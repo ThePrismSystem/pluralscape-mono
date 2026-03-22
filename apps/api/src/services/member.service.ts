@@ -5,14 +5,12 @@ import {
   frontingComments,
   frontingSessions,
   groupMemberships,
-  layerMemberships,
   members,
   memberPhotos,
   notes,
   polls,
   relationships,
-  sideSystemMemberships,
-  subsystemMemberships,
+  systemStructureEntityMemberLinks,
 } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
@@ -662,28 +660,11 @@ export interface MemberMembershipsResult {
     readonly systemId: SystemId;
     readonly createdAt: UnixMillis;
   }>;
-  readonly subsystems: ReadonlyArray<{
+  readonly structureEntities: ReadonlyArray<{
     readonly id: string;
-    readonly subsystemId: string;
+    readonly entityId: string | null;
     readonly memberId: MemberId;
     readonly systemId: SystemId;
-    readonly encryptedData: string;
-    readonly createdAt: UnixMillis;
-  }>;
-  readonly sideSystems: ReadonlyArray<{
-    readonly id: string;
-    readonly sideSystemId: string;
-    readonly memberId: MemberId;
-    readonly systemId: SystemId;
-    readonly encryptedData: string;
-    readonly createdAt: UnixMillis;
-  }>;
-  readonly layers: ReadonlyArray<{
-    readonly id: string;
-    readonly layerId: string;
-    readonly memberId: MemberId;
-    readonly systemId: SystemId;
-    readonly encryptedData: string;
     readonly createdAt: UnixMillis;
   }>;
 }
@@ -710,33 +691,20 @@ export async function listAllMemberMemberships(
   }
 
   // Query all structure types in parallel
-  const [groupRows, subsystemRows, sideSystemRows, layerRows] = await Promise.all([
+  const [groupRows, entityMemberRows] = await Promise.all([
     db
       .select()
       .from(groupMemberships)
       .where(and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId))),
     db
       .select()
-      .from(subsystemMemberships)
+      .from(systemStructureEntityMemberLinks)
       .where(
         and(
-          eq(subsystemMemberships.memberId, memberId),
-          eq(subsystemMemberships.systemId, systemId),
+          eq(systemStructureEntityMemberLinks.memberId, memberId),
+          eq(systemStructureEntityMemberLinks.systemId, systemId),
         ),
       ),
-    db
-      .select()
-      .from(sideSystemMemberships)
-      .where(
-        and(
-          eq(sideSystemMemberships.memberId, memberId),
-          eq(sideSystemMemberships.systemId, systemId),
-        ),
-      ),
-    db
-      .select()
-      .from(layerMemberships)
-      .where(and(eq(layerMemberships.memberId, memberId), eq(layerMemberships.systemId, systemId))),
   ]);
 
   return {
@@ -746,28 +714,11 @@ export async function listAllMemberMemberships(
       systemId: r.systemId as SystemId,
       createdAt: toUnixMillis(r.createdAt),
     })),
-    subsystems: subsystemRows.map((r) => ({
+    structureEntities: entityMemberRows.map((r) => ({
       id: r.id,
-      subsystemId: r.subsystemId,
+      entityId: r.parentEntityId,
       memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
-      encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-    sideSystems: sideSystemRows.map((r) => ({
-      id: r.id,
-      sideSystemId: r.sideSystemId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-    layers: layerRows.map((r) => ({
-      id: r.id,
-      layerId: r.layerId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      encryptedData: encryptedBlobToBase64(r.encryptedData),
       createdAt: toUnixMillis(r.createdAt),
     })),
   };

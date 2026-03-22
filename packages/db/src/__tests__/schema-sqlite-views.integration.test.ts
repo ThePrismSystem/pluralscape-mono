@@ -87,18 +87,6 @@ describe("SQLite views / query helpers", () => {
     client.exec(SQLITE_DDL.webhookDeliveries);
     client.exec(SQLITE_DDL.webhookDeliveriesIndexes);
     client.exec(SQLITE_DDL.relationships);
-    client.exec(SQLITE_DDL.subsystems);
-    client.exec(SQLITE_DDL.subsystemsIndexes);
-    client.exec(SQLITE_DDL.sideSystems);
-    client.exec(SQLITE_DDL.sideSystemsIndexes);
-    client.exec(SQLITE_DDL.layers);
-    client.exec(SQLITE_DDL.layersIndexes);
-    client.exec(SQLITE_DDL.subsystemLayerLinks);
-    client.exec(SQLITE_DDL.subsystemLayerLinksIndexes);
-    client.exec(SQLITE_DDL.subsystemSideSystemLinks);
-    client.exec(SQLITE_DDL.subsystemSideSystemLinksIndexes);
-    client.exec(SQLITE_DDL.sideSystemLayerLinks);
-    client.exec(SQLITE_DDL.sideSystemLayerLinksIndexes);
     client.exec(SQLITE_DDL.systemStructureEntityTypes);
     client.exec(SQLITE_DDL.systemStructureEntityTypesIndexes);
     client.exec(SQLITE_DDL.systemStructureEntities);
@@ -133,12 +121,6 @@ describe("SQLite views / query helpers", () => {
       "system_structure_entity_associations",
       "system_structure_entities",
       "system_structure_entity_types",
-      "side_system_layer_links",
-      "subsystem_side_system_links",
-      "subsystem_layer_links",
-      "layers",
-      "side_systems",
-      "subsystems",
       "custom_fronts",
       "members",
       "systems",

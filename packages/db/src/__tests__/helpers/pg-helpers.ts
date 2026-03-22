@@ -32,6 +32,7 @@ import {
 import {
   fieldBucketVisibility,
   fieldDefinitions,
+  fieldDefinitionScopes,
   fieldValues,
 } from "../../schema/pg/custom-fields.js";
 import { customFronts, frontingComments, frontingSessions } from "../../schema/pg/fronting.js";
@@ -64,16 +65,7 @@ import {
 import { safeModeContent } from "../../schema/pg/safe-mode-content.js";
 import { systemSnapshots } from "../../schema/pg/snapshots.js";
 import {
-  layerMemberships,
-  layers,
   relationships,
-  sideSystemLayerLinks,
-  sideSystemMemberships,
-  sideSystems,
-  subsystemLayerLinks,
-  subsystemMemberships,
-  subsystemSideSystemLinks,
-  subsystems,
   systemStructureEntityAssociations,
   systemStructureEntities,
   systemStructureEntityLinks,
@@ -174,24 +166,6 @@ export const PG_DDL = {
   // --- Structure ---
   relationships: pgTableToCreateDDL(relationships),
   relationshipsIndexes: indexDDL(relationships),
-  subsystems: pgTableToCreateDDL(subsystems),
-  subsystemsIndexes: indexDDL(subsystems),
-  sideSystems: pgTableToCreateDDL(sideSystems),
-  sideSystemsIndexes: indexDDL(sideSystems),
-  layers: pgTableToCreateDDL(layers),
-  layersIndexes: indexDDL(layers),
-  subsystemMemberships: pgTableToCreateDDL(subsystemMemberships),
-  subsystemMembershipsIndexes: indexDDL(subsystemMemberships),
-  sideSystemMemberships: pgTableToCreateDDL(sideSystemMemberships),
-  sideSystemMembershipsIndexes: indexDDL(sideSystemMemberships),
-  layerMemberships: pgTableToCreateDDL(layerMemberships),
-  layerMembershipsIndexes: indexDDL(layerMemberships),
-  subsystemLayerLinks: pgTableToCreateDDL(subsystemLayerLinks),
-  subsystemLayerLinksIndexes: indexDDL(subsystemLayerLinks),
-  subsystemSideSystemLinks: pgTableToCreateDDL(subsystemSideSystemLinks),
-  subsystemSideSystemLinksIndexes: indexDDL(subsystemSideSystemLinks),
-  sideSystemLayerLinks: pgTableToCreateDDL(sideSystemLayerLinks),
-  sideSystemLayerLinksIndexes: indexDDL(sideSystemLayerLinks),
   systemStructureEntityTypes: pgTableToCreateDDL(systemStructureEntityTypes),
   systemStructureEntityTypesIndexes: indexDDL(systemStructureEntityTypes),
   systemStructureEntities: pgTableToCreateDDL(systemStructureEntities),
@@ -209,6 +183,8 @@ export const PG_DDL = {
   fieldValuesIndexes: indexDDL(fieldValues),
   fieldBucketVisibility: pgTableToCreateDDL(fieldBucketVisibility),
   fieldBucketVisibilityIndexes: indexDDL(fieldBucketVisibility),
+  fieldDefinitionScopes: pgTableToCreateDDL(fieldDefinitionScopes),
+  fieldDefinitionScopesIndexes: indexDDL(fieldDefinitionScopes),
   // --- Settings ---
   nomenclatureSettings: pgTableToCreateDDL(nomenclatureSettings),
   nomenclatureSettingsIndexes: indexDDL(nomenclatureSettings),
@@ -434,6 +410,10 @@ export async function createPgFrontingTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.membersIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntities);
+  await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
   await pgExec(client, PG_DDL.customFronts);
   await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingSessions);
@@ -448,34 +428,34 @@ export async function createPgStructureTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.relationships);
   await pgExec(client, PG_DDL.relationshipsIndexes);
-  await pgExec(client, PG_DDL.subsystems);
-  await pgExec(client, PG_DDL.subsystemsIndexes);
-  await pgExec(client, PG_DDL.sideSystems);
-  await pgExec(client, PG_DDL.sideSystemsIndexes);
-  await pgExec(client, PG_DDL.layers);
-  await pgExec(client, PG_DDL.layersIndexes);
-  await pgExec(client, PG_DDL.subsystemMemberships);
-  await pgExec(client, PG_DDL.subsystemMembershipsIndexes);
-  await pgExec(client, PG_DDL.sideSystemMemberships);
-  await pgExec(client, PG_DDL.sideSystemMembershipsIndexes);
-  await pgExec(client, PG_DDL.layerMemberships);
-  await pgExec(client, PG_DDL.layerMembershipsIndexes);
-  await pgExec(client, PG_DDL.subsystemLayerLinks);
-  await pgExec(client, PG_DDL.subsystemLayerLinksIndexes);
-  await pgExec(client, PG_DDL.subsystemSideSystemLinks);
-  await pgExec(client, PG_DDL.subsystemSideSystemLinksIndexes);
-  await pgExec(client, PG_DDL.sideSystemLayerLinks);
-  await pgExec(client, PG_DDL.sideSystemLayerLinksIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntities);
+  await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityLinks);
+  await pgExec(client, PG_DDL.systemStructureEntityLinksIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityMemberLinks);
+  await pgExec(client, PG_DDL.systemStructureEntityMemberLinksIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityAssociations);
+  await pgExec(client, PG_DDL.systemStructureEntityAssociationsIndexes);
 }
 
 export async function createPgCustomFieldsTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.membersIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntities);
+  await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
+  await pgExec(client, PG_DDL.groups);
+  await pgExec(client, PG_DDL.groupsIndexes);
   await pgExec(client, PG_DDL.buckets);
   await pgExec(client, PG_DDL.bucketsIndexes);
   await pgExec(client, PG_DDL.fieldDefinitions);
   await pgExec(client, PG_DDL.fieldDefinitionsIndexes);
+  await pgExec(client, PG_DDL.fieldDefinitionScopes);
+  await pgExec(client, PG_DDL.fieldDefinitionScopesIndexes);
   await pgExec(client, PG_DDL.fieldValues);
   await pgExec(client, PG_DDL.fieldValuesIndexes);
   await pgExec(client, PG_DDL.fieldBucketVisibility);
@@ -772,6 +752,19 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.friendCodesIndexes);
   await pgExec(client, PG_DDL.friendBucketAssignments);
   await pgExec(client, PG_DDL.friendBucketAssignmentsIndexes);
+  // Structure (must precede fronting — fronting_sessions FK → system_structure_entities)
+  await pgExec(client, PG_DDL.relationships);
+  await pgExec(client, PG_DDL.relationshipsIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntities);
+  await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityLinks);
+  await pgExec(client, PG_DDL.systemStructureEntityLinksIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityMemberLinks);
+  await pgExec(client, PG_DDL.systemStructureEntityMemberLinksIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityAssociations);
+  await pgExec(client, PG_DDL.systemStructureEntityAssociationsIndexes);
   // Fronting
   await pgExec(client, PG_DDL.customFronts);
   await pgExec(client, PG_DDL.customFrontsIndexes);
@@ -781,30 +774,16 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.frontingCommentsIndexes);
   await pgExec(client, PG_DDL.frontingReports);
   await pgExec(client, PG_DDL.frontingReportsIndexes);
-  // Structure
-  await pgExec(client, PG_DDL.relationships);
-  await pgExec(client, PG_DDL.relationshipsIndexes);
-  await pgExec(client, PG_DDL.subsystems);
-  await pgExec(client, PG_DDL.subsystemsIndexes);
-  await pgExec(client, PG_DDL.sideSystems);
-  await pgExec(client, PG_DDL.sideSystemsIndexes);
-  await pgExec(client, PG_DDL.layers);
-  await pgExec(client, PG_DDL.layersIndexes);
-  await pgExec(client, PG_DDL.subsystemMemberships);
-  await pgExec(client, PG_DDL.subsystemMembershipsIndexes);
-  await pgExec(client, PG_DDL.sideSystemMemberships);
-  await pgExec(client, PG_DDL.sideSystemMembershipsIndexes);
-  await pgExec(client, PG_DDL.layerMemberships);
-  await pgExec(client, PG_DDL.layerMembershipsIndexes);
-  await pgExec(client, PG_DDL.subsystemLayerLinks);
-  await pgExec(client, PG_DDL.subsystemLayerLinksIndexes);
-  await pgExec(client, PG_DDL.subsystemSideSystemLinks);
-  await pgExec(client, PG_DDL.subsystemSideSystemLinksIndexes);
-  await pgExec(client, PG_DDL.sideSystemLayerLinks);
-  await pgExec(client, PG_DDL.sideSystemLayerLinksIndexes);
+  // Groups (must precede custom fields — field_values FK → groups)
+  await pgExec(client, PG_DDL.groups);
+  await pgExec(client, PG_DDL.groupsIndexes);
+  await pgExec(client, PG_DDL.groupMemberships);
+  await pgExec(client, PG_DDL.groupMembershipsIndexes);
   // Custom fields
   await pgExec(client, PG_DDL.fieldDefinitions);
   await pgExec(client, PG_DDL.fieldDefinitionsIndexes);
+  await pgExec(client, PG_DDL.fieldDefinitionScopes);
+  await pgExec(client, PG_DDL.fieldDefinitionScopesIndexes);
   await pgExec(client, PG_DDL.fieldValues);
   await pgExec(client, PG_DDL.fieldValuesIndexes);
   await pgExec(client, PG_DDL.fieldBucketVisibility);
@@ -844,11 +823,6 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.journalEntriesIndexes);
   await pgExec(client, PG_DDL.wikiPages);
   await pgExec(client, PG_DDL.wikiPagesIndexes);
-  // Groups
-  await pgExec(client, PG_DDL.groups);
-  await pgExec(client, PG_DDL.groupsIndexes);
-  await pgExec(client, PG_DDL.groupMemberships);
-  await pgExec(client, PG_DDL.groupMembershipsIndexes);
   // Innerworld
   await pgExec(client, PG_DDL.innerworldRegions);
   await pgExec(client, PG_DDL.innerworldRegionsIndexes);

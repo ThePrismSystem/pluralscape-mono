@@ -20,10 +20,12 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { FIELD_TYPES } from "../../helpers/enums.js";
+import { FIELD_DEFINITION_SCOPE_TYPES, FIELD_TYPES } from "../../helpers/enums.js";
 
+import { groups } from "./groups.js";
 import { members } from "./members.js";
 import { buckets } from "./privacy.js";
+import { systemStructureEntities, systemStructureEntityTypes } from "./structure.js";
 import { systems } from "./systems.js";
 
 import type { ServerFieldDefinition } from "@pluralscape/types";
@@ -59,6 +61,8 @@ export const fieldValues = sqliteTable(
     id: text("id").primaryKey(),
     fieldDefinitionId: text("field_definition_id").notNull(),
     memberId: text("member_id"),
+    structureEntityId: text("structure_entity_id"),
+    groupId: text("group_id"),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -77,13 +81,33 @@ export const fieldValues = sqliteTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.structureEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.groupId, t.systemId],
+      foreignColumns: [groups.id, groups.systemId],
+    }).onDelete("restrict"),
     versionCheckFor("field_values", t.version),
     uniqueIndex("field_values_definition_member_uniq")
       .on(t.fieldDefinitionId, t.memberId)
       .where(sql`${t.memberId} IS NOT NULL`),
+    uniqueIndex("field_values_definition_entity_uniq")
+      .on(t.fieldDefinitionId, t.structureEntityId)
+      .where(sql`${t.structureEntityId} IS NOT NULL`),
+    uniqueIndex("field_values_definition_group_uniq")
+      .on(t.fieldDefinitionId, t.groupId)
+      .where(sql`${t.groupId} IS NOT NULL`),
     uniqueIndex("field_values_definition_system_uniq")
       .on(t.fieldDefinitionId, t.systemId)
-      .where(sql`${t.memberId} IS NULL`),
+      .where(
+        sql`${t.memberId} IS NULL AND ${t.structureEntityId} IS NULL AND ${t.groupId} IS NULL`,
+      ),
+    check(
+      "field_values_subject_exclusivity_check",
+      sql`(CASE WHEN ${t.memberId} IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN ${t.structureEntityId} IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN ${t.groupId} IS NOT NULL THEN 1 ELSE 0 END) <= 1`,
+    ),
   ],
 );
 
@@ -107,9 +131,51 @@ export const fieldBucketVisibility = sqliteTable(
   ],
 );
 
+export const fieldDefinitionScopes = sqliteTable(
+  "field_definition_scopes",
+  {
+    id: text("id").primaryKey(),
+    fieldDefinitionId: text("field_definition_id").notNull(),
+    scopeType: text("scope_type").notNull(),
+    scopeEntityTypeId: text("scope_entity_type_id"),
+    systemId: text("system_id")
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    ...timestamps(),
+    ...versioned(),
+  },
+  (t) => [
+    index("field_definition_scopes_field_definition_id_idx").on(t.fieldDefinitionId),
+    foreignKey({
+      columns: [t.fieldDefinitionId, t.systemId],
+      foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.scopeEntityTypeId, t.systemId],
+      foreignColumns: [systemStructureEntityTypes.id, systemStructureEntityTypes.systemId],
+    }).onDelete("restrict"),
+    check(
+      "field_definition_scopes_scope_type_check",
+      enumCheck(t.scopeType, FIELD_DEFINITION_SCOPE_TYPES),
+    ),
+    check(
+      "field_definition_scopes_entity_type_check",
+      sql`${t.scopeEntityTypeId} IS NULL OR ${t.scopeType} = 'structure-entity-type'`,
+    ),
+    unique("field_definition_scopes_definition_scope_uniq").on(
+      t.fieldDefinitionId,
+      t.scopeType,
+      t.scopeEntityTypeId,
+    ),
+    versionCheckFor("field_definition_scopes", t.version),
+  ],
+);
+
 export type FieldDefinitionRow = InferSelectModel<typeof fieldDefinitions>;
 export type NewFieldDefinition = InferInsertModel<typeof fieldDefinitions>;
 export type FieldValueRow = InferSelectModel<typeof fieldValues>;
 export type NewFieldValue = InferInsertModel<typeof fieldValues>;
 export type FieldBucketVisibilityRow = InferSelectModel<typeof fieldBucketVisibility>;
 export type NewFieldBucketVisibility = InferInsertModel<typeof fieldBucketVisibility>;
+export type FieldDefinitionScopeRow = InferSelectModel<typeof fieldDefinitionScopes>;
+export type NewFieldDefinitionScope = InferInsertModel<typeof fieldDefinitionScopes>;

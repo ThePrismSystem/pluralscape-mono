@@ -62,9 +62,7 @@ describe("GET /systems/:systemId/members/:memberId/memberships", () => {
           createdAt: 1000 as never,
         },
       ],
-      subsystems: [],
-      sideSystems: [],
-      layers: [],
+      structureEntities: [],
     });
 
     const app = createApp();
@@ -73,15 +71,11 @@ describe("GET /systems/:systemId/members/:memberId/memberships", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       groups: { groupId: string }[];
-      subsystems: unknown[];
-      sideSystems: unknown[];
-      layers: unknown[];
+      structureEntities: unknown[];
     };
     expect(body.groups).toHaveLength(1);
     expect(body.groups[0]?.groupId).toBe("grp_test");
-    expect(body.subsystems).toEqual([]);
-    expect(body.sideSystems).toEqual([]);
-    expect(body.layers).toEqual([]);
+    expect(body.structureEntities).toEqual([]);
   });
 
   it("returns 404 when member not found", async () => {

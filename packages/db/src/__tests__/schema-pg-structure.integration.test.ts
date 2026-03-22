@@ -6,16 +6,12 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/pg/auth.js";
 import { members } from "../schema/pg/members.js";
 import {
-  layers,
-  layerMemberships,
   relationships,
-  sideSystems,
-  sideSystemLayerLinks,
-  sideSystemMemberships,
-  subsystems,
-  subsystemLayerLinks,
-  subsystemMemberships,
-  subsystemSideSystemLinks,
+  systemStructureEntityAssociations,
+  systemStructureEntities,
+  systemStructureEntityLinks,
+  systemStructureEntityMemberLinks,
+  systemStructureEntityTypes,
 } from "../schema/pg/structure.js";
 import { systems } from "../schema/pg/systems.js";
 
@@ -34,15 +30,11 @@ const schema = {
   systems,
   members,
   relationships,
-  subsystems,
-  sideSystems,
-  layers,
-  subsystemMemberships,
-  sideSystemMemberships,
-  layerMemberships,
-  subsystemLayerLinks,
-  subsystemSideSystemLinks,
-  sideSystemLayerLinks,
+  systemStructureEntityTypes,
+  systemStructureEntities,
+  systemStructureEntityLinks,
+  systemStructureEntityMemberLinks,
+  systemStructureEntityAssociations,
 };
 
 describe("PG structure schema", () => {
@@ -52,52 +44,6 @@ describe("PG structure schema", () => {
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
   const insertMember = (systemId: string, id?: string) => pgInsertMember(db, systemId, id);
-
-  async function insertSubsystem(
-    systemId: string,
-    parentSubsystemId: string | null = null,
-    id = crypto.randomUUID(),
-  ): Promise<string> {
-    const now = Date.now();
-    await db.insert(subsystems).values({
-      id,
-      systemId,
-      parentSubsystemId,
-      encryptedData: testBlob(),
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-
-  async function insertSideSystem(systemId: string, id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(sideSystems).values({
-      id,
-      systemId,
-      encryptedData: testBlob(),
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-
-  async function insertLayer(
-    systemId: string,
-    sortOrder: number,
-    id = crypto.randomUUID(),
-  ): Promise<string> {
-    const now = Date.now();
-    await db.insert(layers).values({
-      id,
-      systemId,
-      sortOrder,
-      encryptedData: testBlob(),
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -110,16 +56,12 @@ describe("PG structure schema", () => {
   });
 
   afterEach(async () => {
+    await db.delete(systemStructureEntityAssociations);
+    await db.delete(systemStructureEntityMemberLinks);
+    await db.delete(systemStructureEntityLinks);
+    await db.delete(systemStructureEntities);
+    await db.delete(systemStructureEntityTypes);
     await db.delete(relationships);
-    await db.delete(subsystemMemberships);
-    await db.delete(sideSystemMemberships);
-    await db.delete(layerMemberships);
-    await db.delete(subsystemLayerLinks);
-    await db.delete(subsystemSideSystemLinks);
-    await db.delete(sideSystemLayerLinks);
-    await db.delete(subsystems);
-    await db.delete(sideSystems);
-    await db.delete(layers);
   });
 
   // ── Primary entities ──────────────────────────────────────────────
@@ -440,1168 +382,638 @@ describe("PG structure schema", () => {
     });
   });
 
-  describe("subsystems", () => {
+  // ── Structure Entity Types ─────────────────────────────────────────
+
+  describe("systemStructureEntityTypes", () => {
     it("inserts and round-trips encrypted data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = testBlob(new Uint8Array([10, 20, 30]));
+      const data = testBlob(new Uint8Array([10, 20]));
 
-      await db.insert(subsystems).values({
-        id,
-        systemId,
-        encryptedData: data,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.systemId).toBe(systemId);
-    });
-
-    it("allows nullable parentSubsystemId", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystems).values({
-        id,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows[0]?.parentSubsystemId).toBeNull();
-    });
-
-    it("sets parentSubsystemId to null on parent delete", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const parentId = await insertSubsystem(systemId);
-      const childId = await insertSubsystem(systemId, parentId);
-
-      // verify child references parent
-      let rows = await db.select().from(subsystems).where(eq(subsystems.id, childId));
-      expect(rows[0]?.parentSubsystemId).toBe(parentId);
-
-      // delete parent
-      await db.delete(subsystems).where(eq(subsystems.id, parentId));
-
-      // child still exists, parentSubsystemId is null
-      rows = await db.select().from(subsystems).where(eq(subsystems.id, childId));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.parentSubsystemId).toBeNull();
-    });
-
-    it("cascades on system deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-
-      await db.delete(systems).where(eq(systems.id, systemId));
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, subsystemId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("round-trips T3 metadata columns", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystems).values({
-        id,
-        systemId,
-        architectureType: { kind: "known", type: "orbital" },
-        hasCore: true,
-        discoveryStatus: "fully-mapped",
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows[0]?.architectureType).toEqual({ kind: "known", type: "orbital" });
-      expect(rows[0]?.hasCore).toBe(true);
-      expect(rows[0]?.discoveryStatus).toBe("fully-mapped");
-    });
-
-    it("defaults T3 metadata to null", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystems).values({
-        id,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows[0]?.architectureType).toBeNull();
-      expect(rows[0]?.hasCore).toBe(false);
-      expect(rows[0]?.discoveryStatus).toBeNull();
-    });
-
-    it("rejects invalid discoveryStatus via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(subsystems).values({
-          id: crypto.randomUUID(),
-          systemId,
-          discoveryStatus: "invalid" as "fully-mapped",
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        }),
-      ).rejects.toThrow(/check|constraint|failed query/i);
-    });
-
-    it("defaults archived to false and archivedAt to null", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = await insertSubsystem(systemId);
-
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows[0]?.archived).toBe(false);
-      expect(rows[0]?.archivedAt).toBeNull();
-    });
-
-    it("round-trips archived: true with archivedAt timestamp", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystems).values({
-        id,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-        archived: true,
-        archivedAt: now,
-      });
-
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("updates archived from false to true", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = await insertSubsystem(systemId);
-
-      const now = Date.now();
-      await db
-        .update(subsystems)
-        .set({ archived: true, archivedAt: now })
-        .where(eq(subsystems.id, id));
-      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          "INSERT INTO subsystems (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
-          [crypto.randomUUID(), systemId, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-
-    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          "INSERT INTO subsystems (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, false, $5)",
-          [crypto.randomUUID(), systemId, now, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-  });
-
-  describe("side_systems", () => {
-    it("inserts and round-trips encrypted data", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const data = testBlob(new Uint8Array([5, 10, 15]));
-
-      await db.insert(sideSystems).values({
-        id,
-        systemId,
-        encryptedData: data,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(sideSystems).where(eq(sideSystems.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.systemId).toBe(systemId);
-    });
-
-    it("defaults version to 1", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(sideSystems).values({
-        id,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(sideSystems).where(eq(sideSystems.id, id));
-      expect(rows[0]?.version).toBe(1);
-    });
-
-    it("cascades on system deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-
-      await db.delete(systems).where(eq(systems.id, systemId));
-      const rows = await db.select().from(sideSystems).where(eq(sideSystems.id, sideSystemId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("rejects nonexistent systemId FK", async () => {
-      const now = Date.now();
-      await expect(
-        db.insert(sideSystems).values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it("defaults archived to false and archivedAt to null", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = await insertSideSystem(systemId);
-
-      const rows = await db.select().from(sideSystems).where(eq(sideSystems.id, id));
-      expect(rows[0]?.archived).toBe(false);
-      expect(rows[0]?.archivedAt).toBeNull();
-    });
-
-    it("round-trips archived: true with archivedAt timestamp", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(sideSystems).values({
-        id,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-        archived: true,
-        archivedAt: now,
-      });
-
-      const rows = await db.select().from(sideSystems).where(eq(sideSystems.id, id));
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("updates archived from false to true", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = await insertSideSystem(systemId);
-
-      const now = Date.now();
-      await db
-        .update(sideSystems)
-        .set({ archived: true, archivedAt: now })
-        .where(eq(sideSystems.id, id));
-      const rows = await db.select().from(sideSystems).where(eq(sideSystems.id, id));
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          "INSERT INTO side_systems (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
-          [crypto.randomUUID(), systemId, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-
-    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          "INSERT INTO side_systems (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, false, $5)",
-          [crypto.randomUUID(), systemId, now, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-  });
-
-  describe("layers", () => {
-    it("inserts with sortOrder and round-trips encrypted data", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const data = testBlob(new Uint8Array([7, 14, 21]));
-
-      await db.insert(layers).values({
-        id,
-        systemId,
-        sortOrder: 3,
-        encryptedData: data,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(layers).where(eq(layers.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.sortOrder).toBe(3);
-      expect(rows[0]?.systemId).toBe(systemId);
-    });
-
-    it("defaults version to 1", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(layers).values({
+      await db.insert(systemStructureEntityTypes).values({
         id,
         systemId,
         sortOrder: 0,
-        encryptedData: testBlob(new Uint8Array([1])),
+        encryptedData: data,
         createdAt: now,
         updatedAt: now,
       });
 
-      const rows = await db.select().from(layers).where(eq(layers.id, id));
-      expect(rows[0]?.version).toBe(1);
+      const rows = await db
+        .select()
+        .from(systemStructureEntityTypes)
+        .where(eq(systemStructureEntityTypes.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
     });
 
-    it("cascades on system deletion", async () => {
+    it("defaults version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const layerId = await insertLayer(systemId, 1);
+      const id = crypto.randomUUID();
+      const now = Date.now();
 
-      await db.delete(systems).where(eq(systems.id, systemId));
-      const rows = await db.select().from(layers).where(eq(layers.id, layerId));
-      expect(rows).toHaveLength(0);
+      await db.insert(systemStructureEntityTypes).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(systemStructureEntityTypes)
+        .where(eq(systemStructureEntityTypes.id, id));
+      expect(rows[0]?.version).toBe(1);
     });
 
     it("rejects nonexistent systemId FK", async () => {
       const now = Date.now();
       await expect(
-        db.insert(layers).values({
+        db.insert(systemStructureEntityTypes).values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
           sortOrder: 0,
-          encryptedData: testBlob(new Uint8Array([1])),
+          encryptedData: testBlob(),
           createdAt: now,
           updatedAt: now,
         }),
       ).rejects.toThrow();
     });
 
-    it("defaults archived to false and archivedAt to null", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = await insertLayer(systemId, 0);
-
-      const rows = await db.select().from(layers).where(eq(layers.id, id));
-      expect(rows[0]?.archived).toBe(false);
-      expect(rows[0]?.archivedAt).toBeNull();
-    });
-
-    it("round-trips archived: true with archivedAt timestamp", async () => {
+    it("defaults archived to false", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
-      await db.insert(layers).values({
+      await db.insert(systemStructureEntityTypes).values({
         id,
         systemId,
         sortOrder: 0,
-        encryptedData: testBlob(new Uint8Array([1])),
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(systemStructureEntityTypes)
+        .where(eq(systemStructureEntityTypes.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
         archived: true,
         archivedAt: now,
       });
 
-      const rows = await db.select().from(layers).where(eq(layers.id, id));
+      const rows = await db
+        .select()
+        .from(systemStructureEntityTypes)
+        .where(eq(systemStructureEntityTypes.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
     });
 
-    it("updates archived from false to true", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = await insertLayer(systemId, 0);
-
-      const now = Date.now();
-      await db.update(layers).set({ archived: true, archivedAt: now }).where(eq(layers.id, id));
-      const rows = await db.select().from(layers).where(eq(layers.id, id));
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          "INSERT INTO layers (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
-          [crypto.randomUUID(), systemId, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-
-    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          "INSERT INTO layers (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, false, $5)",
-          [crypto.randomUUID(), systemId, now, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-  });
-
-  // ── Memberships ───────────────────────────────────────────────────
-
-  describe("subsystem_memberships", () => {
-    it("inserts and round-trips encrypted data", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const data = testBlob(new Uint8Array([11, 22, 33]));
-
-      await db.insert(subsystemMemberships).values({
-        id,
-        subsystemId,
-        memberId,
-        systemId,
-        encryptedData: data,
-        createdAt: now,
-      });
-
-      const rows = await db
-        .select()
-        .from(subsystemMemberships)
-        .where(eq(subsystemMemberships.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.subsystemId).toBe(subsystemId);
-      expect(rows[0]?.systemId).toBe(systemId);
-    });
-
-    it("cascades on subsystem deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystemMemberships).values({
-        id,
-        subsystemId,
-        memberId,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-      });
-
-      await db.delete(subsystems).where(eq(subsystems.id, subsystemId));
-      const rows = await db
-        .select()
-        .from(subsystemMemberships)
-        .where(eq(subsystemMemberships.id, id));
-      expect(rows).toHaveLength(0);
-    });
-
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
-      await db.insert(subsystemMemberships).values({
+      await db.insert(systemStructureEntityTypes).values({
         id,
-        subsystemId,
-        memberId,
         systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
+        sortOrder: 0,
+        encryptedData: testBlob(),
         createdAt: now,
+        updatedAt: now,
       });
 
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db
         .select()
-        .from(subsystemMemberships)
-        .where(eq(subsystemMemberships.id, id));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("rejects nonexistent subsystemId FK", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const memberId = await insertMember(systemId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(subsystemMemberships).values({
-          id: crypto.randomUUID(),
-          subsystemId: "nonexistent",
-          memberId,
-          systemId,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-        }),
-      ).rejects.toThrow();
-    });
-  });
-
-  describe("side_system_memberships", () => {
-    it("inserts and round-trips encrypted data", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const data = testBlob(new Uint8Array([44, 55, 66]));
-
-      await db.insert(sideSystemMemberships).values({
-        id,
-        sideSystemId,
-        memberId,
-        systemId,
-        encryptedData: data,
-        createdAt: now,
-      });
-
-      const rows = await db
-        .select()
-        .from(sideSystemMemberships)
-        .where(eq(sideSystemMemberships.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.sideSystemId).toBe(sideSystemId);
-      expect(rows[0]?.systemId).toBe(systemId);
-    });
-
-    it("cascades on side system deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(sideSystemMemberships).values({
-        id,
-        sideSystemId,
-        memberId,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-      });
-
-      await db.delete(sideSystems).where(eq(sideSystems.id, sideSystemId));
-      const rows = await db
-        .select()
-        .from(sideSystemMemberships)
-        .where(eq(sideSystemMemberships.id, id));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("cascades on system deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(sideSystemMemberships).values({
-        id,
-        sideSystemId,
-        memberId,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-      });
-
-      await db.delete(systems).where(eq(systems.id, systemId));
-      const rows = await db
-        .select()
-        .from(sideSystemMemberships)
-        .where(eq(sideSystemMemberships.id, id));
+        .from(systemStructureEntityTypes)
+        .where(eq(systemStructureEntityTypes.id, id));
       expect(rows).toHaveLength(0);
     });
   });
 
-  describe("layer_memberships", () => {
-    it("inserts and round-trips encrypted data", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const layerId = await insertLayer(systemId, 0);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const data = testBlob(new Uint8Array([77, 88, 99]));
+  // ── Structure Entities ─────────────────────────────────────────────
 
-      await db.insert(layerMemberships).values({
-        id,
-        layerId,
-        memberId,
-        systemId,
-        encryptedData: data,
-        createdAt: now,
-      });
-
-      const rows = await db.select().from(layerMemberships).where(eq(layerMemberships.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.layerId).toBe(layerId);
-      expect(rows[0]?.systemId).toBe(systemId);
-    });
-
-    it("cascades on layer deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const layerId = await insertLayer(systemId, 0);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(layerMemberships).values({
-        id,
-        layerId,
-        memberId,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-      });
-
-      await db.delete(layers).where(eq(layers.id, layerId));
-      const rows = await db.select().from(layerMemberships).where(eq(layerMemberships.id, id));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("cascades on system deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const layerId = await insertLayer(systemId, 0);
-      const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(layerMemberships).values({
-        id,
-        layerId,
-        memberId,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-      });
-
-      await db.delete(systems).where(eq(systems.id, systemId));
-      const rows = await db.select().from(layerMemberships).where(eq(layerMemberships.id, id));
-      expect(rows).toHaveLength(0);
-    });
-  });
-
-  // ── Cross-links ───────────────────────────────────────────────────
-
-  describe("subsystem_layer_links", () => {
+  describe("systemStructureEntities", () => {
     it("inserts and round-trips data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const id = crypto.randomUUID();
+      const typeId = crypto.randomUUID();
       const now = Date.now();
-      const data = testBlob(new Uint8Array([1, 2]));
 
-      await db.insert(subsystemLayerLinks).values({
-        id,
-        subsystemId,
-        layerId,
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
         systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const entityId = crypto.randomUUID();
+      const data = testBlob(new Uint8Array([30, 40]));
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
         encryptedData: data,
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db
         .select()
-        .from(subsystemLayerLinks)
-        .where(eq(subsystemLayerLinks.id, id));
+        .from(systemStructureEntities)
+        .where(eq(systemStructureEntities.id, entityId));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.subsystemId).toBe(subsystemId);
-      expect(rows[0]?.layerId).toBe(layerId);
+      expect(rows[0]?.entityTypeId).toBe(typeId);
     });
 
-    it("allows nullable encryptedData", async () => {
+    it("rejects nonexistent entityTypeId FK (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const id = crypto.randomUUID();
       const now = Date.now();
 
-      await db.insert(subsystemLayerLinks).values({
-        id,
-        subsystemId,
-        layerId,
+      await expect(
+        db.insert(systemStructureEntities).values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityTypeId: "nonexistent",
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("prevents deletion of entity type with dependent entities (RESTRICT)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
         systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
         createdAt: now,
+        updatedAt: now,
       });
 
-      const rows = await db
-        .select()
-        .from(subsystemLayerLinks)
-        .where(eq(subsystemLayerLinks.id, id));
-      expect(rows[0]?.encryptedData).toBeNull();
-    });
-
-    it("rejects duplicate subsystemId+layerId pair", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const now = Date.now();
-
-      await db.insert(subsystemLayerLinks).values({
+      await db.insert(systemStructureEntities).values({
         id: crypto.randomUUID(),
-        subsystemId,
-        layerId,
         systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
         createdAt: now,
+        updatedAt: now,
       });
 
       await expect(
-        db.insert(subsystemLayerLinks).values({
+        db.delete(systemStructureEntityTypes).where(eq(systemStructureEntityTypes.id, typeId)),
+      ).rejects.toThrow();
+    });
+
+    it("defaults archived to false", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const entityId = crypto.randomUUID();
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(systemStructureEntities)
+        .where(eq(systemStructureEntities.id, entityId));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("defaults version to 1", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const entityId = crypto.randomUUID();
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(systemStructureEntities)
+        .where(eq(systemStructureEntities.id, entityId));
+      expect(rows[0]?.version).toBe(1);
+    });
+  });
+
+  // ── Structure Entity Links ─────────────────────────────────────────
+
+  describe("systemStructureEntityLinks", () => {
+    it("inserts and round-trips data", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const linkId = crypto.randomUUID();
+      await db.insert(systemStructureEntityLinks).values({
+        id: linkId,
+        systemId,
+        entityId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(systemStructureEntityLinks)
+        .where(eq(systemStructureEntityLinks.id, linkId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.entityId).toBe(entityId);
+      expect(rows[0]?.parentEntityId).toBeNull();
+    });
+
+    it("rejects nonexistent entityId FK (RESTRICT)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(systemStructureEntityLinks).values({
           id: crypto.randomUUID(),
-          subsystemId,
-          layerId,
           systemId,
+          entityId: "nonexistent",
+          sortOrder: 0,
           createdAt: now,
         }),
       ).rejects.toThrow();
     });
 
-    it("cascades on subsystem deletion", async () => {
+    it("prevents deletion of entity with dependent links (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const linkId = crypto.randomUUID();
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
       const now = Date.now();
 
-      await db.insert(subsystemLayerLinks).values({
-        id: linkId,
-        subsystemId,
-        layerId,
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
         systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntityLinks).values({
+        id: crypto.randomUUID(),
+        systemId,
+        entityId,
+        sortOrder: 0,
         createdAt: now,
       });
 
-      await db.delete(subsystems).where(eq(subsystems.id, subsystemId));
-      const rows = await db
-        .select()
-        .from(subsystemLayerLinks)
-        .where(eq(subsystemLayerLinks.id, linkId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("cascades on layer deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const linkId = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystemLayerLinks).values({
-        id: linkId,
-        subsystemId,
-        layerId,
-        systemId,
-        createdAt: now,
-      });
-
-      await db.delete(layers).where(eq(layers.id, layerId));
-      const rows = await db
-        .select()
-        .from(subsystemLayerLinks)
-        .where(eq(subsystemLayerLinks.id, linkId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("rejects nonexistent subsystemId FK", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const layerId = await insertLayer(systemId, 0);
-      const now = Date.now();
-
       await expect(
-        db.insert(subsystemLayerLinks).values({
-          id: crypto.randomUUID(),
-          subsystemId: "nonexistent",
-          layerId,
-          systemId,
-          createdAt: now,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it("rejects nonexistent layerId FK", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(subsystemLayerLinks).values({
-          id: crypto.randomUUID(),
-          subsystemId,
-          layerId: "nonexistent",
-          systemId,
-          createdAt: now,
-        }),
+        db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, entityId)),
       ).rejects.toThrow();
     });
   });
 
-  describe("subsystem_side_system_links", () => {
+  // ── Structure Entity Member Links ──────────────────────────────────
+
+  describe("systemStructureEntityMemberLinks", () => {
     it("inserts and round-trips data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const id = crypto.randomUUID();
+      const memberId = await insertMember(systemId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
       const now = Date.now();
-      const data = testBlob(new Uint8Array([3, 4]));
 
-      await db.insert(subsystemSideSystemLinks).values({
-        id,
-        subsystemId,
-        sideSystemId,
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
         systemId,
-        encryptedData: data,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const linkId = crypto.randomUUID();
+      await db.insert(systemStructureEntityMemberLinks).values({
+        id: linkId,
+        systemId,
+        parentEntityId: entityId,
+        memberId,
+        sortOrder: 0,
         createdAt: now,
       });
 
       const rows = await db
         .select()
-        .from(subsystemSideSystemLinks)
-        .where(eq(subsystemSideSystemLinks.id, id));
+        .from(systemStructureEntityMemberLinks)
+        .where(eq(systemStructureEntityMemberLinks.id, linkId));
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.subsystemId).toBe(subsystemId);
-      expect(rows[0]?.sideSystemId).toBe(sideSystemId);
+      expect(rows[0]?.memberId).toBe(memberId);
+      expect(rows[0]?.parentEntityId).toBe(entityId);
     });
 
-    it("rejects duplicate subsystemId+sideSystemId pair", async () => {
+    it("rejects nonexistent memberId FK (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const sideSystemId = await insertSideSystem(systemId);
       const now = Date.now();
 
-      await db.insert(subsystemSideSystemLinks).values({
+      await expect(
+        db.insert(systemStructureEntityMemberLinks).values({
+          id: crypto.randomUUID(),
+          systemId,
+          memberId: "nonexistent",
+          sortOrder: 0,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("prevents deletion of member with dependent links (RESTRICT)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityMemberLinks).values({
         id: crypto.randomUUID(),
-        subsystemId,
-        sideSystemId,
         systemId,
+        memberId,
+        sortOrder: 0,
         createdAt: now,
       });
 
-      await expect(
-        db.insert(subsystemSideSystemLinks).values({
-          id: crypto.randomUUID(),
-          subsystemId,
-          sideSystemId,
-          systemId,
-          createdAt: now,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it("cascades on subsystem deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const linkId = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystemSideSystemLinks).values({
-        id: linkId,
-        subsystemId,
-        sideSystemId,
-        systemId,
-        createdAt: now,
-      });
-
-      await db.delete(subsystems).where(eq(subsystems.id, subsystemId));
-      const rows = await db
-        .select()
-        .from(subsystemSideSystemLinks)
-        .where(eq(subsystemSideSystemLinks.id, linkId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("cascades on side system deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const linkId = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(subsystemSideSystemLinks).values({
-        id: linkId,
-        subsystemId,
-        sideSystemId,
-        systemId,
-        createdAt: now,
-      });
-
-      await db.delete(sideSystems).where(eq(sideSystems.id, sideSystemId));
-      const rows = await db
-        .select()
-        .from(subsystemSideSystemLinks)
-        .where(eq(subsystemSideSystemLinks.id, linkId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("rejects nonexistent subsystemId FK", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(subsystemSideSystemLinks).values({
-          id: crypto.randomUUID(),
-          subsystemId: "nonexistent",
-          sideSystemId,
-          systemId,
-          createdAt: now,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it("rejects nonexistent sideSystemId FK", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const subsystemId = await insertSubsystem(systemId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(subsystemSideSystemLinks).values({
-          id: crypto.randomUUID(),
-          subsystemId,
-          sideSystemId: "nonexistent",
-          systemId,
-          createdAt: now,
-        }),
-      ).rejects.toThrow();
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
   });
 
-  describe("side_system_layer_links", () => {
+  // ── Structure Entity Associations ──────────────────────────────────
+
+  describe("systemStructureEntityAssociations", () => {
     it("inserts and round-trips data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const id = crypto.randomUUID();
+      const typeId = crypto.randomUUID();
+      const entityId1 = crypto.randomUUID();
+      const entityId2 = crypto.randomUUID();
       const now = Date.now();
-      const data = testBlob(new Uint8Array([5, 6]));
 
-      await db.insert(sideSystemLayerLinks).values({
-        id,
-        sideSystemId,
-        layerId,
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
         systemId,
-        encryptedData: data,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: entityId1,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: entityId2,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+
+      const assocId = crypto.randomUUID();
+      await db.insert(systemStructureEntityAssociations).values({
+        id: assocId,
+        systemId,
+        sourceEntityId: entityId1,
+        targetEntityId: entityId2,
         createdAt: now,
       });
 
       const rows = await db
         .select()
-        .from(sideSystemLayerLinks)
-        .where(eq(sideSystemLayerLinks.id, id));
+        .from(systemStructureEntityAssociations)
+        .where(eq(systemStructureEntityAssociations.id, assocId));
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.sideSystemId).toBe(sideSystemId);
-      expect(rows[0]?.layerId).toBe(layerId);
+      expect(rows[0]?.sourceEntityId).toBe(entityId1);
+      expect(rows[0]?.targetEntityId).toBe(entityId2);
     });
 
-    it("rejects duplicate sideSystemId+layerId pair", async () => {
+    it("enforces unique (sourceEntityId, targetEntityId)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
+      const typeId = crypto.randomUUID();
+      const entityId1 = crypto.randomUUID();
+      const entityId2 = crypto.randomUUID();
       const now = Date.now();
 
-      await db.insert(sideSystemLayerLinks).values({
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: entityId1,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: entityId2,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+
+      await db.insert(systemStructureEntityAssociations).values({
         id: crypto.randomUUID(),
-        sideSystemId,
-        layerId,
         systemId,
+        sourceEntityId: entityId1,
+        targetEntityId: entityId2,
         createdAt: now,
       });
 
       await expect(
-        db.insert(sideSystemLayerLinks).values({
+        db.insert(systemStructureEntityAssociations).values({
           id: crypto.randomUUID(),
-          sideSystemId,
-          layerId,
           systemId,
+          sourceEntityId: entityId1,
+          targetEntityId: entityId2,
           createdAt: now,
         }),
       ).rejects.toThrow();
     });
 
-    it("cascades on side system deletion", async () => {
+    it("prevents deletion of entity with dependent associations (RESTRICT)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const linkId = crypto.randomUUID();
+      const typeId = crypto.randomUUID();
+      const entityId1 = crypto.randomUUID();
+      const entityId2 = crypto.randomUUID();
       const now = Date.now();
 
-      await db.insert(sideSystemLayerLinks).values({
-        id: linkId,
-        sideSystemId,
-        layerId,
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
         systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: entityId1,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: entityId2,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+      await db.insert(systemStructureEntityAssociations).values({
+        id: crypto.randomUUID(),
+        systemId,
+        sourceEntityId: entityId1,
+        targetEntityId: entityId2,
         createdAt: now,
       });
 
-      await db.delete(sideSystems).where(eq(sideSystems.id, sideSystemId));
-      const rows = await db
-        .select()
-        .from(sideSystemLayerLinks)
-        .where(eq(sideSystemLayerLinks.id, linkId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("cascades on layer deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const layerId = await insertLayer(systemId, 0);
-      const linkId = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(sideSystemLayerLinks).values({
-        id: linkId,
-        sideSystemId,
-        layerId,
-        systemId,
-        createdAt: now,
-      });
-
-      await db.delete(layers).where(eq(layers.id, layerId));
-      const rows = await db
-        .select()
-        .from(sideSystemLayerLinks)
-        .where(eq(sideSystemLayerLinks.id, linkId));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("rejects nonexistent sideSystemId FK", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const layerId = await insertLayer(systemId, 0);
-      const now = Date.now();
-
       await expect(
-        db.insert(sideSystemLayerLinks).values({
-          id: crypto.randomUUID(),
-          sideSystemId: "nonexistent",
-          layerId,
-          systemId,
-          createdAt: now,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it("rejects nonexistent layerId FK", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const sideSystemId = await insertSideSystem(systemId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(sideSystemLayerLinks).values({
-          id: crypto.randomUUID(),
-          sideSystemId,
-          layerId: "nonexistent",
-          systemId,
-          createdAt: now,
-        }),
+        db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, entityId1)),
       ).rejects.toThrow();
     });
   });

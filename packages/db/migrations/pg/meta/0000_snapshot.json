@@ -1,5 +1,5 @@
 {
-  "id": "4398ccd2-b7b7-4fa0-9a6f-7efe3ed0e204",
+  "id": "794afa67-4b94-4a4f-a4d5-530188c756d4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2712,6 +2712,131 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.field_definition_scopes": {
+      "name": "field_definition_scopes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "field_definition_id": {
+          "name": "field_definition_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_type": {
+          "name": "scope_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope_entity_type_id": {
+          "name": "scope_entity_type_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        }
+      },
+      "indexes": {
+        "field_definition_scopes_field_definition_id_idx": {
+          "name": "field_definition_scopes_field_definition_id_idx",
+          "columns": [
+            {
+              "expression": "field_definition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "field_definition_scopes_system_id_systems_id_fk": {
+          "name": "field_definition_scopes_system_id_systems_id_fk",
+          "tableFrom": "field_definition_scopes",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "field_definition_scopes_field_definition_id_system_id_field_definitions_id_system_id_fk": {
+          "name": "field_definition_scopes_field_definition_id_system_id_field_definitions_id_system_id_fk",
+          "tableFrom": "field_definition_scopes",
+          "tableTo": "field_definitions",
+          "columnsFrom": ["field_definition_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "field_definition_scopes_scope_entity_type_id_system_id_system_structure_entity_types_id_system_id_fk": {
+          "name": "field_definition_scopes_scope_entity_type_id_system_id_system_structure_entity_types_id_system_id_fk",
+          "tableFrom": "field_definition_scopes",
+          "tableTo": "system_structure_entity_types",
+          "columnsFrom": ["scope_entity_type_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "field_definition_scopes_definition_scope_uniq": {
+          "name": "field_definition_scopes_definition_scope_uniq",
+          "nullsNotDistinct": false,
+          "columns": ["field_definition_id", "scope_type", "scope_entity_type_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "field_definition_scopes_scope_type_check": {
+          "name": "field_definition_scopes_scope_type_check",
+          "value": "\"field_definition_scopes\".\"scope_type\" IS NULL OR \"field_definition_scopes\".\"scope_type\" IN ('system', 'member', 'group', 'structure-entity-type')"
+        },
+        "field_definition_scopes_entity_type_check": {
+          "name": "field_definition_scopes_entity_type_check",
+          "value": "\"field_definition_scopes\".\"scope_entity_type_id\" IS NULL OR \"field_definition_scopes\".\"scope_type\" = 'structure-entity-type'"
+        },
+        "field_definition_scopes_version_check": {
+          "name": "field_definition_scopes_version_check",
+          "value": "\"field_definition_scopes\".\"version\" >= 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.field_definitions": {
       "name": "field_definitions",
       "schema": "",
@@ -2868,6 +2993,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "structure_entity_id": {
+          "name": "structure_entity_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "group_id": {
+          "name": "group_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "system_id": {
           "name": "system_id",
           "type": "varchar(50)",
@@ -2965,6 +3102,50 @@
           "method": "btree",
           "with": {}
         },
+        "field_values_definition_entity_uniq": {
+          "name": "field_values_definition_entity_uniq",
+          "columns": [
+            {
+              "expression": "field_definition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "structure_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"field_values\".\"structure_entity_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "field_values_definition_group_uniq": {
+          "name": "field_values_definition_group_uniq",
+          "columns": [
+            {
+              "expression": "field_definition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "group_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"field_values\".\"group_id\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "field_values_definition_system_uniq": {
           "name": "field_values_definition_system_uniq",
           "columns": [
@@ -2982,7 +3163,7 @@
             }
           ],
           "isUnique": true,
-          "where": "\"field_values\".\"member_id\" IS NULL",
+          "where": "\"field_values\".\"member_id\" IS NULL AND \"field_values\".\"structure_entity_id\" IS NULL AND \"field_values\".\"group_id\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -3015,6 +3196,24 @@
           "columnsTo": ["id", "system_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
+        },
+        "field_values_structure_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "field_values_structure_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "field_values",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["structure_entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "field_values_group_id_system_id_groups_id_system_id_fk": {
+          "name": "field_values_group_id_system_id_groups_id_system_id_fk",
+          "tableFrom": "field_values",
+          "tableTo": "groups",
+          "columnsFrom": ["group_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -3024,6 +3223,10 @@
         "field_values_version_check": {
           "name": "field_values_version_check",
           "value": "\"field_values\".\"version\" >= 1"
+        },
+        "field_values_subject_exclusivity_check": {
+          "name": "field_values_subject_exclusivity_check",
+          "value": "(CASE WHEN \"field_values\".\"member_id\" IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN \"field_values\".\"structure_entity_id\" IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN \"field_values\".\"group_id\" IS NOT NULL THEN 1 ELSE 0 END) <= 1"
         }
       },
       "isRLSEnabled": false
@@ -3994,6 +4197,33 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "fronting_sessions_system_entity_start_idx": {
+          "name": "fronting_sessions_system_entity_start_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "structure_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -4021,6 +4251,15 @@
           "tableTo": "custom_fronts",
           "columnsFrom": ["custom_front_id"],
           "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fronting_sessions_structure_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "fronting_sessions_structure_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "fronting_sessions",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["structure_entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4054,7 +4293,7 @@
         },
         "fronting_sessions_subject_check": {
           "name": "fronting_sessions_subject_check",
-          "value": "\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL"
+          "value": "\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL OR \"fronting_sessions\".\"structure_entity_id\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false
@@ -5121,245 +5360,6 @@
         "key_grants_key_version_check": {
           "name": "key_grants_key_version_check",
           "value": "\"key_grants\".\"key_version\" >= 1"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.layer_memberships": {
-      "name": "layer_memberships",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "layer_id": {
-          "name": "layer_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "member_id": {
-          "name": "member_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "layer_memberships_layer_id_idx": {
-          "name": "layer_memberships_layer_id_idx",
-          "columns": [
-            {
-              "expression": "layer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "layer_memberships_member_id_idx": {
-          "name": "layer_memberships_member_id_idx",
-          "columns": [
-            {
-              "expression": "member_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "layer_memberships_system_id_idx": {
-          "name": "layer_memberships_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "layer_memberships_system_id_systems_id_fk": {
-          "name": "layer_memberships_system_id_systems_id_fk",
-          "tableFrom": "layer_memberships",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "layer_memberships_layer_id_system_id_layers_id_system_id_fk": {
-          "name": "layer_memberships_layer_id_system_id_layers_id_system_id_fk",
-          "tableFrom": "layer_memberships",
-          "tableTo": "layers",
-          "columnsFrom": ["layer_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "layer_memberships_member_id_system_id_members_id_system_id_fk": {
-          "name": "layer_memberships_member_id_system_id_members_id_system_id_fk",
-          "tableFrom": "layer_memberships",
-          "tableTo": "members",
-          "columnsFrom": ["member_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.layers": {
-      "name": "layers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sort_order": {
-          "name": "sort_order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "layers_system_archived_idx": {
-          "name": "layers_system_archived_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "archived",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "layers_system_id_systems_id_fk": {
-          "name": "layers_system_id_systems_id_fk",
-          "tableFrom": "layers",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "layers_id_system_id_unique": {
-          "name": "layers_id_system_id_unique",
-          "nullsNotDistinct": false,
-          "columns": ["id", "system_id"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "layers_version_check": {
-          "name": "layers_version_check",
-          "value": "\"layers\".\"version\" >= 1"
-        },
-        "layers_archived_consistency_check": {
-          "name": "layers_archived_consistency_check",
-          "value": "(\"layers\".\"archived\" = true) = (\"layers\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -7173,852 +7173,6 @@
         "sessions_expires_at_check": {
           "name": "sessions_expires_at_check",
           "value": "\"sessions\".\"expires_at\" IS NULL OR \"sessions\".\"expires_at\" > \"sessions\".\"created_at\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.side_system_layer_links": {
-      "name": "side_system_layer_links",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "side_system_id": {
-          "name": "side_system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "layer_id": {
-          "name": "layer_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "side_system_layer_links_side_system_id_idx": {
-          "name": "side_system_layer_links_side_system_id_idx",
-          "columns": [
-            {
-              "expression": "side_system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "side_system_layer_links_layer_id_idx": {
-          "name": "side_system_layer_links_layer_id_idx",
-          "columns": [
-            {
-              "expression": "layer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "side_system_layer_links_system_id_systems_id_fk": {
-          "name": "side_system_layer_links_system_id_systems_id_fk",
-          "tableFrom": "side_system_layer_links",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "side_system_layer_links_side_system_id_system_id_side_systems_id_system_id_fk": {
-          "name": "side_system_layer_links_side_system_id_system_id_side_systems_id_system_id_fk",
-          "tableFrom": "side_system_layer_links",
-          "tableTo": "side_systems",
-          "columnsFrom": ["side_system_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "side_system_layer_links_layer_id_system_id_layers_id_system_id_fk": {
-          "name": "side_system_layer_links_layer_id_system_id_layers_id_system_id_fk",
-          "tableFrom": "side_system_layer_links",
-          "tableTo": "layers",
-          "columnsFrom": ["layer_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "side_system_layer_links_uniq": {
-          "name": "side_system_layer_links_uniq",
-          "nullsNotDistinct": false,
-          "columns": ["side_system_id", "layer_id"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.side_system_memberships": {
-      "name": "side_system_memberships",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "side_system_id": {
-          "name": "side_system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "member_id": {
-          "name": "member_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "side_system_memberships_side_system_id_idx": {
-          "name": "side_system_memberships_side_system_id_idx",
-          "columns": [
-            {
-              "expression": "side_system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "side_system_memberships_member_id_idx": {
-          "name": "side_system_memberships_member_id_idx",
-          "columns": [
-            {
-              "expression": "member_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "side_system_memberships_system_id_idx": {
-          "name": "side_system_memberships_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "side_system_memberships_system_id_systems_id_fk": {
-          "name": "side_system_memberships_system_id_systems_id_fk",
-          "tableFrom": "side_system_memberships",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "side_system_memberships_side_system_id_system_id_side_systems_id_system_id_fk": {
-          "name": "side_system_memberships_side_system_id_system_id_side_systems_id_system_id_fk",
-          "tableFrom": "side_system_memberships",
-          "tableTo": "side_systems",
-          "columnsFrom": ["side_system_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "side_system_memberships_member_id_system_id_members_id_system_id_fk": {
-          "name": "side_system_memberships_member_id_system_id_members_id_system_id_fk",
-          "tableFrom": "side_system_memberships",
-          "tableTo": "members",
-          "columnsFrom": ["member_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.side_systems": {
-      "name": "side_systems",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "side_systems_system_archived_idx": {
-          "name": "side_systems_system_archived_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "archived",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "side_systems_system_id_systems_id_fk": {
-          "name": "side_systems_system_id_systems_id_fk",
-          "tableFrom": "side_systems",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "side_systems_id_system_id_unique": {
-          "name": "side_systems_id_system_id_unique",
-          "nullsNotDistinct": false,
-          "columns": ["id", "system_id"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "side_systems_version_check": {
-          "name": "side_systems_version_check",
-          "value": "\"side_systems\".\"version\" >= 1"
-        },
-        "side_systems_archived_consistency_check": {
-          "name": "side_systems_archived_consistency_check",
-          "value": "(\"side_systems\".\"archived\" = true) = (\"side_systems\".\"archived_at\" IS NOT NULL)"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.subsystem_layer_links": {
-      "name": "subsystem_layer_links",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "subsystem_id": {
-          "name": "subsystem_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "layer_id": {
-          "name": "layer_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "subsystem_layer_links_subsystem_id_idx": {
-          "name": "subsystem_layer_links_subsystem_id_idx",
-          "columns": [
-            {
-              "expression": "subsystem_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "subsystem_layer_links_layer_id_idx": {
-          "name": "subsystem_layer_links_layer_id_idx",
-          "columns": [
-            {
-              "expression": "layer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "subsystem_layer_links_system_id_systems_id_fk": {
-          "name": "subsystem_layer_links_system_id_systems_id_fk",
-          "tableFrom": "subsystem_layer_links",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "subsystem_layer_links_subsystem_id_system_id_subsystems_id_system_id_fk": {
-          "name": "subsystem_layer_links_subsystem_id_system_id_subsystems_id_system_id_fk",
-          "tableFrom": "subsystem_layer_links",
-          "tableTo": "subsystems",
-          "columnsFrom": ["subsystem_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "subsystem_layer_links_layer_id_system_id_layers_id_system_id_fk": {
-          "name": "subsystem_layer_links_layer_id_system_id_layers_id_system_id_fk",
-          "tableFrom": "subsystem_layer_links",
-          "tableTo": "layers",
-          "columnsFrom": ["layer_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "subsystem_layer_links_uniq": {
-          "name": "subsystem_layer_links_uniq",
-          "nullsNotDistinct": false,
-          "columns": ["subsystem_id", "layer_id"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.subsystem_memberships": {
-      "name": "subsystem_memberships",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "subsystem_id": {
-          "name": "subsystem_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "member_id": {
-          "name": "member_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "subsystem_memberships_subsystem_id_idx": {
-          "name": "subsystem_memberships_subsystem_id_idx",
-          "columns": [
-            {
-              "expression": "subsystem_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "subsystem_memberships_member_id_idx": {
-          "name": "subsystem_memberships_member_id_idx",
-          "columns": [
-            {
-              "expression": "member_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "subsystem_memberships_system_id_idx": {
-          "name": "subsystem_memberships_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "subsystem_memberships_system_id_systems_id_fk": {
-          "name": "subsystem_memberships_system_id_systems_id_fk",
-          "tableFrom": "subsystem_memberships",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "subsystem_memberships_subsystem_id_system_id_subsystems_id_system_id_fk": {
-          "name": "subsystem_memberships_subsystem_id_system_id_subsystems_id_system_id_fk",
-          "tableFrom": "subsystem_memberships",
-          "tableTo": "subsystems",
-          "columnsFrom": ["subsystem_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "subsystem_memberships_member_id_system_id_members_id_system_id_fk": {
-          "name": "subsystem_memberships_member_id_system_id_members_id_system_id_fk",
-          "tableFrom": "subsystem_memberships",
-          "tableTo": "members",
-          "columnsFrom": ["member_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.subsystem_side_system_links": {
-      "name": "subsystem_side_system_links",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "subsystem_id": {
-          "name": "subsystem_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "side_system_id": {
-          "name": "side_system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "subsystem_side_system_links_subsystem_id_idx": {
-          "name": "subsystem_side_system_links_subsystem_id_idx",
-          "columns": [
-            {
-              "expression": "subsystem_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "subsystem_side_system_links_side_system_id_idx": {
-          "name": "subsystem_side_system_links_side_system_id_idx",
-          "columns": [
-            {
-              "expression": "side_system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "subsystem_side_system_links_system_id_systems_id_fk": {
-          "name": "subsystem_side_system_links_system_id_systems_id_fk",
-          "tableFrom": "subsystem_side_system_links",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "subsystem_side_system_links_subsystem_id_system_id_subsystems_id_system_id_fk": {
-          "name": "subsystem_side_system_links_subsystem_id_system_id_subsystems_id_system_id_fk",
-          "tableFrom": "subsystem_side_system_links",
-          "tableTo": "subsystems",
-          "columnsFrom": ["subsystem_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "subsystem_side_system_links_side_system_id_system_id_side_systems_id_system_id_fk": {
-          "name": "subsystem_side_system_links_side_system_id_system_id_side_systems_id_system_id_fk",
-          "tableFrom": "subsystem_side_system_links",
-          "tableTo": "side_systems",
-          "columnsFrom": ["side_system_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "subsystem_side_system_links_uniq": {
-          "name": "subsystem_side_system_links_uniq",
-          "nullsNotDistinct": false,
-          "columns": ["subsystem_id", "side_system_id"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.subsystems": {
-      "name": "subsystems",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_subsystem_id": {
-          "name": "parent_subsystem_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "architecture_type": {
-          "name": "architecture_type",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "has_core": {
-          "name": "has_core",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "discovery_status": {
-          "name": "discovery_status",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "encrypted_data": {
-          "name": "encrypted_data",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "subsystems_system_archived_idx": {
-          "name": "subsystems_system_archived_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "archived",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "subsystems_system_id_systems_id_fk": {
-          "name": "subsystems_system_id_systems_id_fk",
-          "tableFrom": "subsystems",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk": {
-          "name": "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk",
-          "tableFrom": "subsystems",
-          "tableTo": "subsystems",
-          "columnsFrom": ["parent_subsystem_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "subsystems_id_system_id_unique": {
-          "name": "subsystems_id_system_id_unique",
-          "nullsNotDistinct": false,
-          "columns": ["id", "system_id"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "subsystems_discovery_status_check": {
-          "name": "subsystems_discovery_status_check",
-          "value": "\"subsystems\".\"discovery_status\" IS NULL OR \"subsystems\".\"discovery_status\" IN ('fully-mapped', 'partially-mapped', 'unknown')"
-        },
-        "subsystems_version_check": {
-          "name": "subsystems_version_check",
-          "value": "\"subsystems\".\"version\" >= 1"
-        },
-        "subsystems_archived_consistency_check": {
-          "name": "subsystems_archived_consistency_check",
-          "value": "(\"subsystems\".\"archived\" = true) = (\"subsystems\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false

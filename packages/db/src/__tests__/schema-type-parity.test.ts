@@ -222,6 +222,11 @@ const TABLE_PAIRS: Array<{
     pgTable: getTableColumns(pg.fieldBucketVisibility),
     sqliteTable: getTableColumns(sqlite.fieldBucketVisibility),
   },
+  {
+    name: "fieldDefinitionScopes",
+    pgTable: getTableColumns(pg.fieldDefinitionScopes),
+    sqliteTable: getTableColumns(sqlite.fieldDefinitionScopes),
+  },
   // Groups
   {
     name: "groups",
@@ -293,51 +298,6 @@ const TABLE_PAIRS: Array<{
     name: "relationships",
     pgTable: getTableColumns(pg.relationships),
     sqliteTable: getTableColumns(sqlite.relationships),
-  },
-  {
-    name: "subsystems",
-    pgTable: getTableColumns(pg.subsystems),
-    sqliteTable: getTableColumns(sqlite.subsystems),
-  },
-  {
-    name: "subsystemMemberships",
-    pgTable: getTableColumns(pg.subsystemMemberships),
-    sqliteTable: getTableColumns(sqlite.subsystemMemberships),
-  },
-  {
-    name: "subsystemLayerLinks",
-    pgTable: getTableColumns(pg.subsystemLayerLinks),
-    sqliteTable: getTableColumns(sqlite.subsystemLayerLinks),
-  },
-  {
-    name: "subsystemSideSystemLinks",
-    pgTable: getTableColumns(pg.subsystemSideSystemLinks),
-    sqliteTable: getTableColumns(sqlite.subsystemSideSystemLinks),
-  },
-  {
-    name: "sideSystems",
-    pgTable: getTableColumns(pg.sideSystems),
-    sqliteTable: getTableColumns(sqlite.sideSystems),
-  },
-  {
-    name: "sideSystemMemberships",
-    pgTable: getTableColumns(pg.sideSystemMemberships),
-    sqliteTable: getTableColumns(sqlite.sideSystemMemberships),
-  },
-  {
-    name: "sideSystemLayerLinks",
-    pgTable: getTableColumns(pg.sideSystemLayerLinks),
-    sqliteTable: getTableColumns(sqlite.sideSystemLayerLinks),
-  },
-  {
-    name: "layers",
-    pgTable: getTableColumns(pg.layers),
-    sqliteTable: getTableColumns(sqlite.layers),
-  },
-  {
-    name: "layerMemberships",
-    pgTable: getTableColumns(pg.layerMemberships),
-    sqliteTable: getTableColumns(sqlite.layerMemberships),
   },
   {
     name: "systemStructureEntityTypes",

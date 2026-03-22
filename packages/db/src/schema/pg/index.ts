@@ -11,7 +11,12 @@ export {
   polls,
   pollVotes,
 } from "./communication.js";
-export { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
+export {
+  fieldBucketVisibility,
+  fieldDefinitions,
+  fieldDefinitionScopes,
+  fieldValues,
+} from "./custom-fields.js";
 export { customFronts, frontingComments, frontingSessions } from "./fronting.js";
 export { groupMemberships, groups } from "./groups.js";
 export { innerworldCanvas, innerworldEntities, innerworldRegions } from "./innerworld.js";
@@ -35,16 +40,7 @@ export {
 } from "./privacy.js";
 export { safeModeContent } from "./safe-mode-content.js";
 export {
-  layerMemberships,
-  layers,
   relationships,
-  sideSystemLayerLinks,
-  sideSystemMemberships,
-  sideSystems,
-  subsystemLayerLinks,
-  subsystemMemberships,
-  subsystemSideSystemLinks,
-  subsystems,
   systemStructureEntityTypes,
   systemStructureEntities,
   systemStructureEntityLinks,
@@ -120,24 +116,6 @@ export type {
 export type {
   RelationshipRow,
   NewRelationship,
-  SubsystemRow,
-  NewSubsystem,
-  SideSystemRow,
-  NewSideSystem,
-  LayerRow,
-  NewLayer,
-  SubsystemMembershipRow,
-  NewSubsystemMembership,
-  SideSystemMembershipRow,
-  NewSideSystemMembership,
-  LayerMembershipRow,
-  NewLayerMembership,
-  SubsystemLayerLinkRow,
-  NewSubsystemLayerLink,
-  SubsystemSideSystemLinkRow,
-  NewSubsystemSideSystemLink,
-  SideSystemLayerLinkRow,
-  NewSideSystemLayerLink,
   SystemStructureEntityTypeRow,
   NewSystemStructureEntityType,
   SystemStructureEntityRow,
@@ -158,6 +136,8 @@ export type {
   NewFieldValue,
   FieldBucketVisibilityRow,
   NewFieldBucketVisibility,
+  FieldDefinitionScopeRow,
+  NewFieldDefinitionScope,
 } from "./custom-fields.js";
 
 // Biometric Tokens
