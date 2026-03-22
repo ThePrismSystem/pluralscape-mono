@@ -1,4 +1,8 @@
-import { frontingComments, frontingSessions } from "@pluralscape/db/pg";
+import {
+  frontingComments,
+  frontingSessions,
+  systemStructureEntityMemberLinks,
+} from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CreateFrontingSessionBodySchema,
@@ -6,7 +10,7 @@ import {
   FrontingSessionQuerySchema,
   UpdateFrontingSessionBodySchema,
 } from "@pluralscape/validation";
-import { and, count, desc, eq, gte, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -488,6 +492,73 @@ export async function restoreFrontingSession(
   return restoreEntity(db, systemId, sessionId, auth, audit, FRONTING_SESSION_LIFECYCLE, (row) =>
     toFrontingSessionResult(row as typeof frontingSessions.$inferSelect),
   );
+}
+
+// ── ACTIVE FRONTING ─────────────────────────────────────────────────
+
+export interface ActiveFrontingResult {
+  readonly sessions: readonly FrontingSessionResult[];
+  readonly isCofronting: boolean;
+  readonly entityMemberMap: Record<string, readonly string[]>;
+}
+
+export async function getActiveFronting(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+): Promise<ActiveFrontingResult> {
+  assertSystemOwnership(systemId, auth);
+
+  const rows = await db
+    .select()
+    .from(frontingSessions)
+    .where(
+      and(
+        eq(frontingSessions.systemId, systemId),
+        isNull(frontingSessions.endTime),
+        eq(frontingSessions.archived, false),
+      ),
+    )
+    .orderBy(desc(frontingSessions.startTime));
+
+  const sessions = rows.map(toFrontingSessionResult);
+
+  // Collect structure entity IDs from active sessions
+  const entityIds = rows.map((r) => r.structureEntityId).filter((id): id is string => id !== null);
+
+  // Resolve member associations for fronting structure entities
+  const entityMemberMap: Record<string, readonly string[]> = {};
+  if (entityIds.length > 0) {
+    const links = await db
+      .select({
+        parentEntityId: systemStructureEntityMemberLinks.parentEntityId,
+        memberId: systemStructureEntityMemberLinks.memberId,
+      })
+      .from(systemStructureEntityMemberLinks)
+      .where(
+        and(
+          eq(systemStructureEntityMemberLinks.systemId, systemId),
+          inArray(systemStructureEntityMemberLinks.parentEntityId, entityIds),
+        ),
+      );
+
+    for (const link of links) {
+      if (link.parentEntityId) {
+        const existing = entityMemberMap[link.parentEntityId];
+        if (existing) {
+          entityMemberMap[link.parentEntityId] = [...existing, link.memberId];
+        } else {
+          entityMemberMap[link.parentEntityId] = [link.memberId];
+        }
+      }
+    }
+  }
+
+  return {
+    sessions,
+    isCofronting: sessions.length > 1,
+    entityMemberMap,
+  };
 }
 
 // ── PARSE QUERY PARAMS ──────────────────────────────────────────────
