@@ -976,6 +976,28 @@ describe("SQLite custom fields schema", () => {
         .all();
       expect(rows).toHaveLength(0);
     });
+
+    it("restricts deletion of field definition with dependent scopes", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      db.insert(fieldDefinitionScopes)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          scopeType: "member",
+          systemId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client.prepare("DELETE FROM field_definitions WHERE id = ?").run(fieldDefId),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("field_values — structureEntityId and groupId columns", () => {
@@ -1133,6 +1155,109 @@ describe("SQLite custom fields schema", () => {
           })
           .run(),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects structureEntityId + groupId both set via subject_exclusivity_check", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const entityTypeId = insertEntityType(systemId);
+      const entityId = insertEntity(systemId, entityTypeId);
+      const groupId = insertGroup(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            structureEntityId: entityId,
+            groupId,
+            systemId,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects all three subject columns set via subject_exclusivity_check", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const memberId = sqliteInsertMember(db, systemId);
+      const entityTypeId = insertEntityType(systemId);
+      const entityId = insertEntity(systemId, entityTypeId);
+      const groupId = insertGroup(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            memberId,
+            structureEntityId: entityId,
+            groupId,
+            systemId,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("restricts deletion of structure entity with dependent field values", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const entityTypeId = insertEntityType(systemId);
+      const entityId = insertEntity(systemId, entityTypeId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          structureEntityId: entityId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client.prepare("DELETE FROM system_structure_entities WHERE id = ?").run(entityId),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("restricts deletion of group with dependent field values", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const groupId = insertGroup(systemId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          groupId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() => client.prepare("DELETE FROM groups WHERE id = ?").run(groupId)).toThrow(
+        /FOREIGN KEY|constraint/i,
+      );
     });
 
     it("rejects nonexistent structureEntityId FK", () => {

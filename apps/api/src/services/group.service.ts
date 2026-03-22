@@ -1,4 +1,4 @@
-import { groupMemberships, groups } from "@pluralscape/db/pg";
+import { fieldValues, groupMemberships, groups } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CopyGroupBodySchema,
@@ -119,6 +119,12 @@ const groupHierarchy = createHierarchyService<
       entityColumn: groupMemberships.groupId,
       systemColumn: groupMemberships.systemId,
       label: "member(s)",
+    },
+    {
+      table: fieldValues,
+      entityColumn: fieldValues.groupId,
+      systemColumn: fieldValues.systemId,
+      label: "field value(s)",
     },
   ],
   events: {

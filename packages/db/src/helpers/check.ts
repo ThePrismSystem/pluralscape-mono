@@ -60,6 +60,25 @@ export function pgTimeFormatCheck(column: AnyColumn): SQL {
  * Allows NULL (SQL CHECKs pass on NULL by default; explicit IS NULL for clarity).
  * SQLite variant uses length/substr checks (no regex engine).
  */
+/**
+ * CHECK constraint: at most one of the given columns may be non-NULL.
+ * Used for polymorphic subject references (e.g., field_values can reference
+ * a member, structure entity, or group — but not more than one).
+ */
+export function exclusiveNullCheck(...columns: AnyColumn[]): SQL {
+  const cases = columns.map((col) => sql`CASE WHEN ${col} IS NOT NULL THEN 1 ELSE 0 END`);
+  return sql`(${sql.join(cases, sql` + `)}) <= 1`;
+}
+
+/**
+ * CHECK constraint: at least one of the given columns must be non-NULL.
+ * Used for subject presence (e.g., fronting sessions must reference at least one subject).
+ */
+export function atLeastOneNotNull(...columns: AnyColumn[]): SQL {
+  const ors = columns.map((col) => sql`${col} IS NOT NULL`);
+  return sql`(${sql.join(ors, sql` OR `)})`;
+}
+
 export function sqliteTimeFormatCheck(column: AnyColumn): SQL {
   return sql`${column} IS NULL OR (
     length(${column}) = 5

@@ -346,7 +346,8 @@ describe("deleteGroup", () => {
     chain.where
       .mockReturnValueOnce(chain) // existence check → chains to .limit()
       .mockResolvedValueOnce([{ count: 0 }]) // child groups count
-      .mockResolvedValueOnce([{ count: 0 }]); // memberships count
+      .mockResolvedValueOnce([{ count: 0 }]) // memberships count
+      .mockResolvedValueOnce([{ count: 0 }]); // field values count
 
     await deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
 
@@ -371,7 +372,8 @@ describe("deleteGroup", () => {
     chain.where
       .mockReturnValueOnce(chain) // existence → .limit()
       .mockResolvedValueOnce([{ count: 2 }]) // child groups
-      .mockResolvedValueOnce([{ count: 3 }]); // memberships
+      .mockResolvedValueOnce([{ count: 3 }]) // memberships
+      .mockResolvedValueOnce([{ count: 0 }]); // field values
 
     await expect(deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({
@@ -392,6 +394,7 @@ describe("deleteGroup", () => {
     // synchronously before either promise resolves.
     let resolve1!: (v: { count: number }[]) => void;
     let resolve2!: (v: { count: number }[]) => void;
+    let resolve3!: (v: { count: number }[]) => void;
 
     chain.where
       .mockReturnValueOnce(chain) // existence → .limit()
@@ -404,6 +407,11 @@ describe("deleteGroup", () => {
         new Promise<{ count: number }[]>((r) => {
           resolve2 = r;
         }),
+      )
+      .mockReturnValueOnce(
+        new Promise<{ count: number }[]>((r) => {
+          resolve3 = r;
+        }),
       );
 
     // Start deleteGroup without awaiting — sequential impl would deadlock here
@@ -414,14 +422,15 @@ describe("deleteGroup", () => {
       queueMicrotask(r);
     });
 
-    // Both dependent-check .where() calls dispatched before either resolved
-    expect(chain.where).toHaveBeenCalledTimes(3); // 1 existence + 2 dependents
+    // All dependent-check .where() calls dispatched before any resolved
+    expect(chain.where).toHaveBeenCalledTimes(4); // 1 existence + 3 dependents
 
     resolve1([{ count: 0 }]);
     resolve2([{ count: 0 }]);
+    resolve3([{ count: 0 }]);
     await done;
 
-    expect(chain.select).toHaveBeenCalledTimes(3);
+    expect(chain.select).toHaveBeenCalledTimes(4);
   });
 });
 

@@ -84,8 +84,8 @@ describe("Relationship", () => {
   it("has correct field types", () => {
     expectTypeOf<Relationship["id"]>().toEqualTypeOf<RelationshipId>();
     expectTypeOf<Relationship["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Relationship["sourceMemberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<Relationship["targetMemberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<Relationship["sourceMemberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<Relationship["targetMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<Relationship["type"]>().toEqualTypeOf<RelationshipType>();
     expectTypeOf<Relationship["label"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Relationship["bidirectional"]>().toEqualTypeOf<boolean>();

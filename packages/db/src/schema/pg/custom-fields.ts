@@ -20,7 +20,7 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, exclusiveNullCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { FIELD_DEFINITION_SCOPE_TYPES, FIELD_TYPES } from "../../helpers/enums.js";
 
@@ -112,7 +112,7 @@ export const fieldValues = pgTable(
       ),
     check(
       "field_values_subject_exclusivity_check",
-      sql`(CASE WHEN ${t.memberId} IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN ${t.structureEntityId} IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN ${t.groupId} IS NOT NULL THEN 1 ELSE 0 END) <= 1`,
+      exclusiveNullCheck(t.memberId, t.structureEntityId, t.groupId),
     ),
   ],
 );

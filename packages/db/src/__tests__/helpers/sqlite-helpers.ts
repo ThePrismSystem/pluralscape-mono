@@ -432,6 +432,7 @@ export const SQLITE_DDL = {
       parent_entity_id TEXT,
       sort_order INTEGER NOT NULL,
       created_at INTEGER NOT NULL,
+      UNIQUE (entity_id, parent_entity_id),
       FOREIGN KEY (entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
       FOREIGN KEY (parent_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT
     )
@@ -439,7 +440,8 @@ export const SQLITE_DDL = {
   systemStructureEntityLinksIndexes: `
     CREATE INDEX system_structure_entity_links_entity_id_idx ON system_structure_entity_links (entity_id);
     CREATE INDEX system_structure_entity_links_parent_entity_id_idx ON system_structure_entity_links (parent_entity_id);
-    CREATE INDEX system_structure_entity_links_system_id_idx ON system_structure_entity_links (system_id)
+    CREATE INDEX system_structure_entity_links_system_id_idx ON system_structure_entity_links (system_id);
+    CREATE UNIQUE INDEX system_structure_entity_links_entity_root_uniq ON system_structure_entity_links (entity_id) WHERE parent_entity_id IS NULL
   `,
   systemStructureEntityMemberLinks: `
     CREATE TABLE system_structure_entity_member_links (
@@ -449,6 +451,7 @@ export const SQLITE_DDL = {
       member_id TEXT NOT NULL,
       sort_order INTEGER NOT NULL,
       created_at INTEGER NOT NULL,
+      UNIQUE (member_id, parent_entity_id),
       FOREIGN KEY (parent_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
       FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
     )
@@ -456,7 +459,8 @@ export const SQLITE_DDL = {
   systemStructureEntityMemberLinksIndexes: `
     CREATE INDEX system_structure_entity_member_links_parent_entity_id_idx ON system_structure_entity_member_links (parent_entity_id);
     CREATE INDEX system_structure_entity_member_links_member_id_idx ON system_structure_entity_member_links (member_id);
-    CREATE INDEX system_structure_entity_member_links_system_id_idx ON system_structure_entity_member_links (system_id)
+    CREATE INDEX system_structure_entity_member_links_system_id_idx ON system_structure_entity_member_links (system_id);
+    CREATE UNIQUE INDEX system_structure_entity_member_links_member_root_uniq ON system_structure_entity_member_links (member_id) WHERE parent_entity_id IS NULL
   `,
   systemStructureEntityAssociations: `
     CREATE TABLE system_structure_entity_associations (

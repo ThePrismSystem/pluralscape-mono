@@ -1108,6 +1108,154 @@ describe("SQLite structure schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("enforces unique (entityId, parentEntityId)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const parentEntityId = crypto.randomUUID();
+      const childEntityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values([
+          {
+            id: parentEntityId,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 0,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: childEntityId,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 1,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run();
+
+      db.insert(systemStructureEntityLinks)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityId: childEntityId,
+          parentEntityId,
+          sortOrder: 0,
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(systemStructureEntityLinks)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            entityId: childEntityId,
+            parentEntityId,
+            sortOrder: 1,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("enforces unique entityId at root (parentEntityId = null)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values({
+          id: entityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(systemStructureEntityLinks)
+        .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 0, createdAt: now })
+        .run();
+
+      expect(() =>
+        db
+          .insert(systemStructureEntityLinks)
+          .values({ id: crypto.randomUUID(), systemId, entityId, sortOrder: 1, createdAt: now })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const linkId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values({
+          id: entityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntityLinks)
+        .values({ id: linkId, systemId, entityId, sortOrder: 0, createdAt: now })
+        .run();
+
+      client.prepare("DELETE FROM systems WHERE id = ?").run(systemId);
+      const rows = client
+        .prepare("SELECT * FROM system_structure_entity_links WHERE id = ?")
+        .all(linkId);
+      expect(rows).toHaveLength(0);
+    });
   });
 
   // ── Structure Entity Member Links ──────────────────────────────────
@@ -1203,6 +1351,137 @@ describe("SQLite structure schema", () => {
       expect(() => db.delete(members).where(eq(members.id, memberId)).run()).toThrow(
         /FOREIGN KEY|constraint/i,
       );
+    });
+
+    it("enforces unique (memberId, parentEntityId)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values({
+          id: entityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(systemStructureEntityMemberLinks)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          memberId,
+          parentEntityId: entityId,
+          sortOrder: 0,
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(systemStructureEntityMemberLinks)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            memberId,
+            parentEntityId: entityId,
+            sortOrder: 1,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("enforces unique memberId at root (parentEntityId = null)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const now = Date.now();
+
+      db.insert(systemStructureEntityMemberLinks)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          memberId,
+          sortOrder: 0,
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(systemStructureEntityMemberLinks)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            memberId,
+            sortOrder: 1,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const linkId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityMemberLinks)
+        .values({
+          id: linkId,
+          systemId,
+          memberId,
+          sortOrder: 0,
+          createdAt: now,
+        })
+        .run();
+
+      client.prepare("DELETE FROM systems WHERE id = ?").run(systemId);
+      const rows = client
+        .prepare("SELECT * FROM system_structure_entity_member_links WHERE id = ?")
+        .all(linkId);
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent parentEntityId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(systemStructureEntityMemberLinks)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            memberId,
+            parentEntityId: "nonexistent",
+            sortOrder: 0,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 
@@ -1389,6 +1668,64 @@ describe("SQLite structure schema", () => {
       expect(() =>
         db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, entityId1)).run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId1 = crypto.randomUUID();
+      const entityId2 = crypto.randomUUID();
+      const assocId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values([
+          {
+            id: entityId1,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 0,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: entityId2,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 1,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run();
+      db.insert(systemStructureEntityAssociations)
+        .values({
+          id: assocId,
+          systemId,
+          sourceEntityId: entityId1,
+          targetEntityId: entityId2,
+          createdAt: now,
+        })
+        .run();
+
+      client.prepare("DELETE FROM systems WHERE id = ?").run(systemId);
+      const rows = client
+        .prepare("SELECT * FROM system_structure_entity_associations WHERE id = ?")
+        .all(assocId);
+      expect(rows).toHaveLength(0);
     });
 
     it("rejects self-referential association", () => {

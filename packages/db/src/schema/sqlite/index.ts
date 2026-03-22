@@ -123,7 +123,7 @@ export type {
   NewSystemStructureEntityLink,
   SystemStructureEntityMemberLinkRow,
   NewSystemStructureEntityMemberLink,
-  SystemStructureEntityAssociationRow as DbSystemStructureEntityAssociationRow,
+  SystemStructureEntityAssociationRow,
   NewSystemStructureEntityAssociation,
 } from "./structure.js";
 

@@ -9,6 +9,7 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
+import { atLeastOneNotNull } from "../../helpers/check.js";
 
 import { members } from "./members.js";
 import { systemStructureEntities } from "./structure.js";
@@ -92,7 +93,7 @@ export const frontingSessions = sqliteTable(
     // before that subject can be deleted. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
     check(
       "fronting_sessions_subject_check",
-      sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL OR ${t.structureEntityId} IS NOT NULL`,
+      atLeastOneNotNull(t.memberId, t.customFrontId, t.structureEntityId),
     ),
   ],
 );

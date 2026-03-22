@@ -1054,6 +1054,149 @@ describe("PG structure schema", () => {
         db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, parentEntityId)),
       ).rejects.toThrow();
     });
+
+    it("enforces unique (entityId, parentEntityId)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const parentEntityId = crypto.randomUUID();
+      const childEntityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: parentEntityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: childEntityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+
+      await db.insert(systemStructureEntityLinks).values({
+        id: crypto.randomUUID(),
+        systemId,
+        entityId: childEntityId,
+        parentEntityId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      await expect(
+        db.insert(systemStructureEntityLinks).values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityId: childEntityId,
+          parentEntityId,
+          sortOrder: 1,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("enforces unique entityId at root (parentEntityId = null)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(systemStructureEntityLinks).values({
+        id: crypto.randomUUID(),
+        systemId,
+        entityId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      await expect(
+        db.insert(systemStructureEntityLinks).values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityId,
+          sortOrder: 1,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const linkId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntityLinks).values({
+        id: linkId,
+        systemId,
+        entityId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      await client.query("DELETE FROM systems WHERE id = $1", [systemId]);
+      const result = await client.query(
+        "SELECT * FROM system_structure_entity_links WHERE id = $1",
+        [linkId],
+      );
+      expect(result.rows).toHaveLength(0);
+    });
   });
 
   // ── Structure Entity Member Links ──────────────────────────────────
@@ -1135,6 +1278,119 @@ describe("PG structure schema", () => {
       });
 
       await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
+    });
+
+    it("enforces unique (memberId, parentEntityId)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(systemStructureEntityMemberLinks).values({
+        id: crypto.randomUUID(),
+        systemId,
+        memberId,
+        parentEntityId: entityId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      await expect(
+        db.insert(systemStructureEntityMemberLinks).values({
+          id: crypto.randomUUID(),
+          systemId,
+          memberId,
+          parentEntityId: entityId,
+          sortOrder: 1,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("enforces unique memberId at root (parentEntityId = null)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityMemberLinks).values({
+        id: crypto.randomUUID(),
+        systemId,
+        memberId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      await expect(
+        db.insert(systemStructureEntityMemberLinks).values({
+          id: crypto.randomUUID(),
+          systemId,
+          memberId,
+          sortOrder: 1,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const linkId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityMemberLinks).values({
+        id: linkId,
+        systemId,
+        memberId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      await client.query("DELETE FROM systems WHERE id = $1", [systemId]);
+      const result = await client.query(
+        "SELECT * FROM system_structure_entity_member_links WHERE id = $1",
+        [linkId],
+      );
+      expect(result.rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent parentEntityId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(systemStructureEntityMemberLinks).values({
+          id: crypto.randomUUID(),
+          systemId,
+          memberId,
+          parentEntityId: "nonexistent",
+          sortOrder: 0,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -1332,6 +1588,59 @@ describe("PG structure schema", () => {
       await expect(
         db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, entityId1)),
       ).rejects.toThrow();
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId1 = crypto.randomUUID();
+      const entityId2 = crypto.randomUUID();
+      const assocId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: entityId1,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: entityId2,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+      await db.insert(systemStructureEntityAssociations).values({
+        id: assocId,
+        systemId,
+        sourceEntityId: entityId1,
+        targetEntityId: entityId2,
+        createdAt: now,
+      });
+
+      await client.query("DELETE FROM systems WHERE id = $1", [systemId]);
+      const result = await client.query(
+        "SELECT * FROM system_structure_entity_associations WHERE id = $1",
+        [assocId],
+      );
+      expect(result.rows).toHaveLength(0);
     });
   });
 });

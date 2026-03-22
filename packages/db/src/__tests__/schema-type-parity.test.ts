@@ -797,6 +797,9 @@ const KNOWN_PG_ONLY_INDEXES = new Set([
 const KNOWN_SQLITE_ONLY_INDEXES = new Set([
   // SQLite uses system_id-prefixed seq index (integer, not serial)
   "sync_queue_system_id_seq_idx",
+  // SQLite uses partial unique indexes to emulate PG's nullsNotDistinct on UNIQUE constraints
+  "system_structure_entity_links_entity_root_uniq",
+  "system_structure_entity_member_links_member_root_uniq",
 ]);
 
 /**

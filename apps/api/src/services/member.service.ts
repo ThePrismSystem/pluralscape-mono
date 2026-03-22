@@ -694,49 +694,53 @@ export async function listAllMemberMemberships(
 ): Promise<MemberMembershipsResult> {
   assertSystemOwnership(systemId, auth);
 
-  // Verify member exists
-  const [member] = await db
-    .select({ id: members.id })
-    .from(members)
-    .where(
-      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
-    )
-    .limit(1);
-
-  if (!member) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
-  }
-
-  // Query all structure types in parallel
-  const [groupRows, entityMemberRows] = await Promise.all([
-    db
-      .select()
-      .from(groupMemberships)
-      .where(and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId))),
-    db
-      .select()
-      .from(systemStructureEntityMemberLinks)
+  return db.transaction(async (tx) => {
+    // Verify member exists
+    const [member] = await tx
+      .select({ id: members.id })
+      .from(members)
       .where(
-        and(
-          eq(systemStructureEntityMemberLinks.memberId, memberId),
-          eq(systemStructureEntityMemberLinks.systemId, systemId),
-        ),
-      ),
-  ]);
+        and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+      )
+      .limit(1);
 
-  return {
-    groups: groupRows.map((r) => ({
-      groupId: r.groupId as GroupId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-    structureEntities: entityMemberRows.map((r) => ({
-      id: r.id,
-      parentEntityId: r.parentEntityId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-  };
+    if (!member) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
+
+    // Query all structure types in parallel
+    const [groupRows, entityMemberRows] = await Promise.all([
+      tx
+        .select()
+        .from(groupMemberships)
+        .where(
+          and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId)),
+        ),
+      tx
+        .select()
+        .from(systemStructureEntityMemberLinks)
+        .where(
+          and(
+            eq(systemStructureEntityMemberLinks.memberId, memberId),
+            eq(systemStructureEntityMemberLinks.systemId, systemId),
+          ),
+        ),
+    ]);
+
+    return {
+      groups: groupRows.map((r) => ({
+        groupId: r.groupId as GroupId,
+        memberId: r.memberId as MemberId,
+        systemId: r.systemId as SystemId,
+        createdAt: toUnixMillis(r.createdAt),
+      })),
+      structureEntities: entityMemberRows.map((r) => ({
+        id: r.id,
+        parentEntityId: r.parentEntityId,
+        memberId: r.memberId as MemberId,
+        systemId: r.systemId as SystemId,
+        createdAt: toUnixMillis(r.createdAt),
+      })),
+    };
+  });
 }

@@ -19,7 +19,7 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, exclusiveNullCheck } from "../../helpers/check.js";
 import { FIELD_DEFINITION_SCOPE_TYPES, FIELD_TYPES } from "../../helpers/enums.js";
 
 import { groups } from "./groups.js";
@@ -108,7 +108,7 @@ export const fieldValues = sqliteTable(
       ),
     check(
       "field_values_subject_exclusivity_check",
-      sql`(CASE WHEN ${t.memberId} IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN ${t.structureEntityId} IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN ${t.groupId} IS NOT NULL THEN 1 ELSE 0 END) <= 1`,
+      exclusiveNullCheck(t.memberId, t.structureEntityId, t.groupId),
     ),
   ],
 );
@@ -165,6 +165,9 @@ export const fieldDefinitionScopes = sqliteTable(
       sql`${t.scopeEntityTypeId} IS NULL OR ${t.scopeType} = 'structure-entity-type'`,
     ),
     index("field_definition_scopes_system_id_idx").on(t.systemId),
+    // SQLite does not support nullsNotDistinct on UNIQUE constraints.
+    // The adjacent partial unique index (field_definition_scopes_definition_scope_null_uniq)
+    // provides equivalent behavior for NULL scopeEntityTypeId values.
     unique("field_definition_scopes_definition_scope_uniq").on(
       t.fieldDefinitionId,
       t.scopeType,

@@ -123,9 +123,11 @@ export const systemStructureEntityLinks = pgTable(
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
-    index("system_structure_entity_links_entity_id_idx").on(t.entityId),
-    index("system_structure_entity_links_parent_entity_id_idx").on(t.parentEntityId),
-    index("system_structure_entity_links_system_id_idx").on(t.systemId),
+    index("system_structure_entity_links_system_entity_idx").on(t.systemId, t.entityId),
+    index("system_structure_entity_links_system_parent_idx").on(t.systemId, t.parentEntityId),
+    unique("system_structure_entity_links_entity_parent_uniq")
+      .on(t.entityId, t.parentEntityId)
+      .nullsNotDistinct(),
     foreignKey({
       columns: [t.entityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
@@ -150,9 +152,14 @@ export const systemStructureEntityMemberLinks = pgTable(
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
-    index("system_structure_entity_member_links_parent_entity_id_idx").on(t.parentEntityId),
-    index("system_structure_entity_member_links_member_id_idx").on(t.memberId),
-    index("system_structure_entity_member_links_system_id_idx").on(t.systemId),
+    index("system_structure_entity_member_links_system_member_idx").on(t.systemId, t.memberId),
+    index("system_structure_entity_member_links_system_parent_idx").on(
+      t.systemId,
+      t.parentEntityId,
+    ),
+    unique("system_structure_entity_member_links_member_parent_uniq")
+      .on(t.memberId, t.parentEntityId)
+      .nullsNotDistinct(),
     foreignKey({
       columns: [t.parentEntityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
@@ -164,6 +171,12 @@ export const systemStructureEntityMemberLinks = pgTable(
   ],
 );
 
+/**
+ * Directed associations between structure entities (source → target).
+ * The unique constraint on (sourceEntityId, targetEntityId) intentionally allows
+ * both (A, B) and (B, A) as distinct associations. Application-level logic should
+ * enforce ordering if undirected semantics are desired.
+ */
 export const systemStructureEntityAssociations = pgTable(
   "system_structure_entity_associations",
   {
@@ -177,9 +190,14 @@ export const systemStructureEntityAssociations = pgTable(
   },
   (t) => [
     unique("system_structure_entity_associations_uniq").on(t.sourceEntityId, t.targetEntityId),
-    index("system_structure_entity_associations_source_idx").on(t.sourceEntityId),
-    index("system_structure_entity_associations_target_idx").on(t.targetEntityId),
-    index("system_structure_entity_associations_system_id_idx").on(t.systemId),
+    index("system_structure_entity_associations_system_source_idx").on(
+      t.systemId,
+      t.sourceEntityId,
+    ),
+    index("system_structure_entity_associations_system_target_idx").on(
+      t.systemId,
+      t.targetEntityId,
+    ),
     foreignKey({
       columns: [t.sourceEntityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],

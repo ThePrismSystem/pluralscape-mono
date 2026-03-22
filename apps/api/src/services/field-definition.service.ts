@@ -1,5 +1,10 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
-import { fieldBucketVisibility, fieldDefinitions, fieldValues } from "@pluralscape/db/pg";
+import {
+  fieldBucketVisibility,
+  fieldDefinitionScopes,
+  fieldDefinitions,
+  fieldValues,
+} from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CreateFieldDefinitionBodySchema,
@@ -485,7 +490,7 @@ export async function deleteFieldDefinition(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
     }
 
-    const [[valueCount], [visibilityCount]] = await Promise.all([
+    const [[valueCount], [visibilityCount], [scopeCount]] = await Promise.all([
       tx
         .select({ count: count() })
         .from(fieldValues)
@@ -499,17 +504,27 @@ export async function deleteFieldDefinition(
             eq(fieldBucketVisibility.systemId, systemId),
           ),
         ),
+      tx
+        .select({ count: count() })
+        .from(fieldDefinitionScopes)
+        .where(
+          and(
+            eq(fieldDefinitionScopes.fieldDefinitionId, fieldId),
+            eq(fieldDefinitionScopes.systemId, systemId),
+          ),
+        ),
     ]);
 
-    if (!valueCount || !visibilityCount) {
+    if (!valueCount || !visibilityCount || !scopeCount) {
       throw new Error("Unexpected: count query returned no rows");
     }
 
-    type FieldDefinitionDependentType = "fieldValues" | "bucketVisibility";
+    type FieldDefinitionDependentType = "fieldValues" | "bucketVisibility" | "scopes";
     const dependents: { type: FieldDefinitionDependentType; count: number }[] = [];
     if (valueCount.count > 0) dependents.push({ type: "fieldValues", count: valueCount.count });
     if (visibilityCount.count > 0)
       dependents.push({ type: "bucketVisibility", count: visibilityCount.count });
+    if (scopeCount.count > 0) dependents.push({ type: "scopes", count: scopeCount.count });
 
     if (dependents.length > 0 && !force) {
       throw new ApiHttpError(
@@ -537,6 +552,16 @@ export async function deleteFieldDefinition(
                 and(
                   eq(fieldBucketVisibility.fieldDefinitionId, fieldId),
                   eq(fieldBucketVisibility.systemId, systemId),
+                ),
+              )
+          : Promise.resolve(),
+        scopeCount.count > 0
+          ? tx
+              .delete(fieldDefinitionScopes)
+              .where(
+                and(
+                  eq(fieldDefinitionScopes.fieldDefinitionId, fieldId),
+                  eq(fieldDefinitionScopes.systemId, systemId),
                 ),
               )
           : Promise.resolve(),

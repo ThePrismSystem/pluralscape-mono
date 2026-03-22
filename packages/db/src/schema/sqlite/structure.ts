@@ -7,6 +7,7 @@ import {
   sqliteTable,
   text,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
@@ -119,9 +120,12 @@ export const systemStructureEntityLinks = sqliteTable(
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
-    index("system_structure_entity_links_entity_id_idx").on(t.entityId),
-    index("system_structure_entity_links_parent_entity_id_idx").on(t.parentEntityId),
-    index("system_structure_entity_links_system_id_idx").on(t.systemId),
+    index("system_structure_entity_links_system_entity_idx").on(t.systemId, t.entityId),
+    index("system_structure_entity_links_system_parent_idx").on(t.systemId, t.parentEntityId),
+    unique("system_structure_entity_links_entity_parent_uniq").on(t.entityId, t.parentEntityId),
+    uniqueIndex("system_structure_entity_links_entity_root_uniq")
+      .on(t.entityId)
+      .where(sql`${t.parentEntityId} IS NULL`),
     foreignKey({
       columns: [t.entityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
@@ -146,9 +150,18 @@ export const systemStructureEntityMemberLinks = sqliteTable(
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
-    index("system_structure_entity_member_links_parent_entity_id_idx").on(t.parentEntityId),
-    index("system_structure_entity_member_links_member_id_idx").on(t.memberId),
-    index("system_structure_entity_member_links_system_id_idx").on(t.systemId),
+    index("system_structure_entity_member_links_system_member_idx").on(t.systemId, t.memberId),
+    index("system_structure_entity_member_links_system_parent_idx").on(
+      t.systemId,
+      t.parentEntityId,
+    ),
+    unique("system_structure_entity_member_links_member_parent_uniq").on(
+      t.memberId,
+      t.parentEntityId,
+    ),
+    uniqueIndex("system_structure_entity_member_links_member_root_uniq")
+      .on(t.memberId)
+      .where(sql`${t.parentEntityId} IS NULL`),
     foreignKey({
       columns: [t.parentEntityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
@@ -160,6 +173,12 @@ export const systemStructureEntityMemberLinks = sqliteTable(
   ],
 );
 
+/**
+ * Directed associations between structure entities (source → target).
+ * The unique constraint on (sourceEntityId, targetEntityId) intentionally allows
+ * both (A, B) and (B, A) as distinct associations. Application-level logic should
+ * enforce ordering if undirected semantics are desired.
+ */
 export const systemStructureEntityAssociations = sqliteTable(
   "system_structure_entity_associations",
   {
@@ -173,9 +192,14 @@ export const systemStructureEntityAssociations = sqliteTable(
   },
   (t) => [
     unique("system_structure_entity_associations_uniq").on(t.sourceEntityId, t.targetEntityId),
-    index("system_structure_entity_associations_source_idx").on(t.sourceEntityId),
-    index("system_structure_entity_associations_target_idx").on(t.targetEntityId),
-    index("system_structure_entity_associations_system_id_idx").on(t.systemId),
+    index("system_structure_entity_associations_system_source_idx").on(
+      t.systemId,
+      t.sourceEntityId,
+    ),
+    index("system_structure_entity_associations_system_target_idx").on(
+      t.systemId,
+      t.targetEntityId,
+    ),
     foreignKey({
       columns: [t.sourceEntityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],

@@ -39,7 +39,7 @@ describe("FrontingSession", () => {
   it("has shared fields on both variants", () => {
     expectTypeOf<ActiveFrontingSession["id"]>().toEqualTypeOf<FrontingSessionId>();
     expectTypeOf<ActiveFrontingSession["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ActiveFrontingSession["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<ActiveFrontingSession["memberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<ActiveFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<ActiveFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ActiveFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
@@ -53,7 +53,7 @@ describe("FrontingSession", () => {
   it("CompletedFrontingSession has individual field types", () => {
     expectTypeOf<CompletedFrontingSession["id"]>().toEqualTypeOf<FrontingSessionId>();
     expectTypeOf<CompletedFrontingSession["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<CompletedFrontingSession["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<CompletedFrontingSession["memberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<CompletedFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CompletedFrontingSession["endTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CompletedFrontingSession["comment"]>().toEqualTypeOf<string | null>();
@@ -176,6 +176,6 @@ describe("ArchivedFrontingSession", () => {
   it("preserves core FrontingSession fields", () => {
     expectTypeOf<ArchivedFrontingSession["id"]>().toEqualTypeOf<FrontingSessionId>();
     expectTypeOf<ArchivedFrontingSession["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ArchivedFrontingSession["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<ArchivedFrontingSession["memberId"]>().toEqualTypeOf<MemberId | null>();
   });
 });
