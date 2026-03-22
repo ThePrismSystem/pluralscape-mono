@@ -296,7 +296,7 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
           endTime: null,
           comment: null,
           customFrontId: null,
-          linkedStructure: null,
+          structureEntityId: null,
           positionality: null,
           outtrigger: null,
           outtriggerSentiment: null,

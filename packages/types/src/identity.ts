@@ -135,7 +135,7 @@ export interface SystemDuplicationScope {
   readonly photos: boolean;
   readonly customFields: boolean;
   readonly groups: boolean;
-  /** Subsystems, side systems, layers, memberships, and cross-structure links. */
+  /** Structure entity types, entities, links, member links, and associations. */
   readonly structure: boolean;
   readonly relationships: boolean;
   readonly frontingHistory: boolean;

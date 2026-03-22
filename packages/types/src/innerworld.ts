@@ -2,11 +2,9 @@ import type {
   HexColor,
   InnerWorldEntityId,
   InnerWorldRegionId,
-  LayerId,
   MemberId,
-  SideSystemId,
-  SubsystemId,
   SystemId,
+  SystemStructureEntityId,
 } from "./ids.js";
 import type { ImageSource } from "./image-source.js";
 import type { Archived, AuditMetadata } from "./utility.js";
@@ -47,31 +45,14 @@ export interface LandmarkEntity extends InnerWorldEntityBase {
   readonly description: string | null;
 }
 
-/** An innerworld entity representing a subsystem. */
-export interface SubsystemEntity extends InnerWorldEntityBase {
-  readonly entityType: "subsystem";
-  readonly linkedSubsystemId: SubsystemId;
-}
-
-/** An innerworld entity representing a side system. */
-export interface SideSystemEntity extends InnerWorldEntityBase {
-  readonly entityType: "side-system";
-  readonly linkedSideSystemId: SideSystemId;
-}
-
-/** An innerworld entity representing a layer. */
-export interface LayerEntity extends InnerWorldEntityBase {
-  readonly entityType: "layer";
-  readonly linkedLayerId: LayerId;
+/** Linked to a system structure entity. */
+export interface StructureEntityEntity extends InnerWorldEntityBase {
+  readonly entityType: "structure-entity";
+  readonly linkedStructureEntityId: SystemStructureEntityId;
 }
 
 /** All innerworld entity variants — discriminated on entityType. */
-export type InnerWorldEntity =
-  | MemberEntity
-  | LandmarkEntity
-  | SubsystemEntity
-  | SideSystemEntity
-  | LayerEntity;
+export type InnerWorldEntity = MemberEntity | LandmarkEntity | StructureEntityEntity;
 
 /** An archived innerworld entity. */
 export type ArchivedInnerWorldEntity = Archived<InnerWorldEntity>;

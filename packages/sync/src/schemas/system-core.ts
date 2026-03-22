@@ -94,52 +94,32 @@ export interface CrdtGroup extends CrdtAuditFields {
 
 // ── structure ────────────────────────────────────────────────────────
 
-/** CRDT representation of a Subsystem (LWW map, keyed by SubsystemId). */
-export interface CrdtSubsystem extends CrdtAuditFields {
+/** CRDT representation of a SystemStructureEntityType (LWW map). */
+export interface CrdtStructureEntityType extends CrdtAuditFields {
   id: CrdtString;
   systemId: CrdtString;
   name: CrdtString;
   description: CrdtOptionalString;
-  parentSubsystemId: CrdtOptionalString;
-  /** JSON-serialized ArchitectureType | null */
-  architectureType: CrdtOptionalString;
-  hasCore: boolean;
-  /** DiscoveryStatus string */
-  discoveryStatus: CrdtString;
   color: CrdtOptionalString;
   /** JSON-serialized ImageSource | null */
   imageSource: CrdtOptionalString;
   emoji: CrdtOptionalString;
+  sortOrder: number;
   archived: boolean;
 }
 
-/** CRDT representation of a SideSystem (LWW map, keyed by SideSystemId). */
-export interface CrdtSideSystem extends CrdtAuditFields {
+/** CRDT representation of a SystemStructureEntity (LWW map). */
+export interface CrdtStructureEntity extends CrdtAuditFields {
   id: CrdtString;
   systemId: CrdtString;
+  entityTypeId: CrdtString;
   name: CrdtString;
   description: CrdtOptionalString;
   color: CrdtOptionalString;
   /** JSON-serialized ImageSource | null */
   imageSource: CrdtOptionalString;
   emoji: CrdtOptionalString;
-  archived: boolean;
-}
-
-/** CRDT representation of a Layer (LWW map, keyed by LayerId). */
-export interface CrdtLayer extends CrdtAuditFields {
-  id: CrdtString;
-  systemId: CrdtString;
-  name: CrdtString;
-  description: CrdtOptionalString;
-  /** LayerAccessType string: "open" | "gatekept" */
-  accessType: CrdtString;
-  /** JSON-serialized MemberId[] */
-  gatekeeperMemberIds: CrdtString;
-  color: CrdtOptionalString;
-  /** JSON-serialized ImageSource | null */
-  imageSource: CrdtOptionalString;
-  emoji: CrdtOptionalString;
+  sortOrder: number;
   archived: boolean;
 }
 
@@ -217,12 +197,8 @@ export interface CrdtInnerWorldEntity extends CrdtAuditFields {
   // Discriminator-specific fields (null when not applicable)
   /** "member" type only — linked MemberId */
   linkedMemberId: CrdtOptionalString;
-  /** "subsystem" type only — linked SubsystemId */
-  linkedSubsystemId: CrdtOptionalString;
-  /** "side-system" type only — linked SideSystemId */
-  linkedSideSystemId: CrdtOptionalString;
-  /** "layer" type only — linked LayerId */
-  linkedLayerId: CrdtOptionalString;
+  /** "structure-entity" type only — linked SystemStructureEntityId */
+  linkedStructureEntityId: CrdtOptionalString;
   /** "landmark" type only */
   name: CrdtOptionalString;
   /** "landmark" type only */
@@ -287,8 +263,8 @@ export interface CrdtLifecycleEvent {
  * Automerge document schema for the system-core document.
  *
  * Contains the structural definition of a system — member profiles, groups,
- * subsystems, layers, relationships, custom fronts, field definitions, settings,
- * innerworld, timers, junctions, and lifecycle events.
+ * structure entity types, structure entities, relationships, custom fronts,
+ * field definitions, settings, innerworld, timers, junctions, and lifecycle events.
  *
  * Encryption key: Master key
  * Naming: system-core-{systemId}
@@ -302,9 +278,8 @@ export interface SystemCoreDocument {
   members: Record<string, CrdtMember>;
   memberPhotos: Record<string, CrdtMemberPhoto>;
   groups: Record<string, CrdtGroup>;
-  subsystems: Record<string, CrdtSubsystem>;
-  sideSystems: Record<string, CrdtSideSystem>;
-  layers: Record<string, CrdtLayer>;
+  structureEntityTypes: Record<string, CrdtStructureEntityType>;
+  structureEntities: Record<string, CrdtStructureEntity>;
   relationships: Record<string, CrdtRelationship>;
   customFronts: Record<string, CrdtCustomFront>;
   fieldDefinitions: Record<string, CrdtFieldDefinition>;
@@ -319,18 +294,12 @@ export interface SystemCoreDocument {
    */
   /** Key format: "{groupId}_{memberId}" */
   groupMemberships: Record<string, true>;
-  /** Key format: "{subsystemId}_{memberId}" */
-  subsystemMemberships: Record<string, true>;
-  /** Key format: "{sideSystemId}_{memberId}" */
-  sideSystemMemberships: Record<string, true>;
-  /** Key format: "{layerId}_{memberId}" */
-  layerMemberships: Record<string, true>;
-  /** Key format: "{subsystemId}_{layerId}" */
-  subsystemLayerLinks: Record<string, true>;
-  /** Key format: "{subsystemId}_{sideSystemId}" */
-  subsystemSideSystemLinks: Record<string, true>;
-  /** Key format: "{sideSystemId}_{layerId}" */
-  sideSystemLayerLinks: Record<string, true>;
+  /** Key format: "{entityId}_{parentEntityId}" */
+  structureEntityLinks: Record<string, true>;
+  /** Key format: "{entityId}_{memberId}" */
+  structureEntityMemberLinks: Record<string, true>;
+  /** Key format: "{sourceEntityId}_{targetEntityId}" */
+  structureEntityAssociations: Record<string, true>;
 
   /** Append-only lifecycle event log */
   lifecycleEvents: CrdtLifecycleEvent[];

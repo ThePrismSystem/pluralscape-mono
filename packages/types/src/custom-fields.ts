@@ -1,4 +1,14 @@
-import type { BucketId, FieldDefinitionId, FieldValueId, MemberId, SystemId } from "./ids.js";
+import type {
+  BucketId,
+  FieldDefinitionId,
+  FieldDefinitionScopeId,
+  FieldValueId,
+  GroupId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "./ids.js";
 import type { Archived, AuditMetadata } from "./utility.js";
 
 /** The supported field types for custom fields (single source of truth). */
@@ -21,6 +31,18 @@ export interface FieldBucketVisibility {
   readonly bucketId: BucketId;
 }
 
+/** The entity scope a field definition applies to. */
+export type FieldDefinitionScopeType = "system" | "member" | "group" | "structure-entity-type";
+
+/** A scope binding for a field definition, controlling which entity types it applies to. */
+export interface FieldDefinitionScope {
+  readonly id: FieldDefinitionScopeId;
+  readonly fieldDefinitionId: FieldDefinitionId;
+  readonly scopeType: FieldDefinitionScopeType;
+  /** The specific structure entity type this scope targets. Null means all entity types when scopeType is "structure-entity-type". */
+  readonly scopeEntityTypeId: SystemStructureEntityTypeId | null;
+}
+
 /** A user-defined custom field definition. */
 export interface FieldDefinition extends AuditMetadata {
   readonly id: FieldDefinitionId;
@@ -38,11 +60,13 @@ export interface FieldDefinition extends AuditMetadata {
 /** An archived field definition. */
 export type ArchivedFieldDefinition = Archived<FieldDefinition>;
 
-/** A value stored for a specific field on a member. */
+/** A value stored for a specific field on an entity. */
 export interface FieldValue extends AuditMetadata {
   readonly id: FieldValueId;
   readonly fieldDefinitionId: FieldDefinitionId;
   readonly memberId: MemberId;
+  readonly structureEntityId: SystemStructureEntityId | null;
+  readonly groupId: GroupId | null;
   readonly value: FieldValueUnion;
 }
 

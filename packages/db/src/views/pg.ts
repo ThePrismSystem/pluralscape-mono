@@ -15,14 +15,10 @@ import { frontingComments, frontingSessions } from "../schema/pg/fronting.js";
 import { groupMemberships } from "../schema/pg/groups.js";
 import { deviceTokens } from "../schema/pg/notifications.js";
 import { friendConnections } from "../schema/pg/privacy.js";
-import {
-  sideSystemLayerLinks,
-  subsystemLayerLinks,
-  subsystemSideSystemLinks,
-} from "../schema/pg/structure.js";
+import { systemStructureEntityAssociations } from "../schema/pg/structure.js";
 import { webhookDeliveries } from "../schema/pg/webhooks.js";
 
-import { mapCrossLinkRow } from "./mappers.js";
+import { mapStructureEntityAssociationRow as mapAssociationRow } from "./mappers.js";
 
 import type {
   ActiveApiKey,
@@ -35,7 +31,7 @@ import type {
   MemberGroupSummary,
   PendingFriendRequest,
   PendingWebhookRetry,
-  StructureCrossLink,
+  StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
@@ -247,32 +243,22 @@ export async function getActiveDeviceTransfers(
     );
 }
 
-/** Get all structure cross-links (UNION of subsystem-layer, subsystem-side-system, side-system-layer). */
-export async function getStructureCrossLinks(
+/** Get all structure entity associations for a system. */
+export async function getStructureEntityAssociations(
   db: PgDb,
   systemId: string,
-): Promise<StructureCrossLink[]> {
-  interface PgCrossLinkRow {
-    id: string;
-    system_id: string;
-    link_type: string;
-    source_id: string;
-    target_id: string;
-    created_at: string;
-  }
-  const result: { rows: PgCrossLinkRow[] } = (await db.execute(sql`
-    SELECT id, system_id, 'subsystem-layer' as link_type, subsystem_id as source_id, layer_id as target_id, created_at
-    FROM ${subsystemLayerLinks}
-    WHERE system_id = ${systemId}
-    UNION ALL
-    SELECT id, system_id, 'subsystem-side-system' as link_type, subsystem_id as source_id, side_system_id as target_id, created_at
-    FROM ${subsystemSideSystemLinks}
-    WHERE system_id = ${systemId}
-    UNION ALL
-    SELECT id, system_id, 'side-system-layer' as link_type, side_system_id as source_id, layer_id as target_id, created_at
-    FROM ${sideSystemLayerLinks}
-    WHERE system_id = ${systemId}
-  `)) as { rows: PgCrossLinkRow[] };
-  const { rows } = result;
-  return rows.map(mapCrossLinkRow);
+): Promise<StructureEntityAssociationRow[]> {
+  const rows = await db
+    .select()
+    .from(systemStructureEntityAssociations)
+    .where(eq(systemStructureEntityAssociations.systemId, systemId));
+  return rows.map((r) =>
+    mapAssociationRow({
+      id: r.id,
+      system_id: r.systemId,
+      source_entity_id: r.sourceEntityId,
+      target_entity_id: r.targetEntityId,
+      created_at: r.createdAt,
+    }),
+  );
 }

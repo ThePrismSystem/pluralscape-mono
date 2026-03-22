@@ -92,35 +92,28 @@ describe("AuditEventType", () => {
         case "field-value.set":
         case "field-value.updated":
         case "field-value.deleted":
-        case "subsystem.created":
-        case "subsystem.updated":
-        case "subsystem.archived":
-        case "subsystem.restored":
-        case "subsystem.deleted":
-        case "side-system.created":
-        case "side-system.updated":
-        case "side-system.archived":
-        case "side-system.restored":
-        case "side-system.deleted":
-        case "layer.created":
-        case "layer.updated":
-        case "layer.archived":
-        case "layer.restored":
-        case "layer.deleted":
+        case "structure-entity-type.created":
+        case "structure-entity-type.updated":
+        case "structure-entity-type.archived":
+        case "structure-entity-type.restored":
+        case "structure-entity-type.deleted":
+        case "structure-entity.created":
+        case "structure-entity.updated":
+        case "structure-entity.archived":
+        case "structure-entity.restored":
+        case "structure-entity.deleted":
         case "relationship.created":
         case "relationship.updated":
         case "relationship.archived":
         case "relationship.restored":
         case "relationship.deleted":
         case "lifecycle-event.created":
-        case "subsystem-membership.added":
-        case "subsystem-membership.removed":
-        case "side-system-membership.added":
-        case "side-system-membership.removed":
-        case "layer-membership.added":
-        case "layer-membership.removed":
-        case "structure-link.created":
-        case "structure-link.deleted":
+        case "structure-entity-link.created":
+        case "structure-entity-link.deleted":
+        case "structure-entity-member-link.added":
+        case "structure-entity-member-link.removed":
+        case "structure-entity-association.created":
+        case "structure-entity-association.deleted":
         case "innerworld-region.created":
         case "innerworld-region.updated":
         case "innerworld-region.archived":

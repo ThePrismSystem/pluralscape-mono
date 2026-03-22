@@ -1,39 +1,32 @@
 import { z } from "zod/v4";
 
 import { brandedString } from "./branded.js";
-import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
-// ── Structure Memberships ────────────────────────────────────────────
+// ── Structure Entity Links ───────────────────────────────────────────
 
-export const AddStructureMembershipBodySchema = z
+export const CreateStructureEntityLinkBodySchema = z
   .object({
+    entityId: brandedString<"SystemStructureEntityId">(),
+    parentEntityId: brandedString<"SystemStructureEntityId">().nullable(),
+    sortOrder: z.int().min(0),
+  })
+  .readonly();
+
+// ── Structure Entity Member Links ───────────────────────────────────
+
+export const CreateStructureEntityMemberLinkBodySchema = z
+  .object({
+    parentEntityId: brandedString<"SystemStructureEntityId">().nullable(),
     memberId: brandedString<"MemberId">(),
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
+    sortOrder: z.int().min(0),
   })
   .readonly();
 
-// ── Cross-Structure Links ────────────────────────────────────────────
+// ── Structure Entity Associations ───────────────────────────────────
 
-export const CreateSubsystemLayerLinkBodySchema = z
+export const CreateStructureEntityAssociationBodySchema = z
   .object({
-    subsystemId: brandedString<"SubsystemId">(),
-    layerId: brandedString<"LayerId">(),
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE).optional(),
-  })
-  .readonly();
-
-export const CreateSubsystemSideSystemLinkBodySchema = z
-  .object({
-    subsystemId: brandedString<"SubsystemId">(),
-    sideSystemId: brandedString<"SideSystemId">(),
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE).optional(),
-  })
-  .readonly();
-
-export const CreateSideSystemLayerLinkBodySchema = z
-  .object({
-    sideSystemId: brandedString<"SideSystemId">(),
-    layerId: brandedString<"LayerId">(),
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE).optional(),
+    sourceEntityId: brandedString<"SystemStructureEntityId">(),
+    targetEntityId: brandedString<"SystemStructureEntityId">(),
   })
   .readonly();

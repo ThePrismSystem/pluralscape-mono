@@ -3,25 +3,18 @@ import type {
   GroupId,
   InnerWorldEntityId,
   InnerWorldRegionId,
-  LayerId,
   MemberId,
-  SideSystemId,
-  SubsystemId,
   SystemId,
   SystemSnapshotId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "./ids.js";
 import type { InnerWorldEntityType } from "./innerworld.js";
 import type {
-  ArchitectureType,
-  DiscoveryStatus,
-  LayerAccessType,
   RelationshipType,
-  SubsystemLayerLink,
-  SubsystemMembership,
-  SubsystemSideSystemLink,
-  SideSystemMembership,
-  SideSystemLayerLink,
-  LayerMembership,
+  SystemStructureEntityAssociation,
+  SystemStructureEntityLink,
+  SystemStructureEntityMemberLink,
 } from "./structure.js";
 import type { UnixMillis } from "./timestamps.js";
 
@@ -54,31 +47,19 @@ export interface SnapshotMember {
   readonly archived: boolean;
 }
 
-/** Snapshot of a subsystem. */
-export interface SnapshotSubsystem {
-  readonly id: SubsystemId;
-  readonly name: string;
-  readonly description: string | null;
-  readonly parentSubsystemId: SubsystemId | null;
-  readonly architectureType: ArchitectureType | null;
-  readonly hasCore: boolean;
-  readonly discoveryStatus: DiscoveryStatus;
-}
-
-/** Snapshot of a side system. */
-export interface SnapshotSideSystem {
-  readonly id: SideSystemId;
+/** Snapshot of a structure entity type. */
+export interface SnapshotStructureEntityType {
+  readonly id: SystemStructureEntityTypeId;
   readonly name: string;
   readonly description: string | null;
 }
 
-/** Snapshot of a layer. */
-export interface SnapshotLayer {
-  readonly id: LayerId;
+/** Snapshot of a structure entity. */
+export interface SnapshotStructureEntity {
+  readonly id: SystemStructureEntityId;
+  readonly entityTypeId: SystemStructureEntityTypeId;
   readonly name: string;
   readonly description: string | null;
-  readonly accessType: LayerAccessType;
-  readonly gatekeeperMemberIds: readonly MemberId[];
 }
 
 /** Snapshot of a relationship between members. */
@@ -120,20 +101,12 @@ export interface SnapshotContent {
   readonly name: string | null;
   readonly description: string | null;
   readonly members: readonly SnapshotMember[];
-  readonly subsystems: readonly SnapshotSubsystem[];
-  readonly sideSystems: readonly SnapshotSideSystem[];
-  readonly layers: readonly SnapshotLayer[];
+  readonly structureEntityTypes: readonly SnapshotStructureEntityType[];
+  readonly structureEntities: readonly SnapshotStructureEntity[];
+  readonly structureEntityLinks: readonly SystemStructureEntityLink[];
+  readonly structureEntityMemberLinks: readonly SystemStructureEntityMemberLink[];
+  readonly structureEntityAssociations: readonly SystemStructureEntityAssociation[];
   readonly relationships: readonly SnapshotRelationship[];
-  readonly memberships: {
-    readonly subsystem: readonly SubsystemMembership[];
-    readonly sideSystem: readonly SideSystemMembership[];
-    readonly layer: readonly LayerMembership[];
-  };
-  readonly crossLinks: {
-    readonly subsystemLayer: readonly SubsystemLayerLink[];
-    readonly subsystemSideSystem: readonly SubsystemSideSystemLink[];
-    readonly sideSystemLayer: readonly SideSystemLayerLink[];
-  };
   readonly groups: readonly SnapshotGroup[];
   readonly innerworldRegions: readonly SnapshotInnerworldRegion[];
   readonly innerworldEntities: readonly SnapshotInnerworldEntity[];

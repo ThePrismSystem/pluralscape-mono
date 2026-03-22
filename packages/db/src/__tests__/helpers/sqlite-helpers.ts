@@ -539,6 +539,64 @@ export const SQLITE_DDL = {
     CREATE INDEX side_system_layer_links_side_system_id_idx ON side_system_layer_links (side_system_id);
     CREATE INDEX side_system_layer_links_layer_id_idx ON side_system_layer_links (layer_id)
   `,
+  systemStructureEntityTypes: `
+    CREATE TABLE system_structure_entity_types (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sort_order INTEGER NOT NULL,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      UNIQUE (id, system_id),
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
+    )
+  `,
+  systemStructureEntityTypesIndexes: `
+    CREATE INDEX system_structure_entity_types_system_archived_idx ON system_structure_entity_types (system_id, archived)
+  `,
+  systemStructureEntities: `
+    CREATE TABLE system_structure_entities (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type_id TEXT NOT NULL,
+      sort_order INTEGER NOT NULL,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      UNIQUE (id, system_id),
+      FOREIGN KEY (entity_type_id, system_id) REFERENCES system_structure_entity_types(id, system_id) ON DELETE RESTRICT,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
+    )
+  `,
+  systemStructureEntitiesIndexes: `
+    CREATE INDEX system_structure_entities_system_archived_idx ON system_structure_entities (system_id, archived);
+    CREATE INDEX system_structure_entities_entity_type_id_idx ON system_structure_entities (entity_type_id)
+  `,
+  systemStructureEntityAssociations: `
+    CREATE TABLE system_structure_entity_associations (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      source_entity_id TEXT NOT NULL,
+      target_entity_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE (source_entity_id, target_entity_id),
+      FOREIGN KEY (source_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (target_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT
+    )
+  `,
+  systemStructureEntityAssociationsIndexes: `
+    CREATE INDEX system_structure_entity_associations_source_idx ON system_structure_entity_associations (source_entity_id);
+    CREATE INDEX system_structure_entity_associations_target_idx ON system_structure_entity_associations (target_entity_id);
+    CREATE INDEX system_structure_entity_associations_system_id_idx ON system_structure_entity_associations (system_id)
+  `,
   // Custom Fields
   fieldDefinitions: `
     CREATE TABLE field_definitions (

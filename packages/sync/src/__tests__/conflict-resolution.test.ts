@@ -13,7 +13,7 @@ import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
 import { asSyncDocId } from "./test-crypto-helpers.js";
 
-import type { CrdtGroup, CrdtSubsystem, CrdtInnerWorldRegion } from "../schemas/system-core.js";
+import type { CrdtGroup, CrdtInnerWorldRegion } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 import type { SyncDocumentId } from "@pluralscape/types";
@@ -244,7 +244,7 @@ describe("Category 3: concurrent FrontingSession end time", () => {
         endTime: null,
         comment: null,
         customFrontId: null,
-        linkedStructure: null,
+        structureEntityId: null,
         positionality: null,
         outtrigger: null,
         outtriggerSentiment: null,
@@ -932,9 +932,9 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
   });
 });
 
-// ── Subsystem/region hierarchy cycle detection ────────────────────────
+// ── Group/region hierarchy cycle detection ─────────────────────────────
 
-describe("Hierarchy cycles: subsystems and innerworld regions", () => {
+describe("Hierarchy cycles: groups and innerworld regions", () => {
   let relay: EncryptedRelay;
   let keys: DocumentKeys;
 
@@ -942,25 +942,6 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
     relay = new EncryptedRelay();
     keys = makeKeys();
   });
-
-  function makeSubsystem(id: string, parentId?: string): CrdtSubsystem {
-    return {
-      id: s(id),
-      systemId: s("sys_1"),
-      name: s(id),
-      description: null,
-      parentSubsystemId: parentId ? s(parentId) : null,
-      architectureType: null,
-      hasCore: false,
-      discoveryStatus: s("known"),
-      color: null,
-      imageSource: null,
-      emoji: null,
-      archived: false,
-      createdAt: 1000,
-      updatedAt: 1000,
-    };
-  }
 
   function makeRegion(id: string, parentId?: string): CrdtInnerWorldRegion {
     return {
@@ -979,30 +960,30 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
     };
   }
 
-  it("concurrent cross-reparenting of subsystems produces a detectable cycle", async () => {
+  it("concurrent cross-reparenting of groups produces a detectable cycle", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cycle-ss"));
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cycle-grp"));
 
     const seedEnv = sessionA.change((d) => {
-      d.subsystems["ss_a"] = makeSubsystem("ss_a");
-      d.subsystems["ss_b"] = makeSubsystem("ss_b");
+      d.groups["grp_a"] = makeGroup("grp_a", 1);
+      d.groups["grp_b"] = makeGroup("grp_b", 2);
     });
     await relay.submit(seedEnv);
-    const _r14 = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-ss"), 0);
+    const _r14 = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-grp"), 0);
     sessionB.applyEncryptedChanges(_r14.envelopes);
 
     const envA = sessionA.change((d) => {
-      const ss = d.subsystems["ss_a"];
-      if (ss) {
-        ss.parentSubsystemId = s("ss_b");
-        ss.updatedAt = 2000;
+      const g = d.groups["grp_a"];
+      if (g) {
+        g.parentGroupId = s("grp_b");
+        g.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const ss = d.subsystems["ss_b"];
-      if (ss) {
-        ss.parentSubsystemId = s("ss_a");
-        ss.updatedAt = 2001;
+      const g = d.groups["grp_b"];
+      if (g) {
+        g.parentGroupId = s("grp_a");
+        g.updatedAt = 2001;
       }
     });
 
@@ -1011,8 +992,8 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
-    expect(sessionA.document.subsystems["ss_a"]?.parentSubsystemId?.val).toBe("ss_b");
-    expect(sessionA.document.subsystems["ss_b"]?.parentSubsystemId?.val).toBe("ss_a");
+    expect(sessionA.document.groups["grp_a"]?.parentGroupId?.val).toBe("grp_b");
+    expect(sessionA.document.groups["grp_b"]?.parentGroupId?.val).toBe("grp_a");
   });
 
   it("concurrent cross-reparenting of innerworld regions produces a detectable cycle", async () => {

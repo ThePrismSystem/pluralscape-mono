@@ -45,6 +45,11 @@ export {
   subsystemMemberships,
   subsystemSideSystemLinks,
   subsystems,
+  systemStructureEntityTypes,
+  systemStructureEntities,
+  systemStructureEntityLinks,
+  systemStructureEntityMemberLinks,
+  systemStructureEntityAssociations,
 } from "./structure.js";
 export { blobMetadata } from "./blob-metadata.js";
 export { systemSettings } from "./system-settings.js";
@@ -132,6 +137,16 @@ export type {
   NewSubsystemSideSystemLink,
   SideSystemLayerLinkRow,
   NewSideSystemLayerLink,
+  SystemStructureEntityTypeRow,
+  NewSystemStructureEntityType,
+  SystemStructureEntityRow,
+  NewSystemStructureEntity,
+  SystemStructureEntityLinkRow,
+  NewSystemStructureEntityLink,
+  SystemStructureEntityMemberLinkRow,
+  NewSystemStructureEntityMemberLink,
+  SystemStructureEntityAssociationRow as DbSystemStructureEntityAssociationRow,
+  NewSystemStructureEntityAssociation,
 } from "./structure.js";
 
 // Custom Fields

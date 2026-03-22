@@ -3,8 +3,8 @@ import type {
   InnerWorldRegionId,
   LifecycleEventId,
   MemberId,
-  SubsystemId,
   SystemId,
+  SystemStructureEntityId,
 } from "./ids.js";
 import type { InnerWorldEntityType } from "./innerworld.js";
 import type { UnixMillis } from "./timestamps.js";
@@ -76,11 +76,11 @@ export interface ArchivalEvent extends LifecycleEventBase {
   readonly entity: EntityReference;
 }
 
-/** A subsystem forms from a member or group of members. */
-export interface SubsystemFormationEvent extends LifecycleEventBase {
-  readonly eventType: "subsystem-formation";
+/** A structure entity forms from a member or group of members. */
+export interface StructureEntityFormationEvent extends LifecycleEventBase {
+  readonly eventType: "structure-entity-formation";
   readonly memberId: MemberId;
-  readonly resultSubsystemId: SubsystemId;
+  readonly resultStructureEntityId: SystemStructureEntityId;
 }
 
 /** A member's form changes (e.g. age, appearance, species). */
@@ -99,12 +99,12 @@ export interface NameChangeEvent extends LifecycleEventBase {
   readonly newName: string;
 }
 
-/** A member moves within the system structure (subsystem, side system, or layer). */
+/** A member moves within the system structure. */
 export interface StructureMoveEvent extends LifecycleEventBase {
   readonly eventType: "structure-move";
   readonly memberId: MemberId;
-  readonly fromStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
-  readonly toStructure: EntityReference<"subsystem" | "side-system" | "layer">;
+  readonly fromStructure: EntityReference<"structure-entity"> | null;
+  readonly toStructure: EntityReference<"structure-entity">;
 }
 
 /** An entity moves within the innerworld (between regions). */
@@ -126,7 +126,7 @@ export type LifecycleEvent =
   | DormancyEndEvent
   | DiscoveryEvent
   | ArchivalEvent
-  | SubsystemFormationEvent
+  | StructureEntityFormationEvent
   | FormChangeEvent
   | NameChangeEvent
   | StructureMoveEvent

@@ -11,12 +11,9 @@ import { members } from "../schema/sqlite/members.js";
 import { deviceTokens } from "../schema/sqlite/notifications.js";
 import { friendConnections } from "../schema/sqlite/privacy.js";
 import {
-  layers,
-  sideSystemLayerLinks,
-  sideSystems,
-  subsystemLayerLinks,
-  subsystemSideSystemLinks,
-  subsystems,
+  systemStructureEntityAssociations,
+  systemStructureEntities,
+  systemStructureEntityTypes,
 } from "../schema/sqlite/structure.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/sqlite/webhooks.js";
 import {
@@ -30,7 +27,7 @@ import {
   getMemberGroupSummary,
   getPendingFriendRequests,
   getPendingWebhookRetries,
-  getStructureCrossLinks,
+  getStructureEntityAssociations,
   getUnconfirmedAcknowledgements,
 } from "../views/sqlite.js";
 
@@ -102,6 +99,12 @@ describe("SQLite views / query helpers", () => {
     client.exec(SQLITE_DDL.subsystemSideSystemLinksIndexes);
     client.exec(SQLITE_DDL.sideSystemLayerLinks);
     client.exec(SQLITE_DDL.sideSystemLayerLinksIndexes);
+    client.exec(SQLITE_DDL.systemStructureEntityTypes);
+    client.exec(SQLITE_DDL.systemStructureEntityTypesIndexes);
+    client.exec(SQLITE_DDL.systemStructureEntities);
+    client.exec(SQLITE_DDL.systemStructureEntitiesIndexes);
+    client.exec(SQLITE_DDL.systemStructureEntityAssociations);
+    client.exec(SQLITE_DDL.systemStructureEntityAssociationsIndexes);
   });
 
   afterAll(() => {
@@ -127,6 +130,9 @@ describe("SQLite views / query helpers", () => {
       "api_keys",
       "device_transfer_requests",
       "sessions",
+      "system_structure_entity_associations",
+      "system_structure_entities",
+      "system_structure_entity_types",
       "side_system_layer_links",
       "subsystem_side_system_links",
       "subsystem_layer_links",
@@ -637,39 +643,21 @@ describe("SQLite views / query helpers", () => {
     });
   });
 
-  describe("getStructureCrossLinks", () => {
-    it("returns empty array when no links", () => {
-      const links = getStructureCrossLinks(db, systemId);
-      expect(links).toHaveLength(0);
+  describe("getStructureEntityAssociations", () => {
+    it("returns empty array when no associations", () => {
+      const assocs = getStructureEntityAssociations(db, systemId);
+      expect(assocs).toHaveLength(0);
     });
 
-    it("returns UNION of all 3 link types", () => {
+    it("returns associations for a system", () => {
       const now = Date.now();
-      const subsystemId = crypto.randomUUID();
-      const sideSystemId = crypto.randomUUID();
-      const layerId = crypto.randomUUID();
+      const entityTypeId = crypto.randomUUID();
+      const entityId1 = crypto.randomUUID();
+      const entityId2 = crypto.randomUUID();
 
-      db.insert(subsystems)
+      db.insert(systemStructureEntityTypes)
         .values({
-          id: subsystemId,
-          systemId,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-      db.insert(sideSystems)
-        .values({
-          id: sideSystemId,
-          systemId,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-      db.insert(layers)
-        .values({
-          id: layerId,
+          id: entityTypeId,
           systemId,
           sortOrder: 0,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -677,21 +665,42 @@ describe("SQLite views / query helpers", () => {
           updatedAt: now,
         })
         .run();
+      db.insert(systemStructureEntities)
+        .values([
+          {
+            id: entityId1,
+            systemId,
+            entityTypeId,
+            sortOrder: 0,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: entityId2,
+            systemId,
+            entityTypeId,
+            sortOrder: 1,
+            encryptedData: testBlob(new Uint8Array([2])),
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run();
+      db.insert(systemStructureEntityAssociations)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          sourceEntityId: entityId1,
+          targetEntityId: entityId2,
+          createdAt: now,
+        })
+        .run();
 
-      db.insert(subsystemLayerLinks)
-        .values({ id: crypto.randomUUID(), subsystemId, layerId, systemId, createdAt: now })
-        .run();
-      db.insert(subsystemSideSystemLinks)
-        .values({ id: crypto.randomUUID(), subsystemId, sideSystemId, systemId, createdAt: now })
-        .run();
-      db.insert(sideSystemLayerLinks)
-        .values({ id: crypto.randomUUID(), sideSystemId, layerId, systemId, createdAt: now })
-        .run();
-
-      const links = getStructureCrossLinks(db, systemId);
-      expect(links).toHaveLength(3);
-      const types = links.map((l) => l.linkType).sort();
-      expect(types).toEqual(["side-system-layer", "subsystem-layer", "subsystem-side-system"]);
+      const assocs = getStructureEntityAssociations(db, systemId);
+      expect(assocs).toHaveLength(1);
+      expect(assocs[0]?.sourceEntityId).toBe(entityId1);
+      expect(assocs[0]?.targetEntityId).toBe(entityId2);
     });
   });
 });

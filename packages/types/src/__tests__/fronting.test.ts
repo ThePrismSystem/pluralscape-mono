@@ -21,7 +21,7 @@ import type {
   SystemId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
-import type { AuditMetadata, EntityReference } from "../utility.js";
+import type { AuditMetadata } from "../utility.js";
 
 describe("FrontingSession", () => {
   it("discriminates on endTime — null narrows to ActiveFrontingSession", () => {
@@ -43,9 +43,6 @@ describe("FrontingSession", () => {
     expectTypeOf<ActiveFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<ActiveFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ActiveFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<ActiveFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
-      "subsystem" | "side-system" | "layer"
-    > | null>();
     expectTypeOf<ActiveFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ActiveFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
     expectTypeOf<
@@ -61,9 +58,6 @@ describe("FrontingSession", () => {
     expectTypeOf<CompletedFrontingSession["endTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CompletedFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<CompletedFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<CompletedFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
-      "subsystem" | "side-system" | "layer"
-    > | null>();
     expectTypeOf<CompletedFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
     expectTypeOf<CompletedFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
     expectTypeOf<

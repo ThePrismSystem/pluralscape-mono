@@ -31,7 +31,6 @@ import type {
   InnerWorldRegionId,
   JournalEntryId,
   KeyGrantId,
-  LayerId,
   MemberId,
   MemberPhotoId,
   MessageId,
@@ -43,8 +42,12 @@ import type {
   RecoveryKeyDisplay,
   RelationshipId,
   SessionId,
-  SideSystemId,
-  SubsystemId,
+  SystemStructureEntityTypeId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+  SystemStructureEntityMemberLinkId,
+  SystemStructureEntityAssociationId,
+  FieldDefinitionScopeId,
   AuthKeyId,
   RecoveryKeyId,
   DeviceTransferRequestId,
@@ -106,7 +109,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 60 branded types as string-based", () => {
+  it("defines all 63 branded types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -116,8 +119,13 @@ describe("branded ID types", () => {
     expectTypeOf<NoteId>().toExtend<string>();
     expectTypeOf<PollId>().toExtend<string>();
     expectTypeOf<RelationshipId>().toExtend<string>();
-    expectTypeOf<SubsystemId>().toExtend<string>();
+    expectTypeOf<SystemStructureEntityTypeId>().toExtend<string>();
+    expectTypeOf<SystemStructureEntityId>().toExtend<string>();
+    expectTypeOf<SystemStructureEntityLinkId>().toExtend<string>();
+    expectTypeOf<SystemStructureEntityMemberLinkId>().toExtend<string>();
+    expectTypeOf<SystemStructureEntityAssociationId>().toExtend<string>();
     expectTypeOf<FieldDefinitionId>().toExtend<string>();
+    expectTypeOf<FieldDefinitionScopeId>().toExtend<string>();
     expectTypeOf<FieldValueId>().toExtend<string>();
     expectTypeOf<SessionId>().toExtend<string>();
     expectTypeOf<LifecycleEventId>().toExtend<string>();
@@ -128,8 +136,6 @@ describe("branded ID types", () => {
     expectTypeOf<TimerId>().toExtend<string>();
     expectTypeOf<JournalEntryId>().toExtend<string>();
     expectTypeOf<WikiPageId>().toExtend<string>();
-    expectTypeOf<SideSystemId>().toExtend<string>();
-    expectTypeOf<LayerId>().toExtend<string>();
     expectTypeOf<InnerWorldCanvasId>().toExtend<string>();
     expectTypeOf<InnerWorldEntityId>().toExtend<string>();
     expectTypeOf<InnerWorldRegionId>().toExtend<string>();
@@ -205,7 +211,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(64);
+    expect(prefixCount).toBe(63);
   });
 });
 
@@ -241,9 +247,11 @@ describe("EntityType", () => {
         case "note":
         case "poll":
         case "relationship":
-        case "subsystem":
-        case "side-system":
-        case "layer":
+        case "structure-entity-type":
+        case "structure-entity":
+        case "structure-entity-link":
+        case "structure-entity-member-link":
+        case "structure-entity-association":
         case "journal-entry":
         case "wiki-page":
         case "custom-front":
@@ -292,6 +300,7 @@ describe("EntityType", () => {
         case "bucket-rotation-item":
         case "system-snapshot":
         case "biometric-token":
+        case "field-definition-scope":
           return type;
         default: {
           const _exhaustive: never = type;

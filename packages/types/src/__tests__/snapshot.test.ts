@@ -5,12 +5,11 @@ import type {
   GroupId,
   InnerWorldEntityId,
   InnerWorldRegionId,
-  LayerId,
   MemberId,
-  SideSystemId,
-  SubsystemId,
   SystemId,
   SystemSnapshotId,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
 } from "../ids.js";
 import type { InnerWorldEntityType } from "../innerworld.js";
 import type {
@@ -18,26 +17,19 @@ import type {
   SnapshotGroup,
   SnapshotInnerworldEntity,
   SnapshotInnerworldRegion,
-  SnapshotLayer,
   SnapshotMember,
   SnapshotRelationship,
   SnapshotSchedule,
-  SnapshotSideSystem,
-  SnapshotSubsystem,
+  SnapshotStructureEntity,
+  SnapshotStructureEntityType,
   SnapshotTrigger,
   SystemSnapshot,
 } from "../snapshot.js";
 import type {
-  ArchitectureType,
-  DiscoveryStatus,
-  LayerAccessType,
   RelationshipType,
-  SubsystemMembership,
-  SideSystemMembership,
-  LayerMembership,
-  SubsystemLayerLink,
-  SubsystemSideSystemLink,
-  SideSystemLayerLink,
+  SystemStructureEntityAssociation,
+  SystemStructureEntityLink,
+  SystemStructureEntityMemberLink,
 } from "../structure.js";
 import type { UnixMillis } from "../timestamps.js";
 
@@ -91,9 +83,21 @@ describe("SnapshotContent", () => {
 
   it("has all array fields", () => {
     expectTypeOf<SnapshotContent["members"]>().toEqualTypeOf<readonly SnapshotMember[]>();
-    expectTypeOf<SnapshotContent["subsystems"]>().toEqualTypeOf<readonly SnapshotSubsystem[]>();
-    expectTypeOf<SnapshotContent["sideSystems"]>().toEqualTypeOf<readonly SnapshotSideSystem[]>();
-    expectTypeOf<SnapshotContent["layers"]>().toEqualTypeOf<readonly SnapshotLayer[]>();
+    expectTypeOf<SnapshotContent["structureEntityTypes"]>().toEqualTypeOf<
+      readonly SnapshotStructureEntityType[]
+    >();
+    expectTypeOf<SnapshotContent["structureEntities"]>().toEqualTypeOf<
+      readonly SnapshotStructureEntity[]
+    >();
+    expectTypeOf<SnapshotContent["structureEntityLinks"]>().toEqualTypeOf<
+      readonly SystemStructureEntityLink[]
+    >();
+    expectTypeOf<SnapshotContent["structureEntityMemberLinks"]>().toEqualTypeOf<
+      readonly SystemStructureEntityMemberLink[]
+    >();
+    expectTypeOf<SnapshotContent["structureEntityAssociations"]>().toEqualTypeOf<
+      readonly SystemStructureEntityAssociation[]
+    >();
     expectTypeOf<SnapshotContent["relationships"]>().toEqualTypeOf<
       readonly SnapshotRelationship[]
     >();
@@ -103,27 +107,6 @@ describe("SnapshotContent", () => {
     >();
     expectTypeOf<SnapshotContent["innerworldEntities"]>().toEqualTypeOf<
       readonly SnapshotInnerworldEntity[]
-    >();
-  });
-
-  it("has membership and cross-link fields", () => {
-    expectTypeOf<SnapshotContent["memberships"]["subsystem"]>().toEqualTypeOf<
-      readonly SubsystemMembership[]
-    >();
-    expectTypeOf<SnapshotContent["memberships"]["sideSystem"]>().toEqualTypeOf<
-      readonly SideSystemMembership[]
-    >();
-    expectTypeOf<SnapshotContent["memberships"]["layer"]>().toEqualTypeOf<
-      readonly LayerMembership[]
-    >();
-    expectTypeOf<SnapshotContent["crossLinks"]["subsystemLayer"]>().toEqualTypeOf<
-      readonly SubsystemLayerLink[]
-    >();
-    expectTypeOf<SnapshotContent["crossLinks"]["subsystemSideSystem"]>().toEqualTypeOf<
-      readonly SubsystemSideSystemLink[]
-    >();
-    expectTypeOf<SnapshotContent["crossLinks"]["sideSystemLayer"]>().toEqualTypeOf<
-      readonly SideSystemLayerLink[]
     >();
   });
 });
@@ -140,33 +123,22 @@ describe("SnapshotMember", () => {
   });
 });
 
-describe("SnapshotSubsystem", () => {
+describe("SnapshotStructureEntityType", () => {
   it("has correct field types", () => {
-    expectTypeOf<SnapshotSubsystem["id"]>().toEqualTypeOf<SubsystemId>();
-    expectTypeOf<SnapshotSubsystem["name"]>().toBeString();
-    expectTypeOf<SnapshotSubsystem["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<SnapshotSubsystem["parentSubsystemId"]>().toEqualTypeOf<SubsystemId | null>();
-    expectTypeOf<SnapshotSubsystem["architectureType"]>().toEqualTypeOf<ArchitectureType | null>();
-    expectTypeOf<SnapshotSubsystem["hasCore"]>().toBeBoolean();
-    expectTypeOf<SnapshotSubsystem["discoveryStatus"]>().toEqualTypeOf<DiscoveryStatus>();
+    expectTypeOf<SnapshotStructureEntityType["id"]>().toEqualTypeOf<SystemStructureEntityTypeId>();
+    expectTypeOf<SnapshotStructureEntityType["name"]>().toBeString();
+    expectTypeOf<SnapshotStructureEntityType["description"]>().toEqualTypeOf<string | null>();
   });
 });
 
-describe("SnapshotSideSystem", () => {
+describe("SnapshotStructureEntity", () => {
   it("has correct field types", () => {
-    expectTypeOf<SnapshotSideSystem["id"]>().toEqualTypeOf<SideSystemId>();
-    expectTypeOf<SnapshotSideSystem["name"]>().toBeString();
-    expectTypeOf<SnapshotSideSystem["description"]>().toEqualTypeOf<string | null>();
-  });
-});
-
-describe("SnapshotLayer", () => {
-  it("has correct field types", () => {
-    expectTypeOf<SnapshotLayer["id"]>().toEqualTypeOf<LayerId>();
-    expectTypeOf<SnapshotLayer["name"]>().toBeString();
-    expectTypeOf<SnapshotLayer["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<SnapshotLayer["accessType"]>().toEqualTypeOf<LayerAccessType>();
-    expectTypeOf<SnapshotLayer["gatekeeperMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
+    expectTypeOf<SnapshotStructureEntity["id"]>().toEqualTypeOf<SystemStructureEntityId>();
+    expectTypeOf<
+      SnapshotStructureEntity["entityTypeId"]
+    >().toEqualTypeOf<SystemStructureEntityTypeId>();
+    expectTypeOf<SnapshotStructureEntity["name"]>().toBeString();
+    expectTypeOf<SnapshotStructureEntity["description"]>().toEqualTypeOf<string | null>();
   });
 });
 

@@ -66,30 +66,33 @@ export const InnerWorldEntityQuerySchema = z.object({
   includeArchived: booleanQueryParam,
 });
 
-// ── Structure link query schemas ────────────────────────────────
+// ── Structure entity query schemas ──────────────────────────────
 
 /**
- * Query parameters for the subsystem ↔ layer link list endpoint.
+ * Query parameters for the structure entity link list endpoint.
+ * Filters by either source or target structure entity ID.
  */
-export const SubsystemLayerQuerySchema = z.object({
-  subsystemId: brandedIdQueryParam("sub_").optional(),
-  layerId: brandedIdQueryParam("lyr_").optional(),
+export const StructureEntityLinkQuerySchema = z.object({
+  sourceEntityId: brandedIdQueryParam("ste_").optional(),
+  targetEntityId: brandedIdQueryParam("ste_").optional(),
 });
 
 /**
- * Query parameters for the subsystem ↔ side system link list endpoint.
+ * Query parameters for the structure entity member link list endpoint.
+ * Filters by structure entity ID or member ID.
  */
-export const SubsystemSideSystemQuerySchema = z.object({
-  subsystemId: brandedIdQueryParam("sub_").optional(),
-  sideSystemId: brandedIdQueryParam("ss_").optional(),
+export const StructureEntityMemberLinkQuerySchema = z.object({
+  structureEntityId: brandedIdQueryParam("ste_").optional(),
+  memberId: brandedIdQueryParam("mem_").optional(),
 });
 
 /**
- * Query parameters for the side system ↔ layer link list endpoint.
+ * Query parameters for the structure entity association list endpoint.
+ * Filters by either source or target structure entity ID.
  */
-export const SideSystemLayerQuerySchema = z.object({
-  sideSystemId: brandedIdQueryParam("ss_").optional(),
-  layerId: brandedIdQueryParam("lyr_").optional(),
+export const StructureEntityAssociationQuerySchema = z.object({
+  sourceEntityId: brandedIdQueryParam("ste_").optional(),
+  targetEntityId: brandedIdQueryParam("ste_").optional(),
 });
 
 // ── Include-archived query schema ───────────────────────────────

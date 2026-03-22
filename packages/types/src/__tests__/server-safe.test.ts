@@ -17,7 +17,6 @@ import type {
   ClientInnerWorldEntity,
   ClientInnerWorldRegion,
   ClientJournalEntry,
-  ClientLayer,
   ClientLifecycleEvent,
   ClientMember,
   ClientMemberPhoto,
@@ -25,8 +24,9 @@ import type {
   ClientPoll,
   ClientPollVote,
   ClientRelationship,
-  ClientSideSystem,
-  ClientSubsystem,
+  ClientResponseData,
+  ClientStructureEntity,
+  ClientStructureEntityType,
   ClientTimerConfig,
   ClientWikiPage,
   ServerAcknowledgementRequest,
@@ -43,7 +43,6 @@ import type {
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
   ServerJournalEntry,
-  ServerLayer,
   ServerLifecycleEvent,
   ServerMember,
   ServerMemberPhoto,
@@ -51,10 +50,9 @@ import type {
   ServerPoll,
   ServerPollVote,
   ServerRelationship,
-  ClientResponseData,
   ServerResponseData,
-  ServerSideSystem,
-  ServerSubsystem,
+  ServerStructureEntity,
+  ServerStructureEntityType,
   ServerTimerConfig,
   ServerWikiPage,
 } from "../encryption.js";
@@ -69,7 +67,8 @@ type AllServerTypes = [
   ServerFrontingSession,
   ServerFrontingComment,
   ServerGroup,
-  ServerSubsystem,
+  ServerStructureEntityType,
+  ServerStructureEntity,
   ServerRelationship,
   ServerChannel,
   ServerChatMessage,
@@ -87,15 +86,13 @@ type AllServerTypes = [
   ServerPoll,
   ServerPollVote,
   ServerAcknowledgementRequest,
-  ServerSideSystem,
-  ServerLayer,
   ServerTimerConfig,
   ServerAuditLogEntry,
 ];
 
 describe("serverSafe() — Server* types accepted", () => {
-  it("accepts all 26 Server* types (count assertion)", () => {
-    expectTypeOf<AllServerTypes["length"]>().toEqualTypeOf<26>();
+  it("accepts all 25 Server* types (count assertion)", () => {
+    expectTypeOf<AllServerTypes["length"]>().toEqualTypeOf<25>();
   });
 
   it("ServerMember extends ServerResponseData", () => {
@@ -114,8 +111,12 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerGroup>().toExtend<ServerResponseData>();
   });
 
-  it("ServerSubsystem extends ServerResponseData", () => {
-    expectTypeOf<ServerSubsystem>().toExtend<ServerResponseData>();
+  it("ServerStructureEntityType extends ServerResponseData", () => {
+    expectTypeOf<ServerStructureEntityType>().toExtend<ServerResponseData>();
+  });
+
+  it("ServerStructureEntity extends ServerResponseData", () => {
+    expectTypeOf<ServerStructureEntity>().toExtend<ServerResponseData>();
   });
 
   it("ServerRelationship extends ServerResponseData", () => {
@@ -186,14 +187,6 @@ describe("serverSafe() — Server* types accepted", () => {
     expectTypeOf<ServerAcknowledgementRequest>().toExtend<ServerResponseData>();
   });
 
-  it("ServerSideSystem extends ServerResponseData", () => {
-    expectTypeOf<ServerSideSystem>().toExtend<ServerResponseData>();
-  });
-
-  it("ServerLayer extends ServerResponseData", () => {
-    expectTypeOf<ServerLayer>().toExtend<ServerResponseData>();
-  });
-
   it("ServerTimerConfig extends ServerResponseData", () => {
     expectTypeOf<ServerTimerConfig>().toExtend<ServerResponseData>();
   });
@@ -211,7 +204,8 @@ type AllClientTypes = [
   ClientFrontingSession,
   ClientFrontingComment,
   ClientGroup,
-  ClientSubsystem,
+  ClientStructureEntityType,
+  ClientStructureEntity,
   ClientRelationship,
   ClientChannel,
   ClientChatMessage,
@@ -229,15 +223,13 @@ type AllClientTypes = [
   ClientPoll,
   ClientPollVote,
   ClientAcknowledgementRequest,
-  ClientSideSystem,
-  ClientLayer,
   ClientTimerConfig,
   ClientAuditLogEntry,
 ];
 
 describe("ClientResponseData union completeness", () => {
-  it("has all 26 Client* types (count assertion)", () => {
-    expectTypeOf<AllClientTypes["length"]>().toEqualTypeOf<26>();
+  it("has all 25 Client* types (count assertion)", () => {
+    expectTypeOf<AllClientTypes["length"]>().toEqualTypeOf<25>();
   });
 
   it("ClientMember extends ClientResponseData", () => {
@@ -256,8 +248,12 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientGroup>().toExtend<ClientResponseData>();
   });
 
-  it("ClientSubsystem extends ClientResponseData", () => {
-    expectTypeOf<ClientSubsystem>().toExtend<ClientResponseData>();
+  it("ClientStructureEntityType extends ClientResponseData", () => {
+    expectTypeOf<ClientStructureEntityType>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientStructureEntity extends ClientResponseData", () => {
+    expectTypeOf<ClientStructureEntity>().toExtend<ClientResponseData>();
   });
 
   it("ClientRelationship extends ClientResponseData", () => {
@@ -328,14 +324,6 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ClientAcknowledgementRequest>().toExtend<ClientResponseData>();
   });
 
-  it("ClientSideSystem extends ClientResponseData", () => {
-    expectTypeOf<ClientSideSystem>().toExtend<ClientResponseData>();
-  });
-
-  it("ClientLayer extends ClientResponseData", () => {
-    expectTypeOf<ClientLayer>().toExtend<ClientResponseData>();
-  });
-
   it("ClientTimerConfig extends ClientResponseData", () => {
     expectTypeOf<ClientTimerConfig>().toExtend<ClientResponseData>();
   });
@@ -349,7 +337,8 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ServerFrontingSession>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerFrontingComment>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerGroup>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerSubsystem>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerStructureEntityType>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerStructureEntity>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerRelationship>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerChannel>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerChatMessage>().not.toExtend<ClientResponseData>();
@@ -367,8 +356,6 @@ describe("ClientResponseData union completeness", () => {
     expectTypeOf<ServerPoll>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerPollVote>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerAcknowledgementRequest>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerSideSystem>().not.toExtend<ClientResponseData>();
-    expectTypeOf<ServerLayer>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerTimerConfig>().not.toExtend<ClientResponseData>();
     expectTypeOf<ServerAuditLogEntry>().not.toExtend<ClientResponseData>();
   });
@@ -391,8 +378,12 @@ describe("serverSafe() — Client* types rejected", () => {
     expectTypeOf<ClientGroup>().not.toExtend<ServerResponseData>();
   });
 
-  it("ClientSubsystem does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientSubsystem>().not.toExtend<ServerResponseData>();
+  it("ClientStructureEntityType does NOT extend ServerResponseData", () => {
+    expectTypeOf<ClientStructureEntityType>().not.toExtend<ServerResponseData>();
+  });
+
+  it("ClientStructureEntity does NOT extend ServerResponseData", () => {
+    expectTypeOf<ClientStructureEntity>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientRelationship does NOT extend ServerResponseData", () => {
@@ -461,14 +452,6 @@ describe("serverSafe() — Client* types rejected", () => {
 
   it("ClientAcknowledgementRequest does NOT extend ServerResponseData", () => {
     expectTypeOf<ClientAcknowledgementRequest>().not.toExtend<ServerResponseData>();
-  });
-
-  it("ClientSideSystem does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientSideSystem>().not.toExtend<ServerResponseData>();
-  });
-
-  it("ClientLayer does NOT extend ServerResponseData", () => {
-    expectTypeOf<ClientLayer>().not.toExtend<ServerResponseData>();
   });
 
   it("ClientTimerConfig does NOT extend ServerResponseData", () => {

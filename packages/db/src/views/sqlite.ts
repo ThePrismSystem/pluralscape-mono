@@ -9,14 +9,10 @@ import { frontingComments, frontingSessions } from "../schema/sqlite/fronting.js
 import { groupMemberships } from "../schema/sqlite/groups.js";
 import { deviceTokens } from "../schema/sqlite/notifications.js";
 import { friendConnections } from "../schema/sqlite/privacy.js";
-import {
-  sideSystemLayerLinks,
-  subsystemLayerLinks,
-  subsystemSideSystemLinks,
-} from "../schema/sqlite/structure.js";
+import { systemStructureEntityAssociations } from "../schema/sqlite/structure.js";
 import { webhookDeliveries } from "../schema/sqlite/webhooks.js";
 
-import { mapCrossLinkRow } from "./mappers.js";
+import { mapStructureEntityAssociationRow as mapAssociationRow } from "./mappers.js";
 
 import type {
   ActiveApiKey,
@@ -29,7 +25,7 @@ import type {
   MemberGroupSummary,
   PendingFriendRequest,
   PendingWebhookRetry,
-  StructureCrossLink,
+  StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./types.js";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -250,30 +246,23 @@ export function getActiveDeviceTransfers(
     .all();
 }
 
-/** Get all structure cross-links (UNION of subsystem-layer, subsystem-side-system, side-system-layer). */
-export function getStructureCrossLinks(
+/** Get all structure entity associations for a system. */
+export function getStructureEntityAssociations(
   db: BetterSQLite3Database,
   systemId: string,
-): StructureCrossLink[] {
-  const rows = db.all<{
-    id: string;
-    system_id: string;
-    link_type: string;
-    source_id: string;
-    target_id: string;
-    created_at: number;
-  }>(sql`
-    SELECT id, system_id, 'subsystem-layer' as link_type, subsystem_id as source_id, layer_id as target_id, created_at
-    FROM ${subsystemLayerLinks}
-    WHERE system_id = ${systemId}
-    UNION ALL
-    SELECT id, system_id, 'subsystem-side-system' as link_type, subsystem_id as source_id, side_system_id as target_id, created_at
-    FROM ${subsystemSideSystemLinks}
-    WHERE system_id = ${systemId}
-    UNION ALL
-    SELECT id, system_id, 'side-system-layer' as link_type, side_system_id as source_id, layer_id as target_id, created_at
-    FROM ${sideSystemLayerLinks}
-    WHERE system_id = ${systemId}
-  `);
-  return rows.map(mapCrossLinkRow);
+): StructureEntityAssociationRow[] {
+  const rows = db
+    .select()
+    .from(systemStructureEntityAssociations)
+    .where(eq(systemStructureEntityAssociations.systemId, systemId))
+    .all();
+  return rows.map((r) =>
+    mapAssociationRow({
+      id: r.id,
+      system_id: r.systemId,
+      source_entity_id: r.sourceEntityId,
+      target_entity_id: r.targetEntityId,
+      created_at: r.createdAt,
+    }),
+  );
 }

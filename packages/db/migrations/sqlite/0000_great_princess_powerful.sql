@@ -84,7 +84,7 @@ CREATE TABLE `audit_log` (
 	PRIMARY KEY(`id`, `timestamp`),
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'subsystem.created', 'subsystem.updated', 'subsystem.archived', 'subsystem.restored', 'subsystem.deleted', 'side-system.created', 'side-system.updated', 'side-system.archived', 'side-system.restored', 'side-system.deleted', 'layer.created', 'layer.updated', 'layer.archived', 'layer.restored', 'layer.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'subsystem-membership.added', 'subsystem-membership.removed', 'side-system-membership.added', 'side-system-membership.removed', 'layer-membership.added', 'layer-membership.removed', 'structure-link.created', 'structure-link.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')),
+	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')),
 	CONSTRAINT "audit_log_detail_length_check" CHECK("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint
@@ -163,7 +163,7 @@ CREATE TABLE `bucket_content_tags` (
 	PRIMARY KEY(`entity_type`, `entity_id`, `bucket_id`),
 	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "bucket_content_tags_entity_type_check" CHECK("bucket_content_tags"."entity_type" IS NULL OR "bucket_content_tags"."entity_type" IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment'))
+	CONSTRAINT "bucket_content_tags_entity_type_check" CHECK("bucket_content_tags"."entity_type" IS NULL OR "bucket_content_tags"."entity_type" IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'structure-entity-type', 'structure-entity', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment'))
 );
 --> statement-breakpoint
 CREATE INDEX `bucket_content_tags_bucket_id_idx` ON `bucket_content_tags` (`bucket_id`);--> statement-breakpoint
@@ -496,7 +496,7 @@ CREATE TABLE `fronting_sessions` (
 	`end_time` integer,
 	`member_id` text,
 	`custom_front_id` text,
-	`linked_structure` text,
+	`structure_entity_id` text,
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
@@ -734,7 +734,7 @@ CREATE TABLE `lifecycle_events` (
 	`encrypted_data` blob NOT NULL,
 	`plaintext_metadata` text,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "lifecycle_events_event_type_check" CHECK("lifecycle_events"."event_type" IS NULL OR "lifecycle_events"."event_type" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move'))
+	CONSTRAINT "lifecycle_events_event_type_check" CHECK("lifecycle_events"."event_type" IS NULL OR "lifecycle_events"."event_type" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'structure-entity-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move'))
 );
 --> statement-breakpoint
 CREATE INDEX `lifecycle_events_system_occurred_idx` ON `lifecycle_events` (`system_id`,`occurred_at`);--> statement-breakpoint
@@ -1178,6 +1178,88 @@ CREATE TABLE `system_snapshots` (
 );
 --> statement-breakpoint
 CREATE INDEX `system_snapshots_system_created_idx` ON `system_snapshots` (`system_id`,`created_at`);--> statement-breakpoint
+CREATE TABLE `system_structure_entities` (
+	`id` text PRIMARY KEY NOT NULL,
+	`system_id` text NOT NULL,
+	`entity_type_id` text NOT NULL,
+	`sort_order` integer NOT NULL,
+	`encrypted_data` blob NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`version` integer DEFAULT 1 NOT NULL,
+	`archived` integer DEFAULT false NOT NULL,
+	`archived_at` integer,
+	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`entity_type_id`,`system_id`) REFERENCES `system_structure_entity_types`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	CONSTRAINT "system_structure_entities_version_check" CHECK("system_structure_entities"."version" >= 1),
+	CONSTRAINT "system_structure_entities_archived_consistency_check" CHECK(("system_structure_entities"."archived" = true) = ("system_structure_entities"."archived_at" IS NOT NULL))
+);
+--> statement-breakpoint
+CREATE INDEX `system_structure_entities_system_archived_idx` ON `system_structure_entities` (`system_id`,`archived`);--> statement-breakpoint
+CREATE INDEX `system_structure_entities_entity_type_id_idx` ON `system_structure_entities` (`entity_type_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `system_structure_entities_id_system_id_unique` ON `system_structure_entities` (`id`,`system_id`);--> statement-breakpoint
+CREATE TABLE `system_structure_entity_associations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`system_id` text NOT NULL,
+	`source_entity_id` text NOT NULL,
+	`target_entity_id` text NOT NULL,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`source_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`target_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+);
+--> statement-breakpoint
+CREATE INDEX `system_structure_entity_associations_source_idx` ON `system_structure_entity_associations` (`source_entity_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entity_associations_target_idx` ON `system_structure_entity_associations` (`target_entity_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entity_associations_system_id_idx` ON `system_structure_entity_associations` (`system_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `system_structure_entity_associations_uniq` ON `system_structure_entity_associations` (`source_entity_id`,`target_entity_id`);--> statement-breakpoint
+CREATE TABLE `system_structure_entity_links` (
+	`id` text PRIMARY KEY NOT NULL,
+	`system_id` text NOT NULL,
+	`entity_id` text NOT NULL,
+	`parent_entity_id` text,
+	`sort_order` integer NOT NULL,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`parent_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+);
+--> statement-breakpoint
+CREATE INDEX `system_structure_entity_links_entity_id_idx` ON `system_structure_entity_links` (`entity_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entity_links_parent_entity_id_idx` ON `system_structure_entity_links` (`parent_entity_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entity_links_system_id_idx` ON `system_structure_entity_links` (`system_id`);--> statement-breakpoint
+CREATE TABLE `system_structure_entity_member_links` (
+	`id` text PRIMARY KEY NOT NULL,
+	`system_id` text NOT NULL,
+	`parent_entity_id` text,
+	`member_id` text NOT NULL,
+	`sort_order` integer NOT NULL,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`parent_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+);
+--> statement-breakpoint
+CREATE INDEX `system_structure_entity_member_links_parent_entity_id_idx` ON `system_structure_entity_member_links` (`parent_entity_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entity_member_links_member_id_idx` ON `system_structure_entity_member_links` (`member_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entity_member_links_system_id_idx` ON `system_structure_entity_member_links` (`system_id`);--> statement-breakpoint
+CREATE TABLE `system_structure_entity_types` (
+	`id` text PRIMARY KEY NOT NULL,
+	`system_id` text NOT NULL,
+	`sort_order` integer NOT NULL,
+	`encrypted_data` blob NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`version` integer DEFAULT 1 NOT NULL,
+	`archived` integer DEFAULT false NOT NULL,
+	`archived_at` integer,
+	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "system_structure_entity_types_version_check" CHECK("system_structure_entity_types"."version" >= 1),
+	CONSTRAINT "system_structure_entity_types_archived_consistency_check" CHECK(("system_structure_entity_types"."archived" = true) = ("system_structure_entity_types"."archived_at" IS NOT NULL))
+);
+--> statement-breakpoint
+CREATE INDEX `system_structure_entity_types_system_archived_idx` ON `system_structure_entity_types` (`system_id`,`archived`);--> statement-breakpoint
+CREATE UNIQUE INDEX `system_structure_entity_types_id_system_id_unique` ON `system_structure_entity_types` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `systems` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,

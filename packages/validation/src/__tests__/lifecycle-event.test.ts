@@ -121,10 +121,10 @@ describe("validateLifecycleMetadata", () => {
     expect(result.success).toBe(true);
   });
 
-  // ── subsystem-formation ───────────────────────────────────────
-  it("validates subsystem-formation metadata", () => {
-    const result = validateLifecycleMetadata("subsystem-formation", {
-      structureIds: ["sub_abc"],
+  // ── structure-entity-formation ───────────────────────────────
+  it("validates structure-entity-formation metadata", () => {
+    const result = validateLifecycleMetadata("structure-entity-formation", {
+      structureIds: ["ste_abc"],
     });
     expect(result.success).toBe(true);
   });
@@ -133,7 +133,7 @@ describe("validateLifecycleMetadata", () => {
   it("validates structure-move metadata", () => {
     const result = validateLifecycleMetadata("structure-move", {
       memberIds: ["mem_a"],
-      structureIds: ["sub_from", "sub_to"],
+      structureIds: ["ste_from", "ste_to"],
     });
     expect(result.success).toBe(true);
   });
@@ -141,7 +141,7 @@ describe("validateLifecycleMetadata", () => {
   it("rejects structure-move with wrong structureIds count", () => {
     const result = validateLifecycleMetadata("structure-move", {
       memberIds: ["mem_a"],
-      structureIds: ["sub_from"],
+      structureIds: ["ste_from"],
     });
     expect(result.success).toBe(false);
   });

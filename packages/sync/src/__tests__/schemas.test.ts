@@ -53,9 +53,8 @@ function makeSystemCoreDoc(): Automerge.Doc<SystemCoreDocument> {
     members: {},
     memberPhotos: {},
     groups: {},
-    subsystems: {},
-    sideSystems: {},
-    layers: {},
+    structureEntityTypes: {},
+    structureEntities: {},
     relationships: {},
     customFronts: {},
     fieldDefinitions: {},
@@ -64,12 +63,9 @@ function makeSystemCoreDoc(): Automerge.Doc<SystemCoreDocument> {
     innerWorldRegions: {},
     timers: {},
     groupMemberships: {},
-    subsystemMemberships: {},
-    sideSystemMemberships: {},
-    layerMemberships: {},
-    subsystemLayerLinks: {},
-    subsystemSideSystemLinks: {},
-    sideSystemLayerLinks: {},
+    structureEntityLinks: {},
+    structureEntityMemberLinks: {},
+    structureEntityAssociations: {},
     lifecycleEvents: [],
   });
 }
@@ -244,11 +240,11 @@ describe("SystemCoreDocument schema", () => {
     doc = Automerge.change(doc, (d) => {
       d.groupMemberships["g1_m1"] = true;
       d.groupMemberships["g1_m2"] = true;
-      d.subsystemMemberships["ss1_m1"] = true;
+      d.structureEntityMemberLinks["se1_m1"] = true;
     });
     expect(doc.groupMemberships["g1_m1"]).toBe(true);
     expect(doc.groupMemberships["g1_m2"]).toBe(true);
-    expect(doc.subsystemMemberships["ss1_m1"]).toBe(true);
+    expect(doc.structureEntityMemberLinks["se1_m1"]).toBe(true);
     expect(Object.keys(doc.groupMemberships)).toHaveLength(2);
   });
 
@@ -300,7 +296,7 @@ describe("FrontingDocument schema", () => {
         endTime: null,
         comment: null,
         customFrontId: null,
-        linkedStructure: null,
+        structureEntityId: null,
         positionality: null,
         outtrigger: null,
         outtriggerSentiment: null,
@@ -332,7 +328,7 @@ describe("FrontingDocument schema", () => {
         endTime: null,
         comment: null,
         customFrontId: null,
-        linkedStructure: null,
+        structureEntityId: null,
         positionality: null,
         outtrigger: null,
         outtriggerSentiment: null,
@@ -406,7 +402,7 @@ describe("FrontingDocument schema", () => {
         endTime: 6000,
         comment: s("round-trip test"),
         customFrontId: null,
-        linkedStructure: null,
+        structureEntityId: null,
         positionality: null,
         outtrigger: s("felt triggered by noise"),
         outtriggerSentiment: s("negative"),

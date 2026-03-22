@@ -298,14 +298,14 @@ describe("SQLite fronting schema", () => {
           updatedAt: now,
           memberId,
           customFrontId: cfId,
-          linkedStructure: { entityType: "subsystem", entityId: "r-1" },
+          structureEntityId: "r-1",
         })
         .run();
 
       const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
       expect(rows[0]?.memberId).toBe(memberId);
       expect(rows[0]?.customFrontId).toBe(cfId);
-      expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
+      expect(rows[0]?.structureEntityId).toBe("r-1");
     });
 
     it("defaults T3 metadata columns to null", () => {
@@ -329,7 +329,7 @@ describe("SQLite fronting schema", () => {
 
       const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
       expect(rows[0]?.memberId).toBeNull();
-      expect(rows[0]?.linkedStructure).toBeNull();
+      expect(rows[0]?.structureEntityId).toBeNull();
     });
 
     it("sets memberId to null on member deletion", () => {

@@ -34,7 +34,7 @@ import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
 import { asSyncDocId } from "./test-crypto-helpers.js";
 
-import type { CrdtGroup, CrdtSubsystem, CrdtInnerWorldRegion } from "../schemas/system-core.js";
+import type { CrdtGroup, CrdtInnerWorldRegion } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 import type { SyncDocumentId } from "@pluralscape/types";
@@ -83,25 +83,6 @@ function makeGroup(
     color: null,
     emoji: null,
     sortOrder,
-    archived: false,
-    createdAt: 1000,
-    updatedAt: 1000,
-  };
-}
-
-function makeSubsystem(id: string, parentId?: string): CrdtSubsystem {
-  return {
-    id: s(id),
-    systemId: s("sys_1"),
-    name: s(id),
-    description: null,
-    parentSubsystemId: parentId ? s(parentId) : null,
-    architectureType: null,
-    hasCore: false,
-    discoveryStatus: s("known"),
-    color: null,
-    imageSource: null,
-    emoji: null,
     archived: false,
     createdAt: 1000,
     updatedAt: 1000,
@@ -305,25 +286,25 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     expect(sessionA.document.groups["groupB"]?.parentGroupId?.val).toBe("groupA");
   });
 
-  it("breaks subsystem cycles", async () => {
+  it("breaks a second group cycle (independent from the first)", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-ss-cycle"));
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-grp-cycle-2"));
 
     const seedEnv = sessionA.change((d) => {
-      d.subsystems["ss_a"] = makeSubsystem("ss_a");
-      d.subsystems["ss_b"] = makeSubsystem("ss_b");
+      d.groups["grpX"] = makeGroup("grpX", 1);
+      d.groups["grpY"] = makeGroup("grpY", 2);
     });
     await relay.submit(seedEnv);
-    const _r3 = await relay.getEnvelopesSince(asSyncDocId("doc-ss-cycle"), 0);
+    const _r3 = await relay.getEnvelopesSince(asSyncDocId("doc-grp-cycle-2"), 0);
     sessionB.applyEncryptedChanges(_r3.envelopes);
 
     const envA = sessionA.change((d) => {
-      const ss = d.subsystems["ss_a"];
-      if (ss) ss.parentSubsystemId = s("ss_b");
+      const g = d.groups["grpX"];
+      if (g) g.parentGroupId = s("grpY");
     });
     const envB = sessionB.change((d) => {
-      const ss = d.subsystems["ss_b"];
-      if (ss) ss.parentSubsystemId = s("ss_a");
+      const g = d.groups["grpY"];
+      if (g) g.parentGroupId = s("grpX");
     });
 
     await relay.submit(envA);
@@ -333,8 +314,8 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     const { breaks } = detectHierarchyCycles(sessionA);
 
     expect(breaks.length).toBeGreaterThan(0);
-    // ss_a < ss_b alphabetically, so ss_a's parent gets nulled
-    expect(sessionA.document.subsystems["ss_a"]?.parentSubsystemId).toBeNull();
+    // grpX < grpY alphabetically, so grpX's parent gets nulled
+    expect(sessionA.document.groups["grpX"]?.parentGroupId).toBeNull();
   });
 
   it("breaks innerworld region cycles", async () => {

@@ -18,8 +18,16 @@ export type MessageId = Brand<string, "MessageId">;
 export type NoteId = Brand<string, "NoteId">;
 export type PollId = Brand<string, "PollId">;
 export type RelationshipId = Brand<string, "RelationshipId">;
-export type SubsystemId = Brand<string, "SubsystemId">;
+export type SystemStructureEntityTypeId = Brand<string, "SystemStructureEntityTypeId">;
+export type SystemStructureEntityId = Brand<string, "SystemStructureEntityId">;
+export type SystemStructureEntityLinkId = Brand<string, "SystemStructureEntityLinkId">;
+export type SystemStructureEntityMemberLinkId = Brand<string, "SystemStructureEntityMemberLinkId">;
+export type SystemStructureEntityAssociationId = Brand<
+  string,
+  "SystemStructureEntityAssociationId"
+>;
 export type FieldDefinitionId = Brand<string, "FieldDefinitionId">;
+export type FieldDefinitionScopeId = Brand<string, "FieldDefinitionScopeId">;
 export type FieldValueId = Brand<string, "FieldValueId">;
 export type SessionId = Brand<string, "SessionId">;
 export type LifecycleEventId = Brand<string, "LifecycleEventId">;
@@ -30,8 +38,6 @@ export type WebhookId = Brand<string, "WebhookId">;
 export type TimerId = Brand<string, "TimerId">;
 export type JournalEntryId = Brand<string, "JournalEntryId">;
 export type WikiPageId = Brand<string, "WikiPageId">;
-export type SideSystemId = Brand<string, "SideSystemId">;
-export type LayerId = Brand<string, "LayerId">;
 export type InnerWorldEntityId = Brand<string, "InnerWorldEntityId">;
 export type InnerWorldRegionId = Brand<string, "InnerWorldRegionId">;
 export type InnerWorldCanvasId = Brand<string, "InnerWorldCanvasId">;
@@ -71,10 +77,6 @@ export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
 export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
 export type SystemSnapshotId = Brand<string, "SystemSnapshotId">;
 export type BiometricTokenId = Brand<string, "BiometricTokenId">;
-export type SubsystemMembershipId = Brand<string, "SubsystemMembershipId">;
-export type SideSystemMembershipId = Brand<string, "SideSystemMembershipId">;
-export type LayerMembershipId = Brand<string, "LayerMembershipId">;
-export type StructureLinkId = Brand<string, "StructureLinkId">;
 export type StorageKey = Brand<string, "StorageKey">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
@@ -99,8 +101,13 @@ export const ID_PREFIXES = {
   note: "note_",
   poll: "poll_",
   relationship: "rel_",
-  subsystem: "sub_",
+  structureEntityType: "stet_",
+  structureEntity: "ste_",
+  structureEntityLink: "stel_",
+  structureEntityMemberLink: "steml_",
+  structureEntityAssociation: "stea_",
   fieldDefinition: "fld_",
+  fieldDefinitionScope: "fds_",
   fieldValue: "fv_",
   session: "sess_",
   lifecycleEvent: "evt_",
@@ -111,8 +118,6 @@ export const ID_PREFIXES = {
   timer: "tmr_",
   journalEntry: "je_",
   wikiPage: "wp_",
-  sideSystem: "ss_",
-  layer: "lyr_",
   innerWorldEntity: "iwe_",
   innerWorldRegion: "iwr_",
   innerWorldCanvas: "iwc_",
@@ -150,10 +155,6 @@ export const ID_PREFIXES = {
   bucketRotationItem: "bri_",
   systemSnapshot: "snap_",
   biometricToken: "bt_",
-  subsystemMembership: "subm_",
-  sideSystemMembership: "ssm_",
-  layerMembership: "lyrm_",
-  structureLink: "slink_",
 } as const;
 
 /** Maps each ID prefix value to its Brand tag string. */
@@ -167,8 +168,13 @@ export interface IdPrefixBrandMap {
   note_: "NoteId";
   poll_: "PollId";
   rel_: "RelationshipId";
-  sub_: "SubsystemId";
+  stet_: "SystemStructureEntityTypeId";
+  ste_: "SystemStructureEntityId";
+  stel_: "SystemStructureEntityLinkId";
+  steml_: "SystemStructureEntityMemberLinkId";
+  stea_: "SystemStructureEntityAssociationId";
   fld_: "FieldDefinitionId";
+  fds_: "FieldDefinitionScopeId";
   fv_: "FieldValueId";
   sess_: "SessionId";
   evt_: "LifecycleEventId";
@@ -179,8 +185,6 @@ export interface IdPrefixBrandMap {
   tmr_: "TimerId";
   je_: "JournalEntryId";
   wp_: "WikiPageId";
-  ss_: "SideSystemId";
-  lyr_: "LayerId";
   iwe_: "InnerWorldEntityId";
   iwr_: "InnerWorldRegionId";
   iwc_: "InnerWorldCanvasId";
@@ -218,10 +222,6 @@ export interface IdPrefixBrandMap {
   bri_: "BucketRotationItemId";
   snap_: "SystemSnapshotId";
   bt_: "BiometricTokenId";
-  subm_: "SubsystemMembershipId";
-  ssm_: "SideSystemMembershipId";
-  lyrm_: "LayerMembershipId";
-  slink_: "StructureLinkId";
 }
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -236,9 +236,11 @@ export type EntityType =
   | "note"
   | "poll"
   | "relationship"
-  | "subsystem"
-  | "side-system"
-  | "layer"
+  | "structure-entity-type"
+  | "structure-entity"
+  | "structure-entity-link"
+  | "structure-entity-member-link"
+  | "structure-entity-association"
   | "journal-entry"
   | "wiki-page"
   | "custom-front"
@@ -286,4 +288,5 @@ export type EntityType =
   | "bucket-key-rotation"
   | "bucket-rotation-item"
   | "system-snapshot"
-  | "biometric-token";
+  | "biometric-token"
+  | "field-definition-scope";
