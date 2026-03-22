@@ -1,0 +1,211 @@
+/systems/{systemId}/structure-entity-types:
+  get:
+    operationId: listStructureEntityTypes
+    tags: [Structure Entity Types]
+    summary: List structure entity types
+    description: Returns a paginated list of structure entity types for the given system. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated structure entity type list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [entityTypes]
+                  properties:
+                    entityTypes:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createStructureEntityType
+    tags: [Structure Entity Types]
+    summary: Create a structure entity type
+    description: Creates a new structure entity type within the given system. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/CreateStructureEntityTypeRequest"
+    responses:
+      "201":
+        description: Structure entity type created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-entity-types/{entityTypeId}:
+  get:
+    operationId: getStructureEntityType
+    tags: [Structure Entity Types]
+    summary: Get a structure entity type
+    description: Returns details for a single structure entity type by ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityTypeId
+        in: path
+        required: true
+        description: Structure entity type ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Structure entity type details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateStructureEntityType
+    tags: [Structure Entity Types]
+    summary: Update a structure entity type
+    description: Updates the encrypted payload or metadata for a structure entity type. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityTypeId
+        in: path
+        required: true
+        description: Structure entity type ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/UpdateStructureEntityTypeRequest"
+    responses:
+      "200":
+        description: Structure entity type updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteStructureEntityType
+    tags: [Structure Entity Types]
+    summary: Delete a structure entity type
+    description: Permanently deletes a structure entity type. Returns 409 if the entity type has dependents. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityTypeId
+        in: path
+        required: true
+        description: Structure entity type ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-entity-types/{entityTypeId}/archive:
+  post:
+    operationId: archiveStructureEntityType
+    tags: [Structure Entity Types]
+    summary: Archive a structure entity type
+    description: Marks a structure entity type as archived. Archived entity types are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityTypeId
+        in: path
+        required: true
+        description: Structure entity type ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Structure entity type archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-entity-types/{entityTypeId}/restore:
+  post:
+    operationId: restoreStructureEntityType
+    tags: [Structure Entity Types]
+    summary: Restore an archived structure entity type
+    description: Removes the archived flag from a structure entity type, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityTypeId
+        in: path
+        required: true
+        description: Structure entity type ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Structure entity type restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

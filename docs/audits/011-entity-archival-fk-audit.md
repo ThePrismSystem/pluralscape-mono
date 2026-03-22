@@ -6,6 +6,8 @@
 
 **Note (2026-03-17):** Entity-to-entity FKs have been changed from CASCADE/SET NULL to RESTRICT. The verdicts below reflect the pre-RESTRICT state. With RESTRICT, all entities with inbound entity FKs will block on deletion until dependents are removed first.
 
+**Note (2026-03-22):** The structure entity refactor (PRs #236-#238) replaced the Subsystem, Side System, and Layer tables with generic structure entity tables (`system_structure_entity_types`, `system_structure_entities`, plus link/association tables). The FK sections for those three entities below reflect the pre-refactor schema.
+
 ---
 
 ## Scope of This Audit
@@ -21,9 +23,11 @@ The following entities carry `archived` + `archivedAt` columns and are therefore
 | Switch                          | `switches`                        | `pg/fronting.ts`      |
 | Fronting Comment                | `fronting_comments`               | `pg/fronting.ts`      |
 | Relationship                    | `relationships`                   | `pg/structure.ts`     |
-| Subsystem                       | `subsystems`                      | `pg/structure.ts`     |
-| Side System                     | `side_systems`                    | `pg/structure.ts`     |
-| Layer                           | `layers`                          | `pg/structure.ts`     |
+| ~~Subsystem~~                   | ~~`subsystems`~~                  | ~~`pg/structure.ts`~~ |
+| ~~Side System~~                 | ~~`side_systems`~~                | ~~`pg/structure.ts`~~ |
+| ~~Layer~~                       | ~~`layers`~~                      | ~~`pg/structure.ts`~~ |
+| Structure Entity Type           | `system_structure_entity_types`   | `pg/structure.ts`     |
+| Structure Entity                | `system_structure_entities`       | `pg/structure.ts`     |
 | Channel                         | `channels`                        | `pg/communication.ts` |
 | Message                         | `messages`                        | `pg/communication.ts` |
 | Board Message                   | `board_messages`                  | `pg/communication.ts` |
@@ -65,29 +69,30 @@ The following entities carry `archived` + `archivedAt` columns and are therefore
 **Table:** `members`
 **Inbound FK references:**
 
-| Referencing Table   | Column(s)                             | ON DELETE | Notes                          |
-| ------------------- | ------------------------------------- | --------- | ------------------------------ |
-| `member_photos`     | `(member_id, system_id)`              | CASCADE   | Deletes all photos             |
-| `fronting_sessions` | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`              |
-| `fronting_comments` | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`              |
-| `relationships`     | `(source_member_id, system_id)`       | SET NULL  | Nulls `source_member_id`       |
-| `relationships`     | `(target_member_id, system_id)`       | SET NULL  | Nulls `target_member_id`       |
-| `notes`             | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`              |
-| `polls`             | `(created_by_member_id, system_id)`   | SET NULL  | Nulls `created_by_member_id`   |
-| `acknowledgements`  | `(created_by_member_id, system_id)`   | SET NULL  | Nulls `created_by_member_id`   |
-| `check_in_records`  | `(responded_by_member_id, system_id)` | SET NULL  | Nulls `responded_by_member_id` |
-| `group_memberships` | `(member_id, system_id)`              | CASCADE   | Deletes membership rows        |
-| `field_values`      | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`              |
+| Referencing Table                      | Column(s)                             | ON DELETE | Notes                               |
+| -------------------------------------- | ------------------------------------- | --------- | ----------------------------------- |
+| `member_photos`                        | `(member_id, system_id)`              | CASCADE   | Deletes all photos                  |
+| `fronting_sessions`                    | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`                   |
+| `fronting_comments`                    | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`                   |
+| `relationships`                        | `(source_member_id, system_id)`       | SET NULL  | Nulls `source_member_id`            |
+| `relationships`                        | `(target_member_id, system_id)`       | SET NULL  | Nulls `target_member_id`            |
+| `notes`                                | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`                   |
+| `polls`                                | `(created_by_member_id, system_id)`   | SET NULL  | Nulls `created_by_member_id`        |
+| `acknowledgements`                     | `(created_by_member_id, system_id)`   | SET NULL  | Nulls `created_by_member_id`        |
+| `check_in_records`                     | `(responded_by_member_id, system_id)` | SET NULL  | Nulls `responded_by_member_id`      |
+| `group_memberships`                    | `(member_id, system_id)`              | CASCADE   | Deletes membership rows             |
+| `field_values`                         | `(member_id, system_id)`              | SET NULL  | Nulls `member_id`                   |
+| `system_structure_entity_member_links` | `(member_id, system_id)`              | RESTRICT  | Blocks deletion if member is linked |
 
-**Hard delete verdict:** BLOCKED (special case)
+**Hard delete verdict:** BLOCKED
 
-The FK mechanics themselves are `CASCADE` or `SET NULL` — none use `RESTRICT`. However, `fronting_sessions` carries a `CHECK` constraint:
+Per the 2026-03-17 note, all entity-to-entity FKs are now `RESTRICT`. The `system_structure_entity_member_links` FK directly blocks hard deletion if any structure entity links reference this member. Additionally, `fronting_sessions` carries a `CHECK` constraint:
 
 ```sql
-CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL)
+CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL OR structure_entity_id IS NOT NULL)
 ```
 
-If a fronting session's only subject is a member, the `ON DELETE SET NULL` cascade will null `member_id`. With `custom_front_id` also `NULL`, the `fronting_sessions_subject_check` constraint fires and raises a violation. This is **intentional fail-loud behavior** documented in the schema: members should be archived, not deleted. Account purge (system-level `ON DELETE CASCADE`) bypasses this by nuking `fronting_sessions` entirely via the `system_id` FK.
+If a fronting session's only subject is a member, the `ON DELETE SET NULL` cascade will null `member_id`. If `custom_front_id` and `structure_entity_id` are also `NULL`, the `fronting_sessions_subject_check` constraint fires and raises a violation.
 
 **Action:** Never hard-delete a member. Use archival. System-level purge is safe because it cascades from `systems.id`.
 
@@ -113,7 +118,7 @@ If a fronting session's only subject is a member, the `ON DELETE SET NULL` casca
 
 **Hard delete verdict:** BLOCKED (special case)
 
-Same constraint risk as `members`. The `fronting_sessions_subject_check` constraint fires if a session's sole subject is this custom front and `member_id` is also `NULL`. The single-column FK (not composite) is a deliberate design: a composite `(custom_front_id, system_id)` FK with `ON DELETE SET NULL` would attempt to null `system_id`, violating its `NOT NULL` constraint. This design choice is documented in `fronting.ts`.
+Same constraint risk as `members`. The `fronting_sessions_subject_check` constraint fires if a session's sole subject is this custom front and `member_id` and `structure_entity_id` are both also `NULL`. The single-column FK (not composite) is a deliberate design: a composite `(custom_front_id, system_id)` FK with `ON DELETE SET NULL` would attempt to null `system_id`, violating its `NOT NULL` constraint. This design choice is documented in `fronting.ts`.
 
 **Action:** Never hard-delete a custom front. Use archival.
 
@@ -167,7 +172,52 @@ Hard deletion removes all `fronting_comments` for the session. The journal `fron
 
 ---
 
-### 8. `subsystems`
+### 8. `system_structure_entity_types` (NEW — 2026-03-22)
+
+**Table:** `system_structure_entity_types`
+**Schema file:** `pg/structure.ts`
+**Inbound FK references:**
+
+| Referencing Table           | Column(s)                           | ON DELETE | Notes                                            |
+| --------------------------- | ----------------------------------- | --------- | ------------------------------------------------ |
+| `system_structure_entities` | `(entity_type_id, system_id)`       | RESTRICT  | Blocks deletion if any entities use this type    |
+| `field_definition_scopes`   | `(scope_entity_type_id, system_id)` | RESTRICT  | Blocks deletion if any field scopes reference it |
+
+**Hard delete verdict:** BLOCKED (RESTRICT from entities and field scopes)
+
+A structure entity type cannot be hard-deleted while any `system_structure_entities` rows reference it, or while any `field_definition_scopes` rows are scoped to it. Both FKs use `ON DELETE RESTRICT`.
+
+**Action:** Never hard-delete. Use archival.
+
+---
+
+### 9. `system_structure_entities` (NEW — 2026-03-22)
+
+**Table:** `system_structure_entities`
+**Schema file:** `pg/structure.ts`
+**Inbound FK references:**
+
+| Referencing Table                      | Column(s)                          | ON DELETE | Notes                                                 |
+| -------------------------------------- | ---------------------------------- | --------- | ----------------------------------------------------- |
+| `system_structure_entity_links`        | `(entity_id, system_id)`           | RESTRICT  | Blocks deletion if linked as a child                  |
+| `system_structure_entity_links`        | `(parent_entity_id, system_id)`    | RESTRICT  | Blocks deletion if linked as a parent                 |
+| `system_structure_entity_member_links` | `(parent_entity_id, system_id)`    | RESTRICT  | Blocks deletion if any member links reference it      |
+| `system_structure_entity_associations` | `(source_entity_id, system_id)`    | RESTRICT  | Blocks deletion if used as association source         |
+| `system_structure_entity_associations` | `(target_entity_id, system_id)`    | RESTRICT  | Blocks deletion if used as association target         |
+| `fronting_sessions`                    | `structure_entity_id`              | RESTRICT  | Blocks deletion if referenced in any fronting session |
+| `field_values`                         | `(structure_entity_id, system_id)` | RESTRICT  | Blocks deletion if any field values exist             |
+
+**Hard delete verdict:** BLOCKED (multiple RESTRICT FKs)
+
+A structure entity cannot be hard-deleted while any of its link, association, fronting session, or field value dependents remain. All seven FK references use `ON DELETE RESTRICT`.
+
+**Action:** Never hard-delete. Use archival.
+
+---
+
+### 10. `subsystems` (SUPERSEDED)
+
+> **Superseded (2026-03-22):** This entity was replaced by `system_structure_entities` in the structure entity refactor (PRs #236-#238). The analysis below reflects the pre-refactor schema.
 
 **Table:** `subsystems`
 **Inbound FK references:**
@@ -185,7 +235,9 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 9. `side_systems`
+### 11. `side_systems` (SUPERSEDED)
+
+> **Superseded (2026-03-22):** This entity was replaced by `system_structure_entities` in the structure entity refactor (PRs #236-#238). The analysis below reflects the pre-refactor schema.
 
 **Table:** `side_systems`
 **Inbound FK references:**
@@ -200,7 +252,9 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 10. `layers`
+### 12. `layers` (SUPERSEDED)
+
+> **Superseded (2026-03-22):** This entity was replaced by `system_structure_entities` in the structure entity refactor (PRs #236-#238). The analysis below reflects the pre-refactor schema.
 
 **Table:** `layers`
 **Inbound FK references:**
@@ -215,7 +269,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 11. `channels`
+### 13. `channels`
 
 **Table:** `channels`
 **Inbound FK references:**
@@ -231,7 +285,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 12. `messages`
+### 14. `messages`
 
 **Table:** `messages`
 **Partition:** PARTITION BY RANGE (`timestamp`). PK is composite `(id, timestamp)`.
@@ -243,7 +297,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 13. `board_messages`
+### 15. `board_messages`
 
 **Table:** `board_messages`
 **Inbound FK references:** None — no other table references `board_messages`.
@@ -252,7 +306,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 14. `notes`
+### 16. `notes`
 
 **Table:** `notes`
 **Inbound FK references:** None — no other table references `notes`.
@@ -261,7 +315,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 15. `polls`
+### 17. `polls`
 
 **Table:** `polls`
 **Inbound FK references:**
@@ -274,7 +328,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 16. `poll_votes`
+### 18. `poll_votes`
 
 **Table:** `poll_votes`
 **Inbound FK references:** None — no other table references `poll_votes`.
@@ -283,7 +337,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 17. `acknowledgements`
+### 19. `acknowledgements`
 
 **Table:** `acknowledgements`
 **Inbound FK references:** None — no other table references `acknowledgements`.
@@ -292,7 +346,7 @@ Self-referential `SET NULL` on `parent_subsystem_id` correctly detaches child su
 
 ---
 
-### 18. `innerworld_regions`
+### 20. `innerworld_regions`
 
 **Table:** `innerworld_regions`
 **Inbound FK references:**
@@ -308,7 +362,7 @@ Note: `innerworld_entities.region_id` uses a single-column FK (not composite) ag
 
 ---
 
-### 19. `innerworld_entities`
+### 21. `innerworld_entities`
 
 **Table:** `innerworld_entities`
 **Inbound FK references:** None — no other table references `innerworld_entities`.
@@ -317,7 +371,7 @@ Note: `innerworld_entities.region_id` uses a single-column FK (not composite) ag
 
 ---
 
-### 20. `buckets`
+### 22. `buckets`
 
 **Table:** `buckets`
 **Inbound FK references:**
@@ -336,7 +390,7 @@ Hard-deleting a bucket revokes friend access (key grants deleted), removes conte
 
 ---
 
-### 21. `friend_connections`
+### 23. `friend_connections`
 
 **Table:** `friend_connections`
 **Inbound FK references:**
@@ -350,7 +404,7 @@ Hard-deleting a bucket revokes friend access (key grants deleted), removes conte
 
 ---
 
-### 22. `friend_codes`
+### 24. `friend_codes`
 
 **Table:** `friend_codes`
 **Inbound FK references:** None — no other table references `friend_codes`.
@@ -359,7 +413,7 @@ Hard-deleting a bucket revokes friend access (key grants deleted), removes conte
 
 ---
 
-### 23. `notification_configs`
+### 25. `notification_configs`
 
 **Table:** `notification_configs`
 **Inbound FK references:** None — no other table references `notification_configs`.
@@ -368,7 +422,7 @@ Hard-deleting a bucket revokes friend access (key grants deleted), removes conte
 
 ---
 
-### 24. `friend_notification_preferences`
+### 26. `friend_notification_preferences`
 
 **Table:** `friend_notification_preferences`
 **Inbound FK references:** None — no other table references `friend_notification_preferences`.
@@ -377,7 +431,7 @@ Hard-deleting a bucket revokes friend access (key grants deleted), removes conte
 
 ---
 
-### 25. `webhook_configs`
+### 27. `webhook_configs`
 
 **Table:** `webhook_configs`
 **Inbound FK references:**
@@ -392,7 +446,7 @@ Deleting a webhook config erases delivery history. Archival preserves delivery r
 
 ---
 
-### 26. `webhook_deliveries`
+### 28. `webhook_deliveries`
 
 **Table:** `webhook_deliveries`
 **Inbound FK references:** None — no other table references `webhook_deliveries`.
@@ -403,7 +457,7 @@ Note: Terminal-state delivery records (`status IN ('success', 'failed')`) are in
 
 ---
 
-### 27. `timer_configs`
+### 29. `timer_configs`
 
 **Table:** `timer_configs`
 **Inbound FK references:**
@@ -418,7 +472,7 @@ Deleting a timer config erases all historical check-in records. Archival is stro
 
 ---
 
-### 28. `check_in_records`
+### 30. `check_in_records`
 
 **Table:** `check_in_records`
 **Inbound FK references:** None — no other table references `check_in_records`.
@@ -427,7 +481,7 @@ Deleting a timer config erases all historical check-in records. Archival is stro
 
 ---
 
-### 29. `blob_metadata`
+### 31. `blob_metadata`
 
 **Table:** `blob_metadata`
 **Inbound FK references:**
@@ -442,7 +496,7 @@ The self-referential FK `thumbnail_of_blob_id → id` uses `ON DELETE SET NULL`.
 
 ---
 
-### 30. `journal_entries`
+### 32. `journal_entries`
 
 **Table:** `journal_entries`
 **Inbound FK references:** None — no other table references `journal_entries`.
@@ -453,7 +507,7 @@ Note: `journal_entries.fronting_session_id` is application-enforced only, not a 
 
 ---
 
-### 31. `wiki_pages`
+### 33. `wiki_pages`
 
 **Table:** `wiki_pages`
 **Inbound FK references:** None — no other table references `wiki_pages`.
@@ -462,7 +516,7 @@ Note: `journal_entries.fronting_session_id` is application-enforced only, not a 
 
 ---
 
-### 32. `groups`
+### 34. `groups`
 
 **Table:** `groups`
 **Inbound FK references:**
@@ -476,7 +530,7 @@ Note: `journal_entries.fronting_session_id` is application-enforced only, not a 
 
 ---
 
-### 33. `field_definitions`
+### 35. `field_definitions`
 
 **Table:** `field_definitions`
 **Inbound FK references:**
@@ -513,12 +567,12 @@ PostgreSQL cannot enforce FK constraints from non-partitioned tables that refere
 This `CHECK` is the most consequential constraint for the archival/deletion feature:
 
 ```sql
-CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL)
+CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL OR structure_entity_id IS NOT NULL)
 ```
 
-It makes hard-deleting `members` or `custom_fronts` potentially destructive, not just to the target row, but to the schema integrity of `fronting_sessions`. Any code path that performs hard deletion of a member or custom front must first verify:
+It makes hard-deleting `members`, `custom_fronts`, or `system_structure_entities` potentially destructive, not just to the target row, but to the schema integrity of `fronting_sessions`. Any code path that performs hard deletion of a member, custom front, or structure entity must first verify:
 
-1. No fronting session exists where this entity is the **sole subject** (both `member_id` and `custom_front_id` are not both non-null to another value).
+1. No fronting session exists where this entity is the **sole subject** (i.e., the other two subject columns are both `NULL`).
 2. If such sessions exist, the operation must fail with a clear error — not silently corrupt data.
 
 Account-level purge is exempt because `fronting_sessions.system_id` cascades from `systems.id`, which cascades from `accounts.id`, bypassing this check by deleting the entire session rather than nulling its subject column.
@@ -531,42 +585,44 @@ Account-level purge is exempt because `fronting_sessions.system_id` cascades fro
 
 ## Summary Table
 
-| Entity (table)                    | Has Inbound FKs | Min. ON DELETE Behavior | Hard Delete | Reason / Notes                                          |
-| --------------------------------- | --------------- | ----------------------- | ----------- | ------------------------------------------------------- |
-| `members`                         | Yes             | SET NULL + CASCADE      | **BLOCKED** | `fronting_sessions_subject_check` can fire              |
-| `member_photos`                   | No              | —                       | Safe        | No children                                             |
-| `custom_fronts`                   | Yes             | SET NULL                | **BLOCKED** | `fronting_sessions_subject_check` can fire              |
-| `fronting_sessions`               | Yes             | CASCADE                 | Safe        | Cascades to `fronting_comments`; journal FK is app-only |
-| `switches`                        | No              | —                       | Safe        | No DB children; `member_ids` JSONB has no FK            |
-| `fronting_comments`               | No              | —                       | Safe        | No children                                             |
-| `relationships`                   | No              | —                       | Safe        | No children                                             |
-| `subsystems`                      | Yes             | CASCADE + SET NULL      | Safe        | Self-ref SET NULL detaches children                     |
-| `side_systems`                    | Yes             | CASCADE                 | Safe        | All children cascade                                    |
-| `layers`                          | Yes             | CASCADE                 | Safe        | All children cascade                                    |
-| `channels`                        | Yes             | CASCADE + SET NULL      | Safe        | Cascades to `messages`; self-ref SET NULL               |
-| `messages`                        | No              | —                       | Safe        | No DB children; `reply_to_id` is app-only               |
-| `board_messages`                  | No              | —                       | Safe        | No children                                             |
-| `notes`                           | No              | —                       | Safe        | No children                                             |
-| `polls`                           | Yes             | CASCADE                 | Safe        | Cascades to `poll_votes`                                |
-| `poll_votes`                      | No              | —                       | Safe        | No children                                             |
-| `acknowledgements`                | No              | —                       | Safe        | No children                                             |
-| `innerworld_regions`              | Yes             | SET NULL                | Safe        | Self-ref SET NULL; entity `region_id` SET NULL          |
-| `innerworld_entities`             | No              | —                       | Safe        | No children                                             |
-| `buckets`                         | Yes             | CASCADE + SET NULL      | Safe        | Revokes all friend access on delete                     |
-| `friend_connections`              | Yes             | CASCADE                 | Safe        | Cascades to assignments and prefs                       |
-| `friend_codes`                    | No              | —                       | Safe        | No children                                             |
-| `notification_configs`            | No              | —                       | Safe        | No children                                             |
-| `friend_notification_preferences` | No              | —                       | Safe        | No children                                             |
-| `webhook_configs`                 | Yes             | CASCADE                 | Safe        | Cascades to delivery records                            |
-| `webhook_deliveries`              | No              | —                       | Safe        | No children; TTL cleanup is legitimate hard-delete      |
-| `timer_configs`                   | Yes             | CASCADE                 | Safe        | Cascades to check-in records                            |
-| `check_in_records`                | No              | —                       | Safe        | No children                                             |
-| `blob_metadata`                   | Yes (self)      | SET NULL                | Safe        | Self-ref for thumbnails; no blocking constraints        |
-| `journal_entries`                 | No              | —                       | Safe        | No children                                             |
-| `wiki_pages`                      | No              | —                       | Safe        | No children                                             |
-| `groups`                          | Yes             | CASCADE + SET NULL      | Safe        | Self-ref SET NULL; memberships cascade                  |
-| `field_definitions`               | Yes             | CASCADE                 | Safe        | Cascades values and visibility rules                    |
+| Entity (table)                    | Has Inbound FKs | Min. ON DELETE Behavior | Hard Delete | Reason / Notes                                                                                                |
+| --------------------------------- | --------------- | ----------------------- | ----------- | ------------------------------------------------------------------------------------------------------------- |
+| `members`                         | Yes             | RESTRICT + SET NULL     | **BLOCKED** | RESTRICT from `system_structure_entity_member_links`; three-column `fronting_sessions_subject_check` can fire |
+| `member_photos`                   | No              | —                       | Safe        | No children                                                                                                   |
+| `custom_fronts`                   | Yes             | SET NULL                | **BLOCKED** | Three-column `fronting_sessions_subject_check` can fire                                                       |
+| `fronting_sessions`               | Yes             | CASCADE                 | Safe        | Cascades to `fronting_comments`; journal FK is app-only                                                       |
+| `switches`                        | No              | —                       | Safe        | No DB children; `member_ids` JSONB has no FK                                                                  |
+| `fronting_comments`               | No              | —                       | Safe        | No children                                                                                                   |
+| `relationships`                   | No              | —                       | Safe        | No children                                                                                                   |
+| `system_structure_entity_types`   | Yes             | RESTRICT                | **BLOCKED** | RESTRICT from entities and field scopes                                                                       |
+| `system_structure_entities`       | Yes             | RESTRICT                | **BLOCKED** | Multiple RESTRICT FKs; three-column `fronting_sessions_subject_check` can fire                                |
+| ~~`subsystems`~~ (superseded)     | Yes             | CASCADE + SET NULL      | Safe        | Replaced by `system_structure_entities` (PRs #236-#238)                                                       |
+| ~~`side_systems`~~ (superseded)   | Yes             | CASCADE                 | Safe        | Replaced by `system_structure_entities` (PRs #236-#238)                                                       |
+| ~~`layers`~~ (superseded)         | Yes             | CASCADE                 | Safe        | Replaced by `system_structure_entities` (PRs #236-#238)                                                       |
+| `channels`                        | Yes             | CASCADE + SET NULL      | Safe        | Cascades to `messages`; self-ref SET NULL                                                                     |
+| `messages`                        | No              | —                       | Safe        | No DB children; `reply_to_id` is app-only                                                                     |
+| `board_messages`                  | No              | —                       | Safe        | No children                                                                                                   |
+| `notes`                           | No              | —                       | Safe        | No children                                                                                                   |
+| `polls`                           | Yes             | CASCADE                 | Safe        | Cascades to `poll_votes`                                                                                      |
+| `poll_votes`                      | No              | —                       | Safe        | No children                                                                                                   |
+| `acknowledgements`                | No              | —                       | Safe        | No children                                                                                                   |
+| `innerworld_regions`              | Yes             | SET NULL                | Safe        | Self-ref SET NULL; entity `region_id` SET NULL                                                                |
+| `innerworld_entities`             | No              | —                       | Safe        | No children                                                                                                   |
+| `buckets`                         | Yes             | CASCADE + SET NULL      | Safe        | Revokes all friend access on delete                                                                           |
+| `friend_connections`              | Yes             | CASCADE                 | Safe        | Cascades to assignments and prefs                                                                             |
+| `friend_codes`                    | No              | —                       | Safe        | No children                                                                                                   |
+| `notification_configs`            | No              | —                       | Safe        | No children                                                                                                   |
+| `friend_notification_preferences` | No              | —                       | Safe        | No children                                                                                                   |
+| `webhook_configs`                 | Yes             | CASCADE                 | Safe        | Cascades to delivery records                                                                                  |
+| `webhook_deliveries`              | No              | —                       | Safe        | No children; TTL cleanup is legitimate hard-delete                                                            |
+| `timer_configs`                   | Yes             | CASCADE                 | Safe        | Cascades to check-in records                                                                                  |
+| `check_in_records`                | No              | —                       | Safe        | No children                                                                                                   |
+| `blob_metadata`                   | Yes (self)      | SET NULL                | Safe        | Self-ref for thumbnails; no blocking constraints                                                              |
+| `journal_entries`                 | No              | —                       | Safe        | No children                                                                                                   |
+| `wiki_pages`                      | No              | —                       | Safe        | No children                                                                                                   |
+| `groups`                          | Yes             | CASCADE + SET NULL      | Safe        | Self-ref SET NULL; memberships cascade                                                                        |
+| `field_definitions`               | Yes             | CASCADE                 | Safe        | Cascades values and visibility rules                                                                          |
 
-**Entities where hard delete is blocked: `members`, `custom_fronts`**
+**Entities where hard delete is blocked: `members`, `custom_fronts`, `system_structure_entity_types`, `system_structure_entities`**
 
 All other archivable entities are technically safe to hard-delete at the FK level, but operational hard deletion should remain exceptional. Archival is the standard path for all user-visible entities.

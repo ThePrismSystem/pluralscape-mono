@@ -138,7 +138,7 @@ erDiagram
 
 ## 3. Members & Structure
 
-Members (headmates/alters) and the various structural containers — groups, subsystems, side-systems, and layers — that organize them. All member data is T1-encrypted.
+Members (headmates/alters) and the structural containers that organize them. Groups provide hierarchical folders. Structure entity types are user-defined per system (e.g. "Subsystem", "Side System", "Layer"), providing a generic, extensible hierarchy with entity-to-entity links, member-to-entity links, and directed entity associations. All member data is T1-encrypted.
 
 ### 3a. Members & Groups
 
@@ -197,7 +197,9 @@ erDiagram
     members ||--o{ relationships : "target"
 ```
 
-### 3b. Subsystems, Side-Systems & Layers
+### 3b. Structure Entities
+
+Structure entity types are user-defined per system — for example, a system might create types called "Subsystem", "Side System", and "Layer". Entities are instances of those types. Entity links form hierarchical trees (entities within entities). Member links connect members to entities. Associations are directed cross-references between entities. All entity type and entity names/metadata are inside `encrypted_data` (T1).
 
 ```mermaid
 erDiagram
@@ -205,94 +207,69 @@ erDiagram
         varchar id PK
     }
 
-    subsystems {
+    members {
         varchar id PK
         varchar system_id FK
-        varchar parent_subsystem_id FK "self-ref, nullable"
-        jsonb architecture_type
-        boolean has_core
-        varchar discovery_status
-        blob encrypted_data "T1"
     }
 
-    side_systems {
-        varchar id PK
-        varchar system_id FK
-        blob encrypted_data "T1"
-    }
-
-    layers {
+    system_structure_entity_types {
         varchar id PK
         varchar system_id FK
         integer sort_order
         blob encrypted_data "T1"
     }
 
-    subsystem_memberships {
+    system_structure_entities {
         varchar id PK
-        varchar subsystem_id FK
-        varchar member_id FK
         varchar system_id FK
+        varchar entity_type_id FK "RESTRICT"
+        integer sort_order
         blob encrypted_data "T1"
     }
 
-    side_system_memberships {
+    system_structure_entity_links {
         varchar id PK
-        varchar side_system_id FK
-        varchar member_id FK
         varchar system_id FK
-        blob encrypted_data "T1"
+        varchar entity_id FK "RESTRICT"
+        varchar parent_entity_id FK "RESTRICT, nullable"
+        integer sort_order
+        timestamp created_at
     }
 
-    layer_memberships {
+    system_structure_entity_member_links {
         varchar id PK
-        varchar layer_id FK
-        varchar member_id FK
         varchar system_id FK
-        blob encrypted_data "T1"
+        varchar parent_entity_id FK "RESTRICT, nullable"
+        varchar member_id FK "RESTRICT"
+        integer sort_order
+        timestamp created_at
     }
 
-    subsystem_layer_links {
+    system_structure_entity_associations {
         varchar id PK
-        varchar subsystem_id FK
-        varchar layer_id FK
         varchar system_id FK
-        blob encrypted_data "T1, nullable"
+        varchar source_entity_id FK "RESTRICT"
+        varchar target_entity_id FK "RESTRICT"
+        timestamp created_at
     }
 
-    subsystem_side_system_links {
-        varchar id PK
-        varchar subsystem_id FK
-        varchar side_system_id FK
-        varchar system_id FK
-        blob encrypted_data "T1, nullable"
-    }
-
-    side_system_layer_links {
-        varchar id PK
-        varchar side_system_id FK
-        varchar layer_id FK
-        varchar system_id FK
-        blob encrypted_data "T1, nullable"
-    }
-
-    systems ||--o{ subsystems : "has"
-    subsystems ||--o| subsystems : "parent_subsystem"
-    systems ||--o{ side_systems : "has"
-    systems ||--o{ layers : "has"
-    subsystems ||--o{ subsystem_memberships : "contains"
-    members ||--o{ subsystem_memberships : "member"
-    side_systems ||--o{ side_system_memberships : "contains"
-    members ||--o{ side_system_memberships : "member"
-    layers ||--o{ layer_memberships : "contains"
-    members ||--o{ layer_memberships : "member"
-    subsystems ||--o{ subsystem_layer_links : "linked to"
-    layers ||--o{ subsystem_layer_links : "linked to"
-    subsystems ||--o{ subsystem_side_system_links : "linked to"
-    side_systems ||--o{ subsystem_side_system_links : "linked to"
-    side_systems ||--o{ side_system_layer_links : "linked to"
-    layers ||--o{ side_system_layer_links : "linked to"
+    systems ||--o{ system_structure_entity_types : "defines"
+    system_structure_entity_types ||--o{ system_structure_entities : "typed as"
+    systems ||--o{ system_structure_entities : "contains"
+    system_structure_entities ||--o{ system_structure_entity_links : "child"
+    system_structure_entities ||--o{ system_structure_entity_links : "parent"
+    system_structure_entities ||--o{ system_structure_entity_member_links : "contains"
+    members ||--o{ system_structure_entity_member_links : "belongs to"
+    system_structure_entities ||--o{ system_structure_entity_associations : "source"
+    system_structure_entities ||--o{ system_structure_entity_associations : "target"
 ```
+
+**Notes:**
+
+- `system_structure_entity_links` has a unique constraint on `(entity_id, parent_entity_id)` — in PostgreSQL via NULLS NOT DISTINCT; in SQLite via a partial unique index on the null case. A null `parent_entity_id` means the entity is at the root level of its hierarchy.
+- `system_structure_entity_member_links` has a unique constraint on `(member_id, parent_entity_id)` — in PostgreSQL via NULLS NOT DISTINCT; in SQLite via a partial unique index on the null case.
+- `system_structure_entity_associations` has a unique constraint on `(source_entity_id, target_entity_id)` and a CHECK constraint preventing self-links. Both directions (A→B) and (B→A) are allowed as distinct associations.
+- All entity-to-entity and member-to-entity FKs use composite `(id, system_id)` scoped FKs with ON DELETE RESTRICT.
 
 ---
 
@@ -411,6 +388,11 @@ erDiagram
         varchar system_id FK
     }
 
+    system_structure_entities {
+        varchar id PK
+        varchar system_id FK
+    }
+
     custom_fronts {
         varchar id PK
         varchar system_id FK
@@ -423,9 +405,8 @@ erDiagram
         timestamp start_time PK "composite PK with id"
         timestamp end_time "nullable - NULL means currently fronting"
         varchar member_id FK "nullable"
-        varchar fronting_type
         varchar custom_front_id FK "nullable"
-        jsonb linked_structure
+        varchar structure_entity_id FK "nullable, RESTRICT"
         blob encrypted_data "T1"
     }
 
@@ -449,12 +430,16 @@ erDiagram
     systems ||--o{ fronting_sessions : "has"
     members ||--o{ fronting_sessions : "fronts in"
     custom_fronts ||--o{ fronting_sessions : "fronts in"
+    system_structure_entities ||--o{ fronting_sessions : "fronts in"
     systems ||--o{ switches : "logs"
     fronting_sessions ||--o{ fronting_comments : "has"
     members ||--o{ fronting_comments : "authored by"
 ```
 
-**Note:** `switches.member_ids` is a `jsonb` array. FK constraints on JSONB array elements are not possible in PostgreSQL; cross-system validation is enforced at the application layer.
+**Notes:**
+
+- `switches.member_ids` is a `jsonb` array. FK constraints on JSONB array elements are not possible in PostgreSQL; cross-system validation is enforced at the application layer.
+- **Subject constraint:** Every fronting session must have at least one of `member_id`, `custom_front_id`, or `structure_entity_id` (enforced by CHECK). Structure entity fronting is represented by a session with `structure_entity_id` set.
 
 ---
 
@@ -649,7 +634,7 @@ erDiagram
 
 ## 11. Custom Fields
 
-System-defined fields that extend member (or system-level) profiles. Values are per-member or system-level. Visibility is controlled per-bucket.
+System-defined fields with configurable scope. Fields can target members, groups, structure entity types, or the system as a whole. Values are per-member, per-group, per-structure-entity, or system-level. Scope targeting is defined via `field_definition_scopes`. Visibility is controlled per-bucket.
 
 ```mermaid
 erDiagram
@@ -658,6 +643,21 @@ erDiagram
     }
 
     members {
+        varchar id PK
+        varchar system_id FK
+    }
+
+    groups {
+        varchar id PK
+        varchar system_id FK
+    }
+
+    system_structure_entities {
+        varchar id PK
+        varchar system_id FK
+    }
+
+    system_structure_entity_types {
         varchar id PK
         varchar system_id FK
     }
@@ -675,10 +675,20 @@ erDiagram
         blob encrypted_data "T1"
     }
 
+    field_definition_scopes {
+        varchar id PK
+        varchar field_definition_id FK "RESTRICT"
+        varchar scope_type "system, member, group, structure-entity-type"
+        varchar scope_entity_type_id FK "RESTRICT, nullable"
+        varchar system_id FK
+    }
+
     field_values {
         varchar id PK
-        varchar field_definition_id FK
-        varchar member_id FK "nullable - NULL means system-level value"
+        varchar field_definition_id FK "RESTRICT"
+        varchar member_id FK "RESTRICT, nullable"
+        varchar structure_entity_id FK "RESTRICT, nullable"
+        varchar group_id FK "RESTRICT, nullable"
         varchar system_id FK
         blob encrypted_data "T1"
     }
@@ -686,14 +696,24 @@ erDiagram
     field_bucket_visibility {
         varchar field_definition_id PK "composite PK, FK"
         varchar bucket_id PK "composite PK, FK"
+        varchar system_id FK
     }
 
     systems ||--o{ field_definitions : "defines"
+    field_definitions ||--o{ field_definition_scopes : "scoped to"
+    system_structure_entity_types ||--o{ field_definition_scopes : "targets"
     field_definitions ||--o{ field_values : "has values"
     members ||--o{ field_values : "has"
+    system_structure_entities ||--o{ field_values : "has"
+    groups ||--o{ field_values : "has"
     field_definitions ||--o{ field_bucket_visibility : "visible in"
     buckets ||--o{ field_bucket_visibility : "exposes"
 ```
+
+**Notes:**
+
+- `field_values` has a mutual exclusivity CHECK on `(member_id, structure_entity_id, group_id)` — at most one can be non-null. When all three are null, the value is system-level. Partial unique indexes enforce one value per definition per owner.
+- `field_definition_scopes` has a CHECK: `scope_entity_type_id` must be null unless `scope_type = 'structure-entity-type'`. Unique on `(field_definition_id, scope_type, scope_entity_type_id)` — in PostgreSQL via NULLS NOT DISTINCT; in SQLite via a partial unique index on the null case.
 
 ---
 
@@ -1092,6 +1112,8 @@ erDiagram
     accounts ||--o{ api_keys : "owns"
     accounts ||--o{ friend_connections : "has"
     systems ||--o{ members : "contains"
+    systems ||--o{ system_structure_entity_types : "defines"
+    systems ||--o{ system_structure_entities : "contains"
     systems ||--o{ buckets : "owns"
     systems ||--o{ fronting_sessions : "tracks"
     systems ||--o{ channels : "has"
@@ -1106,4 +1128,6 @@ erDiagram
     channels ||--o{ messages : "contains"
     members ||--o{ group_memberships : "belongs to"
     members ||--o{ fronting_sessions : "fronts in"
+    system_structure_entities ||--o{ fronting_sessions : "fronts in"
+    system_structure_entities ||--o{ field_values : "has"
 ```

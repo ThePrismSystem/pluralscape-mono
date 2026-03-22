@@ -132,16 +132,16 @@ tags:
     description: Custom field definitions for a system
   - name: Relationships
     description: Relationships between members
-  - name: Subsystems
-    description: Subsystem structures within a system
-  - name: Side Systems
-    description: Side system structures
-  - name: Layers
-    description: Layer structures within a system
-  - name: Structure Links
-    description: Cross-structure links (subsystem-layer, subsystem-side-system, side-system-layer)
-  - name: Structure Memberships
-    description: Member assignments to subsystems, side systems, and layers
+  - name: Structure Entity Types
+    description: User-defined structure entity types within a system
+  - name: Structure Entities
+    description: Structure entities (instances of user-defined entity types)
+  - name: Structure Entity Links
+    description: Hierarchical parent-child links between structure entities
+  - name: Structure Entity Member Links
+    description: Member assignments to structure entities
+  - name: Structure Entity Associations
+    description: Directed cross-references between structure entities
   - name: Lifecycle Events
     description: System lifecycle events (splits, fusions, etc.)
   - name: Innerworld
@@ -320,43 +320,31 @@ components:
       $ref: "./schemas/relationships.yaml#/UpdateRelationshipRequest"
     RelationshipResponse:
       $ref: "./schemas/relationships.yaml#/RelationshipResponse"
-    # Structures
-    KnownArchitectureType:
-      $ref: "./schemas/structures.yaml#/KnownArchitectureType"
-    ArchitectureType:
-      $ref: "./schemas/structures.yaml#/ArchitectureType"
-    DiscoveryStatus:
-      $ref: "./schemas/structures.yaml#/DiscoveryStatus"
-    CreateSubsystemRequest:
-      $ref: "./schemas/structures.yaml#/CreateSubsystemRequest"
-    UpdateSubsystemRequest:
-      $ref: "./schemas/structures.yaml#/UpdateSubsystemRequest"
-    SubsystemResponse:
-      $ref: "./schemas/structures.yaml#/SubsystemResponse"
-    CreateSideSystemRequest:
-      $ref: "./schemas/structures.yaml#/CreateSideSystemRequest"
-    UpdateSideSystemRequest:
-      $ref: "./schemas/structures.yaml#/UpdateSideSystemRequest"
-    CreateLayerRequest:
-      $ref: "./schemas/structures.yaml#/CreateLayerRequest"
-    UpdateLayerRequest:
-      $ref: "./schemas/structures.yaml#/UpdateLayerRequest"
-    LayerResponse:
-      $ref: "./schemas/structures.yaml#/LayerResponse"
-    StructureMembershipResponse:
-      $ref: "./schemas/structures.yaml#/StructureMembershipResponse"
-    SideSystemResponse:
-      $ref: "./schemas/structures.yaml#/SideSystemResponse"
-    AddStructureMembershipRequest:
-      $ref: "./schemas/structures.yaml#/AddStructureMembershipRequest"
-    CreateSubsystemLayerLinkRequest:
-      $ref: "./schemas/structures.yaml#/CreateSubsystemLayerLinkRequest"
-    CreateSubsystemSideSystemLinkRequest:
-      $ref: "./schemas/structures.yaml#/CreateSubsystemSideSystemLinkRequest"
-    CreateSideSystemLayerLinkRequest:
-      $ref: "./schemas/structures.yaml#/CreateSideSystemLayerLinkRequest"
-    StructureLinkResponse:
-      $ref: "./schemas/structures.yaml#/StructureLinkResponse"
+    # Structure Entity Types & Entities
+    CreateStructureEntityTypeRequest:
+      $ref: "./schemas/structures.yaml#/CreateStructureEntityTypeRequest"
+    UpdateStructureEntityTypeRequest:
+      $ref: "./schemas/structures.yaml#/UpdateStructureEntityTypeRequest"
+    StructureEntityTypeResponse:
+      $ref: "./schemas/structures.yaml#/StructureEntityTypeResponse"
+    CreateStructureEntityRequest:
+      $ref: "./schemas/structures.yaml#/CreateStructureEntityRequest"
+    UpdateStructureEntityRequest:
+      $ref: "./schemas/structures.yaml#/UpdateStructureEntityRequest"
+    StructureEntityResponse:
+      $ref: "./schemas/structures.yaml#/StructureEntityResponse"
+    CreateStructureEntityLinkRequest:
+      $ref: "./schemas/structures.yaml#/CreateStructureEntityLinkRequest"
+    StructureEntityLinkResponse:
+      $ref: "./schemas/structures.yaml#/StructureEntityLinkResponse"
+    CreateStructureEntityMemberLinkRequest:
+      $ref: "./schemas/structures.yaml#/CreateStructureEntityMemberLinkRequest"
+    StructureEntityMemberLinkResponse:
+      $ref: "./schemas/structures.yaml#/StructureEntityMemberLinkResponse"
+    CreateStructureEntityAssociationRequest:
+      $ref: "./schemas/structures.yaml#/CreateStructureEntityAssociationRequest"
+    StructureEntityAssociationResponse:
+      $ref: "./schemas/structures.yaml#/StructureEntityAssociationResponse"
     # Lifecycle Events
     LifecycleEventType:
       $ref: "./schemas/lifecycle-events.yaml#/LifecycleEventType"
@@ -650,58 +638,39 @@ paths:
     $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships~1%7BrelationshipId%7D~1archive"
   /systems/{systemId}/relationships/{relationshipId}/restore:
     $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships~1%7BrelationshipId%7D~1restore"
-  # Subsystems
-  /systems/{systemId}/subsystems:
-    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems"
-  /systems/{systemId}/subsystems/{subsystemId}:
-    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D"
-  /systems/{systemId}/subsystems/{subsystemId}/archive:
-    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1archive"
-  /systems/{systemId}/subsystems/{subsystemId}/restore:
-    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1restore"
-  /systems/{systemId}/subsystems/{subsystemId}/memberships:
-    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1memberships"
-  /systems/{systemId}/subsystems/{subsystemId}/memberships/{membershipId}:
-    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1memberships~1%7BmembershipId%7D"
-  # Side Systems
-  /systems/{systemId}/side-systems:
-    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems"
-  /systems/{systemId}/side-systems/{sideSystemId}:
-    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D"
-  /systems/{systemId}/side-systems/{sideSystemId}/archive:
-    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1archive"
-  /systems/{systemId}/side-systems/{sideSystemId}/restore:
-    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1restore"
-  /systems/{systemId}/side-systems/{sideSystemId}/memberships:
-    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1memberships"
-  /systems/{systemId}/side-systems/{sideSystemId}/memberships/{membershipId}:
-    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1memberships~1%7BmembershipId%7D"
-  # Layers
-  /systems/{systemId}/layers:
-    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers"
-  /systems/{systemId}/layers/{layerId}:
-    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D"
-  /systems/{systemId}/layers/{layerId}/archive:
-    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1archive"
-  /systems/{systemId}/layers/{layerId}/restore:
-    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1restore"
-  /systems/{systemId}/layers/{layerId}/memberships:
-    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1memberships"
-  /systems/{systemId}/layers/{layerId}/memberships/{membershipId}:
-    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1memberships~1%7BmembershipId%7D"
-  # Structure Links
-  /systems/{systemId}/structure-links/subsystem-layer:
-    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-layer"
-  /systems/{systemId}/structure-links/subsystem-layer/{linkId}:
-    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-layer~1%7BlinkId%7D"
-  /systems/{systemId}/structure-links/subsystem-side-system:
-    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-side-system"
-  /systems/{systemId}/structure-links/subsystem-side-system/{linkId}:
-    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-side-system~1%7BlinkId%7D"
-  /systems/{systemId}/structure-links/side-system-layer:
-    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1side-system-layer"
-  /systems/{systemId}/structure-links/side-system-layer/{linkId}:
-    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1side-system-layer~1%7BlinkId%7D"
+  # Structure Entity Types
+  /systems/{systemId}/structure-entity-types:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types"
+  /systems/{systemId}/structure-entity-types/{entityTypeId}:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types~1%7BentityTypeId%7D"
+  /systems/{systemId}/structure-entity-types/{entityTypeId}/archive:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types~1%7BentityTypeId%7D~1archive"
+  /systems/{systemId}/structure-entity-types/{entityTypeId}/restore:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types~1%7BentityTypeId%7D~1restore"
+  # Structure Entities
+  /systems/{systemId}/structure-entities:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities"
+  /systems/{systemId}/structure-entities/{entityId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D"
+  /systems/{systemId}/structure-entities/{entityId}/archive:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1archive"
+  /systems/{systemId}/structure-entities/{entityId}/restore:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1restore"
+  # Structure Entity Links
+  /systems/{systemId}/structure-entity-links:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-links"
+  /systems/{systemId}/structure-entity-links/{linkId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-links~1%7BlinkId%7D"
+  # Structure Entity Member Links
+  /systems/{systemId}/structure-entity-member-links:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-member-links"
+  /systems/{systemId}/structure-entity-member-links/{linkId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-member-links~1%7BlinkId%7D"
+  # Structure Entity Associations
+  /systems/{systemId}/structure-entity-associations:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-associations"
+  /systems/{systemId}/structure-entity-associations/{associationId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-associations~1%7BassociationId%7D"
   # Lifecycle Events
   /systems/{systemId}/lifecycle-events:
     $ref: "./paths/lifecycle-events.yaml#/~1systems~1%7BsystemId%7D~1lifecycle-events"

@@ -1,139 +1,4 @@
-KnownArchitectureType:
-  type: string
-  enum: [orbital, spectrum, median, age-sliding, webbed, unknown, fluid]
-  example: orbital
-
-ArchitectureType:
-  oneOf:
-    - type: object
-      required: [kind, type]
-      properties:
-        kind:
-          type: string
-          const: known
-        type:
-          $ref: "#/KnownArchitectureType"
-    - type: object
-      required: [kind, value]
-      properties:
-        kind:
-          type: string
-          const: custom
-        value:
-          type: string
-          minLength: 1
-          maxLength: 100
-
-DiscoveryStatus:
-  type: string
-  enum: [fully-mapped, partially-mapped, unknown]
-
-CreateSubsystemRequest:
-  type: object
-  required: [encryptedData, hasCore]
-  properties:
-    encryptedData:
-      type: string
-      contentEncoding: base64
-      minLength: 1
-      maxLength: 87382
-      description: "T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)"
-    parentSubsystemId:
-      type: string
-      nullable: true
-      description: ID of the parent subsystem for nesting
-    architectureType:
-      oneOf:
-        - $ref: "#/ArchitectureType"
-        - type: "null"
-    hasCore:
-      type: boolean
-      description: Whether this subsystem has a core identity
-    discoveryStatus:
-      oneOf:
-        - $ref: "#/DiscoveryStatus"
-        - type: "null"
-
-UpdateSubsystemRequest:
-  type: object
-  required: [encryptedData, hasCore, version]
-  properties:
-    encryptedData:
-      type: string
-      contentEncoding: base64
-      minLength: 1
-      maxLength: 87382
-      description: "T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)"
-    parentSubsystemId:
-      type: string
-      nullable: true
-    architectureType:
-      oneOf:
-        - $ref: "#/ArchitectureType"
-        - type: "null"
-    hasCore:
-      type: boolean
-    discoveryStatus:
-      oneOf:
-        - $ref: "#/DiscoveryStatus"
-        - type: "null"
-    version:
-      type: integer
-      minimum: 1
-
-SubsystemResponse:
-  allOf:
-    - $ref: "./common.yaml#/EncryptedEntity"
-    - type: object
-      required: [hasCore]
-      properties:
-        parentSubsystemId:
-          type: string
-          nullable: true
-          description: ID of the parent subsystem
-        architectureType:
-          oneOf:
-            - $ref: "#/ArchitectureType"
-            - type: "null"
-        hasCore:
-          type: boolean
-          description: Whether this subsystem has a core identity
-        discoveryStatus:
-          type: string
-          nullable: true
-          description: How well-mapped the subsystem is
-
-CreateSideSystemRequest:
-  type: object
-  required: [encryptedData]
-  properties:
-    encryptedData:
-      type: string
-      contentEncoding: base64
-      minLength: 1
-      maxLength: 87382
-      description: "T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)"
-
-UpdateSideSystemRequest:
-  type: object
-  required: [encryptedData, version]
-  properties:
-    encryptedData:
-      type: string
-      contentEncoding: base64
-      minLength: 1
-      maxLength: 87382
-      description: "T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)"
-    version:
-      type: integer
-      minimum: 1
-
-SideSystemResponse:
-  description: A side system structure. Extends EncryptedEntity.
-  allOf:
-    - $ref: "./common.yaml#/EncryptedEntity"
-
-CreateLayerRequest:
+CreateStructureEntityTypeRequest:
   type: object
   required: [encryptedData, sortOrder]
   properties:
@@ -142,13 +7,13 @@ CreateLayerRequest:
       contentEncoding: base64
       minLength: 1
       maxLength: 87382
-      description: "T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)"
+      description: "T1-encrypted PlaintextStructureEntityType (see ./plaintext.yaml#/PlaintextStructureEntityType)"
     sortOrder:
       type: integer
       minimum: 0
-      description: Display order among layers
+      description: Display order among entity types
 
-UpdateLayerRequest:
+UpdateStructureEntityTypeRequest:
   type: object
   required: [encryptedData, sortOrder, version]
   properties:
@@ -157,7 +22,7 @@ UpdateLayerRequest:
       contentEncoding: base64
       minLength: 1
       maxLength: 87382
-      description: "T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)"
+      description: "T1-encrypted PlaintextStructureEntityType (see ./plaintext.yaml#/PlaintextStructureEntityType)"
     sortOrder:
       type: integer
       minimum: 0
@@ -165,7 +30,7 @@ UpdateLayerRequest:
       type: integer
       minimum: 1
 
-LayerResponse:
+StructureEntityTypeResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"
     - type: object
@@ -173,119 +38,165 @@ LayerResponse:
       properties:
         sortOrder:
           type: integer
-          description: Display order among layers
+          description: Display order among entity types
 
-StructureMembershipResponse:
+CreateStructureEntityRequest:
   type: object
-  description: A member's assignment to a structural entity (subsystem, side system, or layer)
-  required: [id, systemId, memberId, encryptedData, createdAt]
+  required: [encryptedData, entityTypeId, sortOrder]
   properties:
-    id:
-      type: string
-      description: Membership identifier
-    systemId:
-      type: string
-      description: System that owns this membership
-    memberId:
-      type: string
-      description: ID of the assigned member
     encryptedData:
       type: string
       contentEncoding: base64
-      description: "T1-encrypted PlaintextStructureMembership"
-    createdAt:
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextStructureEntity (see ./plaintext.yaml#/PlaintextStructureEntity)"
+    entityTypeId:
+      type: string
+      description: ID of the entity type this entity belongs to
+    sortOrder:
       type: integer
-      format: int64
-      description: Unix timestamp in milliseconds
+      minimum: 0
+      description: Display order among entities of the same type
 
-AddStructureMembershipRequest:
+UpdateStructureEntityRequest:
   type: object
-  required: [memberId, encryptedData]
+  required: [encryptedData, sortOrder, version]
   properties:
-    memberId:
-      type: string
-      description: ID of the member to add
     encryptedData:
       type: string
       contentEncoding: base64
       minLength: 1
       maxLength: 87382
-      description: "T1-encrypted PlaintextStructureMembership (see ./plaintext.yaml#/PlaintextStructureMembership)"
+      description: "T1-encrypted PlaintextStructureEntity (see ./plaintext.yaml#/PlaintextStructureEntity)"
+    sortOrder:
+      type: integer
+      minimum: 0
+    version:
+      type: integer
+      minimum: 1
 
-CreateSubsystemLayerLinkRequest:
+StructureEntityResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [entityTypeId, sortOrder]
+      properties:
+        entityTypeId:
+          type: string
+          description: ID of the entity type this entity belongs to
+        sortOrder:
+          type: integer
+          description: Display order among entities of the same type
+
+CreateStructureEntityLinkRequest:
   type: object
-  required: [subsystemId, layerId]
+  required: [entityId, sortOrder]
   properties:
-    subsystemId:
+    entityId:
       type: string
-      description: ID of the subsystem to link
-    layerId:
+      description: ID of the entity to link
+    parentEntityId:
       type: string
-      description: ID of the layer to link
-    encryptedData:
-      type: string
-      contentEncoding: base64
-      minLength: 1
-      maxLength: 87382
-      description: "Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)"
+      nullable: true
+      description: ID of the parent entity, or null for a top-level link
+    sortOrder:
+      type: integer
+      minimum: 0
+      description: Display order among sibling links
 
-CreateSubsystemSideSystemLinkRequest:
+StructureEntityLinkResponse:
   type: object
-  required: [subsystemId, sideSystemId]
-  properties:
-    subsystemId:
-      type: string
-      description: ID of the subsystem to link
-    sideSystemId:
-      type: string
-      description: ID of the side system to link
-    encryptedData:
-      type: string
-      contentEncoding: base64
-      minLength: 1
-      maxLength: 87382
-      description: "Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)"
-
-CreateSideSystemLayerLinkRequest:
-  type: object
-  required: [sideSystemId, layerId]
-  properties:
-    sideSystemId:
-      type: string
-      description: ID of the side system to link
-    layerId:
-      type: string
-      description: ID of the layer to link
-    encryptedData:
-      type: string
-      contentEncoding: base64
-      minLength: 1
-      maxLength: 87382
-      description: "Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)"
-
-StructureLinkResponse:
-  type: object
-  required: [id, systemId, createdAt]
+  required: [id, systemId, entityId, sortOrder, createdAt]
   properties:
     id:
       type: string
       description: Link identifier
     systemId:
       type: string
-    subsystemId:
+      description: System that owns this link
+    entityId:
       type: string
-      description: Present for subsystem-layer and subsystem-side-system links
-    sideSystemId:
+      description: ID of the linked entity
+    parentEntityId:
       type: string
-      description: Present for subsystem-side-system and side-system-layer links
-    layerId:
-      type: string
-      description: Present for subsystem-layer and side-system-layer links
-    encryptedData:
-      type: string
-      contentEncoding: base64
       nullable: true
-      description: Optional T1-encrypted PlaintextStructureLink
+      description: ID of the parent entity, or null for a top-level link
+    sortOrder:
+      type: integer
+      description: Display order among sibling links
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+
+CreateStructureEntityMemberLinkRequest:
+  type: object
+  required: [memberId, sortOrder]
+  properties:
+    memberId:
+      type: string
+      description: ID of the member to link
+    parentEntityId:
+      type: string
+      nullable: true
+      description: ID of the parent entity this member is linked under, or null for a top-level link
+    sortOrder:
+      type: integer
+      minimum: 0
+      description: Display order among sibling member links
+
+StructureEntityMemberLinkResponse:
+  type: object
+  required: [id, systemId, memberId, sortOrder, createdAt]
+  properties:
+    id:
+      type: string
+      description: Link identifier
+    systemId:
+      type: string
+      description: System that owns this link
+    parentEntityId:
+      type: string
+      nullable: true
+      description: ID of the parent entity this member is linked under, or null for a top-level link
+    memberId:
+      type: string
+      description: ID of the linked member
+    sortOrder:
+      type: integer
+      description: Display order among sibling member links
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+
+CreateStructureEntityAssociationRequest:
+  type: object
+  required: [sourceEntityId, targetEntityId]
+  properties:
+    sourceEntityId:
+      type: string
+      description: ID of the source entity in the association
+    targetEntityId:
+      type: string
+      description: ID of the target entity in the association
+
+StructureEntityAssociationResponse:
+  type: object
+  required: [id, systemId, sourceEntityId, targetEntityId, createdAt]
+  properties:
+    id:
+      type: string
+      description: Association identifier
+    systemId:
+      type: string
+      description: System that owns this association
+    sourceEntityId:
+      type: string
+      description: ID of the source entity
+    targetEntityId:
+      type: string
+      description: ID of the target entity
     createdAt:
       type: integer
       format: int64

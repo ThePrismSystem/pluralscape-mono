@@ -16,7 +16,7 @@ Actionable feature spec for Pluralscape, organized by domain.
 - **Image editing** — built-in crop and resize when uploading avatars or gallery photos (no external tool needed)
 - **Custom fields** — up to 200 user-defined fields per member
 - **Group membership display** — member profiles show all groups they belong to, with links to view each group
-- **System structure membership display** — optional setting to show which subsystems/side systems a member belongs to on their profile, with links to those entities
+- **System structure membership display** — optional setting to show which structure entities a member belongs to on their profile, with links to those entities
 - **Groups/folders** — hierarchical organization with multi-group membership, drag-and-drop reorder
   - Groups have: image, description, color, emoji
   - Move/copy entire folders between other folders
@@ -33,12 +33,12 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Co-fronting vs co-conscious distinction (active control vs passive awareness)
   - Custom front status text per fronting session (max 50 chars, matches SP behavior)
   - Fronting comments: multiple timestamped comments per fronting session (unlimited length), stored as separate `FrontingComment` entities linked to the session
-  - Sessions can link to a structure entity (subsystem, side system, or layer) via `linkedStructure` — replaces the old subsystem-only field with a polymorphic `EntityReference`
+  - Sessions can link to a structure entity via `structureEntityId` (FK to `system_structure_entities`) — any user-defined entity type (e.g. subsystem, side system, layer) can be a fronting subject
   - Positionality: free-text field describing fronting position (e.g. close vs far, height, depth)
   - Outtrigger reason: optional free-text field describing what caused the switch/fronting change, stored in T1 encrypted blob
   - Outtrigger sentiment: classification of the outtrigger as negative, neutral, or positive
-  - Fronting structure location display: when viewing who's fronting, show which layer(s), subsystem(s), and side system(s) the fronting members belong to (queries existing structure membership tables)
-  - Subsystem-level fronting (subsystems can front independently of the parent system)
+  - Fronting structure location display: when viewing who's fronting, show which structure entities the fronting members belong to (queries entity member links)
+  - Structure entity fronting (structure entities can front independently via `structureEntityId` on fronting sessions)
 - **Historical editing** — retroactive entries, timestamp adjustment, comments on entries
 - **Timeline visualization** — multi-lane display, color-coded per member, co-fronting overlap visible
 - **Analytics** — cumulative duration, average session length, pie/bar charts, date range filters
@@ -54,7 +54,7 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Poll kinds: standard or custom
   - Optional description, end date, abstain option, and veto option
   - Options can have color and emoji
-  - Voters can be members, subsystems, side systems, or layers (polymorphic `EntityReference`)
+  - Voters can be members or structure entities (polymorphic `EntityReference`)
   - Votes support optional comment and veto flag; null option = abstain
 - **Mandatory acknowledgement routing** — targeted alerts that persist until a specific member confirms
 
@@ -91,39 +91,37 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
 - **Relationship data model** — member-to-member connections with typed, directed edges
   - Relationship types: split-from, fused-from, sibling, partner, parent-child, protector-of, caretaker-of, gatekeeper-of, source (for introjects), and custom user-defined types
   - Bidirectional flag per relationship (e.g., "sibling" is mutual, "protector-of" is directional)
-- **Multiple structure types** for complex/polyfragmented systems:
-  - Recursive tree model (depth capped at 50 levels) — subsystems within subsystems within subsystems
-  - Side systems (parallel groups, not nested inside a member)
-  - Layers (vertically stacked divisions with differing access rules, optionally gatekept)
-  - Subsystem metadata: architecture type (orbital, spectrum, median, age-sliding, webbed, unknown, fluid, custom), has-core flag, discovery status (fully mapped vs still discovering)
-  - Subsystems, side systems, and layers have visual properties: color, image source, and emoji
-  - Gatekept layers have zero or more gatekeeper members (empty array if unassigned, multiple gatekeepers supported)
-  - Cross-structure junctions: subsystem-layer links, subsystem-side-system links, side-system-layer links
-  - Members belong to any level of nested structure
-  - Subsystems/side systems can front independently (replaces SP workaround of custom fronts for "someone in subsystem X is fronting")
+- **Generic structure entity model** for complex/polyfragmented systems:
+  - User-defined entity types per system (e.g. "Subsystem", "Side System", "Layer" — or any custom type)
+  - Recursive entity hierarchy (depth capped at 50 levels) — entities within entities within entities
+  - Entity-to-entity directed associations for cross-type links (replacing fixed junction tables)
+  - All entity type metadata (name, color, image source, emoji, architecture type, gatekeepers, etc.) stored in T1 encrypted data
+  - Members belong to entities at any level of nested structure via member links
+  - Structure entities can front independently via `structureEntityId` on fronting sessions
+  - Custom fields can be scoped to specific entity types via `field_definition_scopes`
 - **Member lifecycle events** — append-only log tracking:
   - Split (one member divides into multiple)
   - Fusion (permanent combination into a new member)
   - Merge (temporary blurring between members) and unmerge
   - Dormancy start/end
   - Discovery and archival
-  - Subsystem formation (member joins or creates a subsystem)
+  - Structure formation (member joins or creates a structure entity)
   - Form change (tracking appearance/form shifts)
   - Name change (tracking previous and new names)
-  - Structure move (member moves between subsystems, side systems, or layers)
+  - Structure move (member moves between structure entities)
   - Innerworld move (entity moves between innerworld regions)
   - Each event links the involved members and resulting members
 - **System snapshots** — point-in-time captures of system structure state (ADR 022)
   - Manual trigger and configurable schedule (daily/weekly/disabled)
-  - Captures: members (text-only), subsystems, side systems, layers, relationships, memberships, cross-links, groups, innerworld state
+  - Captures: members (text-only), structure entity types, structure entities, entity links, entity associations, relationships, member links, groups, innerworld state
   - View-only (no revert); T1 encrypted; stored in `system_snapshots` table
 - **Multi-system support** — multiple systems per account (already supported by schema: `systems.accountId` is a non-unique FK). System selection is a client concern; encryption keys are per-account (shared across systems). `SystemListItem` type for the system-switcher UI.
 - **System duplication** — duplicate the current system to a new system under the same account, choosing which elements to copy (members, photos, custom fields, groups, structure, relationships, fronting history, communication, journal, wiki, innerworld, settings). Application-layer deep copy with ID remapping.
 - **Innerworld mapping** — spatial positioning on 2D canvas
   - Layers/regions with access rules (open vs gatekept)
   - Gatekeeper member assignment per region
-  - Entity types: member, landmark, subsystem, side system, layer — each with visual properties (color, shape, image source, external URL)
-  - Structure entities link back to their corresponding subsystem/side-system/layer
+  - Entity types: member, landmark, structure entity — each with visual properties (color, shape, image source, external URL)
+  - Innerworld entities can link to their corresponding structure entity
 - **Visual structure editor** — pan/zoom canvas, drag-and-drop, connecting lines
   - Data model and relationship management UI are day-one requirements
   - Visual canvas is stretch goal but targeted for day-one
@@ -132,7 +130,7 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
 
 - **Block-based rich-text editor** — nested, structured content blocks
 - **Hyperlinked pages** — member names auto-link to profiles
-- **Polymorphic authorship** — journal entries can be authored by members or structure entities (subsystems, side systems, layers)
+- **Polymorphic authorship** — journal entries can be authored by members or structure entities
 - **Fronting snapshot** — optional point-in-time capture of who is fronting when a journal entry is created
   - Automatic capture via `autoCaptureFrontingOnJournal` system setting, or manual via button in editor
   - Supports multiple snapshots per entry (for long writing sessions)

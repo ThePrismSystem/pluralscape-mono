@@ -9,6 +9,11 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 ### Changed
 
 - Upgraded pnpm from 9.x to 10.x with `onlyBuiltDependencies` configuration
+- **Structure entity refactor** — replaced 9 rigid structure tables (subsystems, side_systems, layers + 3 membership junctions + 3 cross-link junctions) with a generic 5-table entity model: user-defined entity types, entities, entity links, member links, and directed entity associations
+- Extended `fronting_sessions` with `structure_entity_id` FK (replacing `linked_structure` jsonb) — structure entities can now be fronting subjects alongside members and custom fronts
+- Extended `field_values` with `structure_entity_id` and `group_id` columns for polymorphic custom field ownership with mutual exclusivity CHECK
+- Added `field_definition_scopes` table for targeting custom fields to specific entity types, groups, members, or system-wide
+- Upgraded CRDT sync layer — structure entity link documents upgraded from junction-style to LWW-Map registers with parent-scoped sort normalization
 
 ## Milestone 3: Sync and Real-Time
 
@@ -44,7 +49,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - Custom fronts — CRUD with archive/restore
 - System settings — CRUD with encrypted data and PIN verification
 - Initial setup wizard — multi-step onboarding (profile, nomenclature, completion)
-- System structure data model — subsystems, side-systems, layers, relationships, structure links, structure memberships with generic CRUD extraction
+- System structure data model — generic structure entity types, entities, entity links, member links, entity associations, relationships with generic CRUD extraction
 - Media upload pipeline — presigned upload/download URLs, blob confirmation, lifecycle management, orphan cleanup (ADR 009)
 - Per-category rate limit middleware — read/write/auth/sensitive categories with Valkey-backed distributed store
 - Key rotation API endpoints — initiate, claim, complete-chunk, progress tracking (ADR 014)

@@ -513,7 +513,7 @@ export function runAllValidations(
     onError?.("Tombstone enforcement failed", error);
   }
 
-  if ("groups" in doc || "subsystems" in doc || "innerWorldRegions" in doc) {
+  if ("groups" in doc || "structureEntities" in doc || "innerWorldRegions" in doc) {
     try {
       const cycleResult = detectHierarchyCycles(session);
       cycleBreaks = cycleResult.breaks;
