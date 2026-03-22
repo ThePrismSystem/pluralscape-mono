@@ -4,7 +4,7 @@
 **Scope:** Audit all ~27 active `db-*` bean schemas against canonical type definitions (`packages/types/src/`), ADRs, and features.md
 **Methodology:** Per-bean comparison of table definitions against their corresponding TypeScript types, encryption tier annotations (ADR 006/013), and feature requirements
 
-> **Superseded findings:** The structure entity refactor (PRs #236-#238, March 2026) replaced the 9 rigid structure tables (subsystems, side_systems, layers + 6 junctions) with a generic 5-table entity model. This supersedes findings **C3** (subsystem_id -> linked_structure) and **C4** (missing cross-link tables). C3's concern (polymorphic structure FK on fronting_sessions) is now resolved by a direct `structure_entity_id` FK to `system_structure_entities`. C4's concern (missing cross-link tables) is resolved by `system_structure_entity_associations`, a generic directed association table.
+> **Superseded findings:** The structure entity refactor (PRs #236-#238, March 2026) replaced the 9 rigid structure tables (subsystems, side_systems, layers + 3 membership junctions + 3 cross-link junctions) with a generic 5-table entity model. This supersedes findings **C3** (subsystem_id -> linked_structure) and **C4** (missing cross-link tables). C3's concern (polymorphic structure FK on fronting_sessions) is now resolved by a direct `structure_entity_id` FK to `system_structure_entities`. C4's concern (missing cross-link tables) is resolved by `system_structure_entity_associations`, a generic directed association table.
 
 ---
 

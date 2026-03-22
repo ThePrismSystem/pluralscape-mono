@@ -266,8 +266,8 @@ erDiagram
 
 **Notes:**
 
-- `system_structure_entity_links` has a unique constraint on `(entity_id, parent_entity_id)` with NULLS NOT DISTINCT. A null `parent_entity_id` means the entity is at the root level of its hierarchy.
-- `system_structure_entity_member_links` has a unique constraint on `(member_id, parent_entity_id)` with NULLS NOT DISTINCT.
+- `system_structure_entity_links` has a unique constraint on `(entity_id, parent_entity_id)` — in PostgreSQL via NULLS NOT DISTINCT; in SQLite via a partial unique index on the null case. A null `parent_entity_id` means the entity is at the root level of its hierarchy.
+- `system_structure_entity_member_links` has a unique constraint on `(member_id, parent_entity_id)` — in PostgreSQL via NULLS NOT DISTINCT; in SQLite via a partial unique index on the null case.
 - `system_structure_entity_associations` has a unique constraint on `(source_entity_id, target_entity_id)` and a CHECK constraint preventing self-links. Both directions (A→B) and (B→A) are allowed as distinct associations.
 - All entity-to-entity and member-to-entity FKs use composite `(id, system_id)` scoped FKs with ON DELETE RESTRICT.
 
@@ -713,7 +713,7 @@ erDiagram
 **Notes:**
 
 - `field_values` has a mutual exclusivity CHECK on `(member_id, structure_entity_id, group_id)` — at most one can be non-null. When all three are null, the value is system-level. Partial unique indexes enforce one value per definition per owner.
-- `field_definition_scopes` has a CHECK: `scope_entity_type_id` must be null unless `scope_type = 'structure-entity-type'`. Unique on `(field_definition_id, scope_type, scope_entity_type_id)` NULLS NOT DISTINCT.
+- `field_definition_scopes` has a CHECK: `scope_entity_type_id` must be null unless `scope_type = 'structure-entity-type'`. Unique on `(field_definition_id, scope_type, scope_entity_type_id)` — in PostgreSQL via NULLS NOT DISTINCT; in SQLite via a partial unique index on the null case.
 
 ---
 
