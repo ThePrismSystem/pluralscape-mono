@@ -16,6 +16,8 @@ import { lifecycleEventRoutes } from "../lifecycle-events/index.js";
 import { memberRoutes } from "../members/index.js";
 import { relationshipRoutes } from "../relationships/index.js";
 import { timerConfigRoutes } from "../timer-configs/index.js";
+import { webhookConfigRoutes } from "../webhook-configs/index.js";
+import { webhookDeliveryRoutes } from "../webhook-deliveries/index.js";
 
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
@@ -59,3 +61,5 @@ systemRoutes.route("/:systemId/analytics", analyticsRoutes);
 systemRoutes.route("/:systemId/fronting-reports", frontingReportRoutes);
 systemRoutes.route("/:systemId/timer-configs", timerConfigRoutes);
 systemRoutes.route("/:systemId/check-in-records", checkInRecordRoutes);
+systemRoutes.route("/:systemId/webhook-configs", webhookConfigRoutes);
+systemRoutes.route("/:systemId/webhook-deliveries", webhookDeliveryRoutes);

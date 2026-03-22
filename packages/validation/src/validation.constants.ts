@@ -49,3 +49,28 @@ export const MAX_RECOVERY_KEY_LENGTH = 200;
 
 /** Maximum password length to prevent Argon2 DoS on unauthenticated endpoints. */
 export const MAX_PASSWORD_LENGTH = 1024;
+
+/** Maximum character length for webhook target URLs. Matches DB URL_MAX_LENGTH. */
+export const MAX_WEBHOOK_URL_LENGTH = 2048;
+
+/** Maximum number of event types a single webhook config can subscribe to. */
+export const MAX_WEBHOOK_EVENT_TYPES = 15;
+
+/** All valid webhook event type values, used for Zod enum validation. */
+export const WEBHOOK_EVENT_TYPE_VALUES = [
+  "member.created",
+  "member.updated",
+  "member.archived",
+  "fronting.started",
+  "fronting.ended",
+  "group.created",
+  "group.updated",
+  "note.created",
+  "note.updated",
+  "chat.message-sent",
+  "poll.created",
+  "poll.closed",
+  "acknowledgement.requested",
+  "lifecycle.event-recorded",
+  "custom-front.changed",
+] as const;

@@ -190,6 +190,13 @@ export const ENTITY_CRDT_STRATEGIES = {
     mutationSemantics:
       "LWW per field — archived mutable; sourceEntityId, targetEntityId, systemId immutable after creation",
   },
+  "webhook-config": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "webhookConfigs",
+    mutationSemantics:
+      "LWW per field — url, eventTypes, enabled, archived. Secret is server-authoritative (not synced via CRDT)",
+  },
   // Junctions (system-core)
   "group-membership": {
     storageType: "junction-map",

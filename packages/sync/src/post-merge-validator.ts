@@ -64,6 +64,31 @@ interface FriendConnectionLike {
   visibility: Automerge.ImmutableString;
 }
 
+interface WebhookConfigLike {
+  url: Automerge.ImmutableString;
+  eventTypes: unknown[];
+  enabled: boolean;
+}
+
+/** Valid webhook event types for post-merge validation. */
+const VALID_WEBHOOK_EVENT_TYPES = new Set([
+  "member.created",
+  "member.updated",
+  "member.archived",
+  "fronting.started",
+  "fronting.ended",
+  "group.created",
+  "group.updated",
+  "note.created",
+  "note.updated",
+  "chat.message-sent",
+  "poll.created",
+  "poll.closed",
+  "acknowledgement.requested",
+  "lifecycle.event-recorded",
+  "custom-front.changed",
+]);
+
 interface FrontingSessionLike {
   startTime: number;
   endTime: number | null;
@@ -575,6 +600,15 @@ export function normalizeFrontingSessions(session: EncryptedSyncSession<unknown>
  * to prevent invalid check-in generation.
  */
 export function normalizeTimerConfig(session: EncryptedSyncSession<unknown>): {
+ * Validates webhook configs after merge:
+ * - URL format: must be a valid URL (HTTPS required in production, but post-merge
+ *   only checks URL starts with http:// or https://)
+ * - eventTypes: all values must be from the WebhookEventType enum
+ *
+ * Invalid entries generate notifications only (no auto-fix to avoid data loss).
+ * Returns the count of issues and notifications.
+ */
+export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>): {
   count: number;
   notifications: ConflictNotification[];
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
@@ -621,6 +655,66 @@ export function normalizeTimerConfig(session: EncryptedSyncSession<unknown>): {
           detectedAt: now,
           summary: `Disabled timer ${timerId}: invalid waking hours (start=${String(startStr)}, end=${String(endStr)})`,
         });
+  const timestamp = Date.now();
+  const notifications: ConflictNotification[] = [];
+
+  const configs = getEntityMap<WebhookConfigLike>(doc, "webhookConfigs");
+  if (!configs) return { count: 0, notifications, envelope: null };
+
+  let issueCount = 0;
+
+  for (const [configId, config] of Object.entries(configs)) {
+    // Validate URL format — config.url is an Automerge ImmutableString
+    const urlVal = typeof config.url === "object" ? config.url.val : null;
+    if (urlVal !== null) {
+      try {
+        const parsed = new URL(urlVal);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+          notifications.push({
+            entityType: "webhook-config",
+            entityId: configId,
+            fieldName: "url",
+            resolution: "notification-only",
+            detectedAt: timestamp,
+            summary: `Webhook config ${configId} has non-HTTP(S) URL: ${urlVal}`,
+          });
+          issueCount++;
+        }
+      } catch {
+        notifications.push({
+          entityType: "webhook-config",
+          entityId: configId,
+          fieldName: "url",
+          resolution: "notification-only",
+          detectedAt: timestamp,
+          summary: `Webhook config ${configId} has invalid URL format`,
+        });
+        issueCount++;
+      }
+    }
+
+    // Validate event types
+    if (Array.isArray(config.eventTypes)) {
+      for (const eventType of config.eventTypes) {
+        const val =
+          typeof eventType === "object" && eventType !== null && "val" in eventType
+            ? (eventType as { val: string }).val
+            : typeof eventType === "string"
+              ? eventType
+              : null;
+
+        if (val === null || !VALID_WEBHOOK_EVENT_TYPES.has(val)) {
+          notifications.push({
+            entityType: "webhook-config",
+            entityId: configId,
+            fieldName: "eventTypes",
+            resolution: "notification-only",
+            detectedAt: timestamp,
+            summary: `Webhook config ${configId} has unknown event type: ${String(val)}`,
+          });
+          issueCount++;
+          break; // One notification per config for event type issues
+        }
       }
     }
   }
@@ -640,6 +734,7 @@ export function normalizeTimerConfig(session: EncryptedSyncSession<unknown>): {
   });
 
   return { count: toDisable.length, notifications, envelope };
+  return { count: issueCount, notifications, envelope: null };
 }
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -666,6 +761,7 @@ export function runAllValidations(
   let friendConnectionNormalizations = 0;
   let frontingSessionNormalizations = 0;
   let timerConfigNormalizations = 0;
+  let webhookConfigIssues = 0;
 
   // Always run tombstone enforcement first
   try {
@@ -734,6 +830,17 @@ export function runAllValidations(
     } catch (error) {
       errors.push({ validator: "normalizeTimerConfig", error });
       onError?.("Timer config normalization failed", error);
+  if ("webhookConfigs" in doc) {
+    try {
+      const webhookResult = normalizeWebhookConfigs(session);
+      webhookConfigIssues = webhookResult.count;
+      if (webhookResult.envelope) {
+        correctionEnvelopes.push(webhookResult.envelope);
+      }
+      notifications.push(...webhookResult.notifications);
+    } catch (error) {
+      errors.push({ validator: "normalizeWebhookConfigs", error });
+      onError?.("Webhook config validation failed", error);
     }
   }
 
@@ -806,6 +913,7 @@ export function runAllValidations(
     friendConnectionNormalizations,
     frontingSessionNormalizations,
     timerConfigNormalizations,
+    webhookConfigIssues,
     correctionEnvelopes,
     notifications,
     errors,

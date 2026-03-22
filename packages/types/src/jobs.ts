@@ -48,7 +48,10 @@ export interface JobPayloadMap {
   "blob-cleanup": Record<string, never>;
   "export-generate": Record<string, unknown>;
   "import-process": Record<string, unknown>;
-  "webhook-deliver": Record<string, unknown>;
+  "webhook-deliver": {
+    readonly deliveryId: string;
+    readonly payload: Readonly<Record<string, unknown>>;
+  };
   "notification-send": Record<string, unknown>;
   "analytics-compute": Record<string, unknown>;
   "account-purge": Record<string, unknown>;

@@ -29,3 +29,15 @@ export const MAX_ANCESTOR_DEPTH = 50;
 
 /** Maximum number of active fronting sessions returned by the active fronting query. */
 export const MAX_ACTIVE_SESSIONS = 200;
+
+/** Number of random bytes for webhook HMAC signing secrets (32 bytes = 256-bit). */
+export const WEBHOOK_SECRET_BYTES = 32;
+
+/** Maximum number of retry attempts for webhook delivery. */
+export const WEBHOOK_MAX_RETRY_ATTEMPTS = 5;
+
+/** Base backoff delay in milliseconds for webhook delivery retries. */
+export const WEBHOOK_BASE_BACKOFF_MS = 1000;
+
+/** Maximum age in days for terminal (success/failed) webhook deliveries before cleanup. */
+export const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;

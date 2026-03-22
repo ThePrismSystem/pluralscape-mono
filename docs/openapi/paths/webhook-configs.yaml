@@ -1,0 +1,230 @@
+/systems/{systemId}/webhook-configs:
+  get:
+    operationId: listWebhookConfigs
+    tags: [Webhook Configs]
+    summary: List webhook configs
+    description: |
+      Returns a paginated list of webhook configurations for the specified system.
+      The `secret` field is never included in list responses.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, include archived configs in the response
+    responses:
+      "200":
+        description: Paginated webhook config list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "../openapi.yaml#/components/schemas/PaginatedResponse"
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+  post:
+    operationId: createWebhookConfig
+    tags: [Webhook Configs]
+    summary: Create a webhook config
+    description: |
+      Creates a new webhook configuration and returns the generated HMAC signing
+      secret. The secret is only returned in this response and cannot be retrieved
+      again (similar to GitHub webhook secrets).
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/webhooks.yaml#/CreateWebhookConfigRequest"
+    responses:
+      "201":
+        description: Webhook config created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/webhooks.yaml#/WebhookConfigCreateResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/BadRequest"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+/systems/{systemId}/webhook-configs/{webhookId}:
+  get:
+    operationId: getWebhookConfig
+    tags: [Webhook Configs]
+    summary: Get a webhook config
+    description: |
+      Returns a single webhook configuration. The `secret` field is never included.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Webhook config ID (wh_ prefix)
+    responses:
+      "200":
+        description: Webhook config details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+  put:
+    operationId: updateWebhookConfig
+    tags: [Webhook Configs]
+    summary: Update a webhook config
+    description: |
+      Updates a webhook configuration. Uses optimistic concurrency control via
+      the `version` field.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/webhooks.yaml#/UpdateWebhookConfigRequest"
+    responses:
+      "200":
+        description: Webhook config updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/BadRequest"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+
+  delete:
+    operationId: deleteWebhookConfig
+    tags: [Webhook Configs]
+    summary: Delete a webhook config
+    description: |
+      Permanently deletes a webhook configuration. Returns 409 if there are
+      pending deliveries.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Webhook config deleted
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+
+/systems/{systemId}/webhook-configs/{webhookId}/archive:
+  post:
+    operationId: archiveWebhookConfig
+    tags: [Webhook Configs]
+    summary: Archive a webhook config
+    description: |
+      Archives a webhook configuration. Archived configs are not triggered
+      by events.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Webhook config archived
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+/systems/{systemId}/webhook-configs/{webhookId}/restore:
+  post:
+    operationId: restoreWebhookConfig
+    tags: [Webhook Configs]
+    summary: Restore an archived webhook config
+    description: |
+      Restores an archived webhook configuration.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Webhook config restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"

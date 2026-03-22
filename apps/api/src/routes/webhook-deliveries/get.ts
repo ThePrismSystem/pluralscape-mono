@@ -1,0 +1,23 @@
+import { ID_PREFIXES } from "@pluralscape/types";
+import { Hono } from "hono";
+
+import { getDb } from "../../lib/db.js";
+import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
+import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { getWebhookDelivery } from "../../services/webhook-delivery.service.js";
+
+import type { AuthEnv } from "../../lib/auth-context.js";
+
+export const getRoute = new Hono<AuthEnv>();
+
+getRoute.use("*", createCategoryRateLimiter("readDefault"));
+
+getRoute.get("/:deliveryId", async (c) => {
+  const auth = c.get("auth");
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
+  const deliveryId = parseIdParam(c.req.param("deliveryId"), ID_PREFIXES.webhookDelivery);
+
+  const db = await getDb();
+  const result = await getWebhookDelivery(db, systemId, deliveryId, auth);
+  return c.json(result);
+});

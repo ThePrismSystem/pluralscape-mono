@@ -138,6 +138,11 @@ export type AuditEventType =
   | "check-in-record.dismissed"
   | "check-in-record.archived"
   | "check-in-record.deleted";
+  | "webhook-config.created"
+  | "webhook-config.updated"
+  | "webhook-config.archived"
+  | "webhook-config.restored"
+  | "webhook-config.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =
