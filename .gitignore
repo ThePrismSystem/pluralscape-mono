@@ -71,3 +71,4 @@ ui-design-local/
 .pnpm-debug.log
 
 # OS
+.tmp
