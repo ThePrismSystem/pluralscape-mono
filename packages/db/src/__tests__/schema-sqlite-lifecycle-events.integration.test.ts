@@ -50,6 +50,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: occurred,
         recordedAt: recorded,
+        updatedAt: recorded,
         encryptedData: data,
       })
       .run();
@@ -78,6 +79,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: blob,
       })
       .run();
@@ -98,6 +100,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -109,6 +112,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now + 1000,
         recordedAt: now + 1000,
+        updatedAt: now + 1000,
         encryptedData: testBlob(new Uint8Array([2])),
       })
       .run();
@@ -135,6 +139,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: occurred,
         recordedAt: recorded,
+        updatedAt: recorded,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -158,6 +163,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -178,6 +184,7 @@ describe("SQLite lifecycle_events schema", () => {
           eventType: "discovery",
           occurredAt: now,
           recordedAt: now,
+          updatedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
         })
         .run(),
@@ -197,6 +204,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -210,6 +218,7 @@ describe("SQLite lifecycle_events schema", () => {
           eventType: "discovery",
           occurredAt: now,
           recordedAt: now,
+          updatedAt: now,
           encryptedData: testBlob(new Uint8Array([2])),
         })
         .run(),
@@ -229,6 +238,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1, 2, 3])),
       })
       .run();
@@ -250,6 +260,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -272,6 +283,7 @@ describe("SQLite lifecycle_events schema", () => {
           eventType: "invalid" as "discovery",
           occurredAt: now,
           recordedAt: now,
+          updatedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
         })
         .run(),

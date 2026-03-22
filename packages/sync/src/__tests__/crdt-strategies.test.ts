@@ -122,8 +122,7 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
       ([, s]) => s.storageType === "append-only",
     );
     for (const [entityType, strategy] of appendOnly) {
-      // append-only entities: lifecycle-event (system-core),
-      // message, poll-vote (chat)
+      // append-only entities: message, poll-vote (chat)
       expect(
         ["system-core", "fronting", "chat"],
         `append-only entity ${entityType} has unexpected document ${strategy.document}`,

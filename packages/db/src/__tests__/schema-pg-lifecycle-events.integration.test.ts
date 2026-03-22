@@ -48,6 +48,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt,
       recordedAt,
+      updatedAt: recordedAt,
       encryptedData: data,
     });
 
@@ -74,6 +75,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: blob,
     });
 
@@ -93,6 +95,7 @@ describe("PG lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now + i * 1000,
         recordedAt: now + i * 1000,
+        updatedAt: now + i * 1000,
         encryptedData: testBlob(new Uint8Array([i])),
       });
     }
@@ -116,6 +119,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -133,6 +137,7 @@ describe("PG lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       }),
     ).rejects.toThrow();
@@ -162,6 +167,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -172,6 +178,7 @@ describe("PG lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([2])),
       }),
     ).rejects.toThrow();
@@ -190,6 +197,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt,
       recordedAt,
+      updatedAt: recordedAt,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -211,6 +219,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1, 2, 3])),
     });
 
@@ -230,6 +239,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -249,6 +259,7 @@ describe("PG lifecycle_events schema", () => {
         eventType: "invalid" as "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       }),
     ).rejects.toThrow(/check|constraint|failed query/i);

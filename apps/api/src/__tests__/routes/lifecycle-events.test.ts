@@ -16,6 +16,9 @@ vi.mock("../../services/lifecycle-event.service.js", () => ({
   createLifecycleEvent: vi.fn(),
   listLifecycleEvents: vi.fn(),
   getLifecycleEvent: vi.fn(),
+  deleteLifecycleEvent: vi.fn(),
+  archiveLifecycleEvent: vi.fn(),
+  restoreLifecycleEvent: vi.fn(),
 }));
 
 vi.mock("../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -28,8 +31,14 @@ vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { createLifecycleEvent, listLifecycleEvents, getLifecycleEvent } =
-  await import("../../services/lifecycle-event.service.js");
+const {
+  createLifecycleEvent,
+  listLifecycleEvents,
+  getLifecycleEvent,
+  deleteLifecycleEvent,
+  archiveLifecycleEvent,
+  restoreLifecycleEvent,
+} = await import("../../services/lifecycle-event.service.js");
 const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 
@@ -41,6 +50,7 @@ const EVT_ID = "evt_550e8400-e29b-41d4-a716-446655440001";
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const BASE_URL = `/systems/${SYS_ID}/lifecycle-events`;
+const EVT_URL = `${BASE_URL}/${EVT_ID}`;
 
 const MOCK_EVENT = {
   id: EVT_ID as never,
@@ -48,8 +58,12 @@ const MOCK_EVENT = {
   eventType: "created",
   occurredAt: 1000 as never,
   recordedAt: 1000 as never,
+  updatedAt: 1000 as never,
   encryptedData: "dGVzdA==",
   plaintextMetadata: null,
+  version: 1,
+  archived: false,
+  archivedAt: null,
 };
 
 const MOCK_PAGINATED = {
@@ -172,7 +186,7 @@ describe("GET /systems/:id/lifecycle-events/:eventId", () => {
   it("returns 200 with event", async () => {
     vi.mocked(getLifecycleEvent).mockResolvedValueOnce(MOCK_EVENT);
     const app = createApp();
-    const res = await app.request(`${BASE_URL}/${EVT_ID}`);
+    const res = await app.request(EVT_URL);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe(EVT_ID);
@@ -184,9 +198,148 @@ describe("GET /systems/:id/lifecycle-events/:eventId", () => {
       new ApiHttpError(404, "NOT_FOUND", "Lifecycle event not found"),
     );
     const app = createApp();
-    const res = await app.request(`${BASE_URL}/${EVT_ID}`);
+    const res = await app.request(EVT_URL);
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("NOT_FOUND");
+  });
+});
+
+describe("DELETE /systems/:id/lifecycle-events/:eventId", () => {
+  beforeEach(() => vi.mocked(deleteLifecycleEvent).mockReset());
+  afterEach(() => vi.restoreAllMocks());
+
+  it("returns 204 on success", async () => {
+    vi.mocked(deleteLifecycleEvent).mockResolvedValueOnce(undefined);
+
+    const app = createApp();
+    const res = await app.request(EVT_URL, { method: "DELETE" });
+
+    expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(deleteLifecycleEvent).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Lifecycle event not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(EVT_URL, { method: "DELETE" });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("forwards systemId, eventId, auth to service", async () => {
+    vi.mocked(deleteLifecycleEvent).mockResolvedValueOnce(undefined);
+
+    const app = createApp();
+    await app.request(EVT_URL, { method: "DELETE" });
+
+    expect(vi.mocked(deleteLifecycleEvent)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      EVT_ID,
+      MOCK_AUTH,
+      expect.any(Function),
+    );
+  });
+});
+
+describe("POST /systems/:id/lifecycle-events/:eventId/archive", () => {
+  beforeEach(() => vi.mocked(archiveLifecycleEvent).mockReset());
+  afterEach(() => vi.restoreAllMocks());
+
+  it("returns 204 on archive", async () => {
+    vi.mocked(archiveLifecycleEvent).mockResolvedValueOnce(undefined);
+
+    const app = createApp();
+    const res = await app.request(`${EVT_URL}/archive`, { method: "POST" });
+
+    expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(archiveLifecycleEvent).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Lifecycle event not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(`${EVT_URL}/archive`, { method: "POST" });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("forwards systemId, eventId, auth to service", async () => {
+    vi.mocked(archiveLifecycleEvent).mockResolvedValueOnce(undefined);
+
+    const app = createApp();
+    await app.request(`${EVT_URL}/archive`, { method: "POST" });
+
+    expect(vi.mocked(archiveLifecycleEvent)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      EVT_ID,
+      MOCK_AUTH,
+      expect.any(Function),
+    );
+  });
+});
+
+describe("POST /systems/:id/lifecycle-events/:eventId/restore", () => {
+  beforeEach(() => vi.mocked(restoreLifecycleEvent).mockReset());
+  afterEach(() => vi.restoreAllMocks());
+
+  it("returns 200 with restored event", async () => {
+    vi.mocked(restoreLifecycleEvent).mockResolvedValueOnce(MOCK_EVENT);
+
+    const app = createApp();
+    const res = await app.request(`${EVT_URL}/restore`, { method: "POST" });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { id: string };
+    expect(body.id).toBe(EVT_ID);
+  });
+
+  it("returns 404 when archived event not found", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(restoreLifecycleEvent).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Archived lifecycle event not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(`${EVT_URL}/restore`, { method: "POST" });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("forwards systemId, eventId, auth to service", async () => {
+    vi.mocked(restoreLifecycleEvent).mockResolvedValueOnce(MOCK_EVENT);
+
+    const app = createApp();
+    await app.request(`${EVT_URL}/restore`, { method: "POST" });
+
+    expect(vi.mocked(restoreLifecycleEvent)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      EVT_ID,
+      MOCK_AUTH,
+      expect.any(Function),
+    );
+  });
+});
+
+describe("rate limits", () => {
+  it("applies readDefault and write rate limit categories", () => {
+    const calls = vi.mocked(createCategoryRateLimiter).mock.calls.map((c) => c[0]);
+    expect(calls).toContain("readDefault");
+    expect(calls).toContain("write");
   });
 });

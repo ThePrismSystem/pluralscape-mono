@@ -89,3 +89,98 @@
         $ref: "../openapi.yaml#/components/responses/NotFound"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteLifecycleEvent
+    tags: [Lifecycle Events]
+    summary: Delete a lifecycle event
+    description: |
+      Permanently deletes a lifecycle event. Lifecycle events have no dependents,
+      so deletion is always permitted. Use archive instead for reversible removal.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: eventId
+        in: path
+        required: true
+        description: Lifecycle Event ID (evt_ prefix)
+        schema:
+          type: string
+          pattern: ^evt_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/lifecycle-events/{eventId}/archive:
+  post:
+    operationId: archiveLifecycleEvent
+    tags: [Lifecycle Events]
+    summary: Archive a lifecycle event
+    description: |
+      Marks a lifecycle event as archived. Archived events are hidden from
+      default list responses but remain accessible. Archival is always permitted.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: eventId
+        in: path
+        required: true
+        description: Lifecycle Event ID (evt_ prefix)
+        schema:
+          type: string
+          pattern: ^evt_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/lifecycle-events/{eventId}/restore:
+  post:
+    operationId: restoreLifecycleEvent
+    tags: [Lifecycle Events]
+    summary: Restore an archived lifecycle event
+    description: |
+      Removes the archived flag from a lifecycle event, making it visible in
+      default list responses again.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: eventId
+        in: path
+        required: true
+        description: Lifecycle Event ID (evt_ prefix)
+        schema:
+          type: string
+          pattern: ^evt_
+    responses:
+      "200":
+        description: Restored lifecycle event
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/lifecycle-events.yaml#/LifecycleEventResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

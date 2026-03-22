@@ -10,6 +10,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -32,6 +33,10 @@ export interface LifecycleEventResult {
   readonly recordedAt: UnixMillis;
   readonly encryptedData: string;
   readonly plaintextMetadata: PlaintextMetadata | null;
+  readonly version: number;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly updatedAt: UnixMillis;
 }
 
 export interface LifecycleEventCursor {
@@ -54,8 +59,12 @@ function toLifecycleEventResult(row: {
   eventType: string;
   occurredAt: number;
   recordedAt: number;
+  updatedAt: number;
   encryptedData: EncryptedBlob;
   plaintextMetadata?: PlaintextMetadata | null;
+  version: number;
+  archived: boolean;
+  archivedAt: number | null;
 }): LifecycleEventResult {
   return {
     id: row.id as LifecycleEventId,
@@ -63,8 +72,12 @@ function toLifecycleEventResult(row: {
     eventType: row.eventType,
     occurredAt: toUnixMillis(row.occurredAt),
     recordedAt: toUnixMillis(row.recordedAt),
+    updatedAt: toUnixMillis(row.updatedAt),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     plaintextMetadata: row.plaintextMetadata ?? null,
+    version: row.version,
+    archived: row.archived,
+    archivedAt: row.archivedAt !== null ? toUnixMillis(row.archivedAt) : null,
   };
 }
 
@@ -134,6 +147,7 @@ export async function createLifecycleEvent(
         eventType: parsed.eventType,
         occurredAt: parsed.occurredAt,
         recordedAt: timestamp,
+        updatedAt: timestamp,
         encryptedData: blob,
         plaintextMetadata: metadata,
       })
@@ -222,4 +236,73 @@ export async function getLifecycleEvent(
   }
 
   return toLifecycleEventResult(row);
+}
+
+// ── DELETE ──────────────────────────────────────────────────────────
+
+export async function deleteLifecycleEvent(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  eventId: LifecycleEventId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  assertSystemOwnership(systemId, auth);
+
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: lifecycleEvents.id })
+      .from(lifecycleEvents)
+      .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)))
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Lifecycle event not found");
+    }
+
+    await audit(tx, {
+      eventType: "lifecycle-event.deleted",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Lifecycle event deleted",
+      systemId,
+    });
+
+    await tx
+      .delete(lifecycleEvents)
+      .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)));
+  });
+}
+
+// ── ARCHIVE ─────────────────────────────────────────────────────────
+
+const LIFECYCLE_EVENT_LIFECYCLE = {
+  table: lifecycleEvents,
+  columns: lifecycleEvents,
+  entityName: "Lifecycle event",
+  archiveEvent: "lifecycle-event.archived" as const,
+  restoreEvent: "lifecycle-event.restored" as const,
+};
+
+export async function archiveLifecycleEvent(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  eventId: LifecycleEventId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  await archiveEntity(db, systemId, eventId, auth, audit, LIFECYCLE_EVENT_LIFECYCLE);
+}
+
+// ── RESTORE ─────────────────────────────────────────────────────────
+
+export async function restoreLifecycleEvent(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  eventId: LifecycleEventId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<LifecycleEventResult> {
+  return restoreEntity(db, systemId, eventId, auth, audit, LIFECYCLE_EVENT_LIFECYCLE, (row) =>
+    toLifecycleEventResult(row as typeof lifecycleEvents.$inferSelect),
+  );
 }

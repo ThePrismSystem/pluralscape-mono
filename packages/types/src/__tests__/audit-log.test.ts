@@ -108,6 +108,9 @@ describe("AuditEventType", () => {
         case "relationship.restored":
         case "relationship.deleted":
         case "lifecycle-event.created":
+        case "lifecycle-event.archived":
+        case "lifecycle-event.restored":
+        case "lifecycle-event.deleted":
         case "structure-entity-link.created":
         case "structure-entity-link.deleted":
         case "structure-entity-member-link.added":
