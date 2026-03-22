@@ -19,6 +19,8 @@ import {
   archivable,
   archivableConsistencyCheckFor,
   timestamps,
+  versioned,
+  versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
@@ -45,11 +47,13 @@ export const webhookConfigs = sqliteTable(
       onDelete: "restrict",
     }),
     ...timestamps(),
+    ...versioned(),
     ...archivable(),
   },
   (t) => [
     index("webhook_configs_system_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
+    versionCheckFor("webhook_configs", t.version),
     archivableConsistencyCheckFor("webhook_configs", t.archived, t.archivedAt),
   ],
 );
