@@ -288,7 +288,7 @@ Archival is performed server-side and reflected in the manifest as `archived: tr
 
 ### Why 200 changes as the compaction threshold?
 
-The secsync reference implementation uses 100–200 as a typical range. At 200 changes per document per compaction cycle, compaction overhead is minimal for most systems (< 1 per day for casual users). Heavy fronting systems (~20 switches/day) would compact ~every 10 days. The 1 MB size trigger provides a secondary bound for burst-write scenarios.
+The secsync reference implementation uses 100–200 as a typical range. At 200 changes per document per compaction cycle, compaction overhead is minimal for most systems (< 1 per day for casual users). Heavy fronting systems (~20 sessions/day) would compact ~every 10 days. The 1 MB size trigger provides a secondary bound for burst-write scenarios.
 
 ### Why 1 MB as the size increase trigger?
 

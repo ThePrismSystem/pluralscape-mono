@@ -726,7 +726,6 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 //
 // SystemSnapshot: T1 (name, description, SnapshotContent — all inside encryptedData) | T3 (trigger, createdAt)
 //
-// Switch: T3 (memberIds, timestamp — member IDs are non-identifying opaque tokens)
 // FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
 //
 // Session: T1 (deviceInfo inside encryptedData) | T3 (accountId, revoked, timestamps, expiresAt)

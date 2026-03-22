@@ -1109,7 +1109,7 @@ export const SQLITE_DDL = {
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE,
-      CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+      CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
       CHECK (status IS NULL OR status IN ('pending', 'success', 'failed')),
       CHECK (attempt_count >= 0),
       CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599)),

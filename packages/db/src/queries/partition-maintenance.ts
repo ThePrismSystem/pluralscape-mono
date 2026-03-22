@@ -82,7 +82,7 @@ export interface DetachResult {
 /**
  * Detach and drop audit_log monthly partitions older than `olderThanMonths`.
  *
- * Restricted to audit_log only — messages, fronting_sessions, and switches
+ * Restricted to audit_log only — messages and fronting_sessions
  * partitions are never dropped automatically.
  *
  * Queries pg_inherits + pg_class to find child partitions, parses their

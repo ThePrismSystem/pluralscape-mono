@@ -183,7 +183,6 @@ SystemCoreDocument {
 FrontingDocument {
   sessions: Record<id, CrdtFrontingSession>           // append-lww
   comments: Record<id, CrdtFrontingComment>           // lww-map
-  switches: CrdtSwitch[]                              // append-only
   checkInRecords: Record<id, CrdtCheckInRecord>       // append-lww (correction)
 }
 ```
@@ -233,7 +232,7 @@ The table below summarizes the dominant merge profile for each document type. In
 | Document type    | Dominant merge profile                   | Key characteristics                                                                                                                                                                         |
 | ---------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `system-core`    | LWW maps + junction add-wins             | All entity maps are LWW per field; junctions are `Record<string, true>` (add-wins). Post-merge cycle detection required for group/subsystem/innerworld-region hierarchies.                  |
-| `fronting`       | Append-only + append-lww                 | `switches[]` is append-only; `sessions` and `checkInRecords` are append-lww. Time-split by month eliminates merge conflicts for historical periods.                                         |
+| `fronting`       | Append-lww maps                          | `sessions` and `checkInRecords` are append-lww. Time-split by month eliminates merge conflicts for historical periods.                                                                      |
 | `chat`           | Primarily append-only; LWW metadata      | `messages[]` and `votes[]` are append-only. Edit chains resolved at application layer via `editOf` links. Time-split by month. Board messages use append-lww for `pinned`/`sortOrder`.      |
 | `journal`        | Append-lww entries + LWW wiki/notes      | Journal entries mutable after creation (title, blocks, tags). Wiki pages and notes are fully LWW.                                                                                           |
 | `privacy-config` | LWW maps; security-critical revocation   | Key grants are append-lww; `revokedAt` is the only mutable field. Any revocation wins — idempotent from a security perspective. `assignedBuckets` nested map uses add-wins.                 |
@@ -268,11 +267,11 @@ The table below summarizes the dominant merge profile for each document type. In
 
 ### Category 2: Concurrent Appends to Lists
 
-**Scenario:** Device A and Device B both append to `switches[]` concurrently.
+**Scenario:** Device A and Device B both append to `messages[]` concurrently.
 
-- A appends switch `sw_aaa`, B appends switch `sw_bbb`
+- A appends message `msg_aaa`, B appends message `msg_bbb`
 - After merge: list contains both entries (order determined by Automerge's causal ordering)
-- **Expected:** no entries lost; both `sw_aaa` and `sw_bbb` present
+- **Expected:** no entries lost; both `msg_aaa` and `msg_bbb` present
 
 ---
 
