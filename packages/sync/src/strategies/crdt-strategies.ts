@@ -148,6 +148,27 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "lifecycleEvents",
     mutationSemantics: "Immutable once appended — append-only list in system-core document",
   },
+  // Structure entity links (system-core)
+  "structure-entity-link": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "structureEntityLinks",
+    hasSortOrder: true,
+    mutationSemantics: "LWW per field — entityId, parentEntityId, sortOrder",
+  },
+  "structure-entity-member-link": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "structureEntityMemberLinks",
+    hasSortOrder: true,
+    mutationSemantics: "LWW per field — parentEntityId, memberId, sortOrder",
+  },
+  "structure-entity-association": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "structureEntityAssociations",
+    mutationSemantics: "LWW per field — sourceEntityId, targetEntityId",
+  },
   // Junctions (system-core)
   "group-membership": {
     storageType: "junction-map",
@@ -155,24 +176,6 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "groupMemberships",
     mutationSemantics:
       "Add-wins — compound key {groupId}_{memberId} mapped to true; concurrent add+remove preserves the junction",
-  },
-  "structure-entity-link": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "structureEntityLinks",
-    mutationSemantics: "Add-wins — compound key {entityId}_{parentEntityId} mapped to true",
-  },
-  "structure-entity-member-link": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "structureEntityMemberLinks",
-    mutationSemantics: "Add-wins — compound key {entityId}_{memberId} mapped to true",
-  },
-  "structure-entity-association": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "structureEntityAssociations",
-    mutationSemantics: "Add-wins — compound key {sourceEntityId}_{targetEntityId} mapped to true",
   },
 
   // ── fronting document ────────────────────────────────────────────

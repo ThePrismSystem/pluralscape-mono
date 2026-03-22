@@ -42,11 +42,12 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
       "innerworld-region",
       "timer",
       "lifecycle-event",
-      // system-core junctions
-      "group-membership",
+      // system-core structure links
       "structure-entity-link",
       "structure-entity-member-link",
       "structure-entity-association",
+      // system-core junctions
+      "group-membership",
       // fronting
       "fronting-session",
       "fronting-comment",

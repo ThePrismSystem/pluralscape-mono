@@ -48,6 +48,9 @@ describe("Document factories", () => {
         "groups",
         "structureEntityTypes",
         "structureEntities",
+        "structureEntityLinks",
+        "structureEntityMemberLinks",
+        "structureEntityAssociations",
         "relationships",
         "customFronts",
         "fieldDefinitions",
@@ -62,12 +65,7 @@ describe("Document factories", () => {
 
     it("all junction maps are initially empty", () => {
       const doc = createSystemCoreDocument();
-      for (const key of [
-        "groupMemberships",
-        "structureEntityLinks",
-        "structureEntityMemberLinks",
-        "structureEntityAssociations",
-      ] as const) {
+      for (const key of ["groupMemberships"] as const) {
         expect(Object.keys(doc[key])).toHaveLength(0);
       }
     });
