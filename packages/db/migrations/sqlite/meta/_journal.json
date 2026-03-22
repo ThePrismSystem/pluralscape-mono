@@ -8,6 +8,13 @@
       "when": 1774136235528,
       "tag": "0000_square_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1774145574336,
+      "tag": "0001_simple_oracle",
+      "breakpoints": true
     }
   ]
 }
