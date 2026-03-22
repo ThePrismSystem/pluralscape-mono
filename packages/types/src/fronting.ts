@@ -17,7 +17,7 @@ export type OuttriggerSentiment = "negative" | "neutral" | "positive";
 interface FrontingSessionBase extends AuditMetadata {
   readonly id: FrontingSessionId;
   readonly systemId: SystemId;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
   readonly startTime: UnixMillis;
   /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
   readonly comment: string | null;

@@ -5,14 +5,12 @@ import {
   frontingComments,
   frontingSessions,
   groupMemberships,
-  layerMemberships,
   members,
   memberPhotos,
   notes,
   polls,
   relationships,
-  sideSystemMemberships,
-  subsystemMemberships,
+  systemStructureEntityMemberLinks,
 } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
@@ -543,6 +541,7 @@ export async function deleteMember(
       [checkInCount],
       [pollCount],
       [ackCount],
+      [entityMemberLinkCount],
     ] = await Promise.all([
       tx
         .select({ count: count() })
@@ -585,6 +584,15 @@ export async function deleteMember(
         .select({ count: count() })
         .from(acknowledgements)
         .where(eq(acknowledgements.createdByMemberId, memberId)),
+      tx
+        .select({ count: count() })
+        .from(systemStructureEntityMemberLinks)
+        .where(
+          and(
+            eq(systemStructureEntityMemberLinks.memberId, memberId),
+            eq(systemStructureEntityMemberLinks.systemId, systemId),
+          ),
+        ),
     ]);
 
     if (
@@ -597,7 +605,8 @@ export async function deleteMember(
       !frontingCommentCount ||
       !checkInCount ||
       !pollCount ||
-      !ackCount
+      !ackCount ||
+      !entityMemberLinkCount
     ) {
       throw new Error("Unexpected: count query returned no rows");
     }
@@ -612,7 +621,8 @@ export async function deleteMember(
       | "frontingComments"
       | "checkInRecords"
       | "polls"
-      | "acknowledgements";
+      | "acknowledgements"
+      | "structureEntityMemberLinks";
 
     const dependents: { type: MemberDependentType; count: number }[] = [];
     if (photoCount.count > 0) dependents.push({ type: "photos", count: photoCount.count });
@@ -631,6 +641,11 @@ export async function deleteMember(
       dependents.push({ type: "checkInRecords", count: checkInCount.count });
     if (pollCount.count > 0) dependents.push({ type: "polls", count: pollCount.count });
     if (ackCount.count > 0) dependents.push({ type: "acknowledgements", count: ackCount.count });
+    if (entityMemberLinkCount.count > 0)
+      dependents.push({
+        type: "structureEntityMemberLinks",
+        count: entityMemberLinkCount.count,
+      });
 
     if (dependents.length > 0) {
       throw new ApiHttpError(
@@ -662,28 +677,11 @@ export interface MemberMembershipsResult {
     readonly systemId: SystemId;
     readonly createdAt: UnixMillis;
   }>;
-  readonly subsystems: ReadonlyArray<{
+  readonly structureEntities: ReadonlyArray<{
     readonly id: string;
-    readonly subsystemId: string;
+    readonly parentEntityId: string | null;
     readonly memberId: MemberId;
     readonly systemId: SystemId;
-    readonly encryptedData: string;
-    readonly createdAt: UnixMillis;
-  }>;
-  readonly sideSystems: ReadonlyArray<{
-    readonly id: string;
-    readonly sideSystemId: string;
-    readonly memberId: MemberId;
-    readonly systemId: SystemId;
-    readonly encryptedData: string;
-    readonly createdAt: UnixMillis;
-  }>;
-  readonly layers: ReadonlyArray<{
-    readonly id: string;
-    readonly layerId: string;
-    readonly memberId: MemberId;
-    readonly systemId: SystemId;
-    readonly encryptedData: string;
     readonly createdAt: UnixMillis;
   }>;
 }
@@ -696,79 +694,53 @@ export async function listAllMemberMemberships(
 ): Promise<MemberMembershipsResult> {
   assertSystemOwnership(systemId, auth);
 
-  // Verify member exists
-  const [member] = await db
-    .select({ id: members.id })
-    .from(members)
-    .where(
-      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
-    )
-    .limit(1);
-
-  if (!member) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
-  }
-
-  // Query all structure types in parallel
-  const [groupRows, subsystemRows, sideSystemRows, layerRows] = await Promise.all([
-    db
-      .select()
-      .from(groupMemberships)
-      .where(and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId))),
-    db
-      .select()
-      .from(subsystemMemberships)
+  return db.transaction(async (tx) => {
+    // Verify member exists
+    const [member] = await tx
+      .select({ id: members.id })
+      .from(members)
       .where(
-        and(
-          eq(subsystemMemberships.memberId, memberId),
-          eq(subsystemMemberships.systemId, systemId),
-        ),
-      ),
-    db
-      .select()
-      .from(sideSystemMemberships)
-      .where(
-        and(
-          eq(sideSystemMemberships.memberId, memberId),
-          eq(sideSystemMemberships.systemId, systemId),
-        ),
-      ),
-    db
-      .select()
-      .from(layerMemberships)
-      .where(and(eq(layerMemberships.memberId, memberId), eq(layerMemberships.systemId, systemId))),
-  ]);
+        and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+      )
+      .limit(1);
 
-  return {
-    groups: groupRows.map((r) => ({
-      groupId: r.groupId as GroupId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-    subsystems: subsystemRows.map((r) => ({
-      id: r.id,
-      subsystemId: r.subsystemId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-    sideSystems: sideSystemRows.map((r) => ({
-      id: r.id,
-      sideSystemId: r.sideSystemId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-    layers: layerRows.map((r) => ({
-      id: r.id,
-      layerId: r.layerId,
-      memberId: r.memberId as MemberId,
-      systemId: r.systemId as SystemId,
-      encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: toUnixMillis(r.createdAt),
-    })),
-  };
+    if (!member) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
+
+    // Query all structure types in parallel
+    const [groupRows, entityMemberRows] = await Promise.all([
+      tx
+        .select()
+        .from(groupMemberships)
+        .where(
+          and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId)),
+        ),
+      tx
+        .select()
+        .from(systemStructureEntityMemberLinks)
+        .where(
+          and(
+            eq(systemStructureEntityMemberLinks.memberId, memberId),
+            eq(systemStructureEntityMemberLinks.systemId, systemId),
+          ),
+        ),
+    ]);
+
+    return {
+      groups: groupRows.map((r) => ({
+        groupId: r.groupId as GroupId,
+        memberId: r.memberId as MemberId,
+        systemId: r.systemId as SystemId,
+        createdAt: toUnixMillis(r.createdAt),
+      })),
+      structureEntities: entityMemberRows.map((r) => ({
+        id: r.id,
+        parentEntityId: r.parentEntityId,
+        memberId: r.memberId as MemberId,
+        systemId: r.systemId as SystemId,
+        createdAt: toUnixMillis(r.createdAt),
+      })),
+    };
+  });
 }

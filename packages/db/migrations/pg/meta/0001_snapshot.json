@@ -1,6 +1,6 @@
 {
-  "id": "619de438-94e1-4987-8e35-ee6dcba37ba8",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "013eb2e8-b447-4a48-aa2f-411c1e502714",
+  "prevId": "619de438-94e1-4987-8e35-ee6dcba37ba8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4372,7 +4372,7 @@
         },
         "fronting_sessions_subject_check": {
           "name": "fronting_sessions_subject_check",
-          "value": "\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL OR \"fronting_sessions\".\"structure_entity_id\" IS NOT NULL"
+          "value": "(\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL OR \"fronting_sessions\".\"structure_entity_id\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -8080,9 +8080,15 @@
         }
       },
       "indexes": {
-        "system_structure_entity_associations_source_idx": {
-          "name": "system_structure_entity_associations_source_idx",
+        "system_structure_entity_associations_system_source_idx": {
+          "name": "system_structure_entity_associations_system_source_idx",
           "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "source_entity_id",
               "isExpression": false,
@@ -8095,26 +8101,17 @@
           "method": "btree",
           "with": {}
         },
-        "system_structure_entity_associations_target_idx": {
-          "name": "system_structure_entity_associations_target_idx",
-          "columns": [
-            {
-              "expression": "target_entity_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "system_structure_entity_associations_system_id_idx": {
-          "name": "system_structure_entity_associations_system_id_idx",
+        "system_structure_entity_associations_system_target_idx": {
+          "name": "system_structure_entity_associations_system_target_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8214,9 +8211,15 @@
         }
       },
       "indexes": {
-        "system_structure_entity_links_entity_id_idx": {
-          "name": "system_structure_entity_links_entity_id_idx",
+        "system_structure_entity_links_system_entity_idx": {
+          "name": "system_structure_entity_links_system_entity_idx",
           "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "entity_id",
               "isExpression": false,
@@ -8229,26 +8232,17 @@
           "method": "btree",
           "with": {}
         },
-        "system_structure_entity_links_parent_entity_id_idx": {
-          "name": "system_structure_entity_links_parent_entity_id_idx",
-          "columns": [
-            {
-              "expression": "parent_entity_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "system_structure_entity_links_system_id_idx": {
-          "name": "system_structure_entity_links_system_id_idx",
+        "system_structure_entity_links_system_parent_idx": {
+          "name": "system_structure_entity_links_system_parent_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "parent_entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8290,7 +8284,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "system_structure_entity_links_entity_parent_uniq": {
+          "name": "system_structure_entity_links_entity_parent_uniq",
+          "nullsNotDistinct": true,
+          "columns": ["entity_id", "parent_entity_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -8337,24 +8337,15 @@
         }
       },
       "indexes": {
-        "system_structure_entity_member_links_parent_entity_id_idx": {
-          "name": "system_structure_entity_member_links_parent_entity_id_idx",
+        "system_structure_entity_member_links_system_member_idx": {
+          "name": "system_structure_entity_member_links_system_member_idx",
           "columns": [
             {
-              "expression": "parent_entity_id",
+              "expression": "system_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "system_structure_entity_member_links_member_id_idx": {
-          "name": "system_structure_entity_member_links_member_id_idx",
-          "columns": [
+            },
             {
               "expression": "member_id",
               "isExpression": false,
@@ -8367,11 +8358,17 @@
           "method": "btree",
           "with": {}
         },
-        "system_structure_entity_member_links_system_id_idx": {
-          "name": "system_structure_entity_member_links_system_id_idx",
+        "system_structure_entity_member_links_system_parent_idx": {
+          "name": "system_structure_entity_member_links_system_parent_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "parent_entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8413,7 +8410,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "system_structure_entity_member_links_member_parent_uniq": {
+          "name": "system_structure_entity_member_links_member_parent_uniq",
+          "nullsNotDistinct": true,
+          "columns": ["member_id", "parent_entity_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

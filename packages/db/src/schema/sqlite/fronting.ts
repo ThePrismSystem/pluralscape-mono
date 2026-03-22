@@ -9,8 +9,10 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
+import { atLeastOneNotNull } from "../../helpers/check.js";
 
 import { members } from "./members.js";
+import { systemStructureEntities } from "./structure.js";
 import { systems } from "./systems.js";
 
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -29,6 +31,7 @@ export const customFronts = sqliteTable(
   },
   (t) => [
     index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
+    unique("custom_fronts_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("custom_fronts", t.version),
     archivableConsistencyCheckFor("custom_fronts", t.archived, t.archivedAt),
   ],
@@ -74,15 +77,23 @@ export const frontingSessions = sqliteTable(
       columns: [t.customFrontId],
       foreignColumns: [customFronts.id],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.structureEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
+    index("fronting_sessions_system_entity_start_idx").on(
+      t.systemId,
+      t.structureEntityId,
+      t.startTime,
+    ),
     versionCheckFor("fronting_sessions", t.version),
     archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
-    // Invariant: every session must have at least one subject (member or custom front).
-    // Both member_id and custom_front_id use ON DELETE RESTRICT — fronting sessions
-    // referencing a member/custom_front must be removed before that member/custom_front
-    // can be deleted. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
+    // Invariant: every session must have at least one subject (member, custom front, or structure entity).
+    // Subject FKs use ON DELETE RESTRICT — fronting sessions referencing a subject must be removed
+    // before that subject can be deleted. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
     check(
       "fronting_sessions_subject_check",
-      sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
+      atLeastOneNotNull(t.memberId, t.customFrontId, t.structureEntityId),
     ),
   ],
 );

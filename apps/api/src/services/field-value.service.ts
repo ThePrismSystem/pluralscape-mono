@@ -10,28 +10,30 @@ import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertFieldDefinitionActive, assertMemberActive } from "../lib/member-helpers.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
+import { MAX_ENCRYPTED_FIELD_VALUE_BYTES } from "./field-value.constants.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EncryptedBlob,
   FieldDefinitionId,
   FieldValueId,
+  GroupId,
   MemberId,
   SystemId,
+  SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Constants ───────────────────────────────────────────────────────
-
-const MAX_ENCRYPTED_FIELD_VALUE_BYTES = 16_384;
 
 // ── Types ───────────────────────────────────────────────────────────
 
 export interface FieldValueResult {
   readonly id: FieldValueId;
   readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
+  readonly structureEntityId: SystemStructureEntityId | null;
+  readonly groupId: GroupId | null;
   readonly systemId: SystemId;
   readonly encryptedData: string;
   readonly version: number;
@@ -45,20 +47,20 @@ function toFieldValueResult(row: {
   id: string;
   fieldDefinitionId: string;
   memberId: string | null;
+  structureEntityId: string | null;
+  groupId: string | null;
   systemId: string;
   encryptedData: EncryptedBlob;
   version: number;
   createdAt: number;
   updatedAt: number;
 }): FieldValueResult {
-  if (row.memberId === null) {
-    throw new Error("Unexpected null memberId in member-scoped field value query");
-  }
-
   return {
     id: row.id as FieldValueId,
     fieldDefinitionId: row.fieldDefinitionId as FieldDefinitionId,
-    memberId: row.memberId as MemberId,
+    memberId: row.memberId as MemberId | null,
+    structureEntityId: row.structureEntityId as SystemStructureEntityId | null,
+    groupId: row.groupId as GroupId | null,
     systemId: row.systemId as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
@@ -100,8 +102,6 @@ export async function setFieldValue(
   audit: AuditWriter,
 ): Promise<FieldValueResult> {
   assertSystemOwnership(systemId, auth);
-  await assertMemberActive(db, systemId, memberId);
-  await assertFieldDefinitionActive(db, systemId, fieldDefId);
 
   const parsed = SetFieldValueBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -113,6 +113,8 @@ export async function setFieldValue(
   const timestamp = now();
 
   return db.transaction(async (tx) => {
+    await assertMemberActive(tx, systemId, memberId);
+    await assertFieldDefinitionActive(tx, systemId, fieldDefId);
     // Check for existing value (unique constraint)
     const [existing] = await tx
       .select({ id: fieldValues.id })
@@ -165,14 +167,17 @@ export async function listFieldValues(
   auth: AuthContext,
 ): Promise<FieldValueResult[]> {
   assertSystemOwnership(systemId, auth);
-  await assertMemberActive(db, systemId, memberId);
 
-  const rows = await db
-    .select()
-    .from(fieldValues)
-    .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
+  return db.transaction(async (tx) => {
+    await assertMemberActive(tx, systemId, memberId);
 
-  return rows.map(toFieldValueResult);
+    const rows = await tx
+      .select()
+      .from(fieldValues)
+      .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
+
+    return rows.map(toFieldValueResult);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -187,8 +192,6 @@ export async function updateFieldValue(
   audit: AuditWriter,
 ): Promise<FieldValueResult> {
   assertSystemOwnership(systemId, auth);
-  await assertMemberActive(db, systemId, memberId);
-  await assertFieldDefinitionActive(db, systemId, fieldDefId);
 
   const parsed = UpdateFieldValueBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -199,6 +202,9 @@ export async function updateFieldValue(
   const timestamp = now();
 
   return db.transaction(async (tx) => {
+    await assertMemberActive(tx, systemId, memberId);
+    await assertFieldDefinitionActive(tx, systemId, fieldDefId);
+
     const updated = await tx
       .update(fieldValues)
       .set({
@@ -259,9 +265,10 @@ export async function deleteFieldValue(
   audit: AuditWriter,
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
-  await assertMemberActive(db, systemId, memberId);
 
   await db.transaction(async (tx) => {
+    await assertMemberActive(tx, systemId, memberId);
+
     const deleted = await tx
       .delete(fieldValues)
       .where(

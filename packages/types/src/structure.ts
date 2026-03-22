@@ -30,8 +30,8 @@ export type RelationshipType =
 export interface Relationship {
   readonly id: RelationshipId;
   readonly systemId: SystemId;
-  readonly sourceMemberId: MemberId;
-  readonly targetMemberId: MemberId;
+  readonly sourceMemberId: MemberId | null;
+  readonly targetMemberId: MemberId | null;
   readonly type: RelationshipType;
   /** User-defined label — only meaningful when type is "custom". */
   readonly label: string | null;

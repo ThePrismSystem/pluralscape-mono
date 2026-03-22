@@ -132,7 +132,10 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (version >= 1)
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   systemsIndexes: `
@@ -199,7 +202,7 @@ export const SQLITE_DDL = {
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
-      entity_type TEXT NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
+      entity_type TEXT NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'structure-entity-type', 'structure-entity', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
       entity_id TEXT NOT NULL,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
@@ -291,7 +294,7 @@ export const SQLITE_DDL = {
       end_time INTEGER,
       member_id TEXT,
       custom_front_id TEXT,
-      linked_structure TEXT,
+      structure_entity_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -302,8 +305,9 @@ export const SQLITE_DDL = {
       UNIQUE (id, system_id),
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
+      FOREIGN KEY (structure_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
       CHECK (version >= 1),
-      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL),
+      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL OR structure_entity_id IS NOT NULL),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
@@ -312,7 +316,8 @@ export const SQLITE_DDL = {
     CREATE INDEX fronting_sessions_system_member_start_idx ON fronting_sessions (system_id, member_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
     CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL;
-    CREATE INDEX fronting_sessions_system_archived_idx ON fronting_sessions (system_id, archived)
+    CREATE INDEX fronting_sessions_system_archived_idx ON fronting_sessions (system_id, archived);
+    CREATE INDEX fronting_sessions_system_entity_start_idx ON fronting_sessions (system_id, structure_entity_id, start_time)
   `,
   customFronts: `
     CREATE TABLE custom_fronts (
@@ -324,6 +329,7 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
+      UNIQUE (id, system_id),
       CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
@@ -377,168 +383,6 @@ export const SQLITE_DDL = {
   relationshipsIndexes: `
     CREATE INDEX relationships_system_archived_idx ON relationships (system_id, archived)
   `,
-  subsystems: `
-    CREATE TABLE subsystems (
-      id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      parent_subsystem_id TEXT,
-      architecture_type TEXT,
-      has_core INTEGER NOT NULL DEFAULT 0,
-      discovery_status TEXT CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
-      encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1,
-      archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER,
-      UNIQUE (id, system_id),
-      FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL,
-      CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
-    )
-  `,
-  subsystemsIndexes: `
-    CREATE INDEX subsystems_system_archived_idx ON subsystems (system_id, archived)
-  `,
-  sideSystems: `
-    CREATE TABLE side_systems (
-      id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1,
-      archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER,
-      UNIQUE (id, system_id),
-      CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
-    )
-  `,
-  sideSystemsIndexes: `
-    CREATE INDEX side_systems_system_archived_idx ON side_systems (system_id, archived)
-  `,
-  layers: `
-    CREATE TABLE layers (
-      id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sort_order INTEGER NOT NULL,
-      encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1,
-      archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER,
-      UNIQUE (id, system_id),
-      CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
-    )
-  `,
-  layersIndexes: `
-    CREATE INDEX layers_system_archived_idx ON layers (system_id, archived)
-  `,
-  subsystemMemberships: `
-    CREATE TABLE subsystem_memberships (
-      id TEXT PRIMARY KEY,
-      subsystem_id TEXT NOT NULL,
-      member_id TEXT NOT NULL,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE RESTRICT,
-      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
-    )
-  `,
-  subsystemMembershipsIndexes: `
-    CREATE INDEX subsystem_memberships_subsystem_id_idx ON subsystem_memberships (subsystem_id);
-    CREATE INDEX subsystem_memberships_member_id_idx ON subsystem_memberships (member_id);
-    CREATE INDEX subsystem_memberships_system_id_idx ON subsystem_memberships (system_id)
-  `,
-  sideSystemMemberships: `
-    CREATE TABLE side_system_memberships (
-      id TEXT PRIMARY KEY,
-      side_system_id TEXT NOT NULL,
-      member_id TEXT NOT NULL,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE RESTRICT,
-      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
-    )
-  `,
-  sideSystemMembershipsIndexes: `
-    CREATE INDEX side_system_memberships_side_system_id_idx ON side_system_memberships (side_system_id);
-    CREATE INDEX side_system_memberships_member_id_idx ON side_system_memberships (member_id);
-    CREATE INDEX side_system_memberships_system_id_idx ON side_system_memberships (system_id)
-  `,
-  layerMemberships: `
-    CREATE TABLE layer_memberships (
-      id TEXT PRIMARY KEY,
-      layer_id TEXT NOT NULL,
-      member_id TEXT NOT NULL,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE RESTRICT,
-      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
-    )
-  `,
-  layerMembershipsIndexes: `
-    CREATE INDEX layer_memberships_layer_id_idx ON layer_memberships (layer_id);
-    CREATE INDEX layer_memberships_member_id_idx ON layer_memberships (member_id);
-    CREATE INDEX layer_memberships_system_id_idx ON layer_memberships (system_id)
-  `,
-  subsystemLayerLinks: `
-    CREATE TABLE subsystem_layer_links (
-      id TEXT PRIMARY KEY,
-      subsystem_id TEXT NOT NULL,
-      layer_id TEXT NOT NULL,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB,
-      created_at INTEGER NOT NULL,
-      UNIQUE (subsystem_id, layer_id),
-      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE CASCADE
-    )
-  `,
-  subsystemLayerLinksIndexes: `
-    CREATE INDEX subsystem_layer_links_subsystem_id_idx ON subsystem_layer_links (subsystem_id);
-    CREATE INDEX subsystem_layer_links_layer_id_idx ON subsystem_layer_links (layer_id)
-  `,
-  subsystemSideSystemLinks: `
-    CREATE TABLE subsystem_side_system_links (
-      id TEXT PRIMARY KEY,
-      subsystem_id TEXT NOT NULL,
-      side_system_id TEXT NOT NULL,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB,
-      created_at INTEGER NOT NULL,
-      UNIQUE (subsystem_id, side_system_id),
-      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE CASCADE
-    )
-  `,
-  subsystemSideSystemLinksIndexes: `
-    CREATE INDEX subsystem_side_system_links_subsystem_id_idx ON subsystem_side_system_links (subsystem_id);
-    CREATE INDEX subsystem_side_system_links_side_system_id_idx ON subsystem_side_system_links (side_system_id)
-  `,
-  sideSystemLayerLinks: `
-    CREATE TABLE side_system_layer_links (
-      id TEXT PRIMARY KEY,
-      side_system_id TEXT NOT NULL,
-      layer_id TEXT NOT NULL,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB,
-      created_at INTEGER NOT NULL,
-      UNIQUE (side_system_id, layer_id),
-      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE CASCADE
-    )
-  `,
-  sideSystemLayerLinksIndexes: `
-    CREATE INDEX side_system_layer_links_side_system_id_idx ON side_system_layer_links (side_system_id);
-    CREATE INDEX side_system_layer_links_layer_id_idx ON side_system_layer_links (layer_id)
-  `,
   systemStructureEntityTypes: `
     CREATE TABLE system_structure_entity_types (
       id TEXT PRIMARY KEY,
@@ -578,7 +422,45 @@ export const SQLITE_DDL = {
   `,
   systemStructureEntitiesIndexes: `
     CREATE INDEX system_structure_entities_system_archived_idx ON system_structure_entities (system_id, archived);
-    CREATE INDEX system_structure_entities_entity_type_id_idx ON system_structure_entities (entity_type_id)
+    CREATE INDEX system_structure_entities_entity_type_id_idx ON system_structure_entities (system_id, entity_type_id)
+  `,
+  systemStructureEntityLinks: `
+    CREATE TABLE system_structure_entity_links (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_id TEXT NOT NULL,
+      parent_entity_id TEXT,
+      sort_order INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE (entity_id, parent_entity_id),
+      FOREIGN KEY (entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (parent_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT
+    )
+  `,
+  systemStructureEntityLinksIndexes: `
+    CREATE INDEX system_structure_entity_links_entity_id_idx ON system_structure_entity_links (entity_id);
+    CREATE INDEX system_structure_entity_links_parent_entity_id_idx ON system_structure_entity_links (parent_entity_id);
+    CREATE INDEX system_structure_entity_links_system_id_idx ON system_structure_entity_links (system_id);
+    CREATE UNIQUE INDEX system_structure_entity_links_entity_root_uniq ON system_structure_entity_links (entity_id) WHERE parent_entity_id IS NULL
+  `,
+  systemStructureEntityMemberLinks: `
+    CREATE TABLE system_structure_entity_member_links (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_entity_id TEXT,
+      member_id TEXT NOT NULL,
+      sort_order INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE (member_id, parent_entity_id),
+      FOREIGN KEY (parent_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
+    )
+  `,
+  systemStructureEntityMemberLinksIndexes: `
+    CREATE INDEX system_structure_entity_member_links_parent_entity_id_idx ON system_structure_entity_member_links (parent_entity_id);
+    CREATE INDEX system_structure_entity_member_links_member_id_idx ON system_structure_entity_member_links (member_id);
+    CREATE INDEX system_structure_entity_member_links_system_id_idx ON system_structure_entity_member_links (system_id);
+    CREATE UNIQUE INDEX system_structure_entity_member_links_member_root_uniq ON system_structure_entity_member_links (member_id) WHERE parent_entity_id IS NULL
   `,
   systemStructureEntityAssociations: `
     CREATE TABLE system_structure_entity_associations (
@@ -589,7 +471,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       UNIQUE (source_entity_id, target_entity_id),
       FOREIGN KEY (source_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
-      FOREIGN KEY (target_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT
+      FOREIGN KEY (target_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
+      CHECK (source_entity_id <> target_entity_id)
     )
   `,
   systemStructureEntityAssociationsIndexes: `
@@ -624,20 +507,30 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       field_definition_id TEXT NOT NULL,
       member_id TEXT,
+      structure_entity_id TEXT,
+      group_id TEXT,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (structure_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (group_id, system_id) REFERENCES groups(id, system_id) ON DELETE RESTRICT,
+      CHECK (version >= 1),
+      CHECK ((CASE WHEN member_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN structure_entity_id IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN group_id IS NOT NULL THEN 1 ELSE 0 END) <= 1)
     )
   `,
   fieldValuesIndexes: `
     CREATE INDEX field_values_definition_system_idx ON field_values (field_definition_id, system_id);
+    CREATE INDEX field_values_system_member_idx ON field_values (system_id, member_id);
+    CREATE INDEX field_values_system_entity_idx ON field_values (system_id, structure_entity_id);
+    CREATE INDEX field_values_system_group_idx ON field_values (system_id, group_id);
     CREATE UNIQUE INDEX field_values_definition_member_uniq ON field_values (field_definition_id, member_id) WHERE member_id IS NOT NULL;
-    CREATE UNIQUE INDEX field_values_definition_system_uniq ON field_values (field_definition_id, system_id) WHERE member_id IS NULL
+    CREATE UNIQUE INDEX field_values_definition_entity_uniq ON field_values (field_definition_id, structure_entity_id) WHERE structure_entity_id IS NOT NULL;
+    CREATE UNIQUE INDEX field_values_definition_group_uniq ON field_values (field_definition_id, group_id) WHERE group_id IS NOT NULL;
+    CREATE UNIQUE INDEX field_values_definition_system_uniq ON field_values (field_definition_id, system_id) WHERE member_id IS NULL AND structure_entity_id IS NULL AND group_id IS NULL
   `,
   fieldBucketVisibility: `
     CREATE TABLE field_bucket_visibility (
@@ -650,6 +543,29 @@ export const SQLITE_DDL = {
   fieldBucketVisibilityIndexes: `
     CREATE INDEX field_bucket_visibility_bucket_id_idx ON field_bucket_visibility (bucket_id);
     CREATE INDEX field_bucket_visibility_system_id_idx ON field_bucket_visibility (system_id)
+  `,
+  fieldDefinitionScopes: `
+    CREATE TABLE field_definition_scopes (
+      id TEXT PRIMARY KEY,
+      field_definition_id TEXT NOT NULL,
+      scope_type TEXT NOT NULL,
+      scope_entity_type_id TEXT,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1),
+      CHECK (scope_type IN ('system', 'member', 'group', 'structure-entity-type')),
+      CHECK (scope_entity_type_id IS NULL OR scope_type = 'structure-entity-type'),
+      UNIQUE (field_definition_id, scope_type, scope_entity_type_id),
+      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (scope_entity_type_id, system_id) REFERENCES system_structure_entity_types(id, system_id) ON DELETE RESTRICT
+    )
+  `,
+  fieldDefinitionScopesIndexes: `
+    CREATE INDEX field_definition_scopes_field_definition_id_idx ON field_definition_scopes (field_definition_id);
+    CREATE INDEX field_definition_scopes_system_id_idx ON field_definition_scopes (system_id);
+    CREATE UNIQUE INDEX field_definition_scopes_definition_scope_null_uniq ON field_definition_scopes (field_definition_id, scope_type) WHERE scope_entity_type_id IS NULL
   `,
   // Nomenclature Settings
   nomenclatureSettings: `
@@ -1565,6 +1481,10 @@ export function createSqliteFrontingTables(client: InstanceType<typeof Database>
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.membersIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypesIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntities);
+  client.exec(SQLITE_DDL.systemStructureEntitiesIndexes);
   client.exec(SQLITE_DDL.customFronts);
   client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
@@ -1579,34 +1499,34 @@ export function createSqliteStructureTables(client: InstanceType<typeof Database
   client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.relationships);
   client.exec(SQLITE_DDL.relationshipsIndexes);
-  client.exec(SQLITE_DDL.subsystems);
-  client.exec(SQLITE_DDL.subsystemsIndexes);
-  client.exec(SQLITE_DDL.sideSystems);
-  client.exec(SQLITE_DDL.sideSystemsIndexes);
-  client.exec(SQLITE_DDL.layers);
-  client.exec(SQLITE_DDL.layersIndexes);
-  client.exec(SQLITE_DDL.subsystemMemberships);
-  client.exec(SQLITE_DDL.subsystemMembershipsIndexes);
-  client.exec(SQLITE_DDL.sideSystemMemberships);
-  client.exec(SQLITE_DDL.sideSystemMembershipsIndexes);
-  client.exec(SQLITE_DDL.layerMemberships);
-  client.exec(SQLITE_DDL.layerMembershipsIndexes);
-  client.exec(SQLITE_DDL.subsystemLayerLinks);
-  client.exec(SQLITE_DDL.subsystemLayerLinksIndexes);
-  client.exec(SQLITE_DDL.subsystemSideSystemLinks);
-  client.exec(SQLITE_DDL.subsystemSideSystemLinksIndexes);
-  client.exec(SQLITE_DDL.sideSystemLayerLinks);
-  client.exec(SQLITE_DDL.sideSystemLayerLinksIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypesIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntities);
+  client.exec(SQLITE_DDL.systemStructureEntitiesIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntityLinks);
+  client.exec(SQLITE_DDL.systemStructureEntityLinksIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntityMemberLinks);
+  client.exec(SQLITE_DDL.systemStructureEntityMemberLinksIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntityAssociations);
+  client.exec(SQLITE_DDL.systemStructureEntityAssociationsIndexes);
 }
 
 export function createSqliteCustomFieldsTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.membersIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypesIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntities);
+  client.exec(SQLITE_DDL.systemStructureEntitiesIndexes);
+  client.exec(SQLITE_DDL.groups);
+  client.exec(SQLITE_DDL.groupsIndexes);
   client.exec(SQLITE_DDL.buckets);
   client.exec(SQLITE_DDL.bucketsIndexes);
   client.exec(SQLITE_DDL.fieldDefinitions);
   client.exec(SQLITE_DDL.fieldDefinitionsIndexes);
+  client.exec(SQLITE_DDL.fieldDefinitionScopes);
+  client.exec(SQLITE_DDL.fieldDefinitionScopesIndexes);
   client.exec(SQLITE_DDL.fieldValues);
   client.exec(SQLITE_DDL.fieldValuesIndexes);
   client.exec(SQLITE_DDL.fieldBucketVisibility);

@@ -282,6 +282,21 @@ CREATE TABLE "field_bucket_visibility" (
 	CONSTRAINT "field_bucket_visibility_field_definition_id_bucket_id_pk" PRIMARY KEY("field_definition_id","bucket_id")
 );
 --> statement-breakpoint
+CREATE TABLE "field_definition_scopes" (
+	"id" varchar(50) PRIMARY KEY NOT NULL,
+	"field_definition_id" varchar(50) NOT NULL,
+	"scope_type" varchar(50) NOT NULL,
+	"scope_entity_type_id" varchar(50),
+	"system_id" varchar(50) NOT NULL,
+	"created_at" timestamptz NOT NULL,
+	"updated_at" timestamptz NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	CONSTRAINT "field_definition_scopes_definition_scope_uniq" UNIQUE NULLS NOT DISTINCT("field_definition_id","scope_type","scope_entity_type_id"),
+	CONSTRAINT "field_definition_scopes_scope_type_check" CHECK ("field_definition_scopes"."scope_type" IS NULL OR "field_definition_scopes"."scope_type" IN ('system', 'member', 'group', 'structure-entity-type')),
+	CONSTRAINT "field_definition_scopes_entity_type_check" CHECK ("field_definition_scopes"."scope_entity_type_id" IS NULL OR "field_definition_scopes"."scope_type" = 'structure-entity-type'),
+	CONSTRAINT "field_definition_scopes_version_check" CHECK ("field_definition_scopes"."version" >= 1)
+);
+--> statement-breakpoint
 CREATE TABLE "field_definitions" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"system_id" varchar(50) NOT NULL,
@@ -304,12 +319,15 @@ CREATE TABLE "field_values" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"field_definition_id" varchar(50) NOT NULL,
 	"member_id" varchar(50),
+	"structure_entity_id" varchar(50),
+	"group_id" varchar(50),
 	"system_id" varchar(50) NOT NULL,
 	"encrypted_data" "bytea" NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
-	CONSTRAINT "field_values_version_check" CHECK ("field_values"."version" >= 1)
+	CONSTRAINT "field_values_version_check" CHECK ("field_values"."version" >= 1),
+	CONSTRAINT "field_values_subject_exclusivity_check" CHECK ((CASE WHEN "field_values"."member_id" IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN "field_values"."structure_entity_id" IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN "field_values"."group_id" IS NOT NULL THEN 1 ELSE 0 END) <= 1)
 );
 --> statement-breakpoint
 CREATE TABLE "friend_bucket_assignments" (
@@ -406,7 +424,7 @@ CREATE TABLE "fronting_sessions" (
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK ("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
 	CONSTRAINT "fronting_sessions_version_check" CHECK ("fronting_sessions"."version" >= 1),
 	CONSTRAINT "fronting_sessions_archived_consistency_check" CHECK (("fronting_sessions"."archived" = true) = ("fronting_sessions"."archived_at" IS NOT NULL)),
-	CONSTRAINT "fronting_sessions_subject_check" CHECK ("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL)
+	CONSTRAINT "fronting_sessions_subject_check" CHECK ("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL OR "fronting_sessions"."structure_entity_id" IS NOT NULL)
 );
 --> statement-breakpoint
 CREATE TABLE "group_memberships" (
@@ -518,30 +536,6 @@ CREATE TABLE "key_grants" (
 	"revoked_at" timestamptz,
 	CONSTRAINT "key_grants_bucket_friend_version_uniq" UNIQUE("bucket_id","friend_account_id","key_version"),
 	CONSTRAINT "key_grants_key_version_check" CHECK ("key_grants"."key_version" >= 1)
-);
---> statement-breakpoint
-CREATE TABLE "layer_memberships" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"layer_id" varchar(50) NOT NULL,
-	"member_id" varchar(50) NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"encrypted_data" "bytea" NOT NULL,
-	"created_at" timestamptz NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "layers" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"sort_order" integer NOT NULL,
-	"encrypted_data" "bytea" NOT NULL,
-	"created_at" timestamptz NOT NULL,
-	"updated_at" timestamptz NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
-	"archived" boolean DEFAULT false NOT NULL,
-	"archived_at" timestamptz,
-	CONSTRAINT "layers_id_system_id_unique" UNIQUE("id","system_id"),
-	CONSTRAINT "layers_version_check" CHECK ("layers"."version" >= 1),
-	CONSTRAINT "layers_archived_consistency_check" CHECK (("layers"."archived" = true) = ("layers"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "lifecycle_events" (
@@ -747,87 +741,6 @@ CREATE TABLE "sessions" (
 	CONSTRAINT "sessions_expires_at_check" CHECK ("sessions"."expires_at" IS NULL OR "sessions"."expires_at" > "sessions"."created_at")
 );
 --> statement-breakpoint
-CREATE TABLE "side_system_layer_links" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"side_system_id" varchar(50) NOT NULL,
-	"layer_id" varchar(50) NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"encrypted_data" "bytea",
-	"created_at" timestamptz NOT NULL,
-	CONSTRAINT "side_system_layer_links_uniq" UNIQUE("side_system_id","layer_id")
-);
---> statement-breakpoint
-CREATE TABLE "side_system_memberships" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"side_system_id" varchar(50) NOT NULL,
-	"member_id" varchar(50) NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"encrypted_data" "bytea" NOT NULL,
-	"created_at" timestamptz NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "side_systems" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"encrypted_data" "bytea" NOT NULL,
-	"created_at" timestamptz NOT NULL,
-	"updated_at" timestamptz NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
-	"archived" boolean DEFAULT false NOT NULL,
-	"archived_at" timestamptz,
-	CONSTRAINT "side_systems_id_system_id_unique" UNIQUE("id","system_id"),
-	CONSTRAINT "side_systems_version_check" CHECK ("side_systems"."version" >= 1),
-	CONSTRAINT "side_systems_archived_consistency_check" CHECK (("side_systems"."archived" = true) = ("side_systems"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
-CREATE TABLE "subsystem_layer_links" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"subsystem_id" varchar(50) NOT NULL,
-	"layer_id" varchar(50) NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"encrypted_data" "bytea",
-	"created_at" timestamptz NOT NULL,
-	CONSTRAINT "subsystem_layer_links_uniq" UNIQUE("subsystem_id","layer_id")
-);
---> statement-breakpoint
-CREATE TABLE "subsystem_memberships" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"subsystem_id" varchar(50) NOT NULL,
-	"member_id" varchar(50) NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"encrypted_data" "bytea" NOT NULL,
-	"created_at" timestamptz NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "subsystem_side_system_links" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"subsystem_id" varchar(50) NOT NULL,
-	"side_system_id" varchar(50) NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"encrypted_data" "bytea",
-	"created_at" timestamptz NOT NULL,
-	CONSTRAINT "subsystem_side_system_links_uniq" UNIQUE("subsystem_id","side_system_id")
-);
---> statement-breakpoint
-CREATE TABLE "subsystems" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"parent_subsystem_id" varchar(50),
-	"architecture_type" jsonb,
-	"has_core" boolean DEFAULT false NOT NULL,
-	"discovery_status" varchar(50),
-	"encrypted_data" "bytea" NOT NULL,
-	"created_at" timestamptz NOT NULL,
-	"updated_at" timestamptz NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
-	"archived" boolean DEFAULT false NOT NULL,
-	"archived_at" timestamptz,
-	CONSTRAINT "subsystems_id_system_id_unique" UNIQUE("id","system_id"),
-	CONSTRAINT "subsystems_discovery_status_check" CHECK ("subsystems"."discovery_status" IS NULL OR "subsystems"."discovery_status" IN ('fully-mapped', 'partially-mapped', 'unknown')),
-	CONSTRAINT "subsystems_version_check" CHECK ("subsystems"."version" >= 1),
-	CONSTRAINT "subsystems_archived_consistency_check" CHECK (("subsystems"."archived" = true) = ("subsystems"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
 CREATE TABLE "sync_changes" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"document_id" varchar(255) NOT NULL,
@@ -929,7 +842,8 @@ CREATE TABLE "system_structure_entity_associations" (
 	"source_entity_id" varchar(50) NOT NULL,
 	"target_entity_id" varchar(50) NOT NULL,
 	"created_at" timestamptz NOT NULL,
-	CONSTRAINT "system_structure_entity_associations_uniq" UNIQUE("source_entity_id","target_entity_id")
+	CONSTRAINT "system_structure_entity_associations_uniq" UNIQUE("source_entity_id","target_entity_id"),
+	CONSTRAINT "system_structure_entity_associations_no_self_link" CHECK ("system_structure_entity_associations"."source_entity_id" <> "system_structure_entity_associations"."target_entity_id")
 );
 --> statement-breakpoint
 CREATE TABLE "system_structure_entity_links" (
@@ -1089,10 +1003,15 @@ ALTER TABLE "export_requests" ADD CONSTRAINT "export_requests_system_id_account_
 ALTER TABLE "field_bucket_visibility" ADD CONSTRAINT "field_bucket_visibility_field_definition_id_field_definitions_id_fk" FOREIGN KEY ("field_definition_id") REFERENCES "public"."field_definitions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "field_bucket_visibility" ADD CONSTRAINT "field_bucket_visibility_bucket_id_buckets_id_fk" FOREIGN KEY ("bucket_id") REFERENCES "public"."buckets"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "field_bucket_visibility" ADD CONSTRAINT "field_bucket_visibility_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "field_definition_scopes" ADD CONSTRAINT "field_definition_scopes_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "field_definition_scopes" ADD CONSTRAINT "field_definition_scopes_field_definition_id_system_id_field_definitions_id_system_id_fk" FOREIGN KEY ("field_definition_id","system_id") REFERENCES "public"."field_definitions"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "field_definition_scopes" ADD CONSTRAINT "field_definition_scopes_scope_entity_type_id_system_id_system_structure_entity_types_id_system_id_fk" FOREIGN KEY ("scope_entity_type_id","system_id") REFERENCES "public"."system_structure_entity_types"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "field_definitions" ADD CONSTRAINT "field_definitions_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "field_values" ADD CONSTRAINT "field_values_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "field_values" ADD CONSTRAINT "field_values_field_definition_id_system_id_field_definitions_id_system_id_fk" FOREIGN KEY ("field_definition_id","system_id") REFERENCES "public"."field_definitions"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "field_values" ADD CONSTRAINT "field_values_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "field_values" ADD CONSTRAINT "field_values_structure_entity_id_system_id_system_structure_entities_id_system_id_fk" FOREIGN KEY ("structure_entity_id","system_id") REFERENCES "public"."system_structure_entities"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "field_values" ADD CONSTRAINT "field_values_group_id_system_id_groups_id_system_id_fk" FOREIGN KEY ("group_id","system_id") REFERENCES "public"."groups"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "friend_bucket_assignments" ADD CONSTRAINT "friend_bucket_assignments_friend_connection_id_friend_connections_id_fk" FOREIGN KEY ("friend_connection_id") REFERENCES "public"."friend_connections"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "friend_bucket_assignments" ADD CONSTRAINT "friend_bucket_assignments_bucket_id_buckets_id_fk" FOREIGN KEY ("bucket_id") REFERENCES "public"."buckets"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "friend_bucket_assignments" ADD CONSTRAINT "friend_bucket_assignments_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -1108,6 +1027,7 @@ ALTER TABLE "fronting_reports" ADD CONSTRAINT "fronting_reports_system_id_system
 ALTER TABLE "fronting_sessions" ADD CONSTRAINT "fronting_sessions_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fronting_sessions" ADD CONSTRAINT "fronting_sessions_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fronting_sessions" ADD CONSTRAINT "fronting_sessions_custom_front_id_custom_fronts_id_fk" FOREIGN KEY ("custom_front_id") REFERENCES "public"."custom_fronts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fronting_sessions" ADD CONSTRAINT "fronting_sessions_structure_entity_id_system_id_system_structure_entities_id_system_id_fk" FOREIGN KEY ("structure_entity_id","system_id") REFERENCES "public"."system_structure_entities"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "group_memberships" ADD CONSTRAINT "group_memberships_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "group_memberships" ADD CONSTRAINT "group_memberships_group_id_system_id_groups_id_system_id_fk" FOREIGN KEY ("group_id","system_id") REFERENCES "public"."groups"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "group_memberships" ADD CONSTRAINT "group_memberships_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -1124,10 +1044,6 @@ ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_system_id_systems_
 ALTER TABLE "key_grants" ADD CONSTRAINT "key_grants_bucket_id_buckets_id_fk" FOREIGN KEY ("bucket_id") REFERENCES "public"."buckets"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "key_grants" ADD CONSTRAINT "key_grants_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "key_grants" ADD CONSTRAINT "key_grants_friend_account_id_accounts_id_fk" FOREIGN KEY ("friend_account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "layer_memberships" ADD CONSTRAINT "layer_memberships_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "layer_memberships" ADD CONSTRAINT "layer_memberships_layer_id_system_id_layers_id_system_id_fk" FOREIGN KEY ("layer_id","system_id") REFERENCES "public"."layers"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "layer_memberships" ADD CONSTRAINT "layer_memberships_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "layers" ADD CONSTRAINT "layers_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "lifecycle_events" ADD CONSTRAINT "lifecycle_events_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "member_photos" ADD CONSTRAINT "member_photos_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "member_photos" ADD CONSTRAINT "member_photos_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -1149,24 +1065,6 @@ ALTER TABLE "relationships" ADD CONSTRAINT "relationships_source_member_id_syste
 ALTER TABLE "relationships" ADD CONSTRAINT "relationships_target_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("target_member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "safe_mode_content" ADD CONSTRAINT "safe_mode_content_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "side_system_layer_links" ADD CONSTRAINT "side_system_layer_links_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "side_system_layer_links" ADD CONSTRAINT "side_system_layer_links_side_system_id_system_id_side_systems_id_system_id_fk" FOREIGN KEY ("side_system_id","system_id") REFERENCES "public"."side_systems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "side_system_layer_links" ADD CONSTRAINT "side_system_layer_links_layer_id_system_id_layers_id_system_id_fk" FOREIGN KEY ("layer_id","system_id") REFERENCES "public"."layers"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "side_system_memberships" ADD CONSTRAINT "side_system_memberships_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "side_system_memberships" ADD CONSTRAINT "side_system_memberships_side_system_id_system_id_side_systems_id_system_id_fk" FOREIGN KEY ("side_system_id","system_id") REFERENCES "public"."side_systems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "side_system_memberships" ADD CONSTRAINT "side_system_memberships_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "side_systems" ADD CONSTRAINT "side_systems_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_layer_links" ADD CONSTRAINT "subsystem_layer_links_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_layer_links" ADD CONSTRAINT "subsystem_layer_links_subsystem_id_system_id_subsystems_id_system_id_fk" FOREIGN KEY ("subsystem_id","system_id") REFERENCES "public"."subsystems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_layer_links" ADD CONSTRAINT "subsystem_layer_links_layer_id_system_id_layers_id_system_id_fk" FOREIGN KEY ("layer_id","system_id") REFERENCES "public"."layers"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_memberships" ADD CONSTRAINT "subsystem_memberships_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_memberships" ADD CONSTRAINT "subsystem_memberships_subsystem_id_system_id_subsystems_id_system_id_fk" FOREIGN KEY ("subsystem_id","system_id") REFERENCES "public"."subsystems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_memberships" ADD CONSTRAINT "subsystem_memberships_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_side_system_links" ADD CONSTRAINT "subsystem_side_system_links_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_side_system_links" ADD CONSTRAINT "subsystem_side_system_links_subsystem_id_system_id_subsystems_id_system_id_fk" FOREIGN KEY ("subsystem_id","system_id") REFERENCES "public"."subsystems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystem_side_system_links" ADD CONSTRAINT "subsystem_side_system_links_side_system_id_system_id_side_systems_id_system_id_fk" FOREIGN KEY ("side_system_id","system_id") REFERENCES "public"."side_systems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystems" ADD CONSTRAINT "subsystems_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "subsystems" ADD CONSTRAINT "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk" FOREIGN KEY ("parent_subsystem_id","system_id") REFERENCES "public"."subsystems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sync_changes" ADD CONSTRAINT "sync_changes_document_id_sync_documents_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."sync_documents"("document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sync_conflicts" ADD CONSTRAINT "sync_conflicts_document_id_sync_documents_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."sync_documents"("document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sync_documents" ADD CONSTRAINT "sync_documents_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -1236,11 +1134,18 @@ CREATE INDEX "export_requests_account_id_idx" ON "export_requests" USING btree (
 CREATE INDEX "export_requests_system_id_idx" ON "export_requests" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "field_bucket_visibility_bucket_id_idx" ON "field_bucket_visibility" USING btree ("bucket_id");--> statement-breakpoint
 CREATE INDEX "field_bucket_visibility_system_id_idx" ON "field_bucket_visibility" USING btree ("system_id");--> statement-breakpoint
+CREATE INDEX "field_definition_scopes_field_definition_id_idx" ON "field_definition_scopes" USING btree ("field_definition_id");--> statement-breakpoint
+CREATE INDEX "field_definition_scopes_system_id_idx" ON "field_definition_scopes" USING btree ("system_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "field_definition_scopes_definition_scope_null_uniq" ON "field_definition_scopes" USING btree ("field_definition_id","scope_type") WHERE "field_definition_scopes"."scope_entity_type_id" IS NULL;--> statement-breakpoint
 CREATE INDEX "field_definitions_system_archived_idx" ON "field_definitions" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "field_values_definition_system_idx" ON "field_values" USING btree ("field_definition_id","system_id");--> statement-breakpoint
 CREATE INDEX "field_values_system_member_idx" ON "field_values" USING btree ("system_id","member_id");--> statement-breakpoint
+CREATE INDEX "field_values_system_entity_idx" ON "field_values" USING btree ("system_id","structure_entity_id");--> statement-breakpoint
+CREATE INDEX "field_values_system_group_idx" ON "field_values" USING btree ("system_id","group_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "field_values_definition_member_uniq" ON "field_values" USING btree ("field_definition_id","member_id") WHERE "field_values"."member_id" IS NOT NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX "field_values_definition_system_uniq" ON "field_values" USING btree ("field_definition_id","system_id") WHERE "field_values"."member_id" IS NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "field_values_definition_entity_uniq" ON "field_values" USING btree ("field_definition_id","structure_entity_id") WHERE "field_values"."structure_entity_id" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "field_values_definition_group_uniq" ON "field_values" USING btree ("field_definition_id","group_id") WHERE "field_values"."group_id" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "field_values_definition_system_uniq" ON "field_values" USING btree ("field_definition_id","system_id") WHERE "field_values"."member_id" IS NULL AND "field_values"."structure_entity_id" IS NULL AND "field_values"."group_id" IS NULL;--> statement-breakpoint
 CREATE INDEX "friend_bucket_assignments_bucket_id_idx" ON "friend_bucket_assignments" USING btree ("bucket_id");--> statement-breakpoint
 CREATE INDEX "friend_bucket_assignments_system_id_idx" ON "friend_bucket_assignments" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "friend_codes_account_archived_idx" ON "friend_codes" USING btree ("account_id","archived");--> statement-breakpoint
@@ -1259,6 +1164,7 @@ CREATE INDEX "fronting_sessions_system_member_start_idx" ON "fronting_sessions" 
 CREATE INDEX "fronting_sessions_system_end_idx" ON "fronting_sessions" USING btree ("system_id","end_time");--> statement-breakpoint
 CREATE INDEX "fronting_sessions_active_idx" ON "fronting_sessions" USING btree ("system_id") WHERE "fronting_sessions"."end_time" IS NULL;--> statement-breakpoint
 CREATE INDEX "fronting_sessions_system_archived_idx" ON "fronting_sessions" USING btree ("system_id","archived");--> statement-breakpoint
+CREATE INDEX "fronting_sessions_system_entity_start_idx" ON "fronting_sessions" USING btree ("system_id","structure_entity_id","start_time");--> statement-breakpoint
 CREATE INDEX "group_memberships_member_id_idx" ON "group_memberships" USING btree ("member_id");--> statement-breakpoint
 CREATE INDEX "group_memberships_system_id_idx" ON "group_memberships" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "group_memberships_system_group_idx" ON "group_memberships" USING btree ("system_id","group_id");--> statement-breakpoint
@@ -1275,10 +1181,6 @@ CREATE INDEX "key_grants_system_id_idx" ON "key_grants" USING btree ("system_id"
 CREATE INDEX "key_grants_friend_bucket_idx" ON "key_grants" USING btree ("friend_account_id","bucket_id");--> statement-breakpoint
 CREATE INDEX "key_grants_friend_revoked_idx" ON "key_grants" USING btree ("friend_account_id","revoked_at");--> statement-breakpoint
 CREATE INDEX "key_grants_revoked_at_idx" ON "key_grants" USING btree ("revoked_at");--> statement-breakpoint
-CREATE INDEX "layer_memberships_layer_id_idx" ON "layer_memberships" USING btree ("layer_id");--> statement-breakpoint
-CREATE INDEX "layer_memberships_member_id_idx" ON "layer_memberships" USING btree ("member_id");--> statement-breakpoint
-CREATE INDEX "layer_memberships_system_id_idx" ON "layer_memberships" USING btree ("system_id");--> statement-breakpoint
-CREATE INDEX "layers_system_archived_idx" ON "layers" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "lifecycle_events_system_occurred_idx" ON "lifecycle_events" USING btree ("system_id","occurred_at");--> statement-breakpoint
 CREATE INDEX "lifecycle_events_system_recorded_idx" ON "lifecycle_events" USING btree ("system_id","recorded_at");--> statement-breakpoint
 CREATE INDEX "member_photos_system_archived_idx" ON "member_photos" USING btree ("system_id","archived");--> statement-breakpoint
@@ -1304,20 +1206,6 @@ CREATE UNIQUE INDEX "sessions_token_hash_idx" ON "sessions" USING btree ("token_
 CREATE INDEX "sessions_revoked_last_active_idx" ON "sessions" USING btree ("revoked","last_active");--> statement-breakpoint
 CREATE INDEX "sessions_expires_at_idx" ON "sessions" USING btree ("expires_at") WHERE "sessions"."expires_at" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX "sessions_ttl_duration_ms_idx" ON "sessions" USING btree ((CAST(EXTRACT(EPOCH FROM ("expires_at" - "created_at")) * 1000 AS bigint)));--> statement-breakpoint
-CREATE INDEX "side_system_layer_links_side_system_id_idx" ON "side_system_layer_links" USING btree ("side_system_id");--> statement-breakpoint
-CREATE INDEX "side_system_layer_links_layer_id_idx" ON "side_system_layer_links" USING btree ("layer_id");--> statement-breakpoint
-CREATE INDEX "side_system_memberships_side_system_id_idx" ON "side_system_memberships" USING btree ("side_system_id");--> statement-breakpoint
-CREATE INDEX "side_system_memberships_member_id_idx" ON "side_system_memberships" USING btree ("member_id");--> statement-breakpoint
-CREATE INDEX "side_system_memberships_system_id_idx" ON "side_system_memberships" USING btree ("system_id");--> statement-breakpoint
-CREATE INDEX "side_systems_system_archived_idx" ON "side_systems" USING btree ("system_id","archived");--> statement-breakpoint
-CREATE INDEX "subsystem_layer_links_subsystem_id_idx" ON "subsystem_layer_links" USING btree ("subsystem_id");--> statement-breakpoint
-CREATE INDEX "subsystem_layer_links_layer_id_idx" ON "subsystem_layer_links" USING btree ("layer_id");--> statement-breakpoint
-CREATE INDEX "subsystem_memberships_subsystem_id_idx" ON "subsystem_memberships" USING btree ("subsystem_id");--> statement-breakpoint
-CREATE INDEX "subsystem_memberships_member_id_idx" ON "subsystem_memberships" USING btree ("member_id");--> statement-breakpoint
-CREATE INDEX "subsystem_memberships_system_id_idx" ON "subsystem_memberships" USING btree ("system_id");--> statement-breakpoint
-CREATE INDEX "subsystem_side_system_links_subsystem_id_idx" ON "subsystem_side_system_links" USING btree ("subsystem_id");--> statement-breakpoint
-CREATE INDEX "subsystem_side_system_links_side_system_id_idx" ON "subsystem_side_system_links" USING btree ("side_system_id");--> statement-breakpoint
-CREATE INDEX "subsystems_system_archived_idx" ON "subsystems" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE UNIQUE INDEX "sync_changes_document_id_seq_idx" ON "sync_changes" USING btree ("document_id","seq");--> statement-breakpoint
 CREATE UNIQUE INDEX "sync_changes_dedup_idx" ON "sync_changes" USING btree ("document_id","author_public_key","nonce");--> statement-breakpoint
 CREATE INDEX "sync_conflicts_document_id_idx" ON "sync_conflicts" USING btree ("document_id");--> statement-breakpoint
@@ -1326,7 +1214,7 @@ CREATE INDEX "sync_documents_system_id_idx" ON "sync_documents" USING btree ("sy
 CREATE INDEX "sync_documents_system_id_doc_type_idx" ON "sync_documents" USING btree ("system_id","doc_type");--> statement-breakpoint
 CREATE INDEX "system_snapshots_system_created_idx" ON "system_snapshots" USING btree ("system_id","created_at");--> statement-breakpoint
 CREATE INDEX "system_structure_entities_system_archived_idx" ON "system_structure_entities" USING btree ("system_id","archived");--> statement-breakpoint
-CREATE INDEX "system_structure_entities_entity_type_id_idx" ON "system_structure_entities" USING btree ("entity_type_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entities_entity_type_id_idx" ON "system_structure_entities" USING btree ("system_id","entity_type_id");--> statement-breakpoint
 CREATE INDEX "system_structure_entity_associations_source_idx" ON "system_structure_entity_associations" USING btree ("source_entity_id");--> statement-breakpoint
 CREATE INDEX "system_structure_entity_associations_target_idx" ON "system_structure_entity_associations" USING btree ("target_entity_id");--> statement-breakpoint
 CREATE INDEX "system_structure_entity_associations_system_id_idx" ON "system_structure_entity_associations" USING btree ("system_id");--> statement-breakpoint

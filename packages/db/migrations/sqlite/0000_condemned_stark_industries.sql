@@ -282,6 +282,7 @@ CREATE TABLE `custom_fronts` (
 );
 --> statement-breakpoint
 CREATE INDEX `custom_fronts_system_archived_idx` ON `custom_fronts` (`system_id`,`archived`);--> statement-breakpoint
+CREATE UNIQUE INDEX `custom_fronts_id_system_id_unique` ON `custom_fronts` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `device_tokens` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
@@ -352,6 +353,27 @@ CREATE TABLE `field_bucket_visibility` (
 --> statement-breakpoint
 CREATE INDEX `field_bucket_visibility_bucket_id_idx` ON `field_bucket_visibility` (`bucket_id`);--> statement-breakpoint
 CREATE INDEX `field_bucket_visibility_system_id_idx` ON `field_bucket_visibility` (`system_id`);--> statement-breakpoint
+CREATE TABLE `field_definition_scopes` (
+	`id` text PRIMARY KEY NOT NULL,
+	`field_definition_id` text NOT NULL,
+	`scope_type` text NOT NULL,
+	`scope_entity_type_id` text,
+	`system_id` text NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`version` integer DEFAULT 1 NOT NULL,
+	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`field_definition_id`,`system_id`) REFERENCES `field_definitions`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`scope_entity_type_id`,`system_id`) REFERENCES `system_structure_entity_types`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	CONSTRAINT "field_definition_scopes_scope_type_check" CHECK("field_definition_scopes"."scope_type" IS NULL OR "field_definition_scopes"."scope_type" IN ('system', 'member', 'group', 'structure-entity-type')),
+	CONSTRAINT "field_definition_scopes_entity_type_check" CHECK("field_definition_scopes"."scope_entity_type_id" IS NULL OR "field_definition_scopes"."scope_type" = 'structure-entity-type'),
+	CONSTRAINT "field_definition_scopes_version_check" CHECK("field_definition_scopes"."version" >= 1)
+);
+--> statement-breakpoint
+CREATE INDEX `field_definition_scopes_field_definition_id_idx` ON `field_definition_scopes` (`field_definition_id`);--> statement-breakpoint
+CREATE INDEX `field_definition_scopes_system_id_idx` ON `field_definition_scopes` (`system_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `field_definition_scopes_definition_scope_null_uniq` ON `field_definition_scopes` (`field_definition_id`,`scope_type`) WHERE "field_definition_scopes"."scope_entity_type_id" IS NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `field_definition_scopes_definition_scope_uniq` ON `field_definition_scopes` (`field_definition_id`,`scope_type`,`scope_entity_type_id`);--> statement-breakpoint
 CREATE TABLE `field_definitions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`system_id` text NOT NULL,
@@ -376,6 +398,8 @@ CREATE TABLE `field_values` (
 	`id` text PRIMARY KEY NOT NULL,
 	`field_definition_id` text NOT NULL,
 	`member_id` text,
+	`structure_entity_id` text,
+	`group_id` text,
 	`system_id` text NOT NULL,
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
@@ -384,13 +408,20 @@ CREATE TABLE `field_values` (
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`field_definition_id`,`system_id`) REFERENCES `field_definitions`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "field_values_version_check" CHECK("field_values"."version" >= 1)
+	FOREIGN KEY (`structure_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`group_id`,`system_id`) REFERENCES `groups`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	CONSTRAINT "field_values_version_check" CHECK("field_values"."version" >= 1),
+	CONSTRAINT "field_values_subject_exclusivity_check" CHECK((CASE WHEN "field_values"."member_id" IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN "field_values"."structure_entity_id" IS NOT NULL THEN 1 ELSE 0 END + CASE WHEN "field_values"."group_id" IS NOT NULL THEN 1 ELSE 0 END) <= 1)
 );
 --> statement-breakpoint
 CREATE INDEX `field_values_definition_system_idx` ON `field_values` (`field_definition_id`,`system_id`);--> statement-breakpoint
 CREATE INDEX `field_values_system_member_idx` ON `field_values` (`system_id`,`member_id`);--> statement-breakpoint
+CREATE INDEX `field_values_system_entity_idx` ON `field_values` (`system_id`,`structure_entity_id`);--> statement-breakpoint
+CREATE INDEX `field_values_system_group_idx` ON `field_values` (`system_id`,`group_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `field_values_definition_member_uniq` ON `field_values` (`field_definition_id`,`member_id`) WHERE "field_values"."member_id" IS NOT NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX `field_values_definition_system_uniq` ON `field_values` (`field_definition_id`,`system_id`) WHERE "field_values"."member_id" IS NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `field_values_definition_entity_uniq` ON `field_values` (`field_definition_id`,`structure_entity_id`) WHERE "field_values"."structure_entity_id" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `field_values_definition_group_uniq` ON `field_values` (`field_definition_id`,`group_id`) WHERE "field_values"."group_id" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `field_values_definition_system_uniq` ON `field_values` (`field_definition_id`,`system_id`) WHERE "field_values"."member_id" IS NULL AND "field_values"."structure_entity_id" IS NULL AND "field_values"."group_id" IS NULL;--> statement-breakpoint
 CREATE TABLE `friend_bucket_assignments` (
 	`friend_connection_id` text NOT NULL,
 	`bucket_id` text NOT NULL,
@@ -506,10 +537,11 @@ CREATE TABLE `fronting_sessions` (
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`custom_front_id`) REFERENCES `custom_fronts`(`id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`structure_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
 	CONSTRAINT "fronting_sessions_version_check" CHECK("fronting_sessions"."version" >= 1),
 	CONSTRAINT "fronting_sessions_archived_consistency_check" CHECK(("fronting_sessions"."archived" = true) = ("fronting_sessions"."archived_at" IS NOT NULL)),
-	CONSTRAINT "fronting_sessions_subject_check" CHECK("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL)
+	CONSTRAINT "fronting_sessions_subject_check" CHECK("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL OR "fronting_sessions"."structure_entity_id" IS NOT NULL)
 );
 --> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_start_idx` ON `fronting_sessions` (`system_id`,`start_time`);--> statement-breakpoint
@@ -517,6 +549,7 @@ CREATE INDEX `fronting_sessions_system_member_start_idx` ON `fronting_sessions` 
 CREATE INDEX `fronting_sessions_system_end_idx` ON `fronting_sessions` (`system_id`,`end_time`);--> statement-breakpoint
 CREATE INDEX `fronting_sessions_active_idx` ON `fronting_sessions` (`system_id`) WHERE "fronting_sessions"."end_time" IS NULL;--> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_archived_idx` ON `fronting_sessions` (`system_id`,`archived`);--> statement-breakpoint
+CREATE INDEX `fronting_sessions_system_entity_start_idx` ON `fronting_sessions` (`system_id`,`structure_entity_id`,`start_time`);--> statement-breakpoint
 CREATE UNIQUE INDEX `fronting_sessions_id_system_id_unique` ON `fronting_sessions` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `group_memberships` (
 	`group_id` text NOT NULL,
@@ -693,38 +726,6 @@ CREATE INDEX `key_grants_friend_bucket_idx` ON `key_grants` (`friend_account_id`
 CREATE INDEX `key_grants_friend_revoked_idx` ON `key_grants` (`friend_account_id`,`revoked_at`);--> statement-breakpoint
 CREATE INDEX `key_grants_revoked_at_idx` ON `key_grants` (`revoked_at`);--> statement-breakpoint
 CREATE UNIQUE INDEX `key_grants_bucket_friend_version_uniq` ON `key_grants` (`bucket_id`,`friend_account_id`,`key_version`);--> statement-breakpoint
-CREATE TABLE `layer_memberships` (
-	`id` text PRIMARY KEY NOT NULL,
-	`layer_id` text NOT NULL,
-	`member_id` text NOT NULL,
-	`system_id` text NOT NULL,
-	`encrypted_data` blob NOT NULL,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
-);
---> statement-breakpoint
-CREATE INDEX `layer_memberships_layer_id_idx` ON `layer_memberships` (`layer_id`);--> statement-breakpoint
-CREATE INDEX `layer_memberships_member_id_idx` ON `layer_memberships` (`member_id`);--> statement-breakpoint
-CREATE INDEX `layer_memberships_system_id_idx` ON `layer_memberships` (`system_id`);--> statement-breakpoint
-CREATE TABLE `layers` (
-	`id` text PRIMARY KEY NOT NULL,
-	`system_id` text NOT NULL,
-	`sort_order` integer NOT NULL,
-	`encrypted_data` blob NOT NULL,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL,
-	`version` integer DEFAULT 1 NOT NULL,
-	`archived` integer DEFAULT false NOT NULL,
-	`archived_at` integer,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "layers_version_check" CHECK("layers"."version" >= 1),
-	CONSTRAINT "layers_archived_consistency_check" CHECK(("layers"."archived" = true) = ("layers"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
-CREATE INDEX `layers_system_archived_idx` ON `layers` (`system_id`,`archived`);--> statement-breakpoint
-CREATE UNIQUE INDEX `layers_id_system_id_unique` ON `layers` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `lifecycle_events` (
 	`id` text PRIMARY KEY NOT NULL,
 	`system_id` text NOT NULL,
@@ -973,119 +974,6 @@ CREATE INDEX `sessions_account_id_idx` ON `sessions` (`account_id`);--> statemen
 CREATE UNIQUE INDEX `sessions_token_hash_idx` ON `sessions` (`token_hash`);--> statement-breakpoint
 CREATE INDEX `sessions_revoked_last_active_idx` ON `sessions` (`revoked`,`last_active`);--> statement-breakpoint
 CREATE INDEX `sessions_expires_at_idx` ON `sessions` (`expires_at`) WHERE "sessions"."expires_at" IS NOT NULL;--> statement-breakpoint
-CREATE TABLE `side_system_layer_links` (
-	`id` text PRIMARY KEY NOT NULL,
-	`side_system_id` text NOT NULL,
-	`layer_id` text NOT NULL,
-	`system_id` text NOT NULL,
-	`encrypted_data` blob,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
-);
---> statement-breakpoint
-CREATE INDEX `side_system_layer_links_side_system_id_idx` ON `side_system_layer_links` (`side_system_id`);--> statement-breakpoint
-CREATE INDEX `side_system_layer_links_layer_id_idx` ON `side_system_layer_links` (`layer_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `side_system_layer_links_uniq` ON `side_system_layer_links` (`side_system_id`,`layer_id`);--> statement-breakpoint
-CREATE TABLE `side_system_memberships` (
-	`id` text PRIMARY KEY NOT NULL,
-	`side_system_id` text NOT NULL,
-	`member_id` text NOT NULL,
-	`system_id` text NOT NULL,
-	`encrypted_data` blob NOT NULL,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
-);
---> statement-breakpoint
-CREATE INDEX `side_system_memberships_side_system_id_idx` ON `side_system_memberships` (`side_system_id`);--> statement-breakpoint
-CREATE INDEX `side_system_memberships_member_id_idx` ON `side_system_memberships` (`member_id`);--> statement-breakpoint
-CREATE INDEX `side_system_memberships_system_id_idx` ON `side_system_memberships` (`system_id`);--> statement-breakpoint
-CREATE TABLE `side_systems` (
-	`id` text PRIMARY KEY NOT NULL,
-	`system_id` text NOT NULL,
-	`encrypted_data` blob NOT NULL,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL,
-	`version` integer DEFAULT 1 NOT NULL,
-	`archived` integer DEFAULT false NOT NULL,
-	`archived_at` integer,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "side_systems_version_check" CHECK("side_systems"."version" >= 1),
-	CONSTRAINT "side_systems_archived_consistency_check" CHECK(("side_systems"."archived" = true) = ("side_systems"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
-CREATE INDEX `side_systems_system_archived_idx` ON `side_systems` (`system_id`,`archived`);--> statement-breakpoint
-CREATE UNIQUE INDEX `side_systems_id_system_id_unique` ON `side_systems` (`id`,`system_id`);--> statement-breakpoint
-CREATE TABLE `subsystem_layer_links` (
-	`id` text PRIMARY KEY NOT NULL,
-	`subsystem_id` text NOT NULL,
-	`layer_id` text NOT NULL,
-	`system_id` text NOT NULL,
-	`encrypted_data` blob,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
-);
---> statement-breakpoint
-CREATE INDEX `subsystem_layer_links_subsystem_id_idx` ON `subsystem_layer_links` (`subsystem_id`);--> statement-breakpoint
-CREATE INDEX `subsystem_layer_links_layer_id_idx` ON `subsystem_layer_links` (`layer_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `subsystem_layer_links_uniq` ON `subsystem_layer_links` (`subsystem_id`,`layer_id`);--> statement-breakpoint
-CREATE TABLE `subsystem_memberships` (
-	`id` text PRIMARY KEY NOT NULL,
-	`subsystem_id` text NOT NULL,
-	`member_id` text NOT NULL,
-	`system_id` text NOT NULL,
-	`encrypted_data` blob NOT NULL,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
-);
---> statement-breakpoint
-CREATE INDEX `subsystem_memberships_subsystem_id_idx` ON `subsystem_memberships` (`subsystem_id`);--> statement-breakpoint
-CREATE INDEX `subsystem_memberships_member_id_idx` ON `subsystem_memberships` (`member_id`);--> statement-breakpoint
-CREATE INDEX `subsystem_memberships_system_id_idx` ON `subsystem_memberships` (`system_id`);--> statement-breakpoint
-CREATE TABLE `subsystem_side_system_links` (
-	`id` text PRIMARY KEY NOT NULL,
-	`subsystem_id` text NOT NULL,
-	`side_system_id` text NOT NULL,
-	`system_id` text NOT NULL,
-	`encrypted_data` blob,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
-);
---> statement-breakpoint
-CREATE INDEX `subsystem_side_system_links_subsystem_id_idx` ON `subsystem_side_system_links` (`subsystem_id`);--> statement-breakpoint
-CREATE INDEX `subsystem_side_system_links_side_system_id_idx` ON `subsystem_side_system_links` (`side_system_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `subsystem_side_system_links_uniq` ON `subsystem_side_system_links` (`subsystem_id`,`side_system_id`);--> statement-breakpoint
-CREATE TABLE `subsystems` (
-	`id` text PRIMARY KEY NOT NULL,
-	`system_id` text NOT NULL,
-	`parent_subsystem_id` text,
-	`architecture_type` text,
-	`has_core` integer DEFAULT false NOT NULL,
-	`discovery_status` text,
-	`encrypted_data` blob NOT NULL,
-	`created_at` integer NOT NULL,
-	`updated_at` integer NOT NULL,
-	`version` integer DEFAULT 1 NOT NULL,
-	`archived` integer DEFAULT false NOT NULL,
-	`archived_at` integer,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`parent_subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "subsystems_discovery_status_check" CHECK("subsystems"."discovery_status" IS NULL OR "subsystems"."discovery_status" IN ('fully-mapped', 'partially-mapped', 'unknown')),
-	CONSTRAINT "subsystems_version_check" CHECK("subsystems"."version" >= 1),
-	CONSTRAINT "subsystems_archived_consistency_check" CHECK(("subsystems"."archived" = true) = ("subsystems"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
-CREATE INDEX `subsystems_system_archived_idx` ON `subsystems` (`system_id`,`archived`);--> statement-breakpoint
-CREATE UNIQUE INDEX `subsystems_id_system_id_unique` ON `subsystems` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `sync_changes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`document_id` text NOT NULL,
@@ -1196,7 +1084,7 @@ CREATE TABLE `system_structure_entities` (
 );
 --> statement-breakpoint
 CREATE INDEX `system_structure_entities_system_archived_idx` ON `system_structure_entities` (`system_id`,`archived`);--> statement-breakpoint
-CREATE INDEX `system_structure_entities_entity_type_id_idx` ON `system_structure_entities` (`entity_type_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entities_entity_type_id_idx` ON `system_structure_entities` (`system_id`,`entity_type_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `system_structure_entities_id_system_id_unique` ON `system_structure_entities` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `system_structure_entity_associations` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -1206,7 +1094,8 @@ CREATE TABLE `system_structure_entity_associations` (
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`source_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`target_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+	FOREIGN KEY (`target_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	CONSTRAINT "system_structure_entity_associations_no_self_link" CHECK("system_structure_entity_associations"."source_entity_id" <> "system_structure_entity_associations"."target_entity_id")
 );
 --> statement-breakpoint
 CREATE INDEX `system_structure_entity_associations_source_idx` ON `system_structure_entity_associations` (`source_entity_id`);--> statement-breakpoint

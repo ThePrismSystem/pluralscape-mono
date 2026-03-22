@@ -216,6 +216,15 @@ describe("RLS_TABLE_POLICIES", () => {
     expect(RLS_TABLE_POLICIES.innerworld_canvas).toBe("system-pk");
   });
 
+  it("includes new structure entity tables in RLS_TABLE_POLICIES", () => {
+    expect(RLS_TABLE_POLICIES).toHaveProperty("system_structure_entity_types", "system");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("system_structure_entities", "system");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("system_structure_entity_links", "system");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("system_structure_entity_member_links", "system");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("system_structure_entity_associations", "system");
+    expect(RLS_TABLE_POLICIES).toHaveProperty("field_definition_scopes", "system");
+  });
+
   it("has valid scope types for all entries", () => {
     const validScopes = new Set<RlsScopeType>([
       "system",

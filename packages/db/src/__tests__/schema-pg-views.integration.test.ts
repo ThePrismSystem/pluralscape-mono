@@ -99,18 +99,6 @@ describe("PG views / query helpers", () => {
     await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
     // Structure
     await pgExec(client, PG_DDL.relationships);
-    await pgExec(client, PG_DDL.subsystems);
-    await pgExec(client, PG_DDL.subsystemsIndexes);
-    await pgExec(client, PG_DDL.sideSystems);
-    await pgExec(client, PG_DDL.sideSystemsIndexes);
-    await pgExec(client, PG_DDL.layers);
-    await pgExec(client, PG_DDL.layersIndexes);
-    await pgExec(client, PG_DDL.subsystemLayerLinks);
-    await pgExec(client, PG_DDL.subsystemLayerLinksIndexes);
-    await pgExec(client, PG_DDL.subsystemSideSystemLinks);
-    await pgExec(client, PG_DDL.subsystemSideSystemLinksIndexes);
-    await pgExec(client, PG_DDL.sideSystemLayerLinks);
-    await pgExec(client, PG_DDL.sideSystemLayerLinksIndexes);
     await pgExec(client, PG_DDL.systemStructureEntityTypes);
     await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
     await pgExec(client, PG_DDL.systemStructureEntities);
@@ -141,12 +129,6 @@ describe("PG views / query helpers", () => {
       "system_structure_entity_associations",
       "system_structure_entities",
       "system_structure_entity_types",
-      "side_system_layer_links",
-      "subsystem_side_system_links",
-      "subsystem_layer_links",
-      "layers",
-      "side_systems",
-      "subsystems",
       "members",
       "systems",
       "accounts",

@@ -141,7 +141,7 @@ export type ClientMember = import("./identity.js").Member;
 export interface ServerFrontingSession extends AuditMetadata {
   readonly id: FrontingSessionId;
   readonly systemId: SystemId;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
   readonly startTime: UnixMillis;
   readonly endTime: UnixMillis | null;
   readonly customFrontId: CustomFrontId | null;
@@ -236,8 +236,8 @@ export type ClientStructureEntity = SystemStructureEntity;
 export interface ServerRelationship {
   readonly id: RelationshipId;
   readonly systemId: SystemId;
-  readonly sourceMemberId: MemberId;
-  readonly targetMemberId: MemberId;
+  readonly sourceMemberId: MemberId | null;
+  readonly targetMemberId: MemberId | null;
   readonly type: RelationshipType;
   readonly bidirectional: boolean;
   readonly createdAt: UnixMillis;
@@ -349,7 +349,7 @@ export type ClientFieldDefinition = FieldDefinition;
 export interface ServerFieldValue extends AuditMetadata {
   readonly id: FieldValueId;
   readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
   readonly structureEntityId: SystemStructureEntityId | null;
   readonly groupId: GroupId | null;
   readonly encryptedData: EncryptedBlob;

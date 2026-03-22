@@ -102,7 +102,7 @@ describe("FieldValue", () => {
   it("has correct field types", () => {
     expectTypeOf<FieldValue["id"]>().toEqualTypeOf<FieldValueId>();
     expectTypeOf<FieldValue["fieldDefinitionId"]>().toEqualTypeOf<FieldDefinitionId>();
-    expectTypeOf<FieldValue["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<FieldValue["memberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<FieldValue["value"]>().toEqualTypeOf<FieldValueUnion>();
   });
 });
