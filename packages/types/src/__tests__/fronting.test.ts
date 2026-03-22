@@ -19,6 +19,7 @@ import type {
   HexColor,
   MemberId,
   SystemId,
+  SystemStructureEntityId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
@@ -132,7 +133,11 @@ describe("FrontingComment", () => {
     expectTypeOf<FrontingComment["id"]>().toEqualTypeOf<FrontingCommentId>();
     expectTypeOf<FrontingComment["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
     expectTypeOf<FrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<FrontingComment["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<FrontingComment["memberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<FrontingComment["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
+    expectTypeOf<
+      FrontingComment["structureEntityId"]
+    >().toEqualTypeOf<SystemStructureEntityId | null>();
     expectTypeOf<FrontingComment["content"]>().toBeString();
   });
 

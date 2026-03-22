@@ -1,0 +1,5 @@
+ALTER TABLE "fronting_comments" ADD COLUMN "custom_front_id" varchar(50);--> statement-breakpoint
+ALTER TABLE "fronting_comments" ADD COLUMN "structure_entity_id" varchar(50);--> statement-breakpoint
+ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_custom_front_id_custom_fronts_id_fk" FOREIGN KEY ("custom_front_id") REFERENCES "public"."custom_fronts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_structure_entity_id_system_id_system_structure_entities_id_system_id_fk" FOREIGN KEY ("structure_entity_id","system_id") REFERENCES "public"."system_structure_entities"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_author_check" CHECK (("fronting_comments"."member_id" IS NOT NULL OR "fronting_comments"."custom_front_id" IS NOT NULL OR "fronting_comments"."structure_entity_id" IS NOT NULL));

@@ -287,7 +287,7 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerFrontingComment["id"]>().toEqualTypeOf<FrontingCommentId>();
     expectTypeOf<ServerFrontingComment["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
     expectTypeOf<ServerFrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ServerFrontingComment["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<ServerFrontingComment["memberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<ClientFrontingComment>().toEqualTypeOf<FrontingComment>();
   });
 

@@ -15,6 +15,13 @@
       "when": 1774164942409,
       "tag": "0001_careful_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774196988476,
+      "tag": "0002_fine_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }

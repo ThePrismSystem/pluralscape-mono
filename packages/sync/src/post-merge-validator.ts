@@ -54,6 +54,14 @@ interface FriendConnectionLike {
   visibility: Automerge.ImmutableString;
 }
 
+interface FrontingSessionLike {
+  startTime: number;
+  endTime: number | null;
+  memberId: Automerge.ImmutableString | null;
+  customFrontId: Automerge.ImmutableString | null;
+  structureEntityId: Automerge.ImmutableString | null;
+}
+
 /** Typed accessor for a nested entity map within an Automerge document. */
 function getEntityMap<T>(doc: DocRecord, field: string): Record<string, T> | undefined {
   const val = doc[field];
@@ -478,6 +486,76 @@ export function normalizeFriendConnection(session: EncryptedSyncSession<unknown>
   return { count: toFix.length, envelope };
 }
 
+/**
+ * Validates fronting sessions after merge:
+ * - endTime > startTime: if violated, null out endTime (revert to active)
+ * - Subject constraint: at least one of memberId/customFrontId/structureEntityId must be set
+ *
+ * Returns the count of corrections and the correction envelope (if any mutations were applied).
+ */
+export function normalizeFrontingSessions(session: EncryptedSyncSession<unknown>): {
+  count: number;
+  notifications: ConflictNotification[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+  const now = Date.now();
+  const notifications: ConflictNotification[] = [];
+
+  const sessions = getEntityMap<FrontingSessionLike>(doc, "sessions");
+  if (!sessions) return { count: 0, notifications, envelope: null };
+
+  const endTimeFixIds: string[] = [];
+  for (const [sessionId, s] of Object.entries(sessions)) {
+    // Check endTime > startTime
+    if (s.endTime !== null && s.endTime <= s.startTime) {
+      endTimeFixIds.push(sessionId);
+    }
+
+    // Check subject constraint — notify but don't auto-fix (data loss risk)
+    const hasMember = s.memberId !== null;
+    const hasCustomFront = s.customFrontId !== null;
+    const hasStructureEntity = s.structureEntityId !== null;
+    if (!hasMember && !hasCustomFront && !hasStructureEntity) {
+      notifications.push({
+        entityType: "fronting-session",
+        entityId: sessionId,
+        fieldName: "subject",
+        resolution: "notification-only",
+        detectedAt: now,
+        summary: `Fronting session ${sessionId} has no subject (memberId, customFrontId, structureEntityId all null)`,
+      });
+    }
+  }
+
+  if (endTimeFixIds.length === 0) {
+    return { count: 0, notifications, envelope: null };
+  }
+
+  const envelope = session.change((d) => {
+    const map = getEntityMap<FrontingSessionLike>(d as DocRecord, "sessions");
+    for (const sessionId of endTimeFixIds) {
+      const target = map?.[sessionId];
+      if (target) {
+        target.endTime = null;
+      }
+    }
+  });
+
+  for (const sessionId of endTimeFixIds) {
+    notifications.push({
+      entityType: "fronting-session",
+      entityId: sessionId,
+      fieldName: "endTime",
+      resolution: "post-merge-endtime-normalize",
+      detectedAt: now,
+      summary: `Nulled invalid endTime for fronting session ${sessionId} (endTime <= startTime)`,
+    });
+  }
+
+  return { count: endTimeFixIds.length, notifications, envelope };
+}
+
 // ── Public API ──────────────────────────────────────────────────────
 
 /**
@@ -500,6 +578,7 @@ export function runAllValidations(
   let sortOrderPatches: SortOrderPatch[] = [];
   let checkInNormalizations = 0;
   let friendConnectionNormalizations = 0;
+  let frontingSessionNormalizations = 0;
 
   // Always run tombstone enforcement first
   try {
@@ -580,6 +659,22 @@ export function runAllValidations(
     }
   }
 
+  // Fronting documents are identified by having all three of these fields.
+  // If a future document type shares these field names, add its detection BEFORE this block.
+  if ("sessions" in doc && "comments" in doc && "checkInRecords" in doc) {
+    try {
+      const frontingResult = normalizeFrontingSessions(session);
+      frontingSessionNormalizations = frontingResult.count;
+      if (frontingResult.envelope) {
+        correctionEnvelopes.push(frontingResult.envelope);
+      }
+      notifications.push(...frontingResult.notifications);
+    } catch (error) {
+      errors.push({ validator: "normalizeFrontingSessions", error });
+      onError?.("Fronting session normalization failed", error);
+    }
+  }
+
   if ("friendConnections" in doc) {
     try {
       const friendResult = normalizeFriendConnection(session);
@@ -608,6 +703,7 @@ export function runAllValidations(
     sortOrderPatches,
     checkInNormalizations,
     friendConnectionNormalizations,
+    frontingSessionNormalizations,
     correctionEnvelopes,
     notifications,
     errors,

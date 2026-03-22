@@ -204,7 +204,8 @@ export const ENTITY_CRDT_STRATEGIES = {
     storageType: "lww-map",
     document: "fronting",
     fieldName: "comments",
-    mutationSemantics: "LWW per field — content, archived",
+    mutationSemantics:
+      "LWW per field — content, archived; author fields (memberId, customFrontId, structureEntityId) immutable",
   },
   "check-in-record": {
     storageType: "append-lww",

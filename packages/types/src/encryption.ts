@@ -147,7 +147,7 @@ export interface ServerFrontingSession extends AuditMetadata {
   readonly customFrontId: CustomFrontId | null;
   readonly structureEntityId: SystemStructureEntityId | null;
   readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob | null;
+  readonly encryptedData: EncryptedBlob;
 }
 
 /** Client-side fronting session — flat decrypted fields. */
@@ -156,7 +156,7 @@ export type ClientFrontingSession = FrontingSession;
 /**
  * Server-side fronting comment representation.
  * T1 encrypted: content
- * T3 plaintext: frontingSessionId, sessionStartTime, memberId, archived
+ * T3 plaintext: frontingSessionId, sessionStartTime, memberId, customFrontId, structureEntityId, archived
  */
 export interface ServerFrontingComment extends AuditMetadata {
   readonly id: FrontingCommentId;
@@ -164,7 +164,9 @@ export interface ServerFrontingComment extends AuditMetadata {
   readonly systemId: SystemId;
   /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
   readonly sessionStartTime: UnixMillis;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
+  readonly customFrontId: CustomFrontId | null;
+  readonly structureEntityId: SystemStructureEntityId | null;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
 }

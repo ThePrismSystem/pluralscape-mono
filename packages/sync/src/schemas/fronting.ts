@@ -33,7 +33,9 @@ export interface CrdtFrontingComment extends CrdtAuditFields {
   id: CrdtString;
   frontingSessionId: CrdtString;
   systemId: CrdtString;
-  memberId: CrdtString;
+  memberId: CrdtOptionalString;
+  customFrontId: CrdtOptionalString;
+  structureEntityId: CrdtOptionalString;
   content: CrdtString;
   archived: boolean;
 }

@@ -104,6 +104,8 @@ x-tagGroups:
     tags: [Subsystems, Side Systems, Layers, Structure Links, Structure Memberships]
   - name: Lifecycle & Innerworld
     tags: [Lifecycle Events, Innerworld]
+  - name: Fronting
+    tags: [Fronting Sessions, Fronting Comments]
   - name: Media & Crypto
     tags: [Blobs, Key Rotation]
 
@@ -150,6 +152,10 @@ tags:
     description: Encrypted file upload and download
   - name: Key Rotation
     description: Privacy bucket key rotation
+  - name: Fronting Sessions
+    description: Fronting session tracking (who is fronting and when)
+  - name: Fronting Comments
+    description: Comments attached to fronting sessions
 
 components:
   securitySchemes:
@@ -397,6 +403,23 @@ components:
       $ref: "./schemas/key-rotation.yaml#/CompleteChunkRequest"
     CompleteChunkResponse:
       $ref: "./schemas/key-rotation.yaml#/CompleteChunkResponse"
+    # Fronting Sessions & Comments
+    FrontingSessionResponse:
+      $ref: "./schemas/fronting.yaml#/FrontingSessionResponse"
+    CreateFrontingSessionRequest:
+      $ref: "./schemas/fronting.yaml#/CreateFrontingSessionRequest"
+    UpdateFrontingSessionRequest:
+      $ref: "./schemas/fronting.yaml#/UpdateFrontingSessionRequest"
+    EndFrontingSessionRequest:
+      $ref: "./schemas/fronting.yaml#/EndFrontingSessionRequest"
+    ActiveFrontingResponse:
+      $ref: "./schemas/fronting.yaml#/ActiveFrontingResponse"
+    FrontingCommentResponse:
+      $ref: "./schemas/fronting.yaml#/FrontingCommentResponse"
+    CreateFrontingCommentRequest:
+      $ref: "./schemas/fronting.yaml#/CreateFrontingCommentRequest"
+    UpdateFrontingCommentRequest:
+      $ref: "./schemas/fronting.yaml#/UpdateFrontingCommentRequest"
     # Settings
     UpdateSystemSettingsRequest:
       $ref: "./schemas/settings.yaml#/UpdateSystemSettingsRequest"
@@ -715,3 +738,24 @@ paths:
     $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1claim"
   /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete-chunk:
     $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1complete-chunk"
+  # Fronting Sessions
+  /systems/{systemId}/fronting-sessions:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions"
+  /systems/{systemId}/fronting-sessions/{sessionId}:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D"
+  /systems/{systemId}/fronting-sessions/{sessionId}/end:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1end"
+  /systems/{systemId}/fronting-sessions/{sessionId}/archive:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1archive"
+  /systems/{systemId}/fronting-sessions/{sessionId}/restore:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1restore"
+  /systems/{systemId}/fronting/active:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting~1active"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1comments"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1comments~1%7BcommentId%7D"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}/archive:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1comments~1%7BcommentId%7D~1archive"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}/restore:
+    $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1comments~1%7BcommentId%7D~1restore"

@@ -26,6 +26,7 @@ import {
   normalizeSortOrder,
   normalizeCheckInRecord,
   normalizeFriendConnection,
+  normalizeFrontingSessions,
   ENTITY_FIELD_MAP,
 } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
@@ -752,6 +753,258 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
 
     const { count } = normalizeFriendConnection(session);
     expect(count).toBe(0);
+  });
+});
+
+// ── Task 2: FrontingSession normalization ──────────────────────────────
+
+describe("PostMergeValidator: normalizeFrontingSessions", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("nulls endTime when endTime <= startTime and emits notification with post-merge-endtime-normalize resolution", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-endtime"),
+      sodium,
+    });
+
+    const sessionId = `fs_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.sessions[sessionId] = {
+        id: s(sessionId),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        startTime: 2000,
+        endTime: 1000,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications, envelope } = normalizeFrontingSessions(session);
+
+    expect(count).toBe(1);
+    expect(envelope).not.toBeNull();
+    expect(session.document.sessions[sessionId]?.endTime).toBeNull();
+
+    const endTimeNotification = notifications.find(
+      (n) => n.resolution === "post-merge-endtime-normalize",
+    );
+    expect(endTimeNotification).toBeDefined();
+    expect(endTimeNotification?.entityId).toBe(sessionId);
+    expect(endTimeNotification?.fieldName).toBe("endTime");
+  });
+
+  it("emits notification-only resolution when subject is missing (all null) without mutating", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-no-subject"),
+      sodium,
+    });
+
+    const sessionId = `fs_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.sessions[sessionId] = {
+        id: s(sessionId),
+        systemId: s("sys_1"),
+        memberId: s("mem_placeholder"),
+        startTime: 1000,
+        endTime: 5000,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    // Null out memberId to simulate CRDT merge artifact (all subjects missing)
+    session.change((d) => {
+      const target = d.sessions[sessionId];
+      // @ts-expect-error -- deliberately setting to null to simulate invalid CRDT merge state
+      if (target) target.memberId = null;
+    });
+
+    const { count, notifications, envelope } = normalizeFrontingSessions(session);
+
+    // No endTime mutation (endTime > startTime is valid)
+    expect(count).toBe(0);
+    expect(envelope).toBeNull();
+
+    // But a notification-only warning for missing subject
+    const subjectNotification = notifications.find((n) => n.resolution === "notification-only");
+    expect(subjectNotification).toBeDefined();
+    expect(subjectNotification?.entityId).toBe(sessionId);
+    expect(subjectNotification?.fieldName).toBe("subject");
+  });
+
+  it("returns count=0 and no notifications for a valid session", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-valid"),
+      sodium,
+    });
+
+    const sessionId = `fs_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.sessions[sessionId] = {
+        id: s(sessionId),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        startTime: 1000,
+        endTime: 5000,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { count, notifications, envelope } = normalizeFrontingSessions(session);
+
+    expect(count).toBe(0);
+    expect(notifications).toHaveLength(0);
+    expect(envelope).toBeNull();
+  });
+
+  it("returns count=0 and envelope=null for empty sessions map", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-empty"),
+      sodium,
+    });
+
+    const { count, notifications, envelope } = normalizeFrontingSessions(session);
+
+    expect(count).toBe(0);
+    expect(notifications).toHaveLength(0);
+    expect(envelope).toBeNull();
+  });
+
+  it("fixes only invalid sessions in a mixed valid + invalid set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-mixed"),
+      sodium,
+    });
+
+    const validId = `fs_${crypto.randomUUID()}`;
+    const invalidId = `fs_${crypto.randomUUID()}`;
+    const noSubjectId = `fs_${crypto.randomUUID()}`;
+
+    session.change((d) => {
+      // Valid session: endTime > startTime, has subject
+      d.sessions[validId] = {
+        id: s(validId),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        startTime: 1000,
+        endTime: 5000,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+
+      // Invalid endTime: endTime <= startTime
+      d.sessions[invalidId] = {
+        id: s(invalidId),
+        systemId: s("sys_1"),
+        memberId: s("mem_2"),
+        startTime: 3000,
+        endTime: 2000,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+
+      // Missing subject: no mutation, notification only
+      d.sessions[noSubjectId] = {
+        id: s(noSubjectId),
+        systemId: s("sys_1"),
+        memberId: s("mem_placeholder"),
+        startTime: 1000,
+        endTime: 8000,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    // Null out memberId on noSubjectId to simulate CRDT merge artifact (all subjects missing)
+    session.change((d) => {
+      const target = d.sessions[noSubjectId];
+      // @ts-expect-error -- deliberately setting to null to simulate invalid CRDT merge state
+      if (target) target.memberId = null;
+    });
+
+    const { count, notifications, envelope } = normalizeFrontingSessions(session);
+
+    // Only the endTime violation gets mutated
+    expect(count).toBe(1);
+    expect(envelope).not.toBeNull();
+
+    // Invalid session had its endTime nulled
+    expect(session.document.sessions[invalidId]?.endTime).toBeNull();
+    // Valid session remains untouched
+    expect(session.document.sessions[validId]?.endTime).toBe(5000);
+    // No-subject session endTime remains untouched (it was valid)
+    expect(session.document.sessions[noSubjectId]?.endTime).toBe(8000);
+
+    // Notifications: 1 for endTime fix + 1 for missing subject
+    const endTimeNotifications = notifications.filter(
+      (n) => n.resolution === "post-merge-endtime-normalize",
+    );
+    const subjectNotifications = notifications.filter((n) => n.resolution === "notification-only");
+    expect(endTimeNotifications).toHaveLength(1);
+    expect(endTimeNotifications[0]?.entityId).toBe(invalidId);
+    expect(subjectNotifications).toHaveLength(1);
+    expect(subjectNotifications[0]?.entityId).toBe(noSubjectId);
   });
 });
 
