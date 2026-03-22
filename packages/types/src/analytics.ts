@@ -1,4 +1,11 @@
-import type { Brand, FrontingReportId, MemberId, SystemId } from "./ids.js";
+import type {
+  Brand,
+  CustomFrontId,
+  FrontingReportId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { DateRange } from "./utility.js";
 
@@ -19,9 +26,22 @@ export interface DateRangeFilter extends DateRange {
   readonly preset: DateRangePreset | null;
 }
 
+/** Fronting subject type discriminator. */
+export type FrontingSubjectType = "member" | "customFront" | "structureEntity";
+
 /** Fronting analytics breakdown for a single member. */
 export interface MemberFrontingBreakdown {
   readonly memberId: MemberId;
+  readonly totalDuration: Duration;
+  readonly sessionCount: number;
+  readonly averageSessionLength: Duration;
+  readonly percentageOfTotal: number;
+}
+
+/** Fronting analytics breakdown for a single subject (polymorphic). */
+export interface SubjectFrontingBreakdown {
+  readonly subjectType: FrontingSubjectType;
+  readonly subjectId: MemberId | CustomFrontId | SystemStructureEntityId;
   readonly totalDuration: Duration;
   readonly sessionCount: number;
   readonly averageSessionLength: Duration;
@@ -33,6 +53,7 @@ export interface FrontingAnalytics {
   readonly systemId: SystemId;
   readonly dateRange: DateRange;
   readonly memberBreakdowns: readonly MemberFrontingBreakdown[];
+  readonly subjectBreakdowns: readonly SubjectFrontingBreakdown[];
 }
 
 /** A generated fronting report entity. */

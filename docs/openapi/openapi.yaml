@@ -106,6 +106,8 @@ x-tagGroups:
     tags: [Lifecycle Events, Innerworld]
   - name: Fronting
     tags: [Fronting Sessions, Fronting Comments]
+  - name: Analytics
+    tags: [Analytics, Fronting Reports]
   - name: Media & Crypto
     tags: [Blobs, Key Rotation]
 
@@ -156,6 +158,10 @@ tags:
     description: Fronting session tracking (who is fronting and when)
   - name: Fronting Comments
     description: Comments attached to fronting sessions
+  - name: Analytics
+    description: Fronting analytics (duration breakdowns, co-fronting statistics)
+  - name: Fronting Reports
+    description: Immutable encrypted report snapshots
 
 components:
   securitySchemes:
@@ -420,6 +426,19 @@ components:
       $ref: "./schemas/fronting.yaml#/CreateFrontingCommentRequest"
     UpdateFrontingCommentRequest:
       $ref: "./schemas/fronting.yaml#/UpdateFrontingCommentRequest"
+    # Analytics & Reports
+    SubjectFrontingBreakdown:
+      $ref: "./schemas/analytics.yaml#/SubjectFrontingBreakdown"
+    FrontingBreakdownResponse:
+      $ref: "./schemas/analytics.yaml#/FrontingBreakdownResponse"
+    CoFrontingPair:
+      $ref: "./schemas/analytics.yaml#/CoFrontingPair"
+    CoFrontingBreakdownResponse:
+      $ref: "./schemas/analytics.yaml#/CoFrontingBreakdownResponse"
+    FrontingReportResponse:
+      $ref: "./schemas/analytics.yaml#/FrontingReportResponse"
+    CreateFrontingReportRequest:
+      $ref: "./schemas/analytics.yaml#/CreateFrontingReportRequest"
     # Settings
     UpdateSystemSettingsRequest:
       $ref: "./schemas/settings.yaml#/UpdateSystemSettingsRequest"
@@ -759,3 +778,13 @@ paths:
     $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1comments~1%7BcommentId%7D~1archive"
   /systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}/restore:
     $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions~1%7BsessionId%7D~1comments~1%7BcommentId%7D~1restore"
+  # Analytics
+  /systems/{systemId}/analytics/fronting:
+    $ref: "./paths/analytics.yaml#/~1systems~1%7BsystemId%7D~1analytics~1fronting"
+  /systems/{systemId}/analytics/co-fronting:
+    $ref: "./paths/analytics.yaml#/~1systems~1%7BsystemId%7D~1analytics~1co-fronting"
+  # Fronting Reports
+  /systems/{systemId}/fronting-reports:
+    $ref: "./paths/fronting-reports.yaml#/~1systems~1%7BsystemId%7D~1fronting-reports"
+  /systems/{systemId}/fronting-reports/{reportId}:
+    $ref: "./paths/fronting-reports.yaml#/~1systems~1%7BsystemId%7D~1fronting-reports~1%7BreportId%7D"

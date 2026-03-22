@@ -36,6 +36,7 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
       "structure-entity",
       "relationship",
       "custom-front",
+      "fronting-report",
       "field-definition",
       "field-value",
       "innerworld-entity",

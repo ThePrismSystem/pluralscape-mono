@@ -75,6 +75,7 @@ import type {
   FrontingChangedEvent,
   FrontingReport,
   FrontingReportId,
+  FrontingSubjectType,
   FusionEvent,
   HeadingBlock,
   HeadingLevel,
@@ -188,6 +189,7 @@ import type {
   ServerWikiPage,
   SplitEvent,
   SSEEvent,
+  SubjectFrontingBreakdown,
   SubscriptionId,
   SyncStateChangedEvent,
   TimerConfig,
@@ -681,6 +683,8 @@ describe("barrel exports", () => {
     expectTypeOf<DateRangePreset>().toBeString();
     expectTypeOf<DateRangeFilter>().toBeObject();
     expectTypeOf<MemberFrontingBreakdown>().toBeObject();
+    expectTypeOf<SubjectFrontingBreakdown>().toBeObject();
+    expectTypeOf<FrontingSubjectType>().toBeString();
     expectTypeOf<FrontingAnalytics>().toBeObject();
     expectTypeOf<FrontingReport>().toBeObject();
     expectTypeOf<FrontingReportId>().toExtend<string>();

@@ -1,0 +1,102 @@
+/systems/{systemId}/analytics/fronting:
+  get:
+    tags: [Analytics]
+    summary: Get fronting breakdown
+    description: |
+      Compute per-subject fronting statistics for a system over a date range.
+      Returns total duration, session count, average session length, and
+      percentage of total for each subject (member, custom front, or structure entity).
+
+      Open sessions (no end time) are capped at the current time.
+      Co-fronting sessions each count their full duration (no dedup).
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: preset
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [last-7-days, last-30-days, last-90-days, last-year, all-time, custom]
+          default: last-30-days
+        description: Date range preset
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Custom range start (Unix milliseconds). Required when preset is `custom`.
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          type: integer
+        description: Custom range end (Unix milliseconds). Required when preset is `custom`.
+    responses:
+      "200":
+        description: Fronting breakdown
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/analytics.yaml#/FrontingBreakdownResponse"
+      "400":
+        description: Invalid query parameters
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+      "404":
+        description: System not found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+
+/systems/{systemId}/analytics/co-fronting:
+  get:
+    tags: [Analytics]
+    summary: Get co-fronting breakdown
+    description: |
+      Compute co-fronting statistics for a system over a date range.
+      Detects overlapping fronting sessions between distinct members and
+      returns per-pair overlap duration, session count, and percentage.
+
+      Custom fronts and structure entities are excluded from co-fronting analysis.
+      Pair ordering is canonical (lexicographic by member ID).
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: preset
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [last-7-days, last-30-days, last-90-days, last-year, all-time, custom]
+          default: last-30-days
+      - name: startDate
+        in: query
+        required: false
+        schema:
+          type: integer
+      - name: endDate
+        in: query
+        required: false
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Co-fronting breakdown
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/analytics.yaml#/CoFrontingBreakdownResponse"
+      "400":
+        description: Invalid query parameters
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+      "404":
+        description: System not found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"

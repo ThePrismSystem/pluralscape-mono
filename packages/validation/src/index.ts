@@ -94,6 +94,7 @@ export {
   StructureEntityMemberLinkQuerySchema,
   StructureEntityAssociationQuerySchema,
 } from "./query-params.js";
+export { AnalyticsQuerySchema, CreateFrontingReportBodySchema } from "./analytics.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
