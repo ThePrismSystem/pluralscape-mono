@@ -282,12 +282,8 @@
           type: string
           pattern: ^fs_
     responses:
-      "200":
-        description: Fronting session archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -364,7 +360,7 @@
     summary: List comments on a fronting session
     description: |
       Returns a paginated list of comments attached to the specified fronting session,
-      ordered by creation time descending.
+      ordered by ID descending (newest first).
 
       Rate limit: 60 req/min (readDefault)
     security:
@@ -473,10 +469,10 @@
       - name: commentId
         in: path
         required: true
-        description: Fronting comment ID (fsc_ prefix)
+        description: Fronting comment ID (fcom_ prefix)
         schema:
           type: string
-          pattern: ^fsc_
+          pattern: ^fcom_
     responses:
       "200":
         description: Fronting comment
@@ -512,10 +508,10 @@
       - name: commentId
         in: path
         required: true
-        description: Fronting comment ID (fsc_ prefix)
+        description: Fronting comment ID (fcom_ prefix)
         schema:
           type: string
-          pattern: ^fsc_
+          pattern: ^fcom_
     requestBody:
       required: true
       content:
@@ -561,10 +557,10 @@
       - name: commentId
         in: path
         required: true
-        description: Fronting comment ID (fsc_ prefix)
+        description: Fronting comment ID (fcom_ prefix)
         schema:
           type: string
-          pattern: ^fsc_
+          pattern: ^fcom_
     responses:
       "204":
         $ref: "../openapi.yaml#/components/responses/NoContent"
@@ -598,17 +594,13 @@
       - name: commentId
         in: path
         required: true
-        description: Fronting comment ID (fsc_ prefix)
+        description: Fronting comment ID (fcom_ prefix)
         schema:
           type: string
-          pattern: ^fsc_
+          pattern: ^fcom_
     responses:
-      "200":
-        description: Fronting comment archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -640,10 +632,10 @@
       - name: commentId
         in: path
         required: true
-        description: Fronting comment ID (fsc_ prefix)
+        description: Fronting comment ID (fcom_ prefix)
         schema:
           type: string
-          pattern: ^fsc_
+          pattern: ^fcom_
     responses:
       "200":
         description: Fronting comment restored

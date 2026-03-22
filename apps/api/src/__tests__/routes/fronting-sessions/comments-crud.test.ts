@@ -150,6 +150,50 @@ describe("GET .../fronting-sessions/:sessionId/comments", () => {
     const body = (await res.json()) as typeof EMPTY_PAGE;
     expect(body.items).toEqual([]);
   });
+
+  it("passes includeArchived option to service", async () => {
+    vi.mocked(listFrontingComments).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    await app.request(`${BASE_URL}?includeArchived=true`);
+
+    expect(listFrontingComments).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ includeArchived: true }),
+    );
+  });
+
+  it("defaults includeArchived to false", async () => {
+    vi.mocked(listFrontingComments).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    await app.request(BASE_URL);
+
+    expect(listFrontingComments).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ includeArchived: false }),
+    );
+  });
+
+  it("returns 404 when parent session not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(listFrontingComments).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Fronting session not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(BASE_URL);
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
 });
 
 describe("GET .../comments/:commentId", () => {

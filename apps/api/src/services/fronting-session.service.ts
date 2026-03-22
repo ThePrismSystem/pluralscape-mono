@@ -441,11 +441,16 @@ export async function deleteFrontingSession(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
     }
 
-    // Check for dependent fronting comments
+    // Check for non-archived dependent fronting comments
     const [commentCount] = await tx
       .select({ count: count() })
       .from(frontingComments)
-      .where(eq(frontingComments.frontingSessionId, sessionId));
+      .where(
+        and(
+          eq(frontingComments.frontingSessionId, sessionId),
+          eq(frontingComments.archived, false),
+        ),
+      );
 
     if (!commentCount) {
       throw new Error("Unexpected: count query returned no rows");
@@ -455,7 +460,7 @@ export async function deleteFrontingSession(
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Fronting session has ${String(commentCount.count)} comment(s). Archive instead of deleting.`,
+        `Fronting session has ${String(commentCount.count)} non-archived comment(s). Archive or delete comments first.`,
       );
     }
 
@@ -573,9 +578,15 @@ export async function getActiveFronting(
     }
   }
 
+  // Custom fronts represent abstract cognitive states (e.g. "Dissociated"), not members.
+  // Only count sessions with a member or structure entity subject for co-fronting.
+  const memberSessions = sessions.filter(
+    (s) => s.memberId !== null || s.structureEntityId !== null,
+  );
+
   return {
     sessions,
-    isCofronting: sessions.length > 1,
+    isCofronting: memberSessions.length > 1,
     entityMemberMap,
   };
 }

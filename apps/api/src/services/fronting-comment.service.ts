@@ -176,28 +176,41 @@ export async function listFrontingComments(
   systemId: SystemId,
   sessionId: FrontingSessionId,
   auth: AuthContext,
-  cursor?: string,
-  limit = DEFAULT_PAGE_LIMIT,
+  opts?: { cursor?: string; limit?: number; includeArchived?: boolean },
 ): Promise<PaginatedResult<FrontingCommentResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
+  // Verify parent session exists and belongs to this system
+  const [session] = await db
+    .select({ id: frontingSessions.id })
+    .from(frontingSessions)
+    .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)))
+    .limit(1);
+
+  if (!session) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
+  }
+
+  const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   const conditions = [
     eq(frontingComments.systemId, systemId),
     eq(frontingComments.frontingSessionId, sessionId),
-    eq(frontingComments.archived, false),
   ];
 
-  if (cursor) {
-    conditions.push(lt(frontingComments.id, cursor));
+  if (!opts?.includeArchived) {
+    conditions.push(eq(frontingComments.archived, false));
+  }
+
+  if (opts?.cursor) {
+    conditions.push(lt(frontingComments.id, opts.cursor));
   }
 
   const rows = await db
     .select()
     .from(frontingComments)
     .where(and(...conditions))
-    .orderBy(desc(frontingComments.createdAt), desc(frontingComments.id))
+    .orderBy(desc(frontingComments.id))
     .limit(effectiveLimit + 1);
 
   return buildPaginatedResult(rows, effectiveLimit, toFrontingCommentResult);
@@ -213,6 +226,17 @@ export async function getFrontingComment(
   auth: AuthContext,
 ): Promise<FrontingCommentResult> {
   assertSystemOwnership(systemId, auth);
+
+  // Verify parent session exists and belongs to this system
+  const [session] = await db
+    .select({ id: frontingSessions.id })
+    .from(frontingSessions)
+    .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)))
+    .limit(1);
+
+  if (!session) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
+  }
 
   const [row] = await db
     .select()

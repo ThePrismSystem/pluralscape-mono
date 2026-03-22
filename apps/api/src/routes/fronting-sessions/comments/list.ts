@@ -1,4 +1,5 @@
 import { ID_PREFIXES } from "@pluralscape/types";
+import { FrontingCommentQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
@@ -24,15 +25,15 @@ listRoute.get("/", async (c) => {
   );
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  const query = FrontingCommentQuerySchema.parse({
+    includeArchived: c.req.query("includeArchived"),
+  });
 
   const db = await getDb();
-  const result = await listFrontingComments(
-    db,
-    systemId,
-    sessionId,
-    auth,
-    parseCursor(cursorParam),
+  const result = await listFrontingComments(db, systemId, sessionId, auth, {
+    cursor: parseCursor(cursorParam),
     limit,
-  );
+    includeArchived: query.includeArchived,
+  });
   return c.json(result);
 });

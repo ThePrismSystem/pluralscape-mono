@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 
 import { optionalBrandedId, requireSubject, REQUIRE_SUBJECT_MESSAGE } from "./branded-id.js";
+import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
 // ── Create ──────────────────────────────────────────────────────
@@ -22,3 +23,9 @@ export const UpdateFrontingCommentBodySchema = z
     version: z.int().min(1),
   })
   .readonly();
+
+// ── Query ──────────────────────────────────────────────────────
+
+export const FrontingCommentQuerySchema = z.object({
+  includeArchived: booleanQueryParam,
+});

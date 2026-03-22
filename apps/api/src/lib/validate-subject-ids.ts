@@ -1,6 +1,4 @@
-import { customFronts } from "@pluralscape/db/pg";
-import { members } from "@pluralscape/db/pg";
-import { systemStructureEntities } from "@pluralscape/db/pg";
+import { customFronts, members, systemStructureEntities } from "@pluralscape/db/pg";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
@@ -29,7 +27,13 @@ export async function validateSubjectIds(
     const [row] = await tx
       .select({ id: members.id })
       .from(members)
-      .where(and(eq(members.id, subjects.memberId), eq(members.systemId, systemId)))
+      .where(
+        and(
+          eq(members.id, subjects.memberId),
+          eq(members.systemId, systemId),
+          eq(members.archived, false),
+        ),
+      )
       .limit(1);
     if (!row) {
       throw new ApiHttpError(
@@ -44,7 +48,13 @@ export async function validateSubjectIds(
     const [row] = await tx
       .select({ id: customFronts.id })
       .from(customFronts)
-      .where(and(eq(customFronts.id, subjects.customFrontId), eq(customFronts.systemId, systemId)))
+      .where(
+        and(
+          eq(customFronts.id, subjects.customFrontId),
+          eq(customFronts.systemId, systemId),
+          eq(customFronts.archived, false),
+        ),
+      )
       .limit(1);
     if (!row) {
       throw new ApiHttpError(
@@ -63,6 +73,7 @@ export async function validateSubjectIds(
         and(
           eq(systemStructureEntities.id, subjects.structureEntityId),
           eq(systemStructureEntities.systemId, systemId),
+          eq(systemStructureEntities.archived, false),
         ),
       )
       .limit(1);

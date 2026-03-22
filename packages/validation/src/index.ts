@@ -82,6 +82,7 @@ export {
 export {
   CreateFrontingCommentBodySchema,
   UpdateFrontingCommentBodySchema,
+  FrontingCommentQuerySchema,
 } from "./fronting-comment.js";
 export {
   booleanQueryParam,

@@ -132,6 +132,29 @@ describe("GET /systems/:id/fronting/active", () => {
     expect(body.isCofronting).toBe(true);
   });
 
+  it("reports isCofronting false when only one member plus custom front", async () => {
+    const customFrontSession = {
+      ...MOCK_SESSION,
+      id: "fs_880e8400-e29b-41d4-a716-446655440000" as never,
+      memberId: null,
+      customFrontId: "cf_990e8400-e29b-41d4-a716-446655440000" as never,
+    };
+
+    vi.mocked(getActiveFronting).mockResolvedValueOnce({
+      sessions: [MOCK_SESSION, customFrontSession],
+      isCofronting: false,
+      entityMemberMap: {},
+    });
+
+    const app = createApp();
+    const res = await app.request(ACTIVE_URL);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { sessions: unknown[]; isCofronting: boolean };
+    expect(body.sessions).toHaveLength(2);
+    expect(body.isCofronting).toBe(false);
+  });
+
   it("includes entity member map when structure entities are fronting", async () => {
     const entitySession = {
       ...MOCK_SESSION,

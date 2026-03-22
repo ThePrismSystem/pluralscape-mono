@@ -659,6 +659,8 @@ export function runAllValidations(
     }
   }
 
+  // Fronting documents are identified by having all three of these fields.
+  // If a future document type shares these field names, add its detection BEFORE this block.
   if ("sessions" in doc && "comments" in doc && "checkInRecords" in doc) {
     try {
       const frontingResult = normalizeFrontingSessions(session);
