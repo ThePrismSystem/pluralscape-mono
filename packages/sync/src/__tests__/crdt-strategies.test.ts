@@ -150,4 +150,44 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
     expect(boardMsg.storageType).toBe("append-lww");
     expect(boardMsg.mutationSemantics).toContain("topology correction");
   });
+
+  it("structure entity link strategies are lww-map in system-core", () => {
+    for (const key of [
+      "structure-entity-link",
+      "structure-entity-member-link",
+      "structure-entity-association",
+    ] as const) {
+      const strategy = ENTITY_CRDT_STRATEGIES[key];
+      expect(strategy.storageType, `${key} should be lww-map`).toBe("lww-map");
+      expect(strategy.document, `${key} should be in system-core`).toBe("system-core");
+    }
+  });
+
+  it("hasSortOrder is set on structure entity link and member link", () => {
+    expect(ENTITY_CRDT_STRATEGIES["structure-entity-link"].hasSortOrder).toBe(true);
+    expect(ENTITY_CRDT_STRATEGIES["structure-entity-member-link"].hasSortOrder).toBe(true);
+    expect("hasSortOrder" in ENTITY_CRDT_STRATEGIES["structure-entity-association"]).toBe(false);
+  });
+
+  it("sortGroupField is set correctly for parent-scoped sort normalization", () => {
+    expect(ENTITY_CRDT_STRATEGIES["structure-entity-link"].sortGroupField).toBe("parentEntityId");
+    expect(ENTITY_CRDT_STRATEGIES["structure-entity-member-link"].sortGroupField).toBe(
+      "parentEntityId",
+    );
+    expect("sortGroupField" in ENTITY_CRDT_STRATEGIES["structure-entity-association"]).toBe(false);
+  });
+
+  it("link strategy mutationSemantics distinguish mutable from immutable fields", () => {
+    const link = ENTITY_CRDT_STRATEGIES["structure-entity-link"];
+    expect(link.mutationSemantics).toContain("immutable after creation");
+    expect(link.mutationSemantics).toContain("sortOrder");
+
+    const memberLink = ENTITY_CRDT_STRATEGIES["structure-entity-member-link"];
+    expect(memberLink.mutationSemantics).toContain("immutable after creation");
+    expect(memberLink.mutationSemantics).toContain("sortOrder");
+
+    const assoc = ENTITY_CRDT_STRATEGIES["structure-entity-association"];
+    expect(assoc.mutationSemantics).toContain("immutable after creation");
+    expect(assoc.mutationSemantics).toContain("archived");
+  });
 });

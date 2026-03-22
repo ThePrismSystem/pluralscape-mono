@@ -1,5 +1,5 @@
 import * as Automerge from "@automerge/automerge";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { fromDoc } from "../factories/document-factory.js";
 
@@ -246,54 +246,171 @@ describe("SystemCoreDocument schema", () => {
     expect(Object.keys(doc.groupMemberships)).toHaveLength(2);
   });
 
-  it("adds structure entity links as lww-map entries", () => {
-    let doc = makeSystemCoreDoc();
-    doc = Automerge.change(doc, (d) => {
-      d.structureEntityLinks["stel_1"] = {
-        id: s("stel_1"),
-        systemId: s("sys_test"),
-        entityId: s("ste_1"),
-        parentEntityId: s("ste_parent"),
-        sortOrder: 0,
-        createdAt: 1000,
-      };
+  describe("structure entity link types", () => {
+    let doc: Automerge.Doc<SystemCoreDocument>;
+    beforeEach(() => {
+      doc = makeSystemCoreDoc();
     });
-    expect(doc.structureEntityLinks["stel_1"]?.entityId.val).toBe("ste_1");
-    expect(doc.structureEntityLinks["stel_1"]?.parentEntityId?.val).toBe("ste_parent");
-    expect(doc.structureEntityLinks["stel_1"]?.sortOrder).toBe(0);
-  });
 
-  it("adds structure entity member links as lww-map entries", () => {
-    let doc = makeSystemCoreDoc();
-    doc = Automerge.change(doc, (d) => {
-      d.structureEntityMemberLinks["steml_1"] = {
-        id: s("steml_1"),
-        systemId: s("sys_test"),
-        parentEntityId: s("ste_1"),
-        memberId: s("mem_1"),
-        sortOrder: 100,
-        createdAt: 2000,
-      };
+    it("creates entity links with all fields", () => {
+      doc = Automerge.change(doc, (d) => {
+        d.structureEntityLinks["stel_1"] = {
+          id: s("stel_1"),
+          systemId: s("sys_test"),
+          entityId: s("ste_1"),
+          parentEntityId: s("ste_parent"),
+          sortOrder: 0,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      expect(doc.structureEntityLinks["stel_1"]?.entityId.val).toBe("ste_1");
+      expect(doc.structureEntityLinks["stel_1"]?.parentEntityId?.val).toBe("ste_parent");
+      expect(doc.structureEntityLinks["stel_1"]?.sortOrder).toBe(0);
+      expect(doc.structureEntityLinks["stel_1"]?.archived).toBe(false);
+      expect(doc.structureEntityLinks["stel_1"]?.updatedAt).toBe(1000);
     });
-    expect(doc.structureEntityMemberLinks["steml_1"]?.memberId.val).toBe("mem_1");
-    expect(doc.structureEntityMemberLinks["steml_1"]?.parentEntityId?.val).toBe("ste_1");
-    expect(doc.structureEntityMemberLinks["steml_1"]?.sortOrder).toBe(100);
-  });
 
-  it("adds structure entity associations as lww-map entries", () => {
-    let doc = makeSystemCoreDoc();
-    doc = Automerge.change(doc, (d) => {
-      d.structureEntityAssociations["stea_1"] = {
-        id: s("stea_1"),
-        systemId: s("sys_test"),
-        sourceEntityId: s("ste_1"),
-        targetEntityId: s("ste_2"),
-        createdAt: 3000,
-        updatedAt: 3000,
-      };
+    it("entity link supports null parentEntityId (root)", () => {
+      doc = Automerge.change(doc, (d) => {
+        d.structureEntityLinks["stel_root"] = {
+          id: s("stel_root"),
+          systemId: s("sys_test"),
+          entityId: s("ste_root"),
+          parentEntityId: null,
+          sortOrder: 0,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      expect(doc.structureEntityLinks["stel_root"]?.parentEntityId).toBeNull();
+      expect(doc.structureEntityLinks["stel_root"]?.entityId.val).toBe("ste_root");
     });
-    expect(doc.structureEntityAssociations["stea_1"]?.sourceEntityId.val).toBe("ste_1");
-    expect(doc.structureEntityAssociations["stea_1"]?.targetEntityId.val).toBe("ste_2");
+
+    it("entity link sortOrder is mutable via LWW", () => {
+      doc = Automerge.change(doc, (d) => {
+        d.structureEntityLinks["stel_1"] = {
+          id: s("stel_1"),
+          systemId: s("sys_test"),
+          entityId: s("ste_1"),
+          parentEntityId: null,
+          sortOrder: 1,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      doc = Automerge.change(doc, (d) => {
+        const link = d.structureEntityLinks["stel_1"];
+        if (link) {
+          link.sortOrder = 42;
+          link.updatedAt = 2000;
+        }
+      });
+      expect(doc.structureEntityLinks["stel_1"]?.sortOrder).toBe(42);
+      expect(doc.structureEntityLinks["stel_1"]?.updatedAt).toBe(2000);
+    });
+
+    it("creates member links with all fields", () => {
+      doc = Automerge.change(doc, (d) => {
+        d.structureEntityMemberLinks["steml_1"] = {
+          id: s("steml_1"),
+          systemId: s("sys_test"),
+          parentEntityId: s("ste_1"),
+          memberId: s("mem_1"),
+          sortOrder: 100,
+          archived: false,
+          createdAt: 2000,
+          updatedAt: 2000,
+        };
+      });
+      expect(doc.structureEntityMemberLinks["steml_1"]?.memberId.val).toBe("mem_1");
+      expect(doc.structureEntityMemberLinks["steml_1"]?.parentEntityId?.val).toBe("ste_1");
+      expect(doc.structureEntityMemberLinks["steml_1"]?.sortOrder).toBe(100);
+      expect(doc.structureEntityMemberLinks["steml_1"]?.archived).toBe(false);
+    });
+
+    it("member link parentEntityId mutable via LWW", () => {
+      doc = Automerge.change(doc, (d) => {
+        d.structureEntityMemberLinks["steml_1"] = {
+          id: s("steml_1"),
+          systemId: s("sys_test"),
+          parentEntityId: s("ste_1"),
+          memberId: s("mem_1"),
+          sortOrder: 0,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      doc = Automerge.change(doc, (d) => {
+        const link = d.structureEntityMemberLinks["steml_1"];
+        if (link) {
+          link.parentEntityId = s("ste_2");
+          link.updatedAt = 2000;
+        }
+      });
+      expect(doc.structureEntityMemberLinks["steml_1"]?.parentEntityId?.val).toBe("ste_2");
+    });
+
+    it("creates associations with all fields including archived", () => {
+      doc = Automerge.change(doc, (d) => {
+        d.structureEntityAssociations["stea_1"] = {
+          id: s("stea_1"),
+          systemId: s("sys_test"),
+          sourceEntityId: s("ste_1"),
+          targetEntityId: s("ste_2"),
+          archived: false,
+          createdAt: 3000,
+          updatedAt: 3000,
+        };
+      });
+      expect(doc.structureEntityAssociations["stea_1"]?.sourceEntityId.val).toBe("ste_1");
+      expect(doc.structureEntityAssociations["stea_1"]?.targetEntityId.val).toBe("ste_2");
+      expect(doc.structureEntityAssociations["stea_1"]?.archived).toBe(false);
+      expect(doc.structureEntityAssociations["stea_1"]?.updatedAt).toBe(3000);
+    });
+
+    it("link entities survive Automerge binary round-trip", () => {
+      doc = Automerge.change(doc, (d) => {
+        d.structureEntityLinks["stel_rt"] = {
+          id: s("stel_rt"),
+          systemId: s("sys_test"),
+          entityId: s("ste_rt"),
+          parentEntityId: null,
+          sortOrder: 5,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+        d.structureEntityMemberLinks["steml_rt"] = {
+          id: s("steml_rt"),
+          systemId: s("sys_test"),
+          parentEntityId: s("ste_rt"),
+          memberId: s("mem_rt"),
+          sortOrder: 1,
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+        d.structureEntityAssociations["stea_rt"] = {
+          id: s("stea_rt"),
+          systemId: s("sys_test"),
+          sourceEntityId: s("ste_1"),
+          targetEntityId: s("ste_2"),
+          archived: false,
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      const bytes = Automerge.save(doc);
+      const loaded = Automerge.load<SystemCoreDocument>(bytes);
+      expect(loaded.structureEntityLinks["stel_rt"]?.entityId.val).toBe("ste_rt");
+      expect(loaded.structureEntityMemberLinks["steml_rt"]?.memberId.val).toBe("mem_rt");
+      expect(loaded.structureEntityAssociations["stea_rt"]?.sourceEntityId.val).toBe("ste_1");
+    });
   });
 
   it("CrdtFieldDefinition includes scopes field", () => {
@@ -321,23 +438,63 @@ describe("SystemCoreDocument schema", () => {
     expect(doc.fieldDefinitions["fd_1"]?.scopes.val).toBe(scopesJson);
   });
 
-  it("CrdtFieldValue supports structureEntityId and groupId", () => {
-    let doc = makeSystemCoreDoc();
-    doc = Automerge.change(doc, (d) => {
-      d.fieldValues["fv_1"] = {
-        id: s("fv_1"),
-        fieldDefinitionId: s("fd_1"),
-        memberId: null,
-        structureEntityId: s("ste_1"),
-        groupId: null,
-        value: s('"some value"'),
-        createdAt: 1000,
-        updatedAt: 1000,
-      };
+  describe("CrdtFieldValue polymorphic owner", () => {
+    it("supports structureEntityId owner", () => {
+      let doc = makeSystemCoreDoc();
+      doc = Automerge.change(doc, (d) => {
+        d.fieldValues["fv_se"] = {
+          id: s("fv_se"),
+          fieldDefinitionId: s("fd_1"),
+          memberId: null,
+          structureEntityId: s("ste_1"),
+          groupId: null,
+          value: s('"some value"'),
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      expect(doc.fieldValues["fv_se"]?.structureEntityId?.val).toBe("ste_1");
+      expect(doc.fieldValues["fv_se"]?.memberId).toBeNull();
+      expect(doc.fieldValues["fv_se"]?.groupId).toBeNull();
     });
-    expect(doc.fieldValues["fv_1"]?.structureEntityId?.val).toBe("ste_1");
-    expect(doc.fieldValues["fv_1"]?.memberId).toBeNull();
-    expect(doc.fieldValues["fv_1"]?.groupId).toBeNull();
+
+    it("supports memberId owner", () => {
+      let doc = makeSystemCoreDoc();
+      doc = Automerge.change(doc, (d) => {
+        d.fieldValues["fv_mem"] = {
+          id: s("fv_mem"),
+          fieldDefinitionId: s("fd_1"),
+          memberId: s("mem_1"),
+          structureEntityId: null,
+          groupId: null,
+          value: s('"member value"'),
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      expect(doc.fieldValues["fv_mem"]?.memberId?.val).toBe("mem_1");
+      expect(doc.fieldValues["fv_mem"]?.structureEntityId).toBeNull();
+      expect(doc.fieldValues["fv_mem"]?.groupId).toBeNull();
+    });
+
+    it("supports groupId owner", () => {
+      let doc = makeSystemCoreDoc();
+      doc = Automerge.change(doc, (d) => {
+        d.fieldValues["fv_grp"] = {
+          id: s("fv_grp"),
+          fieldDefinitionId: s("fd_1"),
+          memberId: null,
+          structureEntityId: null,
+          groupId: s("grp_1"),
+          value: s('"group value"'),
+          createdAt: 1000,
+          updatedAt: 1000,
+        };
+      });
+      expect(doc.fieldValues["fv_grp"]?.groupId?.val).toBe("grp_1");
+      expect(doc.fieldValues["fv_grp"]?.memberId).toBeNull();
+      expect(doc.fieldValues["fv_grp"]?.structureEntityId).toBeNull();
+    });
   });
 
   it("saves and loads via Automerge binary serialization", () => {

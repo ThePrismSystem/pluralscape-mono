@@ -14,6 +14,7 @@ export type {
   CrdtRelationship,
   CrdtCustomFront,
   CrdtFieldDefinition,
+  CrdtFieldValueOwner,
   CrdtFieldValue,
   CrdtInnerWorldEntity,
   CrdtInnerWorldRegion,

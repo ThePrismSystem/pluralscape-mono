@@ -446,6 +446,197 @@ describe("Category 6: junction add-wins semantics", () => {
   });
 });
 
+// ── Category 6b: LWW structure entity link merge semantics ────────────
+
+describe("Category 6b: LWW structure entity link merge semantics", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  it("6b-a — concurrent sortOrder edits on same link: LWW resolves to one value", async () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-6b"));
+
+    // Seed a structure entity link
+    const seedEnv = sessionA.change((d) => {
+      d.structureEntityLinks["stel_1"] = {
+        id: s("stel_1"),
+        systemId: s("sys_1"),
+        entityId: s("ste_1"),
+        parentEntityId: s("ste_parent"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    await relay.submit(seedEnv);
+    const r6b = await relay.getEnvelopesSince(asSyncDocId("doc-cr-6b"), 0);
+    sessionB.applyEncryptedChanges(r6b.envelopes);
+
+    // Concurrent edits to sortOrder
+    const envA = sessionA.change((d) => {
+      const link = d.structureEntityLinks["stel_1"];
+      if (link) {
+        link.sortOrder = 10;
+        link.updatedAt = 2000;
+      }
+    });
+    const envB = sessionB.change((d) => {
+      const link = d.structureEntityLinks["stel_1"];
+      if (link) {
+        link.sortOrder = 20;
+        link.updatedAt = 2000;
+      }
+    });
+
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
+
+    // LWW resolves to one value — both sessions agree
+    const resultA = sessionA.document.structureEntityLinks["stel_1"]?.sortOrder;
+    const resultB = sessionB.document.structureEntityLinks["stel_1"]?.sortOrder;
+    expect(resultA).toBe(resultB);
+    expect([10, 20]).toContain(resultA);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+
+  it("6b-b — concurrent edits to different links: both edits preserved", async () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-6b-b"));
+
+    // Seed two links
+    const seedEnv = sessionA.change((d) => {
+      d.structureEntityLinks["stel_1"] = {
+        id: s("stel_1"),
+        systemId: s("sys_1"),
+        entityId: s("ste_1"),
+        parentEntityId: null,
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.structureEntityLinks["stel_2"] = {
+        id: s("stel_2"),
+        systemId: s("sys_1"),
+        entityId: s("ste_2"),
+        parentEntityId: null,
+        sortOrder: 2,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    await relay.submit(seedEnv);
+    const r6bb = await relay.getEnvelopesSince(asSyncDocId("doc-cr-6b-b"), 0);
+    sessionB.applyEncryptedChanges(r6bb.envelopes);
+
+    // A edits link 1, B edits link 2
+    const envA = sessionA.change((d) => {
+      const link = d.structureEntityLinks["stel_1"];
+      if (link) link.sortOrder = 99;
+    });
+    const envB = sessionB.change((d) => {
+      const link = d.structureEntityLinks["stel_2"];
+      if (link) link.sortOrder = 77;
+    });
+
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document.structureEntityLinks["stel_1"]?.sortOrder).toBe(99);
+    expect(sessionA.document.structureEntityLinks["stel_2"]?.sortOrder).toBe(77);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+
+  it("6b-c — one session deletes link, other edits sortOrder: delete wins", async () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-6b-c"));
+
+    const seedEnv = sessionA.change((d) => {
+      d.structureEntityMemberLinks["steml_1"] = {
+        id: s("steml_1"),
+        systemId: s("sys_1"),
+        parentEntityId: s("ste_1"),
+        memberId: s("mem_1"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    await relay.submit(seedEnv);
+    const r6bc = await relay.getEnvelopesSince(asSyncDocId("doc-cr-6b-c"), 0);
+    sessionB.applyEncryptedChanges(r6bc.envelopes);
+
+    // A deletes, B edits concurrently
+    const envA = sessionA.change((d) => {
+      delete d.structureEntityMemberLinks["steml_1"];
+    });
+    const envB = sessionB.change((d) => {
+      const link = d.structureEntityMemberLinks["steml_1"];
+      if (link) link.sortOrder = 50;
+    });
+
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
+
+    // Automerge: delete wins over concurrent field edit in a map
+    expect(sessionA.document.structureEntityMemberLinks["steml_1"]).toBeUndefined();
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+
+  it("6b-d — concurrent creation of same-keyed member link: LWW resolves", async () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-6b-d"));
+
+    // Both create steml_1 with different memberId
+    const envA = sessionA.change((d) => {
+      d.structureEntityMemberLinks["steml_1"] = {
+        id: s("steml_1"),
+        systemId: s("sys_1"),
+        parentEntityId: s("ste_1"),
+        memberId: s("mem_a"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    const envB = sessionB.change((d) => {
+      d.structureEntityMemberLinks["steml_1"] = {
+        id: s("steml_1"),
+        systemId: s("sys_1"),
+        parentEntityId: s("ste_1"),
+        memberId: s("mem_b"),
+        sortOrder: 2,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
+
+    // Both sessions converge to same value
+    const resultA = sessionA.document.structureEntityMemberLinks["steml_1"]?.memberId.val;
+    const resultB = sessionB.document.structureEntityMemberLinks["steml_1"]?.memberId.val;
+    expect(resultA).toBe(resultB);
+    expect(["mem_a", "mem_b"]).toContain(resultA);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+});
+
 // ── Category 7: CheckInRecord concurrent respond + dismiss ────────────
 
 describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {

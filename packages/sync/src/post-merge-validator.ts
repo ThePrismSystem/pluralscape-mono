@@ -39,6 +39,7 @@ interface SortableEntity {
   id: Automerge.ImmutableString;
   sortOrder: number;
   createdAt: number;
+  [key: string]: unknown;
 }
 
 interface CheckInLike {
@@ -303,6 +304,36 @@ function collectSortOrderPatches<T extends SortableEntity>(
 }
 
 /**
+ * Partitions an entity map by a grouping field (e.g. parentEntityId).
+ * Entities with the same group field value are placed in the same partition,
+ * allowing sort order normalization to operate independently per group.
+ */
+function partitionByGroupField<T extends SortableEntity>(
+  entityMap: Record<string, T>,
+  groupField: string,
+): Record<string, Record<string, T>> {
+  const NULL_GROUP = "__null_group__";
+  const partitions: Record<string, Record<string, T>> = {};
+
+  for (const [id, entity] of Object.entries(entityMap)) {
+    const groupValue: unknown = entity[groupField];
+    let key: string;
+    if (groupValue === null || groupValue === undefined) {
+      key = NULL_GROUP;
+    } else if (typeof groupValue === "object" && "val" in groupValue) {
+      key = (groupValue as { val: string }).val;
+    } else {
+      key = NULL_GROUP;
+    }
+
+    partitions[key] ??= {};
+    (partitions[key] as Record<string, T>)[id] = entity;
+  }
+
+  return partitions;
+}
+
+/**
  * For entities with sortOrder (derived from strategies with hasSortOrder), detect ties
  * and re-assign sequential values by createdAt then id.
  *
@@ -315,14 +346,22 @@ export function normalizeSortOrder(session: EncryptedSyncSession<unknown>): {
   const doc = session.document as DocRecord;
   const allPatches: Array<SortOrderPatch & { fieldName: string }> = [];
 
-  const sortableFields = Object.values(ENTITY_CRDT_STRATEGIES)
-    .filter((s) => "hasSortOrder" in s)
-    .map((s) => s.fieldName);
+  const sortableStrategies = Object.values(ENTITY_CRDT_STRATEGIES).filter(
+    (s): s is typeof s & { hasSortOrder: true } => "hasSortOrder" in s,
+  );
 
-  for (const fieldName of sortableFields) {
-    const entityMap = getEntityMap<SortableEntity>(doc, fieldName);
-    if (entityMap) {
-      allPatches.push(...collectSortOrderPatches(entityMap, fieldName));
+  for (const strategy of sortableStrategies) {
+    const entityMap = getEntityMap<SortableEntity>(doc, strategy.fieldName);
+    if (!entityMap) continue;
+
+    if ("sortGroupField" in strategy && typeof strategy.sortGroupField === "string") {
+      // Parent-scoped normalization: partition by group field, then normalize each group
+      const partitions = partitionByGroupField(entityMap, strategy.sortGroupField);
+      for (const partition of Object.values(partitions)) {
+        allPatches.push(...collectSortOrderPatches(partition, strategy.fieldName));
+      }
+    } else {
+      allPatches.push(...collectSortOrderPatches(entityMap, strategy.fieldName));
     }
   }
 

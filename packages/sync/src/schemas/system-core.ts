@@ -123,24 +123,30 @@ export interface CrdtStructureEntity extends CrdtAuditFields {
   archived: boolean;
 }
 
-/** CRDT representation of a StructureEntityLink (LWW map, keyed by SystemStructureEntityLinkId). */
-export interface CrdtStructureEntityLink {
+/**
+ * Shared base for structure entity link CRDT types.
+ * Both link types share parentEntityId-based hierarchy, sortOrder, and lifecycle fields.
+ */
+interface CrdtStructureEntityLinkBase extends CrdtAuditFields {
   id: CrdtString;
   systemId: CrdtString;
-  entityId: CrdtString;
+  /**
+   * The parent entity this link is placed under.
+   * Null for entities/members at the root level of the structure hierarchy.
+   */
   parentEntityId: CrdtOptionalString;
   sortOrder: number;
-  createdAt: number;
+  archived: boolean;
+}
+
+/** CRDT representation of a StructureEntityLink (LWW map, keyed by SystemStructureEntityLinkId). */
+export interface CrdtStructureEntityLink extends CrdtStructureEntityLinkBase {
+  entityId: CrdtString;
 }
 
 /** CRDT representation of a StructureEntityMemberLink (LWW map, keyed by SystemStructureEntityMemberLinkId). */
-export interface CrdtStructureEntityMemberLink {
-  id: CrdtString;
-  systemId: CrdtString;
-  parentEntityId: CrdtOptionalString;
+export interface CrdtStructureEntityMemberLink extends CrdtStructureEntityLinkBase {
   memberId: CrdtString;
-  sortOrder: number;
-  createdAt: number;
 }
 
 /** CRDT representation of a StructureEntityAssociation (LWW map, keyed by SystemStructureEntityAssociationId). */
@@ -149,6 +155,7 @@ export interface CrdtStructureEntityAssociation extends CrdtAuditFields {
   systemId: CrdtString;
   sourceEntityId: CrdtString;
   targetEntityId: CrdtString;
+  archived: boolean;
 }
 
 /** CRDT representation of a Relationship (LWW map, keyed by RelationshipId). */
@@ -197,16 +204,23 @@ export interface CrdtFieldDefinition extends CrdtAuditFields {
   archived: boolean;
 }
 
+/**
+ * Discriminated owner fields for CrdtFieldValue.
+ * Exactly one of the three owner fields must be non-null.
+ */
+export type CrdtFieldValueOwner =
+  | { memberId: CrdtString; structureEntityId: null; groupId: null }
+  | { memberId: null; structureEntityId: CrdtString; groupId: null }
+  | { memberId: null; structureEntityId: null; groupId: CrdtString };
+
 /** CRDT representation of a FieldValue (LWW map, keyed by FieldValueId). */
-export interface CrdtFieldValue extends CrdtAuditFields {
-  id: CrdtString;
-  fieldDefinitionId: CrdtString;
-  memberId: CrdtOptionalString;
-  structureEntityId: CrdtOptionalString;
-  groupId: CrdtOptionalString;
-  /** JSON-serialized FieldValueUnion */
-  value: CrdtString;
-}
+export type CrdtFieldValue = CrdtAuditFields &
+  CrdtFieldValueOwner & {
+    id: CrdtString;
+    fieldDefinitionId: CrdtString;
+    /** JSON-serialized FieldValueUnion */
+    value: CrdtString;
+  };
 
 // ── innerworld ───────────────────────────────────────────────────────
 

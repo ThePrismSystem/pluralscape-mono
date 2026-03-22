@@ -31,8 +31,17 @@ export interface CrdtStrategy {
   readonly fieldName: string;
   /** Parent reference field name, if this entity participates in hierarchy cycle detection. */
   readonly parentField?: string;
-  /** Whether this entity has a sortOrder field that needs tie-breaking normalization. */
+  /**
+   * Whether this entity has a `sortOrder` field that participates in
+   * post-merge tie-breaking normalization.
+   */
   readonly hasSortOrder?: boolean;
+  /**
+   * Field name to group by for parent-scoped sort normalization.
+   * When set, entities are partitioned by this field's value before tie
+   * detection — siblings under different parents maintain independent orderings.
+   */
+  readonly sortGroupField?: string;
 }
 
 /**
@@ -112,7 +121,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "fieldDefinitions",
     hasSortOrder: true,
     mutationSemantics:
-      "LWW per field — name, description, fieldType, options, required, sortOrder, archived",
+      "LWW per field — name, description, fieldType, options, required, sortOrder, scopes, archived",
   },
   "field-value": {
     storageType: "lww-map",
@@ -154,20 +163,25 @@ export const ENTITY_CRDT_STRATEGIES = {
     document: "system-core",
     fieldName: "structureEntityLinks",
     hasSortOrder: true,
-    mutationSemantics: "LWW per field — entityId, parentEntityId, sortOrder",
+    sortGroupField: "parentEntityId",
+    mutationSemantics:
+      "LWW per field — sortOrder, parentEntityId, archived mutable; entityId, systemId immutable after creation",
   },
   "structure-entity-member-link": {
     storageType: "lww-map",
     document: "system-core",
     fieldName: "structureEntityMemberLinks",
     hasSortOrder: true,
-    mutationSemantics: "LWW per field — parentEntityId, memberId, sortOrder",
+    sortGroupField: "parentEntityId",
+    mutationSemantics:
+      "LWW per field — sortOrder, parentEntityId, archived mutable; memberId, systemId immutable after creation",
   },
   "structure-entity-association": {
     storageType: "lww-map",
     document: "system-core",
     fieldName: "structureEntityAssociations",
-    mutationSemantics: "LWW per field — sourceEntityId, targetEntityId",
+    mutationSemantics:
+      "LWW per field — archived mutable; sourceEntityId, targetEntityId, systemId immutable after creation",
   },
   // Junctions (system-core)
   "group-membership": {

@@ -31,24 +31,24 @@ Contains the structural definition of a system — entities that are bounded by 
 
 **Entities:**
 
-| Entity                     | CRDT Type              | Notes                                     |
-| -------------------------- | ---------------------- | ----------------------------------------- |
-| Member                     | LWW map                | name, pronouns, description, colors, etc. |
-| MemberPhoto                | LWW map                | photo reference metadata                  |
-| Group                      | LWW map + ordered list | group hierarchy via parentGroupId         |
-| StructureEntityType        | LWW map                | user-defined structure type definitions   |
-| StructureEntity            | LWW map                | instances of structure entity types       |
-| StructureEntityLink        | LWW map                | parent-child hierarchy between entities   |
-| StructureEntityMemberLink  | LWW map                | members placed under entities             |
-| StructureEntityAssociation | LWW map                | many-to-many cross-type relationships     |
-| Relationship               | LWW map                | links between members                     |
-| CustomFront                | LWW map                | abstract cognitive states                 |
-| FieldDefinition            | LWW map                | custom field schemas with scoped targets  |
-| FieldValue                 | LWW map                | polymorphic custom field values           |
-| SystemSettings             | LWW map                | system-wide configuration                 |
-| InnerWorldEntity           | LWW map                | innerworld entities                       |
-| InnerWorldRegion           | LWW map                | innerworld regions                        |
-| Timer                      | LWW map                | reminder/countdown timers                 |
+| Entity                     | CRDT Type              | Notes                                                      |
+| -------------------------- | ---------------------- | ---------------------------------------------------------- |
+| Member                     | LWW map                | name, pronouns, description, colors, etc.                  |
+| MemberPhoto                | LWW map                | photo reference metadata                                   |
+| Group                      | LWW map + ordered list | group hierarchy via parentGroupId                          |
+| StructureEntityType        | LWW map                | user-defined structure type definitions                    |
+| StructureEntity            | LWW map                | instances of structure entity types                        |
+| StructureEntityLink        | LWW map                | parent-child hierarchy; archived, sortOrder mutable        |
+| StructureEntityMemberLink  | LWW map                | members placed under entities; archived, sortOrder mutable |
+| StructureEntityAssociation | LWW map                | many-to-many cross-type; archived mutable                  |
+| Relationship               | LWW map                | links between members                                      |
+| CustomFront                | LWW map                | abstract cognitive states                                  |
+| FieldDefinition            | LWW map                | custom field schemas with scoped targets                   |
+| FieldValue                 | LWW map                | exactly one of memberId/structureEntityId/groupId          |
+| SystemSettings             | LWW map                | system-wide configuration                                  |
+| InnerWorldEntity           | LWW map                | innerworld entities                                        |
+| InnerWorldRegion           | LWW map                | innerworld regions                                         |
+| Timer                      | LWW map                | reminder/countdown timers                                  |
 
 **Growth pattern:** Bounded by entity count. Even polyfragmented systems (500+ members) produce a document well within Automerge's efficient range.
 
@@ -182,9 +182,9 @@ Every entity type from `packages/types/src/ids.ts` is listed below with its docu
 | `group`                        | `system-core`        | Master   | LWW map + ordered list                                                                  |
 | `structure-entity-type`        | `system-core`        | Master   | LWW map                                                                                 |
 | `structure-entity`             | `system-core`        | Master   | LWW map                                                                                 |
-| `structure-entity-link`        | `system-core`        | Master   | LWW map (parent-child hierarchy between entities)                                       |
-| `structure-entity-member-link` | `system-core`        | Master   | LWW map (members placed under entities)                                                 |
-| `structure-entity-association` | `system-core`        | Master   | LWW map (many-to-many cross-type relationships)                                         |
+| `structure-entity-link`        | `system-core`        | Master   | LWW map (sortOrder, parentEntityId, archived mutable; entityId immutable)               |
+| `structure-entity-member-link` | `system-core`        | Master   | LWW map (sortOrder, parentEntityId, archived mutable; memberId immutable)               |
+| `structure-entity-association` | `system-core`        | Master   | LWW map (archived mutable; sourceEntityId, targetEntityId immutable)                    |
 | `relationship`                 | `system-core`        | Master   | LWW map                                                                                 |
 | `custom-front`                 | `system-core`        | Master   | LWW map                                                                                 |
 | `field-definition`             | `system-core`        | Master   | LWW map                                                                                 |
