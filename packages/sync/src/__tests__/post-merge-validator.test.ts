@@ -1035,6 +1035,7 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.sortOrderPatches).toHaveLength(0);
     expect(result.checkInNormalizations).toBe(0);
     expect(result.friendConnectionNormalizations).toBe(0);
+    expect(result.timerConfigNormalizations).toBe(0);
     expect(result.correctionEnvelopes).toHaveLength(0);
     expect(result.notifications).toHaveLength(0);
     expect(result.errors).toHaveLength(0);

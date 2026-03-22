@@ -1,0 +1,143 @@
+TimerConfigResponse:
+  description: |
+    A timer configuration for recurring check-in reminders.
+    Extends EncryptedEntity with server-visible scheduling fields.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        enabled:
+          type: boolean
+          description: "Whether the timer is actively scheduling check-ins"
+        intervalMinutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: "Minutes between check-in records"
+        wakingHoursOnly:
+          type: boolean
+          nullable: true
+          description: "If true, only generate check-ins during waking hours"
+        wakingStart:
+          type: string
+          nullable: true
+          pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          description: "Start of waking hours (HH:MM, required when wakingHoursOnly=true)"
+        wakingEnd:
+          type: string
+          nullable: true
+          pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+          description: "End of waking hours (HH:MM, required when wakingHoursOnly=true)"
+
+CreateTimerConfigRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextTimerConfig"
+    enabled:
+      type: boolean
+      default: true
+    intervalMinutes:
+      type: integer
+      minimum: 1
+    wakingHoursOnly:
+      type: boolean
+    wakingStart:
+      type: string
+      pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+    wakingEnd:
+      type: string
+      pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+
+UpdateTimerConfigRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+    version:
+      type: integer
+      minimum: 1
+    enabled:
+      type: boolean
+    intervalMinutes:
+      type: integer
+      minimum: 1
+      nullable: true
+    wakingHoursOnly:
+      type: boolean
+    wakingStart:
+      type: string
+      nullable: true
+      pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+    wakingEnd:
+      type: string
+      nullable: true
+      pattern: "^(?:[01]\\d|2[0-3]):[0-5]\\d$"
+
+CheckInRecordResponse:
+  description: |
+    A check-in record created by the timer scheduler or manually.
+    Can be responded to or dismissed.
+  type: object
+  properties:
+    id:
+      type: string
+    systemId:
+      type: string
+    timerConfigId:
+      type: string
+    scheduledAt:
+      type: integer
+      format: int64
+      description: "Unix milliseconds when the check-in was scheduled"
+    respondedByMemberId:
+      type: string
+      nullable: true
+    respondedAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: "Unix milliseconds when the check-in was responded to"
+    dismissed:
+      type: boolean
+    encryptedData:
+      type: string
+      nullable: true
+    archived:
+      type: boolean
+    archivedAt:
+      type: integer
+      format: int64
+      nullable: true
+
+CreateCheckInRecordRequest:
+  type: object
+  required: [timerConfigId, scheduledAt]
+  properties:
+    timerConfigId:
+      type: string
+      description: "Timer config ID (tmr_ prefix)"
+    scheduledAt:
+      type: integer
+      format: int64
+      minimum: 0
+    encryptedData:
+      type: string
+      contentEncoding: base64
+
+RespondCheckInRecordRequest:
+  type: object
+  required: [respondedByMemberId]
+  properties:
+    respondedByMemberId:
+      type: string
+      description: "Member ID who responded (mem_ prefix)"

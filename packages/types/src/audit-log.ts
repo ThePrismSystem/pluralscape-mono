@@ -127,7 +127,19 @@ export type AuditEventType =
   | "fronting-comment.restored"
   | "fronting-comment.deleted"
   | "fronting-report.created"
-  | "fronting-report.deleted";
+  | "fronting-report.deleted"
+  | "timer-config.created"
+  | "timer-config.updated"
+  | "timer-config.archived"
+  | "timer-config.restored"
+  | "timer-config.deleted"
+  | "timer-config.enabled"
+  | "timer-config.disabled"
+  | "check-in-record.created"
+  | "check-in-record.responded"
+  | "check-in-record.dismissed"
+  | "check-in-record.archived"
+  | "check-in-record.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

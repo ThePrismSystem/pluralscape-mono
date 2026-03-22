@@ -113,4 +113,12 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     strategy: "exponential",
     jitterFraction: 0.2,
   },
+  "check-in-generate": {
+    maxRetries: 3,
+    backoffMs: 5_000,
+    backoffMultiplier: 2,
+    maxBackoffMs: 60_000,
+    strategy: "exponential",
+    jitterFraction: 0.2,
+  },
 };
