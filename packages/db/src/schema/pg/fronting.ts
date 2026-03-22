@@ -125,6 +125,8 @@ export const frontingComments = pgTable(
     /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
     sessionStartTime: pgTimestamp("session_start_time").notNull(),
     memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
+    customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
+    structureEntityId: varchar("structure_entity_id", { length: ID_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -142,8 +144,21 @@ export const frontingComments = pgTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.customFrontId],
+      foreignColumns: [customFronts.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.structureEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
     versionCheckFor("fronting_comments", t.version),
     archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
+    // Invariant: every comment must have at least one author (member, custom front, or structure entity).
+    check(
+      "fronting_comments_author_check",
+      atLeastOneNotNull(t.memberId, t.customFrontId, t.structureEntityId),
+    ),
   ],
 );
 

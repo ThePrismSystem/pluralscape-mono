@@ -48,7 +48,9 @@ export interface FrontingComment extends AuditMetadata {
   readonly id: FrontingCommentId;
   readonly frontingSessionId: FrontingSessionId;
   readonly systemId: SystemId;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
+  readonly customFrontId: CustomFrontId | null;
+  readonly structureEntityId: SystemStructureEntityId | null;
   readonly content: string;
   readonly archived: false;
 }

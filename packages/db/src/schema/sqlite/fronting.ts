@@ -107,6 +107,8 @@ export const frontingComments = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     memberId: text("member_id"),
+    customFrontId: text("custom_front_id"),
+    structureEntityId: text("structure_entity_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -123,8 +125,21 @@ export const frontingComments = sqliteTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.customFrontId],
+      foreignColumns: [customFronts.id],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.structureEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
     versionCheckFor("fronting_comments", t.version),
     archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
+    // Invariant: every comment must have at least one author (member, custom front, or structure entity).
+    check(
+      "fronting_comments_author_check",
+      atLeastOneNotNull(t.memberId, t.customFrontId, t.structureEntityId),
+    ),
   ],
 );
 

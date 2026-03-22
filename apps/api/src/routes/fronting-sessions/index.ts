@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { archiveRoute } from "./archive.js";
+import { frontingCommentRoutes } from "./comments/index.js";
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
 import { endRoute } from "./end.js";
@@ -22,3 +23,6 @@ frontingSessionRoutes.route("/", createRoute);
 frontingSessionRoutes.route("/", archiveRoute);
 frontingSessionRoutes.route("/", restoreRoute);
 frontingSessionRoutes.route("/", endRoute);
+
+// Nested comment routes
+frontingSessionRoutes.route("/:sessionId/comments", frontingCommentRoutes);

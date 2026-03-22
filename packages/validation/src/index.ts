@@ -80,6 +80,10 @@ export {
   FrontingSessionQuerySchema,
 } from "./fronting-session.js";
 export {
+  CreateFrontingCommentBodySchema,
+  UpdateFrontingCommentBodySchema,
+} from "./fronting-comment.js";
+export {
   booleanQueryParam,
   IncludeArchivedQuerySchema,
   InnerWorldEntityQuerySchema,
