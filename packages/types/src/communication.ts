@@ -117,7 +117,7 @@ export interface PollVote {
   readonly id: PollVoteId;
   readonly pollId: PollId;
   readonly optionId: PollOptionId | null;
-  readonly voter: EntityReference<"member" | "subsystem" | "side-system" | "layer">;
+  readonly voter: EntityReference<"member" | "structure-entity">;
   readonly comment: string | null;
   readonly isVeto: boolean;
   readonly votedAt: UnixMillis;

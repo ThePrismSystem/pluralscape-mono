@@ -33,56 +33,40 @@ const ArchitectureTypeSchema = z.discriminatedUnion("kind", [
   CustomArchitectureTypeSchema,
 ]);
 
-// ── Subsystem ────────────────────────────────────────────────────────
+// ── Structure Entity Type ────────────────────────────────────────────
 
-export const CreateSubsystemBodySchema = z
+export const CreateStructureEntityTypeBodySchema = z
   .object({
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
-    parentSubsystemId: brandedString<"SubsystemId">().nullable(),
     architectureType: ArchitectureTypeSchema.nullable(),
-    hasCore: z.boolean(),
     discoveryStatus: z.enum(DISCOVERY_STATUSES).nullable(),
   })
   .readonly();
 
-export const UpdateSubsystemBodySchema = z
+export const UpdateStructureEntityTypeBodySchema = z
   .object({
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
-    parentSubsystemId: brandedString<"SubsystemId">().nullable(),
     architectureType: ArchitectureTypeSchema.nullable(),
-    hasCore: z.boolean(),
     discoveryStatus: z.enum(DISCOVERY_STATUSES).nullable(),
     version: z.int().min(1),
   })
   .readonly();
 
-// ── Side System ──────────────────────────────────────────────────────
+// ── Structure Entity ────────────────────────────────────────────────
 
-export const CreateSideSystemBodySchema = z
+export const CreateStructureEntityBodySchema = z
   .object({
+    structureEntityTypeId: brandedString<"SystemStructureEntityTypeId">(),
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
-  })
-  .readonly();
-
-export const UpdateSideSystemBodySchema = z
-  .object({
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
-    version: z.int().min(1),
-  })
-  .readonly();
-
-// ── Layer ────────────────────────────────────────────────────────────
-
-export const CreateLayerBodySchema = z
-  .object({
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
+    parentEntityId: brandedString<"SystemStructureEntityId">().nullable(),
     sortOrder: z.int().min(0),
   })
   .readonly();
 
-export const UpdateLayerBodySchema = z
+export const UpdateStructureEntityBodySchema = z
   .object({
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
+    parentEntityId: brandedString<"SystemStructureEntityId">().nullable(),
     sortOrder: z.int().min(0),
     version: z.int().min(1),
   })

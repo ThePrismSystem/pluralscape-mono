@@ -4,8 +4,8 @@ import type {
   InnerWorldEntityId,
   LifecycleEventId,
   MemberId,
-  SubsystemId,
   SystemId,
+  SystemStructureEntityId,
 } from "../ids.js";
 import type { InnerWorldEntityType } from "../innerworld.js";
 import type {
@@ -106,7 +106,9 @@ describe("SubsystemFormationEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<SubsystemFormationEvent["eventType"]>().toEqualTypeOf<"subsystem-formation">();
     expectTypeOf<SubsystemFormationEvent["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<SubsystemFormationEvent["resultSubsystemId"]>().toEqualTypeOf<SubsystemId>();
+    expectTypeOf<
+      SubsystemFormationEvent["resultStructureEntityId"]
+    >().toEqualTypeOf<SystemStructureEntityId>();
   });
 });
 
@@ -166,7 +168,7 @@ describe("LifecycleEvent discriminated union", () => {
           return event.entity.entityId;
         case "subsystem-formation":
           expectTypeOf(event).toEqualTypeOf<SubsystemFormationEvent>();
-          return event.resultSubsystemId;
+          return event.resultStructureEntityId;
         case "form-change":
           expectTypeOf(event).toEqualTypeOf<FormChangeEvent>();
           return event.memberId;

@@ -25,7 +25,7 @@ import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
+import type { ServerRelationship } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = pgTable(
@@ -70,11 +70,9 @@ export const subsystems = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: varchar("parent_subsystem_id", { length: ID_MAX_LENGTH }),
-    architectureType: jsonb("architecture_type").$type<ServerSubsystem["architectureType"]>(),
+    architectureType: jsonb("architecture_type"),
     hasCore: boolean("has_core").notNull().default(false),
-    discoveryStatus: varchar("discovery_status", { length: ENUM_MAX_LENGTH }).$type<
-      ServerSubsystem["discoveryStatus"]
-    >(),
+    discoveryStatus: varchar("discovery_status", { length: ENUM_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

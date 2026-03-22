@@ -43,7 +43,8 @@ import type {
   ClientGroup,
   ClientMember,
   ClientRelationship,
-  ClientSubsystem,
+  ClientStructureEntityType,
+  ClientStructureEntity,
   ConnectionErrorEvent,
   CryptoApiKey,
   DateRangeFilter,
@@ -162,7 +163,6 @@ import type {
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
   ServerJournalEntry,
-  ServerLayer,
   ServerLifecycleEvent,
   SPImportBoardMessage,
   SPImportChatMessage,
@@ -182,8 +182,8 @@ import type {
   ServerNote,
   ServerPoll,
   ServerRelationship,
-  ServerSideSystem,
-  ServerSubsystem,
+  ServerStructureEntityType,
+  ServerStructureEntity,
   ServerTimerConfig,
   ServerWikiPage,
   SplitEvent,
@@ -219,12 +219,10 @@ import type {
   ClientInnerWorldEntity,
   ClientInnerWorldRegion,
   ClientJournalEntry,
-  ClientLayer,
   ClientLifecycleEvent,
   ClientMemberPhoto,
   ClientNote,
   ClientPoll,
-  ClientSideSystem,
   ClientTimerConfig,
   ClientWikiPage,
   CodeBlock,
@@ -282,7 +280,6 @@ import type {
   FrontingComment,
   FrontingCommentId,
   FrontingSession,
-  GatekeptLayer,
   Group,
   GroupMembership,
   GroupMoveOperation,
@@ -293,10 +290,6 @@ import type {
   KeyGrant,
   KnownSaturationLevel,
   KnownTag,
-  Layer,
-  LayerAccessType,
-  LayerEntity,
-  LayerMembership,
   LittlesSafeModeConfig,
   Locale,
   LocaleConfig,
@@ -308,7 +301,6 @@ import type {
   NomenclatureSettings,
   NotificationPreferences,
   NumberFormatPreference,
-  OpenLayer,
   OriginType,
   PaginatedResult,
   PrivacyBucket,
@@ -341,17 +333,16 @@ import type {
   ServerPollVote,
   ClientPollVote,
   Session,
-  SideSystem,
-  SideSystemEntity,
-  SideSystemLayerLink,
-  SideSystemMembership,
   SortDirection,
-  Subsystem,
-  SubsystemEntity,
+  StructureEntityEntity,
   SubsystemFormationEvent,
-  SubsystemLayerLink,
-  SubsystemMembership,
-  SubsystemSideSystemLink,
+  SystemStructureEntity,
+  ArchivedSystemStructureEntity,
+  SystemStructureEntityType,
+  ArchivedSystemStructureEntityType,
+  SystemStructureEntityLink,
+  SystemStructureEntityMemberLink,
+  SystemStructureEntityAssociation,
   System,
   SystemId,
   TermCategory,
@@ -424,18 +415,13 @@ describe("barrel exports", () => {
     expectTypeOf<StructureVisualProps>().toBeObject();
     expectTypeOf<OriginType>().toBeString();
     expectTypeOf<DiscoveryStatus>().toBeString();
-    expectTypeOf<LayerAccessType>().toBeString();
-    expectTypeOf<Subsystem>().toBeObject();
-    expectTypeOf<SideSystem>().toBeObject();
-    expectTypeOf<Layer>().toBeObject();
-    expectTypeOf<OpenLayer>().toBeObject();
-    expectTypeOf<GatekeptLayer>().toBeObject();
-    expectTypeOf<SubsystemMembership>().toBeObject();
-    expectTypeOf<SideSystemMembership>().toBeObject();
-    expectTypeOf<LayerMembership>().toBeObject();
-    expectTypeOf<SubsystemLayerLink>().toBeObject();
-    expectTypeOf<SubsystemSideSystemLink>().toBeObject();
-    expectTypeOf<SideSystemLayerLink>().toBeObject();
+    expectTypeOf<SystemStructureEntityType>().toBeObject();
+    expectTypeOf<ArchivedSystemStructureEntityType>().toBeObject();
+    expectTypeOf<SystemStructureEntity>().toBeObject();
+    expectTypeOf<ArchivedSystemStructureEntity>().toBeObject();
+    expectTypeOf<SystemStructureEntityLink>().toBeObject();
+    expectTypeOf<SystemStructureEntityMemberLink>().toBeObject();
+    expectTypeOf<SystemStructureEntityAssociation>().toBeObject();
   });
 
   it("exports auth types", () => {
@@ -468,8 +454,10 @@ describe("barrel exports", () => {
     expectTypeOf<ClientFrontingSession>().toBeObject();
     expectTypeOf<ServerGroup>().toBeObject();
     expectTypeOf<ClientGroup>().toBeObject();
-    expectTypeOf<ServerSubsystem>().toBeObject();
-    expectTypeOf<ClientSubsystem>().toBeObject();
+    expectTypeOf<ServerStructureEntityType>().toBeObject();
+    expectTypeOf<ClientStructureEntityType>().toBeObject();
+    expectTypeOf<ServerStructureEntity>().toBeObject();
+    expectTypeOf<ClientStructureEntity>().toBeObject();
     expectTypeOf<ServerRelationship>().toBeObject();
     expectTypeOf<ClientRelationship>().toBeObject();
     expectTypeOf<ServerChannel>().toBeObject();
@@ -502,10 +490,6 @@ describe("barrel exports", () => {
     expectTypeOf<ClientPoll>().toBeObject();
     expectTypeOf<ServerAcknowledgementRequest>().toBeObject();
     expectTypeOf<ClientAcknowledgementRequest>().toBeObject();
-    expectTypeOf<ServerSideSystem>().toBeObject();
-    expectTypeOf<ClientSideSystem>().toBeObject();
-    expectTypeOf<ServerLayer>().toBeObject();
-    expectTypeOf<ClientLayer>().toBeObject();
     expectTypeOf<ServerTimerConfig>().toBeObject();
     expectTypeOf<ClientTimerConfig>().toBeObject();
     expectTypeOf<ServerAuditLogEntry>().toBeObject();
@@ -515,8 +499,6 @@ describe("barrel exports", () => {
     expectTypeOf<ClientMemberPhoto>().toBeObject();
     expectTypeOf<ClientPoll>().toBeObject();
     expectTypeOf<ClientAcknowledgementRequest>().toBeObject();
-    expectTypeOf<ClientSideSystem>().toBeObject();
-    expectTypeOf<ClientLayer>().toBeObject();
     expectTypeOf<ClientTimerConfig>().toBeObject();
     expectTypeOf<ClientAuditLogEntry>().toBeObject();
     expectTypeOf<ServerFrontingComment>().toBeObject();
@@ -717,9 +699,7 @@ describe("barrel exports", () => {
     expectTypeOf<InnerWorldRegion>().toBeObject();
     expectTypeOf<ArchivedInnerWorldRegion>().toBeObject();
     expectTypeOf<InnerWorldCanvas>().toBeObject();
-    expectTypeOf<SubsystemEntity>().toBeObject();
-    expectTypeOf<SideSystemEntity>().toBeObject();
-    expectTypeOf<LayerEntity>().toBeObject();
+    expectTypeOf<StructureEntityEntity>().toBeObject();
   });
 
   it("exports structure profile types", () => {

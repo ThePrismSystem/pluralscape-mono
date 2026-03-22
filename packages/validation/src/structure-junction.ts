@@ -12,28 +12,32 @@ export const AddStructureMembershipBodySchema = z
   })
   .readonly();
 
-// ── Cross-Structure Links ────────────────────────────────────────────
+// ── Structure Entity Links ───────────────────────────────────────────
 
-export const CreateSubsystemLayerLinkBodySchema = z
+export const CreateStructureEntityLinkBodySchema = z
   .object({
-    subsystemId: brandedString<"SubsystemId">(),
-    layerId: brandedString<"LayerId">(),
+    sourceEntityId: brandedString<"SystemStructureEntityId">(),
+    targetEntityId: brandedString<"SystemStructureEntityId">(),
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE).optional(),
   })
   .readonly();
 
-export const CreateSubsystemSideSystemLinkBodySchema = z
+// ── Structure Entity Member Links ───────────────────────────────────
+
+export const CreateStructureEntityMemberLinkBodySchema = z
   .object({
-    subsystemId: brandedString<"SubsystemId">(),
-    sideSystemId: brandedString<"SideSystemId">(),
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE).optional(),
+    structureEntityId: brandedString<"SystemStructureEntityId">(),
+    memberId: brandedString<"MemberId">(),
+    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
   })
   .readonly();
 
-export const CreateSideSystemLayerLinkBodySchema = z
+// ── Structure Entity Associations ───────────────────────────────────
+
+export const CreateStructureEntityAssociationBodySchema = z
   .object({
-    sideSystemId: brandedString<"SideSystemId">(),
-    layerId: brandedString<"LayerId">(),
+    sourceEntityId: brandedString<"SystemStructureEntityId">(),
+    targetEntityId: brandedString<"SystemStructureEntityId">(),
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE).optional(),
   })
   .readonly();

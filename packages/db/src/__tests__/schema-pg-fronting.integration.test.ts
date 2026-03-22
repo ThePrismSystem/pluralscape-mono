@@ -317,13 +317,13 @@ describe("PG fronting schema", () => {
         updatedAt: now,
         memberId,
         customFrontId: cfId,
-        linkedStructure: { entityType: "subsystem", entityId: "r-1" },
+        linkedStructure: { entityType: "structure-entity", entityId: "r-1" },
       });
 
       const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
       expect(rows[0]?.memberId).toBe(memberId);
       expect(rows[0]?.customFrontId).toBe(cfId);
-      expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
+      expect(rows[0]?.linkedStructure).toEqual({ entityType: "structure-entity", entityId: "r-1" });
     });
 
     it("defaults T3 metadata columns to null", async () => {

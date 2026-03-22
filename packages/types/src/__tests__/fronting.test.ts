@@ -43,9 +43,9 @@ describe("FrontingSession", () => {
     expectTypeOf<ActiveFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<ActiveFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ActiveFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<ActiveFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
-      "subsystem" | "side-system" | "layer"
-    > | null>();
+    expectTypeOf<
+      ActiveFrontingSession["linkedStructure"]
+    >().toEqualTypeOf<EntityReference<"structure-entity"> | null>();
     expectTypeOf<ActiveFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ActiveFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
     expectTypeOf<
@@ -61,9 +61,9 @@ describe("FrontingSession", () => {
     expectTypeOf<CompletedFrontingSession["endTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CompletedFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<CompletedFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<CompletedFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
-      "subsystem" | "side-system" | "layer"
-    > | null>();
+    expectTypeOf<
+      CompletedFrontingSession["linkedStructure"]
+    >().toEqualTypeOf<EntityReference<"structure-entity"> | null>();
     expectTypeOf<CompletedFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
     expectTypeOf<CompletedFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
     expectTypeOf<

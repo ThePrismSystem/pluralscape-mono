@@ -782,8 +782,8 @@ describe("analytics type structural parity", () => {
 // 6. BUCKET_CONTENT_ENTITY_TYPES array invariants
 // ---------------------------------------------------------------------------
 describe("BUCKET_CONTENT_ENTITY_TYPES invariants", () => {
-  it("has exactly 22 entries", () => {
-    expect(BUCKET_CONTENT_ENTITY_TYPES).toHaveLength(22);
+  it("has exactly 21 entries", () => {
+    expect(BUCKET_CONTENT_ENTITY_TYPES).toHaveLength(21);
   });
 
   it("has no duplicate values", () => {

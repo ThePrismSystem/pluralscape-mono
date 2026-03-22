@@ -4,11 +4,9 @@ import type {
   HexColor,
   InnerWorldEntityId,
   InnerWorldRegionId,
-  LayerId,
   MemberId,
-  SideSystemId,
-  SubsystemId,
   SystemId,
+  SystemStructureEntityId,
 } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
 import type {
@@ -18,10 +16,8 @@ import type {
   InnerWorldEntity,
   InnerWorldRegion,
   LandmarkEntity,
-  LayerEntity,
   MemberEntity,
-  SideSystemEntity,
-  SubsystemEntity,
+  StructureEntityEntity,
   VisualProperties,
 } from "../innerworld.js";
 import type { Archived, AuditMetadata } from "../utility.js";
@@ -71,51 +67,21 @@ describe("LandmarkEntity", () => {
   });
 });
 
-describe("SubsystemEntity", () => {
+describe("StructureEntityEntity", () => {
   it("extends AuditMetadata", () => {
-    expectTypeOf<SubsystemEntity>().toExtend<AuditMetadata>();
+    expectTypeOf<StructureEntityEntity>().toExtend<AuditMetadata>();
   });
 
   it("has correct discriminator and fields", () => {
-    expectTypeOf<SubsystemEntity["entityType"]>().toEqualTypeOf<"subsystem">();
-    expectTypeOf<SubsystemEntity["linkedSubsystemId"]>().toEqualTypeOf<SubsystemId>();
-    expectTypeOf<SubsystemEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
-    expectTypeOf<SubsystemEntity["positionX"]>().toEqualTypeOf<number>();
-    expectTypeOf<SubsystemEntity["positionY"]>().toEqualTypeOf<number>();
-    expectTypeOf<SubsystemEntity["visual"]>().toEqualTypeOf<VisualProperties>();
-    expectTypeOf<SubsystemEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
-  });
-});
-
-describe("SideSystemEntity", () => {
-  it("extends AuditMetadata", () => {
-    expectTypeOf<SideSystemEntity>().toExtend<AuditMetadata>();
-  });
-
-  it("has correct discriminator and fields", () => {
-    expectTypeOf<SideSystemEntity["entityType"]>().toEqualTypeOf<"side-system">();
-    expectTypeOf<SideSystemEntity["linkedSideSystemId"]>().toEqualTypeOf<SideSystemId>();
-    expectTypeOf<SideSystemEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
-    expectTypeOf<SideSystemEntity["positionX"]>().toEqualTypeOf<number>();
-    expectTypeOf<SideSystemEntity["positionY"]>().toEqualTypeOf<number>();
-    expectTypeOf<SideSystemEntity["visual"]>().toEqualTypeOf<VisualProperties>();
-    expectTypeOf<SideSystemEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
-  });
-});
-
-describe("LayerEntity", () => {
-  it("extends AuditMetadata", () => {
-    expectTypeOf<LayerEntity>().toExtend<AuditMetadata>();
-  });
-
-  it("has correct discriminator and fields", () => {
-    expectTypeOf<LayerEntity["entityType"]>().toEqualTypeOf<"layer">();
-    expectTypeOf<LayerEntity["linkedLayerId"]>().toEqualTypeOf<LayerId>();
-    expectTypeOf<LayerEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
-    expectTypeOf<LayerEntity["positionX"]>().toEqualTypeOf<number>();
-    expectTypeOf<LayerEntity["positionY"]>().toEqualTypeOf<number>();
-    expectTypeOf<LayerEntity["visual"]>().toEqualTypeOf<VisualProperties>();
-    expectTypeOf<LayerEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
+    expectTypeOf<StructureEntityEntity["entityType"]>().toEqualTypeOf<"structure-entity">();
+    expectTypeOf<
+      StructureEntityEntity["linkedStructureEntityId"]
+    >().toEqualTypeOf<SystemStructureEntityId>();
+    expectTypeOf<StructureEntityEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
+    expectTypeOf<StructureEntityEntity["positionX"]>().toEqualTypeOf<number>();
+    expectTypeOf<StructureEntityEntity["positionY"]>().toEqualTypeOf<number>();
+    expectTypeOf<StructureEntityEntity["visual"]>().toEqualTypeOf<VisualProperties>();
+    expectTypeOf<StructureEntityEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
   });
 });
 
@@ -133,15 +99,9 @@ describe("InnerWorldEntity", () => {
         case "landmark":
           expectTypeOf(entity).toEqualTypeOf<LandmarkEntity>();
           return entity.name;
-        case "subsystem":
-          expectTypeOf(entity).toEqualTypeOf<SubsystemEntity>();
-          return entity.linkedSubsystemId;
-        case "side-system":
-          expectTypeOf(entity).toEqualTypeOf<SideSystemEntity>();
-          return entity.linkedSideSystemId;
-        case "layer":
-          expectTypeOf(entity).toEqualTypeOf<LayerEntity>();
-          return entity.linkedLayerId;
+        case "structure-entity":
+          expectTypeOf(entity).toEqualTypeOf<StructureEntityEntity>();
+          return entity.linkedStructureEntityId;
         default: {
           const _exhaustive: never = entity;
           return _exhaustive;

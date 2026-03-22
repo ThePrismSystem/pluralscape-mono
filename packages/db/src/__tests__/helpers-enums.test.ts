@@ -25,7 +25,7 @@ import {
   JOB_STATUSES,
   JOB_TYPES,
   KNOWN_SATURATION_LEVELS,
-  LAYER_ACCESS_TYPES,
+  FIELD_DEFINITION_SCOPE_TYPES,
   LIFECYCLE_EVENT_TYPES,
   NOTIFICATION_EVENT_TYPES,
   PK_SYNC_DIRECTIONS,
@@ -67,8 +67,14 @@ describe("enum arrays", () => {
     expect(RELATIONSHIP_TYPES).toContain("custom");
   });
 
-  it("LAYER_ACCESS_TYPES matches LayerAccessType union", () => {
-    expect(LAYER_ACCESS_TYPES).toEqual(["open", "gatekept"]);
+  it("FIELD_DEFINITION_SCOPE_TYPES matches FieldDefinitionScopeType union", () => {
+    expect(FIELD_DEFINITION_SCOPE_TYPES).toEqual([
+      "system",
+      "member",
+      "group",
+      "structure-entity-type",
+      "all-structure-entity-types",
+    ]);
   });
 
   it("FRIEND_CONNECTION_STATUSES matches FriendConnectionStatus union", () => {
@@ -210,11 +216,14 @@ describe("enum arrays", () => {
   });
 
   it("ENTITY_TYPES matches EntityType union", () => {
-    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(ENTITY_TYPES).toHaveLength(63);
     expect(ENTITY_TYPES).toContain("member");
     expect(ENTITY_TYPES).toContain("system");
     expect(ENTITY_TYPES).toContain("fronting-report");
     expect(ENTITY_TYPES).toContain("bucket-rotation-item");
+    expect(ENTITY_TYPES).toContain("structure-entity-type");
+    expect(ENTITY_TYPES).toContain("structure-entity");
+    expect(ENTITY_TYPES).toContain("field-definition-scope");
   });
 
   it("FRONTING_REPORT_FORMATS matches ReportFormat union", () => {
@@ -271,7 +280,7 @@ describe("enum arrays", () => {
   it("all arrays have correct element counts", () => {
     expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
     expect(RELATIONSHIP_TYPES).toHaveLength(10);
-    expect(LAYER_ACCESS_TYPES).toHaveLength(2);
+    expect(FIELD_DEFINITION_SCOPE_TYPES).toHaveLength(5);
     expect(FRIEND_CONNECTION_STATUSES).toHaveLength(4);
     expect(AUTH_KEY_TYPES).toHaveLength(2);
     expect(DEVICE_TRANSFER_STATUSES).toHaveLength(3);
@@ -297,7 +306,7 @@ describe("enum arrays", () => {
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
     expect(JOB_TYPES).toHaveLength(15);
     expect(JOB_STATUSES).toHaveLength(5);
-    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(ENTITY_TYPES).toHaveLength(63);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
     expect(DISCOVERY_STATUSES).toHaveLength(3);
     expect(ROTATION_STATES).toHaveLength(5);

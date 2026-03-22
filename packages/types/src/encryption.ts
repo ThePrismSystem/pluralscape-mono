@@ -29,7 +29,6 @@ import type {
   InnerWorldEntityId,
   InnerWorldRegionId,
   JournalEntryId,
-  LayerId,
   MemberId,
   MemberPhotoId,
   MessageId,
@@ -38,9 +37,9 @@ import type {
   PollOptionId,
   PollVoteId,
   RelationshipId,
-  SideSystemId,
-  SubsystemId,
   SystemId,
+  SystemStructureEntityTypeId,
+  SystemStructureEntityId,
   TimerId,
   SlugHash,
   WikiPageId,
@@ -48,15 +47,7 @@ import type {
 import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
 import type { JournalEntry, WikiPage } from "./journal.js";
 import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
-import type {
-  RelationshipType,
-  Relationship,
-  Subsystem,
-  SideSystem,
-  Layer,
-  ArchitectureType,
-  DiscoveryStatus,
-} from "./structure.js";
+import type { RelationshipType, Relationship, StructureVisualProps } from "./structure.js";
 import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";
@@ -149,7 +140,8 @@ export interface ServerFrontingSession extends AuditMetadata {
   readonly startTime: UnixMillis;
   readonly endTime: UnixMillis | null;
   readonly customFrontId: CustomFrontId | null;
-  readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  readonly structureEntityId: SystemStructureEntityId | null;
+  readonly linkedStructure: EntityReference<"structure-entity"> | null;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob | null;
 }
@@ -193,24 +185,55 @@ export interface ServerGroup extends AuditMetadata {
 /** Client-side group — flat decrypted fields. */
 export type ClientGroup = Group;
 
+// ── Structure entities ──────────────────────────────────────────
+
 /**
- * Server-side subsystem representation.
- * T1 encrypted: name, description, color, imageSource, emoji
- * T3 plaintext: parentSubsystemId, architectureType, hasCore, discoveryStatus, archived
+ * Server-side structure entity type representation.
+ * T1 encrypted: name, description, emoji, color, imageSource
+ * T3 plaintext: sortOrder, archived
  */
-export interface ServerSubsystem extends AuditMetadata {
-  readonly id: SubsystemId;
+export interface ServerStructureEntityType extends AuditMetadata {
+  readonly id: SystemStructureEntityTypeId;
   readonly systemId: SystemId;
-  readonly parentSubsystemId: SubsystemId | null;
-  readonly architectureType: ArchitectureType | null;
-  readonly hasCore: boolean;
-  readonly discoveryStatus: DiscoveryStatus;
+  readonly sortOrder: number;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
 }
 
-/** Client-side subsystem — flat decrypted fields. */
-export type ClientSubsystem = Subsystem;
+/** Client-side structure entity type — flat decrypted fields. */
+export interface ClientStructureEntityType extends AuditMetadata, StructureVisualProps {
+  readonly id: SystemStructureEntityTypeId;
+  readonly systemId: SystemId;
+  readonly name: string;
+  readonly description: string | null;
+  readonly sortOrder: number;
+  readonly archived: boolean;
+}
+
+/**
+ * Server-side structure entity representation.
+ * T1 encrypted: name, description, emoji, color, imageSource
+ * T3 plaintext: entityTypeId, sortOrder, archived
+ */
+export interface ServerStructureEntity extends AuditMetadata {
+  readonly id: SystemStructureEntityId;
+  readonly systemId: SystemId;
+  readonly entityTypeId: SystemStructureEntityTypeId;
+  readonly sortOrder: number;
+  readonly archived: boolean;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side structure entity — flat decrypted fields. */
+export interface ClientStructureEntity extends AuditMetadata, StructureVisualProps {
+  readonly id: SystemStructureEntityId;
+  readonly systemId: SystemId;
+  readonly entityTypeId: SystemStructureEntityTypeId;
+  readonly name: string;
+  readonly description: string | null;
+  readonly sortOrder: number;
+  readonly archived: boolean;
+}
 
 /**
  * Server-side relationship representation.
@@ -332,11 +355,14 @@ export type ClientFieldDefinition = FieldDefinition;
 /**
  * Server-side field value representation.
  * T1 encrypted: value
+ * T3 plaintext: fieldDefinitionId, memberId, structureEntityId, groupId
  */
 export interface ServerFieldValue extends AuditMetadata {
   readonly id: FieldValueId;
   readonly fieldDefinitionId: FieldDefinitionId;
   readonly memberId: MemberId;
+  readonly structureEntityId: SystemStructureEntityId | null;
+  readonly groupId: GroupId | null;
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -508,7 +534,7 @@ export interface ServerPollVote {
   readonly id: PollVoteId;
   readonly pollId: PollId;
   readonly optionId: PollOptionId | null;
-  readonly voter: EntityReference<"member" | "subsystem" | "side-system" | "layer"> | null;
+  readonly voter: EntityReference<"member" | "structure-entity"> | null;
   readonly isVeto: boolean | null;
   readonly votedAt: UnixMillis | null;
   readonly archived: boolean;
@@ -536,45 +562,6 @@ export interface ServerAcknowledgementRequest extends AuditMetadata {
 
 /** Client-side acknowledgement request — flat decrypted fields. */
 export type ClientAcknowledgementRequest = AcknowledgementRequest;
-
-// ── Side systems ───────────────────────────────────────────────
-
-/**
- * Server-side side system representation.
- * T1 encrypted: name, description, color, imageSource, emoji
- * T3 plaintext: archived
- */
-export interface ServerSideSystem extends AuditMetadata {
-  readonly id: SideSystemId;
-  readonly systemId: SystemId;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side side system — flat decrypted fields. */
-export type ClientSideSystem = SideSystem;
-
-// ── Layers ─────────────────────────────────────────────────────
-
-/**
- * Server-side layer representation.
- * T1 encrypted: name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds
- * T3 plaintext: archived
- *
- * Note: accessType and gatekeeperMemberIds are semantically T3 (server-readable
- * would enable server-side gating), but no DB column exists for either field.
- * They live inside encryptedData for coherence with the zero-knowledge model.
- * If server-side gating is needed later, add real columns and move them to T3.
- */
-export interface ServerLayer extends AuditMetadata {
-  readonly id: LayerId;
-  readonly systemId: SystemId;
-  readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob;
-}
-
-/** Client-side layer — flat decrypted fields. */
-export type ClientLayer = Layer;
 
 // ── Timer config ───────────────────────────────────────────────
 
@@ -635,7 +622,8 @@ export type ServerResponseData =
   | ServerFrontingSession
   | ServerFrontingComment
   | ServerGroup
-  | ServerSubsystem
+  | ServerStructureEntityType
+  | ServerStructureEntity
   | ServerRelationship
   | ServerChannel
   | ServerChatMessage
@@ -653,8 +641,6 @@ export type ServerResponseData =
   | ServerPoll
   | ServerPollVote
   | ServerAcknowledgementRequest
-  | ServerSideSystem
-  | ServerLayer
   | ServerTimerConfig
   | ServerAuditLogEntry;
 
@@ -664,7 +650,8 @@ export type ClientResponseData =
   | ClientFrontingSession
   | ClientFrontingComment
   | ClientGroup
-  | ClientSubsystem
+  | ClientStructureEntityType
+  | ClientStructureEntity
   | ClientRelationship
   | ClientChannel
   | ClientChatMessage
@@ -682,8 +669,6 @@ export type ClientResponseData =
   | ClientPoll
   | ClientPollVote
   | ClientAcknowledgementRequest
-  | ClientSideSystem
-  | ClientLayer
   | ClientTimerConfig
   | ClientAuditLogEntry;
 
@@ -698,17 +683,18 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // ── Tier map ───────────────────────────────────────────────────
 //
 // Member: T1 (name, pronouns, description, tags, colors, avatarSource, saturationLevel, suppressFriendFrontNotification, boardMessageNotificationOnFront) | T3 (archived)
-// FrontingSession: T1 (comment, positionality, outtrigger, outtriggerSentiment) | T3 (timestamps, memberId, customFrontId, linkedStructure, archived)
+// FrontingSession: T1 (comment, positionality, outtrigger, outtriggerSentiment) | T3 (timestamps, memberId, customFrontId, structureEntityId, linkedStructure, archived)
 // FrontingComment: T1 (content) | T3 (frontingSessionId, memberId, archived) — extends AuditMetadata
 // Group: T1 (name, description, imageSource, color, emoji) | T3 (sortOrder, archived, parentGroupId)
-// Subsystem: T1 (name, description, color, imageSource, emoji) | T3 (parentSubsystemId, architectureType, hasCore, discoveryStatus, archived)
+// StructureEntityType: T1 (name, description, emoji, color, imageSource) | T3 (sortOrder, archived)
+// StructureEntity: T1 (name, description, emoji, color, imageSource) | T3 (entityTypeId, sortOrder, archived)
 // Relationship: T1 (label) | T3 (type, sourceMemberId, targetMemberId, bidirectional, archived)
 // Channel: T1 (name) | T3 (type, parentId, sortOrder, archived)
 // ChatMessage: T1 (content, attachments, senderId) | T3 (channelId, replyToId, timestamp, editedAt, archived)
 // BoardMessage: T1 (content, senderId) | T3 (pinned, sortOrder, archived)
 // Note: T1 (title, content, backgroundColor) | T3 (memberId, archived)
 // FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder, archived)
-// FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId)
+// FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId, structureEntityId, groupId)
 // InnerWorldEntity: T1 (linked entity refs, description, visual, entityType, positionX, positionY) | T3 (regionId, archived)
 // InnerWorldRegion: T1 (name, description, boundaryData, visual, gatekeeperMemberIds, accessType) | T3 (parentRegionId, archived)
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
@@ -719,8 +705,6 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Poll: T1 (title, options, description) | T3 (createdByMemberId, kind, status, closedAt, endsAt, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto, archived)
 // PollVote: T1 (comment) | T3 (pollId, optionId, voter, isVeto, votedAt, archived)
 // AcknowledgementRequest: T1 (message, targetMemberId, confirmedAt) | T3 (createdByMemberId, confirmed, archived)
-// SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (archived)
-// Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (archived)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled, archived)
 // AuditLogEntry: T3 (all fields — detail, eventType, actor, ipAddress, userAgent, timestamp; server-readable for security monitoring)
 //

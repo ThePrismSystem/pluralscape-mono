@@ -2,39 +2,33 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
   HexColor,
-  LayerId,
   MemberId,
   RelationshipId,
-  SideSystemId,
-  SubsystemId,
   SystemId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+  SystemStructureEntityMemberLinkId,
+  SystemStructureEntityTypeId,
 } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
 import type {
   ArchitectureType,
-  ArchivedLayer,
   ArchivedRelationship,
-  ArchivedSideSystem,
-  ArchivedSubsystem,
+  ArchivedSystemStructureEntity,
+  ArchivedSystemStructureEntityType,
   DiscoveryStatus,
-  GatekeptLayer,
   KnownArchitectureType,
-  Layer,
-  LayerAccessType,
-  LayerMembership,
-  OpenLayer,
   OriginType,
   Relationship,
   RelationshipType,
-  SideSystem,
-  SideSystemLayerLink,
-  SideSystemMembership,
   StructureVisualProps,
-  Subsystem,
-  SubsystemLayerLink,
-  SubsystemMembership,
-  SubsystemSideSystemLink,
   SystemProfile,
+  SystemStructureEntity,
+  SystemStructureEntityAssociation,
+  SystemStructureEntityLink,
+  SystemStructureEntityMemberLink,
+  SystemStructureEntityType,
 } from "../structure.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
@@ -258,28 +252,6 @@ describe("SystemProfile", () => {
   });
 });
 
-describe("LayerAccessType", () => {
-  it("is exhaustive in a switch", () => {
-    function handleType(type: LayerAccessType): string {
-      switch (type) {
-        case "open":
-        case "gatekept":
-          return type;
-        default: {
-          const _exhaustive: never = type;
-          return _exhaustive;
-        }
-      }
-    }
-    expectTypeOf(handleType).toBeFunction();
-  });
-
-  it("rejects invalid values", () => {
-    // @ts-expect-error invalid access type
-    assertType<LayerAccessType>("restricted");
-  });
-});
-
 describe("StructureVisualProps", () => {
   it("has exactly the expected keys", () => {
     expectTypeOf<keyof StructureVisualProps>().toEqualTypeOf<"color" | "imageSource" | "emoji">();
@@ -292,186 +264,144 @@ describe("StructureVisualProps", () => {
   });
 });
 
-describe("Subsystem", () => {
+describe("SystemStructureEntityType", () => {
   it("extends AuditMetadata", () => {
-    expectTypeOf<Subsystem>().toExtend<AuditMetadata>();
+    expectTypeOf<SystemStructureEntityType>().toExtend<AuditMetadata>();
   });
 
   it("extends StructureVisualProps", () => {
-    expectTypeOf<Subsystem>().toExtend<StructureVisualProps>();
+    expectTypeOf<SystemStructureEntityType>().toExtend<StructureVisualProps>();
   });
 
   it("has correct field types", () => {
-    expectTypeOf<Subsystem["id"]>().toEqualTypeOf<SubsystemId>();
-    expectTypeOf<Subsystem["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Subsystem["name"]>().toBeString();
-    expectTypeOf<Subsystem["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<Subsystem["architectureType"]>().toEqualTypeOf<ArchitectureType | null>();
-    expectTypeOf<Subsystem["hasCore"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<Subsystem["discoveryStatus"]>().toEqualTypeOf<DiscoveryStatus>();
-    expectTypeOf<Subsystem["color"]>().toEqualTypeOf<HexColor | null>();
-    expectTypeOf<Subsystem["imageSource"]>().toEqualTypeOf<ImageSource | null>();
-    expectTypeOf<Subsystem["emoji"]>().toEqualTypeOf<string | null>();
-  });
-
-  it("has recursive parentSubsystemId", () => {
-    expectTypeOf<Subsystem["parentSubsystemId"]>().toEqualTypeOf<SubsystemId | null>();
+    expectTypeOf<SystemStructureEntityType["id"]>().toEqualTypeOf<SystemStructureEntityTypeId>();
+    expectTypeOf<SystemStructureEntityType["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<SystemStructureEntityType["name"]>().toBeString();
+    expectTypeOf<SystemStructureEntityType["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SystemStructureEntityType["sortOrder"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemStructureEntityType["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<SystemStructureEntityType["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<SystemStructureEntityType["emoji"]>().toEqualTypeOf<string | null>();
   });
 
   it("has archived as false literal", () => {
-    expectTypeOf<Subsystem["archived"]>().toEqualTypeOf<false>();
+    expectTypeOf<SystemStructureEntityType["archived"]>().toEqualTypeOf<false>();
   });
 });
 
-describe("ArchivedSubsystem", () => {
+describe("ArchivedSystemStructureEntityType", () => {
   it("has archived as true literal", () => {
-    expectTypeOf<ArchivedSubsystem["archived"]>().toEqualTypeOf<true>();
+    expectTypeOf<ArchivedSystemStructureEntityType["archived"]>().toEqualTypeOf<true>();
   });
 
-  it("has archivedAt timestamp", () => {
-    expectTypeOf<ArchivedSubsystem["archivedAt"]>().toEqualTypeOf<UnixMillis>();
-  });
-
-  it("preserves core Subsystem fields", () => {
-    expectTypeOf<ArchivedSubsystem["id"]>().toEqualTypeOf<SubsystemId>();
-    expectTypeOf<ArchivedSubsystem["systemId"]>().toEqualTypeOf<SystemId>();
+  it("preserves core fields", () => {
+    expectTypeOf<
+      ArchivedSystemStructureEntityType["id"]
+    >().toEqualTypeOf<SystemStructureEntityTypeId>();
+    expectTypeOf<ArchivedSystemStructureEntityType["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 
-describe("SideSystem", () => {
+describe("SystemStructureEntity", () => {
   it("extends AuditMetadata", () => {
-    expectTypeOf<SideSystem>().toExtend<AuditMetadata>();
+    expectTypeOf<SystemStructureEntity>().toExtend<AuditMetadata>();
   });
 
   it("extends StructureVisualProps", () => {
-    expectTypeOf<SideSystem>().toExtend<StructureVisualProps>();
+    expectTypeOf<SystemStructureEntity>().toExtend<StructureVisualProps>();
   });
 
   it("has correct field types", () => {
-    expectTypeOf<SideSystem["id"]>().toEqualTypeOf<SideSystemId>();
-    expectTypeOf<SideSystem["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<SideSystem["name"]>().toBeString();
-    expectTypeOf<SideSystem["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<SideSystem["color"]>().toEqualTypeOf<HexColor | null>();
-    expectTypeOf<SideSystem["imageSource"]>().toEqualTypeOf<ImageSource | null>();
-    expectTypeOf<SideSystem["emoji"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SystemStructureEntity["id"]>().toEqualTypeOf<SystemStructureEntityId>();
+    expectTypeOf<SystemStructureEntity["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<
+      SystemStructureEntity["entityTypeId"]
+    >().toEqualTypeOf<SystemStructureEntityTypeId>();
+    expectTypeOf<SystemStructureEntity["name"]>().toBeString();
+    expectTypeOf<SystemStructureEntity["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SystemStructureEntity["sortOrder"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemStructureEntity["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<SystemStructureEntity["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<SystemStructureEntity["emoji"]>().toEqualTypeOf<string | null>();
   });
 
   it("has archived as false literal", () => {
-    expectTypeOf<SideSystem["archived"]>().toEqualTypeOf<false>();
+    expectTypeOf<SystemStructureEntity["archived"]>().toEqualTypeOf<false>();
   });
 });
 
-describe("ArchivedSideSystem", () => {
+describe("ArchivedSystemStructureEntity", () => {
   it("has archived as true literal", () => {
-    expectTypeOf<ArchivedSideSystem["archived"]>().toEqualTypeOf<true>();
+    expectTypeOf<ArchivedSystemStructureEntity["archived"]>().toEqualTypeOf<true>();
   });
 
-  it("has archivedAt timestamp", () => {
-    expectTypeOf<ArchivedSideSystem["archivedAt"]>().toEqualTypeOf<UnixMillis>();
-  });
-
-  it("preserves core SideSystem fields", () => {
-    expectTypeOf<ArchivedSideSystem["id"]>().toEqualTypeOf<SideSystemId>();
-    expectTypeOf<ArchivedSideSystem["systemId"]>().toEqualTypeOf<SystemId>();
-  });
-});
-
-describe("Layer", () => {
-  it("both variants extend AuditMetadata", () => {
-    expectTypeOf<OpenLayer>().toExtend<AuditMetadata>();
-    expectTypeOf<GatekeptLayer>().toExtend<AuditMetadata>();
-  });
-
-  it("discriminates on accessType", () => {
-    function handleLayer(layer: Layer): void {
-      if (layer.accessType === "open") {
-        expectTypeOf(layer).toEqualTypeOf<OpenLayer>();
-        expectTypeOf(layer.gatekeeperMemberIds).toEqualTypeOf<readonly []>();
-      } else {
-        expectTypeOf(layer).toEqualTypeOf<GatekeptLayer>();
-        expectTypeOf(layer.gatekeeperMemberIds).toEqualTypeOf<readonly MemberId[]>();
-      }
-    }
-    expectTypeOf(handleLayer).toBeFunction();
-  });
-
-  it("has correct shared field types", () => {
-    expectTypeOf<Layer["id"]>().toEqualTypeOf<LayerId>();
-    expectTypeOf<Layer["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Layer["name"]>().toBeString();
-    expectTypeOf<Layer["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<Layer["accessType"]>().toEqualTypeOf<LayerAccessType>();
-    expectTypeOf<Layer["color"]>().toEqualTypeOf<HexColor | null>();
-    expectTypeOf<Layer["imageSource"]>().toEqualTypeOf<ImageSource | null>();
-    expectTypeOf<Layer["emoji"]>().toEqualTypeOf<string | null>();
-  });
-
-  it("has archived as false literal on both variants", () => {
-    expectTypeOf<OpenLayer["archived"]>().toEqualTypeOf<false>();
-    expectTypeOf<GatekeptLayer["archived"]>().toEqualTypeOf<false>();
+  it("preserves core fields", () => {
+    expectTypeOf<ArchivedSystemStructureEntity["id"]>().toEqualTypeOf<SystemStructureEntityId>();
+    expectTypeOf<ArchivedSystemStructureEntity["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<
+      ArchivedSystemStructureEntity["entityTypeId"]
+    >().toEqualTypeOf<SystemStructureEntityTypeId>();
   });
 });
 
-describe("ArchivedLayer", () => {
-  it("has archived as true literal", () => {
-    expectTypeOf<ArchivedLayer["archived"]>().toEqualTypeOf<true>();
+describe("SystemStructureEntityLink", () => {
+  it("has correct field types", () => {
+    expectTypeOf<SystemStructureEntityLink["id"]>().toEqualTypeOf<SystemStructureEntityLinkId>();
+    expectTypeOf<SystemStructureEntityLink["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<SystemStructureEntityLink["entityId"]>().toEqualTypeOf<SystemStructureEntityId>();
+    expectTypeOf<
+      SystemStructureEntityLink["parentEntityId"]
+    >().toEqualTypeOf<SystemStructureEntityId | null>();
+    expectTypeOf<SystemStructureEntityLink["sortOrder"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemStructureEntityLink["createdAt"]>().toEqualTypeOf<UnixMillis>();
   });
 
-  it("has archivedAt timestamp", () => {
-    expectTypeOf<ArchivedLayer["archivedAt"]>().toEqualTypeOf<UnixMillis>();
-  });
-
-  it("preserves core Layer fields", () => {
-    expectTypeOf<ArchivedLayer["id"]>().toEqualTypeOf<LayerId>();
-    expectTypeOf<ArchivedLayer["systemId"]>().toEqualTypeOf<SystemId>();
-  });
-});
-
-describe("SubsystemMembership", () => {
-  it("has exactly subsystemId and memberId", () => {
-    expectTypeOf<SubsystemMembership["subsystemId"]>().toEqualTypeOf<SubsystemId>();
-    expectTypeOf<SubsystemMembership["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<keyof SubsystemMembership>().toEqualTypeOf<"subsystemId" | "memberId">();
+  it("has exact shape", () => {
+    expectTypeOf<keyof SystemStructureEntityLink>().toEqualTypeOf<
+      "id" | "systemId" | "entityId" | "parentEntityId" | "sortOrder" | "createdAt"
+    >();
   });
 });
 
-describe("SideSystemMembership", () => {
-  it("has exactly sideSystemId and memberId", () => {
-    expectTypeOf<SideSystemMembership["sideSystemId"]>().toEqualTypeOf<SideSystemId>();
-    expectTypeOf<SideSystemMembership["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<keyof SideSystemMembership>().toEqualTypeOf<"sideSystemId" | "memberId">();
+describe("SystemStructureEntityMemberLink", () => {
+  it("has correct field types", () => {
+    expectTypeOf<
+      SystemStructureEntityMemberLink["id"]
+    >().toEqualTypeOf<SystemStructureEntityMemberLinkId>();
+    expectTypeOf<SystemStructureEntityMemberLink["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<
+      SystemStructureEntityMemberLink["parentEntityId"]
+    >().toEqualTypeOf<SystemStructureEntityId | null>();
+    expectTypeOf<SystemStructureEntityMemberLink["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<SystemStructureEntityMemberLink["sortOrder"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemStructureEntityMemberLink["createdAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof SystemStructureEntityMemberLink>().toEqualTypeOf<
+      "id" | "systemId" | "parentEntityId" | "memberId" | "sortOrder" | "createdAt"
+    >();
   });
 });
 
-describe("LayerMembership", () => {
-  it("has exactly layerId and memberId", () => {
-    expectTypeOf<LayerMembership["layerId"]>().toEqualTypeOf<LayerId>();
-    expectTypeOf<LayerMembership["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<keyof LayerMembership>().toEqualTypeOf<"layerId" | "memberId">();
+describe("SystemStructureEntityAssociation", () => {
+  it("has correct field types", () => {
+    expectTypeOf<
+      SystemStructureEntityAssociation["id"]
+    >().toEqualTypeOf<SystemStructureEntityAssociationId>();
+    expectTypeOf<SystemStructureEntityAssociation["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<
+      SystemStructureEntityAssociation["sourceEntityId"]
+    >().toEqualTypeOf<SystemStructureEntityId>();
+    expectTypeOf<
+      SystemStructureEntityAssociation["targetEntityId"]
+    >().toEqualTypeOf<SystemStructureEntityId>();
+    expectTypeOf<SystemStructureEntityAssociation["createdAt"]>().toEqualTypeOf<UnixMillis>();
   });
-});
 
-describe("SubsystemLayerLink", () => {
-  it("has exactly subsystemId and layerId", () => {
-    expectTypeOf<SubsystemLayerLink["subsystemId"]>().toEqualTypeOf<SubsystemId>();
-    expectTypeOf<SubsystemLayerLink["layerId"]>().toEqualTypeOf<LayerId>();
-    expectTypeOf<keyof SubsystemLayerLink>().toEqualTypeOf<"subsystemId" | "layerId">();
-  });
-});
-
-describe("SubsystemSideSystemLink", () => {
-  it("has exactly subsystemId and sideSystemId", () => {
-    expectTypeOf<SubsystemSideSystemLink["subsystemId"]>().toEqualTypeOf<SubsystemId>();
-    expectTypeOf<SubsystemSideSystemLink["sideSystemId"]>().toEqualTypeOf<SideSystemId>();
-    expectTypeOf<keyof SubsystemSideSystemLink>().toEqualTypeOf<"subsystemId" | "sideSystemId">();
-  });
-});
-
-describe("SideSystemLayerLink", () => {
-  it("has exactly sideSystemId and layerId", () => {
-    expectTypeOf<SideSystemLayerLink["sideSystemId"]>().toEqualTypeOf<SideSystemId>();
-    expectTypeOf<SideSystemLayerLink["layerId"]>().toEqualTypeOf<LayerId>();
-    expectTypeOf<keyof SideSystemLayerLink>().toEqualTypeOf<"sideSystemId" | "layerId">();
+  it("has exact shape", () => {
+    expectTypeOf<keyof SystemStructureEntityAssociation>().toEqualTypeOf<
+      "id" | "systemId" | "sourceEntityId" | "targetEntityId" | "createdAt"
+    >();
   });
 });

@@ -172,7 +172,7 @@ describe("JournalEntry", () => {
     expectTypeOf<JournalEntry["id"]>().toEqualTypeOf<JournalEntryId>();
     expectTypeOf<JournalEntry["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<JournalEntry["author"]>().toEqualTypeOf<EntityReference<
-      "member" | "subsystem" | "side-system" | "layer"
+      "member" | "structure-entity"
     > | null>();
     expectTypeOf<JournalEntry["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId | null>();
     expectTypeOf<JournalEntry["title"]>().toBeString();

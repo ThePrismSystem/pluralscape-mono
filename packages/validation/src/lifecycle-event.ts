@@ -24,7 +24,7 @@ export { LIFECYCLE_EVENT_TYPES };
 // ── Per-event-type plaintext metadata schemas ─────────────────────
 
 const memberIdArray = z.array(brandedString<"MemberId">()).min(1);
-const structureIdArray = z.array(brandedString<"SubsystemId">()).min(1);
+const structureIdArray = z.array(brandedString<"SystemStructureEntityId">()).min(1);
 const entityIdArray = z.array(brandedString<"InnerWorldEntityId">()).min(1);
 const regionIdArray = z.array(brandedString<"InnerWorldRegionId">()).min(1);
 
@@ -46,7 +46,7 @@ const SubsystemFormationMetadataSchema = z.object({
 
 const StructureMoveMetadataSchema = z.object({
   memberIds: memberIdArray.length(1),
-  structureIds: z.array(brandedString<"SubsystemId">()).length(2),
+  structureIds: z.array(brandedString<"SystemStructureEntityId">()).length(2),
 });
 
 const InnerworldMoveMetadataSchema = z.object({
@@ -82,7 +82,7 @@ export function validateLifecycleMetadata(
 
 const PlaintextMetadataSchema = z.object({
   memberIds: z.array(brandedString<"MemberId">()).optional(),
-  structureIds: z.array(brandedString<"SubsystemId">()).optional(),
+  structureIds: z.array(brandedString<"SystemStructureEntityId">()).optional(),
   entityIds: z.array(brandedString<"InnerWorldEntityId">()).optional(),
   regionIds: z.array(brandedString<"InnerWorldRegionId">()).optional(),
 });

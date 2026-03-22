@@ -5,6 +5,7 @@ import type {
   HexColor,
   MemberId,
   SystemId,
+  SystemStructureEntityId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
@@ -21,8 +22,10 @@ interface FrontingSessionBase extends AuditMetadata {
   /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
   readonly comment: string | null;
   readonly customFrontId: CustomFrontId | null;
-  /** Reference to a linked structure entity (subsystem, side system, or layer). */
-  readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  /** CHECK: structureEntityId is the direct FK; linkedStructure is the typed reference. */
+  readonly structureEntityId: SystemStructureEntityId | null;
+  /** Reference to a linked structure entity. */
+  readonly linkedStructure: EntityReference<"structure-entity"> | null;
   /** Free-text description of fronting positionality (e.g. close vs far, height). */
   readonly positionality: string | null;
   /** Free-text reason describing what caused the fronting change. Stored in T1 encrypted blob. */

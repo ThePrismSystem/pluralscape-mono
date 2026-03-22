@@ -236,7 +236,7 @@ describe("PollVote", () => {
     expectTypeOf<PollVote["pollId"]>().toEqualTypeOf<PollId>();
     expectTypeOf<PollVote["optionId"]>().toEqualTypeOf<PollOptionId | null>();
     expectTypeOf<PollVote["voter"]>().toEqualTypeOf<
-      EntityReference<"member" | "subsystem" | "side-system" | "layer">
+      EntityReference<"member" | "structure-entity">
     >();
     expectTypeOf<PollVote["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<PollVote["isVeto"]>().toEqualTypeOf<boolean>();

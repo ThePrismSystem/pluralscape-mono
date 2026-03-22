@@ -48,12 +48,10 @@ export {
 } from "./key-rotation.js";
 export { AuditLogQuerySchema } from "./audit-log-query.js";
 export {
-  CreateSubsystemBodySchema,
-  UpdateSubsystemBodySchema,
-  CreateSideSystemBodySchema,
-  UpdateSideSystemBodySchema,
-  CreateLayerBodySchema,
-  UpdateLayerBodySchema,
+  CreateStructureEntityTypeBodySchema,
+  UpdateStructureEntityTypeBodySchema,
+  CreateStructureEntityBodySchema,
+  UpdateStructureEntityBodySchema,
 } from "./structure.js";
 export { CreateRelationshipBodySchema, UpdateRelationshipBodySchema } from "./relationship.js";
 export {
@@ -64,9 +62,9 @@ export {
 export type { PlaintextMetadata } from "./lifecycle-event.js";
 export {
   AddStructureMembershipBodySchema,
-  CreateSubsystemLayerLinkBodySchema,
-  CreateSubsystemSideSystemLinkBodySchema,
-  CreateSideSystemLayerLinkBodySchema,
+  CreateStructureEntityLinkBodySchema,
+  CreateStructureEntityMemberLinkBodySchema,
+  CreateStructureEntityAssociationBodySchema,
 } from "./structure-junction.js";
 export {
   CreateRegionBodySchema,
@@ -82,9 +80,9 @@ export {
   InnerWorldEntityQuerySchema,
   LifecycleEventQuerySchema,
   RelationshipQuerySchema,
-  SideSystemLayerQuerySchema,
-  SubsystemLayerQuerySchema,
-  SubsystemSideSystemQuerySchema,
+  StructureEntityLinkQuerySchema,
+  StructureEntityMemberLinkQuerySchema,
+  StructureEntityAssociationQuerySchema,
 } from "./query-params.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,

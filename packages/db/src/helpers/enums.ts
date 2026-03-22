@@ -19,13 +19,13 @@ import type {
   EntityType,
   ExportFormat,
   ExportRequestStatus,
+  FieldDefinitionScopeType,
   FriendConnectionStatus,
   ImportJobStatus,
   ImportSource,
   JobStatus,
   JobType,
   KnownSaturationLevel,
-  LayerAccessType,
   LifecycleEventType,
   NotificationEventType,
   PKSyncDirection,
@@ -63,10 +63,6 @@ export const RELATIONSHIP_TYPES = [
   "source",
   "custom",
 ] as const satisfies readonly RelationshipType[];
-export const LAYER_ACCESS_TYPES = [
-  "open",
-  "gatekept",
-] as const satisfies readonly LayerAccessType[];
 export const DISCOVERY_STATUSES = [
   "fully-mapped",
   "partially-mapped",
@@ -397,9 +393,11 @@ export const ENTITY_TYPES = [
   "note",
   "poll",
   "relationship",
-  "subsystem",
-  "side-system",
-  "layer",
+  "structure-entity-type",
+  "structure-entity",
+  "structure-entity-link",
+  "structure-entity-member-link",
+  "structure-entity-association",
   "journal-entry",
   "wiki-page",
   "custom-front",
@@ -447,6 +445,8 @@ export const ENTITY_TYPES = [
   "bucket-key-rotation",
   "bucket-rotation-item",
   "system-snapshot",
+  "biometric-token",
+  "field-definition-scope",
 ] as const satisfies readonly EntityType[];
 export const FRONTING_REPORT_FORMATS = ["html", "pdf"] as const satisfies readonly ReportFormat[];
 export const SNAPSHOT_TRIGGERS = [
@@ -469,9 +469,8 @@ export const BUCKET_CONTENT_ENTITY_TYPES = [
   "note",
   "poll",
   "relationship",
-  "subsystem",
-  "side-system",
-  "layer",
+  "structure-entity-type",
+  "structure-entity",
   "journal-entry",
   "wiki-page",
   "custom-front",
@@ -485,6 +484,14 @@ export const BUCKET_CONTENT_ENTITY_TYPES = [
   "member-photo",
   "fronting-comment",
 ] as const satisfies readonly BucketContentEntityType[];
+
+export const FIELD_DEFINITION_SCOPE_TYPES = [
+  "system",
+  "member",
+  "group",
+  "structure-entity-type",
+  "all-structure-entity-types",
+] as const satisfies readonly FieldDefinitionScopeType[];
 
 /** Runtime validation for BucketContentEntityType — rejects unknown strings at the trust boundary. */
 export function parseBucketContentEntityType(value: unknown): BucketContentEntityType {

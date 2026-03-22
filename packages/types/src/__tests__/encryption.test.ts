@@ -25,15 +25,14 @@ import type {
   ClientInnerWorldEntity,
   ClientInnerWorldRegion,
   ClientJournalEntry,
-  ClientLayer,
   ClientLifecycleEvent,
   ClientMember,
   ClientMemberPhoto,
   ClientNote,
   ClientPoll,
   ClientRelationship,
-  ClientSideSystem,
-  ClientSubsystem,
+  ClientStructureEntity,
+  ClientStructureEntityType,
   ClientTimerConfig,
   ClientWikiPage,
   DecryptFn,
@@ -54,7 +53,6 @@ import type {
   ServerFrontingSession,
   ServerGroup,
   ServerJournalEntry,
-  ServerLayer,
   ServerLifecycleEvent,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
@@ -63,8 +61,8 @@ import type {
   ServerNote,
   ServerPoll,
   ServerRelationship,
-  ServerSideSystem,
-  ServerSubsystem,
+  ServerStructureEntity,
+  ServerStructureEntityType,
   ServerTimerConfig,
   ServerFrontingComment,
   ClientFrontingComment,
@@ -90,7 +88,7 @@ import type {
 } from "../ids.js";
 import type { JournalEntry, WikiPage } from "../journal.js";
 import type { LifecycleEvent } from "../lifecycle.js";
-import type { Layer, Relationship, SideSystem, Subsystem } from "../structure.js";
+import type { Relationship } from "../structure.js";
 import type { TimerConfig } from "../timer.js";
 import type { UnixMillis } from "../timestamps.js";
 
@@ -194,9 +192,18 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ClientGroup>().toEqualTypeOf<Group>();
   });
 
-  it("subsystem pair", () => {
-    expectTypeOf<ServerSubsystem>().toBeObject();
-    expectTypeOf<ClientSubsystem>().toEqualTypeOf<Subsystem>();
+  it("structure entity type pair", () => {
+    expectTypeOf<ServerStructureEntityType>().toBeObject();
+    expectTypeOf<ServerStructureEntityType["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<ClientStructureEntityType>().toBeObject();
+    expectTypeOf<ClientStructureEntityType["name"]>().toBeString();
+  });
+
+  it("structure entity pair", () => {
+    expectTypeOf<ServerStructureEntity>().toBeObject();
+    expectTypeOf<ServerStructureEntity["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<ClientStructureEntity>().toBeObject();
+    expectTypeOf<ClientStructureEntity["name"]>().toBeString();
   });
 
   it("relationship pair", () => {
@@ -253,18 +260,6 @@ describe("Server/Client pairs exist for completed domains", () => {
     >().toEqualTypeOf<MemberId | null>();
     expectTypeOf<ServerAcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();
     expectTypeOf<ClientAcknowledgementRequest>().toEqualTypeOf<AcknowledgementRequest>();
-  });
-
-  it("side system pair", () => {
-    expectTypeOf<ServerSideSystem>().toBeObject();
-    expectTypeOf<ServerSideSystem["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientSideSystem>().toEqualTypeOf<SideSystem>();
-  });
-
-  it("layer pair", () => {
-    expectTypeOf<ServerLayer>().toBeObject();
-    expectTypeOf<ServerLayer["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ClientLayer>().toEqualTypeOf<Layer>();
   });
 
   it("timer config pair", () => {
@@ -372,16 +367,6 @@ describe("T1 encrypted field absence on server types", () => {
   it("ServerInnerWorldRegion must not have gatekeeperMemberIds", () => {
     // @ts-expect-error - field moved to T1 encrypted
     expectTypeOf<ServerInnerWorldRegion["gatekeeperMemberIds"]>();
-  });
-
-  it("ServerLayer must not have gatekeeperMemberIds", () => {
-    // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerLayer["gatekeeperMemberIds"]>();
-  });
-
-  it("ServerLayer must not have accessType", () => {
-    // @ts-expect-error - field moved to T1 encrypted
-    expectTypeOf<ServerLayer["accessType"]>();
   });
 
   it("ServerChatMessage must not have senderId", () => {

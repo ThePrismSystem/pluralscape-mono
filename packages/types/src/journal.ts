@@ -111,7 +111,7 @@ export interface EntityLink {
 /** Shared base fields for all fronting snapshot entry variants (unexported). */
 interface FrontingSnapshotEntryBase {
   readonly sessionId: FrontingSessionId;
-  readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  readonly linkedStructure: EntityReference<"structure-entity"> | null;
   readonly startTime: UnixMillis;
 }
 
@@ -142,7 +142,7 @@ export interface FrontingSnapshot {
 export interface JournalEntry extends AuditMetadata {
   readonly id: JournalEntryId;
   readonly systemId: SystemId;
-  readonly author: EntityReference<"member" | "subsystem" | "side-system" | "layer"> | null;
+  readonly author: EntityReference<"member" | "structure-entity"> | null;
   readonly frontingSessionId: FrontingSessionId | null;
   readonly title: string;
   readonly blocks: readonly JournalBlock[];

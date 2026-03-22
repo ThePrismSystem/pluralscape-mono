@@ -22,7 +22,7 @@ import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
+import type { ServerRelationship } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = sqliteTable(
@@ -65,9 +65,9 @@ export const subsystems = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: text("parent_subsystem_id"),
-    architectureType: sqliteJson("architecture_type").$type<ServerSubsystem["architectureType"]>(),
+    architectureType: sqliteJson("architecture_type"),
     hasCore: integer("has_core", { mode: "boolean" }).notNull().default(false),
-    discoveryStatus: text("discovery_status").$type<ServerSubsystem["discoveryStatus"]>(),
+    discoveryStatus: text("discovery_status"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
