@@ -6,6 +6,8 @@
 
 **Note (2026-03-17):** Entity-to-entity FKs have been changed from CASCADE/SET NULL to RESTRICT. The verdicts below reflect the pre-RESTRICT state. With RESTRICT, all entities with inbound entity FKs will block on deletion until dependents are removed first.
 
+**Note (2026-03-22):** The structure entity refactor (PRs #236-#238) replaced the Subsystem, Side System, and Layer tables with generic structure entity tables (`system_structure_entity_types`, `system_structure_entities`, plus link/association tables). The FK sections for those three entities below reflect the pre-refactor schema.
+
 ---
 
 ## Scope of This Audit

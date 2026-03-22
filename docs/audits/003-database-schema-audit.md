@@ -4,6 +4,8 @@
 **Scope:** Audit all ~27 active `db-*` bean schemas against canonical type definitions (`packages/types/src/`), ADRs, and features.md
 **Methodology:** Per-bean comparison of table definitions against their corresponding TypeScript types, encryption tier annotations (ADR 006/013), and feature requirements
 
+> **Superseded findings:** The structure entity refactor (PRs #236-#238, March 2026) replaced the 9 rigid structure tables (subsystems, side_systems, layers + 6 junctions) with a generic 5-table entity model. This supersedes findings **C3** (subsystem_id -> linked_structure) and **C4** (missing cross-link tables). C3's concern (polymorphic structure FK on fronting_sessions) is now resolved by a direct `structure_entity_id` FK to `system_structure_entities`. C4's concern (missing cross-link tables) is resolved by `system_structure_entity_associations`, a generic directed association table.
+
 ---
 
 ## Executive Summary
@@ -56,12 +58,14 @@ The types package (37 files, 300+ types) was completed after the initial databas
 **Type:** `FrontingSession` has `linkedStructure?: EntityReference` (polymorphic reference to subsystem, side system, or layer)
 **Bean:** Has `subsystem_id` (single FK)
 **Resolution:** Replace `subsystem_id` with `linked_structure` as structured `EntityReference` (entityType + entityId) inside encrypted_data
+**Status:** Superseded by structure entity refactor (March 2026). `linked_structure` jsonb replaced by `structure_entity_id` FK to `system_structure_entities`.
 
 ### C4: Missing 3 cross-link tables (db-k37y)
 
 **Type:** `SubsystemLayerLink`, `SubsystemSideSystemLink`, `SideSystemLayerLink` define M:N relationships between structure entities
 **Bean:** Only has membership tables (member-to-structure), not structure-to-structure links
 **Resolution:** Add 3 cross-link tables: `subsystem_layer_links`, `subsystem_side_system_links`, `side_system_layer_links`
+**Status:** Superseded by structure entity refactor (March 2026). Cross-link tables replaced by generic `system_structure_entity_associations` table.
 
 ### C5: Only 8 term categories, types define 12 (db-8su3)
 

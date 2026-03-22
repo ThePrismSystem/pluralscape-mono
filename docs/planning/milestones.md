@@ -52,7 +52,7 @@ Epics:
 - ~~Custom fronts~~ [COMPLETED] — CRUD with archive/restore
 - ~~System settings~~ [COMPLETED] — CRUD with encrypted data and PIN verification
 - ~~Initial setup wizard~~ [COMPLETED] — multi-step onboarding (profile, nomenclature, completion)
-- ~~System structure data model~~ [COMPLETED] — subsystems, side-systems, layers, relationships, structure links, structure memberships with generic CRUD extraction
+- ~~System structure data model~~ [COMPLETED] — generic structure entity types, entities, entity links, member links, entity associations, relationships with generic CRUD extraction
 - ~~Media upload pipeline~~ [COMPLETED] — presigned upload/download URLs, blob confirmation, lifecycle management, orphan cleanup (ADR 009)
 - ~~Per-category rate limit middleware wiring~~ [COMPLETED] — read/write/auth/sensitive categories with Valkey-backed distributed store
 - ~~Key rotation API endpoints~~ [COMPLETED] — initiate, claim, complete-chunk, progress tracking (ADR 014)
