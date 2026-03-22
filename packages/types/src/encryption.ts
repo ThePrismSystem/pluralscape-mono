@@ -47,7 +47,12 @@ import type {
 import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
 import type { JournalEntry, WikiPage } from "./journal.js";
 import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
-import type { RelationshipType, Relationship, StructureVisualProps } from "./structure.js";
+import type {
+  RelationshipType,
+  Relationship,
+  SystemStructureEntityType,
+  SystemStructureEntity,
+} from "./structure.js";
 import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata, EntityReference } from "./utility.js";
@@ -131,7 +136,7 @@ export type ClientMember = import("./identity.js").Member;
 /**
  * Server-side fronting session representation.
  * T1 encrypted: comment, positionality, outtrigger, outtriggerSentiment
- * T3 plaintext: timestamps, memberId, customFrontId, linkedStructure, archived
+ * T3 plaintext: timestamps, memberId, customFrontId, structureEntityId, archived
  */
 export interface ServerFrontingSession extends AuditMetadata {
   readonly id: FrontingSessionId;
@@ -141,7 +146,6 @@ export interface ServerFrontingSession extends AuditMetadata {
   readonly endTime: UnixMillis | null;
   readonly customFrontId: CustomFrontId | null;
   readonly structureEntityId: SystemStructureEntityId | null;
-  readonly linkedStructure: EntityReference<"structure-entity"> | null;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob | null;
 }
@@ -201,14 +205,7 @@ export interface ServerStructureEntityType extends AuditMetadata {
 }
 
 /** Client-side structure entity type — flat decrypted fields. */
-export interface ClientStructureEntityType extends AuditMetadata, StructureVisualProps {
-  readonly id: SystemStructureEntityTypeId;
-  readonly systemId: SystemId;
-  readonly name: string;
-  readonly description: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-}
+export type ClientStructureEntityType = SystemStructureEntityType;
 
 /**
  * Server-side structure entity representation.
@@ -225,15 +222,7 @@ export interface ServerStructureEntity extends AuditMetadata {
 }
 
 /** Client-side structure entity — flat decrypted fields. */
-export interface ClientStructureEntity extends AuditMetadata, StructureVisualProps {
-  readonly id: SystemStructureEntityId;
-  readonly systemId: SystemId;
-  readonly entityTypeId: SystemStructureEntityTypeId;
-  readonly name: string;
-  readonly description: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-}
+export type ClientStructureEntity = SystemStructureEntity;
 
 /**
  * Server-side relationship representation.
@@ -373,7 +362,7 @@ export type ClientFieldValue = FieldValue;
 
 /**
  * Server-side innerworld entity representation.
- * T1 encrypted: name/linkedMemberId/linkedSubsystemId/linkedSideSystemId/linkedLayerId, description, visual,
+ * T1 encrypted: name/linkedMemberId/linkedStructureEntityId, description, visual,
  *   entityType, positionX, positionY
  * T3 plaintext: regionId, archived
  */

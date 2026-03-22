@@ -1,5 +1,5 @@
 {
-  "id": "8f131082-498a-4c40-b7d3-f8a8252646a3",
+  "id": "4398ccd2-b7b7-4fa0-9a6f-7efe3ed0e204",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -726,7 +726,7 @@
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
-          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'subsystem.created', 'subsystem.updated', 'subsystem.archived', 'subsystem.restored', 'subsystem.deleted', 'side-system.created', 'side-system.updated', 'side-system.archived', 'side-system.restored', 'side-system.deleted', 'layer.created', 'layer.updated', 'layer.archived', 'layer.restored', 'layer.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'subsystem-membership.added', 'subsystem-membership.removed', 'side-system-membership.added', 'side-system-membership.removed', 'layer-membership.added', 'layer-membership.removed', 'structure-link.created', 'structure-link.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')"
+          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')"
         },
         "audit_log_detail_length_check": {
           "name": "audit_log_detail_length_check",
@@ -1331,7 +1331,7 @@
       "checkConstraints": {
         "bucket_content_tags_entity_type_check": {
           "name": "bucket_content_tags_entity_type_check",
-          "value": "\"bucket_content_tags\".\"entity_type\" IS NULL OR \"bucket_content_tags\".\"entity_type\" IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')"
+          "value": "\"bucket_content_tags\".\"entity_type\" IS NULL OR \"bucket_content_tags\".\"entity_type\" IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'structure-entity-type', 'structure-entity', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')"
         }
       },
       "isRLSEnabled": false
@@ -3843,9 +3843,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "linked_structure": {
-          "name": "linked_structure",
-          "type": "jsonb",
+        "structure_entity_id": {
+          "name": "structure_entity_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -5472,7 +5472,7 @@
       "checkConstraints": {
         "lifecycle_events_event_type_check": {
           "name": "lifecycle_events_event_type_check",
-          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')"
+          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'structure-entity-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')"
         }
       },
       "isRLSEnabled": false
@@ -8655,6 +8655,637 @@
         "system_snapshots_snapshot_trigger_check": {
           "name": "system_snapshots_snapshot_trigger_check",
           "value": "\"system_snapshots\".\"snapshot_trigger\" IS NULL OR \"system_snapshots\".\"snapshot_trigger\" IN ('manual', 'scheduled-daily', 'scheduled-weekly')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.system_structure_entities": {
+      "name": "system_structure_entities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type_id": {
+          "name": "entity_type_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "system_structure_entities_system_archived_idx": {
+          "name": "system_structure_entities_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "system_structure_entities_entity_type_id_idx": {
+          "name": "system_structure_entities_entity_type_id_idx",
+          "columns": [
+            {
+              "expression": "entity_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "system_structure_entities_system_id_systems_id_fk": {
+          "name": "system_structure_entities_system_id_systems_id_fk",
+          "tableFrom": "system_structure_entities",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "system_structure_entities_entity_type_id_system_id_system_structure_entity_types_id_system_id_fk": {
+          "name": "system_structure_entities_entity_type_id_system_id_system_structure_entity_types_id_system_id_fk",
+          "tableFrom": "system_structure_entities",
+          "tableTo": "system_structure_entity_types",
+          "columnsFrom": ["entity_type_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "system_structure_entities_id_system_id_unique": {
+          "name": "system_structure_entities_id_system_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "system_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "system_structure_entities_version_check": {
+          "name": "system_structure_entities_version_check",
+          "value": "\"system_structure_entities\".\"version\" >= 1"
+        },
+        "system_structure_entities_archived_consistency_check": {
+          "name": "system_structure_entities_archived_consistency_check",
+          "value": "(\"system_structure_entities\".\"archived\" = true) = (\"system_structure_entities\".\"archived_at\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.system_structure_entity_associations": {
+      "name": "system_structure_entity_associations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_entity_id": {
+          "name": "source_entity_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_entity_id": {
+          "name": "target_entity_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "system_structure_entity_associations_source_idx": {
+          "name": "system_structure_entity_associations_source_idx",
+          "columns": [
+            {
+              "expression": "source_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "system_structure_entity_associations_target_idx": {
+          "name": "system_structure_entity_associations_target_idx",
+          "columns": [
+            {
+              "expression": "target_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "system_structure_entity_associations_system_id_idx": {
+          "name": "system_structure_entity_associations_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "system_structure_entity_associations_system_id_systems_id_fk": {
+          "name": "system_structure_entity_associations_system_id_systems_id_fk",
+          "tableFrom": "system_structure_entity_associations",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "system_structure_entity_associations_source_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "system_structure_entity_associations_source_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "system_structure_entity_associations",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["source_entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "system_structure_entity_associations_target_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "system_structure_entity_associations_target_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "system_structure_entity_associations",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["target_entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "system_structure_entity_associations_uniq": {
+          "name": "system_structure_entity_associations_uniq",
+          "nullsNotDistinct": false,
+          "columns": ["source_entity_id", "target_entity_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.system_structure_entity_links": {
+      "name": "system_structure_entity_links",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_entity_id": {
+          "name": "parent_entity_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "system_structure_entity_links_entity_id_idx": {
+          "name": "system_structure_entity_links_entity_id_idx",
+          "columns": [
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "system_structure_entity_links_parent_entity_id_idx": {
+          "name": "system_structure_entity_links_parent_entity_id_idx",
+          "columns": [
+            {
+              "expression": "parent_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "system_structure_entity_links_system_id_idx": {
+          "name": "system_structure_entity_links_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "system_structure_entity_links_system_id_systems_id_fk": {
+          "name": "system_structure_entity_links_system_id_systems_id_fk",
+          "tableFrom": "system_structure_entity_links",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "system_structure_entity_links_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "system_structure_entity_links_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "system_structure_entity_links",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "system_structure_entity_links_parent_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "system_structure_entity_links_parent_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "system_structure_entity_links",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["parent_entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.system_structure_entity_member_links": {
+      "name": "system_structure_entity_member_links",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_entity_id": {
+          "name": "parent_entity_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "member_id": {
+          "name": "member_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "system_structure_entity_member_links_parent_entity_id_idx": {
+          "name": "system_structure_entity_member_links_parent_entity_id_idx",
+          "columns": [
+            {
+              "expression": "parent_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "system_structure_entity_member_links_member_id_idx": {
+          "name": "system_structure_entity_member_links_member_id_idx",
+          "columns": [
+            {
+              "expression": "member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "system_structure_entity_member_links_system_id_idx": {
+          "name": "system_structure_entity_member_links_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "system_structure_entity_member_links_system_id_systems_id_fk": {
+          "name": "system_structure_entity_member_links_system_id_systems_id_fk",
+          "tableFrom": "system_structure_entity_member_links",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "system_structure_entity_member_links_parent_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "system_structure_entity_member_links_parent_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "system_structure_entity_member_links",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["parent_entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "system_structure_entity_member_links_member_id_system_id_members_id_system_id_fk": {
+          "name": "system_structure_entity_member_links_member_id_system_id_members_id_system_id_fk",
+          "tableFrom": "system_structure_entity_member_links",
+          "tableTo": "members",
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.system_structure_entity_types": {
+      "name": "system_structure_entity_types",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "system_structure_entity_types_system_archived_idx": {
+          "name": "system_structure_entity_types_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "system_structure_entity_types_system_id_systems_id_fk": {
+          "name": "system_structure_entity_types_system_id_systems_id_fk",
+          "tableFrom": "system_structure_entity_types",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "system_structure_entity_types_id_system_id_unique": {
+          "name": "system_structure_entity_types_id_system_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "system_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "system_structure_entity_types_version_check": {
+          "name": "system_structure_entity_types_version_check",
+          "value": "\"system_structure_entity_types\".\"version\" >= 1"
+        },
+        "system_structure_entity_types_archived_consistency_check": {
+          "name": "system_structure_entity_types_archived_consistency_check",
+          "value": "(\"system_structure_entity_types\".\"archived\" = true) = (\"system_structure_entity_types\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false

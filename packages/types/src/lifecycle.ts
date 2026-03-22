@@ -77,8 +77,8 @@ export interface ArchivalEvent extends LifecycleEventBase {
 }
 
 /** A structure entity forms from a member or group of members. */
-export interface SubsystemFormationEvent extends LifecycleEventBase {
-  readonly eventType: "subsystem-formation";
+export interface StructureEntityFormationEvent extends LifecycleEventBase {
+  readonly eventType: "structure-entity-formation";
   readonly memberId: MemberId;
   readonly resultStructureEntityId: SystemStructureEntityId;
 }
@@ -126,7 +126,7 @@ export type LifecycleEvent =
   | DormancyEndEvent
   | DiscoveryEvent
   | ArchivalEvent
-  | SubsystemFormationEvent
+  | StructureEntityFormationEvent
   | FormChangeEvent
   | NameChangeEvent
   | StructureMoveEvent

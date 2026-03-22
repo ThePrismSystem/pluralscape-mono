@@ -102,41 +102,11 @@ export interface ActiveDeviceTransfer {
   readonly expiresAt: number;
 }
 
-/** Valid link types for structure cross-links. */
-export const LINK_TYPES = [
-  "subsystem-layer",
-  "subsystem-side-system",
-  "side-system-layer",
-] as const;
-
-/** A cross-link from the structure tables (UNION of 3 link types). */
-export interface StructureCrossLink {
+/** A structure entity association from the associations table. */
+export interface StructureEntityAssociationRow {
   readonly id: string;
   readonly systemId: string;
-  readonly linkType: (typeof LINK_TYPES)[number];
-  readonly sourceId: string;
-  readonly targetId: string;
+  readonly sourceEntityId: string;
+  readonly targetEntityId: string;
   readonly createdAt: number;
-}
-
-/** Map a raw cross-link row to a typed StructureCrossLink with runtime linkType validation. */
-export function mapStructureCrossLinkRow(row: {
-  id: string;
-  system_id: string;
-  link_type: string;
-  source_id: string;
-  target_id: string;
-  created_at: number;
-}): StructureCrossLink {
-  if (!(LINK_TYPES as readonly string[]).includes(row.link_type)) {
-    throw new Error(`Unknown link_type: "${row.link_type}"`);
-  }
-  return {
-    id: row.id,
-    systemId: row.system_id,
-    linkType: row.link_type as StructureCrossLink["linkType"],
-    sourceId: row.source_id,
-    targetId: row.target_id,
-    createdAt: row.created_at,
-  };
 }

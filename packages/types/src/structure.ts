@@ -96,12 +96,7 @@ export interface SystemStructureEntityType extends AuditMetadata, StructureVisua
   readonly archived: false;
 }
 
-export interface ArchivedSystemStructureEntityType extends Omit<
-  SystemStructureEntityType,
-  "archived"
-> {
-  readonly archived: true;
-}
+export type ArchivedSystemStructureEntityType = Archived<SystemStructureEntityType>;
 
 /** An instance of a system structure entity type. */
 export interface SystemStructureEntity extends AuditMetadata, StructureVisualProps {
@@ -114,9 +109,7 @@ export interface SystemStructureEntity extends AuditMetadata, StructureVisualPro
   readonly archived: false;
 }
 
-export interface ArchivedSystemStructureEntity extends Omit<SystemStructureEntity, "archived"> {
-  readonly archived: true;
-}
+export type ArchivedSystemStructureEntity = Archived<SystemStructureEntity>;
 
 /** A parent-child hierarchy link between two structure entities. */
 export interface SystemStructureEntityLink {

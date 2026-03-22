@@ -11,12 +11,9 @@ import { members } from "../schema/pg/members.js";
 import { deviceTokens } from "../schema/pg/notifications.js";
 import { friendConnections } from "../schema/pg/privacy.js";
 import {
-  layers,
-  sideSystemLayerLinks,
-  sideSystems,
-  subsystemLayerLinks,
-  subsystemSideSystemLinks,
-  subsystems,
+  systemStructureEntityAssociations,
+  systemStructureEntities,
+  systemStructureEntityTypes,
 } from "../schema/pg/structure.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/pg/webhooks.js";
 import {
@@ -30,7 +27,7 @@ import {
   getMemberGroupSummary,
   getPendingFriendRequests,
   getPendingWebhookRetries,
-  getStructureCrossLinks,
+  getStructureEntityAssociations,
   getUnconfirmedAcknowledgements,
 } from "../views/pg.js";
 
@@ -114,6 +111,12 @@ describe("PG views / query helpers", () => {
     await pgExec(client, PG_DDL.subsystemSideSystemLinksIndexes);
     await pgExec(client, PG_DDL.sideSystemLayerLinks);
     await pgExec(client, PG_DDL.sideSystemLayerLinksIndexes);
+    await pgExec(client, PG_DDL.systemStructureEntityTypes);
+    await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
+    await pgExec(client, PG_DDL.systemStructureEntities);
+    await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
+    await pgExec(client, PG_DDL.systemStructureEntityAssociations);
+    await pgExec(client, PG_DDL.systemStructureEntityAssociationsIndexes);
   });
 
   afterAll(async () => {
@@ -135,6 +138,9 @@ describe("PG views / query helpers", () => {
       "api_keys",
       "device_transfer_requests",
       "sessions",
+      "system_structure_entity_associations",
+      "system_structure_entities",
+      "system_structure_entity_types",
       "side_system_layer_links",
       "subsystem_side_system_links",
       "subsystem_layer_links",
@@ -672,55 +678,58 @@ describe("PG views / query helpers", () => {
     });
   });
 
-  describe("getStructureCrossLinks", () => {
-    it("returns UNION of all 3 link types", async () => {
+  describe("getStructureEntityAssociations", () => {
+    it("returns associations for a system", async () => {
       const now = Date.now();
-      const subsystemId = crypto.randomUUID();
-      const sideSystemId = crypto.randomUUID();
-      const layerId = crypto.randomUUID();
+      const entityTypeId = crypto.randomUUID();
+      const entityId1 = crypto.randomUUID();
+      const entityId2 = crypto.randomUUID();
 
-      await db.insert(subsystems).values({
-        id: subsystemId,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-      await db.insert(sideSystems).values({
-        id: sideSystemId,
-        systemId,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-      await db.insert(layers).values({
-        id: layerId,
+      await db.insert(systemStructureEntityTypes).values({
+        id: entityTypeId,
         systemId,
         sortOrder: 0,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: entityId1,
+          systemId,
+          entityTypeId,
+          sortOrder: 0,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: entityId2,
+          systemId,
+          entityTypeId,
+          sortOrder: 1,
+          encryptedData: testBlob(new Uint8Array([2])),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+      await db.insert(systemStructureEntityAssociations).values({
+        id: crypto.randomUUID(),
+        systemId,
+        sourceEntityId: entityId1,
+        targetEntityId: entityId2,
+        createdAt: now,
+      });
 
-      await db
-        .insert(subsystemLayerLinks)
-        .values({ id: crypto.randomUUID(), subsystemId, layerId, systemId, createdAt: now });
-      await db
-        .insert(subsystemSideSystemLinks)
-        .values({ id: crypto.randomUUID(), subsystemId, sideSystemId, systemId, createdAt: now });
-      await db
-        .insert(sideSystemLayerLinks)
-        .values({ id: crypto.randomUUID(), sideSystemId, layerId, systemId, createdAt: now });
-
-      const links = await getStructureCrossLinks(db, systemId);
-      expect(links).toHaveLength(3);
-      const types = links.map((l) => l.linkType).sort();
-      expect(types).toEqual(["side-system-layer", "subsystem-layer", "subsystem-side-system"]);
+      const assocs = await getStructureEntityAssociations(db, systemId);
+      expect(assocs).toHaveLength(1);
+      expect(assocs[0]?.sourceEntityId).toBe(entityId1);
+      expect(assocs[0]?.targetEntityId).toBe(entityId2);
     });
 
-    it("returns empty array when no links", async () => {
-      const links = await getStructureCrossLinks(db, systemId);
-      expect(links).toHaveLength(0);
+    it("returns empty array when no associations", async () => {
+      const assocs = await getStructureEntityAssociations(db, systemId);
+      expect(assocs).toHaveLength(0);
     });
   });
 });

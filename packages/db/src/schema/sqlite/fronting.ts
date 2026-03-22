@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -13,7 +13,6 @@ import {
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerFrontingSession } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = sqliteTable(
@@ -48,8 +47,7 @@ export const frontingSessions = sqliteTable(
     endTime: sqliteTimestamp("end_time"),
     memberId: text("member_id"),
     customFrontId: text("custom_front_id"),
-    linkedStructure:
-      sqliteJson("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
+    structureEntityId: text("structure_entity_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

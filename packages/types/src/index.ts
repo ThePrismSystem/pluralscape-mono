@@ -456,7 +456,7 @@ export type {
   DormancyEndEvent,
   DiscoveryEvent,
   ArchivalEvent,
-  SubsystemFormationEvent,
+  StructureEntityFormationEvent,
   FormChangeEvent,
   NameChangeEvent,
   StructureMoveEvent,

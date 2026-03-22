@@ -10,7 +10,7 @@ import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.j
 export interface CrdtJournalEntry extends CrdtAuditFields {
   id: CrdtString;
   systemId: CrdtString;
-  /** JSON-serialized EntityReference<"member"|"subsystem"|"side-system"|"layer"> | null */
+  /** JSON-serialized EntityReference<"member"|"structure-entity"> | null */
   author: CrdtOptionalString;
   frontingSessionId: CrdtOptionalString;
   title: CrdtString;

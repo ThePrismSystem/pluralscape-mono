@@ -121,9 +121,9 @@ describe("validateLifecycleMetadata", () => {
     expect(result.success).toBe(true);
   });
 
-  // ── subsystem-formation ───────────────────────────────────────
-  it("validates subsystem-formation metadata", () => {
-    const result = validateLifecycleMetadata("subsystem-formation", {
+  // ── structure-entity-formation ───────────────────────────────
+  it("validates structure-entity-formation metadata", () => {
+    const result = validateLifecycleMetadata("structure-entity-formation", {
       structureIds: ["ste_abc"],
     });
     expect(result.success).toBe(true);

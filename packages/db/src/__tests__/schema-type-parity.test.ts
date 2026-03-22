@@ -339,6 +339,31 @@ const TABLE_PAIRS: Array<{
     pgTable: getTableColumns(pg.layerMemberships),
     sqliteTable: getTableColumns(sqlite.layerMemberships),
   },
+  {
+    name: "systemStructureEntityTypes",
+    pgTable: getTableColumns(pg.systemStructureEntityTypes),
+    sqliteTable: getTableColumns(sqlite.systemStructureEntityTypes),
+  },
+  {
+    name: "systemStructureEntities",
+    pgTable: getTableColumns(pg.systemStructureEntities),
+    sqliteTable: getTableColumns(sqlite.systemStructureEntities),
+  },
+  {
+    name: "systemStructureEntityLinks",
+    pgTable: getTableColumns(pg.systemStructureEntityLinks),
+    sqliteTable: getTableColumns(sqlite.systemStructureEntityLinks),
+  },
+  {
+    name: "systemStructureEntityMemberLinks",
+    pgTable: getTableColumns(pg.systemStructureEntityMemberLinks),
+    sqliteTable: getTableColumns(sqlite.systemStructureEntityMemberLinks),
+  },
+  {
+    name: "systemStructureEntityAssociations",
+    pgTable: getTableColumns(pg.systemStructureEntityAssociations),
+    sqliteTable: getTableColumns(sqlite.systemStructureEntityAssociations),
+  },
   // Blob Metadata
   {
     name: "blobMetadata",

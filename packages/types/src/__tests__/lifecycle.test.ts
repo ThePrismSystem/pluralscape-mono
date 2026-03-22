@@ -22,7 +22,7 @@ import type {
   NameChangeEvent,
   SplitEvent,
   StructureMoveEvent,
-  SubsystemFormationEvent,
+  StructureEntityFormationEvent,
   UnmergeEvent,
 } from "../lifecycle.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -102,12 +102,14 @@ describe("ArchivalEvent", () => {
   });
 });
 
-describe("SubsystemFormationEvent", () => {
+describe("StructureEntityFormationEvent", () => {
   it("has correct discriminator and fields", () => {
-    expectTypeOf<SubsystemFormationEvent["eventType"]>().toEqualTypeOf<"subsystem-formation">();
-    expectTypeOf<SubsystemFormationEvent["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<
-      SubsystemFormationEvent["resultStructureEntityId"]
+      StructureEntityFormationEvent["eventType"]
+    >().toEqualTypeOf<"structure-entity-formation">();
+    expectTypeOf<StructureEntityFormationEvent["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<
+      StructureEntityFormationEvent["resultStructureEntityId"]
     >().toEqualTypeOf<SystemStructureEntityId>();
   });
 });
@@ -166,8 +168,8 @@ describe("LifecycleEvent discriminated union", () => {
         case "archival":
           expectTypeOf(event).toEqualTypeOf<ArchivalEvent>();
           return event.entity.entityId;
-        case "subsystem-formation":
-          expectTypeOf(event).toEqualTypeOf<SubsystemFormationEvent>();
+        case "structure-entity-formation":
+          expectTypeOf(event).toEqualTypeOf<StructureEntityFormationEvent>();
           return event.resultStructureEntityId;
         case "form-change":
           expectTypeOf(event).toEqualTypeOf<FormChangeEvent>();
@@ -201,7 +203,7 @@ describe("LifecycleEventType", () => {
     assertType<LifecycleEventType>("dormancy-end");
     assertType<LifecycleEventType>("discovery");
     assertType<LifecycleEventType>("archival");
-    assertType<LifecycleEventType>("subsystem-formation");
+    assertType<LifecycleEventType>("structure-entity-formation");
     assertType<LifecycleEventType>("form-change");
     assertType<LifecycleEventType>("name-change");
     assertType<LifecycleEventType>("structure-move");

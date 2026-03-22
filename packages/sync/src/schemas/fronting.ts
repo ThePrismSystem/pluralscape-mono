@@ -16,8 +16,8 @@ export interface CrdtFrontingSession extends CrdtAuditFields {
   endTime: number | null;
   comment: CrdtOptionalString;
   customFrontId: CrdtOptionalString;
-  /** JSON-serialized EntityReference<"subsystem"|"side-system"|"layer"> | null */
-  linkedStructure: CrdtOptionalString;
+  /** SystemStructureEntityId or null */
+  structureEntityId: CrdtOptionalString;
   positionality: CrdtOptionalString;
   /** Free-text outtrigger reason | null */
   outtrigger: CrdtOptionalString;

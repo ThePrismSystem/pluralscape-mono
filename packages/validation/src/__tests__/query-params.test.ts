@@ -95,7 +95,7 @@ describe("LifecycleEventQuerySchema", () => {
       "dormancy-end",
       "discovery",
       "archival",
-      "subsystem-formation",
+      "structure-entity-formation",
       "form-change",
       "name-change",
       "structure-move",

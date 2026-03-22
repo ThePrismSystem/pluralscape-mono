@@ -3,7 +3,6 @@ import {
   check,
   foreignKey,
   index,
-  jsonb,
   pgTable,
   primaryKey,
   unique,
@@ -23,7 +22,6 @@ import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerFrontingSession } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = pgTable(
@@ -60,7 +58,7 @@ export const frontingSessions = pgTable(
     endTime: pgTimestamp("end_time"),
     memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
     customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
-    linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
+    structureEntityId: varchar("structure_entity_id", { length: ID_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

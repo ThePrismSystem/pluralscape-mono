@@ -79,26 +79,20 @@ export const ENTITY_CRDT_STRATEGIES = {
     mutationSemantics:
       "LWW per field — name, description, parentGroupId, imageSource, color, emoji, sortOrder, archived",
   },
-  subsystem: {
+  "structure-entity-type": {
     storageType: "lww-map",
     document: "system-core",
-    fieldName: "subsystems",
-    parentField: "parentSubsystemId",
-    mutationSemantics:
-      "LWW per field — name, description, parentSubsystemId, architectureType, hasCore, discoveryStatus, visual, archived",
+    fieldName: "structureEntityTypes",
+    hasSortOrder: true,
+    mutationSemantics: "LWW per field — name, description, visual, sortOrder, archived",
   },
-  "side-system": {
+  "structure-entity": {
     storageType: "lww-map",
     document: "system-core",
-    fieldName: "sideSystems",
-    mutationSemantics: "LWW per field — name, description, visual, archived",
-  },
-  layer: {
-    storageType: "lww-map",
-    document: "system-core",
-    fieldName: "layers",
+    fieldName: "structureEntities",
+    hasSortOrder: true,
     mutationSemantics:
-      "LWW per field — name, description, accessType, gatekeeperMemberIds, visual, archived",
+      "LWW per field — name, description, entityTypeId, visual, sortOrder, archived",
   },
   relationship: {
     storageType: "lww-map",
@@ -162,41 +156,23 @@ export const ENTITY_CRDT_STRATEGIES = {
     mutationSemantics:
       "Add-wins — compound key {groupId}_{memberId} mapped to true; concurrent add+remove preserves the junction",
   },
-  "subsystem-membership": {
+  "structure-entity-link": {
     storageType: "junction-map",
     document: "system-core",
-    fieldName: "subsystemMemberships",
-    mutationSemantics: "Add-wins — compound key {subsystemId}_{memberId} mapped to true",
+    fieldName: "structureEntityLinks",
+    mutationSemantics: "Add-wins — compound key {entityId}_{parentEntityId} mapped to true",
   },
-  "side-system-membership": {
+  "structure-entity-member-link": {
     storageType: "junction-map",
     document: "system-core",
-    fieldName: "sideSystemMemberships",
-    mutationSemantics: "Add-wins — compound key {sideSystemId}_{memberId} mapped to true",
+    fieldName: "structureEntityMemberLinks",
+    mutationSemantics: "Add-wins — compound key {entityId}_{memberId} mapped to true",
   },
-  "layer-membership": {
+  "structure-entity-association": {
     storageType: "junction-map",
     document: "system-core",
-    fieldName: "layerMemberships",
-    mutationSemantics: "Add-wins — compound key {layerId}_{memberId} mapped to true",
-  },
-  "subsystem-layer-link": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "subsystemLayerLinks",
-    mutationSemantics: "Add-wins — compound key {subsystemId}_{layerId} mapped to true",
-  },
-  "subsystem-side-system-link": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "subsystemSideSystemLinks",
-    mutationSemantics: "Add-wins — compound key {subsystemId}_{sideSystemId} mapped to true",
-  },
-  "side-system-layer-link": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "sideSystemLayerLinks",
-    mutationSemantics: "Add-wins — compound key {sideSystemId}_{layerId} mapped to true",
+    fieldName: "structureEntityAssociations",
+    mutationSemantics: "Add-wins — compound key {sourceEntityId}_{targetEntityId} mapped to true",
   },
 
   // ── fronting document ────────────────────────────────────────────

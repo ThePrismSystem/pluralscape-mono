@@ -74,6 +74,11 @@ import {
   subsystemMemberships,
   subsystemSideSystemLinks,
   subsystems,
+  systemStructureEntityAssociations,
+  systemStructureEntities,
+  systemStructureEntityLinks,
+  systemStructureEntityMemberLinks,
+  systemStructureEntityTypes,
 } from "../../schema/pg/structure.js";
 import { syncChanges, syncDocuments, syncSnapshots } from "../../schema/pg/sync.js";
 import { systemSettings } from "../../schema/pg/system-settings.js";
@@ -187,6 +192,16 @@ export const PG_DDL = {
   subsystemSideSystemLinksIndexes: indexDDL(subsystemSideSystemLinks),
   sideSystemLayerLinks: pgTableToCreateDDL(sideSystemLayerLinks),
   sideSystemLayerLinksIndexes: indexDDL(sideSystemLayerLinks),
+  systemStructureEntityTypes: pgTableToCreateDDL(systemStructureEntityTypes),
+  systemStructureEntityTypesIndexes: indexDDL(systemStructureEntityTypes),
+  systemStructureEntities: pgTableToCreateDDL(systemStructureEntities),
+  systemStructureEntitiesIndexes: indexDDL(systemStructureEntities),
+  systemStructureEntityLinks: pgTableToCreateDDL(systemStructureEntityLinks),
+  systemStructureEntityLinksIndexes: indexDDL(systemStructureEntityLinks),
+  systemStructureEntityMemberLinks: pgTableToCreateDDL(systemStructureEntityMemberLinks),
+  systemStructureEntityMemberLinksIndexes: indexDDL(systemStructureEntityMemberLinks),
+  systemStructureEntityAssociations: pgTableToCreateDDL(systemStructureEntityAssociations),
+  systemStructureEntityAssociationsIndexes: indexDDL(systemStructureEntityAssociations),
   // --- Custom Fields ---
   fieldDefinitions: pgTableToCreateDDL(fieldDefinitions),
   fieldDefinitionsIndexes: indexDDL(fieldDefinitions),

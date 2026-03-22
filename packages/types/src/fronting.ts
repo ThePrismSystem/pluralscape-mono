@@ -8,7 +8,7 @@ import type {
   SystemStructureEntityId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** Sentiment classification for an outtrigger reason. */
 export type OuttriggerSentiment = "negative" | "neutral" | "positive";
@@ -22,10 +22,8 @@ interface FrontingSessionBase extends AuditMetadata {
   /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
   readonly comment: string | null;
   readonly customFrontId: CustomFrontId | null;
-  /** CHECK: structureEntityId is the direct FK; linkedStructure is the typed reference. */
+  /** FK to linked structure entity. */
   readonly structureEntityId: SystemStructureEntityId | null;
-  /** Reference to a linked structure entity. */
-  readonly linkedStructure: EntityReference<"structure-entity"> | null;
   /** Free-text description of fronting positionality (e.g. close vs far, height). */
   readonly positionality: string | null;
   /** Free-text reason describing what caused the fronting change. Stored in T1 encrypted blob. */

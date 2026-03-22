@@ -28,8 +28,8 @@ describe("Document factories", () => {
       const doc = createSystemCoreDocument();
       expect(doc.members).toBeDefined();
       expect(doc.groups).toBeDefined();
-      expect(doc.subsystems).toBeDefined();
-      expect(doc.layers).toBeDefined();
+      expect(doc.structureEntityTypes).toBeDefined();
+      expect(doc.structureEntities).toBeDefined();
       expect(doc.relationships).toBeDefined();
       expect(doc.customFronts).toBeDefined();
       expect(doc.fieldDefinitions).toBeDefined();
@@ -46,9 +46,8 @@ describe("Document factories", () => {
         "members",
         "memberPhotos",
         "groups",
-        "subsystems",
-        "sideSystems",
-        "layers",
+        "structureEntityTypes",
+        "structureEntities",
         "relationships",
         "customFronts",
         "fieldDefinitions",
@@ -65,12 +64,9 @@ describe("Document factories", () => {
       const doc = createSystemCoreDocument();
       for (const key of [
         "groupMemberships",
-        "subsystemMemberships",
-        "sideSystemMemberships",
-        "layerMemberships",
-        "subsystemLayerLinks",
-        "subsystemSideSystemLinks",
-        "sideSystemLayerLinks",
+        "structureEntityLinks",
+        "structureEntityMemberLinks",
+        "structureEntityAssociations",
       ] as const) {
         expect(Object.keys(doc[key])).toHaveLength(0);
       }

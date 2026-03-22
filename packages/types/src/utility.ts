@@ -44,7 +44,7 @@ export interface AuditMetadata {
  *
  * Distributive over unions: `Archived<A | B>` correctly produces
  * `Archived<A> | Archived<B>`, preserving discriminant properties
- * (e.g., on FrontingSession, Layer, InnerWorldEntity unions).
+ * (e.g., on FrontingSession, SystemStructureEntity, InnerWorldEntity unions).
  */
 export type Archived<T extends { readonly archived: false }> = T extends {
   readonly archived: false;

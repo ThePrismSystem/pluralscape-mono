@@ -335,7 +335,7 @@ import type {
   Session,
   SortDirection,
   StructureEntityEntity,
-  SubsystemFormationEvent,
+  StructureEntityFormationEvent,
   SystemStructureEntity,
   ArchivedSystemStructureEntity,
   SystemStructureEntityType,
@@ -636,7 +636,7 @@ describe("barrel exports", () => {
     expectTypeOf<ArchivalEvent>().toBeObject();
     expectTypeOf<LifecycleEvent>().toBeObject();
     expectTypeOf<LifecycleEventType>().toBeString();
-    expectTypeOf<SubsystemFormationEvent>().toBeObject();
+    expectTypeOf<StructureEntityFormationEvent>().toBeObject();
     expectTypeOf<FormChangeEvent>().toBeObject();
     expectTypeOf<NameChangeEvent>().toBeObject();
   });

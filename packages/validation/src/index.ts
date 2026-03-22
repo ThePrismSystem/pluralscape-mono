@@ -61,7 +61,6 @@ export {
 } from "./lifecycle-event.js";
 export type { PlaintextMetadata } from "./lifecycle-event.js";
 export {
-  AddStructureMembershipBodySchema,
   CreateStructureEntityLinkBodySchema,
   CreateStructureEntityMemberLinkBodySchema,
   CreateStructureEntityAssociationBodySchema,

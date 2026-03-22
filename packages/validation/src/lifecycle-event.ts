@@ -12,7 +12,7 @@ const LIFECYCLE_EVENT_TYPES = [
   "dormancy-end",
   "discovery",
   "archival",
-  "subsystem-formation",
+  "structure-entity-formation",
   "form-change",
   "name-change",
   "structure-move",
@@ -40,7 +40,7 @@ const MergeMetadataSchema = z.object({
   memberIds: memberIdArray.length(2),
 });
 
-const SubsystemFormationMetadataSchema = z.object({
+const StructureEntityFormationMetadataSchema = z.object({
   structureIds: structureIdArray.length(1),
 });
 
@@ -65,7 +65,7 @@ const METADATA_SCHEMAS: Record<(typeof LIFECYCLE_EVENT_TYPES)[number], z.ZodType
   archival: SingleMemberMetadataSchema,
   "form-change": SingleMemberMetadataSchema,
   "name-change": SingleMemberMetadataSchema,
-  "subsystem-formation": SubsystemFormationMetadataSchema,
+  "structure-entity-formation": StructureEntityFormationMetadataSchema,
   "structure-move": StructureMoveMetadataSchema,
   "innerworld-move": InnerworldMoveMetadataSchema,
 };

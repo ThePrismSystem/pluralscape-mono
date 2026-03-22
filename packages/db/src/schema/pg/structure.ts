@@ -296,6 +296,135 @@ export const sideSystemLayerLinks = pgTable(
   ],
 );
 
+export const systemStructureEntityTypes = pgTable(
+  "system_structure_entity_types",
+  {
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...timestamps(),
+    ...versioned(),
+    ...archivable(),
+  },
+  (t) => [
+    index("system_structure_entity_types_system_archived_idx").on(t.systemId, t.archived),
+    unique("system_structure_entity_types_id_system_id_unique").on(t.id, t.systemId),
+    versionCheckFor("system_structure_entity_types", t.version),
+    archivableConsistencyCheckFor("system_structure_entity_types", t.archived, t.archivedAt),
+  ],
+);
+
+export const systemStructureEntities = pgTable(
+  "system_structure_entities",
+  {
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    entityTypeId: varchar("entity_type_id", { length: ID_MAX_LENGTH }).notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...timestamps(),
+    ...versioned(),
+    ...archivable(),
+  },
+  (t) => [
+    index("system_structure_entities_system_archived_idx").on(t.systemId, t.archived),
+    index("system_structure_entities_entity_type_id_idx").on(t.entityTypeId),
+    unique("system_structure_entities_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.entityTypeId, t.systemId],
+      foreignColumns: [systemStructureEntityTypes.id, systemStructureEntityTypes.systemId],
+    }).onDelete("restrict"),
+    versionCheckFor("system_structure_entities", t.version),
+    archivableConsistencyCheckFor("system_structure_entities", t.archived, t.archivedAt),
+  ],
+);
+
+export const systemStructureEntityLinks = pgTable(
+  "system_structure_entity_links",
+  {
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    parentEntityId: varchar("parent_entity_id", { length: ID_MAX_LENGTH }),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: pgTimestamp("created_at").notNull(),
+  },
+  (t) => [
+    index("system_structure_entity_links_entity_id_idx").on(t.entityId),
+    index("system_structure_entity_links_parent_entity_id_idx").on(t.parentEntityId),
+    index("system_structure_entity_links_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.entityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.parentEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
+  ],
+);
+
+export const systemStructureEntityMemberLinks = pgTable(
+  "system_structure_entity_member_links",
+  {
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    parentEntityId: varchar("parent_entity_id", { length: ID_MAX_LENGTH }),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: pgTimestamp("created_at").notNull(),
+  },
+  (t) => [
+    index("system_structure_entity_member_links_parent_entity_id_idx").on(t.parentEntityId),
+    index("system_structure_entity_member_links_member_id_idx").on(t.memberId),
+    index("system_structure_entity_member_links_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.parentEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("restrict"),
+  ],
+);
+
+export const systemStructureEntityAssociations = pgTable(
+  "system_structure_entity_associations",
+  {
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    sourceEntityId: varchar("source_entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    targetEntityId: varchar("target_entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    createdAt: pgTimestamp("created_at").notNull(),
+  },
+  (t) => [
+    unique("system_structure_entity_associations_uniq").on(t.sourceEntityId, t.targetEntityId),
+    index("system_structure_entity_associations_source_idx").on(t.sourceEntityId),
+    index("system_structure_entity_associations_target_idx").on(t.targetEntityId),
+    index("system_structure_entity_associations_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.sourceEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.targetEntityId, t.systemId],
+      foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
+    }).onDelete("restrict"),
+  ],
+);
+
 export type RelationshipRow = InferSelectModel<typeof relationships>;
 export type NewRelationship = InferInsertModel<typeof relationships>;
 export type SubsystemRow = InferSelectModel<typeof subsystems>;
@@ -316,3 +445,21 @@ export type SubsystemSideSystemLinkRow = InferSelectModel<typeof subsystemSideSy
 export type NewSubsystemSideSystemLink = InferInsertModel<typeof subsystemSideSystemLinks>;
 export type SideSystemLayerLinkRow = InferSelectModel<typeof sideSystemLayerLinks>;
 export type NewSideSystemLayerLink = InferInsertModel<typeof sideSystemLayerLinks>;
+export type SystemStructureEntityTypeRow = InferSelectModel<typeof systemStructureEntityTypes>;
+export type NewSystemStructureEntityType = InferInsertModel<typeof systemStructureEntityTypes>;
+export type SystemStructureEntityRow = InferSelectModel<typeof systemStructureEntities>;
+export type NewSystemStructureEntity = InferInsertModel<typeof systemStructureEntities>;
+export type SystemStructureEntityLinkRow = InferSelectModel<typeof systemStructureEntityLinks>;
+export type NewSystemStructureEntityLink = InferInsertModel<typeof systemStructureEntityLinks>;
+export type SystemStructureEntityMemberLinkRow = InferSelectModel<
+  typeof systemStructureEntityMemberLinks
+>;
+export type NewSystemStructureEntityMemberLink = InferInsertModel<
+  typeof systemStructureEntityMemberLinks
+>;
+export type SystemStructureEntityAssociationRow = InferSelectModel<
+  typeof systemStructureEntityAssociations
+>;
+export type NewSystemStructureEntityAssociation = InferInsertModel<
+  typeof systemStructureEntityAssociations
+>;

@@ -108,7 +108,7 @@ export interface CrdtPollVote {
   pollId: CrdtString;
   /** Null indicates abstain. */
   optionId: CrdtOptionalString;
-  /** JSON-serialized EntityReference<"member"|"subsystem"|"side-system"|"layer"> */
+  /** JSON-serialized EntityReference<"member"|"structure-entity"> */
   voter: CrdtString;
   comment: CrdtOptionalString;
   isVeto: boolean;

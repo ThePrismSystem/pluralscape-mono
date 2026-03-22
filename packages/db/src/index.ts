@@ -107,7 +107,7 @@ export {
 } from "./queries/index.js";
 
 // ── Views / Query Helpers ─────────────────────────────────────
-export { pgViews, sqliteViews, LINK_TYPES, mapStructureCrossLinkRow } from "./views/index.js";
+export { pgViews, sqliteViews, mapStructureEntityAssociationRow } from "./views/index.js";
 export type {
   ActiveApiKey,
   ActiveDeviceToken,
@@ -119,6 +119,6 @@ export type {
   MemberGroupSummary,
   PendingFriendRequest,
   PendingWebhookRetry,
-  StructureCrossLink,
+  StructureEntityAssociationRow,
   UnconfirmedAcknowledgement,
 } from "./views/index.js";

@@ -6,6 +6,7 @@ import type {
   JournalEntryId,
   MemberId,
   SystemId,
+  SystemStructureEntityId,
   WikiPageId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
@@ -111,7 +112,7 @@ export interface EntityLink {
 /** Shared base fields for all fronting snapshot entry variants (unexported). */
 interface FrontingSnapshotEntryBase {
   readonly sessionId: FrontingSessionId;
-  readonly linkedStructure: EntityReference<"structure-entity"> | null;
+  readonly structureEntityId: SystemStructureEntityId | null;
   readonly startTime: UnixMillis;
 }
 
