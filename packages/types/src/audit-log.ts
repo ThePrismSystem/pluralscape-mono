@@ -111,7 +111,13 @@ export type AuditEventType =
   | "blob.archived"
   | "member.deleted"
   | "member-photo.deleted"
-  | "field-definition.deleted";
+  | "field-definition.deleted"
+  | "fronting-session.created"
+  | "fronting-session.updated"
+  | "fronting-session.ended"
+  | "fronting-session.archived"
+  | "fronting-session.restored"
+  | "fronting-session.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

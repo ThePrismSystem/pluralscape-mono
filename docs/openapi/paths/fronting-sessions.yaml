@@ -1,0 +1,249 @@
+/systems/{systemId}/fronting-sessions:
+  get:
+    operationId: listFrontingSessions
+    tags: [Fronting Sessions]
+    summary: List fronting sessions
+    description: |
+      Returns a paginated list of fronting sessions for the specified system.
+      Supports filtering by member, custom front, structure entity, date range,
+      and active-only status.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: memberId
+        in: query
+        schema:
+          type: string
+        description: Filter by member ID
+      - name: customFrontId
+        in: query
+        schema:
+          type: string
+        description: Filter by custom front ID
+      - name: structureEntityId
+        in: query
+        schema:
+          type: string
+        description: Filter by structure entity ID
+      - name: startAfter
+        in: query
+        schema:
+          type: integer
+          format: int64
+        description: Filter sessions starting at or after this Unix timestamp (ms)
+      - name: startBefore
+        in: query
+        schema:
+          type: integer
+          format: int64
+        description: Filter sessions starting at or before this Unix timestamp (ms)
+      - name: activeOnly
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, only return sessions with no end time
+      - name: includeArchived
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, include archived sessions in the response
+    responses:
+      "200":
+        description: Paginated fronting session list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createFrontingSession
+    tags: [Fronting Sessions]
+    summary: Create a fronting session
+    description: |
+      Starts a new fronting session. At least one subject (memberId, customFrontId,
+      or structureEntityId) is required. Retroactive startTime values are allowed.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fronting.yaml#/CreateFrontingSessionRequest"
+    responses:
+      "201":
+        description: Fronting session created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting-sessions/{sessionId}:
+  get:
+    operationId: getFrontingSession
+    tags: [Fronting Sessions]
+    summary: Get a fronting session
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Fronting session
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+  put:
+    operationId: updateFrontingSession
+    tags: [Fronting Sessions]
+    summary: Update a fronting session
+    description: |
+      Updates the encrypted data of a fronting session. Subject fields are
+      immutable after creation. Requires version for OCC.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fronting.yaml#/UpdateFrontingSessionRequest"
+    responses:
+      "200":
+        description: Updated fronting session
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "409":
+        description: Version conflict
+  delete:
+    operationId: deleteFrontingSession
+    tags: [Fronting Sessions]
+    summary: Delete a fronting session
+    description: |
+      Permanently deletes a fronting session. Returns 409 if the session has
+      dependent comments. Use archive instead for reversible removal.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Deleted
+      "409":
+        description: Session has dependent comments (HAS_DEPENDENTS)
+
+/systems/{systemId}/fronting-sessions/{sessionId}/end:
+  post:
+    operationId: endFrontingSession
+    tags: [Fronting Sessions]
+    summary: End a fronting session
+    description: |
+      Sets the endTime on an active session. endTime must be after startTime.
+      Requires version for OCC.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fronting.yaml#/EndFrontingSessionRequest"
+    responses:
+      "200":
+        description: Session ended
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "400":
+        description: endTime must be after startTime
+
+/systems/{systemId}/fronting-sessions/{sessionId}/archive:
+  post:
+    operationId: archiveFrontingSession
+    tags: [Fronting Sessions]
+    summary: Archive a fronting session
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Archived
+
+/systems/{systemId}/fronting-sessions/{sessionId}/restore:
+  post:
+    operationId: restoreFrontingSession
+    tags: [Fronting Sessions]
+    summary: Restore an archived fronting session
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Restored fronting session
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"

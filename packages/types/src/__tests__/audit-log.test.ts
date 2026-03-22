@@ -132,6 +132,12 @@ describe("AuditEventType", () => {
         case "member.deleted":
         case "member-photo.deleted":
         case "field-definition.deleted":
+        case "fronting-session.created":
+        case "fronting-session.updated":
+        case "fronting-session.ended":
+        case "fronting-session.archived":
+        case "fronting-session.restored":
+        case "fronting-session.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

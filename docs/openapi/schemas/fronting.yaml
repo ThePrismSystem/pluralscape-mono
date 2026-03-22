@@ -1,0 +1,79 @@
+FrontingSessionResponse:
+  description: |
+    A fronting session. Extends EncryptedEntity with server-visible fields:
+    subject IDs (memberId/customFrontId/structureEntityId), startTime, endTime,
+    and archived status.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        memberId:
+          type: string
+          nullable: true
+        customFrontId:
+          type: string
+          nullable: true
+        structureEntityId:
+          type: string
+          nullable: true
+        startTime:
+          type: integer
+          format: int64
+          description: "Unix milliseconds when the session started"
+        endTime:
+          type: integer
+          format: int64
+          nullable: true
+          description: "Unix milliseconds when the session ended (null if active)"
+
+CreateFrontingSessionRequest:
+  type: object
+  required: [encryptedData, startTime]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextFrontingSession"
+    startTime:
+      type: integer
+      format: int64
+      minimum: 0
+      description: "Unix milliseconds. Retroactive values are allowed."
+    memberId:
+      type: string
+      description: "Member ID (mem_ prefix). At least one subject required."
+    customFrontId:
+      type: string
+      description: "Custom front ID (cf_ prefix)"
+    structureEntityId:
+      type: string
+      description: "Structure entity ID (ste_ prefix)"
+
+UpdateFrontingSessionRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextFrontingSession"
+    version:
+      type: integer
+      minimum: 1
+
+EndFrontingSessionRequest:
+  type: object
+  required: [endTime, version]
+  properties:
+    endTime:
+      type: integer
+      format: int64
+      minimum: 0
+      description: "Unix milliseconds. Must be after startTime."
+    version:
+      type: integer
+      minimum: 1

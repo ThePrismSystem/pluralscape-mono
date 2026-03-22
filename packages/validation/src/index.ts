@@ -74,6 +74,12 @@ export {
 } from "./innerworld.js";
 export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema } from "./blob.js";
 export {
+  CreateFrontingSessionBodySchema,
+  UpdateFrontingSessionBodySchema,
+  EndFrontingSessionBodySchema,
+  FrontingSessionQuerySchema,
+} from "./fronting-session.js";
+export {
   booleanQueryParam,
   IncludeArchivedQuerySchema,
   InnerWorldEntityQuerySchema,
