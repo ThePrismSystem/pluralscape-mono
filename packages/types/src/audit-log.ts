@@ -137,7 +137,7 @@ export type AuditEventType =
   | "check-in-record.responded"
   | "check-in-record.dismissed"
   | "check-in-record.archived"
-  | "check-in-record.deleted";
+  | "check-in-record.deleted"
   | "webhook-config.created"
   | "webhook-config.updated"
   | "webhook-config.archived"
