@@ -17,7 +17,7 @@ CREATE TABLE `__new_lifecycle_events` (
 	CONSTRAINT "lifecycle_events_archived_consistency_check" CHECK(("__new_lifecycle_events"."archived" = true) = ("__new_lifecycle_events"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
-INSERT INTO `__new_lifecycle_events`("id", "system_id", "event_type", "occurred_at", "recorded_at", "updated_at", "encrypted_data", "plaintext_metadata", "version", "archived", "archived_at") SELECT "id", "system_id", "event_type", "occurred_at", "recorded_at", "updated_at", "encrypted_data", "plaintext_metadata", "version", "archived", "archived_at" FROM `lifecycle_events`;--> statement-breakpoint
+INSERT INTO `__new_lifecycle_events`("id", "system_id", "event_type", "occurred_at", "recorded_at", "updated_at", "encrypted_data", "plaintext_metadata", "version", "archived", "archived_at") SELECT "id", "system_id", "event_type", "occurred_at", "recorded_at", "recorded_at", "encrypted_data", "plaintext_metadata", 1, 0, NULL FROM `lifecycle_events`;--> statement-breakpoint
 DROP TABLE `lifecycle_events`;--> statement-breakpoint
 ALTER TABLE `__new_lifecycle_events` RENAME TO `lifecycle_events`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint

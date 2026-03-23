@@ -287,9 +287,10 @@ export interface CrdtTimer extends CrdtAuditFields {
 // ── lifecycle events ─────────────────────────────────────────────────
 
 /**
- * CRDT representation of a LifecycleEvent (append-only list in system-core).
- * Event-specific fields are serialized into `payload` to keep the list element
- * type uniform across all event types.
+ * CRDT representation of a LifecycleEvent (append-LWW map in system-core).
+ * Event-specific fields are serialized into `payload` to keep the map value
+ * type uniform across all event types. The `archived` field is LWW-mutable
+ * after creation; all other fields are immutable once set.
  */
 export interface CrdtLifecycleEvent {
   id: CrdtString;
@@ -301,6 +302,8 @@ export interface CrdtLifecycleEvent {
   notes: CrdtOptionalString;
   /** JSON-serialized event-specific fields (sourceMemberId, resultMemberIds, etc.) */
   payload: CrdtString;
+  /** LWW-mutable: whether this event has been archived */
+  archived: boolean;
 }
 
 // ── document ─────────────────────────────────────────────────────────
@@ -346,6 +349,6 @@ export interface SystemCoreDocument {
   /** Key format: "{groupId}_{memberId}" */
   groupMemberships: Record<string, true>;
 
-  /** Append-only lifecycle event log */
-  lifecycleEvents: CrdtLifecycleEvent[];
+  /** Append-LWW lifecycle event map (keyed by event ID) */
+  lifecycleEvents: Record<string, CrdtLifecycleEvent>;
 }

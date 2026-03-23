@@ -10,6 +10,12 @@
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - $ref: "../openapi.yaml#/components/parameters/Cursor"
       - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, include archived lifecycle events in the response
     responses:
       "200":
         description: Paginated lifecycle event list

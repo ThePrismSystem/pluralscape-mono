@@ -58,6 +58,7 @@ describe("Document factories", () => {
         "innerWorldEntities",
         "innerWorldRegions",
         "timers",
+        "lifecycleEvents",
       ] as const) {
         expect(Object.keys(doc[key])).toHaveLength(0);
       }
@@ -68,9 +69,9 @@ describe("Document factories", () => {
       expect(Object.keys(doc.groupMemberships)).toHaveLength(0);
     });
 
-    it("lifecycle events list is initially empty", () => {
+    it("lifecycle events map is initially empty", () => {
       const doc = createSystemCoreDocument();
-      expect(doc.lifecycleEvents).toHaveLength(0);
+      expect(Object.keys(doc.lifecycleEvents)).toHaveLength(0);
     });
 
     it("survives save/load roundtrip", () => {

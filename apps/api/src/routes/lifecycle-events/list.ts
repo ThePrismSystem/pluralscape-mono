@@ -19,8 +19,9 @@ listRoute.get("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const { eventType } = LifecycleEventQuerySchema.parse({
+  const { eventType, includeArchived } = LifecycleEventQuerySchema.parse({
     eventType: c.req.query("eventType"),
+    includeArchived: c.req.query("includeArchived"),
   });
 
   const db = await getDb();
@@ -31,6 +32,7 @@ listRoute.get("/", async (c) => {
     parseCursor(cursorParam ?? undefined),
     limit,
     eventType,
+    includeArchived,
   );
   return c.json(result);
 });

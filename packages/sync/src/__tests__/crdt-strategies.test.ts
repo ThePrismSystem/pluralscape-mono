@@ -176,6 +176,14 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
     expect("sortGroupField" in ENTITY_CRDT_STRATEGIES["structure-entity-association"]).toBe(false);
   });
 
+  it("lifecycle-event uses append-lww with archive semantics", () => {
+    const strategy = ENTITY_CRDT_STRATEGIES["lifecycle-event"];
+    expect(strategy.storageType).toBe("append-lww");
+    expect(strategy.document).toBe("system-core");
+    expect(strategy.fieldName).toBe("lifecycleEvents");
+    expect(strategy.mutationSemantics).toContain("archived");
+  });
+
   it("link strategy mutationSemantics distinguish mutable from immutable fields", () => {
     const link = ENTITY_CRDT_STRATEGIES["structure-entity-link"];
     expect(link.mutationSemantics).toContain("immutable after creation");

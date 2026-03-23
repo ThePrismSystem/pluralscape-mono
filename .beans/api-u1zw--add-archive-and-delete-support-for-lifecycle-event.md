@@ -18,7 +18,7 @@ Lifecycle events are currently append-only in the CRDT strategy. They need archi
 - [x] Archive endpoint: `POST /systems/:systemId/lifecycle-events/:eventId/archive`
 - [x] Restore endpoint: `POST /systems/:systemId/lifecycle-events/:eventId/restore`
 - [x] Delete endpoint: `DELETE /systems/:systemId/lifecycle-events/:eventId`
-- [x] OCC version check on archive/restore (new version column)
+- [x] Version column with monotonic increment on archive/restore (for CRDT sync)
 - [x] Update CRDT strategy from `append-only` to `append-lww` in `crdt-strategies.ts`
 - [x] Update OpenAPI spec: `paths/lifecycle-events.yaml` with archive/restore/delete operations
 - [x] Route-level tests for new endpoints

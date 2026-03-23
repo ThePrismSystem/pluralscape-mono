@@ -66,7 +66,7 @@ function makeSystemCoreDoc(): Automerge.Doc<SystemCoreDocument> {
     structureEntityLinks: {},
     structureEntityMemberLinks: {},
     structureEntityAssociations: {},
-    lifecycleEvents: [],
+    lifecycleEvents: {},
   });
 }
 
@@ -141,7 +141,7 @@ describe("SystemCoreDocument schema", () => {
     const doc = makeSystemCoreDoc();
     expect(Object.keys(doc.members)).toHaveLength(0);
     expect(Object.keys(doc.groups)).toHaveLength(0);
-    expect(doc.lifecycleEvents).toHaveLength(0);
+    expect(Object.keys(doc.lifecycleEvents)).toHaveLength(0);
     expect(Object.keys(doc.groupMemberships)).toHaveLength(0);
   });
 
@@ -206,10 +206,10 @@ describe("SystemCoreDocument schema", () => {
     expect(doc.members["mem_1"]?.name.val).toBe("Updated");
   });
 
-  it("appends lifecycle events to the append-only list", () => {
+  it("adds lifecycle events to the append-lww map", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.lifecycleEvents.push({
+      d.lifecycleEvents["le_1"] = {
         id: s("le_1"),
         systemId: s("sys_test"),
         eventType: s("discovery"),
@@ -217,10 +217,11 @@ describe("SystemCoreDocument schema", () => {
         recordedAt: 1001,
         notes: null,
         payload: s('{"memberId":"mem_1"}'),
-      });
+        archived: false,
+      };
     });
     doc = Automerge.change(doc, (d) => {
-      d.lifecycleEvents.push({
+      d.lifecycleEvents["le_2"] = {
         id: s("le_2"),
         systemId: s("sys_test"),
         eventType: s("split"),
@@ -228,11 +229,36 @@ describe("SystemCoreDocument schema", () => {
         recordedAt: 2001,
         notes: s("Split during stressful week"),
         payload: s('{"sourceMemberId":"mem_1","resultMemberIds":["mem_2","mem_3"]}'),
-      });
+        archived: false,
+      };
     });
-    expect(doc.lifecycleEvents).toHaveLength(2);
-    expect(doc.lifecycleEvents[0]?.eventType.val).toBe("discovery");
-    expect(doc.lifecycleEvents[1]?.eventType.val).toBe("split");
+    expect(Object.keys(doc.lifecycleEvents)).toHaveLength(2);
+    expect(doc.lifecycleEvents["le_1"]?.eventType.val).toBe("discovery");
+    expect(doc.lifecycleEvents["le_2"]?.eventType.val).toBe("split");
+  });
+
+  it("supports LWW mutation of archived field on lifecycle events", () => {
+    let doc = makeSystemCoreDoc();
+    doc = Automerge.change(doc, (d) => {
+      d.lifecycleEvents["le_1"] = {
+        id: s("le_1"),
+        systemId: s("sys_test"),
+        eventType: s("discovery"),
+        occurredAt: 1000,
+        recordedAt: 1001,
+        notes: null,
+        payload: s('{"memberId":"mem_1"}'),
+        archived: false,
+      };
+    });
+    expect(doc.lifecycleEvents["le_1"]?.archived).toBe(false);
+    doc = Automerge.change(doc, (d) => {
+      const event = d.lifecycleEvents["le_1"];
+      if (event) {
+        event.archived = true;
+      }
+    });
+    expect(doc.lifecycleEvents["le_1"]?.archived).toBe(true);
   });
 
   it("adds junction map entries with compound keys", () => {
@@ -521,7 +547,7 @@ describe("SystemCoreDocument schema", () => {
     const loaded = Automerge.load<SystemCoreDocument>(bytes);
     expect(loaded.members["mem_1"]?.name.val).toBe("Kai");
     expect(loaded.system.name.val).toBe("Test System");
-    expect(loaded.lifecycleEvents).toHaveLength(0);
+    expect(Object.keys(loaded.lifecycleEvents)).toHaveLength(0);
   });
 });
 

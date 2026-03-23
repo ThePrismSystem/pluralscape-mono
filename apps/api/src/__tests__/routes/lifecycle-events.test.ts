@@ -55,7 +55,7 @@ const EVT_URL = `${BASE_URL}/${EVT_ID}`;
 const MOCK_EVENT = {
   id: EVT_ID as never,
   systemId: SYS_ID as never,
-  eventType: "created",
+  eventType: "discovery" as const,
   occurredAt: 1000 as never,
   recordedAt: 1000 as never,
   updatedAt: 1000 as never,
@@ -148,6 +148,7 @@ describe("GET /systems/:id/lifecycle-events", () => {
       undefined,
       expect.any(Number),
       undefined,
+      false,
     );
   });
 
@@ -162,6 +163,7 @@ describe("GET /systems/:id/lifecycle-events", () => {
       undefined,
       expect.any(Number),
       "discovery",
+      false,
     );
   });
 
@@ -216,6 +218,7 @@ describe("DELETE /systems/:id/lifecycle-events/:eventId", () => {
     const res = await app.request(EVT_URL, { method: "DELETE" });
 
     expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
   });
 
   it("returns 404 when not found", async () => {
@@ -246,6 +249,15 @@ describe("DELETE /systems/:id/lifecycle-events/:eventId", () => {
       expect.any(Function),
     );
   });
+
+  it("returns 500 for unexpected errors", async () => {
+    vi.mocked(deleteLifecycleEvent).mockRejectedValueOnce(new Error("DB timeout"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const app = createApp();
+    const res = await app.request(EVT_URL, { method: "DELETE" });
+    expect(res.status).toBe(500);
+    spy.mockRestore();
+  });
 });
 
 describe("POST /systems/:id/lifecycle-events/:eventId/archive", () => {
@@ -259,6 +271,7 @@ describe("POST /systems/:id/lifecycle-events/:eventId/archive", () => {
     const res = await app.request(`${EVT_URL}/archive`, { method: "POST" });
 
     expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
   });
 
   it("returns 404 when not found", async () => {
@@ -288,6 +301,15 @@ describe("POST /systems/:id/lifecycle-events/:eventId/archive", () => {
       MOCK_AUTH,
       expect.any(Function),
     );
+  });
+
+  it("returns 500 for unexpected errors", async () => {
+    vi.mocked(archiveLifecycleEvent).mockRejectedValueOnce(new Error("DB timeout"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const app = createApp();
+    const res = await app.request(`${EVT_URL}/archive`, { method: "POST" });
+    expect(res.status).toBe(500);
+    spy.mockRestore();
   });
 });
 
@@ -333,6 +355,15 @@ describe("POST /systems/:id/lifecycle-events/:eventId/restore", () => {
       MOCK_AUTH,
       expect.any(Function),
     );
+  });
+
+  it("returns 500 for unexpected errors", async () => {
+    vi.mocked(restoreLifecycleEvent).mockRejectedValueOnce(new Error("DB timeout"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const app = createApp();
+    const res = await app.request(`${EVT_URL}/restore`, { method: "POST" });
+    expect(res.status).toBe(500);
+    spy.mockRestore();
   });
 });
 

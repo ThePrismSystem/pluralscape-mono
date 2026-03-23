@@ -104,7 +104,7 @@ export function createSystemCoreDocument(): Automerge.Doc<SystemCoreDocument> {
     structureEntityLinks: {},
     structureEntityMemberLinks: {},
     structureEntityAssociations: {},
-    lifecycleEvents: [],
+    lifecycleEvents: {},
   });
 }
 

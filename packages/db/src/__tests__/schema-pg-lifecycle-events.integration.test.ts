@@ -264,4 +264,91 @@ describe("PG lifecycle_events schema", () => {
       }),
     ).rejects.toThrow(/check|constraint|failed query/i);
   });
+
+  describe("archivable columns", () => {
+    it("defaults archived to false and archivedAt to null on insert", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      const rows = await db
+        .insert(lifecycleEvents)
+        .values({
+          id,
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+        })
+        .returning();
+
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("defaults version to 1 on insert", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      const rows = await db
+        .insert(lifecycleEvents)
+        .values({
+          id,
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+        })
+        .returning();
+
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("rejects archived=true with archivedAt=null via consistency check", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(lifecycleEvents).values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          archived: true,
+          archivedAt: null,
+        }),
+      ).rejects.toThrow(/check|constraint|failed query/i);
+    });
+
+    it("rejects archived=false with archivedAt set via consistency check", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(lifecycleEvents).values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          archived: false,
+          archivedAt: now,
+        }),
+      ).rejects.toThrow(/check|constraint|failed query/i);
+    });
+  });
 });

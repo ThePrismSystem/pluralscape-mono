@@ -407,7 +407,12 @@ export interface ServerLifecycleEvent {
   readonly eventType: LifecycleEventType;
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
   readonly encryptedData: EncryptedBlob | null;
+  readonly plaintextMetadata: Record<string, unknown> | null;
+  readonly version: number;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
 }
 
 /** Client-side lifecycle event — flat decrypted fields. */

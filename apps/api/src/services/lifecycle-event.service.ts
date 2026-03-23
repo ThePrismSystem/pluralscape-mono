@@ -10,7 +10,11 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
+import {
+  archiveEntity,
+  restoreEntity,
+  type ArchivableEntityConfig,
+} from "../lib/entity-lifecycle.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -20,7 +24,13 @@ import {
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { EncryptedBlob, LifecycleEventId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBlob,
+  LifecycleEventId,
+  LifecycleEventType,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -28,7 +38,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export interface LifecycleEventResult {
   readonly id: LifecycleEventId;
   readonly systemId: SystemId;
-  readonly eventType: string;
+  readonly eventType: LifecycleEventType;
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
   readonly encryptedData: string;
@@ -56,7 +66,7 @@ export interface PaginatedLifecycleEvents {
 function toLifecycleEventResult(row: {
   id: string;
   systemId: string;
-  eventType: string;
+  eventType: LifecycleEventType;
   occurredAt: number;
   recordedAt: number;
   updatedAt: number;
@@ -177,12 +187,17 @@ export async function listLifecycleEvents(
   cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
   eventType?: string,
+  includeArchived = false,
 ): Promise<PaginatedLifecycleEvents> {
   assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
   const conditions = [eq(lifecycleEvents.systemId, systemId)];
+
+  if (!includeArchived) {
+    conditions.push(eq(lifecycleEvents.archived, false));
+  }
 
   if (eventType) {
     conditions.push(sql`${lifecycleEvents.eventType} = ${eventType}`);
@@ -250,13 +265,12 @@ export async function deleteLifecycleEvent(
   assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: lifecycleEvents.id })
-      .from(lifecycleEvents)
+    const deleted = await tx
+      .delete(lifecycleEvents)
       .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)))
-      .limit(1);
+      .returning({ id: lifecycleEvents.id });
 
-    if (!existing) {
+    if (deleted.length === 0) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Lifecycle event not found");
     }
 
@@ -266,16 +280,12 @@ export async function deleteLifecycleEvent(
       detail: "Lifecycle event deleted",
       systemId,
     });
-
-    await tx
-      .delete(lifecycleEvents)
-      .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)));
   });
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const LIFECYCLE_EVENT_LIFECYCLE = {
+const LIFECYCLE_EVENT_LIFECYCLE: ArchivableEntityConfig = {
   table: lifecycleEvents,
   columns: lifecycleEvents,
   entityName: "Lifecycle event",

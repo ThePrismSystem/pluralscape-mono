@@ -4,6 +4,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
 import type { LifecycleEventId, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -31,11 +32,23 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../lib/entity-lifecycle.js", () => ({
+  archiveEntity: vi.fn().mockResolvedValue(undefined),
+  restoreEntity: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
-const { createLifecycleEvent, listLifecycleEvents, getLifecycleEvent } =
-  await import("../../services/lifecycle-event.service.js");
+const {
+  createLifecycleEvent,
+  listLifecycleEvents,
+  getLifecycleEvent,
+  deleteLifecycleEvent,
+  archiveLifecycleEvent,
+  restoreLifecycleEvent,
+} = await import("../../services/lifecycle-event.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
+const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -54,7 +67,20 @@ const mockAudit = vi.fn().mockResolvedValue(undefined);
 
 const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
 
-function makeLifecycleEventRow(overrides: Record<string, unknown> = {}) {
+type LifecycleEventRow = {
+  id: string;
+  systemId: string;
+  eventType: string;
+  occurredAt: number;
+  recordedAt: number;
+  updatedAt: number;
+  encryptedData: Uint8Array;
+  version: number;
+  archived: boolean;
+  archivedAt: number | null;
+};
+
+function makeLifecycleEventRow(overrides: Partial<LifecycleEventRow> = {}): LifecycleEventRow {
   return {
     id: EVENT_ID,
     systemId: SYSTEM_ID,
@@ -231,5 +257,114 @@ describe("getLifecycleEvent", () => {
     await expect(
       getLifecycleEvent(db, SYSTEM_ID, "evt_nonexistent" as LifecycleEventId, AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+describe("deleteLifecycleEvent", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("deletes the event and writes audit log", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([{ id: EVENT_ID }]);
+
+    await deleteLifecycleEvent(db, SYSTEM_ID, EVENT_ID, AUTH, mockAudit);
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "lifecycle-event.deleted" }),
+    );
+  });
+
+  it("throws NOT_FOUND when event does not exist", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+
+    await expect(deleteLifecycleEvent(db, SYSTEM_ID, EVENT_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("rejects when caller does not own the system", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(deleteLifecycleEvent(db, SYSTEM_ID, EVENT_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+});
+
+describe("archiveLifecycleEvent", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("delegates to archiveEntity with correct config", async () => {
+    const { db } = mockDb();
+    vi.mocked(archiveEntity).mockResolvedValueOnce(undefined);
+
+    await archiveLifecycleEvent(db, SYSTEM_ID, EVENT_ID, AUTH, mockAudit);
+
+    expect(archiveEntity).toHaveBeenCalledWith(
+      db,
+      SYSTEM_ID,
+      EVENT_ID,
+      AUTH,
+      mockAudit,
+      expect.objectContaining<Partial<ArchivableEntityConfig>>({
+        entityName: "Lifecycle event",
+        archiveEvent: "lifecycle-event.archived",
+        restoreEvent: "lifecycle-event.restored",
+      }),
+    );
+  });
+});
+
+describe("restoreLifecycleEvent", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("delegates to restoreEntity with correct config", async () => {
+    const { db } = mockDb();
+    vi.mocked(restoreEntity).mockResolvedValueOnce(makeLifecycleEventRow());
+
+    await restoreLifecycleEvent(db, SYSTEM_ID, EVENT_ID, AUTH, mockAudit);
+
+    expect(restoreEntity).toHaveBeenCalledWith(
+      db,
+      SYSTEM_ID,
+      EVENT_ID,
+      AUTH,
+      mockAudit,
+      expect.objectContaining<Partial<ArchivableEntityConfig>>({
+        entityName: "Lifecycle event",
+        archiveEvent: "lifecycle-event.archived",
+        restoreEvent: "lifecycle-event.restored",
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it("maps the returned row through toLifecycleEventResult", async () => {
+    const { db } = mockDb();
+    const row = makeLifecycleEventRow({ version: 3, archived: true, archivedAt: null });
+
+    vi.mocked(restoreEntity).mockImplementationOnce(
+      async (_db, _systemId, _entityId, _auth, _audit, _cfg, toResult) =>
+        Promise.resolve(toResult(row as Record<string, unknown>)),
+    );
+
+    const result = await restoreLifecycleEvent(db, SYSTEM_ID, EVENT_ID, AUTH, mockAudit);
+
+    expect(result.id).toBe(EVENT_ID);
+    expect(result.version).toBe(3);
+    expect(result.eventType).toBe("discovery");
   });
 });
