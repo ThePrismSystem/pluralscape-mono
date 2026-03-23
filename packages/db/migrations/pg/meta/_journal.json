@@ -64,6 +64,13 @@
       "when": 1774253777512,
       "tag": "0008_tricky_nick_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774256695440,
+      "tag": "0009_freezing_ezekiel_stane",
+      "breakpoints": true
     }
   ]
 }

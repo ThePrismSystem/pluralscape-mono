@@ -64,6 +64,13 @@
       "when": 1774253779720,
       "tag": "0008_old_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1774256698067,
+      "tag": "0009_freezing_pet_avengers",
+      "breakpoints": true
     }
   ]
 }
