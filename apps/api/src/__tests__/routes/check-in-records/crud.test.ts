@@ -193,6 +193,34 @@ describe("POST /systems/:id/check-in-records/:recordId/respond", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("ALREADY_RESPONDED");
   });
+
+  it("returns 409 when record is dismissed", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(respondCheckInRecord).mockRejectedValueOnce(
+      new ApiHttpError(409, "ALREADY_DISMISSED", "Check-in already dismissed"),
+    );
+    const app = createApp();
+    const res = await postJSON(app, `${RECORD_URL}/respond`, {
+      respondedByMemberId: "mem_880e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("ALREADY_DISMISSED");
+  });
+
+  it("returns 400 for invalid member", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(respondCheckInRecord).mockRejectedValueOnce(
+      new ApiHttpError(400, "VALIDATION_ERROR", "Member not found in system"),
+    );
+    const app = createApp();
+    const res = await postJSON(app, `${RECORD_URL}/respond`, {
+      respondedByMemberId: "mem_880e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
 });
 
 describe("POST /systems/:id/check-in-records/:recordId/dismiss", () => {
@@ -230,6 +258,18 @@ describe("POST /systems/:id/check-in-records/:recordId/dismiss", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("ALREADY_DISMISSED");
   });
+
+  it("returns 409 when record is already responded", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(dismissCheckInRecord).mockRejectedValueOnce(
+      new ApiHttpError(409, "ALREADY_RESPONDED", "Check-in already responded"),
+    );
+    const app = createApp();
+    const res = await app.request(`${RECORD_URL}/dismiss`, { method: "POST" });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("ALREADY_RESPONDED");
+  });
 });
 
 describe("POST /systems/:id/check-in-records/:recordId/archive", () => {
@@ -248,6 +288,28 @@ describe("POST /systems/:id/check-in-records/:recordId/archive", () => {
 
     expect(res.status).toBe(204);
   });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(archiveCheckInRecord).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Check-in record not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${RECORD_URL}/archive`, { method: "POST" });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 409 when already archived", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(archiveCheckInRecord).mockRejectedValueOnce(
+      new ApiHttpError(409, "ALREADY_ARCHIVED", "Check-in record is already archived"),
+    );
+    const app = createApp();
+    const res = await app.request(`${RECORD_URL}/archive`, { method: "POST" });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("ALREADY_ARCHIVED");
+  });
 });
 
 describe("DELETE /systems/:id/check-in-records/:recordId", () => {
@@ -265,6 +327,16 @@ describe("DELETE /systems/:id/check-in-records/:recordId", () => {
     const res = await app.request(RECORD_URL, { method: "DELETE" });
 
     expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(deleteCheckInRecord).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Check-in record not found"),
+    );
+    const app = createApp();
+    const res = await app.request(RECORD_URL, { method: "DELETE" });
+    expect(res.status).toBe(404);
   });
 });
 

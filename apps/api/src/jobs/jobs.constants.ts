@@ -29,3 +29,9 @@ export const SYNC_QUEUE_RETENTION_MS = 7 * MS_PER_DAY;
  * Conflict records are kept for 90 days for auditing and debugging purposes.
  */
 export const SYNC_CONFLICTS_RETENTION_MS = 90 * MS_PER_DAY;
+
+/**
+ * Maximum number of enabled timer configs to process per check-in generation run.
+ * Keeps individual runs bounded to avoid timeouts on systems with many timers.
+ */
+export const CHECK_IN_GENERATE_BATCH_SIZE = 100;

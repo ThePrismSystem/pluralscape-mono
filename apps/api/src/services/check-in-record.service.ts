@@ -187,7 +187,13 @@ export async function getCheckInRecord(
   const [row] = await db
     .select()
     .from(checkInRecords)
-    .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+    .where(
+      and(
+        eq(checkInRecords.id, recordId),
+        eq(checkInRecords.systemId, systemId),
+        eq(checkInRecords.archived, false),
+      ),
+    )
     .limit(1);
 
   if (!row) {
@@ -336,30 +342,45 @@ export async function archiveCheckInRecord(
 
   const timestamp = now();
 
-  const updated = await db
-    .update(checkInRecords)
-    .set({
-      archived: true,
-      archivedAt: timestamp,
-    })
-    .where(
-      and(
-        eq(checkInRecords.id, recordId),
-        eq(checkInRecords.systemId, systemId),
-        eq(checkInRecords.archived, false),
-      ),
-    )
-    .returning({ id: checkInRecords.id });
+  await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(checkInRecords)
+      .set({
+        archived: true,
+        archivedAt: timestamp,
+      })
+      .where(
+        and(
+          eq(checkInRecords.id, recordId),
+          eq(checkInRecords.systemId, systemId),
+          eq(checkInRecords.archived, false),
+        ),
+      )
+      .returning({ id: checkInRecords.id });
 
-  if (updated.length === 0) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
-  }
+    if (updated.length === 0) {
+      const [existing] = await tx
+        .select({ id: checkInRecords.id })
+        .from(checkInRecords)
+        .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+        .limit(1);
 
-  await audit(db, {
-    eventType: "check-in-record.archived",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "Check-in record archived",
-    systemId,
+      if (existing) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "ALREADY_ARCHIVED",
+          "Check-in record is already archived",
+        );
+      }
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
+    }
+
+    await audit(tx, {
+      eventType: "check-in-record.archived",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Check-in record archived",
+      systemId,
+    });
   });
 }
 
@@ -385,16 +406,16 @@ export async function deleteCheckInRecord(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
     }
 
+    await tx
+      .delete(checkInRecords)
+      .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)));
+
     await audit(tx, {
       eventType: "check-in-record.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Check-in record deleted",
       systemId,
     });
-
-    await tx
-      .delete(checkInRecords)
-      .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)));
   });
 }
 

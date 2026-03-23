@@ -1,6 +1,11 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId } from "@pluralscape/types";
-import { and, eq, gte, lte } from "drizzle-orm";
+import { parseTimeToMinutes } from "@pluralscape/validation";
+import { and, eq } from "drizzle-orm";
+
+import { logger } from "../lib/logger.js";
+
+import { CHECK_IN_GENERATE_BATCH_SIZE } from "./jobs.constants.js";
 
 import type { JobHandler } from "@pluralscape/queue";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -10,18 +15,6 @@ const MINUTES_PER_HOUR = 60;
 
 /** Milliseconds per second. */
 const MS_PER_SECOND = 1000;
-
-/**
- * Parse an "HH:MM" string into total minutes since midnight.
- * Returns null if the format is invalid.
- */
-export function parseTimeToMinutes(time: string): number | null {
-  const match = /^(\d{2}):(\d{2})$/.exec(time);
-  if (!match) return null;
-  const hours = parseInt(match[1] as string, 10);
-  const minutes = parseInt(match[2] as string, 10);
-  return hours * MINUTES_PER_HOUR + minutes;
-}
 
 /**
  * Check if the current time (as minutes since midnight) falls within
@@ -59,7 +52,7 @@ export function computeIdempotencyKey(
   return `${timerConfigId}:${String(windowIndex)}`;
 }
 
-/** Check if the abort signal has been triggered. */
+/** Check if the abort signal has been triggered (avoids lint narrowing). */
 function isAborted(signal: AbortSignal): boolean {
   return signal.aborted;
 }
@@ -67,7 +60,7 @@ function isAborted(signal: AbortSignal): boolean {
 /**
  * Creates a job handler for the `check-in-generate` job type.
  *
- * Polls all enabled, non-archived timer configs and creates check-in
+ * Polls enabled, non-archived timer configs in batches and creates check-in
  * records for those whose interval has elapsed. Respects waking hours
  * constraints and uses idempotency keys to prevent duplicate records.
  */
@@ -80,56 +73,54 @@ export function createCheckInGenerateHandler(
     const nowMs = Date.now();
     const currentMinutes = getCurrentMinutesUtc(nowMs);
 
-    // Fetch all enabled, non-archived timer configs
+    // Fetch enabled, non-archived timer configs in bounded batches
     const configs = await db
       .select()
       .from(timerConfigs)
-      .where(and(eq(timerConfigs.enabled, true), eq(timerConfigs.archived, false)));
+      .where(and(eq(timerConfigs.enabled, true), eq(timerConfigs.archived, false)))
+      .limit(CHECK_IN_GENERATE_BATCH_SIZE);
 
     for (const config of configs) {
       if (isAborted(ctx.signal)) return;
 
-      // Skip configs without an interval
-      if (config.intervalMinutes === null) continue;
+      try {
+        // Skip configs without an interval
+        if (config.intervalMinutes === null) continue;
 
-      // Skip if outside waking hours
-      if (config.wakingHoursOnly === true) {
-        if (!config.wakingStart || !config.wakingEnd) continue;
+        // Skip if outside waking hours
+        if (config.wakingHoursOnly === true) {
+          if (!config.wakingStart || !config.wakingEnd) continue;
 
-        const startMinutes = parseTimeToMinutes(config.wakingStart);
-        const endMinutes = parseTimeToMinutes(config.wakingEnd);
-        if (startMinutes === null || endMinutes === null) continue;
+          const startMinutes = parseTimeToMinutes(config.wakingStart);
+          const endMinutes = parseTimeToMinutes(config.wakingEnd);
+          if (startMinutes === null || endMinutes === null) continue;
 
-        if (!isWithinWakingHours(currentMinutes, startMinutes, endMinutes)) continue;
+          if (!isWithinWakingHours(currentMinutes, startMinutes, endMinutes)) continue;
+        }
+
+        // Create the check-in record with idempotency key to prevent duplicates.
+        // ON CONFLICT DO NOTHING ensures concurrent runs are safe.
+        const recordId = createId(ID_PREFIXES.checkInRecord);
+        const idempotencyKey = computeIdempotencyKey(config.id, config.intervalMinutes, nowMs);
+
+        await db
+          .insert(checkInRecords)
+          .values({
+            id: recordId,
+            systemId: config.systemId,
+            timerConfigId: config.id,
+            scheduledAt: nowMs,
+            idempotencyKey,
+          })
+          .onConflictDoNothing();
+      } catch (error) {
+        logger.warn("Failed to process timer config for check-in generation", {
+          timerConfigId: config.id,
+          ...(error instanceof Error ? { err: error } : { error: String(error) }),
+        });
       }
 
-      // Check if a record already exists for this interval window
-      const [existing] = await db
-        .select({ id: checkInRecords.id })
-        .from(checkInRecords)
-        .where(
-          and(
-            eq(checkInRecords.timerConfigId, config.id),
-            eq(checkInRecords.systemId, config.systemId),
-            gte(
-              checkInRecords.scheduledAt,
-              nowMs - config.intervalMinutes * MINUTES_PER_HOUR * MS_PER_SECOND,
-            ),
-            lte(checkInRecords.scheduledAt, nowMs),
-          ),
-        )
-        .limit(1);
-
-      if (existing) continue;
-
-      // Create the check-in record
-      const recordId = createId(ID_PREFIXES.checkInRecord);
-      await db.insert(checkInRecords).values({
-        id: recordId,
-        systemId: config.systemId,
-        timerConfigId: config.id,
-        scheduledAt: nowMs,
-      });
+      await ctx.heartbeat.heartbeat();
     }
   };
 }

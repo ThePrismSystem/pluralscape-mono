@@ -11,6 +11,23 @@ const HH_MM_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 const hhmmString = z.string().regex(HH_MM_REGEX, "Must be HH:MM format (00:00-23:59)");
 
+const MINUTES_PER_HOUR = 60;
+const MAX_HOUR = 23;
+const MAX_MINUTE = 59;
+
+/**
+ * Parse an "HH:MM" string into total minutes since midnight.
+ * Returns null if the format is invalid or values are out of range.
+ */
+export function parseTimeToMinutes(time: string): number | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match) return null;
+  const hours = parseInt(match[1] as string, 10);
+  const minutes = parseInt(match[2] as string, 10);
+  if (hours > MAX_HOUR || minutes > MAX_MINUTE) return null;
+  return hours * MINUTES_PER_HOUR + minutes;
+}
+
 // ── Timer config schemas ────────────────────────────────────────
 
 export const CreateTimerConfigBodySchema = z
@@ -34,7 +51,9 @@ export const CreateTimerConfigBodySchema = z
       data.wakingStart !== undefined &&
       data.wakingEnd !== undefined
     ) {
-      return data.wakingStart < data.wakingEnd;
+      const start = parseTimeToMinutes(data.wakingStart);
+      const end = parseTimeToMinutes(data.wakingEnd);
+      return start !== null && end !== null && start < end;
     }
     return true;
   }, "wakingStart must be before wakingEnd");
@@ -66,7 +85,9 @@ export const UpdateTimerConfigBodySchema = z
       typeof data.wakingStart === "string" &&
       typeof data.wakingEnd === "string"
     ) {
-      return data.wakingStart < data.wakingEnd;
+      const start = parseTimeToMinutes(data.wakingStart);
+      const end = parseTimeToMinutes(data.wakingEnd);
+      return start !== null && end !== null && start < end;
     }
     return true;
   }, "wakingStart must be before wakingEnd")
@@ -80,7 +101,7 @@ export const TimerConfigQuerySchema = z.object({
 
 export const CreateCheckInRecordBodySchema = z.object({
   timerConfigId: brandedIdQueryParam("tmr_"),
-  scheduledAt: z.number().int().min(0),
+  scheduledAt: z.number().int().min(1),
   encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE).optional(),
 });
 

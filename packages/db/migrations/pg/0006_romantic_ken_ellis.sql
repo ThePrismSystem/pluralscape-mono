@@ -1,0 +1,2 @@
+ALTER TABLE "check_in_records" ADD COLUMN "idempotency_key" varchar(255);--> statement-breakpoint
+ALTER TABLE "check_in_records" ADD CONSTRAINT "check_in_records_idempotency_key_unique" UNIQUE("idempotency_key");

@@ -7,6 +7,7 @@ import {
   RespondCheckInRecordBodySchema,
   TimerConfigQuerySchema,
   UpdateTimerConfigBodySchema,
+  parseTimeToMinutes,
 } from "../timer.js";
 
 describe("CreateTimerConfigBodySchema", () => {
@@ -155,6 +156,14 @@ describe("CreateCheckInRecordBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects zero scheduledAt", () => {
+    const result = CreateCheckInRecordBodySchema.safeParse({
+      timerConfigId: "tmr_550e8400-e29b-41d4-a716-446655440000",
+      scheduledAt: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects negative scheduledAt", () => {
     const result = CreateCheckInRecordBodySchema.safeParse({
       timerConfigId: "tmr_550e8400-e29b-41d4-a716-446655440000",
@@ -199,5 +208,31 @@ describe("CheckInRecordQuerySchema", () => {
       timerConfigId: "tmr_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe("parseTimeToMinutes", () => {
+  it("parses valid HH:MM strings", () => {
+    expect(parseTimeToMinutes("00:00")).toBe(0);
+    expect(parseTimeToMinutes("08:30")).toBe(510);
+    expect(parseTimeToMinutes("12:00")).toBe(720);
+    expect(parseTimeToMinutes("23:59")).toBe(1439);
+  });
+
+  it("returns null for invalid formats", () => {
+    expect(parseTimeToMinutes("8:30")).toBeNull();
+    expect(parseTimeToMinutes("invalid")).toBeNull();
+    expect(parseTimeToMinutes("")).toBeNull();
+  });
+
+  it("returns null for out-of-range hours", () => {
+    expect(parseTimeToMinutes("24:00")).toBeNull();
+    expect(parseTimeToMinutes("25:00")).toBeNull();
+    expect(parseTimeToMinutes("99:00")).toBeNull();
+  });
+
+  it("returns null for out-of-range minutes", () => {
+    expect(parseTimeToMinutes("00:60")).toBeNull();
+    expect(parseTimeToMinutes("12:99")).toBeNull();
   });
 });

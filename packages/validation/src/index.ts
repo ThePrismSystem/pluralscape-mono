@@ -102,6 +102,7 @@ export {
   CreateCheckInRecordBodySchema,
   RespondCheckInRecordBodySchema,
   CheckInRecordQuerySchema,
+  parseTimeToMinutes,
 } from "./timer.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,

@@ -57,7 +57,7 @@ const MOCK_TIMER = {
   systemId: MOCK_AUTH.systemId as never,
   enabled: true,
   intervalMinutes: 30,
-  wakingHoursOnly: false,
+  wakingHoursOnly: false as const,
   wakingStart: null,
   wakingEnd: null,
   encryptedData: "dGVzdA==",
@@ -197,6 +197,16 @@ describe("PUT /systems/:id/timer-configs/:timerId", () => {
 
     expect(res.status).toBe(409);
   });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(updateTimerConfig).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
+    );
+    const app = createApp();
+    const res = await putJSON(app, TIMER_URL, { encryptedData: "dGVzdA==", version: 1 });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("DELETE /systems/:id/timer-configs/:timerId", () => {
@@ -229,6 +239,16 @@ describe("DELETE /systems/:id/timer-configs/:timerId", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("HAS_DEPENDENTS");
   });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(deleteTimerConfig).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
+    );
+    const app = createApp();
+    const res = await app.request(TIMER_URL, { method: "DELETE" });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /systems/:id/timer-configs/:timerId/archive", () => {
@@ -246,6 +266,28 @@ describe("POST /systems/:id/timer-configs/:timerId/archive", () => {
     const res = await app.request(`${TIMER_URL}/archive`, { method: "POST" });
 
     expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(archiveTimerConfig).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${TIMER_URL}/archive`, { method: "POST" });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 409 when already archived", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(archiveTimerConfig).mockRejectedValueOnce(
+      new ApiHttpError(409, "ALREADY_ARCHIVED", "Timer config is already archived"),
+    );
+    const app = createApp();
+    const res = await app.request(`${TIMER_URL}/archive`, { method: "POST" });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("ALREADY_ARCHIVED");
   });
 });
 
@@ -266,6 +308,28 @@ describe("POST /systems/:id/timer-configs/:timerId/restore", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe("tmr_660e8400-e29b-41d4-a716-446655440000");
+  });
+
+  it("returns 404 when not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(restoreTimerConfig).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${TIMER_URL}/restore`, { method: "POST" });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 409 when not archived", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(restoreTimerConfig).mockRejectedValueOnce(
+      new ApiHttpError(409, "NOT_ARCHIVED", "Timer config is not archived"),
+    );
+    const app = createApp();
+    const res = await app.request(`${TIMER_URL}/restore`, { method: "POST" });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_ARCHIVED");
   });
 });
 

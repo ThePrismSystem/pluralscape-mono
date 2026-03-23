@@ -237,6 +237,30 @@ describe("normalizeTimerConfig", () => {
     expect(result.envelope).toBeNull();
   });
 
+  it("skips archived timers with invalid config", () => {
+    const base = createSystemCoreDocument();
+    const docId = asSyncDocId("doc-timer-archived");
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: docId,
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers["tmr_1"] = makeTimer("tmr_1", {
+        intervalMinutes: -5,
+        archived: true,
+      });
+    });
+
+    const result = normalizeTimerConfig(session);
+
+    // Archived timer should be skipped even though intervalMinutes is invalid
+    expect(result.count).toBe(0);
+    expect(result.envelope).toBeNull();
+  });
+
   it("disables timer when wakingHoursOnly=true but wakingStart is null", () => {
     const base = createSystemCoreDocument();
     const docId = asSyncDocId("doc-timer-null-start");

@@ -64,12 +64,14 @@ export const checkInRecords = sqliteTable(
     dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
     respondedByMemberId: text("responded_by_member_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
+    idempotencyKey: text("idempotency_key"),
     ...archivable(),
   },
   (t) => [
     index("check_in_records_system_id_idx").on(t.systemId),
     index("check_in_records_timer_config_id_idx").on(t.timerConfigId),
     index("check_in_records_scheduled_at_idx").on(t.scheduledAt),
+    unique("check_in_records_idempotency_key_unique").on(t.idempotencyKey),
     foreignKey({
       columns: [t.timerConfigId, t.systemId],
       foreignColumns: [timerConfigs.id, timerConfigs.systemId],

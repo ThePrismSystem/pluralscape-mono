@@ -33,14 +33,11 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────
 
-export interface TimerConfigResult {
+interface TimerConfigBase {
   readonly id: TimerId;
   readonly systemId: SystemId;
   readonly enabled: boolean;
   readonly intervalMinutes: number | null;
-  readonly wakingHoursOnly: boolean | null;
-  readonly wakingStart: string | null;
-  readonly wakingEnd: string | null;
   readonly encryptedData: string;
   readonly version: number;
   readonly archived: boolean;
@@ -48,6 +45,20 @@ export interface TimerConfigResult {
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
 }
+
+export type TimerConfigResult = TimerConfigBase &
+  (
+    | {
+        readonly wakingHoursOnly: true;
+        readonly wakingStart: string;
+        readonly wakingEnd: string;
+      }
+    | {
+        readonly wakingHoursOnly: false | null;
+        readonly wakingStart: string | null;
+        readonly wakingEnd: string | null;
+      }
+  );
 
 export interface TimerConfigListOptions {
   readonly cursor?: string;
@@ -72,20 +83,33 @@ function toTimerConfigResult(row: {
   createdAt: number;
   updatedAt: number;
 }): TimerConfigResult {
-  return {
+  const base: TimerConfigBase = {
     id: row.id as TimerId,
     systemId: row.systemId as SystemId,
     enabled: row.enabled,
     intervalMinutes: row.intervalMinutes,
-    wakingHoursOnly: row.wakingHoursOnly,
-    wakingStart: row.wakingStart,
-    wakingEnd: row.wakingEnd,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     archived: row.archived,
     archivedAt: toUnixMillisOrNull(row.archivedAt),
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
+  };
+
+  if (row.wakingHoursOnly === true && row.wakingStart !== null && row.wakingEnd !== null) {
+    return {
+      ...base,
+      wakingHoursOnly: true,
+      wakingStart: row.wakingStart,
+      wakingEnd: row.wakingEnd,
+    };
+  }
+
+  return {
+    ...base,
+    wakingHoursOnly: row.wakingHoursOnly === true ? null : row.wakingHoursOnly,
+    wakingStart: row.wakingStart,
+    wakingEnd: row.wakingEnd,
   };
 }
 
@@ -223,31 +247,33 @@ export async function updateTimerConfig(
   const timestamp = now();
 
   return db.transaction(async (tx) => {
-    const setClause: Record<string, unknown> = {
+    const setClause: Partial<typeof timerConfigs.$inferInsert> = {
       encryptedData: blob,
       updatedAt: timestamp,
-      version: sql`${timerConfigs.version} + 1`,
     };
 
     if (parsed.enabled !== undefined) {
-      setClause["enabled"] = parsed.enabled;
+      setClause.enabled = parsed.enabled;
     }
     if (parsed.intervalMinutes !== undefined) {
-      setClause["intervalMinutes"] = parsed.intervalMinutes;
+      setClause.intervalMinutes = parsed.intervalMinutes;
     }
     if (parsed.wakingHoursOnly !== undefined) {
-      setClause["wakingHoursOnly"] = parsed.wakingHoursOnly;
+      setClause.wakingHoursOnly = parsed.wakingHoursOnly;
     }
     if (parsed.wakingStart !== undefined) {
-      setClause["wakingStart"] = parsed.wakingStart;
+      setClause.wakingStart = parsed.wakingStart;
     }
     if (parsed.wakingEnd !== undefined) {
-      setClause["wakingEnd"] = parsed.wakingEnd;
+      setClause.wakingEnd = parsed.wakingEnd;
     }
 
     const updated = await tx
       .update(timerConfigs)
-      .set(setClause)
+      .set({
+        ...setClause,
+        version: sql`${timerConfigs.version} + 1`,
+      } as Record<string, unknown>)
       .where(
         and(
           eq(timerConfigs.id, timerId),
@@ -334,16 +360,16 @@ export async function deleteTimerConfig(
       );
     }
 
+    await tx
+      .delete(timerConfigs)
+      .where(and(eq(timerConfigs.id, timerId), eq(timerConfigs.systemId, systemId)));
+
     await audit(tx, {
       eventType: "timer-config.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Timer config deleted",
       systemId,
     });
-
-    await tx
-      .delete(timerConfigs)
-      .where(and(eq(timerConfigs.id, timerId), eq(timerConfigs.systemId, systemId)));
   });
 }
 

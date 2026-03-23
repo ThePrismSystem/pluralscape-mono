@@ -43,6 +43,13 @@
       "when": 1774244692178,
       "tag": "0005_amazing_karma",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774247514301,
+      "tag": "0006_romantic_ken_ellis",
+      "breakpoints": true
     }
   ]
 }

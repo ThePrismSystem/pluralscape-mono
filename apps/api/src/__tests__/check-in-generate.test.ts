@@ -1,11 +1,25 @@
-import { describe, expect, it } from "vitest";
+import { toUnixMillis } from "@pluralscape/types";
+import { parseTimeToMinutes } from "@pluralscape/validation";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createCheckInGenerateHandler } from "../jobs/check-in-generate.js";
 import {
   computeIdempotencyKey,
   getCurrentMinutesUtc,
   isWithinWakingHours,
-  parseTimeToMinutes,
 } from "../jobs/check-in-generate.js";
+
+import { mockDb } from "./helpers/mock-db.js";
+
+import type { JobHandlerContext } from "@pluralscape/queue";
+import type { JobDefinition, JobId } from "@pluralscape/types";
+
+const { loggerWarnMock } = vi.hoisted(() => ({
+  loggerWarnMock: vi.fn(),
+}));
+vi.mock("../lib/logger.js", () => ({
+  logger: { warn: loggerWarnMock, info: vi.fn(), error: vi.fn() },
+}));
 
 describe("parseTimeToMinutes", () => {
   it("parses valid HH:MM string", () => {
@@ -21,10 +35,8 @@ describe("parseTimeToMinutes", () => {
     expect(parseTimeToMinutes("")).toBeNull();
   });
 
-  it("parses out-of-range hours as valid minutes (validation is done at schema level)", () => {
-    // parseTimeToMinutes is a parser, not a validator
-    // Schema-level HH:MM validation rejects out-of-range values
-    expect(parseTimeToMinutes("25:00")).toBe(1500);
+  it("returns null for out-of-range hours", () => {
+    expect(parseTimeToMinutes("25:00")).toBeNull();
   });
 });
 
@@ -106,5 +118,198 @@ describe("computeIdempotencyKey", () => {
     const key2 = computeIdempotencyKey("tmr_b", 30, t);
 
     expect(key1).not.toBe(key2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Handler-level tests
+// ---------------------------------------------------------------------------
+
+function stubJob(): JobDefinition<"check-in-generate"> {
+  return {
+    id: "job_test" as JobId,
+    systemId: null,
+    type: "check-in-generate" as const,
+    status: "running",
+    payload: {},
+    attempts: 1,
+    maxAttempts: 3,
+    nextRetryAt: null,
+    error: null,
+    result: null,
+    createdAt: toUnixMillis(0),
+    startedAt: toUnixMillis(0),
+    completedAt: null,
+    idempotencyKey: null,
+    lastHeartbeatAt: null,
+    timeoutMs: 30_000,
+    scheduledFor: null,
+    priority: 0,
+  } satisfies JobDefinition<"check-in-generate">;
+}
+
+const heartbeatFn = vi.fn().mockResolvedValue(undefined);
+
+function stubCtx(): JobHandlerContext & { heartbeatFn: ReturnType<typeof vi.fn> } {
+  heartbeatFn.mockClear();
+  return {
+    heartbeat: { heartbeat: heartbeatFn },
+    signal: new AbortController().signal,
+    heartbeatFn,
+  };
+}
+
+function makeConfig(overrides?: Partial<Record<string, unknown>>) {
+  return {
+    id: "tmr_test-1",
+    systemId: "sys_test-1",
+    enabled: true,
+    intervalMinutes: 30,
+    wakingHoursOnly: false,
+    wakingStart: null,
+    wakingEnd: null,
+    encryptedData: Buffer.from("test"),
+    version: 1,
+    archived: false,
+    archivedAt: null,
+    createdAt: 1000,
+    updatedAt: 1000,
+    ...overrides,
+  };
+}
+
+describe("createCheckInGenerateHandler", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("skips processing when signal is already aborted", async () => {
+    const { db, chain } = mockDb();
+    const handler = createCheckInGenerateHandler(db);
+
+    const ac = new AbortController();
+    ac.abort();
+
+    await handler(stubJob(), {
+      heartbeat: { heartbeat: vi.fn().mockResolvedValue(undefined) },
+      signal: ac.signal,
+    });
+
+    expect(chain.select).not.toHaveBeenCalled();
+  });
+
+  it("returns early on empty config list", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([]);
+    const handler = createCheckInGenerateHandler(db);
+
+    await handler(stubJob(), stubCtx());
+
+    expect(chain.insert).not.toHaveBeenCalled();
+  });
+
+  it("skips config with null intervalMinutes", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([makeConfig({ intervalMinutes: null })]);
+    const handler = createCheckInGenerateHandler(db);
+
+    await handler(stubJob(), stubCtx());
+
+    expect(chain.insert).not.toHaveBeenCalled();
+  });
+
+  it("skips config outside waking hours", async () => {
+    vi.useFakeTimers();
+    // Set system time to 08:00 UTC — outside the 22:00–23:00 waking window
+    vi.setSystemTime(new Date("2024-01-01T08:00:00Z"));
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([
+      makeConfig({
+        wakingHoursOnly: true,
+        wakingStart: "22:00",
+        wakingEnd: "23:00",
+      }),
+    ]);
+    const handler = createCheckInGenerateHandler(db);
+
+    await handler(stubJob(), stubCtx());
+
+    expect(chain.insert).not.toHaveBeenCalled();
+  });
+
+  it("creates check-in record with idempotency key", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-01T08:00:00Z"));
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([makeConfig()]);
+    // onConflictDoNothing resolves to indicate one row was inserted
+    chain.onConflictDoNothing.mockResolvedValue([{ id: "cir_test-1" }]);
+    const handler = createCheckInGenerateHandler(db);
+
+    await handler(stubJob(), stubCtx());
+
+    expect(chain.insert).toHaveBeenCalledOnce();
+    expect(chain.values).toHaveBeenCalledOnce();
+
+    const firstCall = chain.values.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const valuesArg = (firstCall as [Record<string, unknown>])[0];
+    expect(valuesArg).toHaveProperty("idempotencyKey");
+    expect(typeof valuesArg.idempotencyKey).toBe("string");
+    expect(valuesArg.timerConfigId).toBe("tmr_test-1");
+
+    expect(chain.onConflictDoNothing).toHaveBeenCalledOnce();
+  });
+
+  it("handles idempotency conflict gracefully", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([makeConfig()]);
+    // onConflictDoNothing returns chain, then resolves to [] (no row created = conflict)
+    chain.onConflictDoNothing.mockResolvedValue([]);
+    const handler = createCheckInGenerateHandler(db);
+
+    await expect(handler(stubJob(), stubCtx())).resolves.toBeUndefined();
+    expect(chain.onConflictDoNothing).toHaveBeenCalledOnce();
+  });
+
+  it("isolates per-config errors and continues", async () => {
+    const { db, chain } = mockDb();
+
+    const config1 = makeConfig({ id: "tmr_test-1" });
+    const config2 = makeConfig({ id: "tmr_test-2" });
+    chain.limit.mockResolvedValue([config1, config2]);
+
+    // First call to values throws; second succeeds
+    chain.values
+      .mockImplementationOnce(() => {
+        throw new Error("DB error");
+      })
+      .mockReturnValue(chain);
+
+    const handler = createCheckInGenerateHandler(db);
+
+    await handler(stubJob(), stubCtx());
+
+    expect(loggerWarnMock).toHaveBeenCalledOnce();
+    expect(chain.insert).toHaveBeenCalledTimes(2);
+  });
+
+  it("calls heartbeat on each iteration", async () => {
+    const { db, chain } = mockDb();
+
+    const config1 = makeConfig({ id: "tmr_test-1" });
+    const config2 = makeConfig({ id: "tmr_test-2" });
+    chain.limit.mockResolvedValue([config1, config2]);
+    chain.onConflictDoNothing.mockResolvedValue([]);
+
+    const ctx = stubCtx();
+    const handler = createCheckInGenerateHandler(db);
+
+    await handler(stubJob(), ctx);
+
+    expect(ctx.heartbeatFn).toHaveBeenCalledTimes(2);
   });
 });
