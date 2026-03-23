@@ -526,6 +526,7 @@ export type {
 } from "./key-rotation.js";
 
 // ── Analytics ─────────────────────────────────────────────────────
+export { DATE_RANGE_PRESETS } from "./analytics.js";
 export type {
   Duration,
   DateRangePreset,

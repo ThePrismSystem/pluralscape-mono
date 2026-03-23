@@ -1,8 +1,9 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   createDefaultNomenclatureSettings,
   createId,
+  DATE_RANGE_PRESETS,
   DEFAULT_TERM_PRESETS,
   ID_PREFIXES,
   now,
@@ -692,6 +693,11 @@ describe("barrel exports", () => {
     expectTypeOf<ChartData>().toBeObject();
     expectTypeOf<CoFrontingPair>().toBeObject();
     expectTypeOf<CoFrontingAnalytics>().toBeObject();
+  });
+
+  it("exports DATE_RANGE_PRESETS runtime value", () => {
+    expectTypeOf(DATE_RANGE_PRESETS).toExtend<readonly string[]>();
+    expect(DATE_RANGE_PRESETS).toHaveLength(6);
   });
 
   it("exports innerworld types", () => {

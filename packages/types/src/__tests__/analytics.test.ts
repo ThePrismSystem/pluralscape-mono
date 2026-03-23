@@ -1,4 +1,6 @@
-import { assertType, describe, expectTypeOf, it } from "vitest";
+import { assertType, describe, expect, expectTypeOf, it } from "vitest";
+
+import { DATE_RANGE_PRESETS } from "../analytics.js";
 
 import type {
   ChartData,
@@ -10,9 +12,17 @@ import type {
   Duration,
   FrontingAnalytics,
   FrontingReport,
+  FrontingSubjectType,
   MemberFrontingBreakdown,
+  SubjectFrontingBreakdown,
 } from "../analytics.js";
-import type { FrontingReportId, MemberId, SystemId } from "../ids.js";
+import type {
+  CustomFrontId,
+  FrontingReportId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+} from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { DateRange } from "../utility.js";
 
@@ -84,13 +94,40 @@ describe("MemberFrontingBreakdown", () => {
   });
 });
 
+describe("FrontingSubjectType", () => {
+  it("accepts valid subject types", () => {
+    assertType<FrontingSubjectType>("member");
+    assertType<FrontingSubjectType>("customFront");
+    assertType<FrontingSubjectType>("structureEntity");
+  });
+
+  it("rejects invalid subject types", () => {
+    // @ts-expect-error invalid subject type
+    assertType<FrontingSubjectType>("unknown");
+  });
+});
+
+describe("SubjectFrontingBreakdown", () => {
+  it("has correct field types", () => {
+    expectTypeOf<SubjectFrontingBreakdown["subjectType"]>().toEqualTypeOf<FrontingSubjectType>();
+    expectTypeOf<SubjectFrontingBreakdown["subjectId"]>().toEqualTypeOf<
+      MemberId | CustomFrontId | SystemStructureEntityId
+    >();
+    expectTypeOf<SubjectFrontingBreakdown["totalDuration"]>().toEqualTypeOf<Duration>();
+    expectTypeOf<SubjectFrontingBreakdown["sessionCount"]>().toEqualTypeOf<number>();
+    expectTypeOf<SubjectFrontingBreakdown["averageSessionLength"]>().toEqualTypeOf<Duration>();
+    expectTypeOf<SubjectFrontingBreakdown["percentageOfTotal"]>().toEqualTypeOf<number>();
+  });
+});
+
 describe("FrontingAnalytics", () => {
   it("has correct field types", () => {
     expectTypeOf<FrontingAnalytics["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<FrontingAnalytics["dateRange"]>().toEqualTypeOf<DateRange>();
-    expectTypeOf<FrontingAnalytics["memberBreakdowns"]>().toEqualTypeOf<
-      readonly MemberFrontingBreakdown[]
+    expectTypeOf<FrontingAnalytics["dateRange"]>().toEqualTypeOf<DateRangeFilter>();
+    expectTypeOf<FrontingAnalytics["subjectBreakdowns"]>().toEqualTypeOf<
+      readonly SubjectFrontingBreakdown[]
     >();
+    expectTypeOf<FrontingAnalytics["truncated"]>().toEqualTypeOf<boolean>();
   });
 });
 
@@ -143,8 +180,25 @@ describe("CoFrontingPair", () => {
 describe("CoFrontingAnalytics", () => {
   it("has correct field types", () => {
     expectTypeOf<CoFrontingAnalytics["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<CoFrontingAnalytics["dateRange"]>().toEqualTypeOf<DateRange>();
+    expectTypeOf<CoFrontingAnalytics["dateRange"]>().toEqualTypeOf<DateRangeFilter>();
     expectTypeOf<CoFrontingAnalytics["coFrontingPercentage"]>().toEqualTypeOf<number>();
     expectTypeOf<CoFrontingAnalytics["pairs"]>().toEqualTypeOf<readonly CoFrontingPair[]>();
+    expectTypeOf<CoFrontingAnalytics["truncated"]>().toEqualTypeOf<boolean>();
+  });
+});
+
+describe("DATE_RANGE_PRESETS", () => {
+  it("is an array with exactly 6 items", () => {
+    expectTypeOf(DATE_RANGE_PRESETS).toExtend<readonly string[]>();
+    expect(DATE_RANGE_PRESETS).toHaveLength(6);
+  });
+
+  it("contains all presets", () => {
+    expect(DATE_RANGE_PRESETS).toContain("last-7-days");
+    expect(DATE_RANGE_PRESETS).toContain("last-30-days");
+    expect(DATE_RANGE_PRESETS).toContain("last-90-days");
+    expect(DATE_RANGE_PRESETS).toContain("last-year");
+    expect(DATE_RANGE_PRESETS).toContain("all-time");
+    expect(DATE_RANGE_PRESETS).toContain("custom");
   });
 });

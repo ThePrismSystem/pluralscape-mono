@@ -3,7 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
-import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
+import { parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { listFrontingReports } from "../../services/fronting-report.service.js";
@@ -22,7 +22,7 @@ listRoute.get("/", async (c) => {
 
   const db = await getDb();
   const result = await listFrontingReports(db, systemId, auth, {
-    cursor: parseCursor(cursorParam),
+    cursor: cursorParam ?? undefined,
     limit,
   });
   return c.json(result);

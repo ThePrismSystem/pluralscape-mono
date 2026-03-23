@@ -54,6 +54,10 @@ const mockAudit = vi.fn().mockResolvedValue(undefined);
 
 const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
 
+function encodeTestCursor(generatedAt: number, id: string): string {
+  return Buffer.from(JSON.stringify({ t: generatedAt, i: id })).toString("base64url");
+}
+
 function makeReportRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: REPORT_ID,
@@ -126,7 +130,22 @@ describe("createFrontingReport", () => {
     const { db } = mockDb();
     await expect(
       createFrontingReport(db, SYSTEM_ID, { format: "html" }, AUTH, mockAudit),
-    ).rejects.toThrow();
+    ).rejects.toThrow("Invalid payload");
+  });
+
+  it("throws when INSERT returns no rows", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+
+    await expect(
+      createFrontingReport(
+        db,
+        SYSTEM_ID,
+        { encryptedData: VALID_BLOB_BASE64, format: "html", generatedAt: 1000 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow("INSERT returned no rows");
   });
 });
 
@@ -155,6 +174,60 @@ describe("listFrontingReports", () => {
 
     const result = await listFrontingReports(db, SYSTEM_ID, AUTH);
     expect(result.items).toHaveLength(2);
+  });
+
+  it("detects hasMore when more rows than limit", async () => {
+    const { db, chain } = mockDb();
+    const rows = [
+      makeReportRow({ id: "fr_report-1", generatedAt: 3000 }),
+      makeReportRow({ id: "fr_report-2", generatedAt: 2000 }),
+      makeReportRow({ id: "fr_report-3", generatedAt: 1000 }),
+    ];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await listFrontingReports(db, SYSTEM_ID, AUTH, { limit: 2 });
+    expect(result.items).toHaveLength(2);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).not.toBeNull();
+  });
+
+  it("returns nextCursor encoding generatedAt and id of last visible item", async () => {
+    const { db, chain } = mockDb();
+    const rows = [
+      makeReportRow({ id: "fr_report-1", generatedAt: 3000 }),
+      makeReportRow({ id: "fr_report-2", generatedAt: 2000 }),
+      makeReportRow({ id: "fr_report-3", generatedAt: 1000 }),
+    ];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await listFrontingReports(db, SYSTEM_ID, AUTH, { limit: 2 });
+    expect(result.nextCursor).not.toBeNull();
+
+    const cursor = result.nextCursor;
+    expect(cursor).not.toBeNull();
+    const decoded: { t: number; i: string } = JSON.parse(
+      Buffer.from(cursor as string, "base64url").toString("utf8"),
+    );
+    expect(decoded.t).toBe(2000);
+    expect(decoded.i).toBe("fr_report-2");
+  });
+
+  it("applies cursor when provided", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    const cursor = encodeTestCursor(5000, "fr_test-cursor");
+    await listFrontingReports(db, SYSTEM_ID, AUTH, { cursor });
+
+    expect(chain.where).toHaveBeenCalled();
+  });
+
+  it("throws on malformed cursor", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      listFrontingReports(db, SYSTEM_ID, AUTH, { cursor: "not-valid-base64" }),
+    ).rejects.toThrow("Malformed pagination cursor");
   });
 });
 

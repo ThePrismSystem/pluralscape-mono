@@ -1,12 +1,11 @@
 import { frontingReports } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, toUnixMillis } from "@pluralscape/types";
 import { CreateFrontingReportBodySchema } from "@pluralscape/validation";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -38,6 +37,38 @@ export interface FrontingReportResult {
 export interface FrontingReportListOptions {
   readonly cursor?: string;
   readonly limit?: number;
+}
+
+// ── Cursor ───────────────────────────────────────────────────────────
+
+interface CursorData {
+  readonly t: number;
+  readonly i: string;
+}
+
+function encodeCursor(data: CursorData): string {
+  return Buffer.from(JSON.stringify(data)).toString("base64url");
+}
+
+function decodeCursor(cursor: string): CursorData {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "t" in parsed &&
+      "i" in parsed &&
+      typeof (parsed as CursorData).t === "number" &&
+      (parsed as CursorData).t >= 0 &&
+      typeof (parsed as CursorData).i === "string" &&
+      (parsed as CursorData).i.length > 0
+    ) {
+      return parsed as CursorData;
+    }
+  } catch {
+    // fall through
+  }
+  throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed pagination cursor");
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -121,17 +152,37 @@ export async function listFrontingReports(
   const conditions = [eq(frontingReports.systemId, systemId)];
 
   if (opts.cursor) {
-    conditions.push(lt(frontingReports.id, opts.cursor));
+    const cursor = decodeCursor(opts.cursor);
+    const cursorCondition = or(
+      lt(frontingReports.generatedAt, cursor.t),
+      and(eq(frontingReports.generatedAt, cursor.t), lt(frontingReports.id, cursor.i)),
+    );
+    if (cursorCondition) conditions.push(cursorCondition);
   }
 
   const rows = await db
     .select()
     .from(frontingReports)
     .where(and(...conditions))
-    .orderBy(desc(frontingReports.generatedAt))
+    .orderBy(desc(frontingReports.generatedAt), desc(frontingReports.id))
     .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toFrontingReportResult);
+  const hasMore = rows.length > effectiveLimit;
+  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toFrontingReportResult);
+  const lastItem = hasMore && items.length > 0 ? items[items.length - 1] : null;
+
+  return {
+    items,
+    nextCursor:
+      hasMore && lastItem
+        ? (encodeCursor({
+            t: lastItem.generatedAt as number,
+            i: lastItem.id,
+          }) as PaginatedResult<FrontingReportResult>["nextCursor"])
+        : null,
+    hasMore,
+    totalCount: null,
+  };
 }
 
 // ── GET ──────────────────────────────────────────────────────────────

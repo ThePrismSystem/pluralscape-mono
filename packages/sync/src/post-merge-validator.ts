@@ -556,43 +556,6 @@ export function normalizeFrontingSessions(session: EncryptedSyncSession<unknown>
   return { count: endTimeFixIds.length, notifications, envelope };
 }
 
-/**
- * Fronting reports are immutable snapshots — reject modifications to existing reports.
- * Only creation (new keys) and deletion (removal of keys) are allowed.
- *
- * Immutability is primarily enforced at the API layer (no update endpoint exists).
- * This validator checks post-merge state for new report keys that appeared
- * and emits notifications for audit purposes.
- *
- * Returns the count of new reports detected and the correction envelope (always null —
- * no CRDT mutations are needed since immutability is enforced at the API layer).
- */
-export function validateFrontingReportImmutability(
-  _session: EncryptedSyncSession<unknown>,
-  premergeReportIds: ReadonlySet<string>,
-): {
-  count: number;
-  notifications: ConflictNotification[];
-  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-} {
-  const doc = _session.document as DocRecord;
-  const notifications: ConflictNotification[] = [];
-
-  const reports = getEntityMap<Record<string, unknown>>(doc, "frontingReports");
-  if (!reports) return { count: 0, notifications, envelope: null };
-
-  // Count reports that appeared after merge (new creations).
-  let newCount = 0;
-  for (const reportId of Object.keys(reports)) {
-    if (!premergeReportIds.has(reportId)) {
-      newCount += 1;
-    }
-  }
-
-  // No structural corrections needed — immutability is enforced at the API layer.
-  return { count: newCount, notifications, envelope: null };
-}
-
 // ── Public API ──────────────────────────────────────────────────────
 
 /**

@@ -1,17 +1,7 @@
+import { DATE_RANGE_PRESETS } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
-
-// ── Date range presets ─────────────────────────────────────────
-
-const DATE_RANGE_PRESETS = [
-  "last-7-days",
-  "last-30-days",
-  "last-90-days",
-  "last-year",
-  "all-time",
-  "custom",
-] as const;
 
 // ── Analytics query params ─────────────────────────────────────
 

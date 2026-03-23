@@ -120,7 +120,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     document: "system-core",
     fieldName: "frontingReports",
     mutationSemantics:
-      "Immutable once created — post-merge validation rejects modifications to existing reports (only creation and deletion allowed)",
+      "Immutable once created — no update endpoint exists; immutability enforced at the API layer",
   },
   "field-definition": {
     storageType: "lww-map",

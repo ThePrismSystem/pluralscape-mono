@@ -76,6 +76,7 @@ describe("computeFrontingBreakdown", () => {
 
     const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
     expect(result.subjectBreakdowns).toEqual([]);
+    expect(result.truncated).toBe(false);
   });
 
   it("computes breakdown for a single member session", async () => {
@@ -94,6 +95,7 @@ describe("computeFrontingBreakdown", () => {
       averageSessionLength: 3_600_000,
       percentageOfTotal: 100,
     });
+    expect(result.truncated).toBe(false);
   });
 
   it("caps open sessions at current time", async () => {
@@ -106,6 +108,7 @@ describe("computeFrontingBreakdown", () => {
     expect(result.subjectBreakdowns).toHaveLength(1);
     // Duration should be approximately 7200000 (allow for test execution time)
     expect(result.subjectBreakdowns[0]?.totalDuration).toBeGreaterThanOrEqual(7_199_000);
+    expect(result.truncated).toBe(false);
   });
 
   it("aggregates multiple sessions for the same member", async () => {
@@ -132,6 +135,7 @@ describe("computeFrontingBreakdown", () => {
       sessionCount: 2,
       averageSessionLength: 2_700_000,
     });
+    expect(result.truncated).toBe(false);
   });
 
   it("includes custom fronts with subjectType discriminator", async () => {
@@ -201,6 +205,114 @@ describe("computeFrontingBreakdown", () => {
     const cf = result.subjectBreakdowns.find((b: { subjectId: string }) => b.subjectId === "cf_b");
     expect(member?.percentageOfTotal).toBe(75);
     expect(cf?.percentageOfTotal).toBe(25);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("clamps session starting before date range", async () => {
+    const { db, chain } = mockDb();
+    const dateRange = makeDateRange({
+      preset: "custom" as DateRangeFilter["preset"],
+      start: (NOW - 3_600_000) as DateRangeFilter["start"],
+      end: NOW as DateRangeFilter["end"],
+    });
+    // Session starts 2h ago but range only starts 1h ago → clamped to 1h
+    const row = makeSessionRow({
+      startTime: NOW - 7_200_000,
+      endTime: NOW,
+    });
+    chain.limit.mockResolvedValueOnce([row]);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, dateRange);
+
+    expect(result.subjectBreakdowns).toHaveLength(1);
+    expect(result.subjectBreakdowns[0]?.totalDuration).toBe(3_600_000);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("clamps session ending after date range", async () => {
+    const { db, chain } = mockDb();
+    const dateRange = makeDateRange({
+      preset: "custom" as DateRangeFilter["preset"],
+      start: (NOW - 7_200_000) as DateRangeFilter["start"],
+      end: (NOW - 3_600_000) as DateRangeFilter["end"],
+    });
+    // Session runs from 2h ago to now, but range ends 1h ago → clamped to 1h
+    const row = makeSessionRow({
+      startTime: NOW - 7_200_000,
+      endTime: NOW,
+    });
+    chain.limit.mockResolvedValueOnce([row]);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, dateRange);
+
+    expect(result.subjectBreakdowns).toHaveLength(1);
+    expect(result.subjectBreakdowns[0]?.totalDuration).toBe(3_600_000);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("skips sessions with no subject", async () => {
+    const { db, chain } = mockDb();
+    const row = makeSessionRow({
+      memberId: null,
+      customFrontId: null,
+      structureEntityId: null,
+    });
+    chain.limit.mockResolvedValueOnce([row]);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    expect(result.subjectBreakdowns).toEqual([]);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("returns truncated=false when under cap", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([makeSessionRow()]);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    expect(result.truncated).toBe(false);
+  });
+
+  it("returns truncated=true when at session cap", async () => {
+    const { db, chain } = mockDb();
+    const rows = Array.from({ length: 10_000 }, (_, i) =>
+      makeSessionRow({ id: `fs_session-${String(i)}` }),
+    );
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    expect(result.truncated).toBe(true);
+  });
+
+  it("sorts breakdowns descending by total duration", async () => {
+    const { db, chain } = mockDb();
+    const rows = [
+      makeSessionRow({
+        id: "fs_short",
+        memberId: "mem_short",
+        startTime: NOW - 1_800_000,
+        endTime: NOW,
+      }),
+      makeSessionRow({
+        id: "fs_long",
+        memberId: "mem_long",
+        startTime: NOW - 7_200_000,
+        endTime: NOW,
+      }),
+    ];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    expect(result.subjectBreakdowns).toHaveLength(2);
+    expect(
+      (result.subjectBreakdowns[0]?.totalDuration as number) >=
+        (result.subjectBreakdowns[1]?.totalDuration as number),
+    ).toBe(true);
+    expect(result.subjectBreakdowns[0]?.subjectId).toBe("mem_long");
+    expect(result.truncated).toBe(false);
   });
 });
 
@@ -222,6 +334,7 @@ describe("computeCoFrontingBreakdown", () => {
     const result = await computeCoFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
     expect(result.pairs).toEqual([]);
     expect(result.coFrontingPercentage).toBe(0);
+    expect(result.truncated).toBe(false);
   });
 
   it("returns empty when there is no overlap", async () => {
@@ -245,6 +358,7 @@ describe("computeCoFrontingBreakdown", () => {
     const result = await computeCoFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
     expect(result.pairs).toEqual([]);
     expect(result.coFrontingPercentage).toBe(0);
+    expect(result.truncated).toBe(false);
   });
 
   it("detects overlapping sessions between two members", async () => {
@@ -276,6 +390,7 @@ describe("computeCoFrontingBreakdown", () => {
     });
     // Overlap duration should be 2h (7200000ms)
     expect(result.pairs[0]?.totalDuration).toBe(7_200_000);
+    expect(result.truncated).toBe(false);
   });
 
   it("uses canonical pair ordering (lexicographic)", async () => {
@@ -302,12 +417,14 @@ describe("computeCoFrontingBreakdown", () => {
     expect(result.pairs).toHaveLength(1);
     expect(result.pairs[0]?.memberA).toBe("mem_a");
     expect(result.pairs[0]?.memberB).toBe("mem_z");
+    expect(result.truncated).toBe(false);
   });
 
   it("calculates coFrontingPercentage correctly", async () => {
     const { db, chain } = mockDb();
-    // Only member sessions overlap. Total fronting time = union of all sessions.
-    // A: 0-4h, B: 2-6h. Total union = 6h. Co-fronting = 2h. Percentage = 2/6*100 = 33.33...
+    // A: 4h ago → 2h ago (2h duration), B: 3h ago → 1h ago (2h duration)
+    // Sweep-line: union = 3h (4h ago → 1h ago), co-fronting = 1h (3h ago → 2h ago)
+    // Percentage = round(1/3 * 1000) / 10 = 33.3
     const rows = [
       makeSessionRow({
         id: "fs_1",
@@ -326,8 +443,9 @@ describe("computeCoFrontingBreakdown", () => {
 
     const result = await computeCoFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
 
-    expect(result.coFrontingPercentage).toBeGreaterThan(0);
+    expect(result.coFrontingPercentage).toBeCloseTo(33.3, 1);
     expect(result.pairs).toHaveLength(1);
+    expect(result.truncated).toBe(false);
   });
 
   it("handles open sessions in co-fronting", async () => {
@@ -353,6 +471,7 @@ describe("computeCoFrontingBreakdown", () => {
     expect(result.pairs).toHaveLength(1);
     // Overlap should be approximately 1 hour (from mem_b start until now)
     expect(result.pairs[0]?.totalDuration).toBeGreaterThanOrEqual(3_599_000);
+    expect(result.truncated).toBe(false);
   });
 
   it("excludes custom fronts from co-fronting pairs", async () => {
@@ -378,5 +497,56 @@ describe("computeCoFrontingBreakdown", () => {
 
     // Custom fronts don't count as co-fronting — only member-to-member pairs
     expect(result.pairs).toEqual([]);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("produces 3 pairs for 3 overlapping members", async () => {
+    const { db, chain } = mockDb();
+    // All three members overlap the same window
+    const rows = [
+      makeSessionRow({
+        id: "fs_1",
+        memberId: "mem_a",
+        startTime: NOW - 7_200_000,
+        endTime: NOW,
+      }),
+      makeSessionRow({
+        id: "fs_2",
+        memberId: "mem_b",
+        startTime: NOW - 7_200_000,
+        endTime: NOW,
+      }),
+      makeSessionRow({
+        id: "fs_3",
+        memberId: "mem_c",
+        startTime: NOW - 7_200_000,
+        endTime: NOW,
+      }),
+    ];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await computeCoFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    // 3 members → C(3,2) = 3 pairs: A-B, A-C, B-C
+    expect(result.pairs).toHaveLength(3);
+    const pairKeys = result.pairs.map(
+      (p: { memberA: string; memberB: string }) => `${p.memberA}:${p.memberB}`,
+    );
+    expect(pairKeys).toContain("mem_a:mem_b");
+    expect(pairKeys).toContain("mem_a:mem_c");
+    expect(pairKeys).toContain("mem_b:mem_c");
+    expect(result.truncated).toBe(false);
+  });
+
+  it("returns truncated flag", async () => {
+    const { db, chain } = mockDb();
+    const rows = Array.from({ length: 10_000 }, (_, i) =>
+      makeSessionRow({ id: `fs_session-${String(i)}` }),
+    );
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await computeCoFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    expect(result.truncated).toBe(true);
   });
 });
