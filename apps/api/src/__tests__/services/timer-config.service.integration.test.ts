@@ -9,18 +9,31 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  archiveCheckInRecord,
+  createCheckInRecord,
+  deleteCheckInRecord,
+} from "../../services/check-in-record.service.js";
+import {
   archiveTimerConfig,
   createTimerConfig,
   deleteTimerConfig,
   getTimerConfig,
   listTimerConfigs,
+  parseTimerConfigQuery,
   restoreTimerConfig,
   updateTimerConfig,
 } from "../../services/timer-config.service.js";
-import { makeAuth, noopAudit, testEncryptedDataBase64 } from "../helpers/integration-setup.js";
+import {
+  assertApiError,
+  genTimerId,
+  makeAuth,
+  noopAudit,
+  spyAudit,
+  testEncryptedDataBase64,
+} from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, members, timerConfigs, checkInRecords };
@@ -28,15 +41,15 @@ const schema = { accounts, systems, members, timerConfigs, checkInRecords };
 describe("timer-config.service (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
-  let systemId: string;
+  let systemId: SystemId;
   let auth: AuthContext;
 
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgTimerTables(client);
-    const accountId = await pgInsertAccount(db);
-    systemId = await pgInsertSystem(db, accountId);
+    const accountId = (await pgInsertAccount(db)) as AccountId;
+    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
     auth = makeAuth(accountId, systemId);
   });
 
@@ -49,28 +62,35 @@ describe("timer-config.service (PGlite integration)", () => {
     await db.delete(timerConfigs);
   });
 
-  function createParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  function createParams(
+    overrides: Partial<{
+      encryptedData: string;
+      version: number;
+      enabled: boolean;
+      intervalMinutes: number;
+      wakingHoursOnly: boolean;
+      wakingStart: string;
+      wakingEnd: string;
+    }> = {},
+  ) {
     return { encryptedData: testEncryptedDataBase64(), ...overrides };
   }
 
   describe("createTimerConfig", () => {
     it("creates with defaults (enabled=true, no waking hours)", async () => {
-      const result = await createTimerConfig(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      const audit = spyAudit();
+      const result = await createTimerConfig(db as never, systemId, createParams(), auth, audit);
       expect(result.id).toMatch(/^tmr_/);
       expect(result.enabled).toBe(true);
       expect(result.wakingHoursOnly).toBeNull();
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("timer-config.created");
     });
 
     it("creates with waking hours configuration", async () => {
       const result = await createTimerConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({
           wakingHoursOnly: true,
           wakingStart: "08:00",
@@ -87,22 +107,24 @@ describe("timer-config.service (PGlite integration)", () => {
     });
 
     it("rejects wakingHoursOnly=true without start/end", async () => {
-      await expect(
+      await assertApiError(
         createTimerConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           createParams({ wakingHoursOnly: true }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Invalid payload");
+        "VALIDATION_ERROR",
+        400,
+      );
     });
 
     it("rejects wakingStart >= wakingEnd", async () => {
-      await expect(
+      await assertApiError(
         createTimerConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           createParams({
             wakingHoursOnly: true,
             wakingStart: "22:00",
@@ -111,48 +133,63 @@ describe("timer-config.service (PGlite integration)", () => {
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Invalid payload");
+        "VALIDATION_ERROR",
+        400,
+      );
     });
   });
 
   describe("listTimerConfigs", () => {
     it("returns configs with pagination", async () => {
-      await createTimerConfig(db as never, systemId as SystemId, createParams(), auth, noopAudit);
-      await createTimerConfig(db as never, systemId as SystemId, createParams(), auth, noopAudit);
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+      const t2 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
 
-      const result = await listTimerConfigs(db as never, systemId as SystemId, auth);
+      const result = await listTimerConfigs(db as never, systemId, auth);
       expect(result.items.length).toBe(2);
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(t1.id);
+      expect(ids).toContain(t2.id);
     });
 
     it("excludes archived by default", async () => {
-      const t1 = await createTimerConfig(
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await archiveTimerConfig(db as never, systemId, t1.id, auth, noopAudit);
+      await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+
+      const result = await listTimerConfigs(db as never, systemId, auth);
+      expect(result.items.length).toBe(1);
+    });
+  });
+
+  describe("getTimerConfig", () => {
+    it("returns the config by ID", async () => {
+      const created = await createTimerConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await archiveTimerConfig(db as never, systemId as SystemId, t1.id, auth, noopAudit);
-      await createTimerConfig(db as never, systemId as SystemId, createParams(), auth, noopAudit);
+      const fetched = await getTimerConfig(db as never, systemId, created.id, auth);
+      expect(fetched.id).toBe(created.id);
+    });
 
-      const result = await listTimerConfigs(db as never, systemId as SystemId, auth);
-      expect(result.items.length).toBe(1);
+    it("throws NOT_FOUND for nonexistent", async () => {
+      await assertApiError(
+        getTimerConfig(db as never, systemId, genTimerId(), auth),
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
   describe("updateTimerConfig", () => {
     it("updates on correct version", async () => {
-      const t1 = await createTimerConfig(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
 
       const result = await updateTimerConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         t1.id,
         createParams({ version: 1, enabled: false }),
         auth,
@@ -163,136 +200,119 @@ describe("timer-config.service (PGlite integration)", () => {
     });
 
     it("throws CONFLICT on stale version", async () => {
-      const t1 = await createTimerConfig(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
       await updateTimerConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         t1.id,
         createParams({ version: 1 }),
         auth,
         noopAudit,
       );
-      await expect(
+      await assertApiError(
         updateTimerConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           t1.id,
           createParams({ version: 1 }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Version conflict");
+        "CONFLICT",
+        409,
+      );
     });
 
     it("re-validates waking hours on update", async () => {
-      const t1 = await createTimerConfig(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await expect(
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await assertApiError(
         updateTimerConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           t1.id,
           createParams({ version: 1, wakingHoursOnly: true }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Invalid payload");
+        "VALIDATION_ERROR",
+        400,
+      );
     });
   });
 
   describe("deleteTimerConfig", () => {
     it("deletes with no check-in records", async () => {
-      const t1 = await createTimerConfig(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await deleteTimerConfig(db as never, systemId as SystemId, t1.id, auth, noopAudit);
-      await expect(getTimerConfig(db as never, systemId as SystemId, t1.id, auth)).rejects.toThrow(
-        "not found",
-      );
+      const audit = spyAudit();
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await deleteTimerConfig(db as never, systemId, t1.id, auth, audit);
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("timer-config.deleted");
+      await assertApiError(getTimerConfig(db as never, systemId, t1.id, auth), "NOT_FOUND", 404);
     });
 
     it("throws HAS_DEPENDENTS with non-archived check-in records", async () => {
-      const t1 = await createTimerConfig(
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+      const record = await createCheckInRecord(
         db as never,
-        systemId as SystemId,
-        createParams(),
+        systemId,
+        { timerConfigId: t1.id, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      await db.insert(checkInRecords).values({
-        id: `cir_${crypto.randomUUID()}`,
-        systemId,
-        timerConfigId: t1.id,
-        scheduledAt: Date.now(),
-      });
 
-      await expect(
-        deleteTimerConfig(db as never, systemId as SystemId, t1.id, auth, noopAudit),
-      ).rejects.toThrow("non-archived check-in");
+      await assertApiError(
+        deleteTimerConfig(db as never, systemId, t1.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
+
+      // Clean up: delete the record so afterEach can clean timerConfigs
+      await deleteCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
     });
 
-    it("succeeds when all check-in records are archived", async () => {
-      const t1 = await createTimerConfig(
+    it("succeeds after archiving and hard-deleting all check-in records", async () => {
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+
+      // Create a check-in record via service
+      const record = await createCheckInRecord(
         db as never,
-        systemId as SystemId,
-        createParams(),
+        systemId,
+        { timerConfigId: t1.id, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      await db.insert(checkInRecords).values({
-        id: `cir_${crypto.randomUUID()}`,
-        systemId,
-        timerConfigId: t1.id,
-        scheduledAt: Date.now(),
-        archived: true,
-        archivedAt: Date.now(),
-      });
 
-      // The HAS_DEPENDENTS check passes. But FK may block, so clean up records.
-      await db.delete(checkInRecords);
-      await deleteTimerConfig(db as never, systemId as SystemId, t1.id, auth, noopAudit);
+      // Archive and then delete the record
+      await archiveCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
+      await deleteCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
+
+      // Now the timer config can be deleted
+      await deleteTimerConfig(db as never, systemId, t1.id, auth, noopAudit);
     });
   });
 
   describe("archiveTimerConfig / restoreTimerConfig", () => {
     it("archives and restores with version increments", async () => {
-      const t1 = await createTimerConfig(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await archiveTimerConfig(db as never, systemId as SystemId, t1.id, auth, noopAudit);
+      const t1 = await createTimerConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await archiveTimerConfig(db as never, systemId, t1.id, auth, noopAudit);
 
-      await expect(getTimerConfig(db as never, systemId as SystemId, t1.id, auth)).rejects.toThrow(
-        "not found",
-      );
+      await assertApiError(getTimerConfig(db as never, systemId, t1.id, auth), "NOT_FOUND", 404);
 
-      const restored = await restoreTimerConfig(
-        db as never,
-        systemId as SystemId,
-        t1.id,
-        auth,
-        noopAudit,
-      );
+      const restored = await restoreTimerConfig(db as never, systemId, t1.id, auth, noopAudit);
       expect(restored.archived).toBe(false);
       expect(restored.version).toBe(3);
+    });
+  });
+
+  describe("parseTimerConfigQuery", () => {
+    it("returns defaults for empty query", () => {
+      const result = parseTimerConfigQuery({});
+      expect(result).toEqual({ includeArchived: false });
+    });
+
+    it("parses includeArchived boolean", () => {
+      const result = parseTimerConfigQuery({ includeArchived: "true" });
+      expect(result.includeArchived).toBe(true);
     });
   });
 });

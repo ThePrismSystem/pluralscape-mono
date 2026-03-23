@@ -13,13 +13,15 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import { WEBHOOK_MAX_RETRY_ATTEMPTS } from "../../service.constants.js";
 import {
+  calculateBackoffMs,
   computeWebhookSignature,
   findPendingDeliveries,
   processWebhookDelivery,
   WEBHOOK_SIGNATURE_HEADER,
 } from "../../services/webhook-delivery-worker.js";
+import { genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
 
-import type { WebhookDeliveryId } from "@pluralscape/types";
+import type { AccountId, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
@@ -27,20 +29,20 @@ const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries }
 describe("webhook-delivery-worker (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
-  let systemId: string;
-  let webhookId: string;
+  let systemId: SystemId;
+  let webhookId: WebhookId;
   let webhookSecret: Buffer;
 
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgWebhookTables(client);
-    const accountId = await pgInsertAccount(db);
-    systemId = await pgInsertSystem(db, accountId);
+    const accountId = (await pgInsertAccount(db)) as AccountId;
+    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
 
     // Insert a webhook config with a known secret
     webhookSecret = randomBytes(32);
-    webhookId = `wh_${crypto.randomUUID()}`;
+    webhookId = genWebhookId();
     await db.insert(webhookConfigs).values({
       id: webhookId,
       systemId,
@@ -62,19 +64,22 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
     vi.restoreAllMocks();
   });
 
-  async function insertDelivery(overrides: Record<string, unknown> = {}): Promise<string> {
-    const id = `wd_${crypto.randomUUID()}`;
-    await db.insert(webhookDeliveries).values({
+  async function insertDelivery(
+    overrides: Record<string, unknown> = {},
+  ): Promise<WebhookDeliveryId> {
+    const id = genWebhookDeliveryId();
+    const values = {
       id,
       webhookId,
       systemId,
-      eventType: "fronting.started",
-      status: "pending",
+      eventType: "fronting.started" as const,
+      status: "pending" as const,
       attemptCount: 0,
       payloadData: { test: true },
       createdAt: Date.now(),
       ...overrides,
-    });
+    };
+    await db.insert(webhookDeliveries).values(values as typeof webhookDeliveries.$inferInsert);
     return id;
   }
 
@@ -96,19 +101,15 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
 
       const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-      await processWebhookDelivery(
-        db as never,
-        deliveryId as WebhookDeliveryId,
-        payload,
-        mockFetch as never,
-      );
+      await processWebhookDelivery(db as never, deliveryId, payload, mockFetch as never);
 
       // Verify the fetch was called with correct signature
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-      expect(url).toBe("https://example.com/hook");
-      const headers = init.headers as Record<string, string>;
-      expect(headers[WEBHOOK_SIGNATURE_HEADER]).toBeTruthy();
+      const call = mockFetch.mock.calls[0] ?? [];
+      expect(call[0]).toBe("https://example.com/hook");
+      const headers = new Headers((call[1] as RequestInit | undefined)?.headers);
+      const expectedSig = computeWebhookSignature(webhookSecret, JSON.stringify(payload));
+      expect(headers.get(WEBHOOK_SIGNATURE_HEADER)).toBe(expectedSig);
 
       // Verify delivery status in DB
       const [row] = await db
@@ -123,12 +124,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-      await processWebhookDelivery(
-        db as never,
-        deliveryId as WebhookDeliveryId,
-        { test: true },
-        mockFetch as never,
-      );
+      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -146,12 +142,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       });
       const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-      await processWebhookDelivery(
-        db as never,
-        deliveryId as WebhookDeliveryId,
-        { test: true },
-        mockFetch as never,
-      );
+      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -162,7 +153,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
 
     it("marks as failed when config is disabled", async () => {
       // Create a disabled config
-      const disabledWhId = `wh_${crypto.randomUUID()}`;
+      const disabledWhId = genWebhookId();
       await db.insert(webhookConfigs).values({
         id: disabledWhId,
         systemId,
@@ -177,12 +168,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery({ webhookId: disabledWhId });
       const mockFetch = vi.fn();
 
-      await processWebhookDelivery(
-        db as never,
-        deliveryId as WebhookDeliveryId,
-        { test: true },
-        mockFetch as never,
-      );
+      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
 
       expect(mockFetch).not.toHaveBeenCalled();
       const [row] = await db
@@ -190,18 +176,17 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
         .from(webhookDeliveries)
         .where(eq(webhookDeliveries.id, deliveryId));
       expect(row?.status).toBe("failed");
+
+      // Clean up the disabled config
+      await db.delete(webhookDeliveries).where(eq(webhookDeliveries.webhookId, disabledWhId));
+      await db.delete(webhookConfigs).where(eq(webhookConfigs.id, disabledWhId));
     });
 
     it("handles network timeout (null httpStatus)", async () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-      await processWebhookDelivery(
-        db as never,
-        deliveryId as WebhookDeliveryId,
-        { test: true },
-        mockFetch as never,
-      );
+      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -209,14 +194,16 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
         .where(eq(webhookDeliveries.id, deliveryId));
       expect(row?.httpStatus).toBeNull();
       expect(row?.attemptCount).toBe(1);
+      expect(row?.status).toBe("pending");
     });
   });
 
   describe("findPendingDeliveries", () => {
     it("finds deliveries with status=pending and no nextRetryAt", async () => {
-      await insertDelivery();
+      const deliveryId = await insertDelivery();
       const results = await findPendingDeliveries(db as never, 10);
       expect(results.length).toBe(1);
+      expect(results[0]?.id).toBe(deliveryId);
     });
 
     it("excludes deliveries with future nextRetryAt", async () => {
@@ -226,9 +213,28 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
     });
 
     it("includes deliveries with past nextRetryAt", async () => {
-      await insertDelivery({ nextRetryAt: Date.now() - 1000 });
+      const deliveryId = await insertDelivery({ nextRetryAt: Date.now() - 1000 });
       const results = await findPendingDeliveries(db as never, 10);
       expect(results.length).toBe(1);
+      expect(results[0]?.id).toBe(deliveryId);
+    });
+  });
+
+  describe("calculateBackoffMs", () => {
+    it("increases exponentially with attempt count", () => {
+      const base = 1000;
+      const b1 = calculateBackoffMs(1, base, 0);
+      const b2 = calculateBackoffMs(2, base, 0);
+      const b3 = calculateBackoffMs(3, base, 0);
+      expect(b1).toBe(2000); // 2^1 * 1000
+      expect(b2).toBe(4000); // 2^2 * 1000
+      expect(b3).toBe(8000); // 2^3 * 1000
+    });
+
+    it("returns non-negative with jitter", () => {
+      for (let i = 0; i < 20; i++) {
+        expect(calculateBackoffMs(1, 1000)).toBeGreaterThanOrEqual(0);
+      }
     });
   });
 });

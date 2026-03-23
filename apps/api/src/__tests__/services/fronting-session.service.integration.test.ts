@@ -13,11 +13,17 @@ import {
 import {
   createPgFrontingTables,
   pgInsertAccount,
+  pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  createFrontingComment as createComment,
+  deleteFrontingComment,
+} from "../../services/fronting-comment.service.js";
 import {
   archiveFrontingSession,
   createFrontingSession,
@@ -26,20 +32,25 @@ import {
   getActiveFronting,
   getFrontingSession,
   listFrontingSessions,
+  parseFrontingSessionQuery,
   restoreFrontingSession,
   updateFrontingSession,
 } from "../../services/fronting-session.service.js";
 import {
+  assertApiError,
   genCustomFrontId,
+  genFrontingCommentId,
+  genFrontingSessionId,
   genMemberId,
   makeAuth,
   noopAudit,
+  spyAudit,
   testBlob,
   testEncryptedDataBase64,
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { CustomFrontId, FrontingSessionId, MemberId, SystemId } from "@pluralscape/types";
+import type { AccountId, CustomFrontId, MemberId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -57,9 +68,9 @@ const schema = {
 describe("fronting-session.service (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
-  let accountId: string;
-  let systemId: string;
-  let memberId: string;
+  let accountId: AccountId;
+  let systemId: SystemId;
+  let memberId: MemberId;
   let auth: AuthContext;
 
   beforeAll(async () => {
@@ -67,18 +78,10 @@ describe("fronting-session.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgFrontingTables(client);
 
-    accountId = await pgInsertAccount(db);
-    systemId = await pgInsertSystem(db, accountId);
-
+    accountId = (await pgInsertAccount(db)) as AccountId;
+    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
     memberId = genMemberId();
-    const now = Date.now();
-    await db.insert(members).values({
-      id: memberId,
-      systemId,
-      encryptedData: testBlob(),
-      createdAt: now,
-      updatedAt: now,
-    });
+    await pgInsertMember(db, systemId, memberId);
 
     auth = makeAuth(accountId, systemId);
   });
@@ -91,6 +94,7 @@ describe("fronting-session.service (PGlite integration)", () => {
     await db.delete(frontingComments);
     await db.delete(frontingSessions);
     await db.delete(customFronts);
+    await db.delete(members).where(ne(members.id, memberId));
   });
 
   async function insertCustomFront(sysId = systemId): Promise<string> {
@@ -106,20 +110,14 @@ describe("fronting-session.service (PGlite integration)", () => {
     return id;
   }
 
-  async function insertMember(sysId = systemId): Promise<string> {
-    const id = genMemberId();
-    const now = Date.now();
-    await db.insert(members).values({
-      id,
-      systemId: sysId,
-      encryptedData: testBlob(),
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-
-  function createParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  function createParams(
+    overrides: Partial<{
+      encryptedData: string;
+      startTime: number;
+      memberId: MemberId;
+      customFrontId: CustomFrontId;
+    }> = {},
+  ) {
     return {
       encryptedData: testEncryptedDataBase64(),
       startTime: Date.now(),
@@ -132,12 +130,13 @@ describe("fronting-session.service (PGlite integration)", () => {
 
   describe("createFrontingSession", () => {
     it("creates a session with a member subject", async () => {
+      const audit = spyAudit();
       const result = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
-        noopAudit,
+        audit,
       );
 
       expect(result.id).toMatch(/^fs_/);
@@ -145,14 +144,18 @@ describe("fronting-session.service (PGlite integration)", () => {
       expect(result.memberId).toBe(memberId);
       expect(result.version).toBe(1);
       expect(result.archived).toBe(false);
+
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("fronting-session.created");
+      expect(audit.calls[0]?.actor).toEqual({ kind: "account", id: auth.accountId });
     });
 
     it("creates a session with a custom front subject", async () => {
       const cfId = await insertCustomFront();
       const result = await createFrontingSession(
         db as never,
-        systemId as SystemId,
-        createParams({ memberId: undefined, customFrontId: cfId }),
+        systemId,
+        createParams({ memberId: undefined, customFrontId: cfId as CustomFrontId }),
         auth,
         noopAudit,
       );
@@ -163,15 +166,18 @@ describe("fronting-session.service (PGlite integration)", () => {
 
     it("rejects invalid subject ID (member not in system)", async () => {
       const unknownMemberId = genMemberId();
-      await expect(
+      await assertApiError(
         createFrontingSession(
           db as never,
-          systemId as SystemId,
+          systemId,
           createParams({ memberId: unknownMemberId }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("not found in this system");
+        "INVALID_SUBJECT",
+        400,
+        "not found",
+      );
     });
 
     it("rejects archived member as subject", async () => {
@@ -187,38 +193,43 @@ describe("fronting-session.service (PGlite integration)", () => {
         updatedAt: now,
       });
 
-      await expect(
+      await assertApiError(
         createFrontingSession(
           db as never,
-          systemId as SystemId,
+          systemId,
           createParams({ memberId: archivedMemberId }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("not found in this system");
+        "INVALID_SUBJECT",
+        400,
+        "not found",
+      );
     });
 
     it("rejects payload without any subject", async () => {
-      await expect(
+      await assertApiError(
         createFrontingSession(
           db as never,
-          systemId as SystemId,
+          systemId,
           { encryptedData: testEncryptedDataBase64(), startTime: Date.now() },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Invalid payload");
+        "VALIDATION_ERROR",
+        400,
+      );
     });
 
     it("stores encrypted blob and returns base64 data", async () => {
       const result = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      expect(result.encryptedData).toEqual(expect.any(String));
+      expect(typeof result.encryptedData).toBe("string");
       expect(result.encryptedData.length).toBeGreaterThan(0);
     });
   });
@@ -229,20 +240,20 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("returns sessions ordered by id desc", async () => {
       await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: Date.now() - 2000 }),
         auth,
         noopAudit,
       );
       await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: Date.now() - 1000 }),
         auth,
         noopAudit,
       );
 
-      const result = await listFrontingSessions(db as never, systemId as SystemId, auth);
+      const result = await listFrontingSessions(db as never, systemId, auth);
 
       expect(result.items.length).toBe(2);
       // Verify descending order by string comparison
@@ -252,66 +263,57 @@ describe("fronting-session.service (PGlite integration)", () => {
     });
 
     it("filters by memberId", async () => {
-      const otherMemberId = await insertMember();
-      await createFrontingSession(
+      const otherMemberId = genMemberId();
+      await pgInsertMember(db, systemId, otherMemberId);
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
+      const filtered = await createFrontingSession(
         db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ memberId: otherMemberId }),
         auth,
         noopAudit,
       );
 
-      const result = await listFrontingSessions(db as never, systemId as SystemId, auth, {
-        memberId: otherMemberId as MemberId,
+      const result = await listFrontingSessions(db as never, systemId, auth, {
+        memberId: otherMemberId,
       });
 
       expect(result.items.length).toBe(1);
+      expect(result.items[0]?.id).toBe(filtered.id);
       expect(result.items[0]?.memberId).toBe(otherMemberId);
     });
 
     it("filters by customFrontId", async () => {
       const cfId = await insertCustomFront();
-      await createFrontingSession(
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
+      const filtered = await createFrontingSession(
         db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams({ memberId: undefined, customFrontId: cfId }),
+        systemId,
+        createParams({ memberId: undefined, customFrontId: cfId as CustomFrontId }),
         auth,
         noopAudit,
       );
 
-      const result = await listFrontingSessions(db as never, systemId as SystemId, auth, {
+      const result = await listFrontingSessions(db as never, systemId, auth, {
         customFrontId: cfId as CustomFrontId,
       });
 
       expect(result.items.length).toBe(1);
+      expect(result.items[0]?.id).toBe(filtered.id);
       expect(result.items[0]?.customFrontId).toBe(cfId);
     });
 
     it("filters activeOnly (no endTime)", async () => {
       const s1 = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: Date.now() - 5000 }),
         auth,
         noopAudit,
       );
-      await createFrontingSession(
+      const s2 = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
@@ -319,93 +321,58 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       await endFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         s1.id,
         { endTime: Date.now(), version: 1 },
         auth,
         noopAudit,
       );
 
-      const result = await listFrontingSessions(db as never, systemId as SystemId, auth, {
+      const result = await listFrontingSessions(db as never, systemId, auth, {
         activeOnly: true,
       });
 
       expect(result.items.length).toBe(1);
+      expect(result.items[0]?.id).toBe(s2.id);
     });
 
     it("excludes archived by default", async () => {
       const s1 = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingSession(
-        db as never,
-        systemId as SystemId,
-        s1.id,
-        auth,
-        noopAudit,
-      );
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingSession(db as never, systemId, s1.id, auth, noopAudit);
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
 
-      const result = await listFrontingSessions(db as never, systemId as SystemId, auth);
+      const result = await listFrontingSessions(db as never, systemId, auth);
       expect(result.items.length).toBe(1);
     });
 
     it("includes archived when includeArchived=true", async () => {
       const s1 = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingSession(
-        db as never,
-        systemId as SystemId,
-        s1.id,
-        auth,
-        noopAudit,
-      );
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingSession(db as never, systemId, s1.id, auth, noopAudit);
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
 
-      const result = await listFrontingSessions(db as never, systemId as SystemId, auth, {
+      const result = await listFrontingSessions(db as never, systemId, auth, {
         includeArchived: true,
       });
       expect(result.items.length).toBe(2);
     });
 
     it("supports cursor pagination", async () => {
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
 
-      const page1 = await listFrontingSessions(db as never, systemId as SystemId, auth, {
+      const page1 = await listFrontingSessions(db as never, systemId, auth, {
         limit: 1,
       });
 
@@ -416,7 +383,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       expect(firstId).toBeDefined();
 
       // Use the first page's item ID as cursor
-      const page2 = await listFrontingSessions(db as never, systemId as SystemId, auth, {
+      const page2 = await listFrontingSessions(db as never, systemId, auth, {
         cursor: firstId,
         limit: 1,
       });
@@ -430,27 +397,27 @@ describe("fronting-session.service (PGlite integration)", () => {
       const baseTime = Date.now();
       await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: baseTime - 10000 }),
         auth,
         noopAudit,
       );
       const s2 = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: baseTime }),
         auth,
         noopAudit,
       );
       await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: baseTime + 10000 }),
         auth,
         noopAudit,
       );
 
-      const result = await listFrontingSessions(db as never, systemId as SystemId, auth, {
+      const result = await listFrontingSessions(db as never, systemId, auth, {
         startFrom: baseTime - 1,
         startUntil: baseTime + 1,
       });
@@ -466,59 +433,62 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("returns a session by id with correct field mapping", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      const result = await getFrontingSession(
-        db as never,
-        systemId as SystemId,
-        created.id,
-        auth,
-      );
+      const result = await getFrontingSession(db as never, systemId, created.id, auth);
 
       expect(result.id).toBe(created.id);
       expect(result.systemId).toBe(systemId);
       expect(result.memberId).toBe(memberId);
-      expect(result.encryptedData).toBeTruthy();
+      expect(typeof result.encryptedData).toBe("string");
+      expect(result.encryptedData.length).toBeGreaterThan(0);
     });
 
     it("throws NOT_FOUND for nonexistent session", async () => {
-      await expect(
-        getFrontingSession(
-          db as never,
-          systemId as SystemId,
-          `fs_${crypto.randomUUID()}` as FrontingSessionId,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        getFrontingSession(db as never, systemId, genFrontingSessionId(), auth),
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("throws NOT_FOUND for archived session", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingSession(
+      await archiveFrontingSession(db as never, systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        getFrontingSession(db as never, systemId, created.id, auth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("cannot access another system's session", async () => {
+      const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
-        created.id,
+        systemId,
+        createParams(),
         auth,
         noopAudit,
       );
 
-      await expect(
-        getFrontingSession(
-          db as never,
-          systemId as SystemId,
-          created.id,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      await assertApiError(
+        getFrontingSession(db as never, otherSystemId, created.id, otherAuth),
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
@@ -528,7 +498,7 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("updates on correct version", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
@@ -536,7 +506,7 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       const result = await updateFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
         auth,
@@ -549,7 +519,7 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("throws CONFLICT on stale version", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
@@ -557,36 +527,40 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       await updateFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
         auth,
         noopAudit,
       );
 
-      await expect(
+      await assertApiError(
         updateFrontingSession(
           db as never,
-          systemId as SystemId,
+          systemId,
           created.id,
           { encryptedData: testEncryptedDataBase64(), version: 1 },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Version conflict");
+        "CONFLICT",
+        409,
+      );
     });
 
     it("throws NOT_FOUND for nonexistent session", async () => {
-      await expect(
+      await assertApiError(
         updateFrontingSession(
           db as never,
-          systemId as SystemId,
-          `fs_${crypto.randomUUID()}` as FrontingSessionId,
+          systemId,
+          genFrontingSessionId(),
           { encryptedData: testEncryptedDataBase64(), version: 1 },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("not found");
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
@@ -597,7 +571,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       const startTime = Date.now() - 5000;
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime }),
         auth,
         noopAudit,
@@ -606,7 +580,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       const endTime = Date.now();
       const result = await endFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         { endTime, version: 1 },
         auth,
@@ -621,7 +595,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       const startTime = Date.now() - 5000;
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime }),
         auth,
         noopAudit,
@@ -629,52 +603,57 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       await endFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         { endTime: Date.now(), version: 1 },
         auth,
         noopAudit,
       );
 
-      await expect(
+      await assertApiError(
         endFrontingSession(
           db as never,
-          systemId as SystemId,
+          systemId,
           created.id,
           { endTime: Date.now(), version: 2 },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("already ended");
+        "ALREADY_ENDED",
+        400,
+      );
     });
 
     it("rejects endTime <= startTime", async () => {
       const startTime = Date.now();
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime }),
         auth,
         noopAudit,
       );
 
-      await expect(
+      await assertApiError(
         endFrontingSession(
           db as never,
-          systemId as SystemId,
+          systemId,
           created.id,
           { endTime: startTime - 1, version: 1 },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("endTime must be after startTime");
+        "VALIDATION_ERROR",
+        400,
+        "endTime",
+      );
     });
 
     it("throws CONFLICT on stale version (OCC check)", async () => {
       const startTime = Date.now() - 5000;
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime }),
         auth,
         noopAudit,
@@ -682,36 +661,40 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       await updateFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
         auth,
         noopAudit,
       );
 
-      await expect(
+      await assertApiError(
         endFrontingSession(
           db as never,
-          systemId as SystemId,
+          systemId,
           created.id,
           { endTime: Date.now(), version: 1 },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Version conflict");
+        "CONFLICT",
+        409,
+      );
     });
 
     it("throws NOT_FOUND for nonexistent session", async () => {
-      await expect(
+      await assertApiError(
         endFrontingSession(
           db as never,
-          systemId as SystemId,
-          `fs_${crypto.randomUUID()}` as FrontingSessionId,
+          systemId,
+          genFrontingSessionId(),
           { endTime: Date.now(), version: 1 },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("not found");
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
@@ -721,34 +704,29 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("deletes a session with no comments", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
 
-      await deleteFrontingSession(
-        db as never,
-        systemId as SystemId,
-        created.id,
-        auth,
-        noopAudit,
-      );
+      const audit = spyAudit();
+      await deleteFrontingSession(db as never, systemId, created.id, auth, audit);
 
-      await expect(
-        getFrontingSession(
-          db as never,
-          systemId as SystemId,
-          created.id,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("fronting-session.deleted");
+
+      await assertApiError(
+        getFrontingSession(db as never, systemId, created.id, auth),
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("throws HAS_DEPENDENTS with non-archived comments", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
@@ -756,74 +734,55 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       const now = Date.now();
       await db.insert(frontingComments).values({
-        id: `fcom_${crypto.randomUUID()}`,
+        id: genFrontingCommentId(),
         frontingSessionId: created.id,
         systemId,
-        sessionStartTime: created.startTime as number,
+        sessionStartTime: Number(created.startTime),
         memberId,
         encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       });
 
-      await expect(
-        deleteFrontingSession(
-          db as never,
-          systemId as SystemId,
-          created.id,
-          auth,
-          noopAudit,
-        ),
-      ).rejects.toThrow("non-archived comment");
+      await assertApiError(
+        deleteFrontingSession(db as never, systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
     });
 
-    it("passes HAS_DEPENDENTS check when all comments are archived", async () => {
+    it("succeeds after deleting all comments", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
 
-      const commentId = `fcom_${crypto.randomUUID()}`;
-      const now = Date.now();
-      await db.insert(frontingComments).values({
-        id: commentId,
-        frontingSessionId: created.id,
-        systemId,
-        sessionStartTime: created.startTime as number,
-        memberId,
-        archived: true,
-        archivedAt: now,
-        encryptedData: testBlob(),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // The HAS_DEPENDENTS check passes (only non-archived comments block),
-      // but the FK RESTRICT still prevents deletion. Remove the comment first.
-      await db.delete(frontingComments);
-
-      await deleteFrontingSession(
+      // Create a real comment via service
+      const comment = await createComment(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
+        { encryptedData: testEncryptedDataBase64(), memberId },
         auth,
         noopAudit,
       );
+
+      // Delete the comment (while still non-archived)
+      await deleteFrontingComment(db as never, systemId, created.id, comment.id, auth, noopAudit);
+
+      // Now the session can be deleted
+      await deleteFrontingSession(db as never, systemId, created.id, auth, noopAudit);
     });
 
     it("throws NOT_FOUND for nonexistent session", async () => {
-      await expect(
-        deleteFrontingSession(
-          db as never,
-          systemId as SystemId,
-          `fs_${crypto.randomUUID()}` as FrontingSessionId,
-          auth,
-          noopAudit,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        deleteFrontingSession(db as never, systemId, genFrontingSessionId(), auth, noopAudit),
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
@@ -833,55 +792,36 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("archives and hides session from non-archived queries", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
 
-      await archiveFrontingSession(
-        db as never,
-        systemId as SystemId,
-        created.id,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingSession(db as never, systemId, created.id, auth, noopAudit);
 
-      await expect(
-        getFrontingSession(
-          db as never,
-          systemId as SystemId,
-          created.id,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        getFrontingSession(db as never, systemId, created.id, auth),
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("throws ALREADY_ARCHIVED for already-archived session", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingSession(
-        db as never,
-        systemId as SystemId,
-        created.id,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingSession(db as never, systemId, created.id, auth, noopAudit);
 
-      await expect(
-        archiveFrontingSession(
-          db as never,
-          systemId as SystemId,
-          created.id,
-          auth,
-          noopAudit,
-        ),
-      ).rejects.toThrow("already archived");
+      await assertApiError(
+        archiveFrontingSession(db as never, systemId, created.id, auth, noopAudit),
+        "ALREADY_ARCHIVED",
+        409,
+      );
     });
   });
 
@@ -889,22 +829,16 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("restores an archived session and increments version", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingSession(
-        db as never,
-        systemId as SystemId,
-        created.id,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingSession(db as never, systemId, created.id, auth, noopAudit);
 
       const restored = await restoreFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         auth,
         noopAudit,
@@ -918,21 +852,17 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("throws for non-archived session", async () => {
       const created = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
 
-      await expect(
-        restoreFrontingSession(
-          db as never,
-          systemId as SystemId,
-          created.id,
-          auth,
-          noopAudit,
-        ),
-      ).rejects.toThrow("not archived");
+      await assertApiError(
+        restoreFrontingSession(db as never, systemId, created.id, auth, noopAudit),
+        "NOT_ARCHIVED",
+        409,
+      );
     });
   });
 
@@ -942,7 +872,7 @@ describe("fronting-session.service (PGlite integration)", () => {
     it("returns only active non-archived sessions", async () => {
       await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: Date.now() - 5000 }),
         auth,
         noopAudit,
@@ -950,91 +880,103 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       const ended = await createFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ startTime: Date.now() - 10000 }),
         auth,
         noopAudit,
       );
       await endFrontingSession(
         db as never,
-        systemId as SystemId,
+        systemId,
         ended.id,
         { endTime: Date.now(), version: 1 },
         auth,
         noopAudit,
       );
 
-      const result = await getActiveFronting(db as never, systemId as SystemId, auth);
+      const result = await getActiveFronting(db as never, systemId, auth);
       expect(result.sessions.length).toBe(1);
     });
 
     it("isCofronting=false with single member session", async () => {
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
 
-      const result = await getActiveFronting(db as never, systemId as SystemId, auth);
+      const result = await getActiveFronting(db as never, systemId, auth);
       expect(result.isCofronting).toBe(false);
     });
 
     it("isCofronting=true with multiple member sessions", async () => {
-      const otherMemberId = await insertMember();
+      const otherMemberId = genMemberId();
+      await pgInsertMember(db, systemId, otherMemberId);
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
       await createFrontingSession(
         db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
+        systemId,
         createParams({ memberId: otherMemberId }),
         auth,
         noopAudit,
       );
 
-      const result = await getActiveFronting(db as never, systemId as SystemId, auth);
+      const result = await getActiveFronting(db as never, systemId, auth);
       expect(result.isCofronting).toBe(true);
     });
 
     it("isCofronting excludes custom-front-only sessions", async () => {
       const cfId = await insertCustomFront();
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
       await createFrontingSession(
         db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams({ memberId: undefined, customFrontId: cfId }),
+        systemId,
+        createParams({ memberId: undefined, customFrontId: cfId as CustomFrontId }),
         auth,
         noopAudit,
       );
 
-      const result = await getActiveFronting(db as never, systemId as SystemId, auth);
+      const result = await getActiveFronting(db as never, systemId, auth);
       expect(result.sessions.length).toBe(2);
       expect(result.isCofronting).toBe(false);
     });
 
     it("returns empty entityMemberMap when no structure entities", async () => {
-      await createFrontingSession(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      await createFrontingSession(db as never, systemId, createParams(), auth, noopAudit);
 
-      const result = await getActiveFronting(db as never, systemId as SystemId, auth);
+      const result = await getActiveFronting(db as never, systemId, auth);
       expect(result.entityMemberMap).toEqual({});
+    });
+  });
+
+  // ── parseFrontingSessionQuery ─────────────────────────────────────
+
+  describe("parseFrontingSessionQuery", () => {
+    it("returns defaults for empty query", () => {
+      const result = parseFrontingSessionQuery({});
+      expect(result.activeOnly).toBe(false);
+      expect(result.includeArchived).toBe(false);
+      expect(result.memberId).toBeUndefined();
+      expect(result.customFrontId).toBeUndefined();
+      expect(result.startFrom).toBeUndefined();
+      expect(result.startUntil).toBeUndefined();
+    });
+
+    it("parses memberId filter", () => {
+      const id = genMemberId();
+      const result = parseFrontingSessionQuery({ memberId: id });
+      expect(result.memberId).toBe(id);
+    });
+
+    it("parses activeOnly boolean", () => {
+      const result = parseFrontingSessionQuery({ activeOnly: "true" });
+      expect(result.activeOnly).toBe(true);
+    });
+
+    it("parses startFrom/startUntil timestamps", () => {
+      const result = parseFrontingSessionQuery({ startFrom: "1000", startUntil: "2000" });
+      expect(result.startFrom).toBe(1000);
+      expect(result.startUntil).toBe(2000);
+    });
+
+    it("throws VALIDATION_ERROR for invalid startFrom", () => {
+      expect(() => parseFrontingSessionQuery({ startFrom: "not-a-number" })).toThrow();
     });
   });
 });

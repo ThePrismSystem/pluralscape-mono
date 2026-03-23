@@ -14,7 +14,7 @@ import { dispatchWebhookEvent } from "../../services/webhook-dispatcher.js";
 import { makeAuth, noopAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId, WebhookEventType } from "@pluralscape/types";
+import type { AccountId, SystemId, WebhookEventType } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
@@ -22,15 +22,15 @@ const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries }
 describe("webhook-dispatcher (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
-  let systemId: string;
+  let systemId: SystemId;
   let auth: AuthContext;
 
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgWebhookTables(client);
-    const accountId = await pgInsertAccount(db);
-    systemId = await pgInsertSystem(db, accountId);
+    const accountId = (await pgInsertAccount(db)) as AccountId;
+    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
     auth = makeAuth(accountId, systemId);
   });
 
@@ -46,7 +46,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
   it("matches enabled non-archived configs by event type", async () => {
     await createWebhookConfig(
       db as never,
-      systemId as SystemId,
+      systemId,
       { url: "https://example.com/a", eventTypes: ["fronting.started"] },
       auth,
       noopAudit,
@@ -54,7 +54,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
 
     const ids = await dispatchWebhookEvent(
       db as never,
-      systemId as SystemId,
+      systemId,
       "fronting.started" as WebhookEventType,
       { test: true },
     );
@@ -71,14 +71,14 @@ describe("webhook-dispatcher (PGlite integration)", () => {
   it("creates pending delivery per matching config", async () => {
     await createWebhookConfig(
       db as never,
-      systemId as SystemId,
+      systemId,
       { url: "https://example.com/a", eventTypes: ["fronting.started"] },
       auth,
       noopAudit,
     );
     await createWebhookConfig(
       db as never,
-      systemId as SystemId,
+      systemId,
       { url: "https://example.com/b", eventTypes: ["fronting.started", "fronting.ended"] },
       auth,
       noopAudit,
@@ -86,17 +86,27 @@ describe("webhook-dispatcher (PGlite integration)", () => {
 
     const ids = await dispatchWebhookEvent(
       db as never,
-      systemId as SystemId,
+      systemId,
       "fronting.started" as WebhookEventType,
       { test: true },
     );
     expect(ids.length).toBe(2);
+
+    // Verify all deliveries exist in the DB
+    for (const id of ids) {
+      const [row] = await db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.id, id));
+      expect(row).toBeDefined();
+      expect(row?.status).toBe("pending");
+    }
   });
 
   it("skips disabled configs", async () => {
     await createWebhookConfig(
       db as never,
-      systemId as SystemId,
+      systemId,
       { url: "https://example.com/a", eventTypes: ["fronting.started"], enabled: false },
       auth,
       noopAudit,
@@ -104,7 +114,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
 
     const ids = await dispatchWebhookEvent(
       db as never,
-      systemId as SystemId,
+      systemId,
       "fronting.started" as WebhookEventType,
       { test: true },
     );
@@ -114,7 +124,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
   it("skips archived configs", async () => {
     const wh = await createWebhookConfig(
       db as never,
-      systemId as SystemId,
+      systemId,
       { url: "https://example.com/a", eventTypes: ["fronting.started"] },
       auth,
       noopAudit,
@@ -127,7 +137,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
 
     const ids = await dispatchWebhookEvent(
       db as never,
-      systemId as SystemId,
+      systemId,
       "fronting.started" as WebhookEventType,
       { test: true },
     );
@@ -137,7 +147,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
   it("skips non-matching event types", async () => {
     await createWebhookConfig(
       db as never,
-      systemId as SystemId,
+      systemId,
       { url: "https://example.com/a", eventTypes: ["fronting.ended"] },
       auth,
       noopAudit,
@@ -145,7 +155,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
 
     const ids = await dispatchWebhookEvent(
       db as never,
-      systemId as SystemId,
+      systemId,
       "fronting.started" as WebhookEventType,
       { test: true },
     );

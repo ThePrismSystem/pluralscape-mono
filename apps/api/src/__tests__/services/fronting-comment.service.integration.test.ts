@@ -12,6 +12,7 @@ import {
 import {
   createPgFrontingTables,
   pgInsertAccount,
+  pgInsertMember,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
@@ -31,15 +32,24 @@ import {
   createFrontingSession,
 } from "../../services/fronting-session.service.js";
 import {
+  assertApiError,
+  genFrontingCommentId,
+  genFrontingSessionId,
   genMemberId,
   makeAuth,
   noopAudit,
-  testBlob,
+  spyAudit,
   testEncryptedDataBase64,
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { FrontingCommentId, FrontingSessionId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  CustomFrontId,
+  FrontingSessionId,
+  MemberId,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = {
@@ -56,8 +66,9 @@ const schema = {
 describe("fronting-comment.service (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
-  let systemId: string;
-  let memberId: string;
+  let accountId: AccountId;
+  let systemId: SystemId;
+  let memberId: MemberId;
   let auth: AuthContext;
 
   beforeAll(async () => {
@@ -65,17 +76,9 @@ describe("fronting-comment.service (PGlite integration)", () => {
     db = drizzle(client, { schema });
     await createPgFrontingTables(client);
 
-    const accountId = await pgInsertAccount(db);
-    systemId = await pgInsertSystem(db, accountId);
-    memberId = genMemberId();
-    const now = Date.now();
-    await db.insert(members).values({
-      id: memberId,
-      systemId,
-      encryptedData: testBlob(),
-      createdAt: now,
-      updatedAt: now,
-    });
+    accountId = (await pgInsertAccount(db)) as AccountId;
+    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
+    memberId = (await pgInsertMember(db, systemId, genMemberId())) as MemberId;
     auth = makeAuth(accountId, systemId);
   });
 
@@ -89,10 +92,10 @@ describe("fronting-comment.service (PGlite integration)", () => {
     await db.delete(customFronts);
   });
 
-  async function createSession(): Promise<string> {
+  async function createSession(): Promise<FrontingSessionId> {
     const result = await createFrontingSession(
       db as never,
-      systemId as SystemId,
+      systemId,
       {
         encryptedData: testEncryptedDataBase64(),
         startTime: Date.now(),
@@ -104,7 +107,13 @@ describe("fronting-comment.service (PGlite integration)", () => {
     return result.id;
   }
 
-  function commentParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  function commentParams(
+    overrides: Partial<{
+      encryptedData: string;
+      memberId: MemberId;
+      customFrontId: CustomFrontId;
+    }> = {},
+  ) {
     return {
       encryptedData: testEncryptedDataBase64(),
       memberId,
@@ -115,228 +124,171 @@ describe("fronting-comment.service (PGlite integration)", () => {
   describe("createFrontingComment", () => {
     it("creates a comment on an existing session", async () => {
       const sid = await createSession();
+      const audit = spyAudit();
       const result = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
-        noopAudit,
+        audit,
       );
 
       expect(result.id).toMatch(/^fcom_/);
       expect(result.frontingSessionId).toBe(sid);
       expect(result.memberId).toBe(memberId);
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("fronting-comment.created");
+      expect(audit.calls[0]?.actor).toEqual({ kind: "account", id: auth.accountId });
     });
 
     it("throws NOT_FOUND if parent session does not exist", async () => {
-      await expect(
+      await assertApiError(
         createFrontingComment(
           db as never,
-          systemId as SystemId,
-          `fs_${crypto.randomUUID()}` as FrontingSessionId,
+          systemId,
+          genFrontingSessionId(),
           commentParams(),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("not found");
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("throws SESSION_ARCHIVED for archived parent", async () => {
       const sid = await createSession();
 
-      await archiveFrontingSession(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingSession(db as never, systemId, sid, auth, noopAudit);
 
-      await expect(
-        createFrontingComment(
-          db as never,
-          systemId as SystemId,
-          sid as FrontingSessionId,
-          commentParams(),
-          auth,
-          noopAudit,
-        ),
-      ).rejects.toThrow("archived session");
+      await assertApiError(
+        createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit),
+        "SESSION_ARCHIVED",
+        400,
+      );
     });
 
     it("validates subject IDs", async () => {
       const sid = await createSession();
-      await expect(
+      await assertApiError(
         createFrontingComment(
           db as never,
-          systemId as SystemId,
-          sid as FrontingSessionId,
+          systemId,
+          sid,
           commentParams({ memberId: genMemberId() }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("not found in this system");
+        "INVALID_SUBJECT",
+        400,
+      );
     });
   });
 
   describe("listFrontingComments", () => {
     it("throws NOT_FOUND if parent session does not exist", async () => {
-      await expect(
-        listFrontingComments(
-          db as never,
-          systemId as SystemId,
-          `fs_${crypto.randomUUID()}` as FrontingSessionId,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        listFrontingComments(db as never, systemId, genFrontingSessionId(), auth),
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("excludes archived by default", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await createFrontingComment(
+      const c2 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        c1.id,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
 
-      const result = await listFrontingComments(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        auth,
-      );
+      const result = await listFrontingComments(db as never, systemId, sid, auth);
       expect(result.items.length).toBe(1);
+      expect(result.items[0]?.id).toBe(c2.id);
     });
 
     it("includes archived when includeArchived=true", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await createFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        commentParams(),
-        auth,
-        noopAudit,
-      );
-      await archiveFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        c1.id,
-        auth,
-        noopAudit,
-      );
+      await createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit);
+      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
 
-      const result = await listFrontingComments(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        auth,
-        { includeArchived: true },
-      );
+      const result = await listFrontingComments(db as never, systemId, sid, auth, {
+        includeArchived: true,
+      });
       expect(result.items.length).toBe(2);
     });
 
     it("supports cursor pagination by ID desc", async () => {
       const sid = await createSession();
-      await createFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        commentParams(),
-        auth,
-        noopAudit,
-      );
-      await createFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        commentParams(),
-        auth,
-        noopAudit,
-      );
+      await createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit);
+      await createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit);
 
-      const page1 = await listFrontingComments(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        auth,
-        { limit: 1 },
-      );
+      const page1 = await listFrontingComments(db as never, systemId, sid, auth, { limit: 1 });
       expect(page1.items.length).toBe(1);
       expect(page1.hasMore).toBe(true);
+
+      const page2 = await listFrontingComments(db as never, systemId, sid, auth, {
+        cursor: page1.items[0]?.id,
+        limit: 1,
+      });
+      expect(page2.items.length).toBe(1);
+      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
     });
   });
 
   describe("getFrontingComment", () => {
     it("throws NOT_FOUND if parent session does not exist", async () => {
-      await expect(
+      await assertApiError(
         getFrontingComment(
           db as never,
-          systemId as SystemId,
-          `fs_${crypto.randomUUID()}` as FrontingSessionId,
-          `fcom_${crypto.randomUUID()}` as FrontingCommentId,
+          systemId,
+          genFrontingSessionId(),
+          genFrontingCommentId(),
           auth,
         ),
-      ).rejects.toThrow("not found");
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("throws NOT_FOUND for archived comment", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        c1.id,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
 
-      await expect(
-        getFrontingComment(
-          db as never,
-          systemId as SystemId,
-          sid as FrontingSessionId,
-          c1.id,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        getFrontingComment(db as never, systemId, sid, c1.id, auth),
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
@@ -345,8 +297,8 @@ describe("fronting-comment.service (PGlite integration)", () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
@@ -354,8 +306,8 @@ describe("fronting-comment.service (PGlite integration)", () => {
 
       const result = await updateFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         c1.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
         auth,
@@ -368,32 +320,34 @@ describe("fronting-comment.service (PGlite integration)", () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
       await updateFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         c1.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
         auth,
         noopAudit,
       );
-      await expect(
+      await assertApiError(
         updateFrontingComment(
           db as never,
-          systemId as SystemId,
-          sid as FrontingSessionId,
+          systemId,
+          sid,
           c1.id,
           { encryptedData: testEncryptedDataBase64(), version: 1 },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Version conflict");
+        "CONFLICT",
+        409,
+      );
     });
   });
 
@@ -402,45 +356,29 @@ describe("fronting-comment.service (PGlite integration)", () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
 
-      await deleteFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        c1.id,
-        auth,
-        noopAudit,
-      );
+      await deleteFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
 
-      await expect(
-        getFrontingComment(
-          db as never,
-          systemId as SystemId,
-          sid as FrontingSessionId,
-          c1.id,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        getFrontingComment(db as never, systemId, sid, c1.id, auth),
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("throws NOT_FOUND for nonexistent comment", async () => {
       const sid = await createSession();
-      await expect(
-        deleteFrontingComment(
-          db as never,
-          systemId as SystemId,
-          sid as FrontingSessionId,
-          `fcom_${crypto.randomUUID()}` as FrontingCommentId,
-          auth,
-          noopAudit,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        deleteFrontingComment(db as never, systemId, sid, genFrontingCommentId(), auth, noopAudit),
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
@@ -449,56 +387,38 @@ describe("fronting-comment.service (PGlite integration)", () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
 
-      await archiveFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        c1.id,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
 
-      await expect(
-        getFrontingComment(
-          db as never,
-          systemId as SystemId,
-          sid as FrontingSessionId,
-          c1.id,
-          auth,
-        ),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        getFrontingComment(db as never, systemId, sid, c1.id, auth),
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("restores an archived comment and increments version", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingComment(
-        db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
-        c1.id,
-        auth,
-        noopAudit,
-      );
+      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
 
       const restored = await restoreFrontingComment(
         db as never,
-        systemId as SystemId,
-        sid as FrontingSessionId,
+        systemId,
+        sid,
         c1.id,
         auth,
         noopAudit,

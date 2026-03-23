@@ -1,25 +1,31 @@
 /**
  * Shared setup helpers for API service integration tests (PGlite).
  */
-import { AEAD_NONCE_BYTES, serializeEncryptedBlob } from "@pluralscape/crypto";
+import { serializeEncryptedBlob } from "@pluralscape/crypto";
+import { testBlob } from "@pluralscape/db/test-helpers/pg-helpers";
+import { expect } from "vitest";
 
-import type { AuditWriter } from "../../lib/audit-writer.js";
+import { ApiHttpError } from "../../lib/api-error.js";
+
+import type { AuditWriteParams, AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, EncryptedBlob, SessionId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ApiErrorCode,
+  CheckInRecordId,
+  CustomFrontId,
+  FrontingCommentId,
+  FrontingSessionId,
+  MemberId,
+  SessionId,
+  SystemId,
+  SystemStructureEntityId,
+  TimerId,
+  WebhookDeliveryId,
+  WebhookId,
+} from "@pluralscape/types";
 
-/** Build a minimal T1 EncryptedBlob (no bucketId) for DB insertion. */
-export function testBlob(ciphertext: Uint8Array = new Uint8Array([1, 2, 3])): EncryptedBlob {
-  const nonce = new Uint8Array(AEAD_NONCE_BYTES);
-  nonce.fill(0xaa);
-  return {
-    ciphertext,
-    nonce,
-    tier: 1,
-    algorithm: "xchacha20-poly1305",
-    keyVersion: null,
-    bucketId: null,
-  };
-}
+export { testBlob };
 
 /**
  * Create a base64-encoded serialized EncryptedBlob suitable for service params.
@@ -32,55 +38,90 @@ export function testEncryptedDataBase64(): string {
 }
 
 /** Build a minimal AuthContext for integration tests. */
-export function makeAuth(accountId: string, systemId: string): AuthContext {
+export function makeAuth(accountId: AccountId, systemId: SystemId): AuthContext {
   return {
-    accountId: accountId as AccountId,
-    systemId: systemId as SystemId,
+    accountId,
+    systemId,
     sessionId: `sess_${crypto.randomUUID()}` as SessionId,
     accountType: "system",
-    ownedSystemIds: new Set([systemId as SystemId]),
+    ownedSystemIds: new Set([systemId]),
   };
 }
 
 /** No-op audit writer for tests that don't need to verify audit entries. */
 export const noopAudit: AuditWriter = async () => {};
 
-/** Generate a properly-prefixed member ID. */
-export function genMemberId(): string {
-  return `mem_${crypto.randomUUID()}`;
+/** Spy audit writer that records every call for assertion. */
+export function spyAudit(): AuditWriter & { calls: AuditWriteParams[] } {
+  const calls: AuditWriteParams[] = [];
+  const writer: AuditWriter = (_db, params) => {
+    calls.push(params);
+    return Promise.resolve();
+  };
+  return Object.assign(writer, { calls });
 }
 
-/** Generate a properly-prefixed custom front ID. */
-export function genCustomFrontId(): string {
-  return `cf_${crypto.randomUUID()}`;
+/**
+ * Assert that a promise rejects with an ApiHttpError carrying the expected
+ * error code and HTTP status. Optionally checks a message substring.
+ */
+export async function assertApiError(
+  promise: Promise<unknown>,
+  code: ApiErrorCode,
+  status: number,
+  messageSubstring?: string,
+): Promise<ApiHttpError> {
+  let caught: unknown;
+  try {
+    await promise;
+  } catch (err: unknown) {
+    caught = err;
+  }
+  if (!caught) {
+    expect.unreachable("Expected ApiHttpError but promise resolved");
+  }
+  expect(caught).toBeInstanceOf(ApiHttpError);
+  const apiErr = caught as ApiHttpError;
+  expect(apiErr.code).toBe(code);
+  expect(apiErr.status).toBe(status);
+  if (messageSubstring) expect(apiErr.message).toContain(messageSubstring);
+  return apiErr;
 }
 
-/** Generate a properly-prefixed fronting session ID. */
-export function genFrontingSessionId(): string {
-  return `fs_${crypto.randomUUID()}`;
+// ── ID generators (return branded types to avoid per-callsite casts) ─
+
+export function genMemberId(): MemberId {
+  return `mem_${crypto.randomUUID()}` as MemberId;
 }
 
-/** Generate a properly-prefixed timer config ID. */
-export function genTimerId(): string {
-  return `tmr_${crypto.randomUUID()}`;
+export function genCustomFrontId(): CustomFrontId {
+  return `cf_${crypto.randomUUID()}` as CustomFrontId;
 }
 
-/** Generate a properly-prefixed webhook config ID. */
-export function genWebhookId(): string {
-  return `wh_${crypto.randomUUID()}`;
+export function genFrontingSessionId(): FrontingSessionId {
+  return `fs_${crypto.randomUUID()}` as FrontingSessionId;
 }
 
-/** Generate a properly-prefixed webhook delivery ID. */
-export function genWebhookDeliveryId(): string {
-  return `wd_${crypto.randomUUID()}`;
+export function genFrontingCommentId(): FrontingCommentId {
+  return `fcom_${crypto.randomUUID()}` as FrontingCommentId;
 }
 
-/** Generate a properly-prefixed check-in record ID. */
-export function genCheckInRecordId(): string {
-  return `cir_${crypto.randomUUID()}`;
+export function genTimerId(): TimerId {
+  return `tmr_${crypto.randomUUID()}` as TimerId;
 }
 
-/** Generate a properly-prefixed structure entity ID. */
-export function genStructureEntityId(): string {
-  return `ste_${crypto.randomUUID()}`;
+export function genWebhookId(): WebhookId {
+  return `wh_${crypto.randomUUID()}` as WebhookId;
+}
+
+export function genWebhookDeliveryId(): WebhookDeliveryId {
+  return `wd_${crypto.randomUUID()}` as WebhookDeliveryId;
+}
+
+export function genCheckInRecordId(): CheckInRecordId {
+  return `cir_${crypto.randomUUID()}` as CheckInRecordId;
+}
+
+export function genStructureEntityId(): SystemStructureEntityId {
+  return `ste_${crypto.randomUUID()}` as SystemStructureEntityId;
 }

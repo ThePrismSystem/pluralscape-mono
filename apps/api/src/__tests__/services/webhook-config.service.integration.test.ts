@@ -8,18 +8,27 @@ import {
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { WEBHOOK_SECRET_BYTES } from "../../service.constants.js";
 import {
   archiveWebhookConfig,
   createWebhookConfig,
   deleteWebhookConfig,
   getWebhookConfig,
+  listWebhookConfigs,
+  parseWebhookConfigQuery,
   restoreWebhookConfig,
   updateWebhookConfig,
 } from "../../services/webhook-config.service.js";
-import { genWebhookId, makeAuth, noopAudit } from "../helpers/integration-setup.js";
+import {
+  assertApiError,
+  genWebhookId,
+  makeAuth,
+  noopAudit,
+  spyAudit,
+} from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId, WebhookId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
@@ -27,15 +36,15 @@ const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries }
 describe("webhook-config.service (PGlite integration)", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
-  let systemId: string;
+  let systemId: SystemId;
   let auth: AuthContext;
 
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
     await createPgWebhookTables(client);
-    const accountId = await pgInsertAccount(db);
-    systemId = await pgInsertSystem(db, accountId);
+    const accountId = (await pgInsertAccount(db)) as AccountId;
+    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
     auth = makeAuth(accountId, systemId);
   });
 
@@ -48,7 +57,14 @@ describe("webhook-config.service (PGlite integration)", () => {
     await db.delete(webhookConfigs);
   });
 
-  function createParams(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  function createParams(
+    overrides: Partial<{
+      url: string;
+      eventTypes: string[];
+      enabled: boolean;
+      cryptoKeyId: string;
+    }> = {},
+  ) {
     return {
       url: "https://example.com/webhook",
       eventTypes: ["fronting.started"],
@@ -59,41 +75,43 @@ describe("webhook-config.service (PGlite integration)", () => {
 
   describe("createWebhookConfig", () => {
     it("generates a secret in the response", async () => {
-      const result = await createWebhookConfig(
-        db as never,
-        systemId as SystemId,
-        createParams(),
-        auth,
-        noopAudit,
-      );
+      const audit = spyAudit();
+      const result = await createWebhookConfig(db as never, systemId, createParams(), auth, audit);
       expect(result.id).toMatch(/^wh_/);
-      expect(result.secret).toBeTruthy();
-      expect(result.secret.length).toBeGreaterThan(0);
+      // WEBHOOK_SECRET_BYTES=32, base64-encoded = 44 chars
+      const expectedBase64Length = Math.ceil(WEBHOOK_SECRET_BYTES / 3) * 4;
+      expect(result.secret).toHaveLength(expectedBase64Length);
       expect(result.url).toBe("https://example.com/webhook");
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("webhook-config.created");
     });
 
     it("validates event types", async () => {
-      await expect(
+      await assertApiError(
         createWebhookConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           createParams({ eventTypes: ["invalid.event"] }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Invalid payload");
+        "VALIDATION_ERROR",
+        400,
+      );
     });
 
     it("validates URL format", async () => {
-      await expect(
+      await assertApiError(
         createWebhookConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           createParams({ url: "not-a-url" }),
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Invalid payload");
+        "VALIDATION_ERROR",
+        400,
+      );
     });
   });
 
@@ -101,22 +119,24 @@ describe("webhook-config.service (PGlite integration)", () => {
     it("secret is NOT in the response", async () => {
       const created = await createWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
 
-      const result = await getWebhookConfig(db as never, systemId as SystemId, created.id, auth);
+      const result = await getWebhookConfig(db as never, systemId, created.id, auth);
       expect(result.id).toBe(created.id);
       // The get endpoint uses WEBHOOK_CONFIG_SELECT_COLUMNS which excludes secret
       expect("secret" in result).toBe(false);
     });
 
     it("throws NOT_FOUND for nonexistent", async () => {
-      await expect(
-        getWebhookConfig(db as never, systemId as SystemId, genWebhookId() as WebhookId, auth),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        getWebhookConfig(db as never, systemId, genWebhookId(), auth),
+        "NOT_FOUND",
+        404,
+      );
     });
   });
 
@@ -124,7 +144,7 @@ describe("webhook-config.service (PGlite integration)", () => {
     it("updates on correct version (OCC)", async () => {
       const created = await createWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
@@ -132,7 +152,7 @@ describe("webhook-config.service (PGlite integration)", () => {
 
       const result = await updateWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         { version: 1, enabled: false },
         auth,
@@ -145,50 +165,54 @@ describe("webhook-config.service (PGlite integration)", () => {
     it("throws CONFLICT on stale version", async () => {
       const created = await createWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
       await updateWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         { version: 1, enabled: false },
         auth,
         noopAudit,
       );
 
-      await expect(
+      await assertApiError(
         updateWebhookConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           created.id,
           { version: 1, enabled: true },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Version conflict");
+        "CONFLICT",
+        409,
+      );
     });
 
     it("re-validates URL on update", async () => {
       const created = await createWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await expect(
+      await assertApiError(
         updateWebhookConfig(
           db as never,
-          systemId as SystemId,
+          systemId,
           created.id,
           { version: 1, url: "not-a-url" },
           auth,
           noopAudit,
         ),
-      ).rejects.toThrow("Invalid payload");
+        "VALIDATION_ERROR",
+        400,
+      );
     });
   });
 
@@ -196,21 +220,23 @@ describe("webhook-config.service (PGlite integration)", () => {
     it("deletes with no pending deliveries", async () => {
       const created = await createWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await deleteWebhookConfig(db as never, systemId as SystemId, created.id, auth, noopAudit);
-      await expect(
-        getWebhookConfig(db as never, systemId as SystemId, created.id, auth),
-      ).rejects.toThrow("not found");
+      await deleteWebhookConfig(db as never, systemId, created.id, auth, noopAudit);
+      await assertApiError(
+        getWebhookConfig(db as never, systemId, created.id, auth),
+        "NOT_FOUND",
+        404,
+      );
     });
 
     it("throws HAS_DEPENDENTS with pending deliveries", async () => {
       const created = await createWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
@@ -226,9 +252,11 @@ describe("webhook-config.service (PGlite integration)", () => {
         createdAt: Date.now(),
       });
 
-      await expect(
-        deleteWebhookConfig(db as never, systemId as SystemId, created.id, auth, noopAudit),
-      ).rejects.toThrow("pending delivery");
+      await assertApiError(
+        deleteWebhookConfig(db as never, systemId, created.id, auth, noopAudit),
+        "HAS_DEPENDENTS",
+        409,
+      );
     });
   });
 
@@ -236,26 +264,93 @@ describe("webhook-config.service (PGlite integration)", () => {
     it("archives and restores", async () => {
       const created = await createWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         createParams(),
         auth,
         noopAudit,
       );
-      await archiveWebhookConfig(db as never, systemId as SystemId, created.id, auth, noopAudit);
+      await archiveWebhookConfig(db as never, systemId, created.id, auth, noopAudit);
 
-      await expect(
-        getWebhookConfig(db as never, systemId as SystemId, created.id, auth),
-      ).rejects.toThrow("not found");
+      await assertApiError(
+        getWebhookConfig(db as never, systemId, created.id, auth),
+        "NOT_FOUND",
+        404,
+      );
 
       const restored = await restoreWebhookConfig(
         db as never,
-        systemId as SystemId,
+        systemId,
         created.id,
         auth,
         noopAudit,
       );
       expect(restored.archived).toBe(false);
       expect(restored.version).toBe(3);
+    });
+  });
+
+  describe("listWebhookConfigs", () => {
+    it("returns all configs for the system", async () => {
+      await createWebhookConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await createWebhookConfig(
+        db as never,
+        systemId,
+        createParams({ url: "https://example.com/hook2" }),
+        auth,
+        noopAudit,
+      );
+      const result = await listWebhookConfigs(db as never, systemId, auth);
+      expect(result.items.length).toBe(2);
+    });
+
+    it("supports pagination", async () => {
+      await createWebhookConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await createWebhookConfig(
+        db as never,
+        systemId,
+        createParams({ url: "https://example.com/hook2" }),
+        auth,
+        noopAudit,
+      );
+
+      const page1 = await listWebhookConfigs(db as never, systemId, auth, { limit: 1 });
+      expect(page1.items.length).toBe(1);
+      expect(page1.hasMore).toBe(true);
+
+      const page2 = await listWebhookConfigs(db as never, systemId, auth, {
+        cursor: page1.items[0]?.id,
+        limit: 1,
+      });
+      expect(page2.items.length).toBe(1);
+      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
+    });
+
+    it("excludes archived by default", async () => {
+      const wh = await createWebhookConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await archiveWebhookConfig(db as never, systemId, wh.id, auth, noopAudit);
+      const result = await listWebhookConfigs(db as never, systemId, auth);
+      expect(result.items.length).toBe(0);
+    });
+
+    it("includes archived when requested", async () => {
+      const wh = await createWebhookConfig(db as never, systemId, createParams(), auth, noopAudit);
+      await archiveWebhookConfig(db as never, systemId, wh.id, auth, noopAudit);
+      const result = await listWebhookConfigs(db as never, systemId, auth, {
+        includeArchived: true,
+      });
+      expect(result.items.length).toBe(1);
+    });
+  });
+
+  describe("parseWebhookConfigQuery", () => {
+    it("returns defaults for empty query", () => {
+      const result = parseWebhookConfigQuery({});
+      expect(result).toEqual({ includeArchived: false });
+    });
+
+    it("parses includeArchived", () => {
+      const result = parseWebhookConfigQuery({ includeArchived: "true" });
+      expect(result.includeArchived).toBe(true);
     });
   });
 });
