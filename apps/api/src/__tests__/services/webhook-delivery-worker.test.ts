@@ -42,18 +42,33 @@ describe("computeWebhookSignature", () => {
 describe("calculateBackoffMs", () => {
   const baseMs = 1000;
 
-  it("returns base delay for first retry", () => {
-    expect(calculateBackoffMs(1, baseMs)).toBe(2000);
+  it("returns exact delay when jitter is disabled", () => {
+    expect(calculateBackoffMs(0, baseMs, 0)).toBe(1000);
+    expect(calculateBackoffMs(1, baseMs, 0)).toBe(2000);
+    expect(calculateBackoffMs(2, baseMs, 0)).toBe(4000);
+    expect(calculateBackoffMs(3, baseMs, 0)).toBe(8000);
+    expect(calculateBackoffMs(4, baseMs, 0)).toBe(16000);
   });
 
-  it("doubles delay for each subsequent retry", () => {
-    expect(calculateBackoffMs(2, baseMs)).toBe(4000);
-    expect(calculateBackoffMs(3, baseMs)).toBe(8000);
-    expect(calculateBackoffMs(4, baseMs)).toBe(16000);
+  it("applies jitter within expected range with default fraction", () => {
+    const attempts = 100;
+    const results: number[] = [];
+    for (let i = 0; i < attempts; i++) {
+      results.push(calculateBackoffMs(2, baseMs));
+    }
+
+    const expectedBase = 4000;
+    const minExpected = expectedBase * 0.75; // -25%
+    const maxExpected = expectedBase * 1.25; // +25%
+
+    for (const result of results) {
+      expect(result).toBeGreaterThanOrEqual(minExpected);
+      expect(result).toBeLessThanOrEqual(maxExpected);
+    }
   });
 
-  it("returns base for attempt 0", () => {
-    expect(calculateBackoffMs(0, baseMs)).toBe(1000);
+  it("returns non-negative value for attempt 0", () => {
+    expect(calculateBackoffMs(0, baseMs, 0)).toBe(1000);
   });
 });
 

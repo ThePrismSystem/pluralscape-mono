@@ -4,6 +4,7 @@ import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { eq, sql } from "drizzle-orm";
 
+import { logger } from "../lib/logger.js";
 import { WEBHOOK_BASE_BACKOFF_MS, WEBHOOK_MAX_RETRY_ATTEMPTS } from "../service.constants.js";
 
 import type { WebhookDeliveryId } from "@pluralscape/types";
@@ -22,6 +23,9 @@ const HTTP_SUCCESS_MAX = 299;
 /** Default request timeout for webhook delivery (10 seconds). */
 const DELIVERY_TIMEOUT_MS = 10_000;
 
+/** Default jitter fraction for backoff (25%). */
+const DEFAULT_JITTER_FRACTION = 0.25;
+
 /**
  * Compute HMAC-SHA256 signature for a webhook payload using the config's secret.
  */
@@ -31,11 +35,16 @@ export function computeWebhookSignature(secret: Buffer, payload: string): string
 
 /**
  * Calculate exponential backoff delay for the given attempt number.
- * Uses 2^attempt * baseMs (e.g. 1s, 2s, 4s, 8s, 16s).
+ * Uses 2^attempt * baseMs (e.g. 1s, 2s, 4s, 8s, 16s) with optional jitter.
  */
-export function calculateBackoffMs(attemptCount: number, baseMs: number): number {
-  const TWO = 2;
-  return Math.pow(TWO, attemptCount) * baseMs;
+export function calculateBackoffMs(
+  attemptCount: number,
+  baseMs: number,
+  jitterFraction = DEFAULT_JITTER_FRACTION,
+): number {
+  const delay = Math.pow(2, attemptCount) * baseMs;  
+  const jitter = delay * jitterFraction * (2 * Math.random() - 1);
+  return Math.max(0, Math.round(delay + jitter));
 }
 
 /**
@@ -66,7 +75,10 @@ export async function processWebhookDelivery(
     .where(eq(webhookDeliveries.id, deliveryId))
     .limit(1);
 
-  if (!delivery) return;
+  if (!delivery) {
+    logger.warn(`[webhook-worker] delivery not found: ${deliveryId}`);
+    return;
+  }
 
   const [config] = await db
     .select({
@@ -81,6 +93,15 @@ export async function processWebhookDelivery(
 
   // If config is missing or disabled, mark delivery as failed
   if (!config?.enabled) {
+    if (!config) {
+      logger.warn(
+        `[webhook-worker] config not found for delivery ${deliveryId}, webhook ${delivery.webhookId}`,
+      );
+    } else {
+      logger.warn(
+        `[webhook-worker] config disabled for delivery ${deliveryId}, webhook ${delivery.webhookId}`,
+      );
+    }
     await db
       .update(webhookDeliveries)
       .set({
@@ -117,8 +138,17 @@ export async function processWebhookDelivery(
     } finally {
       clearTimeout(timeout);
     }
-  } catch {
-    // Network error — httpStatus stays null
+  } catch (error: unknown) {
+    // Only swallow network/timeout errors — re-throw unexpected errors
+    if (
+      !(
+        error instanceof TypeError ||
+        (error instanceof DOMException && error.name === "AbortError")
+      )
+    ) {
+      throw error;
+    }
+    // Network or timeout error — httpStatus stays null
   }
 
   const isSuccess =
@@ -137,23 +167,21 @@ export async function processWebhookDelivery(
     return;
   }
 
-  // Failure path
-  const newAttemptCount = delivery.attemptCount + 1;
-
-  if (newAttemptCount >= WEBHOOK_MAX_RETRY_ATTEMPTS) {
+  // Failure path — use atomic increment for consistency
+  if (delivery.attemptCount + 1 >= WEBHOOK_MAX_RETRY_ATTEMPTS) {
     await db
       .update(webhookDeliveries)
       .set({
         status: "failed",
         httpStatus,
         lastAttemptAt: timestamp,
-        attemptCount: newAttemptCount,
+        attemptCount: sql`${webhookDeliveries.attemptCount} + 1`,
       })
       .where(eq(webhookDeliveries.id, deliveryId));
     return;
   }
 
-  const backoffMs = calculateBackoffMs(newAttemptCount, WEBHOOK_BASE_BACKOFF_MS);
+  const backoffMs = calculateBackoffMs(delivery.attemptCount + 1, WEBHOOK_BASE_BACKOFF_MS);
   const nextRetryAt = timestamp + backoffMs;
 
   await db
@@ -161,7 +189,7 @@ export async function processWebhookDelivery(
     .set({
       httpStatus,
       lastAttemptAt: timestamp,
-      attemptCount: newAttemptCount,
+      attemptCount: sql`${webhookDeliveries.attemptCount} + 1`,
       nextRetryAt,
     })
     .where(eq(webhookDeliveries.id, deliveryId));
