@@ -23,5 +23,6 @@ createRoute.post("/", async (c) => {
 
   const db = await getDb();
   const result = await createWebhookConfig(db, systemId, body, auth, audit);
+  c.header("Cache-Control", "no-store");
   return c.json(result, HTTP_CREATED);
 });

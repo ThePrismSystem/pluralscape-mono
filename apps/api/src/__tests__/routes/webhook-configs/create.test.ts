@@ -80,6 +80,7 @@ describe("POST /systems/:systemId/webhook-configs", () => {
     expect(body.id).toBe(WH_ID);
     expect(body.secret).toBe("dGVzdC1zZWNyZXQ=");
     expect(body.url).toBe("https://example.com/webhook");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("passes body to service", async () => {

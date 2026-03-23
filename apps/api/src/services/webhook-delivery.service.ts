@@ -1,5 +1,5 @@
 import { webhookDeliveries } from "@pluralscape/db/pg";
-import { toUnixMillisOrNull } from "@pluralscape/types";
+import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { WebhookDeliveryQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
@@ -9,6 +9,7 @@ import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
+import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   SystemId,
@@ -67,7 +68,7 @@ function toWebhookDeliveryResult(row: {
     attemptCount: row.attemptCount,
     lastAttemptAt: toUnixMillisOrNull(row.lastAttemptAt),
     nextRetryAt: toUnixMillisOrNull(row.nextRetryAt),
-    createdAt: row.createdAt,
+    createdAt: toUnixMillis(row.createdAt),
   };
 }
 
@@ -163,17 +164,27 @@ export async function deleteWebhookDelivery(
   systemId: SystemId,
   deliveryId: WebhookDeliveryId,
   auth: AuthContext,
+  audit: AuditWriter,
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  const deleted = await db
-    .delete(webhookDeliveries)
-    .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.systemId, systemId)))
-    .returning({ id: webhookDeliveries.id });
+  await db.transaction(async (tx) => {
+    const deleted = await tx
+      .delete(webhookDeliveries)
+      .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.systemId, systemId)))
+      .returning({ id: webhookDeliveries.id });
 
-  if (deleted.length === 0) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Webhook delivery not found");
-  }
+    if (deleted.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Webhook delivery not found");
+    }
+
+    await audit(tx, {
+      eventType: "webhook-delivery.deleted",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Webhook delivery deleted",
+      systemId,
+    });
+  });
 }
 
 // ── PARSE QUERY PARAMS ──────────────────────────────────────────────
