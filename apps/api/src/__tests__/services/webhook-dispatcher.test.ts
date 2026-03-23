@@ -112,7 +112,7 @@ describe("dispatchWebhookEvent", () => {
 
     await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
 
-    const insertedValues = mockInsertValues.mock.calls[0][0];
+    const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
     expect(insertedValues[0]).toHaveProperty("payloadData", payload);
   });
 });
