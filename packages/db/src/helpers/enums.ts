@@ -263,6 +263,12 @@ export const AUDIT_EVENT_TYPES = [
   "blob.archived",
   "fronting-report.created",
   "fronting-report.deleted",
+  "webhook-config.created",
+  "webhook-config.updated",
+  "webhook-config.archived",
+  "webhook-config.restored",
+  "webhook-config.deleted",
+  "webhook-delivery.deleted",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",

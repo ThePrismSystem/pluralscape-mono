@@ -158,6 +158,12 @@ describe("AuditEventType", () => {
         case "check-in-record.dismissed":
         case "check-in-record.archived":
         case "check-in-record.deleted":
+        case "webhook-config.created":
+        case "webhook-config.updated":
+        case "webhook-config.archived":
+        case "webhook-config.restored":
+        case "webhook-config.deleted":
+        case "webhook-delivery.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

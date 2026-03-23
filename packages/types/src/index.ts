@@ -387,6 +387,7 @@ export type {
   WebhookDeliveryPayload,
   WebhookDelivery,
   ArchivedWebhookDelivery,
+  WebhookEventPayloadMap,
 } from "./webhooks.js";
 
 // ── Notifications ─────────────────────────────────────────────

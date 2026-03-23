@@ -58,3 +58,17 @@ export function mockAccountOnlyAuthFactory(): { authMiddleware: ReturnType<typeo
 export function mockSystemOwnershipFactory(): { assertSystemOwnership: ReturnType<typeof vi.fn> } {
   return { assertSystemOwnership: vi.fn() };
 }
+
+/** Factory for vi.mock("…/webhook-config.service.js") — returns all CRUD functions as mocks. */
+export function mockWebhookConfigServiceFactory(): Record<string, ReturnType<typeof vi.fn>> {
+  return {
+    createWebhookConfig: vi.fn(),
+    listWebhookConfigs: vi.fn(),
+    getWebhookConfig: vi.fn(),
+    updateWebhookConfig: vi.fn(),
+    deleteWebhookConfig: vi.fn(),
+    archiveWebhookConfig: vi.fn(),
+    restoreWebhookConfig: vi.fn(),
+    parseWebhookConfigQuery: vi.fn().mockReturnValue({}),
+  };
+}

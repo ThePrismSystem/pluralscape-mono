@@ -70,3 +70,6 @@ export interface WebhookDelivery {
 
 /** An archived webhook delivery. */
 export type ArchivedWebhookDelivery = Archived<WebhookDelivery>;
+
+/** Maps each webhook event type to its expected payload shape. Placeholder for future per-event typing. */
+export type WebhookEventPayloadMap = { [K in WebhookEventType]: Record<string, unknown> };

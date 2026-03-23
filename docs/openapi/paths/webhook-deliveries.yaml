@@ -1,0 +1,107 @@
+/systems/{systemId}/webhook-deliveries:
+  get:
+    operationId: listWebhookDeliveries
+    tags: [Webhook Deliveries]
+    summary: List webhook deliveries
+    description: |
+      Returns a paginated list of webhook delivery records for the specified system.
+      Supports filtering by webhook config, status, and event type.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: webhookId
+        in: query
+        schema:
+          type: string
+        description: Filter by webhook config ID
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum: [pending, success, failed]
+        description: Filter by delivery status
+      - name: eventType
+        in: query
+        schema:
+          $ref: "../schemas/webhooks.yaml#/WebhookEventType"
+        description: Filter by event type
+    responses:
+      "200":
+        description: Paginated webhook delivery list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "../openapi.yaml#/components/schemas/PaginatedResponse"
+                - type: object
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/webhooks.yaml#/WebhookDeliveryResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+/systems/{systemId}/webhook-deliveries/{deliveryId}:
+  get:
+    operationId: getWebhookDelivery
+    tags: [Webhook Deliveries]
+    summary: Get a webhook delivery
+    description: |
+      Returns a single webhook delivery record.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Webhook delivery ID (wd_ prefix)
+    responses:
+      "200":
+        description: Webhook delivery details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/webhooks.yaml#/WebhookDeliveryResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+  delete:
+    operationId: deleteWebhookDelivery
+    tags: [Webhook Deliveries]
+    summary: Delete a webhook delivery
+    description: |
+      Permanently deletes a webhook delivery record. Deliveries are leaf
+      entities and can always be deleted.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Webhook delivery deleted
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"

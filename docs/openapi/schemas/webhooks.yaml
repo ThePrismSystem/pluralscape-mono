@@ -1,0 +1,161 @@
+WebhookConfigResponse:
+  description: |
+    A webhook configuration. The `secret` field is only included in the
+    create response and is never exposed again via GET endpoints.
+  type: object
+  properties:
+    id:
+      type: string
+      description: "Webhook config ID (wh_ prefix)"
+    systemId:
+      type: string
+      description: "System ID (sys_ prefix)"
+    url:
+      type: string
+      format: uri
+      description: "Webhook target URL"
+    eventTypes:
+      type: array
+      items:
+        $ref: "#/WebhookEventType"
+      description: "Event types this webhook subscribes to"
+    enabled:
+      type: boolean
+      description: "Whether the webhook is currently active"
+    cryptoKeyId:
+      type: string
+      nullable: true
+      description: "Optional API key ID for encrypted payloads"
+    version:
+      type: integer
+      minimum: 1
+      description: "Optimistic concurrency version"
+    archived:
+      type: boolean
+    archivedAt:
+      type: integer
+      format: int64
+      nullable: true
+    createdAt:
+      type: integer
+      format: int64
+    updatedAt:
+      type: integer
+      format: int64
+
+WebhookConfigCreateResponse:
+  description: |
+    Response from creating a webhook config. Includes the `secret` field
+    (base64-encoded HMAC signing key) which is only exposed once.
+  allOf:
+    - $ref: "#/WebhookConfigResponse"
+    - type: object
+      properties:
+        secret:
+          type: string
+          contentEncoding: base64
+          description: "Base64-encoded HMAC signing secret. Only returned on create."
+
+CreateWebhookConfigRequest:
+  type: object
+  required: [url, eventTypes]
+  properties:
+    url:
+      type: string
+      format: uri
+      maxLength: 2048
+      description: "Webhook target URL. Must use HTTPS in production."
+    eventTypes:
+      type: array
+      items:
+        $ref: "#/WebhookEventType"
+      minItems: 1
+      maxItems: 15
+      description: "Event types to subscribe to"
+    enabled:
+      type: boolean
+      default: true
+      description: "Whether the webhook is active on creation"
+    cryptoKeyId:
+      type: string
+      description: "Optional API key ID for encrypted payloads (ak_ prefix)"
+
+UpdateWebhookConfigRequest:
+  type: object
+  required: [version]
+  properties:
+    url:
+      type: string
+      format: uri
+      maxLength: 2048
+      description: "Updated webhook target URL"
+    eventTypes:
+      type: array
+      items:
+        $ref: "#/WebhookEventType"
+      minItems: 1
+      maxItems: 15
+      description: "Updated event type subscriptions"
+    enabled:
+      type: boolean
+      description: "Updated enabled status"
+    version:
+      type: integer
+      minimum: 1
+      description: "Current version for OCC check"
+
+WebhookEventType:
+  type: string
+  enum:
+    - member.created
+    - member.updated
+    - member.archived
+    - fronting.started
+    - fronting.ended
+    - group.created
+    - group.updated
+    - note.created
+    - note.updated
+    - chat.message-sent
+    - poll.created
+    - poll.closed
+    - acknowledgement.requested
+    - lifecycle.event-recorded
+    - custom-front.changed
+
+WebhookDeliveryResponse:
+  description: A webhook delivery record.
+  type: object
+  properties:
+    id:
+      type: string
+      description: "Delivery ID (wd_ prefix)"
+    webhookId:
+      type: string
+      description: "Webhook config ID"
+    systemId:
+      type: string
+      description: "System ID"
+    eventType:
+      $ref: "#/WebhookEventType"
+    status:
+      type: string
+      enum: [pending, success, failed]
+    httpStatus:
+      type: integer
+      nullable: true
+      description: "HTTP status code from the last delivery attempt"
+    attemptCount:
+      type: integer
+      minimum: 0
+    lastAttemptAt:
+      type: integer
+      format: int64
+      nullable: true
+    nextRetryAt:
+      type: integer
+      format: int64
+      nullable: true
+    createdAt:
+      type: integer
+      format: int64
