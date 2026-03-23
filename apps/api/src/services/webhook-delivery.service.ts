@@ -44,6 +44,21 @@ export interface WebhookDeliveryListOptions {
   readonly eventType?: WebhookEventType;
 }
 
+// ── Shared select columns ────────────────────────────────────────────
+
+const WEBHOOK_DELIVERY_SELECT_COLUMNS = {
+  id: webhookDeliveries.id,
+  webhookId: webhookDeliveries.webhookId,
+  systemId: webhookDeliveries.systemId,
+  eventType: webhookDeliveries.eventType,
+  status: webhookDeliveries.status,
+  httpStatus: webhookDeliveries.httpStatus,
+  attemptCount: webhookDeliveries.attemptCount,
+  lastAttemptAt: webhookDeliveries.lastAttemptAt,
+  nextRetryAt: webhookDeliveries.nextRetryAt,
+  createdAt: webhookDeliveries.createdAt,
+} as const;
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function toWebhookDeliveryResult(row: {
@@ -103,18 +118,7 @@ export async function listWebhookDeliveries(
   }
 
   const rows = await db
-    .select({
-      id: webhookDeliveries.id,
-      webhookId: webhookDeliveries.webhookId,
-      systemId: webhookDeliveries.systemId,
-      eventType: webhookDeliveries.eventType,
-      status: webhookDeliveries.status,
-      httpStatus: webhookDeliveries.httpStatus,
-      attemptCount: webhookDeliveries.attemptCount,
-      lastAttemptAt: webhookDeliveries.lastAttemptAt,
-      nextRetryAt: webhookDeliveries.nextRetryAt,
-      createdAt: webhookDeliveries.createdAt,
-    })
+    .select(WEBHOOK_DELIVERY_SELECT_COLUMNS)
     .from(webhookDeliveries)
     .where(and(...conditions))
     .orderBy(desc(webhookDeliveries.id))
@@ -134,18 +138,7 @@ export async function getWebhookDelivery(
   assertSystemOwnership(systemId, auth);
 
   const [row] = await db
-    .select({
-      id: webhookDeliveries.id,
-      webhookId: webhookDeliveries.webhookId,
-      systemId: webhookDeliveries.systemId,
-      eventType: webhookDeliveries.eventType,
-      status: webhookDeliveries.status,
-      httpStatus: webhookDeliveries.httpStatus,
-      attemptCount: webhookDeliveries.attemptCount,
-      lastAttemptAt: webhookDeliveries.lastAttemptAt,
-      nextRetryAt: webhookDeliveries.nextRetryAt,
-      createdAt: webhookDeliveries.createdAt,
-    })
+    .select(WEBHOOK_DELIVERY_SELECT_COLUMNS)
     .from(webhookDeliveries)
     .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.systemId, systemId)))
     .limit(1);

@@ -49,6 +49,22 @@ export interface WebhookConfigListOptions {
   readonly includeArchived?: boolean;
 }
 
+// ── Shared select columns ────────────────────────────────────────────
+
+const WEBHOOK_CONFIG_SELECT_COLUMNS = {
+  id: webhookConfigs.id,
+  systemId: webhookConfigs.systemId,
+  url: webhookConfigs.url,
+  eventTypes: webhookConfigs.eventTypes,
+  enabled: webhookConfigs.enabled,
+  cryptoKeyId: webhookConfigs.cryptoKeyId,
+  version: webhookConfigs.version,
+  archived: webhookConfigs.archived,
+  archivedAt: webhookConfigs.archivedAt,
+  createdAt: webhookConfigs.createdAt,
+  updatedAt: webhookConfigs.updatedAt,
+} as const;
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function toWebhookConfigResult(row: {
@@ -170,19 +186,7 @@ export async function listWebhookConfigs(
   }
 
   const rows = await db
-    .select({
-      id: webhookConfigs.id,
-      systemId: webhookConfigs.systemId,
-      url: webhookConfigs.url,
-      eventTypes: webhookConfigs.eventTypes,
-      enabled: webhookConfigs.enabled,
-      cryptoKeyId: webhookConfigs.cryptoKeyId,
-      version: webhookConfigs.version,
-      archived: webhookConfigs.archived,
-      archivedAt: webhookConfigs.archivedAt,
-      createdAt: webhookConfigs.createdAt,
-      updatedAt: webhookConfigs.updatedAt,
-    })
+    .select(WEBHOOK_CONFIG_SELECT_COLUMNS)
     .from(webhookConfigs)
     .where(and(...conditions))
     .orderBy(desc(webhookConfigs.id))
@@ -202,19 +206,7 @@ export async function getWebhookConfig(
   assertSystemOwnership(systemId, auth);
 
   const [row] = await db
-    .select({
-      id: webhookConfigs.id,
-      systemId: webhookConfigs.systemId,
-      url: webhookConfigs.url,
-      eventTypes: webhookConfigs.eventTypes,
-      enabled: webhookConfigs.enabled,
-      cryptoKeyId: webhookConfigs.cryptoKeyId,
-      version: webhookConfigs.version,
-      archived: webhookConfigs.archived,
-      archivedAt: webhookConfigs.archivedAt,
-      createdAt: webhookConfigs.createdAt,
-      updatedAt: webhookConfigs.updatedAt,
-    })
+    .select(WEBHOOK_CONFIG_SELECT_COLUMNS)
     .from(webhookConfigs)
     .where(
       and(
@@ -284,19 +276,7 @@ export async function updateWebhookConfig(
           eq(webhookConfigs.archived, false),
         ),
       )
-      .returning({
-        id: webhookConfigs.id,
-        systemId: webhookConfigs.systemId,
-        url: webhookConfigs.url,
-        eventTypes: webhookConfigs.eventTypes,
-        enabled: webhookConfigs.enabled,
-        cryptoKeyId: webhookConfigs.cryptoKeyId,
-        version: webhookConfigs.version,
-        archived: webhookConfigs.archived,
-        archivedAt: webhookConfigs.archivedAt,
-        createdAt: webhookConfigs.createdAt,
-        updatedAt: webhookConfigs.updatedAt,
-      });
+      .returning(WEBHOOK_CONFIG_SELECT_COLUMNS);
 
     const row = await assertOccUpdated(
       updated,
