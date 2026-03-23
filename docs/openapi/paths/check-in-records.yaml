@@ -1,0 +1,204 @@
+/systems/{systemId}/check-in-records:
+  get:
+    operationId: listCheckInRecords
+    tags: [Check-In Records]
+    summary: List check-in records
+    description: |
+      Returns a paginated list of check-in records. Supports filtering
+      by timer config and pending status.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: timerConfigId
+        in: query
+        schema:
+          type: string
+        description: Filter by timer config ID
+      - name: pending
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, only return pending records (not responded, not dismissed, not archived)
+      - name: includeArchived
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, include archived records
+    responses:
+      "200":
+        description: Paginated list of check-in records
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/PaginatedResult"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+
+  post:
+    operationId: createCheckInRecord
+    tags: [Check-In Records]
+    summary: Create a check-in record
+    description: |
+      Creates a new check-in record for a timer config.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/timers.yaml#/CreateCheckInRecordRequest"
+    responses:
+      "201":
+        description: Created check-in record
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/BadRequest"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+
+/systems/{systemId}/check-in-records/{recordId}:
+  get:
+    operationId: getCheckInRecord
+    tags: [Check-In Records]
+    summary: Get a check-in record
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: recordId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Check-in record
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+  delete:
+    operationId: deleteCheckInRecord
+    tags: [Check-In Records]
+    summary: Delete a check-in record
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: recordId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Deleted
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+/systems/{systemId}/check-in-records/{recordId}/respond:
+  post:
+    operationId: respondCheckInRecord
+    tags: [Check-In Records]
+    summary: Respond to a check-in record
+    description: |
+      Sets respondedByMemberId and respondedAt. Returns 409 if already
+      responded or dismissed.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: recordId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/timers.yaml#/RespondCheckInRecordRequest"
+    responses:
+      "200":
+        description: Responded check-in record
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        description: Already responded or dismissed
+
+/systems/{systemId}/check-in-records/{recordId}/dismiss:
+  post:
+    operationId: dismissCheckInRecord
+    tags: [Check-In Records]
+    summary: Dismiss a check-in record
+    description: |
+      Sets dismissed=true. Returns 409 if already responded or dismissed.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: recordId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Dismissed check-in record
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        description: Already responded or dismissed
+
+/systems/{systemId}/check-in-records/{recordId}/archive:
+  post:
+    operationId: archiveCheckInRecord
+    tags: [Check-In Records]
+    summary: Archive a check-in record
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: recordId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Archived
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"

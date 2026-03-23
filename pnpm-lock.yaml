@@ -474,6 +474,9 @@ importers:
       '@pluralscape/types':
         specifier: workspace:*
         version: link:../types
+      '@pluralscape/validation':
+        specifier: workspace:*
+        version: link:../validation
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*

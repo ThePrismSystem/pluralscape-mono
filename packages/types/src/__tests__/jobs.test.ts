@@ -48,6 +48,7 @@ describe("JobType", () => {
         case "partition-maintenance":
         case "sync-compaction":
         case "device-transfer-cleanup":
+        case "check-in-generate":
           return type;
         default: {
           const _exhaustive: never = type;

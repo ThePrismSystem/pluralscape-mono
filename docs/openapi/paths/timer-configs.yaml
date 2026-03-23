@@ -1,0 +1,203 @@
+/systems/{systemId}/timer-configs:
+  get:
+    operationId: listTimerConfigs
+    tags: [Timer Configs]
+    summary: List timer configurations
+    description: |
+      Returns a paginated list of timer configs for the specified system.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, include archived timer configs
+    responses:
+      "200":
+        description: Paginated list of timer configs
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/PaginatedResult"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+
+  post:
+    operationId: createTimerConfig
+    tags: [Timer Configs]
+    summary: Create a timer configuration
+    description: |
+      Creates a new timer config with optional scheduling parameters.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/timers.yaml#/CreateTimerConfigRequest"
+    responses:
+      "201":
+        description: Created timer config
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/TimerConfigResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/BadRequest"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+
+/systems/{systemId}/timer-configs/{timerId}:
+  get:
+    operationId: getTimerConfig
+    tags: [Timer Configs]
+    summary: Get a timer configuration
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: timerId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Timer config
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/TimerConfigResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+  put:
+    operationId: updateTimerConfig
+    tags: [Timer Configs]
+    summary: Update a timer configuration
+    description: |
+      Updates a timer config using optimistic concurrency control.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: timerId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/timers.yaml#/UpdateTimerConfigRequest"
+    responses:
+      "200":
+        description: Updated timer config
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/TimerConfigResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+
+  delete:
+    operationId: deleteTimerConfig
+    tags: [Timer Configs]
+    summary: Delete a timer configuration
+    description: |
+      Permanently deletes a timer config. Returns 409 if non-archived
+      check-in records exist.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: timerId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Deleted
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        description: Has dependents
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/systems/{systemId}/timer-configs/{timerId}/archive:
+  post:
+    operationId: archiveTimerConfig
+    tags: [Timer Configs]
+    summary: Archive a timer configuration
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: timerId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        description: Archived
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+/systems/{systemId}/timer-configs/{timerId}/restore:
+  post:
+    operationId: restoreTimerConfig
+    tags: [Timer Configs]
+    summary: Restore an archived timer configuration
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: timerId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Restored timer config
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/TimerConfigResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"

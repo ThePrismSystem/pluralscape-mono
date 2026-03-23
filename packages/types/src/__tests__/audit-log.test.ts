@@ -148,6 +148,16 @@ describe("AuditEventType", () => {
         case "fronting-comment.deleted":
         case "fronting-report.created":
         case "fronting-report.deleted":
+        case "timer-config.created":
+        case "timer-config.updated":
+        case "timer-config.archived":
+        case "timer-config.restored":
+        case "timer-config.deleted":
+        case "check-in-record.created":
+        case "check-in-record.responded":
+        case "check-in-record.dismissed":
+        case "check-in-record.archived":
+        case "check-in-record.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

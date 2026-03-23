@@ -7,6 +7,7 @@
  * making the corrections part of CRDT history.
  */
 import * as Automerge from "@automerge/automerge";
+import { parseTimeToMinutes } from "@pluralscape/validation";
 
 import { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
 
@@ -45,6 +46,15 @@ interface SortableEntity {
 interface CheckInLike {
   respondedByMemberId: Automerge.ImmutableString | null;
   dismissed: boolean;
+}
+
+interface TimerConfigLike {
+  intervalMinutes: number | null;
+  wakingHoursOnly: boolean | null;
+  wakingStart: Automerge.ImmutableString | null;
+  wakingEnd: Automerge.ImmutableString | null;
+  enabled: boolean;
+  archived: boolean;
 }
 
 interface FriendConnectionLike {
@@ -556,6 +566,82 @@ export function normalizeFrontingSessions(session: EncryptedSyncSession<unknown>
   return { count: endTimeFixIds.length, notifications, envelope };
 }
 
+/**
+ * Post-merge validation for timer configs:
+ * - If wakingHoursOnly is true, wakingStart must be before wakingEnd
+ * - intervalMinutes must be > 0 when set
+ *
+ * Violations are corrected by disabling the timer (enabled = false)
+ * to prevent invalid check-in generation.
+ */
+export function normalizeTimerConfig(session: EncryptedSyncSession<unknown>): {
+  count: number;
+  notifications: ConflictNotification[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+  const now = Date.now();
+  const notifications: ConflictNotification[] = [];
+
+  const timers = getEntityMap<TimerConfigLike>(doc, "timers");
+  if (!timers) return { count: 0, notifications, envelope: null };
+
+  const toDisable: string[] = [];
+  for (const [timerId, timer] of Object.entries(timers)) {
+    if (timer.archived) continue;
+
+    // Check intervalMinutes > 0 when set
+    if (timer.intervalMinutes !== null && timer.intervalMinutes <= 0) {
+      toDisable.push(timerId);
+      notifications.push({
+        entityType: "timer",
+        entityId: timerId,
+        fieldName: "intervalMinutes",
+        resolution: "post-merge-timer-normalize",
+        detectedAt: now,
+        summary: `Disabled timer ${timerId}: intervalMinutes must be > 0 (was ${String(timer.intervalMinutes)})`,
+      });
+      continue;
+    }
+
+    // Check wakingStart < wakingEnd when wakingHoursOnly is true
+    if (timer.wakingHoursOnly === true) {
+      const startStr = timer.wakingStart !== null ? timer.wakingStart.val : null;
+      const endStr = timer.wakingEnd !== null ? timer.wakingEnd.val : null;
+      const startMin = startStr !== null ? parseTimeToMinutes(startStr) : null;
+      const endMin = endStr !== null ? parseTimeToMinutes(endStr) : null;
+
+      if (startMin === null || endMin === null || startMin >= endMin) {
+        toDisable.push(timerId);
+        notifications.push({
+          entityType: "timer",
+          entityId: timerId,
+          fieldName: "wakingHours",
+          resolution: "post-merge-timer-normalize",
+          detectedAt: now,
+          summary: `Disabled timer ${timerId}: invalid waking hours (start=${String(startStr)}, end=${String(endStr)})`,
+        });
+      }
+    }
+  }
+
+  if (toDisable.length === 0) {
+    return { count: 0, notifications, envelope: null };
+  }
+
+  const envelope = session.change((d) => {
+    const map = getEntityMap<TimerConfigLike>(d as DocRecord, "timers");
+    for (const timerId of toDisable) {
+      const target = map?.[timerId];
+      if (target) {
+        target.enabled = false;
+      }
+    }
+  });
+
+  return { count: toDisable.length, notifications, envelope };
+}
+
 // ── Public API ──────────────────────────────────────────────────────
 
 /**
@@ -579,6 +665,7 @@ export function runAllValidations(
   let checkInNormalizations = 0;
   let friendConnectionNormalizations = 0;
   let frontingSessionNormalizations = 0;
+  let timerConfigNormalizations = 0;
 
   // Always run tombstone enforcement first
   try {
@@ -633,6 +720,20 @@ export function runAllValidations(
     } catch (error) {
       errors.push({ validator: "normalizeSortOrder", error });
       onError?.("Sort order normalization failed", error);
+    }
+  }
+
+  if ("timers" in doc) {
+    try {
+      const timerResult = normalizeTimerConfig(session);
+      timerConfigNormalizations = timerResult.count;
+      if (timerResult.envelope) {
+        correctionEnvelopes.push(timerResult.envelope);
+      }
+      notifications.push(...timerResult.notifications);
+    } catch (error) {
+      errors.push({ validator: "normalizeTimerConfig", error });
+      onError?.("Timer config normalization failed", error);
     }
   }
 
@@ -704,6 +805,7 @@ export function runAllValidations(
     checkInNormalizations,
     friendConnectionNormalizations,
     frontingSessionNormalizations,
+    timerConfigNormalizations,
     correctionEnvelopes,
     notifications,
     errors,

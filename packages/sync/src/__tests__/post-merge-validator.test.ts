@@ -1035,6 +1035,7 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.sortOrderPatches).toHaveLength(0);
     expect(result.checkInNormalizations).toBe(0);
     expect(result.friendConnectionNormalizations).toBe(0);
+    expect(result.timerConfigNormalizations).toBe(0);
     expect(result.correctionEnvelopes).toHaveLength(0);
     expect(result.notifications).toHaveLength(0);
     expect(result.errors).toHaveLength(0);
@@ -1161,6 +1162,43 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.cycleBreaks.length).toBeGreaterThan(0);
     expect(result.sortOrderPatches.length).toBeGreaterThan(0);
     expect(result.errors).toHaveLength(0);
+  });
+
+  it("normalizes invalid timer configs via runAllValidations dispatch", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-timer-all-valid"),
+      sodium,
+    });
+
+    // Add a timer with invalid intervalMinutes
+    session.change((d) => {
+      d.timers["tmr_invalid"] = {
+        id: s("tmr_invalid"),
+        systemId: s("sys_1"),
+        intervalMinutes: -5,
+        wakingHoursOnly: false,
+        wakingStart: null,
+        wakingEnd: null,
+        promptText: s("Test"),
+        enabled: true,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const result = runAllValidations(session);
+
+    expect(result.timerConfigNormalizations).toBe(1);
+    expect(result.correctionEnvelopes.length).toBeGreaterThan(0);
+    expect(result.notifications.some((n) => n.resolution === "post-merge-timer-normalize")).toBe(
+      true,
+    );
+    // Timer should be disabled
+    expect(session.document.timers["tmr_invalid"]?.enabled).toBe(false);
   });
 
   it("populates errors array and calls onError when no callback swallows", () => {

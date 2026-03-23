@@ -1,7 +1,7 @@
 ---
 # api-2z82
 title: Automated timers and check-in reminders
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z

@@ -294,6 +294,7 @@ describe("SyncEngine edge cases", () => {
         checkInNormalizations: 0,
         friendConnectionNormalizations: 0,
         frontingSessionNormalizations: 0,
+        timerConfigNormalizations: 0,
         correctionEnvelopes: [],
         notifications: [fakeNotification],
         errors: [],
