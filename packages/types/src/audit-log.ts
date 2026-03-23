@@ -142,7 +142,8 @@ export type AuditEventType =
   | "webhook-config.updated"
   | "webhook-config.archived"
   | "webhook-config.restored"
-  | "webhook-config.deleted";
+  | "webhook-config.deleted"
+  | "webhook-delivery.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

@@ -1,4 +1,4 @@
-import type { JobId, SyncDocumentId, SystemId } from "./ids.js";
+import type { JobId, SyncDocumentId, SystemId, WebhookDeliveryId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** The kind of background job. */
@@ -49,7 +49,7 @@ export interface JobPayloadMap {
   "export-generate": Record<string, unknown>;
   "import-process": Record<string, unknown>;
   "webhook-deliver": {
-    readonly deliveryId: string;
+    readonly deliveryId: WebhookDeliveryId;
     readonly payload: Readonly<Record<string, unknown>>;
   };
   "notification-send": Record<string, unknown>;
