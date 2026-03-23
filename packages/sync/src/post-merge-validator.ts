@@ -7,7 +7,18 @@
  * making the corrections part of CRDT history.
  */
 import * as Automerge from "@automerge/automerge";
-import { parseTimeToMinutes } from "@pluralscape/validation";
+/** Parse HH:MM string to total minutes. Returns null for invalid format. */
+function parseTimeToMinutes(time: string): number | null {
+  const MAX_HOUR = 23;
+  const MAX_MINUTE = 59;
+  const MINUTES_PER_HOUR = 60;
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match) return null;
+  const hours = parseInt(match[1] as string, 10);
+  const minutes = parseInt(match[2] as string, 10);
+  if (hours > MAX_HOUR || minutes > MAX_MINUTE) return null;
+  return hours * MINUTES_PER_HOUR + minutes;
+}
 
 import { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
 
@@ -57,13 +68,6 @@ interface TimerConfigLike {
   archived: boolean;
 }
 
-interface FriendConnectionLike {
-  status: Automerge.ImmutableString;
-  assignedBuckets: Record<string, true>;
-  /** JSON-serialized object (e.g. `{"showMembers":true}`). Parse `.val` with JSON.parse(). */
-  visibility: Automerge.ImmutableString;
-}
-
 interface WebhookConfigLike {
   url: Automerge.ImmutableString;
   eventTypes: unknown[];
@@ -88,6 +92,13 @@ const VALID_WEBHOOK_EVENT_TYPES = new Set([
   "lifecycle.event-recorded",
   "custom-front.changed",
 ]);
+
+interface FriendConnectionLike {
+  status: Automerge.ImmutableString;
+  assignedBuckets: Record<string, true>;
+  /** JSON-serialized object (e.g. `{"showMembers":true}`). Parse `.val` with JSON.parse(). */
+  visibility: Automerge.ImmutableString;
+}
 
 interface FrontingSessionLike {
   startTime: number;
@@ -600,15 +611,6 @@ export function normalizeFrontingSessions(session: EncryptedSyncSession<unknown>
  * to prevent invalid check-in generation.
  */
 export function normalizeTimerConfig(session: EncryptedSyncSession<unknown>): {
- * Validates webhook configs after merge:
- * - URL format: must be a valid URL (HTTPS required in production, but post-merge
- *   only checks URL starts with http:// or https://)
- * - eventTypes: all values must be from the WebhookEventType enum
- *
- * Invalid entries generate notifications only (no auto-fix to avoid data loss).
- * Returns the count of issues and notifications.
- */
-export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>): {
   count: number;
   notifications: ConflictNotification[];
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
@@ -655,6 +657,42 @@ export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>):
           detectedAt: now,
           summary: `Disabled timer ${timerId}: invalid waking hours (start=${String(startStr)}, end=${String(endStr)})`,
         });
+      }
+    }
+  }
+
+  if (toDisable.length === 0) {
+    return { count: 0, notifications, envelope: null };
+  }
+
+  const envelope = session.change((d) => {
+    const map = getEntityMap<TimerConfigLike>(d as DocRecord, "timers");
+    for (const timerId of toDisable) {
+      const target = map?.[timerId];
+      if (target) {
+        target.enabled = false;
+      }
+    }
+  });
+
+  return { count: toDisable.length, notifications, envelope };
+}
+
+/**
+ * Validates webhook configs after merge:
+ * - URL format: must be a valid URL (HTTPS required in production, but post-merge
+ *   only checks URL starts with http:// or https://)
+ * - eventTypes: all values must be from the WebhookEventType enum
+ *
+ * Invalid entries generate notifications only (no auto-fix to avoid data loss).
+ * Returns the count of issues and notifications.
+ */
+export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>): {
+  count: number;
+  notifications: ConflictNotification[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
   const timestamp = Date.now();
   const notifications: ConflictNotification[] = [];
 
@@ -664,7 +702,6 @@ export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>):
   let issueCount = 0;
 
   for (const [configId, config] of Object.entries(configs)) {
-    // Validate URL format — config.url is an Automerge ImmutableString
     const urlVal = typeof config.url === "object" ? config.url.val : null;
     if (urlVal !== null) {
       try {
@@ -693,7 +730,6 @@ export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>):
       }
     }
 
-    // Validate event types
     if (Array.isArray(config.eventTypes)) {
       for (const eventType of config.eventTypes) {
         const val =
@@ -713,27 +749,12 @@ export function normalizeWebhookConfigs(session: EncryptedSyncSession<unknown>):
             summary: `Webhook config ${configId} has unknown event type: ${String(val)}`,
           });
           issueCount++;
-          break; // One notification per config for event type issues
+          break;
         }
       }
     }
   }
 
-  if (toDisable.length === 0) {
-    return { count: 0, notifications, envelope: null };
-  }
-
-  const envelope = session.change((d) => {
-    const map = getEntityMap<TimerConfigLike>(d as DocRecord, "timers");
-    for (const timerId of toDisable) {
-      const target = map?.[timerId];
-      if (target) {
-        target.enabled = false;
-      }
-    }
-  });
-
-  return { count: toDisable.length, notifications, envelope };
   return { count: issueCount, notifications, envelope: null };
 }
 
@@ -830,6 +851,9 @@ export function runAllValidations(
     } catch (error) {
       errors.push({ validator: "normalizeTimerConfig", error });
       onError?.("Timer config normalization failed", error);
+    }
+  }
+
   if ("webhookConfigs" in doc) {
     try {
       const webhookResult = normalizeWebhookConfigs(session);
