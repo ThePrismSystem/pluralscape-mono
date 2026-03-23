@@ -64,7 +64,7 @@ interface WebhookConfigLike {
 }
 
 /** Valid webhook event types for post-merge validation. */
-const VALID_WEBHOOK_EVENT_TYPES = new Set(WEBHOOK_EVENT_TYPE_VALUES);
+const VALID_WEBHOOK_EVENT_TYPES: ReadonlySet<string> = new Set(WEBHOOK_EVENT_TYPE_VALUES);
 
 interface FriendConnectionLike {
   status: Automerge.ImmutableString;
