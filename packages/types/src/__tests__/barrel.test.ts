@@ -1,8 +1,9 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   createDefaultNomenclatureSettings,
   createId,
+  DATE_RANGE_PRESETS,
   DEFAULT_TERM_PRESETS,
   ID_PREFIXES,
   now,
@@ -75,6 +76,7 @@ import type {
   FrontingChangedEvent,
   FrontingReport,
   FrontingReportId,
+  FrontingSubjectType,
   FusionEvent,
   HeadingBlock,
   HeadingLevel,
@@ -188,6 +190,7 @@ import type {
   ServerWikiPage,
   SplitEvent,
   SSEEvent,
+  SubjectFrontingBreakdown,
   SubscriptionId,
   SyncStateChangedEvent,
   TimerConfig,
@@ -681,6 +684,8 @@ describe("barrel exports", () => {
     expectTypeOf<DateRangePreset>().toBeString();
     expectTypeOf<DateRangeFilter>().toBeObject();
     expectTypeOf<MemberFrontingBreakdown>().toBeObject();
+    expectTypeOf<SubjectFrontingBreakdown>().toBeObject();
+    expectTypeOf<FrontingSubjectType>().toBeString();
     expectTypeOf<FrontingAnalytics>().toBeObject();
     expectTypeOf<FrontingReport>().toBeObject();
     expectTypeOf<FrontingReportId>().toExtend<string>();
@@ -688,6 +693,11 @@ describe("barrel exports", () => {
     expectTypeOf<ChartData>().toBeObject();
     expectTypeOf<CoFrontingPair>().toBeObject();
     expectTypeOf<CoFrontingAnalytics>().toBeObject();
+  });
+
+  it("exports DATE_RANGE_PRESETS runtime value", () => {
+    expectTypeOf(DATE_RANGE_PRESETS).toExtend<readonly string[]>();
+    expect(DATE_RANGE_PRESETS).toHaveLength(6);
   });
 
   it("exports innerworld types", () => {

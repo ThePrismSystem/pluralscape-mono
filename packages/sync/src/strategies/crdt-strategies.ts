@@ -115,6 +115,13 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "customFronts",
     mutationSemantics: "LWW per field — name, description, color, emoji, archived",
   },
+  "fronting-report": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "frontingReports",
+    mutationSemantics:
+      "Immutable once created — no update endpoint exists; immutability enforced at the API layer",
+  },
   "field-definition": {
     storageType: "lww-map",
     document: "system-core",

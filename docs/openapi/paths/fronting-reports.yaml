@@ -1,0 +1,120 @@
+/systems/{systemId}/fronting-reports:
+  get:
+    tags: [Fronting Reports]
+    summary: List fronting reports
+    description: List stored fronting report snapshots with cursor pagination.
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated list of fronting reports
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items, nextCursor, hasMore, totalCount]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+                nextCursor:
+                  type: string
+                  nullable: true
+                hasMore:
+                  type: boolean
+                totalCount:
+                  type: integer
+                  nullable: true
+      "404":
+        description: System not found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+  post:
+    tags: [Fronting Reports]
+    summary: Create fronting report
+    description: |
+      Store an immutable encrypted report snapshot. The report is generated
+      client-side and encrypted before submission. The server stores it
+      opaquely and never decrypts the contents.
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/analytics.yaml#/CreateFrontingReportRequest"
+    responses:
+      "201":
+        description: Report created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+      "400":
+        description: Invalid payload
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+      "404":
+        description: System not found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+
+/systems/{systemId}/fronting-reports/{reportId}:
+  get:
+    tags: [Fronting Reports]
+    summary: Get fronting report
+    description: Retrieve a single fronting report by ID.
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^fr_
+        description: Fronting report ID (prefixed with `fr_`)
+    responses:
+      "200":
+        description: Fronting report
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+      "404":
+        description: Report not found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+  delete:
+    tags: [Fronting Reports]
+    summary: Delete fronting report
+    description: Permanently delete a fronting report.
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^fr_
+        description: Fronting report ID (prefixed with `fr_`)
+    responses:
+      "204":
+        description: Report deleted
+      "404":
+        description: Report not found
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"

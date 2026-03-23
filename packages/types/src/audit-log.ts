@@ -125,7 +125,9 @@ export type AuditEventType =
   | "fronting-comment.updated"
   | "fronting-comment.archived"
   | "fronting-comment.restored"
-  | "fronting-comment.deleted";
+  | "fronting-comment.deleted"
+  | "fronting-report.created"
+  | "fronting-report.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

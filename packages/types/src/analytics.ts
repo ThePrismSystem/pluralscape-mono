@@ -1,4 +1,11 @@
-import type { Brand, FrontingReportId, MemberId, SystemId } from "./ids.js";
+import type {
+  Brand,
+  CustomFrontId,
+  FrontingReportId,
+  MemberId,
+  SystemId,
+  SystemStructureEntityId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { DateRange } from "./utility.js";
 
@@ -6,18 +13,24 @@ import type { DateRange } from "./utility.js";
 export type Duration = Brand<number, "Duration">;
 
 /** Date range preset options for analytics queries. */
-export type DateRangePreset =
-  | "last-7-days"
-  | "last-30-days"
-  | "last-90-days"
-  | "last-year"
-  | "all-time"
-  | "custom";
+export const DATE_RANGE_PRESETS = [
+  "last-7-days",
+  "last-30-days",
+  "last-90-days",
+  "last-year",
+  "all-time",
+  "custom",
+] as const;
+
+export type DateRangePreset = (typeof DATE_RANGE_PRESETS)[number];
 
 /** A date range filter for analytics queries. */
 export interface DateRangeFilter extends DateRange {
   readonly preset: DateRangePreset | null;
 }
+
+/** Fronting subject type discriminator. */
+export type FrontingSubjectType = "member" | "customFront" | "structureEntity";
 
 /** Fronting analytics breakdown for a single member. */
 export interface MemberFrontingBreakdown {
@@ -28,11 +41,22 @@ export interface MemberFrontingBreakdown {
   readonly percentageOfTotal: number;
 }
 
+/** Fronting analytics breakdown for a single subject (polymorphic). */
+export interface SubjectFrontingBreakdown {
+  readonly subjectType: FrontingSubjectType;
+  readonly subjectId: MemberId | CustomFrontId | SystemStructureEntityId;
+  readonly totalDuration: Duration;
+  readonly sessionCount: number;
+  readonly averageSessionLength: Duration;
+  readonly percentageOfTotal: number;
+}
+
 /** Full fronting analytics for a system over a time range. */
 export interface FrontingAnalytics {
   readonly systemId: SystemId;
-  readonly dateRange: DateRange;
-  readonly memberBreakdowns: readonly MemberFrontingBreakdown[];
+  readonly dateRange: DateRangeFilter;
+  readonly subjectBreakdowns: readonly SubjectFrontingBreakdown[];
+  readonly truncated: boolean;
 }
 
 /** A generated fronting report entity. */
@@ -75,7 +99,8 @@ export interface CoFrontingPair {
 /** Co-fronting analytics for a system over a time range. */
 export interface CoFrontingAnalytics {
   readonly systemId: SystemId;
-  readonly dateRange: DateRange;
+  readonly dateRange: DateRangeFilter;
   readonly coFrontingPercentage: number;
   readonly pairs: readonly CoFrontingPair[];
+  readonly truncated: boolean;
 }

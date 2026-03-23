@@ -1,7 +1,7 @@
 ---
 # api-8sel
 title: Analytics engine
-status: todo
+status: completed
 type: epic
 created_at: 2026-03-08T12:15:47Z
 updated_at: 2026-03-08T12:15:47Z

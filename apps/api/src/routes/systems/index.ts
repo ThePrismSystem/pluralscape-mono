@@ -1,11 +1,13 @@
 import { Hono } from "hono";
 
 import { authMiddleware } from "../../middleware/auth.js";
+import { analyticsRoutes } from "../analytics/index.js";
 import { blobRoutes } from "../blobs/index.js";
 import { bucketRoutes } from "../buckets/index.js";
 import { customFrontRoutes } from "../custom-fronts/index.js";
 import { fieldRoutes } from "../fields/index.js";
 import { frontingRoutes } from "../fronting/index.js";
+import { frontingReportRoutes } from "../fronting-reports/index.js";
 import { frontingSessionRoutes } from "../fronting-sessions/index.js";
 import { groupRoutes } from "../groups/index.js";
 import { innerworldRoutes } from "../innerworld/index.js";
@@ -51,3 +53,5 @@ systemRoutes.route("/:systemId/fronting", frontingRoutes);
 systemRoutes.route("/:systemId/fronting-sessions", frontingSessionRoutes);
 systemRoutes.route("/:systemId/innerworld", innerworldRoutes);
 systemRoutes.route("/:systemId/blobs", blobRoutes);
+systemRoutes.route("/:systemId/analytics", analyticsRoutes);
+systemRoutes.route("/:systemId/fronting-reports", frontingReportRoutes);

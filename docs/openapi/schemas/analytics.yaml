@@ -1,0 +1,159 @@
+SubjectFrontingBreakdown:
+  type: object
+  required:
+    - subjectType
+    - subjectId
+    - totalDuration
+    - sessionCount
+    - averageSessionLength
+    - percentageOfTotal
+  properties:
+    subjectType:
+      type: string
+      enum: [member, customFront, structureEntity]
+      description: The type of fronting subject
+    subjectId:
+      type: string
+      description: ID of the subject (member, custom front, or structure entity)
+    totalDuration:
+      type: integer
+      description: Total fronting duration in milliseconds
+    sessionCount:
+      type: integer
+      description: Number of fronting sessions
+    averageSessionLength:
+      type: integer
+      description: Average session length in milliseconds
+    percentageOfTotal:
+      type: number
+      description: Percentage of total fronting time (0-100)
+
+FrontingBreakdownResponse:
+  type: object
+  required:
+    - systemId
+    - dateRange
+    - subjectBreakdowns
+  properties:
+    systemId:
+      type: string
+      pattern: ^sys_
+    dateRange:
+      type: object
+      required: [preset, start, end]
+      properties:
+        preset:
+          type: string
+          nullable: true
+          enum: [last-7-days, last-30-days, last-90-days, last-year, all-time, custom, null]
+        start:
+          type: integer
+          description: Start timestamp (Unix milliseconds)
+        end:
+          type: integer
+          description: End timestamp (Unix milliseconds)
+    subjectBreakdowns:
+      type: array
+      items:
+        $ref: "#/SubjectFrontingBreakdown"
+
+CoFrontingPair:
+  type: object
+  required:
+    - memberA
+    - memberB
+    - totalDuration
+    - sessionCount
+    - percentageOfTotal
+  properties:
+    memberA:
+      type: string
+      pattern: ^mem_
+      description: First member ID (lexicographically ordered)
+    memberB:
+      type: string
+      pattern: ^mem_
+      description: Second member ID (lexicographically ordered)
+    totalDuration:
+      type: integer
+      description: Total overlap duration in milliseconds
+    sessionCount:
+      type: integer
+      description: Number of overlapping session pairs
+    percentageOfTotal:
+      type: number
+      description: Percentage of total fronting time
+
+CoFrontingBreakdownResponse:
+  type: object
+  required:
+    - systemId
+    - dateRange
+    - coFrontingPercentage
+    - pairs
+  properties:
+    systemId:
+      type: string
+      pattern: ^sys_
+    dateRange:
+      type: object
+      required: [preset, start, end]
+      properties:
+        preset:
+          type: string
+          nullable: true
+        start:
+          type: integer
+        end:
+          type: integer
+    coFrontingPercentage:
+      type: number
+      description: Percentage of total fronting time involving co-fronting
+    pairs:
+      type: array
+      items:
+        $ref: "#/CoFrontingPair"
+
+FrontingReportResponse:
+  type: object
+  required:
+    - id
+    - systemId
+    - encryptedData
+    - format
+    - generatedAt
+  properties:
+    id:
+      type: string
+      pattern: ^fr_
+    systemId:
+      type: string
+      pattern: ^sys_
+    encryptedData:
+      type: string
+      format: base64
+      description: Encrypted report snapshot (client-generated)
+    format:
+      type: string
+      enum: [html, pdf]
+    generatedAt:
+      type: integer
+      description: Timestamp when the report was generated (Unix milliseconds)
+
+CreateFrontingReportRequest:
+  type: object
+  required:
+    - encryptedData
+    - format
+    - generatedAt
+  properties:
+    encryptedData:
+      type: string
+      format: base64
+      description: Encrypted report snapshot
+    format:
+      type: string
+      enum: [html, pdf]
+    generatedAt:
+      type: integer
+      description: Timestamp when the report was generated (Unix milliseconds)

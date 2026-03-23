@@ -146,6 +146,8 @@ describe("AuditEventType", () => {
         case "fronting-comment.archived":
         case "fronting-comment.restored":
         case "fronting-comment.deleted":
+        case "fronting-report.created":
+        case "fronting-report.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

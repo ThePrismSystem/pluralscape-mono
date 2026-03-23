@@ -251,6 +251,8 @@ export const AUDIT_EVENT_TYPES = [
   "blob.upload-requested",
   "blob.confirmed",
   "blob.archived",
+  "fronting-report.created",
+  "fronting-report.deleted",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
