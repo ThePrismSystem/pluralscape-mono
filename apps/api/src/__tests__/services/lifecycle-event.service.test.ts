@@ -354,7 +354,7 @@ describe("restoreLifecycleEvent", () => {
 
   it("maps the returned row through toLifecycleEventResult", async () => {
     const { db } = mockDb();
-    const row = makeLifecycleEventRow({ version: 3, archived: true, archivedAt: null });
+    const row = makeLifecycleEventRow({ version: 3 });
 
     vi.mocked(restoreEntity).mockImplementationOnce(
       async (_db, _systemId, _entityId, _auth, _audit, _cfg, toResult) =>

@@ -289,8 +289,8 @@ const LIFECYCLE_EVENT_LIFECYCLE: ArchivableEntityConfig = {
   table: lifecycleEvents,
   columns: lifecycleEvents,
   entityName: "Lifecycle event",
-  archiveEvent: "lifecycle-event.archived" as const,
-  restoreEvent: "lifecycle-event.restored" as const,
+  archiveEvent: "lifecycle-event.archived",
+  restoreEvent: "lifecycle-event.restored",
 };
 
 export async function archiveLifecycleEvent(

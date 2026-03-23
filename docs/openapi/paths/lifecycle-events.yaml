@@ -12,6 +12,7 @@
       - $ref: "../openapi.yaml#/components/parameters/Limit"
       - name: includeArchived
         in: query
+        required: false
         schema:
           type: string
           enum: ["true", "false"]

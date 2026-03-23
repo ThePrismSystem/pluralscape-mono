@@ -1,7 +1,7 @@
 import { now } from "@pluralscape/types";
 import { and, eq, sql } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 import { assertSystemOwnership } from "./system-ownership.js";
@@ -69,6 +69,18 @@ export async function archiveEntity(
       .returning({ id: columns.id });
 
     if (updated.length === 0) {
+      const existing = await tx
+        .select({ id: columns.id })
+        .from(table)
+        .where(and(eq(columns.id, entityId), eq(columns.systemId, systemId)));
+
+      if (existing.length > 0) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "ALREADY_ARCHIVED",
+          `${entityName} is already archived`,
+        );
+      }
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
     }
 
@@ -122,6 +134,14 @@ export async function restoreEntity<TResult>(
 
     const row = updated[0];
     if (!row) {
+      const existing = await tx
+        .select({ id: columns.id })
+        .from(table)
+        .where(and(eq(columns.id, entityId), eq(columns.systemId, systemId)));
+
+      if (existing.length > 0) {
+        throw new ApiHttpError(HTTP_CONFLICT, "NOT_ARCHIVED", `${entityName} is not archived`);
+      }
       throw new ApiHttpError(
         HTTP_NOT_FOUND,
         "NOT_FOUND",

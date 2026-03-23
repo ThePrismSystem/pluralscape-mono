@@ -381,5 +381,19 @@ describe("SQLite lifecycle_events schema", () => {
           .run(),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("rejects version < 1 via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = sqliteInsertSystem(db, accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO lifecycle_events (id, system_id, event_type, occurred_at, recorded_at, updated_at, encrypted_data, version) VALUES (?, ?, 'discovery', ?, ?, ?, X'0102', 0)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 });

@@ -350,5 +350,18 @@ describe("PG lifecycle_events schema", () => {
         }),
       ).rejects.toThrow(/check|constraint|failed query/i);
     });
+
+    it("rejects version < 1 via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          `INSERT INTO lifecycle_events (id, system_id, event_type, occurred_at, recorded_at, updated_at, encrypted_data, version) VALUES ($1, $2, 'discovery', to_timestamp($3::double precision / 1000), to_timestamp($4::double precision / 1000), to_timestamp($5::double precision / 1000), '\\x0102'::bytea, 0)`,
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 });
