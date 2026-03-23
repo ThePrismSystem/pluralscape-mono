@@ -7,18 +7,7 @@
  * making the corrections part of CRDT history.
  */
 import * as Automerge from "@automerge/automerge";
-/** Parse HH:MM string to total minutes. Returns null for invalid format. */
-function parseTimeToMinutes(time: string): number | null {
-  const MAX_HOUR = 23;
-  const MAX_MINUTE = 59;
-  const MINUTES_PER_HOUR = 60;
-  const match = /^(\d{2}):(\d{2})$/.exec(time);
-  if (!match) return null;
-  const hours = parseInt(match[1] as string, 10);
-  const minutes = parseInt(match[2] as string, 10);
-  if (hours > MAX_HOUR || minutes > MAX_MINUTE) return null;
-  return hours * MINUTES_PER_HOUR + minutes;
-}
+import { parseTimeToMinutes, WEBHOOK_EVENT_TYPE_VALUES } from "@pluralscape/validation";
 
 import { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
 
@@ -75,23 +64,7 @@ interface WebhookConfigLike {
 }
 
 /** Valid webhook event types for post-merge validation. */
-const VALID_WEBHOOK_EVENT_TYPES = new Set([
-  "member.created",
-  "member.updated",
-  "member.archived",
-  "fronting.started",
-  "fronting.ended",
-  "group.created",
-  "group.updated",
-  "note.created",
-  "note.updated",
-  "chat.message-sent",
-  "poll.created",
-  "poll.closed",
-  "acknowledgement.requested",
-  "lifecycle.event-recorded",
-  "custom-front.changed",
-]);
+const VALID_WEBHOOK_EVENT_TYPES = new Set(WEBHOOK_EVENT_TYPE_VALUES);
 
 interface FriendConnectionLike {
   status: Automerge.ImmutableString;
