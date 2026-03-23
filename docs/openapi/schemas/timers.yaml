@@ -129,7 +129,7 @@ CreateCheckInRecordRequest:
     scheduledAt:
       type: integer
       format: int64
-      minimum: 0
+      minimum: 1
     encryptedData:
       type: string
       contentEncoding: base64

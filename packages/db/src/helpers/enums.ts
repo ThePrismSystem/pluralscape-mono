@@ -241,8 +241,6 @@ export const AUDIT_EVENT_TYPES = [
   "timer-config.archived",
   "timer-config.restored",
   "timer-config.deleted",
-  "timer-config.enabled",
-  "timer-config.disabled",
   "check-in-record.created",
   "check-in-record.responded",
   "check-in-record.dismissed",

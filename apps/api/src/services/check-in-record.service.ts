@@ -1,4 +1,4 @@
-import { checkInRecords, members } from "@pluralscape/db/pg";
+import { checkInRecords, members, timerConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CheckInRecordQuerySchema,
@@ -33,18 +33,37 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────
 
-export interface CheckInRecordResult {
+interface CheckInRecordBase {
   readonly id: CheckInRecordId;
   readonly systemId: SystemId;
   readonly timerConfigId: TimerId;
   readonly scheduledAt: UnixMillis;
-  readonly respondedByMemberId: MemberId | null;
-  readonly respondedAt: UnixMillis | null;
-  readonly dismissed: boolean;
   readonly encryptedData: string | null;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
 }
+
+export type CheckInRecordResult = CheckInRecordBase &
+  (
+    | {
+        readonly status: "pending";
+        readonly respondedByMemberId: null;
+        readonly respondedAt: null;
+        readonly dismissed: false;
+      }
+    | {
+        readonly status: "responded";
+        readonly respondedByMemberId: MemberId;
+        readonly respondedAt: UnixMillis;
+        readonly dismissed: false;
+      }
+    | {
+        readonly status: "dismissed";
+        readonly respondedByMemberId: null;
+        readonly respondedAt: null;
+        readonly dismissed: true;
+      }
+  );
 
 export interface CheckInRecordListOptions {
   readonly cursor?: string;
@@ -68,17 +87,42 @@ function toCheckInRecordResult(row: {
   archived: boolean;
   archivedAt: number | null;
 }): CheckInRecordResult {
-  return {
+  const base: CheckInRecordBase = {
     id: row.id as CheckInRecordId,
     systemId: row.systemId as SystemId,
     timerConfigId: row.timerConfigId as TimerId,
     scheduledAt: toUnixMillis(row.scheduledAt),
-    respondedByMemberId: row.respondedByMemberId as MemberId | null,
-    respondedAt: toUnixMillisOrNull(row.respondedAt),
-    dismissed: row.dismissed,
     encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
     archived: row.archived,
     archivedAt: toUnixMillisOrNull(row.archivedAt),
+  };
+
+  if (row.respondedAt !== null && row.respondedByMemberId !== null) {
+    return {
+      ...base,
+      status: "responded",
+      respondedByMemberId: row.respondedByMemberId as MemberId,
+      respondedAt: toUnixMillis(row.respondedAt),
+      dismissed: false,
+    };
+  }
+
+  if (row.dismissed) {
+    return {
+      ...base,
+      status: "dismissed",
+      respondedByMemberId: null,
+      respondedAt: null,
+      dismissed: true,
+    };
+  }
+
+  return {
+    ...base,
+    status: "pending",
+    respondedByMemberId: null,
+    respondedAt: null,
+    dismissed: false,
   };
 }
 
@@ -106,6 +150,27 @@ export async function createCheckInRecord(
   const recordId = createId(ID_PREFIXES.checkInRecord);
 
   return db.transaction(async (tx) => {
+    // Validate timerConfigId belongs to this system
+    const [timerConfig] = await tx
+      .select({ id: timerConfigs.id })
+      .from(timerConfigs)
+      .where(
+        and(
+          eq(timerConfigs.id, parsed.timerConfigId),
+          eq(timerConfigs.systemId, systemId),
+          eq(timerConfigs.archived, false),
+        ),
+      )
+      .limit(1);
+
+    if (!timerConfig) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "VALIDATION_ERROR",
+        "Timer config not found in system",
+      );
+    }
+
     const [row] = await tx
       .insert(checkInRecords)
       .values({
@@ -146,10 +211,6 @@ export async function listCheckInRecords(
 
   const conditions = [eq(checkInRecords.systemId, systemId)];
 
-  if (!opts.includeArchived) {
-    conditions.push(eq(checkInRecords.archived, false));
-  }
-
   if (opts.timerConfigId) {
     conditions.push(eq(checkInRecords.timerConfigId, opts.timerConfigId));
   }
@@ -157,6 +218,8 @@ export async function listCheckInRecords(
   if (opts.pending) {
     conditions.push(isNull(checkInRecords.respondedAt));
     conditions.push(eq(checkInRecords.dismissed, false));
+    conditions.push(eq(checkInRecords.archived, false));
+  } else if (!opts.includeArchived) {
     conditions.push(eq(checkInRecords.archived, false));
   }
 
@@ -203,6 +266,34 @@ export async function getCheckInRecord(
   return toCheckInRecordResult(row);
 }
 
+// ── Helpers: state guards ───────────────────────────────────────
+
+async function fetchPendingCheckIn(
+  tx: PostgresJsDatabase,
+  recordId: CheckInRecordId,
+  systemId: SystemId,
+): Promise<typeof checkInRecords.$inferSelect> {
+  const [current] = await tx
+    .select()
+    .from(checkInRecords)
+    .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+    .limit(1);
+
+  if (!current) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
+  }
+
+  if (current.respondedAt !== null) {
+    throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_RESPONDED", "Check-in already responded");
+  }
+
+  if (current.dismissed) {
+    throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_DISMISSED", "Check-in already dismissed");
+  }
+
+  return current;
+}
+
 // ── RESPOND ─────────────────────────────────────────────────────
 
 export async function respondCheckInRecord(
@@ -223,24 +314,7 @@ export async function respondCheckInRecord(
   const timestamp = now();
 
   return db.transaction(async (tx) => {
-    // Fetch current state
-    const [current] = await tx
-      .select()
-      .from(checkInRecords)
-      .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
-      .limit(1);
-
-    if (!current) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
-    }
-
-    if (current.respondedAt !== null) {
-      throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_RESPONDED", "Check-in already responded");
-    }
-
-    if (current.dismissed) {
-      throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_DISMISSED", "Check-in already dismissed");
-    }
+    await fetchPendingCheckIn(tx, recordId, systemId);
 
     // Validate member exists in this system
     const [member] = await tx
@@ -253,17 +327,35 @@ export async function respondCheckInRecord(
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Member not found in system");
     }
 
+    // State guards in WHERE prevent concurrent overwrites
     const [row] = await tx
       .update(checkInRecords)
       .set({
         respondedByMemberId,
         respondedAt: timestamp,
       })
-      .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+      .where(
+        and(
+          eq(checkInRecords.id, recordId),
+          eq(checkInRecords.systemId, systemId),
+          isNull(checkInRecords.respondedAt),
+          eq(checkInRecords.dismissed, false),
+        ),
+      )
       .returning();
 
     if (!row) {
-      throw new Error("Failed to update check-in record — UPDATE returned no rows");
+      // Re-query to determine the correct conflict code
+      const [current] = await tx
+        .select()
+        .from(checkInRecords)
+        .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+        .limit(1);
+
+      if (current?.respondedAt !== null) {
+        throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_RESPONDED", "Check-in already responded");
+      }
+      throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_DISMISSED", "Check-in already dismissed");
     }
 
     await audit(tx, {
@@ -289,33 +381,34 @@ export async function dismissCheckInRecord(
   assertSystemOwnership(systemId, auth);
 
   return db.transaction(async (tx) => {
-    // Fetch current state
-    const [current] = await tx
-      .select()
-      .from(checkInRecords)
-      .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
-      .limit(1);
+    await fetchPendingCheckIn(tx, recordId, systemId);
 
-    if (!current) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
-    }
-
-    if (current.respondedAt !== null) {
-      throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_RESPONDED", "Check-in already responded");
-    }
-
-    if (current.dismissed) {
-      throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_DISMISSED", "Check-in already dismissed");
-    }
-
+    // State guards in WHERE prevent concurrent overwrites
     const [row] = await tx
       .update(checkInRecords)
       .set({ dismissed: true })
-      .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+      .where(
+        and(
+          eq(checkInRecords.id, recordId),
+          eq(checkInRecords.systemId, systemId),
+          isNull(checkInRecords.respondedAt),
+          eq(checkInRecords.dismissed, false),
+        ),
+      )
       .returning();
 
     if (!row) {
-      throw new Error("Failed to update check-in record — UPDATE returned no rows");
+      // Re-query to determine the correct conflict code
+      const [current] = await tx
+        .select()
+        .from(checkInRecords)
+        .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+        .limit(1);
+
+      if (current?.respondedAt !== null) {
+        throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_RESPONDED", "Check-in already responded");
+      }
+      throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_DISMISSED", "Check-in already dismissed");
     }
 
     await audit(tx, {

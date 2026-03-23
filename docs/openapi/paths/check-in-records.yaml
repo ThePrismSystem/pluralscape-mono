@@ -39,7 +39,7 @@
             schema:
               $ref: "../openapi.yaml#/components/schemas/PaginatedResult"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
 
   post:
     operationId: createCheckInRecord
@@ -68,6 +68,8 @@
               $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/BadRequest"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
 
 /systems/{systemId}/check-in-records/{recordId}:
   get:
@@ -90,6 +92,8 @@
           application/json:
             schema:
               $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -109,6 +113,8 @@
     responses:
       "204":
         description: Deleted
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -142,6 +148,8 @@
           application/json:
             schema:
               $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "409":
         description: Already responded or dismissed
 
@@ -168,6 +176,8 @@
           application/json:
             schema:
               $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "409":
         description: Already responded or dismissed
 
@@ -188,5 +198,7 @@
     responses:
       "204":
         description: Archived
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"

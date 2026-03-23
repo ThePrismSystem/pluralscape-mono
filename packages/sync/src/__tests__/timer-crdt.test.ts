@@ -148,10 +148,12 @@ describe("Timer config merge conflicts", () => {
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    // After merge, both sessions should agree on the value (LWW)
-    expect(sessionA.document.timers["tmr_1"]?.intervalMinutes).toBe(
-      sessionB.document.timers["tmr_1"]?.intervalMinutes,
-    );
+    // After merge, both sessions should agree on the same value (LWW convergence)
+    const mergedA = sessionA.document.timers["tmr_1"]?.intervalMinutes;
+    const mergedB = sessionB.document.timers["tmr_1"]?.intervalMinutes;
+    expect(mergedA).toBe(mergedB);
+    // The winner must be one of the two concurrent values
+    expect([15, 60]).toContain(mergedA);
   });
 });
 

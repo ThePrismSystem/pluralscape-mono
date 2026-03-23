@@ -107,7 +107,7 @@ function toTimerConfigResult(row: {
 
   return {
     ...base,
-    wakingHoursOnly: row.wakingHoursOnly === true ? null : row.wakingHoursOnly,
+    wakingHoursOnly: row.wakingHoursOnly === true ? false : row.wakingHoursOnly,
     wakingStart: row.wakingStart,
     wakingEnd: row.wakingEnd,
   };
@@ -268,6 +268,8 @@ export async function updateTimerConfig(
       setClause.wakingEnd = parsed.wakingEnd;
     }
 
+    // The `.set()` object uses `as Record<string, unknown>` to satisfy Drizzle's
+    // generic table types when mixing typed columns with sql`...` expressions.
     const updated = await tx
       .update(timerConfigs)
       .set({

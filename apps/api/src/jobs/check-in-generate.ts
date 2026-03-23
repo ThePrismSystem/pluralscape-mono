@@ -1,7 +1,7 @@
 import { checkInRecords, timerConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId } from "@pluralscape/types";
 import { parseTimeToMinutes } from "@pluralscape/validation";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, gt } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
 
@@ -12,6 +12,9 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Minutes per hour, used to compute waking hour boundaries. */
 const MINUTES_PER_HOUR = 60;
+
+/** Seconds per minute, used to convert interval minutes to milliseconds. */
+const SECONDS_PER_MINUTE = 60;
 
 /** Milliseconds per second. */
 const MS_PER_SECOND = 1000;
@@ -47,7 +50,7 @@ export function computeIdempotencyKey(
   intervalMinutes: number,
   nowMs: number,
 ): string {
-  const intervalMs = intervalMinutes * MINUTES_PER_HOUR * MS_PER_SECOND;
+  const intervalMs = intervalMinutes * SECONDS_PER_MINUTE * MS_PER_SECOND;
   const windowIndex = Math.floor(nowMs / intervalMs);
   return `${timerConfigId}:${String(windowIndex)}`;
 }
@@ -73,54 +76,86 @@ export function createCheckInGenerateHandler(
     const nowMs = Date.now();
     const currentMinutes = getCurrentMinutesUtc(nowMs);
 
-    // Fetch enabled, non-archived timer configs in bounded batches
-    const configs = await db
-      .select()
-      .from(timerConfigs)
-      .where(and(eq(timerConfigs.enabled, true), eq(timerConfigs.archived, false)))
-      .limit(CHECK_IN_GENERATE_BATCH_SIZE);
+    let cursor: string | null = null;
+    let errorCount = 0;
 
-    for (const config of configs) {
+    // Process all enabled, non-archived timer configs in paginated batches
+    do {
       if (isAborted(ctx.signal)) return;
 
-      try {
-        // Skip configs without an interval
-        if (config.intervalMinutes === null) continue;
-
-        // Skip if outside waking hours
-        if (config.wakingHoursOnly === true) {
-          if (!config.wakingStart || !config.wakingEnd) continue;
-
-          const startMinutes = parseTimeToMinutes(config.wakingStart);
-          const endMinutes = parseTimeToMinutes(config.wakingEnd);
-          if (startMinutes === null || endMinutes === null) continue;
-
-          if (!isWithinWakingHours(currentMinutes, startMinutes, endMinutes)) continue;
-        }
-
-        // Create the check-in record with idempotency key to prevent duplicates.
-        // ON CONFLICT DO NOTHING ensures concurrent runs are safe.
-        const recordId = createId(ID_PREFIXES.checkInRecord);
-        const idempotencyKey = computeIdempotencyKey(config.id, config.intervalMinutes, nowMs);
-
-        await db
-          .insert(checkInRecords)
-          .values({
-            id: recordId,
-            systemId: config.systemId,
-            timerConfigId: config.id,
-            scheduledAt: nowMs,
-            idempotencyKey,
-          })
-          .onConflictDoNothing();
-      } catch (error) {
-        logger.warn("Failed to process timer config for check-in generation", {
-          timerConfigId: config.id,
-          ...(error instanceof Error ? { err: error } : { error: String(error) }),
-        });
+      const conditions = [eq(timerConfigs.enabled, true), eq(timerConfigs.archived, false)];
+      if (cursor !== null) {
+        conditions.push(gt(timerConfigs.id, cursor));
       }
 
-      await ctx.heartbeat.heartbeat();
+      const configs = await db
+        .select()
+        .from(timerConfigs)
+        .where(and(...conditions))
+        .orderBy(asc(timerConfigs.id))
+        .limit(CHECK_IN_GENERATE_BATCH_SIZE);
+
+      if (configs.length === 0) break;
+
+      for (const config of configs) {
+        if (isAborted(ctx.signal)) return;
+
+        await ctx.heartbeat.heartbeat();
+
+        try {
+          // Skip configs without an interval
+          if (config.intervalMinutes === null) continue;
+
+          // Skip if outside waking hours
+          if (config.wakingHoursOnly === true) {
+            if (!config.wakingStart || !config.wakingEnd) continue;
+
+            const startMinutes = parseTimeToMinutes(config.wakingStart);
+            const endMinutes = parseTimeToMinutes(config.wakingEnd);
+            if (startMinutes === null || endMinutes === null) {
+              logger.warn("Timer config has unparseable waking time, skipping", {
+                timerConfigId: config.id,
+                wakingStart: config.wakingStart,
+                wakingEnd: config.wakingEnd,
+              });
+              continue;
+            }
+
+            if (!isWithinWakingHours(currentMinutes, startMinutes, endMinutes)) continue;
+          }
+
+          // Create the check-in record with idempotency key to prevent duplicates.
+          // ON CONFLICT DO NOTHING ensures concurrent runs are safe.
+          const recordId = createId(ID_PREFIXES.checkInRecord);
+          const idempotencyKey = computeIdempotencyKey(config.id, config.intervalMinutes, nowMs);
+
+          await db
+            .insert(checkInRecords)
+            .values({
+              id: recordId,
+              systemId: config.systemId,
+              timerConfigId: config.id,
+              scheduledAt: nowMs,
+              idempotencyKey,
+            })
+            .onConflictDoNothing();
+        } catch (error) {
+          errorCount++;
+          logger.warn("Failed to process timer config for check-in generation", {
+            timerConfigId: config.id,
+            ...(error instanceof Error ? { err: error } : { error: String(error) }),
+          });
+        }
+      }
+
+      cursor = configs[configs.length - 1]?.id ?? null;
+
+      // If this batch was smaller than the limit, we've processed all configs
+      if (configs.length < CHECK_IN_GENERATE_BATCH_SIZE) break;
+    } while (cursor !== null);
+
+    if (errorCount > 0) {
+      logger.error("Check-in generation completed with errors", { errorCount });
     }
   };
 }

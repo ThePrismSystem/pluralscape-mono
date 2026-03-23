@@ -50,6 +50,13 @@
       "when": 1774247516437,
       "tag": "0006_dizzy_thunderbird",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1774251048007,
+      "tag": "0007_greedy_sauron",
+      "breakpoints": true
     }
   ]
 }

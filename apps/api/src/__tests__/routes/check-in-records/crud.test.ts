@@ -57,9 +57,10 @@ const MOCK_RECORD = {
   systemId: MOCK_AUTH.systemId as never,
   timerConfigId: "tmr_770e8400-e29b-41d4-a716-446655440000" as never,
   scheduledAt: 1000 as never,
+  status: "pending" as const,
   respondedByMemberId: null,
   respondedAt: null,
-  dismissed: false,
+  dismissed: false as const,
   encryptedData: null,
   archived: false,
   archivedAt: null,
@@ -164,6 +165,7 @@ describe("POST /systems/:id/check-in-records/:recordId/respond", () => {
   it("returns 200 with responded record", async () => {
     vi.mocked(respondCheckInRecord).mockResolvedValueOnce({
       ...MOCK_RECORD,
+      status: "responded" as const,
       respondedByMemberId: "mem_880e8400-e29b-41d4-a716-446655440000" as never,
       respondedAt: 2000 as never,
     });
@@ -233,8 +235,17 @@ describe("POST /systems/:id/check-in-records/:recordId/dismiss", () => {
 
   it("returns 200 with dismissed record", async () => {
     vi.mocked(dismissCheckInRecord).mockResolvedValueOnce({
-      ...MOCK_RECORD,
-      dismissed: true,
+      id: MOCK_RECORD.id,
+      systemId: MOCK_RECORD.systemId,
+      timerConfigId: MOCK_RECORD.timerConfigId,
+      scheduledAt: MOCK_RECORD.scheduledAt,
+      encryptedData: MOCK_RECORD.encryptedData,
+      archived: MOCK_RECORD.archived,
+      archivedAt: MOCK_RECORD.archivedAt,
+      status: "dismissed" as const,
+      respondedByMemberId: null,
+      respondedAt: null,
+      dismissed: true as const,
     });
 
     const app = createApp();

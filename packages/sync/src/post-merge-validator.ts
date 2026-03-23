@@ -7,6 +7,7 @@
  * making the corrections part of CRDT history.
  */
 import * as Automerge from "@automerge/automerge";
+import { parseTimeToMinutes } from "@pluralscape/validation";
 
 import { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
 
@@ -54,20 +55,6 @@ interface TimerConfigLike {
   wakingEnd: Automerge.ImmutableString | null;
   enabled: boolean;
   archived: boolean;
-}
-
-const MAX_HOUR = 23;
-const MAX_MINUTE = 59;
-const MINUTES_PER_HOUR = 60;
-
-/** Parse "HH:MM" to minutes since midnight. Returns null if invalid or out of range. */
-function parseHhMm(time: string): number | null {
-  const match = /^(\d{2}):(\d{2})$/.exec(time);
-  if (!match) return null;
-  const hours = parseInt(match[1] as string, 10);
-  const minutes = parseInt(match[2] as string, 10);
-  if (hours > MAX_HOUR || minutes > MAX_MINUTE) return null;
-  return hours * MINUTES_PER_HOUR + minutes;
 }
 
 interface FriendConnectionLike {
@@ -621,8 +608,8 @@ export function normalizeTimerConfig(session: EncryptedSyncSession<unknown>): {
     if (timer.wakingHoursOnly === true) {
       const startStr = timer.wakingStart !== null ? timer.wakingStart.val : null;
       const endStr = timer.wakingEnd !== null ? timer.wakingEnd.val : null;
-      const startMin = startStr !== null ? parseHhMm(startStr) : null;
-      const endMin = endStr !== null ? parseHhMm(endStr) : null;
+      const startMin = startStr !== null ? parseTimeToMinutes(startStr) : null;
+      const endMin = endStr !== null ? parseTimeToMinutes(endStr) : null;
 
       if (startMin === null || endMin === null || startMin >= endMin) {
         toDisable.push(timerId);

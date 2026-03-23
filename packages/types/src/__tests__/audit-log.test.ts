@@ -153,8 +153,6 @@ describe("AuditEventType", () => {
         case "timer-config.archived":
         case "timer-config.restored":
         case "timer-config.deleted":
-        case "timer-config.enabled":
-        case "timer-config.disabled":
         case "check-in-record.created":
         case "check-in-record.responded":
         case "check-in-record.dismissed":

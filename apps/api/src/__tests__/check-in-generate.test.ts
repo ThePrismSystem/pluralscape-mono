@@ -14,11 +14,12 @@ import { mockDb } from "./helpers/mock-db.js";
 import type { JobHandlerContext } from "@pluralscape/queue";
 import type { JobDefinition, JobId } from "@pluralscape/types";
 
-const { loggerWarnMock } = vi.hoisted(() => ({
+const { loggerWarnMock, loggerErrorMock } = vi.hoisted(() => ({
   loggerWarnMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
 }));
 vi.mock("../lib/logger.js", () => ({
-  logger: { warn: loggerWarnMock, info: vi.fn(), error: vi.fn() },
+  logger: { warn: loggerWarnMock, info: vi.fn(), error: loggerErrorMock },
 }));
 
 describe("parseTimeToMinutes", () => {
@@ -182,6 +183,8 @@ describe("createCheckInGenerateHandler", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+    loggerWarnMock.mockClear();
+    loggerErrorMock.mockClear();
   });
 
   it("skips processing when signal is already aborted", async () => {
@@ -311,5 +314,73 @@ describe("createCheckInGenerateHandler", () => {
     await handler(stubJob(), ctx);
 
     expect(ctx.heartbeatFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops processing when signal is aborted mid-loop", async () => {
+    const { db, chain } = mockDb();
+
+    const config1 = makeConfig({ id: "tmr_test-1" });
+    const config2 = makeConfig({ id: "tmr_test-2" });
+    chain.limit.mockResolvedValue([config1, config2]);
+
+    const ac = new AbortController();
+    const ctx = {
+      heartbeat: {
+        heartbeat: vi.fn().mockImplementation(() => {
+          // Abort after first heartbeat (first config processed)
+          ac.abort();
+          return Promise.resolve();
+        }),
+      },
+      signal: ac.signal,
+    };
+
+    const handler = createCheckInGenerateHandler(db);
+    await handler(stubJob(), ctx);
+
+    // Only first config should have been processed — heartbeat fires,
+    // then abort check at top of next iteration stops processing
+    expect(ctx.heartbeat.heartbeat).toHaveBeenCalledOnce();
+  });
+
+  it("warns on unparseable waking time and skips config", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-01T10:00:00Z"));
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([
+      makeConfig({
+        wakingHoursOnly: true,
+        wakingStart: "8:30", // invalid — single digit hour
+        wakingEnd: "22:00",
+      }),
+    ]);
+    const handler = createCheckInGenerateHandler(db);
+
+    await handler(stubJob(), stubCtx());
+
+    expect(chain.insert).not.toHaveBeenCalled();
+    expect(loggerWarnMock).toHaveBeenCalledOnce();
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "Timer config has unparseable waking time, skipping",
+      expect.objectContaining({ timerConfigId: "tmr_test-1" }),
+    );
+  });
+
+  it("logs error summary when configs fail", async () => {
+    const { db, chain } = mockDb();
+
+    chain.limit.mockResolvedValue([makeConfig({ id: "tmr_test-1" })]);
+    chain.values.mockImplementationOnce(() => {
+      throw new Error("DB error");
+    });
+
+    const handler = createCheckInGenerateHandler(db);
+    await handler(stubJob(), stubCtx());
+
+    expect(loggerErrorMock).toHaveBeenCalledOnce();
+    expect(loggerErrorMock).toHaveBeenCalledWith("Check-in generation completed with errors", {
+      errorCount: 1,
+    });
   });
 });
