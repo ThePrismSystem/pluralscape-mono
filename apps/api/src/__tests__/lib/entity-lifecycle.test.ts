@@ -71,11 +71,25 @@ describe("archiveEntity", () => {
   it("throws NOT_FOUND when entity does not exist", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
+    // UPDATE.where → chain (for .returning()), then SELECT.where → [] (not found)
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
 
     await expect(
       archiveEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, TEST_CONFIG),
-    ).rejects.toThrow("Test entity not found");
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws ALREADY_ARCHIVED when entity is already archived", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+    // UPDATE.where → chain (for .returning()), then SELECT.where → entity found
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      archiveEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, TEST_CONFIG),
+    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "ALREADY_ARCHIVED" }));
   });
 });
 
@@ -108,23 +122,27 @@ describe("restoreEntity", () => {
     );
   });
 
-  it("throws NOT_FOUND when archived entity does not exist", async () => {
+  it("throws NOT_FOUND when entity does not exist", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
+    // UPDATE.where → chain (for .returning()), then SELECT.where → [] (not found)
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
 
     await expect(
       restoreEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, TEST_CONFIG, (r) => r),
-    ).rejects.toThrow("Archived test entity not found");
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws NOT_FOUND when update returns empty", async () => {
+  it("throws NOT_ARCHIVED when entity is not archived", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
+    // UPDATE.where → chain (for .returning()), then SELECT.where → entity found
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ id: ENTITY_ID }]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
 
     await expect(
       restoreEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, TEST_CONFIG, (r) => r),
-    ).rejects.toThrow("Archived test entity not found");
+    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "NOT_ARCHIVED" }));
   });
 });

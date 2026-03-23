@@ -49,7 +49,7 @@ export interface CrdtStrategy {
  *
  * Every entity type from the document topology must have an entry here.
  * Junction entity types use "junction-map" storage with compound keys.
- * Lifecycle events are stored as an append-only list in system-core.
+ * Lifecycle events are stored as an append-lww map in system-core (archivable).
  */
 export const ENTITY_CRDT_STRATEGIES = {
   // ── system-core document ─────────────────────────────────────────
@@ -152,10 +152,10 @@ export const ENTITY_CRDT_STRATEGIES = {
       "LWW per field — intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, promptText, enabled, archived",
   },
   "lifecycle-event": {
-    storageType: "append-only",
+    storageType: "append-lww",
     document: "system-core",
     fieldName: "lifecycleEvents",
-    mutationSemantics: "Immutable once appended — append-only list in system-core document",
+    mutationSemantics: "Append via map key assignment; archived is LWW-mutable after creation",
   },
   // Structure entity links (system-core)
   "structure-entity-link": {

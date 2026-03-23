@@ -48,6 +48,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt,
       recordedAt,
+      updatedAt: recordedAt,
       encryptedData: data,
     });
 
@@ -74,6 +75,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: blob,
     });
 
@@ -93,6 +95,7 @@ describe("PG lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now + i * 1000,
         recordedAt: now + i * 1000,
+        updatedAt: now + i * 1000,
         encryptedData: testBlob(new Uint8Array([i])),
       });
     }
@@ -116,6 +119,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -133,6 +137,7 @@ describe("PG lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       }),
     ).rejects.toThrow();
@@ -162,6 +167,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -172,6 +178,7 @@ describe("PG lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([2])),
       }),
     ).rejects.toThrow();
@@ -190,6 +197,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt,
       recordedAt,
+      updatedAt: recordedAt,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -211,6 +219,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1, 2, 3])),
     });
 
@@ -230,6 +239,7 @@ describe("PG lifecycle_events schema", () => {
       eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
+      updatedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
@@ -249,8 +259,109 @@ describe("PG lifecycle_events schema", () => {
         eventType: "invalid" as "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       }),
     ).rejects.toThrow(/check|constraint|failed query/i);
+  });
+
+  describe("archivable columns", () => {
+    it("defaults archived to false and archivedAt to null on insert", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      const rows = await db
+        .insert(lifecycleEvents)
+        .values({
+          id,
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+        })
+        .returning();
+
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("defaults version to 1 on insert", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      const rows = await db
+        .insert(lifecycleEvents)
+        .values({
+          id,
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+        })
+        .returning();
+
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("rejects archived=true with archivedAt=null via consistency check", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(lifecycleEvents).values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          archived: true,
+          archivedAt: null,
+        }),
+      ).rejects.toThrow(/check|constraint|failed query/i);
+    });
+
+    it("rejects archived=false with archivedAt set via consistency check", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(lifecycleEvents).values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          archived: false,
+          archivedAt: now,
+        }),
+      ).rejects.toThrow(/check|constraint|failed query/i);
+    });
+
+    it("rejects version < 1 via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          `INSERT INTO lifecycle_events (id, system_id, event_type, occurred_at, recorded_at, updated_at, encrypted_data, version) VALUES ($1, $2, 'discovery', to_timestamp($3::double precision / 1000), to_timestamp($4::double precision / 1000), to_timestamp($5::double precision / 1000), '\\x0102'::bytea, 0)`,
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 });

@@ -122,8 +122,7 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
       ([, s]) => s.storageType === "append-only",
     );
     for (const [entityType, strategy] of appendOnly) {
-      // append-only entities: lifecycle-event (system-core),
-      // message, poll-vote (chat)
+      // append-only entities: message, poll-vote (chat)
       expect(
         ["system-core", "fronting", "chat"],
         `append-only entity ${entityType} has unexpected document ${strategy.document}`,
@@ -175,6 +174,14 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
       "parentEntityId",
     );
     expect("sortGroupField" in ENTITY_CRDT_STRATEGIES["structure-entity-association"]).toBe(false);
+  });
+
+  it("lifecycle-event uses append-lww with archive semantics", () => {
+    const strategy = ENTITY_CRDT_STRATEGIES["lifecycle-event"];
+    expect(strategy.storageType).toBe("append-lww");
+    expect(strategy.document).toBe("system-core");
+    expect(strategy.fieldName).toBe("lifecycleEvents");
+    expect(strategy.mutationSemantics).toContain("archived");
   });
 
   it("link strategy mutationSemantics distinguish mutable from immutable fields", () => {

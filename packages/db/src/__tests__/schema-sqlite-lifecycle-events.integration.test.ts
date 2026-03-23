@@ -50,6 +50,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: occurred,
         recordedAt: recorded,
+        updatedAt: recorded,
         encryptedData: data,
       })
       .run();
@@ -78,6 +79,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: blob,
       })
       .run();
@@ -98,6 +100,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -109,6 +112,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now + 1000,
         recordedAt: now + 1000,
+        updatedAt: now + 1000,
         encryptedData: testBlob(new Uint8Array([2])),
       })
       .run();
@@ -135,6 +139,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: occurred,
         recordedAt: recorded,
+        updatedAt: recorded,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -158,6 +163,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -178,6 +184,7 @@ describe("SQLite lifecycle_events schema", () => {
           eventType: "discovery",
           occurredAt: now,
           recordedAt: now,
+          updatedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
         })
         .run(),
@@ -197,6 +204,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -210,6 +218,7 @@ describe("SQLite lifecycle_events schema", () => {
           eventType: "discovery",
           occurredAt: now,
           recordedAt: now,
+          updatedAt: now,
           encryptedData: testBlob(new Uint8Array([2])),
         })
         .run(),
@@ -229,6 +238,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1, 2, 3])),
       })
       .run();
@@ -250,6 +260,7 @@ describe("SQLite lifecycle_events schema", () => {
         eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
+        updatedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
@@ -272,9 +283,117 @@ describe("SQLite lifecycle_events schema", () => {
           eventType: "invalid" as "discovery",
           occurredAt: now,
           recordedAt: now,
+          updatedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
         })
         .run(),
     ).toThrow(/CHECK|constraint/i);
+  });
+
+  describe("archivable columns", () => {
+    it("defaults archived to false and archivedAt to null on insert", () => {
+      const accountId = insertAccount();
+      const systemId = sqliteInsertSystem(db, accountId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(lifecycleEvents)
+        .values({
+          id,
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+        })
+        .run();
+
+      const rows = db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("defaults version to 1 on insert", () => {
+      const accountId = insertAccount();
+      const systemId = sqliteInsertSystem(db, accountId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(lifecycleEvents)
+        .values({
+          id,
+          systemId,
+          eventType: "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          updatedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+        })
+        .run();
+
+      const rows = db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id)).all();
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("rejects archived=true with archivedAt=null via consistency check", () => {
+      const accountId = insertAccount();
+      const systemId = sqliteInsertSystem(db, accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(lifecycleEvents)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            eventType: "discovery",
+            occurredAt: now,
+            recordedAt: now,
+            updatedAt: now,
+            encryptedData: testBlob(new Uint8Array([1])),
+            archived: true,
+            archivedAt: null,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via consistency check", () => {
+      const accountId = insertAccount();
+      const systemId = sqliteInsertSystem(db, accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(lifecycleEvents)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            eventType: "discovery",
+            occurredAt: now,
+            recordedAt: now,
+            updatedAt: now,
+            encryptedData: testBlob(new Uint8Array([1])),
+            archived: false,
+            archivedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects version < 1 via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = sqliteInsertSystem(db, accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO lifecycle_events (id, system_id, event_type, occurred_at, recorded_at, updated_at, encrypted_data, version) VALUES (?, ?, 'discovery', ?, ?, ?, X'0102', 0)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 });

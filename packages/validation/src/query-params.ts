@@ -22,6 +22,7 @@ export const booleanQueryParam = z
  */
 export const LifecycleEventQuerySchema = z.object({
   eventType: z.enum(LIFECYCLE_EVENT_TYPES).optional(),
+  includeArchived: booleanQueryParam,
 });
 
 // ── Relationship query schema ───────────────────────────────────
