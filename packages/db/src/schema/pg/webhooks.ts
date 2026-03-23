@@ -84,6 +84,7 @@ export const webhookDeliveries = pgTable(
     lastAttemptAt: pgTimestamp("last_attempt_at"),
     nextRetryAt: pgTimestamp("next_retry_at"),
     encryptedData: pgEncryptedBlob("encrypted_data"),
+    payloadData: jsonb("payload_data").$type<Record<string, unknown>>(),
     createdAt: pgTimestamp("created_at").notNull(),
     ...archivable(),
   },

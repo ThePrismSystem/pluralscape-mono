@@ -7,7 +7,7 @@ import type { SystemId, WebhookEventType } from "@pluralscape/types";
 const mockInsertValues = vi.fn();
 const mockWhere = vi.fn();
 
-const mockDb = {
+const mockTx = {
   select: vi.fn().mockReturnValue({
     from: vi.fn().mockReturnValue({
       where: mockWhere,
@@ -18,9 +18,13 @@ const mockDb = {
   }),
 };
 
+const mockDb = {
+  transaction: vi.fn(async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
+};
+
 vi.mock("@pluralscape/db/pg", () => ({
   webhookConfigs: { systemId: "system_id", enabled: "enabled", archived: "archived" },
-  webhookDeliveries: {},
+  webhookDeliveries: { status: "status", nextRetryAt: "next_retry_at" },
 }));
 
 vi.mock("@pluralscape/types", async () => {
@@ -38,6 +42,9 @@ vi.mock("drizzle-orm", async () => {
     ...actual,
     and: vi.fn((...args: unknown[]) => args),
     eq: vi.fn((a: unknown, b: unknown) => [a, b]),
+    or: vi.fn((...args: unknown[]) => args),
+    isNull: vi.fn((a: unknown) => ["isNull", a]),
+    lte: vi.fn((a: unknown, b: unknown) => ["lte", a, b]),
   };
 });
 
@@ -54,6 +61,10 @@ describe("dispatchWebhookEvent", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Re-wire transaction mock after clearAllMocks
+    mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) =>
+      fn(mockTx),
+    );
   });
 
   afterEach(() => {
@@ -66,7 +77,7 @@ describe("dispatchWebhookEvent", () => {
     const result = await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
 
     expect(result).toEqual([]);
-    expect(mockDb.insert).not.toHaveBeenCalled();
+    expect(mockTx.insert).not.toHaveBeenCalled();
   });
 
   it("creates deliveries for matching configs", async () => {
@@ -80,7 +91,7 @@ describe("dispatchWebhookEvent", () => {
 
     // Only config-1 matches member.created
     expect(result).toHaveLength(1);
-    expect(mockDb.insert).toHaveBeenCalledTimes(1);
+    expect(mockTx.insert).toHaveBeenCalledTimes(1);
   });
 
   it("creates multiple deliveries for multiple matching configs", async () => {
@@ -93,5 +104,15 @@ describe("dispatchWebhookEvent", () => {
     const result = await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
 
     expect(result).toHaveLength(2);
+  });
+
+  it("stores payload on delivery records", async () => {
+    mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+    mockInsertValues.mockResolvedValueOnce(undefined);
+
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+
+    const insertedValues = mockInsertValues.mock.calls[0][0];
+    expect(insertedValues[0]).toHaveProperty("payloadData", payload);
   });
 });

@@ -73,6 +73,7 @@ export const webhookDeliveries = sqliteTable(
     lastAttemptAt: sqliteTimestamp("last_attempt_at"),
     nextRetryAt: sqliteTimestamp("next_retry_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
+    payloadData: sqliteJson("payload_data").$type<Record<string, unknown>>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     ...archivable(),
   },

@@ -1,6 +1,6 @@
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, lte, or } from "drizzle-orm";
 
 import type { SystemId, WebhookEventType } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -22,55 +22,53 @@ export async function dispatchWebhookEvent(
   eventType: WebhookEventType,
   payload: Readonly<Record<string, unknown>>,
 ): Promise<readonly string[]> {
-  // Payload is captured for future encrypted storage in webhook_deliveries.encrypted_data.
-  // Currently only the event type is stored; full payload storage requires the crypto
-  // key integration from the webhook config.
-  void payload;
+  return db.transaction(async (tx) => {
+    // Find all enabled, non-archived configs for this system that subscribe to this event
+    const configs = await tx
+      .select({
+        id: webhookConfigs.id,
+        eventTypes: webhookConfigs.eventTypes,
+      })
+      .from(webhookConfigs)
+      .where(
+        and(
+          eq(webhookConfigs.systemId, systemId),
+          eq(webhookConfigs.enabled, true),
+          eq(webhookConfigs.archived, false),
+        ),
+      );
 
-  // Find all enabled, non-archived configs for this system that subscribe to this event
-  const configs = await db
-    .select({
-      id: webhookConfigs.id,
-      eventTypes: webhookConfigs.eventTypes,
-    })
-    .from(webhookConfigs)
-    .where(
-      and(
-        eq(webhookConfigs.systemId, systemId),
-        eq(webhookConfigs.enabled, true),
-        eq(webhookConfigs.archived, false),
-      ),
-    );
+    // Filter configs that subscribe to this specific event type
+    // (JSONB containment would be ideal, but filtering in-app is fine for the
+    // expected cardinality of webhook configs per system)
+    const matchingConfigs = configs.filter((config) => config.eventTypes.includes(eventType));
 
-  // Filter configs that subscribe to this specific event type
-  // (JSONB containment would be ideal, but filtering in-app is fine for the
-  // expected cardinality of webhook configs per system)
-  const matchingConfigs = configs.filter((config) => config.eventTypes.includes(eventType));
+    if (matchingConfigs.length === 0) {
+      return [];
+    }
 
-  if (matchingConfigs.length === 0) {
-    return [];
-  }
+    const timestamp = now();
+    const deliveryIds: string[] = [];
 
-  const timestamp = now();
-  const deliveryIds: string[] = [];
+    const values = matchingConfigs.map((config) => {
+      const deliveryId = createId(ID_PREFIXES.webhookDelivery);
+      deliveryIds.push(deliveryId);
+      return {
+        id: deliveryId,
+        webhookId: config.id,
+        systemId,
+        eventType,
+        status: "pending" as const,
+        attemptCount: 0,
+        payloadData: payload,
+        createdAt: timestamp,
+      };
+    });
 
-  const values = matchingConfigs.map((config) => {
-    const deliveryId = createId(ID_PREFIXES.webhookDelivery);
-    deliveryIds.push(deliveryId);
-    return {
-      id: deliveryId,
-      webhookId: config.id,
-      systemId,
-      eventType,
-      status: "pending" as const,
-      attemptCount: 0,
-      createdAt: timestamp,
-    };
+    await tx.insert(webhookDeliveries).values(values);
+
+    return deliveryIds;
   });
-
-  await db.insert(webhookDeliveries).values(values);
-
-  return deliveryIds;
 }
 
 /**
@@ -89,6 +87,11 @@ export async function findPendingDeliveries(
       eventType: webhookDeliveries.eventType,
     })
     .from(webhookDeliveries)
-    .where(eq(webhookDeliveries.status, "pending"))
+    .where(
+      and(
+        eq(webhookDeliveries.status, "pending"),
+        or(isNull(webhookDeliveries.nextRetryAt), lte(webhookDeliveries.nextRetryAt, now())),
+      ),
+    )
     .limit(limit);
 }
