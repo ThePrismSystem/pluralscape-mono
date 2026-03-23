@@ -1,6 +1,6 @@
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { and, eq, isNull, lte, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { SystemId, WebhookEventType } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -69,29 +69,4 @@ export async function dispatchWebhookEvent(
 
     return deliveryIds;
   });
-}
-
-/**
- * Query delivery records ready for retry (status = 'pending' and nextRetryAt <= now).
- * Used by the delivery worker to find work.
- */
-export async function findPendingDeliveries(
-  db: PostgresJsDatabase,
-  limit: number,
-): Promise<readonly { id: string; webhookId: string; systemId: string; eventType: string }[]> {
-  return db
-    .select({
-      id: webhookDeliveries.id,
-      webhookId: webhookDeliveries.webhookId,
-      systemId: webhookDeliveries.systemId,
-      eventType: webhookDeliveries.eventType,
-    })
-    .from(webhookDeliveries)
-    .where(
-      and(
-        eq(webhookDeliveries.status, "pending"),
-        or(isNull(webhookDeliveries.nextRetryAt), lte(webhookDeliveries.nextRetryAt, now())),
-      ),
-    )
-    .limit(limit);
 }

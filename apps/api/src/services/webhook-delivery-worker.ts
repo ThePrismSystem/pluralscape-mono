@@ -2,7 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
 import { WEBHOOK_BASE_BACKOFF_MS, WEBHOOK_MAX_RETRY_ATTEMPTS } from "../service.constants.js";
@@ -42,7 +42,7 @@ export function calculateBackoffMs(
   baseMs: number,
   jitterFraction = DEFAULT_JITTER_FRACTION,
 ): number {
-  const delay = Math.pow(2, attemptCount) * baseMs;  
+  const delay = Math.pow(2, attemptCount) * baseMs;
   const jitter = delay * jitterFraction * (2 * Math.random() - 1);
   return Math.max(0, Math.round(delay + jitter));
 }
@@ -193,4 +193,29 @@ export async function processWebhookDelivery(
       nextRetryAt,
     })
     .where(eq(webhookDeliveries.id, deliveryId));
+}
+
+/**
+ * Query delivery records ready for retry (status = 'pending' and nextRetryAt <= now).
+ * Used by the delivery worker to find work.
+ */
+export async function findPendingDeliveries(
+  db: PostgresJsDatabase,
+  limit: number,
+): Promise<readonly { id: string; webhookId: string; systemId: string; eventType: string }[]> {
+  return db
+    .select({
+      id: webhookDeliveries.id,
+      webhookId: webhookDeliveries.webhookId,
+      systemId: webhookDeliveries.systemId,
+      eventType: webhookDeliveries.eventType,
+    })
+    .from(webhookDeliveries)
+    .where(
+      and(
+        eq(webhookDeliveries.status, "pending"),
+        or(isNull(webhookDeliveries.nextRetryAt), lte(webhookDeliveries.nextRetryAt, now())),
+      ),
+    )
+    .limit(limit);
 }
