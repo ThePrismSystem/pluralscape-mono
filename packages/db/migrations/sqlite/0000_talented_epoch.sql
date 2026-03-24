@@ -22,6 +22,7 @@ CREATE TABLE `accounts` (
 	`password_hash` text NOT NULL,
 	`kdf_salt` text NOT NULL,
 	`encrypted_master_key` blob,
+	`audit_log_ip_tracking` integer DEFAULT false NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`version` integer DEFAULT 1 NOT NULL,

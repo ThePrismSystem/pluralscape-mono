@@ -38,6 +38,7 @@ export type AuditWriter = (
  */
 export function createAuditWriter(c: Context, auth?: AuthContext | null): AuditWriter {
   const requestMeta = extractRequestMeta(c);
+  const trackIp = auth?.auditLogIpTracking === true;
 
   return async (db: PgDatabase<PgQueryResultHKT>, params: AuditWriteParams): Promise<void> => {
     await writeAuditLog(db, {
@@ -46,8 +47,8 @@ export function createAuditWriter(c: Context, auth?: AuthContext | null): AuditW
       eventType: params.eventType,
       actor: params.actor,
       detail: params.detail,
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
+      ipAddress: trackIp ? requestMeta.ipAddress : null,
+      userAgent: trackIp ? requestMeta.userAgent : null,
     });
   };
 }

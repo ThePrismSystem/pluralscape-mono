@@ -31,6 +31,7 @@ export async function validateSession(
     .select({
       session: sessions,
       accountType: accounts.accountType,
+      auditLogIpTracking: accounts.auditLogIpTracking,
     })
     .from(sessions)
     .innerJoin(accounts, eq(accounts.id, sessions.accountId))
@@ -82,6 +83,7 @@ export async function validateSession(
       sessionId: row.session.id as SessionId,
       accountType: row.accountType,
       ownedSystemIds,
+      auditLogIpTracking: row.auditLogIpTracking,
     },
     session: row.session,
   };

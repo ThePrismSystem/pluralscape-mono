@@ -52,6 +52,7 @@ function createAuth(overrides?: Partial<AuthContext>): AuthContext {
     sessionId: "ses_test-session" as AuthContext["sessionId"],
     accountType: "system" as AuthContext["accountType"],
     ownedSystemIds: new Set(["sys_test-system" as AuthContext["systemId"] & string]),
+    auditLogIpTracking: false,
     ...overrides,
   };
 }
@@ -120,9 +121,10 @@ describe("createAuditWriter", () => {
     expect(mockParams(0).systemId).toBe("sys_explicit");
   });
 
-  it("captures user-agent from request context", async () => {
+  it("captures user-agent when auth.auditLogIpTracking is true", async () => {
     const c = createMockContext({ "user-agent": "PluralscapeApp/2.0" });
-    const audit = createAuditWriter(c);
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
     const db = createMockDb();
 
     await audit(db, {
@@ -133,11 +135,47 @@ describe("createAuditWriter", () => {
     expect(mockParams(0).userAgent).toBe("PluralscapeApp/2.0");
   });
 
-  it("captures IP from x-forwarded-for when TRUST_PROXY=true", async () => {
+  it("excludes user-agent when auth.auditLogIpTracking is false", async () => {
+    const c = createMockContext({ "user-agent": "PluralscapeApp/2.0" });
+    const auth = createAuth({ auditLogIpTracking: false });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockParams(0).userAgent).toBeNull();
+  });
+
+  it("excludes IP/UA when no auth provided (unauthenticated)", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const audit = createAuditWriter(c);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.register",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockParams(0).ipAddress).toBeNull();
+    expect(mockParams(0).userAgent).toBeNull();
+
+    mockEnv.TRUST_PROXY = false;
+  });
+
+  it("captures IP from x-forwarded-for when opted in and TRUST_PROXY=true", async () => {
     mockEnv.TRUST_PROXY = true;
 
     const c = createMockContext({ "x-forwarded-for": "203.0.113.50, 10.0.0.1" });
-    const audit = createAuditWriter(c);
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
     const db = createMockDb();
 
     await audit(db, {
@@ -194,7 +232,7 @@ describe("createAuditWriter", () => {
 
   it("can be called multiple times with different params", async () => {
     const c = createMockContext({ "user-agent": "TestAgent" });
-    const auth = createAuth();
+    const auth = createAuth({ auditLogIpTracking: true });
     const audit = createAuditWriter(c, auth);
     const db = createMockDb();
 
@@ -211,7 +249,7 @@ describe("createAuditWriter", () => {
     expect(writeAuditLogSpy).toHaveBeenCalledTimes(2);
     expect(mockParams(0).eventType).toBe("auth.login");
     expect(mockParams(1).eventType).toBe("auth.logout");
-    // Both calls share the same userAgent from context
+    // Both calls share the same userAgent from context (opted in)
     expect(mockParams(0).userAgent).toBe("TestAgent");
     expect(mockParams(1).userAgent).toBe("TestAgent");
   });

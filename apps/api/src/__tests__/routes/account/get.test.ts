@@ -47,6 +47,8 @@ describe("GET /account", () => {
       accountId: "acct_test" as AccountId,
       accountType: "system" as AccountType,
       systemId: "sys_test" as SystemId,
+      auditLogIpTracking: false,
+      version: 1,
       createdAt: toUnixMillis(1000),
       updatedAt: toUnixMillis(2000),
     };

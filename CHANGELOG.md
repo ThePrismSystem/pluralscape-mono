@@ -8,6 +8,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ### Changed
 
+- IP address and user-agent audit logging is now opt-in per account (default off, ADR 028)
 - Upgraded pnpm from 9.x to 10.x with `onlyBuiltDependencies` configuration
 - **Structure entity refactor** — replaced 9 rigid structure tables (subsystems, side_systems, layers + 3 membership junctions + 3 cross-link junctions) with a generic 5-table entity model: user-defined entity types, entities, entity links, member links, and directed entity associations
 - Extended `fronting_sessions` with `structure_entity_id` FK (replacing `linked_structure` jsonb) — structure entities can now be fronting subjects alongside members and custom fronts

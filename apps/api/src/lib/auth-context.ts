@@ -10,6 +10,8 @@ export interface AuthContext {
   readonly accountType: AccountType;
   /** Non-archived system IDs owned by this account, populated at auth time. */
   readonly ownedSystemIds: ReadonlySet<SystemId>;
+  /** When true, IP address and user-agent are persisted in audit log entries (ADR 028). */
+  readonly auditLogIpTracking: boolean;
 }
 
 /** Hono environment type augmentation for authenticated routes. */

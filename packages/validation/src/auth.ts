@@ -39,6 +39,13 @@ export const ChangePasswordSchema = z
   })
   .readonly();
 
+export const UpdateAccountSettingsSchema = z
+  .object({
+    auditLogIpTracking: z.boolean(),
+    version: z.number().int().nonnegative(),
+  })
+  .readonly();
+
 export const RegenerateRecoveryKeySchema = z
   .object({
     currentPassword: z.string().min(1),

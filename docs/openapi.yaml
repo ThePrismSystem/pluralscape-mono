@@ -673,6 +673,41 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /account/settings:
+    put:
+      operationId: updateAccountSettings
+      tags:
+        - Account
+      summary: Update account settings
+      description: |
+        Update account-level settings. Currently supports enabling/disabling
+        IP address and user-agent logging in the audit log (ADR 028).
+        Uses optimistic concurrency control via the version field.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountSettingsRequest"
+      responses:
+        "200":
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateAccountSettingsResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /systems:
     get:
       operationId: listSystems
@@ -6430,6 +6465,12 @@ components:
           format: int64
           description: Unix timestamp in milliseconds
           example: 1710000000000
+        auditLogIpTracking:
+          type: boolean
+          description: Whether IP address and user-agent logging is enabled in the audit log
+        version:
+          type: integer
+          description: Optimistic concurrency version counter
     ChangeEmailRequest:
       type: object
       required:
@@ -6535,6 +6576,26 @@ components:
           nullable: true
         hasMore:
           type: boolean
+    UpdateAccountSettingsRequest:
+      type: object
+      required:
+        - auditLogIpTracking
+      properties:
+        auditLogIpTracking:
+          type: boolean
+    UpdateAccountSettingsResponse:
+      type: object
+      required:
+        - ok
+        - auditLogIpTracking
+        - version
+      properties:
+        ok:
+          type: boolean
+        auditLogIpTracking:
+          type: boolean
+        version:
+          type: integer
     SystemProfile:
       description: |
         The system (plural system) profile. Unlike most entities, a newly created

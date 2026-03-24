@@ -57,6 +57,7 @@ function createAuth(overrides?: Partial<AuthContext>): AuthContext {
     sessionId: "sess_001" as AuthContext["sessionId"],
     accountType: "system",
     ownedSystemIds: new Set(["sys_xyz" as AuthContext["systemId"] & string]),
+    auditLogIpTracking: false,
     ...overrides,
   };
 }

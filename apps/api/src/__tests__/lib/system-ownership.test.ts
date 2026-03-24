@@ -20,6 +20,7 @@ const AUTH: AuthContext = {
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
   ownedSystemIds: new Set([SYSTEM_ID]),
+  auditLogIpTracking: false,
 };
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -47,6 +48,7 @@ describe("assertSystemOwnership", () => {
     const emptyAuth: AuthContext = {
       ...AUTH,
       ownedSystemIds: new Set(),
+      auditLogIpTracking: false,
     };
     expect(() => {
       assertSystemOwnership(SYSTEM_ID, emptyAuth);
@@ -62,6 +64,7 @@ describe("assertSystemOwnership", () => {
     const multiAuth: AuthContext = {
       ...AUTH,
       ownedSystemIds: new Set([SYSTEM_ID, OTHER_SYSTEM_ID]),
+      auditLogIpTracking: false,
     };
     expect(() => {
       assertSystemOwnership(OTHER_SYSTEM_ID, multiAuth);
@@ -78,6 +81,7 @@ describe("assertSystemOwnership", () => {
     const singleAuth: AuthContext = {
       ...AUTH,
       ownedSystemIds: new Set([OTHER_SYSTEM_ID]),
+      auditLogIpTracking: false,
     };
     expect(() => {
       assertSystemOwnership(SYSTEM_ID, singleAuth);

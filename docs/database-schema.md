@@ -28,6 +28,7 @@ erDiagram
         varchar email_salt
         varchar password_hash
         varchar kdf_salt
+        boolean audit_log_ip_tracking "default false"
     }
 
     auth_keys {

@@ -20,6 +20,7 @@ const MOCK_AUTH: AuthContext = {
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
   ownedSystemIds: new Set(["sys_test" as SystemId]),
+  auditLogIpTracking: false,
 };
 
 const SYSTEM_ID = "sys_test" as SystemId;

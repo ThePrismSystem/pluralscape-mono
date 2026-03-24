@@ -45,6 +45,7 @@ vi.mock("../../../middleware/auth.js", () => ({
             systemId: null,
             accountType: "system",
             ownedSystemIds: new Set(),
+            auditLogIpTracking: false,
           });
           await next();
         },

@@ -51,6 +51,7 @@ function validAuth(): AuthContextWithSystem {
     sessionId: crypto.randomUUID() as SessionId,
     accountType: "system",
     ownedSystemIds: new Set([systemId]),
+    auditLogIpTracking: false,
   };
 }
 
@@ -137,6 +138,7 @@ describe("handleAuthenticate", () => {
     const auth: AuthContextWithSystem = {
       ...validAuth(),
       ownedSystemIds: new Set<SystemId>(),
+      auditLogIpTracking: false,
     };
     mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
     manager.reserveUnauthSlot();
@@ -154,6 +156,7 @@ describe("handleAuthenticate", () => {
     const auth: AuthContextWithSystem = {
       ...validAuth(),
       ownedSystemIds: new Set<SystemId>(),
+      auditLogIpTracking: false,
     };
     mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
     manager.reserveUnauthSlot();

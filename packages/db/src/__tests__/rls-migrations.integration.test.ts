@@ -112,6 +112,7 @@ describe("RLS partial-failure atomicity", () => {
         password_hash VARCHAR(255) NOT NULL,
         kdf_salt VARCHAR(255) NOT NULL,
         encrypted_master_key BYTEA,
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1

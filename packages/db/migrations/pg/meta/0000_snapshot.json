@@ -1,5 +1,5 @@
 {
-  "id": "0e52f86e-62cf-4798-98ee-ce096e7ee73d",
+  "id": "1475ce79-b5dd-47aa-a156-94c4abbb158c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -165,6 +165,13 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": false
+        },
+        "audit_log_ip_tracking": {
+          "name": "audit_log_ip_tracking",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",

@@ -17,6 +17,7 @@ export const MOCK_AUTH: AuthContext = {
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
   ownedSystemIds: new Set([MOCK_SYSTEM_ID as SystemId]),
+  auditLogIpTracking: false,
 };
 
 /** Auth context for account-level routes with no active system (systemId: null). */
@@ -26,6 +27,7 @@ export const MOCK_ACCOUNT_ONLY_AUTH: AuthContext = {
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
   ownedSystemIds: new Set<SystemId>(),
+  auditLogIpTracking: false,
 };
 
 /** Create a Hono app with request-id middleware, the given routes, and the error handler. */

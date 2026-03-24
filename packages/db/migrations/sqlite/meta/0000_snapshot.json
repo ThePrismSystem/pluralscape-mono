@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f0b4605a-5878-4094-8b59-60177e503850",
+  "id": "c5a99649-07fa-41eb-8a2d-40e73ef12f97",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -157,6 +157,14 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "audit_log_ip_tracking": {
+          "name": "audit_log_ip_tracking",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
