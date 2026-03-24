@@ -50,6 +50,9 @@ export const MAX_RECOVERY_KEY_LENGTH = 200;
 /** Maximum password length to prevent Argon2 DoS on unauthenticated endpoints. */
 export const MAX_PASSWORD_LENGTH = 1024;
 
+/** Maximum analytics custom date range span in milliseconds (366 days). */
+export const MAX_ANALYTICS_CUSTOM_RANGE_MS = 366 * 86_400_000;
+
 /** Maximum character length for webhook target URLs. Matches DB URL_MAX_LENGTH. */
 export const MAX_WEBHOOK_URL_LENGTH = 2048;
 

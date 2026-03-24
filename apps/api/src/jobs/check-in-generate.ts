@@ -21,14 +21,25 @@ const MS_PER_SECOND = 1000;
 
 /**
  * Check if the current time (as minutes since midnight) falls within
- * the waking hours window [wakingStart, wakingEnd).
+ * the waking hours window.
+ *
+ * When `wakingStartMinutes <= wakingEndMinutes`, the window is a
+ * daytime range [start, end).
+ *
+ * When `wakingStartMinutes > wakingEndMinutes`, the window wraps
+ * overnight (e.g. 22:00-06:00): time is within range if it is
+ * >= start OR < end.
  */
 export function isWithinWakingHours(
   currentMinutes: number,
   wakingStartMinutes: number,
   wakingEndMinutes: number,
 ): boolean {
-  return currentMinutes >= wakingStartMinutes && currentMinutes < wakingEndMinutes;
+  if (wakingStartMinutes <= wakingEndMinutes) {
+    return currentMinutes >= wakingStartMinutes && currentMinutes < wakingEndMinutes;
+  }
+  // Overnight range: e.g. 22:00 (1320) to 06:00 (360)
+  return currentMinutes >= wakingStartMinutes || currentMinutes < wakingEndMinutes;
 }
 
 /**

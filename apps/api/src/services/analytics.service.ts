@@ -234,22 +234,33 @@ export async function computeCoFrontingBreakdown(
     { memberA: string; memberB: string; totalDuration: number; sessionCount: number }
   >();
 
-  for (let i = 0; i < memberSessions.length; i++) {
-    const sessionA = memberSessions[i];
+  // Sort by clamped start time ascending for early termination
+  const sorted = [...memberSessions].sort((a, b) => {
+    const boundsA = getClampedBounds(a, dateRange);
+    const boundsB = getClampedBounds(b, dateRange);
+    return boundsA.start - boundsB.start;
+  });
+
+  for (let i = 0; i < sorted.length; i++) {
+    const sessionA = sorted[i];
     if (!sessionA) continue;
 
-    for (let j = i + 1; j < memberSessions.length; j++) {
-      const sessionB = memberSessions[j];
+    const boundsA = getClampedBounds(sessionA, dateRange);
+    if (boundsA.end <= boundsA.start) continue;
+
+    for (let j = i + 1; j < sorted.length; j++) {
+      const sessionB = sorted[j];
       if (!sessionB) continue;
+
+      const boundsB = getClampedBounds(sessionB, dateRange);
+
+      // Since sorted by start, if B starts after A ends, no more overlaps for A
+      if (boundsB.start >= boundsA.end) break;
 
       // Skip if same member
       if (sessionA.memberId === sessionB.memberId) continue;
 
-      // Calculate overlap using clamped bounds
-      const boundsA = getClampedBounds(sessionA, dateRange);
-      const boundsB = getClampedBounds(sessionB, dateRange);
-
-      if (boundsA.end <= boundsA.start || boundsB.end <= boundsB.start) continue;
+      if (boundsB.end <= boundsB.start) continue;
 
       const overlapStart = Math.max(boundsA.start, boundsB.start);
       const overlapEnd = Math.min(boundsA.end, boundsB.end);

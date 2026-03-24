@@ -53,10 +53,10 @@ export const CreateTimerConfigBodySchema = z
     ) {
       const start = parseTimeToMinutes(data.wakingStart);
       const end = parseTimeToMinutes(data.wakingEnd);
-      return start !== null && end !== null && start < end;
+      return start !== null && end !== null && start !== end;
     }
     return true;
-  }, "wakingStart must be before wakingEnd");
+  }, "wakingStart and wakingEnd must not be equal");
 
 export const UpdateTimerConfigBodySchema = z
   .object({
@@ -87,10 +87,10 @@ export const UpdateTimerConfigBodySchema = z
     ) {
       const start = parseTimeToMinutes(data.wakingStart);
       const end = parseTimeToMinutes(data.wakingEnd);
-      return start !== null && end !== null && start < end;
+      return start !== null && end !== null && start !== end;
     }
     return true;
-  }, "wakingStart must be before wakingEnd")
+  }, "wakingStart and wakingEnd must not be equal")
   .readonly();
 
 export const TimerConfigQuerySchema = z.object({

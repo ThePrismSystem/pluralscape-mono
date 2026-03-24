@@ -620,7 +620,7 @@ export function normalizeTimerConfig(session: EncryptedSyncSession<unknown>): {
       const startMin = startStr !== null ? parseTimeToMinutes(startStr) : null;
       const endMin = endStr !== null ? parseTimeToMinutes(endStr) : null;
 
-      if (startMin === null || endMin === null || startMin >= endMin) {
+      if (startMin === null || endMin === null || startMin === endMin) {
         toDisable.push(timerId);
         notifications.push({
           entityType: "timer",

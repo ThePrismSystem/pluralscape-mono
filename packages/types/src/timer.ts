@@ -18,8 +18,11 @@ export interface TimerConfig extends AuditMetadata {
 /** An archived timer config. */
 export type ArchivedTimerConfig = Archived<TimerConfig>;
 
+/** Check-in record status derived from response state. */
+export type CheckInRecordStatus = "pending" | "responded" | "dismissed";
+
 /** A record of a scheduled check-in and its response. */
-export interface CheckInRecord extends AuditMetadata {
+export interface CheckInRecord {
   readonly id: CheckInRecordId;
   readonly timerConfigId: TimerId;
   readonly systemId: SystemId;
@@ -27,8 +30,11 @@ export interface CheckInRecord extends AuditMetadata {
   readonly respondedByMemberId: MemberId | null;
   readonly respondedAt: UnixMillis | null;
   readonly dismissed: boolean;
-  readonly archived: false;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
 }
 
 /** An archived check-in record. */
-export type ArchivedCheckInRecord = Archived<CheckInRecord>;
+export interface ArchivedCheckInRecord extends Omit<CheckInRecord, "archived"> {
+  readonly archived: true;
+}

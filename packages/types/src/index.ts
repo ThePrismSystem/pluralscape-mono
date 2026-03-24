@@ -382,9 +382,6 @@ export type {
   WebhookEventType,
   WebhookConfig,
   ArchivedWebhookConfig,
-  PlaintextWebhookPayload,
-  EncryptedWebhookPayload,
-  WebhookDeliveryPayload,
   WebhookDelivery,
   ArchivedWebhookDelivery,
   WebhookEventPayloadMap,
@@ -514,6 +511,7 @@ export type {
   ArchivedTimerConfig,
   CheckInRecord,
   ArchivedCheckInRecord,
+  CheckInRecordStatus,
 } from "./timer.js";
 
 // ── Key Rotation ─────────────────────────────────────────────────

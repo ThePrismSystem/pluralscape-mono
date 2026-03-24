@@ -1,0 +1,12 @@
+---
+# api-ao1s
+title: Reduce over-mocking in webhook-dispatcher unit test
+status: todo
+type: task
+priority: low
+created_at: 2026-03-24T09:25:32Z
+updated_at: 2026-03-24T09:25:32Z
+parent: ps-4ioj
+---
+
+webhook-dispatcher.test.ts mocks drizzle-orm primitives (and, eq, or, etc.) making tests unable to verify correct query construction.

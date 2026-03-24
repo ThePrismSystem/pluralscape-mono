@@ -59,7 +59,6 @@ import type {
   Encrypted,
   EncryptedBlob,
   EncryptedString,
-  EncryptedWebhookPayload,
   EncryptFn,
   EncryptionAlgorithm,
   EntityLink,
@@ -137,7 +136,6 @@ import type {
   PKSyncState,
   PKSyncStatus,
   Plaintext,
-  PlaintextWebhookPayload,
   Poll,
   PollKind,
   PollOption,
@@ -203,7 +201,6 @@ import type {
   WebhookDelivery,
   ArchivedWebhookDelivery,
   WebhookDeliveryId,
-  WebhookDeliveryPayload,
   WebhookEventType,
   WebSocketConnectionState,
   WebSocketEvent,
@@ -577,9 +574,6 @@ describe("barrel exports", () => {
     expectTypeOf<WebhookEventType>().toBeString();
     expectTypeOf<WebhookConfig>().toBeObject();
     expectTypeOf<ArchivedWebhookConfig>().toBeObject();
-    expectTypeOf<PlaintextWebhookPayload>().toBeObject();
-    expectTypeOf<EncryptedWebhookPayload>().toBeObject();
-    expectTypeOf<WebhookDeliveryPayload>().toBeObject();
     expectTypeOf<WebhookDelivery>().toBeObject();
     expectTypeOf<ArchivedWebhookDelivery>().toBeObject();
   });

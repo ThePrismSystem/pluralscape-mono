@@ -6,7 +6,7 @@ import {
 } from "@pluralscape/validation";
 import { and, desc, eq, lt, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
@@ -412,6 +412,25 @@ export async function archiveFrontingComment(
       .returning({ id: frontingComments.id });
 
     if (updated.length === 0) {
+      const [existing] = await tx
+        .select({ id: frontingComments.id })
+        .from(frontingComments)
+        .where(
+          and(
+            eq(frontingComments.id, commentId),
+            eq(frontingComments.systemId, systemId),
+            eq(frontingComments.frontingSessionId, sessionId),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "ALREADY_ARCHIVED",
+          "Fronting comment is already archived",
+        );
+      }
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting comment not found");
     }
 
@@ -459,7 +478,22 @@ export async function restoreFrontingComment(
 
     const row = updated[0];
     if (!row) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived fronting comment not found");
+      const [existing] = await tx
+        .select({ id: frontingComments.id })
+        .from(frontingComments)
+        .where(
+          and(
+            eq(frontingComments.id, commentId),
+            eq(frontingComments.systemId, systemId),
+            eq(frontingComments.frontingSessionId, sessionId),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        throw new ApiHttpError(HTTP_CONFLICT, "NOT_ARCHIVED", "Fronting comment is not archived");
+      }
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting comment not found");
     }
 
     await audit(tx, {

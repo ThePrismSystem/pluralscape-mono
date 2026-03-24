@@ -728,7 +728,7 @@ describe("restoreFrontingComment", () => {
     });
   });
 
-  it("throws 404 when archived comment not found", async () => {
+  it("throws 404 when comment not found", async () => {
     const { db } = mockDb();
 
     await expect(
@@ -744,7 +744,7 @@ describe("restoreFrontingComment", () => {
       expect.objectContaining({
         status: 404,
         code: "NOT_FOUND",
-        message: "Archived fronting comment not found",
+        message: "Fronting comment not found",
       }),
     );
   });

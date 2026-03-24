@@ -62,6 +62,8 @@ function makeSystemCoreDoc(): Automerge.Doc<SystemCoreDocument> {
     innerWorldEntities: {},
     innerWorldRegions: {},
     timers: {},
+    webhookConfigs: {},
+    frontingReports: {},
     groupMemberships: {},
     structureEntityLinks: {},
     structureEntityMemberLinks: {},

@@ -284,6 +284,41 @@ export interface CrdtTimer extends CrdtAuditFields {
   archived: boolean;
 }
 
+// ── webhook config ───────────────────────────────────────────────────
+
+/**
+ * CRDT representation of a WebhookConfig (LWW map, keyed by WebhookId).
+ *
+ * The `secret` field is server-authoritative and intentionally excluded
+ * from the CRDT schema — it is never synced to clients.
+ */
+export interface CrdtWebhookConfig extends CrdtAuditFields {
+  id: CrdtString;
+  systemId: CrdtString;
+  url: CrdtString;
+  /** JSON-serialized WebhookEventType[] */
+  eventTypes: CrdtString;
+  enabled: boolean;
+  archived: boolean;
+}
+
+// ── fronting report ─────────────────────────────────────────────────
+
+/**
+ * CRDT representation of a FrontingReport (LWW map, keyed by FrontingReportId).
+ *
+ * Reports are immutable once created — no update endpoint exists.
+ * Immutability is enforced at the API layer.
+ */
+export interface CrdtFrontingReport {
+  id: CrdtString;
+  systemId: CrdtString;
+  /** Encrypted report data (T1 blob, base64-encoded) */
+  encryptedData: CrdtString;
+  format: CrdtString;
+  generatedAt: number;
+}
+
 // ── lifecycle events ─────────────────────────────────────────────────
 
 /**
@@ -336,6 +371,8 @@ export interface SystemCoreDocument {
   innerWorldEntities: Record<string, CrdtInnerWorldEntity>;
   innerWorldRegions: Record<string, CrdtInnerWorldRegion>;
   timers: Record<string, CrdtTimer>;
+  webhookConfigs: Record<string, CrdtWebhookConfig>;
+  frontingReports: Record<string, CrdtFrontingReport>;
 
   // Entity link maps (keyed by link entity ID) — LWW per field
   structureEntityLinks: Record<string, CrdtStructureEntityLink>;

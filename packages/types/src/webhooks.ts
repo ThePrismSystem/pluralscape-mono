@@ -40,36 +40,26 @@ export interface WebhookConfig extends AuditMetadata {
 /** An archived webhook config. */
 export type ArchivedWebhookConfig = Archived<WebhookConfig>;
 
-/** A plaintext webhook delivery payload. */
-export interface PlaintextWebhookPayload {
-  readonly encrypted: false;
-  readonly body: Readonly<Record<string, unknown>>;
-}
-
-/** An encrypted webhook delivery payload. */
-export interface EncryptedWebhookPayload {
-  readonly encrypted: true;
-  readonly ciphertext: string;
-}
-
-/** Discriminated union of webhook delivery payloads. */
-export type WebhookDeliveryPayload = PlaintextWebhookPayload | EncryptedWebhookPayload;
-
-/** A record of a webhook delivery attempt. */
+/** A record of a webhook delivery attempt with retry lifecycle. */
 export interface WebhookDelivery {
   readonly id: WebhookDeliveryId;
   readonly systemId: SystemId;
   readonly webhookId: WebhookId;
   readonly eventType: WebhookEventType;
-  readonly payload: WebhookDeliveryPayload;
-  readonly statusCode: number | null;
-  readonly deliveredAt: UnixMillis;
-  readonly success: boolean;
-  readonly archived: false;
+  readonly status: WebhookDeliveryStatus;
+  readonly httpStatus: number | null;
+  readonly attemptCount: number;
+  readonly lastAttemptAt: UnixMillis | null;
+  readonly nextRetryAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
 }
 
 /** An archived webhook delivery. */
-export type ArchivedWebhookDelivery = Archived<WebhookDelivery>;
+export interface ArchivedWebhookDelivery extends Omit<WebhookDelivery, "archived"> {
+  readonly archived: true;
+}
 
 /** Maps each webhook event type to its expected payload shape. Placeholder for future per-event typing. */
 export type WebhookEventPayloadMap = { [K in WebhookEventType]: Record<string, unknown> };
