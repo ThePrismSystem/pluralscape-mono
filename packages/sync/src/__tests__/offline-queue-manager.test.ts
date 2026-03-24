@@ -440,8 +440,7 @@ describe("replayOfflineQueue", () => {
       expect(submitChange).toHaveBeenCalledTimes(3);
       expect(result.failed).toBe(1);
       const permanentCalls = onError.mock.calls.filter(
-        (call: unknown[]) =>
-          typeof call[0] === "string" && (call[0]).includes("permanently"),
+        (call: unknown[]) => typeof call[0] === "string" && call[0].includes("permanently"),
       );
       expect(permanentCalls).toHaveLength(0);
     });
@@ -505,8 +504,7 @@ describe("replayOfflineQueue", () => {
       expect(submitChange).toHaveBeenCalledTimes(3);
       expect(result.failed).toBe(1);
       const permanentCalls = onError.mock.calls.filter(
-        (call: unknown[]) =>
-          typeof call[0] === "string" && (call[0]).includes("permanently"),
+        (call: unknown[]) => typeof call[0] === "string" && call[0].includes("permanently"),
       );
       expect(permanentCalls).toHaveLength(0);
     });

@@ -444,8 +444,7 @@ describe("SyncEngine edge cases", () => {
       }
 
       const overflowCalls = onError.mock.calls.filter(
-        (call: unknown[]) =>
-          typeof call[0] === "string" && (call[0]).includes("exceeded cap"),
+        (call: unknown[]) => typeof call[0] === "string" && call[0].includes("exceeded cap"),
       );
       expect(overflowCalls.length).toBeGreaterThanOrEqual(1);
 
