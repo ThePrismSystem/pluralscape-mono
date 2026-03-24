@@ -343,7 +343,7 @@ importers:
         version: 25.10.9(typescript@6.0.2)
       react-i18next:
         specifier: ^16.0.0
-        version: 16.6.2(i18next@25.10.9(typescript@6.0.2))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@6.0.2)
+        version: 16.6.6(i18next@25.10.9(typescript@6.0.2))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@6.0.2)
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*
@@ -5750,14 +5750,14 @@ packages:
     peerDependencies:
       react: '>=17.0.0'
 
-  react-i18next@16.6.2:
-    resolution: {integrity: sha512-/S/GPzElTqEi5o2kzd0/O2627hPDmE6OGhJCCwCfUaQ3syyu+kaYH8/PYFtZeWc25NzfxTN/2fD1QjvrTgrFfA==}
+  react-i18next@16.6.6:
+    resolution: {integrity: sha512-ZgL2HUoW34UKUkOV7uSQFE1CDnRPD+tCR3ywSuWH7u2iapnz86U8Bi3Vrs620qNDzCf1F47NxglCEkchCTDOHw==}
     peerDependencies:
-      i18next: '>= 25.6.2'
+      i18next: '>= 25.10.9'
       react: '>= 16.8.0'
       react-dom: '*'
       react-native: '*'
-      typescript: ^5
+      typescript: ^5 || ^6
     peerDependenciesMeta:
       react-dom:
         optional: true
@@ -12862,7 +12862,7 @@ snapshots:
     dependencies:
       react: 19.2.4
 
-  react-i18next@16.6.2(i18next@25.10.9(typescript@6.0.2))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@6.0.2):
+  react-i18next@16.6.6(i18next@25.10.9(typescript@6.0.2))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@6.0.2):
     dependencies:
       '@babel/runtime': 7.29.2
       html-parse-stringify: 3.0.1
