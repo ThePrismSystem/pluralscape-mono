@@ -15,7 +15,7 @@ import {
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
-import { and, asc, count, eq, gt, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
@@ -252,7 +252,13 @@ export async function loginAccount(
         err instanceof Error ? { err } : { error: String(err) },
       );
     }
-    // Record failure for throttling on non-existent accounts too
+    // Record failure for throttling on non-existent accounts too.
+    // This try/catch is intentionally more lenient than the existing-account path
+    // (which has no try/catch and will fail the login if Valkey is unavailable).
+    // Anti-enumeration timing requires proceeding regardless of throttle store
+    // failures. If Valkey is down, this path allows unthrottled attempts against
+    // non-existent accounts — acceptable because there is no real account to
+    // compromise, and timing equalization prevents account existence disclosure.
     try {
       await loginStore.recordFailure(emailHash);
     } catch (throttleErr: unknown) {
@@ -338,23 +344,18 @@ export async function loginAccount(
     // Enforce per-account session limit: evict oldest session if at capacity
     const currentTime = now();
     const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
-    const [sessionCount] = await tx
-      .select({ value: count() })
+    const [oldest] = await tx
+      .select({
+        id: sessions.id,
+        total: sql<number>`count(*) over()`.as("total"),
+      })
       .from(sessions)
       .where(and(eq(sessions.accountId, account.id), eq(sessions.revoked, false), notExpired))
+      .orderBy(asc(sessions.lastActive))
       .limit(1);
 
-    if (sessionCount && sessionCount.value >= MAX_SESSIONS_PER_ACCOUNT) {
-      const [oldest] = await tx
-        .select({ id: sessions.id })
-        .from(sessions)
-        .where(and(eq(sessions.accountId, account.id), eq(sessions.revoked, false), notExpired))
-        .orderBy(asc(sessions.lastActive))
-        .limit(1);
-
-      if (oldest) {
-        await tx.update(sessions).set({ revoked: true }).where(eq(sessions.id, oldest.id));
-      }
+    if (oldest && oldest.total >= MAX_SESSIONS_PER_ACCOUNT) {
+      await tx.update(sessions).set({ revoked: true }).where(eq(sessions.id, oldest.id));
     }
 
     await tx.insert(sessions).values({

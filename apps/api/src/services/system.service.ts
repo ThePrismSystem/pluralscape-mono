@@ -8,7 +8,12 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64OrNull, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withAccountTransaction, withTenantTransaction } from "../lib/rls-context.js";
+import {
+  withAccountRead,
+  withAccountTransaction,
+  withTenantRead,
+  withTenantTransaction,
+} from "../lib/rls-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_SYSTEM_DATA_BYTES,
@@ -64,7 +69,7 @@ export async function listSystems(
 ): Promise<PaginatedResult<SystemProfileResult>> {
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  return withAccountTransaction(db, accountId, async (tx) => {
+  return withAccountRead(db, accountId, async (tx) => {
     const conditions = [eq(systems.accountId, accountId), eq(systems.archived, false)];
 
     if (cursor) {
@@ -89,7 +94,7 @@ export async function getSystemProfile(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<SystemProfileResult> {
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .select()
       .from(systems)

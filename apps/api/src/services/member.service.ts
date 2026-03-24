@@ -25,7 +25,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_MEMBER_LIMIT,
@@ -145,7 +145,7 @@ export async function listMembers(
 
   const limit = Math.min(opts?.limit ?? DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const conditions = [eq(members.systemId, systemId)];
 
     if (!opts?.includeArchived) {
@@ -177,7 +177,7 @@ export async function getMember(
 ): Promise<MemberResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .select()
       .from(members)
@@ -700,7 +700,7 @@ export async function listAllMemberMemberships(
 ): Promise<MemberMembershipsResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify member exists
     const [member] = await tx
       .select({ id: members.id })

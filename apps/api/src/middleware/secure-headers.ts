@@ -29,5 +29,6 @@ export function createSecureHeaders(): MiddlewareHandler {
       microphone: [],
       geolocation: [],
     },
+    referrerPolicy: "no-referrer",
   });
 }

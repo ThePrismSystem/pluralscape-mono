@@ -15,6 +15,13 @@
       "when": 1774393778011,
       "tag": "0001_soft_siren",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1774395687498,
+      "tag": "0002_military_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

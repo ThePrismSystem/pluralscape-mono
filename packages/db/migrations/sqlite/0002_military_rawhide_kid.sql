@@ -1,0 +1,1 @@
+CREATE INDEX `biometric_tokens_unused_idx` ON `biometric_tokens` (`token_hash`) WHERE used_at IS NULL;

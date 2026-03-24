@@ -6,7 +6,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { toCursor } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { throwOnUniqueViolation } from "../lib/unique-violation.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
@@ -165,7 +165,7 @@ export async function listGroupMembers(
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify group exists
     const [group] = await tx
       .select({ id: groups.id })
@@ -226,7 +226,7 @@ export async function listMemberGroupMemberships(
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify member exists
     const [member] = await tx
       .select({ id: members.id })

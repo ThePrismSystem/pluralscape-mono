@@ -11,7 +11,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
@@ -181,7 +181,7 @@ export async function listFrontingComments(
 ): Promise<PaginatedResult<FrontingCommentResult>> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify parent session exists and belongs to this system
     const [session] = await tx
       .select({ id: frontingSessions.id })
@@ -230,7 +230,7 @@ export async function getFrontingComment(
 ): Promise<FrontingCommentResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify parent session exists and belongs to this system
     const [session] = await tx
       .select({ id: frontingSessions.id })

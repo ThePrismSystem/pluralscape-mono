@@ -18,7 +18,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
@@ -171,7 +171,7 @@ export async function listFrontingSessions(
 
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const conditions = [eq(frontingSessions.systemId, systemId)];
 
     if (!opts.includeArchived) {
@@ -227,7 +227,7 @@ export async function getFrontingSession(
 ): Promise<FrontingSessionResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .select()
       .from(frontingSessions)
@@ -537,7 +537,7 @@ export async function getActiveFronting(
 ): Promise<ActiveFrontingResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const rows = await tx
       .select()
       .from(frontingSessions)

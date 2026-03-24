@@ -9,7 +9,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -125,7 +125,7 @@ export async function listCustomFronts(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const conditions = [eq(customFronts.systemId, systemId), eq(customFronts.archived, false)];
 
     if (cursor) {
@@ -153,7 +153,7 @@ export async function getCustomFront(
 ): Promise<CustomFrontResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .select()
       .from(customFronts)

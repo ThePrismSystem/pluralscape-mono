@@ -232,7 +232,9 @@ describe("createUploadUrl", () => {
       ),
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 400 });
 
-    expect(mockAudit).not.toHaveBeenCalled();
+    // Audit fires inside the transaction (before the S3 call), so it IS called
+    // even when the presigned URL generation subsequently fails.
+    expect(mockAudit).toHaveBeenCalledOnce();
   });
 });
 

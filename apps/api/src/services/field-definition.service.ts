@@ -19,7 +19,7 @@ import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { QueryCache } from "../lib/query-cache.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
 
@@ -237,30 +237,26 @@ export async function listFieldDefinitions(
   const cached = fieldDefCache.get(cacheKey);
   if (cached) return cached;
 
-  const result = await withTenantTransaction(
-    db,
-    { systemId, accountId: auth.accountId },
-    async (tx) => {
-      const conditions = [eq(fieldDefinitions.systemId, systemId)];
+  const result = await withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const conditions = [eq(fieldDefinitions.systemId, systemId)];
 
-      if (!opts?.includeArchived) {
-        conditions.push(eq(fieldDefinitions.archived, false));
-      }
+    if (!opts?.includeArchived) {
+      conditions.push(eq(fieldDefinitions.archived, false));
+    }
 
-      if (opts?.cursor) {
-        conditions.push(gt(fieldDefinitions.id, opts.cursor));
-      }
+    if (opts?.cursor) {
+      conditions.push(gt(fieldDefinitions.id, opts.cursor));
+    }
 
-      const rows = await tx
-        .select()
-        .from(fieldDefinitions)
-        .where(and(...conditions))
-        .orderBy(fieldDefinitions.id)
-        .limit(limit + 1);
+    const rows = await tx
+      .select()
+      .from(fieldDefinitions)
+      .where(and(...conditions))
+      .orderBy(fieldDefinitions.id)
+      .limit(limit + 1);
 
-      return buildPaginatedResult(rows, limit, toFieldDefinitionResult);
-    },
-  );
+    return buildPaginatedResult(rows, limit, toFieldDefinitionResult);
+  });
   fieldDefCache.set(cacheKey, result);
   return result;
 }
@@ -275,7 +271,7 @@ export async function getFieldDefinition(
 ): Promise<FieldDefinitionResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .select()
       .from(fieldDefinitions)

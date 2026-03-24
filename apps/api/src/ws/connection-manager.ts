@@ -40,14 +40,7 @@ export class ConnectionManager {
   /** Release a reserved unauthenticated slot (if onOpen never fires). */
   releaseUnauthSlot(ip?: string): void {
     this.unauthCount = Math.max(0, this.unauthCount - 1);
-    if (ip) {
-      const current = this.ipUnauthCount.get(ip) ?? 0;
-      if (current <= 1) {
-        this.ipUnauthCount.delete(ip);
-      } else {
-        this.ipUnauthCount.set(ip, current - 1);
-      }
-    }
+    this.releaseIpSlot(ip);
   }
 
   /** Check if a new unauthenticated connection from the given IP can be accepted. */

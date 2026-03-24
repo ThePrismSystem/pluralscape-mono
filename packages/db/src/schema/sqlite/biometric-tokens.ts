@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteTimestamp } from "../../columns/sqlite.js";
@@ -20,6 +21,9 @@ export const biometricTokens = sqliteTable(
   (t) => [
     index("biometric_tokens_session_id_idx").on(t.sessionId),
     uniqueIndex("biometric_tokens_token_hash_idx").on(t.tokenHash),
+    index("biometric_tokens_unused_idx")
+      .on(t.tokenHash)
+      .where(sql`used_at IS NULL`),
   ],
 );
 

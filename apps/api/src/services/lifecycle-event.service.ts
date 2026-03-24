@@ -15,7 +15,7 @@ import {
   restoreEntity,
   type ArchivableEntityConfig,
 } from "../lib/entity-lifecycle.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -194,7 +194,7 @@ export async function listLifecycleEvents(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const conditions = [eq(lifecycleEvents.systemId, systemId)];
 
     if (!includeArchived) {
@@ -243,7 +243,7 @@ export async function getLifecycleEvent(
 ): Promise<LifecycleEventResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .select()
       .from(lifecycleEvents)

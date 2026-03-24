@@ -13,7 +13,7 @@ import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import { createHierarchyService } from "./hierarchy-service-factory.js";
@@ -401,7 +401,7 @@ export async function getGroupTree(
 ): Promise<GroupResultTree[]> {
   assertSystemOwnership(systemId, auth);
 
-  const rows = await withTenantTransaction(db, { systemId, accountId: auth.accountId }, (tx) =>
+  const rows = await withTenantRead(db, { systemId, accountId: auth.accountId }, (tx) =>
     tx
       .select()
       .from(groups)

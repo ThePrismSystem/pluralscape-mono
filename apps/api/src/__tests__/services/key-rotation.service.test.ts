@@ -521,6 +521,43 @@ describe("key-rotation service", () => {
         expect.objectContaining({ eventType: "bucket.key_rotation.chunk_completed" }),
       );
     });
+
+    it("calls .for('update') on the rotation record lock to prevent concurrent sealing", async () => {
+      const { db, chain } = mockDbWithFor();
+
+      // Rotation lookup with lock returns existing rotation
+      chain.limit.mockResolvedValueOnce([
+        makeRotationRow({
+          state: ROTATION_STATES.migrating,
+          totalItems: 5,
+          completedItems: 0,
+          failedItems: 0,
+        }),
+      ]);
+      chain.returning.mockResolvedValueOnce([
+        makeItemRow({ status: ROTATION_ITEM_STATUSES.completed }),
+      ]);
+      chain.limit.mockResolvedValueOnce([
+        makeRotationRow({
+          state: ROTATION_STATES.migrating,
+          totalItems: 5,
+          completedItems: 1,
+          failedItems: 0,
+        }),
+      ]);
+
+      await completeRotationChunk(
+        db,
+        SYSTEM_ID,
+        BUCKET_ID,
+        ROTATION_ID,
+        { items: [{ itemId: "bri_item-1", status: ROTATION_ITEM_STATUSES.completed }] },
+        AUTH,
+        mockAudit,
+      );
+
+      expect(chain.for).toHaveBeenCalledWith("update");
+    });
   });
 
   // ── getRotationProgress ──────────────────────────────────────────

@@ -368,7 +368,7 @@ async function collectAllEnvelopes(
  * Defaults to true (secure by default).
  */
 let envelopeVerificationWarningLogged = false;
-function shouldVerifyEnvelopeSignatures(): boolean {
+export function shouldVerifyEnvelopeSignatures(): boolean {
   const envVal = process.env["VERIFY_ENVELOPE_SIGNATURES"];
   if (envVal === undefined) return true;
   const enabled = envVal !== "false" && envVal !== "0";

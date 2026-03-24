@@ -8,7 +8,7 @@ import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constan
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertFieldDefinitionActive, assertMemberActive } from "../lib/member-helpers.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import { MAX_ENCRYPTED_FIELD_VALUE_BYTES } from "./field-value.constants.js";
@@ -169,7 +169,7 @@ export async function listFieldValues(
 ): Promise<FieldValueResult[]> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     await assertMemberActive(tx, systemId, memberId);
 
     const rows = await tx

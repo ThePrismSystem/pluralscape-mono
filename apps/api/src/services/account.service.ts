@@ -23,7 +23,7 @@ import {
   serializeEncryptedPayload,
 } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
-import { withAccountTransaction } from "../lib/rls-context.js";
+import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { EMAIL_CHANGE_FAILED_ERROR } from "../routes/account/account.constants.js";
 import { EMAIL_SALT_BYTES } from "../routes/auth/auth.constants.js";
 
@@ -51,7 +51,7 @@ export async function getAccountInfo(
   db: PostgresJsDatabase,
   accountId: AccountId,
 ): Promise<AccountInfo | null> {
-  return withAccountTransaction(db, accountId, async (tx) => {
+  return withAccountRead(db, accountId, async (tx) => {
     const [row] = await tx
       .select({
         accountId: accounts.id,

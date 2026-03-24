@@ -14,7 +14,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONTENT_TOO_LARGE, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_BLOB_LIMIT,
@@ -107,8 +107,9 @@ export async function createUploadUrl(
   const timestamp = now();
   const expiresAt = toUnixMillis(timestamp + PRESIGNED_UPLOAD_TTL_MS);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
-    // Insert pending row
+  // DB insert + audit inside transaction; S3 presigned URL outside to avoid
+  // holding a DB connection open during external network I/O.
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     await tx.insert(blobMetadata).values({
       id: blobId,
       systemId,
@@ -123,35 +124,35 @@ export async function createUploadUrl(
       expiresAt,
     });
 
-    // Generate presigned URL
-    const presigned = await storageAdapter.generatePresignedUploadUrl({
-      storageKey,
-      mimeType,
-      sizeBytes,
-      expiresInMs: PRESIGNED_UPLOAD_TTL_MS,
-    });
-
-    if (!presigned.supported) {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Presigned uploads not supported by storage backend",
-      );
-    }
-
     await audit(tx, {
       eventType: "blob.upload-requested",
       actor: { kind: "account", id: auth.accountId },
       detail: `Upload requested: ${purpose} (${String(sizeBytes)} bytes)`,
       systemId,
     });
-
-    return {
-      blobId: blobId as BlobId,
-      uploadUrl: presigned.url,
-      expiresAt: presigned.expiresAt,
-    };
   });
+
+  // Generate presigned URL outside the transaction
+  const presigned = await storageAdapter.generatePresignedUploadUrl({
+    storageKey,
+    mimeType,
+    sizeBytes,
+    expiresInMs: PRESIGNED_UPLOAD_TTL_MS,
+  });
+
+  if (!presigned.supported) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Presigned uploads not supported by storage backend",
+    );
+  }
+
+  return {
+    blobId: blobId as BlobId,
+    uploadUrl: presigned.url,
+    expiresAt: presigned.expiresAt,
+  };
 }
 
 // ── CONFIRM UPLOAD ──────────────────────────────────────────────────
@@ -254,7 +255,7 @@ export async function getBlob(
 ): Promise<BlobResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .select()
       .from(blobMetadata)
@@ -292,7 +293,7 @@ export async function listBlobs(
 
   const limit = Math.min(opts?.limit ?? DEFAULT_BLOB_LIMIT, MAX_BLOB_LIMIT);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const conditions = [
       eq(blobMetadata.systemId, systemId),
       sql`${blobMetadata.uploadedAt} IS NOT NULL`,
@@ -328,42 +329,48 @@ export async function getDownloadUrl(
 ): Promise<DownloadUrlResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
-    const [row] = await tx
-      .select({ storageKey: blobMetadata.storageKey })
-      .from(blobMetadata)
-      .where(
-        and(
-          eq(blobMetadata.id, blobId),
-          eq(blobMetadata.systemId, systemId),
-          sql`${blobMetadata.uploadedAt} IS NOT NULL`,
-          eq(blobMetadata.archived, false),
-        ),
-      )
-      .limit(1);
+  // Fetch storage key inside read context; generate presigned URL outside
+  // to avoid holding a DB connection open during external S3 I/O.
+  const storageKey = await withTenantRead(
+    db,
+    { systemId, accountId: auth.accountId },
+    async (tx) => {
+      const [row] = await tx
+        .select({ storageKey: blobMetadata.storageKey })
+        .from(blobMetadata)
+        .where(
+          and(
+            eq(blobMetadata.id, blobId),
+            eq(blobMetadata.systemId, systemId),
+            sql`${blobMetadata.uploadedAt} IS NOT NULL`,
+            eq(blobMetadata.archived, false),
+          ),
+        )
+        .limit(1);
 
-    if (!row) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
-    }
+      if (!row) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
+      }
 
-    const presigned = await storageAdapter.generatePresignedDownloadUrl({
-      storageKey: row.storageKey as StorageKey,
-    });
+      return row.storageKey as StorageKey;
+    },
+  );
 
-    if (!presigned.supported) {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Presigned downloads not supported by storage backend",
-      );
-    }
+  const presigned = await storageAdapter.generatePresignedDownloadUrl({ storageKey });
 
-    return {
-      blobId,
-      downloadUrl: presigned.url,
-      expiresAt: presigned.expiresAt,
-    };
-  });
+  if (!presigned.supported) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Presigned downloads not supported by storage backend",
+    );
+  }
+
+  return {
+    blobId,
+    downloadUrl: presigned.url,
+    expiresAt: presigned.expiresAt,
+  };
 }
 
 // ── ARCHIVE BLOB ────────────────────────────────────────────────────

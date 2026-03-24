@@ -63,6 +63,14 @@ vi.mock("../../lib/email-hash.js", () => ({
   getEmailHashPepper: vi.fn().mockReturnValue(new Uint8Array(32)),
 }));
 
+const mockEqualizeAntiEnumTiming = vi
+  .fn<(startTime: number) => Promise<void>>()
+  .mockResolvedValue(undefined);
+vi.mock("../../lib/anti-enum-timing.js", () => ({
+  equalizeAntiEnumTiming: (startTime: number): Promise<void> =>
+    mockEqualizeAntiEnumTiming(startTime),
+}));
+
 // ── Imports after mocks ──────────────────────────────────────────
 
 const {
@@ -498,6 +506,64 @@ describe("recovery-key service", () => {
 
       // Crypto material still zeroed despite transaction failure
       expect(mockMemzero).toHaveBeenCalledTimes(6);
+    });
+
+    // ── Anti-timing equalization ──────────────────────────────────────
+
+    it("calls equalizeAntiEnumTiming when account is not found", async () => {
+      const { db, chain } = mockDb();
+      // No account found
+      chain.limit.mockResolvedValueOnce([]);
+      mockEqualizeAntiEnumTiming.mockClear();
+
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
+
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("calls equalizeAntiEnumTiming when crypto throws", async () => {
+      const { db, chain } = mockDb();
+      // Account found
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      // Active recovery key found
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+      mockEqualizeAntiEnumTiming.mockClear();
+
+      // Make the transaction throw to simulate crypto failure mid-operation
+      chain.transaction.mockRejectedValueOnce(new Error("crypto failure"));
+
+      await expect(
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger),
+      ).rejects.toThrow("crypto failure");
+
+      // equalizeAntiEnumTiming must still run in the finally block
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("calls equalizeAntiEnumTiming on the success path", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+      chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
+      mockEqualizeAntiEnumTiming.mockClear();
+
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
+
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
     });
   });
 });

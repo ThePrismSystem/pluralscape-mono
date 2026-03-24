@@ -7,7 +7,7 @@ import { parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -148,7 +148,7 @@ export function createHierarchyService<
 
     const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
       const conditions = [eq(columns.systemId, systemId), eq(columns.archived, false)];
 
       if (cursor) {
@@ -176,7 +176,7 @@ export function createHierarchyService<
   ): Promise<TResult> {
     assertSystemOwnership(systemId, auth);
 
-    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
       const [row] = await tx
         .select()
         .from(table)

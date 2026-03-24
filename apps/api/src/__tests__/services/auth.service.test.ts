@@ -12,7 +12,13 @@ vi.mock("../../env.js", () => ({ env: mockEnv }));
 import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { fromCursor } from "../../lib/pagination.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
-import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
+import {
+  CLIENT_PLATFORM_HEADER,
+  DEFAULT_PLATFORM,
+  MAX_SESSIONS_PER_ACCOUNT,
+  RECOVERY_KEY_GROUP_COUNT,
+  RECOVERY_KEY_GROUP_SIZE,
+} from "../../routes/auth/auth.constants.js";
 import {
   ValidationError,
   listSessions,
@@ -766,6 +772,159 @@ describe("auth service", () => {
       await expect(
         logoutCurrentSession(db, "sess_1", "acct_123", mockAudit),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  // ── Per-account session limiting ───────────────────────────────────
+
+  describe("loginAccount — per-account session limiting", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const credentials = { email: "session-limit@example.com", password: "securepassword123" };
+
+    it("does not evict sessions when count is below MAX_SESSIONS_PER_ACCOUNT", async () => {
+      const { db, chain } = mockDb();
+
+      // Account lookup returns a valid account
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_sess_limit_low",
+            emailHash: "hashed_session-limit@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        // Session window-function query returns total < MAX_SESSIONS_PER_ACCOUNT
+        .mockResolvedValueOnce([{ id: "sess_old", total: 10 }]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+
+      // The session eviction UPDATE should NOT have been called for the oldest session
+      // (update IS called for new session insert, but set() with revoked: true should not happen
+      // for the eviction path when count is below limit)
+      const setCalls = chain.set.mock.calls;
+      const revocationCall = setCalls.find(
+        (call) =>
+          call[0] &&
+          typeof call[0] === "object" &&
+          (call[0] as Record<string, unknown>).revoked === true,
+      );
+      expect(revocationCall).toBeUndefined();
+    });
+
+    it("evicts oldest session when count reaches MAX_SESSIONS_PER_ACCOUNT", async () => {
+      const { db, chain } = mockDb();
+
+      // Account lookup
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_sess_limit_full",
+            emailHash: "hashed_session-limit@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        // Session window-function query returns total === MAX_SESSIONS_PER_ACCOUNT
+        .mockResolvedValueOnce([{ id: "sess_oldest", total: MAX_SESSIONS_PER_ACCOUNT }]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+
+      // The eviction UPDATE must have been called with revoked: true
+      expect(chain.update).toHaveBeenCalled();
+      expect(chain.set).toHaveBeenCalledWith({ revoked: true });
+    });
+
+    it("handles zero active sessions gracefully (no eviction)", async () => {
+      const { db, chain } = mockDb();
+
+      // Account lookup
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_sess_limit_zero",
+            emailHash: "hashed_session-limit@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        // Session window-function query returns empty (no active sessions)
+        .mockResolvedValueOnce([]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+
+      // No eviction: set({ revoked: true }) should not appear
+      const setCalls = chain.set.mock.calls;
+      const revocationCall = setCalls.find(
+        (call) =>
+          call[0] &&
+          typeof call[0] === "object" &&
+          (call[0] as Record<string, unknown>).revoked === true,
+      );
+      expect(revocationCall).toBeUndefined();
+    });
+  });
+
+  // ── generateFakeRecoveryKey format (via registerAccount anti-enumeration) ──
+
+  describe("generateFakeRecoveryKey format", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const validParams = {
+      email: "fake-key-format@example.com",
+      password: "securepassword123",
+      recoveryKeyBackupConfirmed: true,
+    };
+
+    it("fake recovery key has exactly RECOVERY_KEY_GROUP_COUNT groups", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+
+      const result = await registerAccount(db, validParams, "web", mockAudit);
+      const groups = result.recoveryKey.split("-");
+      expect(groups).toHaveLength(RECOVERY_KEY_GROUP_COUNT);
+    });
+
+    it("each group of fake recovery key has exactly RECOVERY_KEY_GROUP_SIZE characters", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+
+      const result = await registerAccount(db, validParams, "web", mockAudit);
+      const groups = result.recoveryKey.split("-");
+      for (const group of groups) {
+        expect(group).toHaveLength(RECOVERY_KEY_GROUP_SIZE);
+      }
+    });
+
+    it("each group of fake recovery key uses only base32 alphabet (A-Z, 2-7)", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+
+      const result = await registerAccount(db, validParams, "web", mockAudit);
+      const groups = result.recoveryKey.split("-");
+      for (const group of groups) {
+        expect(group).toMatch(/^[A-Z2-7]+$/);
+      }
     });
   });
 });
