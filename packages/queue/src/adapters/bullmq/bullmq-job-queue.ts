@@ -71,7 +71,20 @@ export class BullMQJobQueue implements JobQueue {
     // fully owns its internal connections. This prevents "Connection is closed"
     // unhandled rejections during teardown — BullMQ's close() cleanly shuts
     // down connections it created, but races with duplicated instances.
-    const connOpts = { host: connection.options.host, port: connection.options.port };
+    // Forwards auth, TLS, db, and sentinel options alongside host/port.
+    const { host, port, password, username, db, tls, keyPrefix, sentinels, natMap } =
+      connection.options;
+    const connOpts = {
+      host,
+      port,
+      ...(password !== undefined && { password }),
+      ...(username !== undefined && { username }),
+      ...(db !== undefined && { db }),
+      ...(tls !== undefined && { tls }),
+      ...(keyPrefix !== undefined && { keyPrefix }),
+      ...(sentinels !== undefined && { sentinels }),
+      ...(natMap !== undefined && { natMap }),
+    };
 
     this.queue = new Queue(queueName, {
       connection: connOpts,

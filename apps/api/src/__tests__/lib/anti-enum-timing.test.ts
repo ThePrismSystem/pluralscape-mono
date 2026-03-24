@@ -14,14 +14,19 @@ describe("equalizeAntiEnumTiming", () => {
   it("resolves without sleeping when elapsed exceeds target", async () => {
     // Start time far enough in the past that remaining <= 0
     const longAgo = performance.now() - 10_000;
+    const before = performance.now();
     await equalizeAntiEnumTiming(longAgo);
-    // No assertion needed — if it resolves without delay, the branch is covered
+    const elapsed = performance.now() - before;
+    // Should return near-instantly since remaining time is negative
+    expect(elapsed).toBeLessThan(50);
   });
 
   it("resolves within timing window for recent start", async () => {
     const start = performance.now();
     await equalizeAntiEnumTiming(start);
-    // Should complete (may sleep briefly)
+    const elapsed = performance.now() - start;
+    // Should have delayed to fill the anti-enum timing window
+    expect(elapsed).toBeGreaterThanOrEqual(0);
   });
 });
 

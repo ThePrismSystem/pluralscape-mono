@@ -23,7 +23,9 @@ const TEST_BUCKET = "pluralscape-test";
 function exec(cmd: string): string {
   try {
     return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[minio-container] exec failed: ${msg}\n`);
     return "";
   }
 }

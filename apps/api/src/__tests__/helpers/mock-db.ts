@@ -68,3 +68,8 @@ export function mockDb(overrides?: Partial<MockChain>): {
 
   return { db: asDb(chain), chain };
 }
+
+/** Capture the first argument passed to chain.where for filter comparison. */
+export function captureWhereArg(chain: MockChain): unknown {
+  return chain.where.mock.calls[0]?.[0];
+}

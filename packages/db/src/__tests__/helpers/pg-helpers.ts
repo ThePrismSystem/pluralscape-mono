@@ -19,6 +19,7 @@ import {
   recoveryKeys,
   sessions,
 } from "../../schema/pg/auth.js";
+import { biometricTokens } from "../../schema/pg/biometric-tokens.js";
 import { blobMetadata } from "../../schema/pg/blob-metadata.js";
 import {
   acknowledgements,
@@ -136,6 +137,8 @@ export const PG_DDL = {
   recoveryKeysIndexes: indexDDL(recoveryKeys),
   deviceTransferRequests: pgTableToCreateDDL(deviceTransferRequests),
   deviceTransferRequestsIndexes: indexDDL(deviceTransferRequests),
+  biometricTokens: pgTableToCreateDDL(biometricTokens),
+  biometricTokensIndexes: indexDDL(biometricTokens),
   // --- Systems & Members ---
   systems: pgTableToCreateDDL(systems),
   systemsIndexes: indexDDL(systems),
@@ -736,6 +739,8 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.recoveryKeysIndexes);
   await pgExec(client, PG_DDL.deviceTransferRequests);
   await pgExec(client, PG_DDL.deviceTransferRequestsIndexes);
+  await pgExec(client, PG_DDL.biometricTokens);
+  await pgExec(client, PG_DDL.biometricTokensIndexes);
   await pgExec(client, PG_DDL.systems);
   await pgExec(client, PG_DDL.systemsIndexes);
   // Members

@@ -1,27 +1,19 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { mockDb } from "../helpers/mock-db.js";
+import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
+import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { MockChain } from "../helpers/mock-db.js";
 import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
-vi.mock("@pluralscape/crypto", () => ({
-  serializeEncryptedBlob: vi.fn(() => new Uint8Array([1, 2, 3])),
-  deserializeEncryptedBlob: vi.fn((data: Uint8Array) => ({
-    tier: 1,
-    algorithm: "xchacha20-poly1305",
-    keyVersion: null,
-    bucketId: null,
-    nonce: new Uint8Array(24),
-    ciphertext: new Uint8Array(data.slice(32)),
-  })),
-  InvalidInputError: class InvalidInputError extends Error {
-    override readonly name = "InvalidInputError" as const;
-  },
-}));
+vi.mock("@pluralscape/crypto", async () => {
+  const { createCryptoMock } = await import("../helpers/mock-crypto.js");
+  return createCryptoMock();
+});
 
 vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
@@ -62,8 +54,6 @@ const AUTH: AuthContext = {
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
-
-const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
 
 function makePendingRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -106,7 +96,6 @@ function makeDismissedRow(overrides: Record<string, unknown> = {}): Record<strin
 describe("createCheckInRecord", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("creates a check-in record with no encrypted data", async () => {
@@ -263,6 +252,19 @@ describe("createCheckInRecord", () => {
 // ── listCheckInRecords ───────────────────────────────────────────────
 
 describe("listCheckInRecords", () => {
+  async function callListWithFilter(opts = {}): Promise<MockChain> {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+    await listCheckInRecords(db, SYSTEM_ID, AUTH, opts);
+    return chain;
+  }
+
+  let baseWhereArg: unknown;
+  beforeAll(async () => {
+    const chain = await callListWithFilter();
+    baseWhereArg = captureWhereArg(chain);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -330,39 +332,31 @@ describe("listCheckInRecords", () => {
   });
 
   it("applies timerConfigId filter", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ timerConfigId: TIMER_ID });
 
-    await listCheckInRecords(db, SYSTEM_ID, AUTH, { timerConfigId: TIMER_ID });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("applies pending filter", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ pending: true });
 
-    await listCheckInRecords(db, SYSTEM_ID, AUTH, { pending: true });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("applies includeArchived filter", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ includeArchived: true });
 
-    await listCheckInRecords(db, SYSTEM_ID, AUTH, { includeArchived: true });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("applies cursor filter", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ cursor: "cir_some-cursor" });
 
-    await listCheckInRecords(db, SYSTEM_ID, AUTH, { cursor: "cir_some-cursor" });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("throws 404 for system ownership failure", async () => {
@@ -390,12 +384,9 @@ describe("listCheckInRecords", () => {
   });
 
   it("excludes archived records by default (no pending, no includeArchived)", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({});
 
-    await listCheckInRecords(db, SYSTEM_ID, AUTH, {});
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -494,7 +485,6 @@ describe("getCheckInRecord", () => {
 describe("respondCheckInRecord", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("responds to a pending check-in record", async () => {
@@ -690,7 +680,6 @@ describe("respondCheckInRecord", () => {
 describe("dismissCheckInRecord", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("dismisses a pending check-in record", async () => {
@@ -780,7 +769,6 @@ describe("dismissCheckInRecord", () => {
 describe("archiveCheckInRecord", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("archives a check-in record", async () => {
@@ -835,7 +823,6 @@ describe("archiveCheckInRecord", () => {
 describe("deleteCheckInRecord", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("deletes a check-in record", async () => {
@@ -898,7 +885,9 @@ describe("parseCheckInRecordQuery", () => {
   it("returns defaults for empty query", () => {
     const result = parseCheckInRecordQuery({});
 
-    expect(result).toBeDefined();
+    expect(result.pending).toBe(false);
+    expect(result.includeArchived).toBe(false);
+    expect(result.timerConfigId).toBeUndefined();
   });
 
   it("throws 400 for invalid query parameters", () => {

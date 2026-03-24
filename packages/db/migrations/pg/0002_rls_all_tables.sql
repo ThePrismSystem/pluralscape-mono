@@ -25,6 +25,12 @@ ALTER TABLE device_transfer_requests FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS device_transfer_requests_account_isolation ON device_transfer_requests;
 CREATE POLICY device_transfer_requests_account_isolation ON device_transfer_requests USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
 
+-- biometric_tokens
+ALTER TABLE biometric_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE biometric_tokens FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS biometric_tokens_account_isolation ON biometric_tokens;
+CREATE POLICY biometric_tokens_account_isolation ON biometric_tokens USING (session_id IN (SELECT id FROM sessions WHERE account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar)) WITH CHECK (session_id IN (SELECT id FROM sessions WHERE account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar));
+
 -- accounts
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accounts FORCE ROW LEVEL SECURITY;

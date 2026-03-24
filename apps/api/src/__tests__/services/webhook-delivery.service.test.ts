@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { mockDb } from "../helpers/mock-db.js";
+import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 
+import type { MockChain } from "../helpers/mock-db.js";
 import type {
   AccountId,
   SessionId,
@@ -93,6 +94,21 @@ describe("webhook-delivery service", () => {
   // ── listWebhookDeliveries ────────────────────────────────────────
 
   describe("listWebhookDeliveries", () => {
+    const WD_AUTH = makeAuth("acct_base1", "sys_base1");
+
+    async function callListWithFilter(opts = {}): Promise<MockChain> {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([]);
+      await listWebhookDeliveries(db, "sys_base1" as SystemId, WD_AUTH, opts);
+      return chain;
+    }
+
+    let baseWhereArg: unknown;
+    beforeAll(async () => {
+      const chain = await callListWithFilter();
+      baseWhereArg = captureWhereArg(chain);
+    });
+
     it("calls assertSystemOwnership", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
@@ -117,67 +133,52 @@ describe("webhook-delivery service", () => {
     });
 
     it("passes webhookId filter when provided", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      const auth = makeAuth("acct_wf1", "sys_wf1");
-      await listWebhookDeliveries(db, "sys_wf1" as SystemId, auth, {
+      const chain = await callListWithFilter({
         webhookId: "wh_filter1" as WebhookId,
       });
 
       expect(chain.select).toHaveBeenCalled();
-      expect(chain.where).toHaveBeenCalled();
+      expect(chain.where).toHaveBeenCalledTimes(1);
+      expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
     });
 
     it("passes status filter when provided", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      const auth = makeAuth("acct_sf1", "sys_sf1");
-      await listWebhookDeliveries(db, "sys_sf1" as SystemId, auth, {
+      const chain = await callListWithFilter({
         status: "failed" as WebhookDeliveryStatus,
       });
 
-      expect(chain.where).toHaveBeenCalled();
+      expect(chain.where).toHaveBeenCalledTimes(1);
+      expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
     });
 
     it("passes eventType filter when provided", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      const auth = makeAuth("acct_ef1", "sys_ef1");
-      await listWebhookDeliveries(db, "sys_ef1" as SystemId, auth, {
+      const chain = await callListWithFilter({
         eventType: "member.created" as WebhookEventType,
       });
 
-      expect(chain.where).toHaveBeenCalled();
+      expect(chain.where).toHaveBeenCalledTimes(1);
+      expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
     });
 
     it("passes cursor filter when provided", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      const auth = makeAuth("acct_cf1", "sys_cf1");
-      await listWebhookDeliveries(db, "sys_cf1" as SystemId, auth, {
+      const chain = await callListWithFilter({
         cursor: "wd_cursor_abc",
       });
 
-      expect(chain.where).toHaveBeenCalled();
+      expect(chain.where).toHaveBeenCalledTimes(1);
+      expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
     });
 
     it("passes all filters simultaneously", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      const auth = makeAuth("acct_all1", "sys_all1");
-      await listWebhookDeliveries(db, "sys_all1" as SystemId, auth, {
+      const chain = await callListWithFilter({
         webhookId: "wh_all1" as WebhookId,
         status: "success" as WebhookDeliveryStatus,
         eventType: "member.updated" as WebhookEventType,
         cursor: "wd_cursor_all",
       });
 
-      expect(chain.where).toHaveBeenCalled();
+      expect(chain.where).toHaveBeenCalledTimes(1);
+      expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
       expect(chain.orderBy).toHaveBeenCalled();
     });
 

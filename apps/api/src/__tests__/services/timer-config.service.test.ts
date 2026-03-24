@@ -1,27 +1,19 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { mockDb } from "../helpers/mock-db.js";
+import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
+import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { MockChain } from "../helpers/mock-db.js";
 import type { SystemId, TimerId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
-vi.mock("@pluralscape/crypto", () => ({
-  serializeEncryptedBlob: vi.fn(() => new Uint8Array([1, 2, 3])),
-  deserializeEncryptedBlob: vi.fn((data: Uint8Array) => ({
-    tier: 1,
-    algorithm: "xchacha20-poly1305",
-    keyVersion: null,
-    bucketId: null,
-    nonce: new Uint8Array(24),
-    ciphertext: new Uint8Array(data.slice(32)),
-  })),
-  InvalidInputError: class InvalidInputError extends Error {
-    override readonly name = "InvalidInputError" as const;
-  },
-}));
+vi.mock("@pluralscape/crypto", async () => {
+  const { createCryptoMock } = await import("../helpers/mock-crypto.js");
+  return createCryptoMock();
+});
 
 vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
@@ -61,8 +53,6 @@ const AUTH: AuthContext = {
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
-const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
-
 function makeTimerRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: TIMER_ID,
@@ -87,7 +77,6 @@ function makeTimerRow(overrides: Record<string, unknown> = {}): Record<string, u
 describe("createTimerConfig", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("creates a timer config with defaults", async () => {
@@ -211,6 +200,19 @@ describe("createTimerConfig", () => {
 });
 
 describe("listTimerConfigs", () => {
+  async function callListWithFilter(opts = {}): Promise<MockChain> {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+    await listTimerConfigs(db, SYSTEM_ID, AUTH, opts);
+    return chain;
+  }
+
+  let baseWhereArg: unknown;
+  beforeAll(async () => {
+    const chain = await callListWithFilter();
+    baseWhereArg = captureWhereArg(chain);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -254,30 +256,23 @@ describe("listTimerConfigs", () => {
   });
 
   it("applies cursor when provided", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ cursor: "tmr_some-cursor" });
 
-    await listTimerConfigs(db, SYSTEM_ID, AUTH, { cursor: "tmr_some-cursor" });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("filters out archived by default", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({});
 
-    await listTimerConfigs(db, SYSTEM_ID, AUTH, {});
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
   });
 
   it("includes archived when includeArchived is true", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ includeArchived: true });
 
-    await listTimerConfigs(db, SYSTEM_ID, AUTH, { includeArchived: true });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("returns hasMore true when more results exist", async () => {
@@ -425,7 +420,6 @@ describe("getTimerConfig", () => {
 describe("updateTimerConfig", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("updates timer config with version increment", async () => {
@@ -576,7 +570,6 @@ describe("updateTimerConfig", () => {
 describe("deleteTimerConfig", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("deletes timer config with no dependents", async () => {
@@ -644,7 +637,6 @@ describe("deleteTimerConfig", () => {
 describe("archiveTimerConfig", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("archives a timer config", async () => {
@@ -694,7 +686,6 @@ describe("archiveTimerConfig", () => {
 describe("restoreTimerConfig", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("restores an archived timer config", async () => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { mockDb } from "../helpers/mock-db.js";
+import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
@@ -8,55 +8,18 @@ import type { SystemId, WebhookId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
-vi.mock("node:crypto", () => ({
-  randomBytes: vi.fn(() => Buffer.from("a".repeat(64), "hex")),
-}));
-
-vi.mock("@pluralscape/types", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@pluralscape/types")>();
+vi.mock("node:crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:crypto")>();
   return {
     ...actual,
-    createId: vi.fn().mockReturnValue("wh_test-webhook-id"),
-    now: vi.fn().mockReturnValue(1700000000000),
-    toUnixMillis: vi.fn((v: number) => v),
-    toUnixMillisOrNull: vi.fn((v: number | null) => v),
+    randomBytes: vi.fn(() => Buffer.from("a".repeat(64), "hex")),
   };
 });
 
-vi.mock("@pluralscape/validation", () => ({
-  CreateWebhookConfigBodySchema: { safeParse: vi.fn() },
-  UpdateWebhookConfigBodySchema: { safeParse: vi.fn() },
-  WebhookConfigQuerySchema: { safeParse: vi.fn() },
-}));
-
-vi.mock("@pluralscape/db/pg", () => ({
-  webhookConfigs: {
-    id: "id",
-    systemId: "systemId",
-    url: "url",
-    eventTypes: "eventTypes",
-    enabled: "enabled",
-    cryptoKeyId: "cryptoKeyId",
-    version: "version",
-    archived: "archived",
-    archivedAt: "archivedAt",
-    createdAt: "createdAt",
-    updatedAt: "updatedAt",
-  },
-  webhookDeliveries: {
-    webhookId: "webhookId",
-    status: "status",
-  },
-}));
-
-vi.mock("drizzle-orm", () => ({
-  and: vi.fn((...args: unknown[]) => ({ type: "and", args })),
-  count: vi.fn(() => "count_expr"),
-  desc: vi.fn((col: unknown) => ({ type: "desc", col })),
-  eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
-  lt: vi.fn((col: unknown, val: unknown) => ({ type: "lt", col, val })),
-  sql: Object.assign(vi.fn(), { raw: vi.fn() }),
-}));
+vi.mock("@pluralscape/crypto", async () => {
+  const { createCryptoMock } = await import("../helpers/mock-crypto.js");
+  return createCryptoMock();
+});
 
 vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
@@ -66,27 +29,9 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
 }));
 
-vi.mock("../../lib/entity-lifecycle.js", () => ({
-  archiveEntity: vi.fn().mockResolvedValue(undefined),
-  restoreEntity: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("../../lib/occ-update.js", () => ({
-  assertOccUpdated: vi.fn(),
-}));
-
-vi.mock("../../lib/pagination.js", () => ({
-  buildPaginatedResult: vi.fn(),
-}));
-
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
-const { assertOccUpdated } = await import("../../lib/occ-update.js");
-const { buildPaginatedResult } = await import("../../lib/pagination.js");
-const { CreateWebhookConfigBodySchema, UpdateWebhookConfigBodySchema, WebhookConfigQuerySchema } =
-  await import("@pluralscape/validation");
 
 const {
   createWebhookConfig,
@@ -101,13 +46,13 @@ const {
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_test-system" as SystemId;
-const WH_ID = "wh_test-webhook" as WebhookId;
+const SYSTEM_ID = "sys_00000000-0000-4000-a000-000000000001" as SystemId;
+const WH_ID = "wh_00000000-0000-4000-a000-000000000002" as WebhookId;
 
 const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+  accountId: "acct_00000000-0000-4000-a000-000000000003" as AuthContext["accountId"],
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
+  sessionId: "sess_00000000-0000-4000-a000-000000000004" as AuthContext["sessionId"],
   accountType: "system",
   ownedSystemIds: new Set([SYSTEM_ID]),
 };
@@ -142,25 +87,21 @@ describe("webhook-config service", () => {
   // ── createWebhookConfig ────────────────────────────────────────────
 
   describe("createWebhookConfig", () => {
+    const validCreatePayload = {
+      url: "https://example.com/webhook",
+      eventTypes: ["member.created"],
+      enabled: true,
+      cryptoKeyId: undefined,
+    };
+
     it("creates a webhook config and returns result with secret", async () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow();
       chain.returning.mockResolvedValueOnce([row]);
 
-      const schema = vi.mocked(CreateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          url: "https://example.com/webhook",
-          eventTypes: ["member.created"],
-          enabled: true,
-          cryptoKeyId: null,
-        },
-      });
+      const result = await createWebhookConfig(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit);
 
-      const result = await createWebhookConfig(db, SYSTEM_ID, {}, AUTH, mockAudit);
-
-      expect(result.id).toBe(WH_ID);
+      expect(result.id).toEqual(expect.stringMatching(/^wh_/));
       expect(result.url).toBe("https://example.com/webhook");
       expect(result.secret).toBeDefined();
       expect(typeof result.secret).toBe("string");
@@ -169,12 +110,6 @@ describe("webhook-config service", () => {
 
     it("throws VALIDATION_ERROR when payload is invalid", async () => {
       const { db } = mockDb();
-
-      const schema = vi.mocked(CreateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
 
       await expect(
         createWebhookConfig(db, SYSTEM_ID, { bad: "payload" }, AUTH, mockAudit),
@@ -186,19 +121,15 @@ describe("webhook-config service", () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "production";
 
-      const schema = vi.mocked(CreateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          url: "http://example.com/webhook",
-          eventTypes: ["member.created"],
-          enabled: true,
-        },
-      });
-
-      await expect(createWebhookConfig(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-      );
+      await expect(
+        createWebhookConfig(
+          db,
+          SYSTEM_ID,
+          { ...validCreatePayload, url: "http://example.com/webhook" },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
 
       process.env.NODE_ENV = originalEnv;
     });
@@ -211,17 +142,13 @@ describe("webhook-config service", () => {
       const row = makeWebhookRow({ url: "http://localhost:3000/webhook" });
       chain.returning.mockResolvedValueOnce([row]);
 
-      const schema = vi.mocked(CreateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          url: "http://localhost:3000/webhook",
-          eventTypes: ["member.created"],
-          enabled: true,
-        },
-      });
-
-      const result = await createWebhookConfig(db, SYSTEM_ID, {}, AUTH, mockAudit);
+      const result = await createWebhookConfig(
+        db,
+        SYSTEM_ID,
+        { ...validCreatePayload, url: "http://localhost:3000/webhook" },
+        AUTH,
+        mockAudit,
+      );
       expect(result.url).toBe("http://localhost:3000/webhook");
 
       process.env.NODE_ENV = originalEnv;
@@ -231,19 +158,9 @@ describe("webhook-config service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const schema = vi.mocked(CreateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          url: "https://example.com/webhook",
-          eventTypes: ["member.created"],
-          enabled: true,
-        },
-      });
-
-      await expect(createWebhookConfig(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        "Failed to create webhook config",
-      );
+      await expect(
+        createWebhookConfig(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to create webhook config");
     });
 
     it("throws 404 when system ownership check fails", async () => {
@@ -251,7 +168,7 @@ describe("webhook-config service", () => {
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
       await expect(
-        createWebhookConfig(db, "sys_other" as SystemId, {}, AUTH, mockAudit),
+        createWebhookConfig(db, "sys_other" as SystemId, validCreatePayload, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -260,18 +177,18 @@ describe("webhook-config service", () => {
       const row = makeWebhookRow({ cryptoKeyId: null });
       chain.returning.mockResolvedValueOnce([row]);
 
-      const schema = vi.mocked(CreateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
+      const result = await createWebhookConfig(
+        db,
+        SYSTEM_ID,
+        {
           url: "https://example.com/webhook",
           eventTypes: ["member.created"],
           enabled: true,
           // cryptoKeyId omitted
         },
-      });
-
-      const result = await createWebhookConfig(db, SYSTEM_ID, {}, AUTH, mockAudit);
+        AUTH,
+        mockAudit,
+      );
       expect(result.cryptoKeyId).toBeNull();
     });
   });
@@ -279,68 +196,47 @@ describe("webhook-config service", () => {
   // ── listWebhookConfigs ─────────────────────────────────────────────
 
   describe("listWebhookConfigs", () => {
+    function callListWithFilter(
+      chain: ReturnType<typeof mockDb>["chain"],
+      rows: Record<string, unknown>[] = [],
+    ): void {
+      chain.limit.mockResolvedValueOnce(rows);
+    }
+
     it("returns paginated results with default options", async () => {
       const { db, chain } = mockDb();
-      const rows = [makeWebhookRow()];
-      chain.limit.mockResolvedValueOnce(rows);
-
-      const mockPaginated = {
-        items: [{ id: "wh_test1" }],
-        nextCursor: null,
-        hasMore: false,
-        totalCount: null,
-      };
-      vi.mocked(buildPaginatedResult).mockReturnValueOnce(mockPaginated);
+      callListWithFilter(chain, [makeWebhookRow()]);
 
       const result = await listWebhookConfigs(db, SYSTEM_ID, AUTH);
 
-      expect(result).toBe(mockPaginated);
-      expect(buildPaginatedResult).toHaveBeenCalledOnce();
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.id).toBe(WH_ID);
+      expect(result.hasMore).toBe(false);
     });
 
     it("excludes archived configs by default", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      vi.mocked(buildPaginatedResult).mockReturnValueOnce({
-        items: [],
-        nextCursor: null,
-        hasMore: false,
-        totalCount: null,
-      });
+      callListWithFilter(chain);
 
       await listWebhookConfigs(db, SYSTEM_ID, AUTH);
 
-      // The where clause should have been called (archived=false condition applied)
-      expect(chain.where).toHaveBeenCalled();
+      const whereArg = captureWhereArg(chain);
+      expect(whereArg).toBeDefined();
     });
 
     it("includes archived configs when includeArchived is true", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      vi.mocked(buildPaginatedResult).mockReturnValueOnce({
-        items: [],
-        nextCursor: null,
-        hasMore: false,
-        totalCount: null,
-      });
+      callListWithFilter(chain);
 
       await listWebhookConfigs(db, SYSTEM_ID, AUTH, { includeArchived: true });
 
-      expect(chain.where).toHaveBeenCalled();
+      const whereArg = captureWhereArg(chain);
+      expect(whereArg).toBeDefined();
     });
 
     it("applies cursor condition when cursor is provided", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      vi.mocked(buildPaginatedResult).mockReturnValueOnce({
-        items: [],
-        nextCursor: null,
-        hasMore: false,
-        totalCount: null,
-      });
+      callListWithFilter(chain);
 
       await listWebhookConfigs(db, SYSTEM_ID, AUTH, { cursor: "wh_prev-cursor" });
 
@@ -349,14 +245,7 @@ describe("webhook-config service", () => {
 
     it("caps limit at MAX_PAGE_LIMIT", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      vi.mocked(buildPaginatedResult).mockReturnValueOnce({
-        items: [],
-        nextCursor: null,
-        hasMore: false,
-        totalCount: null,
-      });
+      callListWithFilter(chain);
 
       await listWebhookConfigs(db, SYSTEM_ID, AUTH, { limit: 500 });
 
@@ -366,19 +255,29 @@ describe("webhook-config service", () => {
 
     it("uses DEFAULT_PAGE_LIMIT when limit is not provided", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      vi.mocked(buildPaginatedResult).mockReturnValueOnce({
-        items: [],
-        nextCursor: null,
-        hasMore: false,
-        totalCount: null,
-      });
+      callListWithFilter(chain);
 
       await listWebhookConfigs(db, SYSTEM_ID, AUTH);
 
       // DEFAULT_PAGE_LIMIT is 25, so limit(26) is called
       expect(chain.limit).toHaveBeenCalledWith(26);
+    });
+
+    it("returns hasMore true when more records exist", async () => {
+      const { db, chain } = mockDb();
+      // Return limit+1 rows to trigger hasMore
+      const rows = Array.from({ length: 26 }, (_, i) =>
+        makeWebhookRow({
+          id: `wh_00000000-0000-4000-a000-0000000001${String(i).padStart(2, "0")}`,
+        }),
+      );
+      callListWithFilter(chain, rows);
+
+      const result = await listWebhookConfigs(db, SYSTEM_ID, AUTH);
+
+      expect(result.hasMore).toBe(true);
+      expect(result.items).toHaveLength(25);
+      expect(result.nextCursor).not.toBeNull();
     });
 
     it("throws 404 when system ownership check fails", async () => {
@@ -410,7 +309,12 @@ describe("webhook-config service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        getWebhookConfig(db, SYSTEM_ID, "wh_nonexistent" as WebhookId, AUTH),
+        getWebhookConfig(
+          db,
+          SYSTEM_ID,
+          "wh_00000000-0000-4000-a000-000000000099" as WebhookId,
+          AUTH,
+        ),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -426,7 +330,7 @@ describe("webhook-config service", () => {
     it("maps row fields correctly via toWebhookConfigResult", async () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow({
-        id: "wh_mapped",
+        id: "wh_00000000-0000-4000-a000-000000000010",
         systemId: SYSTEM_ID,
         url: "https://mapped.example.com/hook",
         eventTypes: ["fronting.started", "fronting.ended"],
@@ -440,10 +344,15 @@ describe("webhook-config service", () => {
       });
       chain.limit.mockResolvedValueOnce([row]);
 
-      const result = await getWebhookConfig(db, SYSTEM_ID, "wh_mapped" as WebhookId, AUTH);
+      const result = await getWebhookConfig(
+        db,
+        SYSTEM_ID,
+        "wh_00000000-0000-4000-a000-000000000010" as WebhookId,
+        AUTH,
+      );
 
       expect(result).toEqual({
-        id: "wh_mapped",
+        id: "wh_00000000-0000-4000-a000-000000000010",
         systemId: SYSTEM_ID,
         url: "https://mapped.example.com/hook",
         eventTypes: ["fronting.started", "fronting.ended"],
@@ -466,18 +375,14 @@ describe("webhook-config service", () => {
       const updatedRow = makeWebhookRow({ version: 2, url: "https://new.example.com/hook" });
       chain.returning.mockResolvedValueOnce([updatedRow]);
 
-      vi.mocked(assertOccUpdated).mockResolvedValueOnce(updatedRow);
-
-      const schema = vi.mocked(UpdateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          url: "https://new.example.com/hook",
-          version: 1,
-        },
-      });
-
-      const result = await updateWebhookConfig(db, SYSTEM_ID, WH_ID, {}, AUTH, mockAudit);
+      const result = await updateWebhookConfig(
+        db,
+        SYSTEM_ID,
+        WH_ID,
+        { url: "https://new.example.com/hook", version: 1 },
+        AUTH,
+        mockAudit,
+      );
 
       expect(result.url).toBe("https://new.example.com/hook");
       expect(mockAudit).toHaveBeenCalledOnce();
@@ -485,12 +390,6 @@ describe("webhook-config service", () => {
 
     it("throws VALIDATION_ERROR when payload is invalid", async () => {
       const { db } = mockDb();
-
-      const schema = vi.mocked(UpdateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
 
       await expect(
         updateWebhookConfig(db, SYSTEM_ID, WH_ID, { bad: "data" }, AUTH, mockAudit),
@@ -502,18 +401,16 @@ describe("webhook-config service", () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "production";
 
-      const schema = vi.mocked(UpdateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          url: "http://insecure.example.com/hook",
-          version: 1,
-        },
-      });
-
-      await expect(updateWebhookConfig(db, SYSTEM_ID, WH_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-      );
+      await expect(
+        updateWebhookConfig(
+          db,
+          SYSTEM_ID,
+          WH_ID,
+          { url: "http://insecure.example.com/hook", version: 1 },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
 
       process.env.NODE_ENV = originalEnv;
     });
@@ -523,22 +420,17 @@ describe("webhook-config service", () => {
       const updatedRow = makeWebhookRow({ version: 2, enabled: false });
       chain.returning.mockResolvedValueOnce([updatedRow]);
 
-      vi.mocked(assertOccUpdated).mockResolvedValueOnce(updatedRow);
-
-      const schema = vi.mocked(UpdateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          enabled: false,
-          version: 1,
-          // url is undefined — no protocol check
-        },
-      });
-
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "production";
 
-      const result = await updateWebhookConfig(db, SYSTEM_ID, WH_ID, {}, AUTH, mockAudit);
+      const result = await updateWebhookConfig(
+        db,
+        SYSTEM_ID,
+        WH_ID,
+        { enabled: false, version: 1 },
+        AUTH,
+        mockAudit,
+      );
       expect(result.enabled).toBe(false);
 
       process.env.NODE_ENV = originalEnv;
@@ -546,43 +438,26 @@ describe("webhook-config service", () => {
 
     it("delegates to assertOccUpdated for version conflict detection", async () => {
       const { db, chain } = mockDb();
+      // update returns empty — triggers assertOccUpdated
       chain.returning.mockResolvedValueOnce([]);
+      // existsFn re-query: entity exists → 409 CONFLICT
+      chain.limit.mockResolvedValueOnce([{ id: WH_ID }]);
 
-      vi.mocked(assertOccUpdated).mockRejectedValueOnce(
-        Object.assign(new Error("Version conflict"), { status: 409, code: "CONFLICT" }),
-      );
-
-      const schema = vi.mocked(UpdateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: { version: 1 },
-      });
-
-      await expect(updateWebhookConfig(db, SYSTEM_ID, WH_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 409, code: "CONFLICT" }),
-      );
+      await expect(
+        updateWebhookConfig(db, SYSTEM_ID, WH_ID, { version: 1 }, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
     });
 
     it("delegates to assertOccUpdated for not-found detection", async () => {
       const { db, chain } = mockDb();
+      // update returns empty
       chain.returning.mockResolvedValueOnce([]);
+      // existsFn re-query: entity not found → 404 NOT_FOUND
+      chain.limit.mockResolvedValueOnce([]);
 
-      vi.mocked(assertOccUpdated).mockRejectedValueOnce(
-        Object.assign(new Error("Webhook config not found"), {
-          status: 404,
-          code: "NOT_FOUND",
-        }),
-      );
-
-      const schema = vi.mocked(UpdateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: { version: 1 },
-      });
-
-      await expect(updateWebhookConfig(db, SYSTEM_ID, WH_ID, {}, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-      );
+      await expect(
+        updateWebhookConfig(db, SYSTEM_ID, WH_ID, { version: 1 }, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
     it("throws 404 when system ownership check fails", async () => {
@@ -603,19 +478,14 @@ describe("webhook-config service", () => {
       });
       chain.returning.mockResolvedValueOnce([updatedRow]);
 
-      vi.mocked(assertOccUpdated).mockResolvedValueOnce(updatedRow);
-
-      const schema = vi.mocked(UpdateWebhookConfigBodySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {
-          eventTypes: ["fronting.started"],
-          enabled: false,
-          version: 1,
-        },
-      });
-
-      const result = await updateWebhookConfig(db, SYSTEM_ID, WH_ID, {}, AUTH, mockAudit);
+      const result = await updateWebhookConfig(
+        db,
+        SYSTEM_ID,
+        WH_ID,
+        { eventTypes: ["fronting.started"], enabled: false, version: 1 },
+        AUTH,
+        mockAudit,
+      );
       expect(result.eventTypes).toEqual(["fronting.started"]);
       expect(result.enabled).toBe(false);
     });
@@ -670,7 +540,13 @@ describe("webhook-config service", () => {
       setupDeleteMocks(chain, []);
 
       await expect(
-        deleteWebhookConfig(db, SYSTEM_ID, "wh_nonexistent" as WebhookId, AUTH, mockAudit),
+        deleteWebhookConfig(
+          db,
+          SYSTEM_ID,
+          "wh_00000000-0000-4000-a000-000000000099" as WebhookId,
+          AUTH,
+          mockAudit,
+        ),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
 
@@ -705,22 +581,64 @@ describe("webhook-config service", () => {
   // ── archiveWebhookConfig ───────────────────────────────────────────
 
   describe("archiveWebhookConfig", () => {
-    it("delegates to archiveEntity", async () => {
-      const { db } = mockDb();
+    /**
+     * Helper: configure mock chain for archive lifecycle flow.
+     *
+     * archiveEntity issues:
+     *   1. update().set().where().returning({id}) — archive attempt
+     *   2. select({id}).from().where()            — existence re-query (no .limit())
+     *
+     * When the update returns empty, query 2 ends at .where() with no .limit(),
+     * so the second .where() call must resolve to an array directly.
+     */
+    function setupArchiveMocks(
+      chain: ReturnType<typeof mockDb>["chain"],
+      updateResult: Record<string, unknown>[],
+      reQueryResult?: Record<string, unknown>[],
+    ): void {
+      chain.returning.mockResolvedValueOnce(updateResult);
+
+      if (reQueryResult !== undefined) {
+        let whereCallCount = 0;
+        chain.where.mockImplementation((): unknown => {
+          whereCallCount++;
+          // Call 2 is the re-query (no .limit() follows)
+          if (whereCallCount === 2) {
+            return Promise.resolve(reQueryResult);
+          }
+          return chain;
+        });
+      }
+    }
+
+    it("archives a webhook config", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ id: WH_ID }]);
 
       await archiveWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
 
-      expect(archiveEntity).toHaveBeenCalledOnce();
-      expect(archiveEntity).toHaveBeenCalledWith(
-        db,
-        SYSTEM_ID,
-        WH_ID,
-        AUTH,
-        mockAudit,
-        expect.objectContaining({
-          entityName: "Webhook config",
-          archiveEvent: "webhook-config.archived",
-        }),
+      expect(chain.transaction).toHaveBeenCalled();
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "webhook-config.archived" }),
+      );
+    });
+
+    it("throws 409 ALREADY_ARCHIVED when already archived", async () => {
+      const { db, chain } = mockDb();
+      setupArchiveMocks(chain, [], [{ id: WH_ID }]);
+
+      await expect(archiveWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 409, code: "ALREADY_ARCHIVED" }),
+      );
+    });
+
+    it("throws 404 when record not found (update empty, re-query empty)", async () => {
+      const { db, chain } = mockDb();
+      setupArchiveMocks(chain, [], []);
+
+      await expect(archiveWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
       );
     });
   });
@@ -728,31 +646,62 @@ describe("webhook-config service", () => {
   // ── restoreWebhookConfig ───────────────────────────────────────────
 
   describe("restoreWebhookConfig", () => {
-    it("delegates to restoreEntity and returns mapped result", async () => {
-      const row = makeWebhookRow({ archived: false, archivedAt: null });
-      vi.mocked(restoreEntity).mockImplementationOnce(
-        (_db, _sid, _eid, _auth, _audit, _cfg, toResult) => {
-          return Promise.resolve((toResult as (r: Record<string, unknown>) => unknown)(row));
-        },
-      );
+    /**
+     * Helper: configure mock chain for restore lifecycle flow.
+     * Same pattern as setupArchiveMocks — re-query ends at .where() with no .limit().
+     */
+    function setupRestoreMocks(
+      chain: ReturnType<typeof mockDb>["chain"],
+      updateResult: Record<string, unknown>[],
+      reQueryResult?: Record<string, unknown>[],
+    ): void {
+      chain.returning.mockResolvedValueOnce(updateResult);
 
-      const { db } = mockDb();
+      if (reQueryResult !== undefined) {
+        let whereCallCount = 0;
+        chain.where.mockImplementation((): unknown => {
+          whereCallCount++;
+          // Call 2 is the re-query (no .limit() follows)
+          if (whereCallCount === 2) {
+            return Promise.resolve(reQueryResult);
+          }
+          return chain;
+        });
+      }
+    }
+
+    it("restores a webhook config and returns mapped result", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow({ archived: false, archivedAt: null, version: 2 });
+      chain.returning.mockResolvedValueOnce([row]);
+
       const result = await restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
 
-      expect(restoreEntity).toHaveBeenCalledOnce();
-      expect(restoreEntity).toHaveBeenCalledWith(
-        db,
-        SYSTEM_ID,
-        WH_ID,
-        AUTH,
-        mockAudit,
-        expect.objectContaining({
-          entityName: "Webhook config",
-          restoreEvent: "webhook-config.restored",
-        }),
-        expect.any(Function),
+      expect(chain.transaction).toHaveBeenCalled();
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "webhook-config.restored" }),
       );
       expect(result.id).toBe(WH_ID);
+      expect(result.archived).toBe(false);
+    });
+
+    it("throws 409 NOT_ARCHIVED when not archived", async () => {
+      const { db, chain } = mockDb();
+      setupRestoreMocks(chain, [], [{ id: WH_ID }]);
+
+      await expect(restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 409, code: "NOT_ARCHIVED" }),
+      );
+    });
+
+    it("throws 404 when record not found", async () => {
+      const { db, chain } = mockDb();
+      setupRestoreMocks(chain, [], []);
+
+      await expect(restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
     });
   });
 
@@ -760,39 +709,21 @@ describe("webhook-config service", () => {
 
   describe("parseWebhookConfigQuery", () => {
     it("returns parsed query options on valid input", () => {
-      const schema = vi.mocked(WebhookConfigQuerySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: { includeArchived: true },
-      });
-
       const result = parseWebhookConfigQuery({ includeArchived: "true" });
 
       expect(result).toEqual({ includeArchived: true });
     });
 
     it("throws VALIDATION_ERROR on invalid query params", () => {
-      const schema = vi.mocked(WebhookConfigQuerySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: false,
-        error: { issues: [] },
-      });
-
-      expect(() => parseWebhookConfigQuery({ invalid: "param" })).toThrow(
+      expect(() => parseWebhookConfigQuery({ includeArchived: "not-a-boolean" })).toThrow(
         expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
       );
     });
 
     it("returns empty options when no query params provided", () => {
-      const schema = vi.mocked(WebhookConfigQuerySchema);
-      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
-        success: true,
-        data: {},
-      });
-
       const result = parseWebhookConfigQuery({});
 
-      expect(result).toEqual({});
+      expect(result).toEqual({ includeArchived: false });
     });
   });
 });

@@ -21,7 +21,9 @@ const POLL_INTERVAL_MS = 200;
 function exec(cmd: string): string {
   try {
     return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[valkey-container] exec failed: ${msg}\n`);
     return "";
   }
 }

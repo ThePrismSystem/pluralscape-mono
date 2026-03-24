@@ -1,9 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { MockChain } from "../helpers/mock-db.js";
 import type {
   CustomFrontId,
   FrontingCommentId,
@@ -15,20 +17,10 @@ import type {
 
 // ── Mock external deps ───────────────────────────────────────────────
 
-vi.mock("@pluralscape/crypto", () => ({
-  serializeEncryptedBlob: vi.fn(() => new Uint8Array([1, 2, 3])),
-  deserializeEncryptedBlob: vi.fn((data: Uint8Array) => ({
-    tier: 1,
-    algorithm: "xchacha20-poly1305",
-    keyVersion: null,
-    bucketId: null,
-    nonce: new Uint8Array(24),
-    ciphertext: new Uint8Array(data.slice(32)),
-  })),
-  InvalidInputError: class InvalidInputError extends Error {
-    override readonly name = "InvalidInputError" as const;
-  },
-}));
+vi.mock("@pluralscape/crypto", async () => {
+  const { createCryptoMock } = await import("../helpers/mock-crypto.js");
+  return createCryptoMock();
+});
 
 vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
@@ -74,8 +66,6 @@ const AUTH: AuthContext = {
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
-const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
-
 const VALID_CREATE_PARAMS = {
   encryptedData: VALID_BLOB_BASE64,
   memberId: MEMBER_ID,
@@ -109,7 +99,6 @@ function makeCommentRow(overrides: Record<string, unknown> = {}): Record<string,
 describe("createFrontingComment", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("creates a fronting comment successfully", async () => {
@@ -258,9 +247,29 @@ describe("createFrontingComment", () => {
 // ── listFrontingComments ─────────────────────────────────────────────
 
 describe("listFrontingComments", () => {
+  async function callListWithFilter(opts = {}): Promise<MockChain> {
+    const { db, chain } = mockDb();
+    // session lookup
+    chain.limit.mockResolvedValueOnce([{ id: SESSION_ID }]);
+    // comments query
+    chain.limit.mockResolvedValueOnce([]);
+    await listFrontingComments(db, SYSTEM_ID, SESSION_ID, AUTH, opts);
+    return chain;
+  }
+
+  /** The session lookup also calls .where(), so the comments filter is the second call. */
+  function captureCommentsWhereArg(chain: MockChain): unknown {
+    return chain.where.mock.calls[1]?.[0];
+  }
+
+  let baseWhereArg: unknown;
+  beforeAll(async () => {
+    const chain = await callListWithFilter();
+    baseWhereArg = captureCommentsWhereArg(chain);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("returns empty page when no comments exist", async () => {
@@ -311,37 +320,23 @@ describe("listFrontingComments", () => {
   });
 
   it("applies cursor when provided", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: SESSION_ID }]);
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ cursor: "fc_cursor-value" });
 
-    await listFrontingComments(db, SYSTEM_ID, SESSION_ID, AUTH, {
-      cursor: "fc_cursor-value",
-    });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(2);
+    expect(captureCommentsWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("includes archived comments when includeArchived is true", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: SESSION_ID }]);
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter({ includeArchived: true });
 
-    await listFrontingComments(db, SYSTEM_ID, SESSION_ID, AUTH, {
-      includeArchived: true,
-    });
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(2);
+    expect(captureCommentsWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
   it("excludes archived comments by default", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: SESSION_ID }]);
-    chain.limit.mockResolvedValueOnce([]);
+    const chain = await callListWithFilter();
 
-    await listFrontingComments(db, SYSTEM_ID, SESSION_ID, AUTH);
-
-    expect(chain.where).toHaveBeenCalled();
+    expect(chain.where).toHaveBeenCalledTimes(2);
   });
 
   it("caps limit to MAX_PAGE_LIMIT", async () => {
@@ -466,7 +461,6 @@ describe("getFrontingComment", () => {
 describe("updateFrontingComment", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("updates comment with version increment", async () => {
@@ -588,7 +582,6 @@ describe("updateFrontingComment", () => {
 describe("deleteFrontingComment", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("deletes a fronting comment successfully", async () => {
@@ -646,7 +639,6 @@ describe("deleteFrontingComment", () => {
 describe("archiveFrontingComment", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("archives a fronting comment successfully", async () => {
@@ -700,7 +692,6 @@ describe("archiveFrontingComment", () => {
 describe("restoreFrontingComment", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    mockAudit.mockClear();
   });
 
   it("restores an archived fronting comment", async () => {
