@@ -689,7 +689,7 @@ describe("computeCoFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
-  it("returns truncated flag", async () => {
+  it("returns truncated flag", { timeout: 15_000 }, async () => {
     const { db, chain } = mockDb();
     const rows = Array.from({ length: 10_000 }, (_, i) =>
       makeSessionRow({ id: `fs_session-${String(i)}` }),

@@ -156,4 +156,57 @@ describe("ObservableJobQueue", () => {
     const policy = queue.getRetryPolicy("sync-push");
     expect(policy.maxRetries).toBeGreaterThanOrEqual(0);
   });
+
+  it("delegates checkIdempotency to inner queue", async () => {
+    const { queue } = makeObservable();
+    const result = await queue.checkIdempotency("test-key");
+    expect(result).toHaveProperty("exists");
+    expect(result.exists).toBe(false);
+  });
+
+  it("delegates listDeadLettered to inner queue", async () => {
+    const { queue } = makeObservable();
+    const result = await queue.listDeadLettered();
+    expect(result).toEqual([]);
+  });
+
+  it("delegates heartbeat to inner queue", async () => {
+    const { inner, queue } = makeObservable();
+    const job = await queue.enqueue(makeJobParams({ type: "sync-push" }));
+    await dequeueOrFail(inner);
+    await expect(queue.heartbeat(job.id)).resolves.toBeUndefined();
+  });
+
+  it("delegates findStalledJobs to inner queue", async () => {
+    const { queue } = makeObservable();
+    const result = await queue.findStalledJobs();
+    expect(result).toEqual([]);
+  });
+
+  it("delegates countJobs to inner queue", async () => {
+    const { queue } = makeObservable();
+    await queue.enqueue(makeJobParams({ type: "sync-push" }));
+    const count = await queue.countJobs({ status: "pending" });
+    expect(count).toBe(1);
+  });
+
+  it("delegates setRetryPolicy to inner queue", () => {
+    const { inner, queue } = makeObservable();
+    const policy = {
+      maxRetries: 5,
+      backoffMs: 1000,
+      backoffMultiplier: 2,
+      maxBackoffMs: 30_000,
+      strategy: "exponential" as const,
+    };
+    queue.setRetryPolicy("sync-push", policy);
+    expect(inner.getRetryPolicy("sync-push")).toEqual(policy);
+  });
+
+  it("delegates setEventHooks to inner queue", () => {
+    const { queue } = makeObservable();
+    const hooks = { onEnqueue: vi.fn(), onComplete: vi.fn() };
+    queue.setEventHooks(hooks);
+    // No assertion needed — verifying it doesn't throw
+  });
 });

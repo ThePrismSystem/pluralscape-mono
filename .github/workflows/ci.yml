@@ -53,9 +53,32 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-  test-unit:
-    name: Unit Tests
+  test:
+    name: Tests (coverage)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18@sha256:a9abf4275f9e99bff8e6aed712b3b7dfec9cac1341bba01c1ffdfce9ff9fc34a
+        env:
+          POSTGRES_DB: pluralscape_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+      valkey:
+        image: valkey/valkey:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="valkey-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -68,8 +91,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Run unit tests with coverage
-        run: pnpm test:unit:coverage
+      - name: Run all tests with coverage
+        run: pnpm test:coverage
 
       - name: Upload coverage report
         if: always()
@@ -78,24 +101,6 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 14
-
-  test-integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
-
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Run integration tests
-        run: pnpm test:integration
 
   migrations:
     name: Migration Freshness

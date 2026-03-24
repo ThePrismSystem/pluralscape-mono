@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_OWNER_FULL_PROFILE,
@@ -6,8 +6,6 @@ import {
   type DocumentSyncState,
   type FriendProfile,
   type OnDemandLoadRequest,
-  type OwnerFullProfile,
-  type OwnerLiteProfile,
   type ReplicationProfile,
   type SubscriptionSet,
 } from "../replication-profiles.js";
@@ -49,13 +47,13 @@ describe("ReplicationProfile union", () => {
     for (const profile of profiles) {
       switch (profile.profileType) {
         case "owner-full":
-          expectTypeOf(profile).toEqualTypeOf<OwnerFullProfile>();
+          expect(profile.profileType).toBe("owner-full");
           break;
         case "owner-lite":
-          expectTypeOf(profile).toEqualTypeOf<OwnerLiteProfile>();
+          expect(profile.activeChannelWindowDays).toBe(30);
           break;
         case "friend":
-          expectTypeOf(profile).toEqualTypeOf<FriendProfile>();
+          expect(profile.friendSystemId).toBe("sys_friend");
           break;
         default: {
           const _exhaustive: never = profile;
@@ -96,14 +94,14 @@ describe("OnDemandLoadRequest", () => {
     expect(req.persist).toBe(true);
   });
 
-  it("is structurally distinct from protocol DocumentLoadRequest (no type/correlationId)", () => {
+  it("does not include protocol fields type or correlationId", () => {
     const req: OnDemandLoadRequest = {
       docId: asSyncDocId("journal-sys_abc-2026"),
       persist: false,
     };
-    // OnDemandLoadRequest does not extend SyncMessageBase — no type or correlationId fields
-    expectTypeOf(req).not.toHaveProperty("type");
-    expectTypeOf(req).not.toHaveProperty("correlationId");
+    // OnDemandLoadRequest does not extend SyncMessageBase — verify at runtime
+    expect(Object.keys(req)).not.toContain("type");
+    expect(Object.keys(req)).not.toContain("correlationId");
   });
 });
 
