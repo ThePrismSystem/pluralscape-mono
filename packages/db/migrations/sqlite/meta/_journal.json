@@ -5,78 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1774159974901,
-      "tag": "0000_condemned_stark_industries",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1774164942409,
-      "tag": "0001_careful_hulk",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1774196988476,
-      "tag": "0002_fine_ma_gnuci",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1774234944220,
-      "tag": "0003_soft_punisher",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1774240021459,
-      "tag": "0004_lucky_living_mummy",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1774244694260,
-      "tag": "0005_dry_medusa",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1774247516437,
-      "tag": "0006_dizzy_thunderbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1774251048007,
-      "tag": "0007_greedy_sauron",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1774253779720,
-      "tag": "0008_old_terrax",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1774256698067,
-      "tag": "0009_freezing_pet_avengers",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1774349748219,
-      "tag": "0010_curvy_misty_knight",
+      "when": 1774360884875,
+      "tag": "0000_shocking_wild_pack",
       "breakpoints": true
     }
   ]

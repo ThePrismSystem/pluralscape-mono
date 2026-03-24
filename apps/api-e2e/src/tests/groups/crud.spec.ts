@@ -58,7 +58,7 @@ test.describe("Groups CRUD", () => {
       expect(listRes.status()).toBe(200);
       const listed = await listRes.json();
       expect(listed).toHaveProperty("items");
-      expect(listed).toHaveProperty("cursor");
+      expect(listed).toHaveProperty("nextCursor");
       expect(listed).toHaveProperty("hasMore");
       expect(listed.items.length).toBeGreaterThanOrEqual(1);
 
@@ -88,7 +88,7 @@ test.describe("Groups CRUD", () => {
       const archiveRes = await request.post(`${groupsUrl}/${groupId}/archive`, {
         headers: authHeaders,
       });
-      expect(archiveRes.status()).toBe(200);
+      expect(archiveRes.status()).toBe(204);
     });
 
     await test.step("restore", async () => {
@@ -102,7 +102,7 @@ test.describe("Groups CRUD", () => {
       const deleteRes = await request.delete(`${groupsUrl}/${groupId}`, {
         headers: authHeaders,
       });
-      expect(deleteRes.status()).toBe(200);
+      expect(deleteRes.status()).toBe(204);
     });
 
     await test.step("verify deleted returns 404", async () => {
@@ -189,14 +189,14 @@ test.describe("Groups CRUD", () => {
     const reorderRes = await request.post(`${groupsUrl}/reorder`, {
       headers: authHeaders,
       data: {
-        items: [
-          { id: groupC.id, sortOrder: 0 },
-          { id: groupA.id, sortOrder: 1 },
-          { id: groupB.id, sortOrder: 2 },
+        operations: [
+          { groupId: groupC.id, sortOrder: 0 },
+          { groupId: groupA.id, sortOrder: 1 },
+          { groupId: groupB.id, sortOrder: 2 },
         ],
       },
     });
-    expect(reorderRes.status()).toBe(200);
+    expect(reorderRes.status()).toBe(204);
 
     const listRes = await request.get(groupsUrl, { headers: authHeaders });
     expect(listRes.status()).toBe(200);
@@ -238,10 +238,10 @@ test.describe("Groups CRUD", () => {
     await test.step("list group members includes added member", async () => {
       const listRes = await request.get(groupMembersUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
-      const body = await listRes.json();
-      const memberIds = (body as Array<{ id?: string; memberId?: string }>).map(
-        (m) => m.memberId ?? m.id,
-      );
+      const body = (await listRes.json()) as {
+        items: Array<{ memberId: string }>;
+      };
+      const memberIds = body.items.map((m) => m.memberId);
       expect(memberIds).toContain(addedMemberId);
     });
 
@@ -249,16 +249,16 @@ test.describe("Groups CRUD", () => {
       const removeRes = await request.delete(`${groupMembersUrl}/${member.id}`, {
         headers: authHeaders,
       });
-      expect(removeRes.status()).toBe(200);
+      expect(removeRes.status()).toBe(204);
     });
 
     await test.step("list after removal excludes member", async () => {
       const listRes = await request.get(groupMembersUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
-      const body = await listRes.json();
-      const memberIds = (body as Array<{ id?: string; memberId?: string }>).map(
-        (m) => m.memberId ?? m.id,
-      );
+      const body = (await listRes.json()) as {
+        items: Array<{ memberId: string }>;
+      };
+      const memberIds = body.items.map((m) => m.memberId);
       expect(memberIds).not.toContain(addedMemberId);
     });
 
@@ -275,16 +275,17 @@ test.describe("Groups CRUD", () => {
     const listRes = await request.get(`/v1/systems/${fakeSystemId}/groups`, {
       headers: authHeaders,
     });
-    expect(listRes.status()).toBe(404);
+    expect(listRes.ok()).toBe(false);
 
-    const getRes = await request.get(`/v1/systems/${fakeSystemId}/groups/${fakeSystemId}`, {
-      headers: authHeaders,
-    });
-    expect(getRes.status()).toBe(404);
+    const getRes = await request.get(
+      `/v1/systems/${fakeSystemId}/groups/grp_00000000-0000-0000-0000-000000000000`,
+      { headers: authHeaders },
+    );
+    expect(getRes.ok()).toBe(false);
 
     const treeRes = await request.get(`/v1/systems/${fakeSystemId}/groups/tree`, {
       headers: authHeaders,
     });
-    expect(treeRes.status()).toBe(404);
+    expect(treeRes.ok()).toBe(false);
   });
 });

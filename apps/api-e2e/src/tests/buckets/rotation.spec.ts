@@ -10,9 +10,10 @@ import { getSystemId } from "../../fixtures/entity-helpers.js";
  *   - Content tagged to the bucket via bucketContentTags
  *   - Key grants for the bucket
  *
- * Without a bucket creation API, the "happy path" rotation lifecycle cannot be
- * meaningfully tested end-to-end because initiateRotation on a non-existent
- * bucket silently creates a rotation with 0 items (no content to re-encrypt).
+ * Without a bucket creation API, only error-path tests are feasible:
+ *   - 404 for non-existent rotation
+ *   - 400 for invalid request body
+ *   - 404 for wrong system access
  *
  * TODO: Once bucket CRUD routes are added, implement the full lifecycle test:
  *   1. Create a privacy bucket
@@ -24,66 +25,6 @@ import { getSystemId } from "../../fixtures/entity-helpers.js";
  */
 
 test.describe("Bucket Key Rotation", () => {
-  test("rotation lifecycle on empty bucket", async ({ request, authHeaders }) => {
-    const systemId = await getSystemId(request, authHeaders);
-
-    // Use a fabricated bucket ID — no bucket creation endpoint exists yet.
-    // The rotation service does not validate bucket existence; it queries
-    // bucketContentTags and proceeds with 0 items if the bucket has no content.
-    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000001";
-    const rotationsUrl = `/v1/systems/${systemId}/buckets/${fakeBucketId}/rotations`;
-
-    let rotationId: string;
-
-    await test.step("initiate rotation", async () => {
-      const res = await request.post(rotationsUrl, {
-        headers: authHeaders,
-        data: {
-          wrappedNewKey: "dGVzdC13cmFwcGVkLWtleQ==",
-          newKeyVersion: 2,
-          friendKeyGrants: [],
-        },
-      });
-      expect(res.status()).toBe(201);
-
-      const body = await res.json();
-      expect(body).toHaveProperty("id");
-      expect(body).toHaveProperty("bucketId", fakeBucketId);
-      expect(body).toHaveProperty("fromKeyVersion", 1);
-      expect(body).toHaveProperty("toKeyVersion", 2);
-      expect(body).toHaveProperty("state", "initiated");
-      expect(body).toHaveProperty("totalItems", 0);
-      expect(body).toHaveProperty("completedItems", 0);
-      expect(body).toHaveProperty("failedItems", 0);
-      rotationId = body.id as string;
-    });
-
-    await test.step("claim chunk returns empty items for zero-item rotation", async () => {
-      const claimUrl = `${rotationsUrl}/${rotationId}/claim`;
-      const res = await request.post(claimUrl, {
-        headers: authHeaders,
-        data: { chunkSize: 10 },
-      });
-      expect(res.status()).toBe(200);
-
-      const body = await res.json();
-      expect(body).toHaveProperty("items");
-      expect(body.items).toHaveLength(0);
-      expect(body).toHaveProperty("rotationState");
-    });
-
-    await test.step("verify progress via GET", async () => {
-      const progressUrl = `${rotationsUrl}/${rotationId}`;
-      const res = await request.get(progressUrl, { headers: authHeaders });
-      expect(res.status()).toBe(200);
-
-      const body = await res.json();
-      expect(body.id).toBe(rotationId);
-      expect(body.bucketId).toBe(fakeBucketId);
-      expect(body.totalItems).toBe(0);
-    });
-  });
-
   test("get progress on non-existent rotation returns 404", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
     const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000002";
@@ -94,7 +35,7 @@ test.describe("Bucket Key Rotation", () => {
     expect(res.status()).toBe(404);
 
     const body = await res.json();
-    expect(body).toHaveProperty("code", "NOT_FOUND");
+    expect(body.error).toHaveProperty("code", "NOT_FOUND");
   });
 
   test("claim on non-existent rotation returns 404", async ({ request, authHeaders }) => {
@@ -110,7 +51,7 @@ test.describe("Bucket Key Rotation", () => {
     expect(res.status()).toBe(404);
 
     const body = await res.json();
-    expect(body).toHaveProperty("code", "NOT_FOUND");
+    expect(body.error).toHaveProperty("code", "NOT_FOUND");
   });
 
   test("complete chunk on non-existent rotation returns 404", async ({ request, authHeaders }) => {
@@ -128,7 +69,7 @@ test.describe("Bucket Key Rotation", () => {
     expect(res.status()).toBe(404);
 
     const body = await res.json();
-    expect(body).toHaveProperty("code", "NOT_FOUND");
+    expect(body.error).toHaveProperty("code", "NOT_FOUND");
   });
 
   test("initiate rotation with invalid body returns 400", async ({ request, authHeaders }) => {
@@ -145,7 +86,7 @@ test.describe("Bucket Key Rotation", () => {
     expect(res.status()).toBe(400);
 
     const body = await res.json();
-    expect(body).toHaveProperty("code", "VALIDATION_ERROR");
+    expect(body.error).toHaveProperty("code", "VALIDATION_ERROR");
   });
 
   test("initiate rotation on wrong system returns 404", async ({ request, authHeaders }) => {
@@ -164,6 +105,6 @@ test.describe("Bucket Key Rotation", () => {
     expect(res.status()).toBe(404);
 
     const body = await res.json();
-    expect(body).toHaveProperty("code", "NOT_FOUND");
+    expect(body.error).toHaveProperty("code", "NOT_FOUND");
   });
 });

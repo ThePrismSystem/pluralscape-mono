@@ -12,10 +12,14 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type {
   AccountId,
   ApiErrorCode,
+  BlobId,
+  BucketId,
+  BucketKeyRotationId,
   CheckInRecordId,
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
+  GroupId,
   MemberId,
   SessionId,
   SystemId,
@@ -124,4 +128,24 @@ export function genCheckInRecordId(): CheckInRecordId {
 
 export function genStructureEntityId(): SystemStructureEntityId {
   return `ste_${crypto.randomUUID()}` as SystemStructureEntityId;
+}
+
+export function genGroupId(): GroupId {
+  return `grp_${crypto.randomUUID()}` as GroupId;
+}
+
+export function genBlobId(): BlobId {
+  return `blob_${crypto.randomUUID()}` as BlobId;
+}
+
+export function genBucketId(): BucketId {
+  return `bkt_${crypto.randomUUID()}` as BucketId;
+}
+
+export function genRotationId(): BucketKeyRotationId {
+  return `rot_${crypto.randomUUID()}` as BucketKeyRotationId;
+}
+
+export function genAccountId(): AccountId {
+  return `acc_${crypto.randomUUID()}` as AccountId;
 }

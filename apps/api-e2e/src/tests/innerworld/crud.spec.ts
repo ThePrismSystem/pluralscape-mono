@@ -67,6 +67,7 @@ test.describe("Innerworld CRUD", () => {
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
       expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("nextCursor");
       expect(body.items.length).toBeGreaterThanOrEqual(1);
 
       const found = (body.items as Array<{ id: string }>).some((e) => e.id === entityId);
@@ -96,7 +97,7 @@ test.describe("Innerworld CRUD", () => {
       const archiveRes = await request.post(`${entitiesUrl}/${entityId}/archive`, {
         headers: authHeaders,
       });
-      expect(archiveRes.status()).toBe(200);
+      expect(archiveRes.status()).toBe(204);
     });
 
     await test.step("restore", async () => {
@@ -110,7 +111,7 @@ test.describe("Innerworld CRUD", () => {
       const deleteRes = await request.delete(`${entitiesUrl}/${entityId}`, {
         headers: authHeaders,
       });
-      expect(deleteRes.status()).toBe(200);
+      expect(deleteRes.status()).toBe(204);
     });
 
     await test.step("verify deleted returns 404", async () => {
@@ -161,6 +162,7 @@ test.describe("Innerworld CRUD", () => {
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
       expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("nextCursor");
       expect(body.items.length).toBeGreaterThanOrEqual(1);
 
       const found = (body.items as Array<{ id: string }>).some((r) => r.id === regionId);
@@ -190,7 +192,7 @@ test.describe("Innerworld CRUD", () => {
       const archiveRes = await request.post(`${regionsUrl}/${regionId}/archive`, {
         headers: authHeaders,
       });
-      expect(archiveRes.status()).toBe(200);
+      expect(archiveRes.status()).toBe(204);
     });
 
     await test.step("restore", async () => {
@@ -204,7 +206,7 @@ test.describe("Innerworld CRUD", () => {
       const deleteRes = await request.delete(`${regionsUrl}/${regionId}`, {
         headers: authHeaders,
       });
-      expect(deleteRes.status()).toBe(200);
+      expect(deleteRes.status()).toBe(204);
     });
 
     await test.step("verify deleted returns 404", async () => {

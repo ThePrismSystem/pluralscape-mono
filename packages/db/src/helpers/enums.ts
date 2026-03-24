@@ -208,6 +208,7 @@ export const AUDIT_EVENT_TYPES = [
   "field-definition.updated",
   "field-definition.archived",
   "field-definition.restored",
+  "field-definition.deleted",
   "field-value.set",
   "field-value.updated",
   "field-value.deleted",

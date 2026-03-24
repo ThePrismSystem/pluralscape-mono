@@ -18,6 +18,15 @@ const PG_READY_TIMEOUT_MS = 30_000;
 const MS_PER_SECOND = 1000;
 const DOCKER_CONTAINER_NAME = "pluralscape-e2e-pg";
 const DOCKER_PG_PORT = 15_432;
+const MINIO_CONTAINER_NAME = "pluralscape-minio-test";
+/** Default MinIO port matching TEST_MINIO_PORT in .env.example. */
+const DEFAULT_MINIO_PORT = 10_943;
+const MINIO_PORT = Number(process.env["TEST_MINIO_PORT"]) || DEFAULT_MINIO_PORT;
+const MINIO_READY_POLL_MS = 200;
+const MINIO_READY_TIMEOUT_MS = 30_000;
+const MINIO_BUCKET = "pluralscape-test";
+const MINIO_ROOT_USER = "minioadmin";
+const MINIO_ROOT_PASSWORD = "minioadmin";
 const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../");
 const API_DIR = path.join(MONOREPO_ROOT, "apps/api");
 
@@ -93,6 +102,77 @@ function waitForPostgres(databaseUrl: string): void {
   );
 }
 
+function ensureMinioContainer(): boolean {
+  // Check if the shared MinIO container is already running
+  try {
+    const status = execSync(
+      `docker ps --filter name=${MINIO_CONTAINER_NAME} --format "{{.Status}}"`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+    ).trim();
+    if (status.startsWith("Up")) return false; // already running, we didn't start it
+  } catch {
+    // Not running
+  }
+
+  // Check if container exists but is stopped
+  try {
+    const id = execSync(`docker ps -a --filter name=${MINIO_CONTAINER_NAME} --format "{{.ID}}"`, {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+    if (id) {
+      execSync(`docker start ${MINIO_CONTAINER_NAME}`, { stdio: "pipe" });
+      return false; // restarted existing, don't tear down
+    }
+  } catch {
+    // No existing container
+  }
+
+  // Create new container
+  execSync(
+    [
+      "docker run -d",
+      `--name ${MINIO_CONTAINER_NAME}`,
+      `-p ${String(MINIO_PORT)}:9000`,
+      `-e MINIO_ROOT_USER=${MINIO_ROOT_USER}`,
+      `-e MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}`,
+      "minio/minio:latest server /data",
+    ].join(" "),
+    { stdio: "pipe" },
+  );
+  return true; // we created it, teardown should clean up
+}
+
+async function waitForMinio(): Promise<void> {
+  const deadline = Date.now() + MINIO_READY_TIMEOUT_MS;
+  const url = `http://localhost:${String(MINIO_PORT)}/minio/health/live`;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return;
+    } catch {
+      // MinIO not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, MINIO_READY_POLL_MS));
+  }
+  throw new Error(`MinIO did not become healthy within ${String(MINIO_READY_TIMEOUT_MS)}ms`);
+}
+
+function ensureMinioBucket(): void {
+  // Use mc CLI inside the container to create the bucket (idempotent)
+  try {
+    execSync(
+      `docker exec ${MINIO_CONTAINER_NAME} mc alias set local http://localhost:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} 2>/dev/null`,
+      { stdio: "pipe" },
+    );
+    execSync(`docker exec ${MINIO_CONTAINER_NAME} mc mb local/${MINIO_BUCKET} 2>/dev/null`, {
+      stdio: "pipe",
+    });
+  } catch {
+    // Bucket may already exist — mc mb exits non-zero if so, which is fine
+  }
+}
+
 async function globalSetup(): Promise<void> {
   let databaseUrl = process.env["E2E_DATABASE_URL"];
   let startedContainer = false;
@@ -116,8 +196,23 @@ async function globalSetup(): Promise<void> {
     console.info("[e2e] Postgres is ready.");
   }
 
+  // Ensure MinIO is available for blob storage (reuses existing container if running)
+  let startedMinio = false;
+  if (dockerIsAvailable()) {
+    console.info("[e2e] Ensuring MinIO container is available...");
+    startedMinio = ensureMinioContainer();
+
+    console.info("[e2e] Waiting for MinIO to be ready...");
+    await waitForMinio();
+
+    console.info("[e2e] Ensuring MinIO bucket exists...");
+    ensureMinioBucket();
+    console.info("[e2e] MinIO is ready.");
+  }
+
   // Store for teardown
   process.env["E2E_STARTED_CONTAINER"] = startedContainer ? "1" : "";
+  process.env["E2E_STARTED_MINIO"] = startedMinio ? "1" : "";
 
   const emailPepper = process.env["EMAIL_HASH_PEPPER"] ?? DEFAULT_TEST_PEPPER;
 
@@ -150,7 +245,11 @@ async function globalSetup(): Promise<void> {
       EMAIL_HASH_PEPPER: emailPepper,
       NODE_ENV: "test",
       DISABLE_RATE_LIMIT: "1",
-      BLOB_STORAGE_PATH: "/tmp/e2e-blobs",
+      BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
+      BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
+      BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
+      AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
+      AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
     },
     stdio: "pipe",
   });

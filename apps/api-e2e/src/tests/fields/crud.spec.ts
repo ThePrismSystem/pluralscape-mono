@@ -103,6 +103,10 @@ test.describe("Fields CRUD", () => {
       const res = await request.delete(`${fieldsUrl}/${fieldId}`, {
         headers: authHeaders,
       });
+      if (res.status() !== 204) {
+        const body = await res.text();
+        console.error(`DELETE failed with ${String(res.status())}: ${body}`);
+      }
       expect(res.status()).toBe(204);
     });
 
@@ -134,8 +138,11 @@ test.describe("Fields CRUD", () => {
       const res = await request.get(valuesUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body).toHaveProperty("items");
-      const ids = (body.items as { fieldDefinitionId: string }[]).map((v) => v.fieldDefinitionId);
+      expect(body).toHaveProperty("data");
+      expect(body.data).toHaveProperty("items");
+      const ids = (body.data.items as { fieldDefinitionId: string }[]).map(
+        (v) => v.fieldDefinitionId,
+      );
       expect(ids).toContain(fieldDef.id);
     });
 

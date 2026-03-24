@@ -66,7 +66,7 @@ test.describe("Relationships CRUD", () => {
       expect(listRes.status()).toBe(200);
       const listed = await listRes.json();
       expect(listed).toHaveProperty("items");
-      expect(listed).toHaveProperty("cursor");
+      expect(listed).toHaveProperty("nextCursor");
       expect(listed).toHaveProperty("hasMore");
       expect(listed.items.length).toBeGreaterThanOrEqual(1);
 
@@ -81,6 +81,8 @@ test.describe("Relationships CRUD", () => {
       const updateRes = await request.put(`${relationshipsUrl}/${relationshipId}`, {
         headers: authHeaders,
         data: {
+          type: "sibling",
+          bidirectional: true,
           encryptedData: updatedEncryptedData,
           version: relationshipVersion,
         },
@@ -99,7 +101,7 @@ test.describe("Relationships CRUD", () => {
       const archiveRes = await request.post(`${relationshipsUrl}/${relationshipId}/archive`, {
         headers: authHeaders,
       });
-      expect(archiveRes.status()).toBe(200);
+      expect(archiveRes.status()).toBe(204);
     });
 
     await test.step("restore", async () => {
@@ -113,7 +115,7 @@ test.describe("Relationships CRUD", () => {
       const deleteRes = await request.delete(`${relationshipsUrl}/${relationshipId}`, {
         headers: authHeaders,
       });
-      expect(deleteRes.status()).toBe(200);
+      expect(deleteRes.status()).toBe(204);
     });
 
     await test.step("verify deleted returns 404", async () => {

@@ -130,7 +130,7 @@ test.describe("Blobs CRUD", () => {
       const deleteRes = await request.delete(`${blobsUrl}/${blobId}`, {
         headers: authHeaders,
       });
-      expect(deleteRes.status()).toBe(200);
+      expect(deleteRes.status()).toBe(204);
 
       const getAfterDelete = await request.get(`${blobsUrl}/${blobId}`, {
         headers: authHeaders,
@@ -153,11 +153,11 @@ test.describe("Blobs CRUD", () => {
     expect(listRes.status()).toBe(200);
     const body = (await listRes.json()) as {
       items: Array<{ id: string }>;
-      cursor: string | null;
+      nextCursor: string | null;
       hasMore: boolean;
     };
     expect(body.items.length).toBeGreaterThanOrEqual(2);
-    expect(body).toHaveProperty("cursor");
+    expect(body).toHaveProperty("nextCursor");
     expect(body).toHaveProperty("hasMore");
   });
 

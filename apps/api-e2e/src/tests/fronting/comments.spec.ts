@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { decryptFromApi, encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
-import { createFrontingSession, createMember, getSystemId } from "../../fixtures/entity-helpers.js";
+import { createMember, getSystemId } from "../../fixtures/entity-helpers.js";
 
 test.describe("Fronting Comments CRUD", () => {
   test.beforeAll(async () => {
@@ -13,7 +13,18 @@ test.describe("Fronting Comments CRUD", () => {
   }) => {
     const systemId = await getSystemId(request, authHeaders);
     const member = await createMember(request, authHeaders, systemId, "E2E Comment Member");
-    const session = await createFrontingSession(request, authHeaders, systemId, [member.id]);
+
+    // Create fronting session with the correct body shape (memberId + startTime, not memberIds)
+    const sessionRes = await request.post(`/v1/systems/${systemId}/fronting-sessions`, {
+      headers: authHeaders,
+      data: {
+        memberId: member.id,
+        startTime: Date.now(),
+        encryptedData: encryptForApi({ note: "E2E test session" }),
+      },
+    });
+    expect(sessionRes.status()).toBe(201);
+    const session = (await sessionRes.json()) as { id: string; version: number };
 
     const baseUrl = `/v1/systems/${systemId}/fronting-sessions/${session.id}/comments`;
     let commentId: string;
@@ -54,6 +65,7 @@ test.describe("Fronting Comments CRUD", () => {
       expect(res.status()).toBe(200);
       const body = await res.json();
       expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("nextCursor");
       expect(body).toHaveProperty("hasMore");
       const ids = (body.items as { id: string }[]).map((c) => c.id);
       expect(ids).toContain(commentId);
@@ -77,7 +89,7 @@ test.describe("Fronting Comments CRUD", () => {
       const res = await request.post(`${baseUrl}/${commentId}/archive`, {
         headers: authHeaders,
       });
-      expect(res.status()).toBe(200);
+      expect(res.status()).toBe(204);
     });
 
     await test.step("restore comment", async () => {
@@ -91,7 +103,7 @@ test.describe("Fronting Comments CRUD", () => {
       const res = await request.delete(`${baseUrl}/${commentId}`, {
         headers: authHeaders,
       });
-      expect(res.status()).toBe(200);
+      expect(res.status()).toBe(204);
     });
 
     await test.step("verify deleted returns 404", async () => {

@@ -108,12 +108,13 @@ export async function createFrontingSession(
   request: APIRequestContext,
   headers: Record<string, string>,
   systemId: string,
-  memberIds: string[],
+  memberId: string,
 ): Promise<{ id: string; version: number }> {
   const res = await request.post(`/v1/systems/${systemId}/fronting-sessions`, {
     headers,
     data: {
-      memberIds,
+      memberId,
+      startTime: Date.now(),
       encryptedData: encryptForApi({ note: "E2E test session" }),
     },
   });
