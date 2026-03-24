@@ -228,6 +228,12 @@ export async function computeCoFrontingBreakdown(
   // Only include sessions with a member subject for co-fronting analysis
   const memberSessions = rows.filter((r) => r.memberId !== null);
 
+  // Pre-compute clamped bounds to avoid redundant recalculation in sort + loops
+  const boundsMap = new Map<string, { start: number; end: number }>();
+  for (const session of memberSessions) {
+    boundsMap.set(session.id, getClampedBounds(session, dateRange));
+  }
+
   // Calculate pair overlaps
   const pairMap = new Map<
     string,
@@ -236,8 +242,9 @@ export async function computeCoFrontingBreakdown(
 
   // Sort by clamped start time ascending for early termination
   const sorted = [...memberSessions].sort((a, b) => {
-    const boundsA = getClampedBounds(a, dateRange);
-    const boundsB = getClampedBounds(b, dateRange);
+    const boundsA = boundsMap.get(a.id);
+    const boundsB = boundsMap.get(b.id);
+    if (!boundsA || !boundsB) return 0;
     return boundsA.start - boundsB.start;
   });
 
@@ -245,14 +252,15 @@ export async function computeCoFrontingBreakdown(
     const sessionA = sorted[i];
     if (!sessionA) continue;
 
-    const boundsA = getClampedBounds(sessionA, dateRange);
-    if (boundsA.end <= boundsA.start) continue;
+    const boundsA = boundsMap.get(sessionA.id);
+    if (!boundsA || boundsA.end <= boundsA.start) continue;
 
     for (let j = i + 1; j < sorted.length; j++) {
       const sessionB = sorted[j];
       if (!sessionB) continue;
 
-      const boundsB = getClampedBounds(sessionB, dateRange);
+      const boundsB = boundsMap.get(sessionB.id);
+      if (!boundsB) continue;
 
       // Since sorted by start, if B starts after A ends, no more overlaps for A
       if (boundsB.start >= boundsA.end) break;
@@ -298,8 +306,8 @@ export async function computeCoFrontingBreakdown(
   }
   const events: SweepEvent[] = [];
   for (const session of memberSessions) {
-    const bounds = getClampedBounds(session, dateRange);
-    if (bounds.end <= bounds.start) continue;
+    const bounds = boundsMap.get(session.id);
+    if (!bounds || bounds.end <= bounds.start) continue;
     events.push({ time: bounds.start, delta: 1 }, { time: bounds.end, delta: -1 });
   }
   // Sort by time; at the same time, process starts before ends

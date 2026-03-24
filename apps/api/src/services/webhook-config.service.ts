@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { resolve4, resolve6 } from "node:dns/promises";
 
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
@@ -13,7 +12,7 @@ import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
-import { isPrivateIp } from "../lib/ip-validation.js";
+import { resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -102,12 +101,9 @@ function toWebhookConfigResult(row: {
  *
  * - Enforces HTTPS in production.
  * - Resolves the hostname and checks all resolved IPs against private/reserved ranges.
- * - Skips DNS resolution in non-production environments to avoid network
- *   dependencies in tests and allow localhost during development.
  */
 async function validateWebhookUrl(url: string): Promise<void> {
-  const isProduction = process.env.NODE_ENV === "production";
-  if (isProduction && !url.startsWith("https://")) {
+  if (process.env.NODE_ENV === "production" && !url.startsWith("https://")) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
@@ -115,45 +111,14 @@ async function validateWebhookUrl(url: string): Promise<void> {
     );
   }
 
-  // Skip DNS resolution in non-production environments
-  if (!isProduction) {
-    return;
-  }
-
-  let hostname: string;
   try {
-    hostname = new URL(url).hostname;
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Webhook URL is not a valid URL");
-  }
-
-  // Resolve both IPv4 and IPv6 addresses
-  const [v4Result, v6Result] = await Promise.allSettled([resolve4(hostname), resolve6(hostname)]);
-
-  const resolvedIps: string[] = [];
-  if (v4Result.status === "fulfilled") {
-    resolvedIps.push(...v4Result.value);
-  }
-  if (v6Result.status === "fulfilled") {
-    resolvedIps.push(...v6Result.value);
-  }
-
-  if (resolvedIps.length === 0) {
+    await resolveAndValidateUrl(url);
+  } catch (error: unknown) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
-      "Webhook URL hostname could not be resolved",
+      error instanceof Error ? error.message : "Webhook URL validation failed",
     );
-  }
-
-  for (const ip of resolvedIps) {
-    if (isPrivateIp(ip)) {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Webhook URL must not resolve to a private or reserved IP address",
-      );
-    }
   }
 }
 

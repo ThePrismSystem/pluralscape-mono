@@ -905,3 +905,36 @@ describe("computeCoFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 });
+
+// ── Truncation ───────────────────────────────────────────────────────
+
+describe("analytics truncation", () => {
+  /** Must match the production constant in analytics.service.ts. */
+  const MAX_ANALYTICS_SESSIONS = 10_000;
+
+  it("returns truncated: true when session count hits the limit", async () => {
+    const { db, chain } = mockDb();
+    const sessions = Array.from({ length: MAX_ANALYTICS_SESSIONS }, (_, i) =>
+      makeSessionRow({
+        id: `fs_${String(i).padStart(36, "0")}`,
+        startTime: NOW - (MAX_ANALYTICS_SESSIONS - i) * 3_600_000,
+        endTime: NOW - (MAX_ANALYTICS_SESSIONS - i - 1) * 3_600_000,
+      }),
+    );
+    chain.limit.mockResolvedValueOnce(sessions);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    expect(result.truncated).toBe(true);
+    expect(result.subjectBreakdowns.length).toBeGreaterThan(0);
+  });
+
+  it("returns truncated: false when below the limit", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([makeSessionRow()]);
+
+    const result = await computeFrontingBreakdown(db, SYSTEM_ID, AUTH, makeDateRange());
+
+    expect(result.truncated).toBe(false);
+  });
+});

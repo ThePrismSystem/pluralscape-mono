@@ -685,6 +685,22 @@ describe("archiveFrontingComment", () => {
       archiveFrontingComment(db, SYSTEM_ID, SESSION_ID, COMMENT_ID, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
+
+  it("throws 409 ALREADY_ARCHIVED when comment exists but is already archived", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+    chain.limit.mockResolvedValueOnce([{ id: COMMENT_ID }]);
+
+    await expect(
+      archiveFrontingComment(db, SYSTEM_ID, SESSION_ID, COMMENT_ID, AUTH, mockAudit),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        status: 409,
+        code: "ALREADY_ARCHIVED",
+        message: "Fronting comment is already archived",
+      }),
+    );
+  });
 });
 
 // ── restoreFrontingComment ───────────────────────────────────────────
@@ -756,5 +772,21 @@ describe("restoreFrontingComment", () => {
     await expect(
       restoreFrontingComment(db, SYSTEM_ID, SESSION_ID, COMMENT_ID, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 409 NOT_ARCHIVED when comment exists but is not archived", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+    chain.limit.mockResolvedValueOnce([{ id: COMMENT_ID }]);
+
+    await expect(
+      restoreFrontingComment(db, SYSTEM_ID, SESSION_ID, COMMENT_ID, AUTH, mockAudit),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        status: 409,
+        code: "NOT_ARCHIVED",
+        message: "Fronting comment is not archived",
+      }),
+    );
   });
 });

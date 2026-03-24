@@ -33,9 +33,6 @@ export const MAX_ACTIVE_SESSIONS = 200;
 /** Number of random bytes for webhook HMAC signing secrets (32 bytes = 256-bit). */
 export const WEBHOOK_SECRET_BYTES = 32;
 
-/** Maximum analytics date span in milliseconds (366 days). */
-export const MAX_ANALYTICS_DATE_SPAN_MS = 366 * 86_400_000;
-
 /** Maximum number of retry attempts for webhook delivery. */
 export const WEBHOOK_MAX_RETRY_ATTEMPTS = 5;
 

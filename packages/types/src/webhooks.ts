@@ -52,14 +52,12 @@ export interface WebhookDelivery {
   readonly lastAttemptAt: UnixMillis | null;
   readonly nextRetryAt: UnixMillis | null;
   readonly createdAt: UnixMillis;
-  readonly archived: boolean;
+  readonly archived: false;
   readonly archivedAt: UnixMillis | null;
 }
 
 /** An archived webhook delivery. */
-export interface ArchivedWebhookDelivery extends Omit<WebhookDelivery, "archived"> {
-  readonly archived: true;
-}
+export type ArchivedWebhookDelivery = Archived<WebhookDelivery>;
 
 /** Maps each webhook event type to its expected payload shape. Placeholder for future per-event typing. */
 export type WebhookEventPayloadMap = { [K in WebhookEventType]: Record<string, unknown> };

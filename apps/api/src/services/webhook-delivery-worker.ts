@@ -1,11 +1,10 @@
 import { createHmac } from "node:crypto";
-import { resolve4, resolve6 } from "node:dns/promises";
 
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
-import { isPrivateIp } from "../lib/ip-validation.js";
+import { resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { logger } from "../lib/logger.js";
 import {
   WEBHOOK_BASE_BACKOFF_MS,
@@ -125,42 +124,20 @@ export async function processWebhookDelivery(
     return;
   }
 
-  // Pre-flight SSRF check: re-resolve hostname to prevent DNS rebinding attacks.
-  // Skipped in non-production environments to avoid network dependencies in tests.
-  if (process.env.NODE_ENV === "production") {
-    let hostname: string;
-    try {
-      hostname = new URL(config.url).hostname;
-    } catch {
-      logger.warn(`[webhook-worker] invalid URL for delivery ${deliveryId}: ${config.url}`);
-      await db
-        .update(webhookDeliveries)
-        .set({ status: "failed", lastAttemptAt: now() })
-        .where(eq(webhookDeliveries.id, deliveryId));
-      return;
-    }
-
-    const [v4Result, v6Result] = await Promise.allSettled([resolve4(hostname), resolve6(hostname)]);
-
-    const resolvedIps: string[] = [];
-    if (v4Result.status === "fulfilled") {
-      resolvedIps.push(...v4Result.value);
-    }
-    if (v6Result.status === "fulfilled") {
-      resolvedIps.push(...v6Result.value);
-    }
-
-    const hasPrivateIp = resolvedIps.some((ip) => isPrivateIp(ip));
-    if (resolvedIps.length === 0 || hasPrivateIp) {
-      logger.warn(
-        `[webhook-worker] SSRF blocked for delivery ${deliveryId}: URL ${config.url} resolves to private/unresolvable address`,
-      );
-      await db
-        .update(webhookDeliveries)
-        .set({ status: "failed", lastAttemptAt: now() })
-        .where(eq(webhookDeliveries.id, deliveryId));
-      return;
-    }
+  // Pre-flight SSRF check: re-resolve hostname to prevent DNS changes since config creation.
+  try {
+    await resolveAndValidateUrl(config.url);
+  } catch (error: unknown) {
+    logger.warn("[webhook-worker] SSRF validation failed for delivery", {
+      deliveryId,
+      url: config.url,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    await db
+      .update(webhookDeliveries)
+      .set({ status: "failed", lastAttemptAt: now() })
+      .where(eq(webhookDeliveries.id, deliveryId));
+    return;
   }
 
   const payloadJson = JSON.stringify(payload);

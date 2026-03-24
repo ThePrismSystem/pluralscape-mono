@@ -309,6 +309,10 @@ export interface CrdtWebhookConfig extends CrdtAuditFields {
  *
  * Reports are immutable once created — no update endpoint exists.
  * Immutability is enforced at the API layer.
+ *
+ * Intentionally omits CrdtAuditFields -- reports are immutable, so
+ * createdAt/updatedAt semantics do not apply. The generatedAt field
+ * serves as the creation timestamp.
  */
 export interface CrdtFrontingReport {
   id: CrdtString;

@@ -1,9 +1,8 @@
 import { MS_PER_DAY } from "@pluralscape/types";
-import { AnalyticsQuerySchema } from "@pluralscape/validation";
+import { AnalyticsQuerySchema, MAX_ANALYTICS_CUSTOM_RANGE_MS } from "@pluralscape/validation";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { MAX_ANALYTICS_DATE_SPAN_MS } from "../service.constants.js";
 
 import type { DateRangeFilter, DateRangePreset, UnixMillis } from "@pluralscape/types";
 
@@ -31,7 +30,7 @@ export function parseAnalyticsQuery(query: Record<string, string | undefined>): 
   if (preset === "all-time") {
     return {
       preset: "all-time",
-      start: Math.max(0, now - MAX_ANALYTICS_DATE_SPAN_MS) as UnixMillis,
+      start: Math.max(0, now - MAX_ANALYTICS_CUSTOM_RANGE_MS) as UnixMillis,
       end: now as UnixMillis,
     };
   }

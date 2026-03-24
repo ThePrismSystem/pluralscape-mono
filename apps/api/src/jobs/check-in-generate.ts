@@ -166,7 +166,9 @@ export function createCheckInGenerateHandler(
     } while (cursor !== null);
 
     if (errorCount > 0) {
-      logger.error("Check-in generation completed with errors", { errorCount });
+      throw new Error(
+        `Check-in generation failed: ${String(errorCount)} config(s) errored during processing`,
+      );
     }
   };
 }

@@ -304,7 +304,7 @@ describe("createCheckInGenerateHandler", () => {
     expect(chain.onConflictDoNothing).toHaveBeenCalledOnce();
   });
 
-  it("isolates per-config errors and continues", async () => {
+  it("isolates per-config errors and continues processing remaining configs", async () => {
     const { db, chain } = mockDb();
 
     const config1 = makeConfig({ id: "tmr_test-1" });
@@ -320,7 +320,8 @@ describe("createCheckInGenerateHandler", () => {
 
     const handler = createCheckInGenerateHandler(db);
 
-    await handler(stubJob(), stubCtx());
+    // Handler still processes all configs, then throws at the end
+    await expect(handler(stubJob(), stubCtx())).rejects.toThrow("errored during processing");
 
     expect(loggerWarnMock).toHaveBeenCalledOnce();
     expect(chain.insert).toHaveBeenCalledTimes(2);
@@ -393,7 +394,7 @@ describe("createCheckInGenerateHandler", () => {
     );
   });
 
-  it("logs error summary when configs fail", async () => {
+  it("throws when configs fail during processing", async () => {
     const { db, chain } = mockDb();
 
     chain.limit.mockResolvedValue([makeConfig({ id: "tmr_test-1" })]);
@@ -402,11 +403,7 @@ describe("createCheckInGenerateHandler", () => {
     });
 
     const handler = createCheckInGenerateHandler(db);
-    await handler(stubJob(), stubCtx());
 
-    expect(loggerErrorMock).toHaveBeenCalledOnce();
-    expect(loggerErrorMock).toHaveBeenCalledWith("Check-in generation completed with errors", {
-      errorCount: 1,
-    });
+    await expect(handler(stubJob(), stubCtx())).rejects.toThrow("errored during processing");
   });
 });

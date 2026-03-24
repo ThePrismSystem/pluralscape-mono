@@ -29,6 +29,10 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
 }));
 
+vi.mock("../../lib/ip-validation.js", () => ({
+  resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");

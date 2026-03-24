@@ -1,8 +1,8 @@
 import { MS_PER_DAY } from "@pluralscape/types";
+import { MAX_ANALYTICS_CUSTOM_RANGE_MS } from "@pluralscape/validation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
-import { MAX_ANALYTICS_DATE_SPAN_MS } from "../../service.constants.js";
 import { parseAnalyticsQuery } from "../../services/analytics-query.service.js";
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ describe("parseAnalyticsQuery", () => {
 
     expect(result).toEqual({
       preset: "all-time",
-      start: Math.max(0, FAKE_NOW - MAX_ANALYTICS_DATE_SPAN_MS),
+      start: Math.max(0, FAKE_NOW - MAX_ANALYTICS_CUSTOM_RANGE_MS),
       end: FAKE_NOW,
     });
   });

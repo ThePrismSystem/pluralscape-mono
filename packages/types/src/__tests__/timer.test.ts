@@ -62,7 +62,7 @@ describe("CheckInRecord", () => {
     expectTypeOf<CheckInRecord["respondedByMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<CheckInRecord["respondedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<CheckInRecord["dismissed"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<CheckInRecord["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<CheckInRecord["archived"]>().toEqualTypeOf<false>();
     expectTypeOf<CheckInRecord["archivedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 

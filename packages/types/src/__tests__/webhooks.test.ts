@@ -103,8 +103,8 @@ describe("WebhookDelivery", () => {
     expectTypeOf<WebhookDelivery["archivedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 
-  it("has archived as boolean", () => {
-    expectTypeOf<WebhookDelivery["archived"]>().toEqualTypeOf<boolean>();
+  it("has archived as false literal", () => {
+    expectTypeOf<WebhookDelivery["archived"]>().toEqualTypeOf<false>();
   });
 
   it("ArchivedWebhookDelivery has archived as true literal", () => {

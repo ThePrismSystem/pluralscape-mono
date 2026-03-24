@@ -1,3 +1,4 @@
+import { resolve4, resolve6 } from "node:dns/promises";
 import { isIP } from "node:net";
 
 /** Matches dotted-decimal IPv4 addresses (4 octets of 1-3 digits). */
@@ -26,6 +27,30 @@ export const IPV4_LINK_LOCAL = "169.254.0.0/16";
 /** IPv4 "this network" range (0.0.0.0/8). */
 export const IPV4_THIS_NETWORK = "0.0.0.0/8";
 
+/** Carrier-Grade NAT range (100.64.0.0/10, RFC 6598). */
+export const IPV4_CGNAT = "100.64.0.0/10";
+
+/** Benchmarking range (198.18.0.0/15, RFC 2544). */
+export const IPV4_BENCHMARKING = "198.18.0.0/15";
+
+/** IETF protocol assignments (192.0.0.0/24, RFC 6890). */
+export const IPV4_IETF_PROTOCOL = "192.0.0.0/24";
+
+/** TEST-NET-1 documentation range (192.0.2.0/24, RFC 5737). */
+export const IPV4_TEST_NET_1 = "192.0.2.0/24";
+
+/** TEST-NET-2 documentation range (198.51.100.0/24, RFC 5737). */
+export const IPV4_TEST_NET_2 = "198.51.100.0/24";
+
+/** TEST-NET-3 documentation range (203.0.113.0/24, RFC 5737). */
+export const IPV4_TEST_NET_3 = "203.0.113.0/24";
+
+/** Reserved for future use (240.0.0.0/4). */
+export const IPV4_RESERVED = "240.0.0.0/4";
+
+/** Limited broadcast address (255.255.255.255/32). */
+export const IPV4_BROADCAST = "255.255.255.255/32";
+
 /** All blocked IPv4 CIDR ranges for SSRF protection. */
 export const BLOCKED_IPV4_RANGES = [
   IPV4_LOOPBACK,
@@ -34,6 +59,14 @@ export const BLOCKED_IPV4_RANGES = [
   IPV4_PRIVATE_C,
   IPV4_LINK_LOCAL,
   IPV4_THIS_NETWORK,
+  IPV4_CGNAT,
+  IPV4_BENCHMARKING,
+  IPV4_IETF_PROTOCOL,
+  IPV4_TEST_NET_1,
+  IPV4_TEST_NET_2,
+  IPV4_TEST_NET_3,
+  IPV4_RESERVED,
+  IPV4_BROADCAST,
 ] as const;
 
 // ── Blocked IPv6 addresses and ranges ───────────────────────────────
@@ -80,6 +113,9 @@ const IPV6_GROUP_BITS = 16;
 
 /** Bitmask for a 16-bit group. */
 const IPV6_GROUP_MASK = 0xffff;
+
+/** Radix for parsing and formatting hexadecimal strings (base 16). */
+const HEX_RADIX = 16;
 
 /** Version number returned by `isIP()` for IPv4. */
 const IP_VERSION_4 = 4;
@@ -138,10 +174,7 @@ function expandIpv6(ip: string): number[] | null {
     const v6Prefix = v4MappedMatch[1] ?? "";
     const highWord = (v4Num >>> IPV6_GROUP_BITS) & IPV6_GROUP_MASK;
     const lowWord = v4Num & IPV6_GROUP_MASK;
-    const expanded = expandIpv6(
-      `${v6Prefix}:${highWord.toString(IPV6_GROUP_BITS)}:${lowWord.toString(IPV6_GROUP_BITS)}`,
-    );
-    return expanded;
+    return expandIpv6(`${v6Prefix}:${highWord.toString(HEX_RADIX)}:${lowWord.toString(HEX_RADIX)}`);
   }
 
   const halves = ip.split("::");
@@ -149,7 +182,7 @@ function expandIpv6(ip: string): number[] | null {
 
   const parseGroups = (s: string): number[] => {
     if (s === "") return [];
-    return s.split(":").map((g) => parseInt(g, IPV6_GROUP_BITS));
+    return s.split(":").map((g) => parseInt(g, HEX_RADIX));
   };
 
   if (halves.length === 2) {
@@ -256,4 +289,55 @@ export function isPrivateIp(ip: string): boolean {
 
   // Not a valid IP — fail closed
   return true;
+}
+
+/**
+ * Resolve a URL's hostname via DNS and validate that all resolved IPs
+ * are public (not private/reserved).
+ *
+ * Always runs DNS resolution and IP validation regardless of NODE_ENV.
+ * Callers are responsible for HTTPS enforcement and logging.
+ *
+ * @returns Array of resolved IP addresses (all validated as public).
+ * @throws Error if the URL is invalid, hostname cannot be resolved,
+ *   or any resolved IP falls within a private/reserved range.
+ *
+ * **DNS rebinding (TOCTOU):** This pre-flight check resolves DNS
+ * independently from a subsequent `fetch()`. A sophisticated attacker
+ * could return a public IP here then rebind to a private IP before the
+ * HTTP connection is established. This is an accepted limitation —
+ * standard `fetch()` does not expose the resolved IP or support
+ * connecting to a specific address. The config-time URL validation is
+ * the primary defense; the delivery-time check is defense-in-depth
+ * against DNS changes between config creation and delivery.
+ */
+export async function resolveAndValidateUrl(url: string): Promise<string[]> {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    throw new Error("Webhook URL is not a valid URL");
+  }
+
+  const [v4Result, v6Result] = await Promise.allSettled([resolve4(hostname), resolve6(hostname)]);
+
+  const resolvedIps: string[] = [];
+  if (v4Result.status === "fulfilled") {
+    resolvedIps.push(...v4Result.value);
+  }
+  if (v6Result.status === "fulfilled") {
+    resolvedIps.push(...v6Result.value);
+  }
+
+  if (resolvedIps.length === 0) {
+    throw new Error("Webhook URL hostname could not be resolved");
+  }
+
+  for (const ip of resolvedIps) {
+    if (isPrivateIp(ip)) {
+      throw new Error("Webhook URL must not resolve to a private or reserved IP address");
+    }
+  }
+
+  return resolvedIps;
 }

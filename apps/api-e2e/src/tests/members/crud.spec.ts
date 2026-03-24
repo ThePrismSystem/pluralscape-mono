@@ -1,16 +1,6 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { decryptFromApi, encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
-
-import type { APIRequestContext } from "@playwright/test";
-
-async function getSystemId(
-  request: APIRequestContext,
-  headers: Record<string, string>,
-): Promise<string> {
-  const res = await request.get("/v1/systems", { headers });
-  const body = await res.json();
-  return body.items[0].id as string;
-}
+import { getSystemId } from "../../fixtures/entity-helpers.js";
 
 const MEMBER_PROFILE = {
   name: "E2E Test Member",

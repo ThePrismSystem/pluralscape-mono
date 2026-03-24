@@ -1,30 +1,6 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
-
-import type { APIRequestContext } from "@playwright/test";
-
-async function getSystemId(
-  request: APIRequestContext,
-  headers: Record<string, string>,
-): Promise<string> {
-  const res = await request.get("/v1/systems", { headers });
-  const body = await res.json();
-  return body.items[0].id as string;
-}
-
-async function createMember(
-  request: APIRequestContext,
-  headers: Record<string, string>,
-  systemId: string,
-): Promise<{ id: string; version: number }> {
-  const res = await request.post(`/v1/systems/${systemId}/members`, {
-    headers,
-    data: { encryptedData: encryptForApi({ name: "E2E Timer Member" }) },
-  });
-  expect(res.status()).toBe(201);
-  const body = await res.json();
-  return { id: body.id as string, version: body.version as number };
-}
+import { createMember, getSystemId } from "../../fixtures/entity-helpers.js";
 
 test.describe("Timer Config and Check-In Records", () => {
   test.beforeAll(async () => {
@@ -39,7 +15,7 @@ test.describe("Timer Config and Check-In Records", () => {
     let record2Id: string;
 
     await test.step("create member", async () => {
-      const member = await createMember(request, authHeaders, systemId);
+      const member = await createMember(request, authHeaders, systemId, "E2E Timer Member");
       memberId = member.id;
     });
 

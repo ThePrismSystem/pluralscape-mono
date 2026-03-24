@@ -30,11 +30,9 @@ export interface CheckInRecord {
   readonly respondedByMemberId: MemberId | null;
   readonly respondedAt: UnixMillis | null;
   readonly dismissed: boolean;
-  readonly archived: boolean;
+  readonly archived: false;
   readonly archivedAt: UnixMillis | null;
 }
 
 /** An archived check-in record. */
-export interface ArchivedCheckInRecord extends Omit<CheckInRecord, "archived"> {
-  readonly archived: true;
-}
+export type ArchivedCheckInRecord = Archived<CheckInRecord>;
