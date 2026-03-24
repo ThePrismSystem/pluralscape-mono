@@ -1,9 +1,11 @@
+import { createHmac } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
+import { WEBHOOK_SIGNATURE_HEADER, WEBHOOK_TIMESTAMP_HEADER } from "../../service.constants.js";
 import {
   calculateBackoffMs,
   computeWebhookSignature,
-  WEBHOOK_SIGNATURE_HEADER,
 } from "../../services/webhook-delivery-worker.js";
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -11,10 +13,11 @@ import {
 describe("computeWebhookSignature", () => {
   it("produces a consistent HMAC-SHA256 hex signature", () => {
     const secret = Buffer.from("test-secret-key");
+    const timestamp = 1700000000;
     const payload = '{"event":"member.created"}';
 
-    const sig1 = computeWebhookSignature(secret, payload);
-    const sig2 = computeWebhookSignature(secret, payload);
+    const sig1 = computeWebhookSignature(secret, timestamp, payload);
+    const sig2 = computeWebhookSignature(secret, timestamp, payload);
 
     expect(sig1).toBe(sig2);
     expect(sig1).toMatch(/^[0-9a-f]{64}$/);
@@ -22,18 +25,42 @@ describe("computeWebhookSignature", () => {
 
   it("produces different signatures for different payloads", () => {
     const secret = Buffer.from("test-secret-key");
+    const timestamp = 1700000000;
 
-    const sig1 = computeWebhookSignature(secret, '{"a":1}');
-    const sig2 = computeWebhookSignature(secret, '{"a":2}');
+    const sig1 = computeWebhookSignature(secret, timestamp, '{"a":1}');
+    const sig2 = computeWebhookSignature(secret, timestamp, '{"a":2}');
 
     expect(sig1).not.toBe(sig2);
   });
 
   it("produces different signatures for different secrets", () => {
+    const timestamp = 1700000000;
     const payload = '{"event":"test"}';
 
-    const sig1 = computeWebhookSignature(Buffer.from("key-1"), payload);
-    const sig2 = computeWebhookSignature(Buffer.from("key-2"), payload);
+    const sig1 = computeWebhookSignature(Buffer.from("key-1"), timestamp, payload);
+    const sig2 = computeWebhookSignature(Buffer.from("key-2"), timestamp, payload);
+
+    expect(sig1).not.toBe(sig2);
+  });
+
+  it("includes the timestamp in the HMAC computation", () => {
+    const secret = Buffer.from("test-secret-key");
+    const payload = '{"event":"test"}';
+
+    const sig = computeWebhookSignature(secret, 1700000000, payload);
+
+    // Manually compute expected: HMAC of "1700000000.{payload}"
+    const expected = createHmac("sha256", secret).update(`1700000000.${payload}`).digest("hex");
+
+    expect(sig).toBe(expected);
+  });
+
+  it("produces different signatures when timestamp changes", () => {
+    const secret = Buffer.from("test-secret-key");
+    const payload = '{"event":"test"}';
+
+    const sig1 = computeWebhookSignature(secret, 1700000000, payload);
+    const sig2 = computeWebhookSignature(secret, 1700000001, payload);
 
     expect(sig1).not.toBe(sig2);
   });
@@ -72,8 +99,12 @@ describe("calculateBackoffMs", () => {
   });
 });
 
-describe("WEBHOOK_SIGNATURE_HEADER", () => {
-  it("has the correct header name", () => {
+describe("webhook header constants", () => {
+  it("WEBHOOK_SIGNATURE_HEADER has the correct header name", () => {
     expect(WEBHOOK_SIGNATURE_HEADER).toBe("X-Pluralscape-Signature");
+  });
+
+  it("WEBHOOK_TIMESTAMP_HEADER has the correct header name", () => {
+    expect(WEBHOOK_TIMESTAMP_HEADER).toBe("X-Pluralscape-Timestamp");
   });
 });

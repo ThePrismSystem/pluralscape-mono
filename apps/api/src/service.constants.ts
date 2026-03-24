@@ -33,11 +33,20 @@ export const MAX_ACTIVE_SESSIONS = 200;
 /** Number of random bytes for webhook HMAC signing secrets (32 bytes = 256-bit). */
 export const WEBHOOK_SECRET_BYTES = 32;
 
+/** Maximum analytics date span in milliseconds (366 days). */
+export const MAX_ANALYTICS_DATE_SPAN_MS = 366 * 86_400_000;
+
 /** Maximum number of retry attempts for webhook delivery. */
 export const WEBHOOK_MAX_RETRY_ATTEMPTS = 5;
 
 /** Base backoff delay in milliseconds for webhook delivery retries. */
 export const WEBHOOK_BASE_BACKOFF_MS = 1000;
+
+/** HTTP header name for the HMAC-SHA256 webhook signature. */
+export const WEBHOOK_SIGNATURE_HEADER = "X-Pluralscape-Signature";
+
+/** HTTP header name for the delivery timestamp (Unix seconds). */
+export const WEBHOOK_TIMESTAMP_HEADER = "X-Pluralscape-Timestamp";
 
 /** Maximum age in days for terminal (success/failed) webhook deliveries before cleanup. */
 export const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;

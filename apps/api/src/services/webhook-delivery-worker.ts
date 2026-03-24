@@ -1,17 +1,21 @@
 import { createHmac } from "node:crypto";
+import { resolve4, resolve6 } from "node:dns/promises";
 
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
+import { isPrivateIp } from "../lib/ip-validation.js";
 import { logger } from "../lib/logger.js";
-import { WEBHOOK_BASE_BACKOFF_MS, WEBHOOK_MAX_RETRY_ATTEMPTS } from "../service.constants.js";
+import {
+  WEBHOOK_BASE_BACKOFF_MS,
+  WEBHOOK_MAX_RETRY_ATTEMPTS,
+  WEBHOOK_SIGNATURE_HEADER,
+  WEBHOOK_TIMESTAMP_HEADER,
+} from "../service.constants.js";
 
 import type { WebhookDeliveryId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-/** Name of the HMAC signature header sent with webhook deliveries. */
-export const WEBHOOK_SIGNATURE_HEADER = "X-Pluralscape-Signature";
 
 /** HMAC algorithm used for signing webhook payloads. */
 const HMAC_ALGORITHM = "sha256";
@@ -26,11 +30,20 @@ const DELIVERY_TIMEOUT_MS = 10_000;
 /** Default jitter fraction for backoff (25%). */
 const DEFAULT_JITTER_FRACTION = 0.25;
 
+/** Milliseconds per second, used to convert Date.now() to Unix seconds. */
+const MS_PER_SECOND = 1_000;
+
 /**
  * Compute HMAC-SHA256 signature for a webhook payload using the config's secret.
  */
-export function computeWebhookSignature(secret: Buffer, payload: string): string {
-  return createHmac(HMAC_ALGORITHM, secret).update(payload).digest("hex");
+export function computeWebhookSignature(
+  secret: Buffer,
+  timestamp: number,
+  payload: string,
+): string {
+  return createHmac(HMAC_ALGORITHM, secret)
+    .update(`${String(timestamp)}.${payload}`)
+    .digest("hex");
 }
 
 /**
@@ -112,9 +125,52 @@ export async function processWebhookDelivery(
     return;
   }
 
+  // Pre-flight SSRF check: re-resolve hostname to prevent DNS rebinding attacks.
+  // Skipped in non-production environments to avoid network dependencies in tests.
+  if (process.env.NODE_ENV === "production") {
+    let hostname: string;
+    try {
+      hostname = new URL(config.url).hostname;
+    } catch {
+      logger.warn(`[webhook-worker] invalid URL for delivery ${deliveryId}: ${config.url}`);
+      await db
+        .update(webhookDeliveries)
+        .set({ status: "failed", lastAttemptAt: now() })
+        .where(eq(webhookDeliveries.id, deliveryId));
+      return;
+    }
+
+    const [v4Result, v6Result] = await Promise.allSettled([resolve4(hostname), resolve6(hostname)]);
+
+    const resolvedIps: string[] = [];
+    if (v4Result.status === "fulfilled") {
+      resolvedIps.push(...v4Result.value);
+    }
+    if (v6Result.status === "fulfilled") {
+      resolvedIps.push(...v6Result.value);
+    }
+
+    const hasPrivateIp = resolvedIps.some((ip) => isPrivateIp(ip));
+    if (resolvedIps.length === 0 || hasPrivateIp) {
+      logger.warn(
+        `[webhook-worker] SSRF blocked for delivery ${deliveryId}: URL ${config.url} resolves to private/unresolvable address`,
+      );
+      await db
+        .update(webhookDeliveries)
+        .set({ status: "failed", lastAttemptAt: now() })
+        .where(eq(webhookDeliveries.id, deliveryId));
+      return;
+    }
+  }
+
   const payloadJson = JSON.stringify(payload);
-  const signature = computeWebhookSignature(Buffer.from(config.secret), payloadJson);
   const timestamp = now();
+  const deliveryTimestamp = Math.floor(Date.now() / MS_PER_SECOND);
+  const signature = computeWebhookSignature(
+    Buffer.from(config.secret),
+    deliveryTimestamp,
+    payloadJson,
+  );
 
   let httpStatus: number | null = null;
 
@@ -130,6 +186,7 @@ export async function processWebhookDelivery(
         headers: {
           "Content-Type": "application/json",
           [WEBHOOK_SIGNATURE_HEADER]: signature,
+          [WEBHOOK_TIMESTAMP_HEADER]: String(deliveryTimestamp),
         },
         body: payloadJson,
         signal: controller.signal,

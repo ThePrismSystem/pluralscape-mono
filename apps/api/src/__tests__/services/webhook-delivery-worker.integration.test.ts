@@ -11,13 +11,16 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { WEBHOOK_MAX_RETRY_ATTEMPTS } from "../../service.constants.js";
+import {
+  WEBHOOK_MAX_RETRY_ATTEMPTS,
+  WEBHOOK_SIGNATURE_HEADER,
+  WEBHOOK_TIMESTAMP_HEADER,
+} from "../../service.constants.js";
 import {
   calculateBackoffMs,
   computeWebhookSignature,
   findPendingDeliveries,
   processWebhookDelivery,
-  WEBHOOK_SIGNATURE_HEADER,
 } from "../../services/webhook-delivery-worker.js";
 import { genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
 
@@ -84,12 +87,15 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
   }
 
   describe("computeWebhookSignature", () => {
-    it("produces HMAC-SHA256 hex digest", () => {
+    it("produces HMAC-SHA256 hex digest with timestamp prefix", () => {
       const secret = Buffer.from("test-secret");
+      const timestamp = 1700000000;
       const payload = '{"test":true}';
-      const sig = computeWebhookSignature(secret, payload);
+      const sig = computeWebhookSignature(secret, timestamp, payload);
 
-      const expected = createHmac("sha256", secret).update(payload).digest("hex");
+      const expected = createHmac("sha256", secret)
+        .update(`${String(timestamp)}.${payload}`)
+        .digest("hex");
       expect(sig).toBe(expected);
     });
   });
@@ -103,12 +109,25 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
 
       await processWebhookDelivery(db as never, deliveryId, payload, mockFetch as never);
 
-      // Verify the fetch was called with correct signature
+      // Verify the fetch was called with correct signature and timestamp
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const call = mockFetch.mock.calls[0] ?? [];
       expect(call[0]).toBe("https://example.com/hook");
       const headers = new Headers((call[1] as RequestInit | undefined)?.headers);
-      const expectedSig = computeWebhookSignature(webhookSecret, JSON.stringify(payload));
+
+      // Verify timestamp header is present and is a valid Unix timestamp
+      const timestampHeader = headers.get(WEBHOOK_TIMESTAMP_HEADER);
+      expect(timestampHeader).toBeTruthy();
+      const timestamp = Number(timestampHeader);
+      expect(Number.isInteger(timestamp)).toBe(true);
+      expect(timestamp).toBeGreaterThan(0);
+
+      // Verify signature matches using the sent timestamp
+      const expectedSig = computeWebhookSignature(
+        webhookSecret,
+        timestamp,
+        JSON.stringify(payload),
+      );
       expect(headers.get(WEBHOOK_SIGNATURE_HEADER)).toBe(expectedSig);
 
       // Verify delivery status in DB
@@ -195,6 +214,19 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       expect(row?.httpStatus).toBeNull();
       expect(row?.attemptCount).toBe(1);
       expect(row?.status).toBe("pending");
+    });
+
+    it("sends timestamp header in delivery requests", async () => {
+      const deliveryId = await insertDelivery();
+      const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+
+      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
+
+      const call = mockFetch.mock.calls[0] ?? [];
+      const headers = new Headers((call[1] as RequestInit | undefined)?.headers);
+
+      expect(headers.get(WEBHOOK_TIMESTAMP_HEADER)).toBeTruthy();
+      expect(headers.get(WEBHOOK_SIGNATURE_HEADER)).toBeTruthy();
     });
   });
 
