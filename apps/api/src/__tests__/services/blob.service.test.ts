@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fromCursor } from "../../lib/pagination.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobResult } from "../../services/blob.service.js";
 import type { BlobId, PaginatedResult, SystemId } from "@pluralscape/types";
 
@@ -38,14 +38,11 @@ const { QuotaExceededError } = await import("@pluralscape/storage");
 const SYSTEM_ID = "sys_test-system" as SystemId;
 const BLOB_ID = "blob_test-blob" as BlobId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
+  sessionId: "sess_test-session",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

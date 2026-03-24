@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { archiveEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
 import { mockDb } from "../helpers/mock-db.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
 import type { SystemId } from "@pluralscape/types";
 
@@ -14,14 +14,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
 }));
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_test" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set(["sys_test" as SystemId]),
-  auditLogIpTracking: false,
-};
+const MOCK_AUTH = makeTestAuth();
 
 const SYSTEM_ID = "sys_test" as SystemId;
 const ENTITY_ID = "ent_test-id";

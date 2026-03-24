@@ -17,6 +17,16 @@ vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: writeAuditLogSpy,
 }));
 
+const mockLogger = {
+  warn: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+};
+vi.mock("../../lib/logger.js", () => ({
+  getContextLogger: () => mockLogger,
+}));
+
 const { createAuditWriter } = await import("../../lib/audit-writer.js");
 
 /** Build a minimal mock Hono context with the given headers. */
@@ -61,6 +71,7 @@ describe("createAuditWriter", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     writeAuditLogSpy.mockReset().mockResolvedValue(undefined);
+    mockLogger.warn.mockReset();
   });
 
   it("passes auth context accountId and systemId to writeAuditLog", async () => {
@@ -320,5 +331,34 @@ describe("createAuditWriter", () => {
     expect(mockParams(0).userAgent).toBe("TestAgent");
 
     mockEnv.TRUST_PROXY = false;
+  });
+
+  it("logs a warning when IP tracking is enabled but no IP is available", async () => {
+    // TRUST_PROXY is false by default, so no IP will be extracted
+    const c = createMockContext({ "user-agent": "TestAgent" });
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("TRUST_PROXY"));
+  });
+
+  it("does not log a warning when IP tracking is disabled", async () => {
+    const c = createMockContext({ "user-agent": "TestAgent" });
+    const auth = createAuth({ auditLogIpTracking: false });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockLogger.warn).not.toHaveBeenCalled();
   });
 });

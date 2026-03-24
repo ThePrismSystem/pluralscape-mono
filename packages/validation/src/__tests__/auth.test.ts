@@ -535,23 +535,28 @@ describe("UpdateAccountSettingsSchema", () => {
     }
   });
 
-  it("accepts version zero", () => {
+  it("rejects version zero", () => {
     const result = UpdateAccountSettingsSchema.safeParse({
       auditLogIpTracking: true,
       version: 0,
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["version"]);
+    }
   });
 
   it("strips unknown properties", () => {
     const result = UpdateAccountSettingsSchema.safeParse({
       auditLogIpTracking: false,
-      version: 0,
+      version: 1,
       admin: true,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({ auditLogIpTracking: false, version: 0 });
+      expect(result.data).toEqual({ auditLogIpTracking: false, version: 1 });
       expect("admin" in result.data).toBe(false);
     }
   });

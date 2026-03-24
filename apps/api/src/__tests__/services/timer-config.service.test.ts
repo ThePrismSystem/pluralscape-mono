@@ -3,8 +3,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
 import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { MockChain } from "../helpers/mock-db.js";
 import type { SystemId, TimerId } from "@pluralscape/types";
 
@@ -43,14 +43,11 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const SYSTEM_ID = "sys_timer-test-system" as SystemId;
 const TIMER_ID = "tmr_timer-test-config" as TimerId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_timer-test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_timer-test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_timer-test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
+  sessionId: "sess_timer-test-session",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

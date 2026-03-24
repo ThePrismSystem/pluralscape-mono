@@ -42,7 +42,7 @@ export const ChangePasswordSchema = z
 export const UpdateAccountSettingsSchema = z
   .object({
     auditLogIpTracking: z.boolean(),
-    version: z.number().int().nonnegative(),
+    version: z.number().int().positive(),
   })
   .readonly();
 

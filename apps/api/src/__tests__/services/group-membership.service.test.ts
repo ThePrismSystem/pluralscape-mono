@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fromCursor } from "../../lib/pagination.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { GroupId, MemberId, SystemId } from "@pluralscape/types";
@@ -24,14 +25,11 @@ const SYSTEM_ID = "sys_test-system" as SystemId;
 const GROUP_ID = "grp_test-group" as GroupId;
 const MEMBER_ID = "mem_test-member" as MemberId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
+  sessionId: "sess_test-session",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -251,7 +249,11 @@ describe("listMemberGroupMemberships", () => {
   it("throws 404 for system mismatch (fail-closed privacy)", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]); // ownership check returns no matching system
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
+    const otherAuth: AuthContext = makeTestAuth({
+      accountId: "acct_test-account",
+      systemId: "sys_other",
+      sessionId: "sess_test-session",
+    });
 
     await expect(listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, otherAuth)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),

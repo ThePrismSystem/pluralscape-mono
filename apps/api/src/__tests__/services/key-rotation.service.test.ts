@@ -2,8 +2,8 @@ import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { BucketId, BucketKeyRotationId, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -28,14 +28,11 @@ const SYSTEM_ID = "sys_test-system" as SystemId;
 const BUCKET_ID = "bkt_test-bucket" as BucketId;
 const ROTATION_ID = "bkr_test-rotation" as BucketKeyRotationId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
+  sessionId: "sess_test-session",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

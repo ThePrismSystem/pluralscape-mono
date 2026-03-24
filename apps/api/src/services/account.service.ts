@@ -295,7 +295,7 @@ export async function updateAccountSettings(
   const timestamp = now();
 
   const updated = await db.transaction(async (tx) => {
-    const rows = await tx
+    const [row] = await tx
       .update(accounts)
       .set({
         auditLogIpTracking: parsed.auditLogIpTracking,
@@ -308,7 +308,6 @@ export async function updateAccountSettings(
         version: accounts.version,
       });
 
-    const [row] = rows;
     if (!row) {
       throw new ConcurrencyError("Account was modified concurrently");
     }
@@ -336,8 +335,6 @@ export async function updateAccountSettings(
 
 // ── Helpers ───────────────────────────────────────────────────────
 
-class ConcurrencyError extends Error {
+export class ConcurrencyError extends Error {
   override readonly name = "ConcurrencyError" as const;
 }
-
-export { ConcurrencyError };

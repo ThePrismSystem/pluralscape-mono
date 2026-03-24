@@ -91,6 +91,36 @@ describe("PUT /account/settings", () => {
     expect(body.error.code).toBe("CONFLICT");
   });
 
+  it("returns 400 on validation error", async () => {
+    const zodError = new Error("Validation failed");
+    zodError.name = "ZodError";
+    vi.mocked(updateAccountSettings).mockRejectedValueOnce(zodError);
+
+    const app = createApp();
+    const res = await app.request("/account/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auditLogIpTracking: "yes", version: 1 }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("re-throws unexpected errors", async () => {
+    vi.mocked(updateAccountSettings).mockRejectedValueOnce(new Error("Unexpected DB failure"));
+
+    const app = createApp();
+    const res = await app.request("/account/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auditLogIpTracking: true, version: 1 }),
+    });
+
+    expect(res.status).toBe(500);
+  });
+
   it("passes account ID and body to service", async () => {
     vi.mocked(updateAccountSettings).mockResolvedValueOnce({
       ok: true,

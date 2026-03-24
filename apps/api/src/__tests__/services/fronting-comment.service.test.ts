@@ -3,8 +3,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { MockChain } from "../helpers/mock-db.js";
 import type {
   CustomFrontId,
@@ -56,14 +56,11 @@ const MEMBER_ID = "mem_d4e5f6a7-b8c9-0123-defa-234567890123" as MemberId;
 const CF_ID = "cf_e5f6a7b8-c9d0-1234-efab-345678901234" as CustomFrontId;
 const SE_ID = "ste_f6a7b8c9-d0e1-2345-fabc-456789012345" as SystemStructureEntityId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_a1b2c3d4-e5f6-7890-abcd-ef1234567890" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   systemId: SYSTEM_ID,
-  sessionId: "sess_b2c3d4e5-f6a7-8901-bcde-f12345678901" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
+  sessionId: "sess_b2c3d4e5-f6a7-8901-bcde-f12345678901",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
