@@ -37,6 +37,6 @@
     "@pluralscape/tsconfig": "workspace:*",
     "@types/bun": "^1.2.4",
     "eslint": "^10.0.3",
-    "typescript": "^5.7.3"
+    "typescript": "^6.0.0"
   }
 }
