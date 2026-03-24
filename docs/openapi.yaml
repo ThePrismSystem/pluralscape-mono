@@ -113,16 +113,16 @@ tags:
     description: Custom field definitions for a system
   - name: Relationships
     description: Relationships between members
-  - name: Subsystems
-    description: Subsystem structures within a system
-  - name: Side Systems
-    description: Side system structures
-  - name: Layers
-    description: Layer structures within a system
-  - name: Structure Links
-    description: Cross-structure links (subsystem-layer, subsystem-side-system, side-system-layer)
-  - name: Structure Memberships
-    description: Member assignments to subsystems, side systems, and layers
+  - name: Structure Entity Types
+    description: User-defined structure entity types within a system
+  - name: Structure Entities
+    description: Structure entities (instances of user-defined entity types)
+  - name: Structure Entity Links
+    description: Hierarchical parent-child links between structure entities
+  - name: Structure Entity Member Links
+    description: Member assignments to structure entities
+  - name: Structure Entity Associations
+    description: Directed cross-references between structure entities
   - name: Lifecycle Events
     description: System lifecycle events (splits, fusions, etc.)
   - name: Innerworld
@@ -131,6 +131,14 @@ tags:
     description: Encrypted file upload and download
   - name: Key Rotation
     description: Privacy bucket key rotation
+  - name: Fronting Sessions
+    description: Fronting session tracking (who is fronting and when)
+  - name: Fronting Comments
+    description: Comments attached to fronting sessions
+  - name: Analytics
+    description: Fronting analytics (duration breakdowns, co-fronting statistics)
+  - name: Fronting Reports
+    description: Immutable encrypted report snapshots
 paths:
   /:
     get:
@@ -2751,7 +2759,7 @@ paths:
       summary: List relationships
       description: |
         Returns a paginated list of all inter-member relationships for the
-        specified system (e.g., "friends", "rivals", "is a subsystem of").
+        specified system (e.g., "friends", "rivals", "protector of").
 
         Rate limit: 60 req/min (readDefault)
       security:
@@ -2991,13 +2999,13 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/subsystems:
+  /systems/{systemId}/structure-entity-types:
     get:
-      operationId: listSubsystems
+      operationId: listStructureEntityTypes
       tags:
-        - Subsystems
-      summary: List subsystems
-      description: Returns a paginated list of subsystems for the given system. Rate limit 60 req/min (readDefault).
+        - Structure Entity Types
+      summary: List structure entity types
+      description: Returns a paginated list of structure entity types for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3006,30 +3014,30 @@ paths:
         - $ref: "#/components/parameters/Limit"
       responses:
         "200":
-          description: Paginated subsystem list
+          description: Paginated structure entity type list
           content:
             application/json:
               schema:
                 allOf:
                   - type: object
                     required:
-                      - subsystems
+                      - entityTypes
                     properties:
-                      subsystems:
+                      entityTypes:
                         type: array
                         items:
-                          $ref: "#/components/schemas/SubsystemResponse"
+                          $ref: "#/components/schemas/StructureEntityTypeResponse"
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
     post:
-      operationId: createSubsystem
+      operationId: createStructureEntityType
       tags:
-        - Subsystems
-      summary: Create a subsystem
-      description: Creates a new subsystem within the given system. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Types
+      summary: Create a structure entity type
+      description: Creates a new structure entity type within the given system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3039,44 +3047,44 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateSubsystemRequest"
+              $ref: "#/components/schemas/CreateStructureEntityTypeRequest"
       responses:
         "201":
-          description: Subsystem created
+          description: Structure entity type created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubsystemResponse"
+                $ref: "#/components/schemas/StructureEntityTypeResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/subsystems/{subsystemId}:
+  /systems/{systemId}/structure-entity-types/{entityTypeId}:
     get:
-      operationId: getSubsystem
+      operationId: getStructureEntityType
       tags:
-        - Subsystems
-      summary: Get a subsystem
-      description: Returns details for a single subsystem by ID. Rate limit 60 req/min (readDefault).
+        - Structure Entity Types
+      summary: Get a structure entity type
+      description: Returns details for a single structure entity type by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
+        - name: entityTypeId
           in: path
           required: true
-          description: Subsystem ID
+          description: Structure entity type ID
           schema:
             type: string
       responses:
         "200":
-          description: Subsystem details
+          description: Structure entity type details
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubsystemResponse"
+                $ref: "#/components/schemas/StructureEntityTypeResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -3084,19 +3092,19 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
     put:
-      operationId: updateSubsystem
+      operationId: updateStructureEntityType
       tags:
-        - Subsystems
-      summary: Update a subsystem
-      description: Updates the encrypted payload or metadata for a subsystem. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Types
+      summary: Update a structure entity type
+      description: Updates the encrypted payload or metadata for a structure entity type. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
+        - name: entityTypeId
           in: path
           required: true
-          description: Subsystem ID
+          description: Structure entity type ID
           schema:
             type: string
       requestBody:
@@ -3104,38 +3112,36 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateSubsystemRequest"
+              $ref: "#/components/schemas/UpdateStructureEntityTypeRequest"
       responses:
         "200":
-          description: Subsystem updated
+          description: Structure entity type updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubsystemResponse"
+                $ref: "#/components/schemas/StructureEntityTypeResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
     delete:
-      operationId: deleteSubsystem
+      operationId: deleteStructureEntityType
       tags:
-        - Subsystems
-      summary: Delete a subsystem
-      description: Permanently deletes a subsystem. Returns 409 if the subsystem has dependents. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Types
+      summary: Delete a structure entity type
+      description: Permanently deletes a structure entity type. Returns 409 if the entity type has dependents. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
+        - name: entityTypeId
           in: path
           required: true
-          description: Subsystem ID
+          description: Structure entity type ID
           schema:
             type: string
       responses:
@@ -3149,852 +3155,313 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/subsystems/{subsystemId}/archive:
+  /systems/{systemId}/structure-entity-types/{entityTypeId}/archive:
     post:
-      operationId: archiveSubsystem
+      operationId: archiveStructureEntityType
       tags:
-        - Subsystems
-      summary: Archive a subsystem
-      description: Marks a subsystem as archived. Archived subsystems are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Types
+      summary: Archive a structure entity type
+      description: Marks a structure entity type as archived. Archived entity types are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
+        - name: entityTypeId
           in: path
           required: true
-          description: Subsystem ID
+          description: Structure entity type ID
           schema:
             type: string
       responses:
         "200":
-          description: Subsystem archived
+          description: Structure entity type archived
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubsystemResponse"
+                $ref: "#/components/schemas/StructureEntityTypeResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/subsystems/{subsystemId}/restore:
+  /systems/{systemId}/structure-entity-types/{entityTypeId}/restore:
     post:
-      operationId: restoreSubsystem
+      operationId: restoreStructureEntityType
       tags:
-        - Subsystems
-      summary: Restore an archived subsystem
-      description: Removes the archived flag from a subsystem, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Types
+      summary: Restore an archived structure entity type
+      description: Removes the archived flag from a structure entity type, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
+        - name: entityTypeId
           in: path
           required: true
-          description: Subsystem ID
+          description: Structure entity type ID
           schema:
             type: string
       responses:
         "200":
-          description: Subsystem restored
+          description: Structure entity type restored
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SubsystemResponse"
+                $ref: "#/components/schemas/StructureEntityTypeResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/subsystems/{subsystemId}/memberships:
+  /systems/{systemId}/structure-entities:
     get:
-      operationId: listSubsystemMemberships
+      operationId: listStructureEntities
       tags:
-        - Structure Memberships
-      summary: List subsystem memberships
-      description: Returns a paginated list of member memberships for the given subsystem. Rate limit 60 req/min (readDefault).
+        - Structure Entities
+      summary: List structure entities
+      description: Returns a paginated list of structure entities for the given system. Optionally filter by entity type. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
-          in: path
-          required: true
-          description: Subsystem ID
-          schema:
-            type: string
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-      responses:
-        "200":
-          description: Membership list
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    required:
-                      - memberships
-                    properties:
-                      memberships:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/StructureMembershipResponse"
-                  - $ref: "#/components/schemas/PaginationMeta"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    post:
-      operationId: addSubsystemMembership
-      tags:
-        - Structure Memberships
-      summary: Add a member to a subsystem
-      description: Creates a membership record associating a member with this subsystem. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
-          in: path
-          required: true
-          description: Subsystem ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddStructureMembershipRequest"
-      responses:
-        "201":
-          description: Membership created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StructureMembershipResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/subsystems/{subsystemId}/memberships/{membershipId}:
-    delete:
-      operationId: removeSubsystemMembership
-      tags:
-        - Structure Memberships
-      summary: Remove a membership from a subsystem
-      description: Removes a member's membership from the given subsystem. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
-          in: path
-          required: true
-          description: Subsystem ID
-          schema:
-            type: string
-        - name: membershipId
-          in: path
-          required: true
-          description: Membership ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/side-systems:
-    get:
-      operationId: listSideSystems
-      tags:
-        - Side Systems
-      summary: List side systems
-      description: Returns a paginated list of side systems for the given system. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-      responses:
-        "200":
-          description: Paginated side system list
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    required:
-                      - sideSystems
-                    properties:
-                      sideSystems:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/SideSystemResponse"
-                  - $ref: "#/components/schemas/PaginationMeta"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    post:
-      operationId: createSideSystem
-      tags:
-        - Side Systems
-      summary: Create a side system
-      description: Creates a new side system within the given system. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateSideSystemRequest"
-      responses:
-        "201":
-          description: Side system created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SideSystemResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/side-systems/{sideSystemId}:
-    get:
-      operationId: getSideSystem
-      tags:
-        - Side Systems
-      summary: Get a side system
-      description: Returns details for a single side system by ID. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Side system details
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SideSystemResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    put:
-      operationId: updateSideSystem
-      tags:
-        - Side Systems
-      summary: Update a side system
-      description: Updates the encrypted payload or metadata for a side system. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateSideSystemRequest"
-      responses:
-        "200":
-          description: Side system updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SideSystemResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    delete:
-      operationId: deleteSideSystem
-      tags:
-        - Side Systems
-      summary: Delete a side system
-      description: Permanently deletes a side system. Returns 409 if the side system has dependents. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/side-systems/{sideSystemId}/archive:
-    post:
-      operationId: archiveSideSystem
-      tags:
-        - Side Systems
-      summary: Archive a side system
-      description: Marks a side system as archived. Archived side systems are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Side system archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SideSystemResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/side-systems/{sideSystemId}/restore:
-    post:
-      operationId: restoreSideSystem
-      tags:
-        - Side Systems
-      summary: Restore an archived side system
-      description: Removes the archived flag from a side system, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Side system restored
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SideSystemResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/side-systems/{sideSystemId}/memberships:
-    get:
-      operationId: listSideSystemMemberships
-      tags:
-        - Structure Memberships
-      summary: List side system memberships
-      description: Returns a paginated list of member memberships for the given side system. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-      responses:
-        "200":
-          description: Membership list
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    required:
-                      - memberships
-                    properties:
-                      memberships:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/StructureMembershipResponse"
-                  - $ref: "#/components/schemas/PaginationMeta"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    post:
-      operationId: addSideSystemMembership
-      tags:
-        - Structure Memberships
-      summary: Add a member to a side system
-      description: Creates a membership record associating a member with this side system. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddStructureMembershipRequest"
-      responses:
-        "201":
-          description: Membership created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StructureMembershipResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/side-systems/{sideSystemId}/memberships/{membershipId}:
-    delete:
-      operationId: removeSideSystemMembership
-      tags:
-        - Structure Memberships
-      summary: Remove a membership from a side system
-      description: Removes a member's membership from the given side system. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
-          in: path
-          required: true
-          description: Side System ID
-          schema:
-            type: string
-        - name: membershipId
-          in: path
-          required: true
-          description: Membership ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/layers:
-    get:
-      operationId: listLayers
-      tags:
-        - Layers
-      summary: List layers
-      description: Returns a paginated list of layers for the given system. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-      responses:
-        "200":
-          description: Paginated layer list
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    required:
-                      - layers
-                    properties:
-                      layers:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/LayerResponse"
-                  - $ref: "#/components/schemas/PaginationMeta"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    post:
-      operationId: createLayer
-      tags:
-        - Layers
-      summary: Create a layer
-      description: Creates a new layer within the given system. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateLayerRequest"
-      responses:
-        "201":
-          description: Layer created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LayerResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/layers/{layerId}:
-    get:
-      operationId: getLayer
-      tags:
-        - Layers
-      summary: Get a layer
-      description: Returns details for a single layer by ID. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Layer details
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LayerResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    put:
-      operationId: updateLayer
-      tags:
-        - Layers
-      summary: Update a layer
-      description: Updates the encrypted payload or metadata for a layer. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateLayerRequest"
-      responses:
-        "200":
-          description: Layer updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LayerResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    delete:
-      operationId: deleteLayer
-      tags:
-        - Layers
-      summary: Delete a layer
-      description: Permanently deletes a layer. Returns 409 if the layer has dependents. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/layers/{layerId}/archive:
-    post:
-      operationId: archiveLayer
-      tags:
-        - Layers
-      summary: Archive a layer
-      description: Marks a layer as archived. Archived layers are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Layer archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LayerResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/layers/{layerId}/restore:
-    post:
-      operationId: restoreLayer
-      tags:
-        - Layers
-      summary: Restore an archived layer
-      description: Removes the archived flag from a layer, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Layer restored
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LayerResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/layers/{layerId}/memberships:
-    get:
-      operationId: listLayerMemberships
-      tags:
-        - Structure Memberships
-      summary: List layer memberships
-      description: Returns a paginated list of member memberships for the given layer. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-        - $ref: "#/components/parameters/Cursor"
-        - $ref: "#/components/parameters/Limit"
-      responses:
-        "200":
-          description: Membership list
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - type: object
-                    required:
-                      - memberships
-                    properties:
-                      memberships:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/StructureMembershipResponse"
-                  - $ref: "#/components/schemas/PaginationMeta"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    post:
-      operationId: addLayerMembership
-      tags:
-        - Structure Memberships
-      summary: Add a member to a layer
-      description: Creates a membership record associating a member with this layer. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddStructureMembershipRequest"
-      responses:
-        "201":
-          description: Membership created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StructureMembershipResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/layers/{layerId}/memberships/{membershipId}:
-    delete:
-      operationId: removeLayerMembership
-      tags:
-        - Structure Memberships
-      summary: Remove a membership from a layer
-      description: Removes a member's membership from the given layer. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: layerId
-          in: path
-          required: true
-          description: Layer ID
-          schema:
-            type: string
-        - name: membershipId
-          in: path
-          required: true
-          description: Membership ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-links/subsystem-layer:
-    get:
-      operationId: listSubsystemLayerLinks
-      tags:
-        - Structure Links
-      summary: List subsystem-layer links
-      description: Returns a paginated list of links between subsystems and layers. Optionally filter by subsystem or layer ID. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
+        - name: entityTypeId
           in: query
-          description: Filter by Subsystem ID
-          schema:
-            type: string
-        - name: layerId
-          in: query
-          description: Filter by Layer ID
+          description: Filter by structure entity type ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
       responses:
         "200":
-          description: Link list
+          description: Paginated structure entity list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - entities
+                    properties:
+                      entities:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/StructureEntityResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createStructureEntity
+      tags:
+        - Structure Entities
+      summary: Create a structure entity
+      description: Creates a new structure entity within the given system. Rate limit 30 req/min (writeDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStructureEntityRequest"
+      responses:
+        "201":
+          description: Structure entity created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StructureEntityResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/structure-entities/{entityId}:
+    get:
+      operationId: getStructureEntity
+      tags:
+        - Structure Entities
+      summary: Get a structure entity
+      description: Returns details for a single structure entity by ID. Rate limit 60 req/min (readDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Structure entity details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StructureEntityResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateStructureEntity
+      tags:
+        - Structure Entities
+      summary: Update a structure entity
+      description: Updates the encrypted payload or metadata for a structure entity. Rate limit 30 req/min (writeDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStructureEntityRequest"
+      responses:
+        "200":
+          description: Structure entity updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StructureEntityResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteStructureEntity
+      tags:
+        - Structure Entities
+      summary: Delete a structure entity
+      description: Permanently deletes a structure entity. Returns 409 if the entity has dependents. Rate limit 30 req/min (writeDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/structure-entities/{entityId}/archive:
+    post:
+      operationId: archiveStructureEntity
+      tags:
+        - Structure Entities
+      summary: Archive a structure entity
+      description: Marks a structure entity as archived. Archived entities are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Structure entity archived
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StructureEntityResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/structure-entities/{entityId}/restore:
+    post:
+      operationId: restoreStructureEntity
+      tags:
+        - Structure Entities
+      summary: Restore an archived structure entity
+      description: Removes the archived flag from a structure entity, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Structure entity restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StructureEntityResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/structure-entity-links:
+    get:
+      operationId: listStructureEntityLinks
+      tags:
+        - Structure Entity Links
+      summary: List structure entity links
+      description: Returns a paginated list of parent-child links between structure entities. Optionally filter by entity or parent entity ID. Rate limit 60 req/min (readDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: query
+          description: Filter by child entity ID
+          schema:
+            type: string
+        - name: parentEntityId
+          in: query
+          description: Filter by parent entity ID
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated entity link list
           content:
             application/json:
               schema:
@@ -4006,18 +3473,18 @@ paths:
                       links:
                         type: array
                         items:
-                          $ref: "#/components/schemas/StructureLinkResponse"
+                          $ref: "#/components/schemas/StructureEntityLinkResponse"
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
     post:
-      operationId: createSubsystemLayerLink
+      operationId: createStructureEntityLink
       tags:
-        - Structure Links
-      summary: Link a subsystem to a layer
-      description: Creates a structural link between a subsystem and a layer. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Links
+      summary: Create a structure entity link
+      description: Creates a parent-child link between two structure entities. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4027,14 +3494,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateSubsystemLayerLinkRequest"
+              $ref: "#/components/schemas/CreateStructureEntityLinkRequest"
       responses:
         "201":
-          description: Link created
+          description: Entity link created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StructureLinkResponse"
+                $ref: "#/components/schemas/StructureEntityLinkResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -4043,13 +3510,13 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-links/subsystem-layer/{linkId}:
+  /systems/{systemId}/structure-entity-links/{linkId}:
     delete:
-      operationId: deleteSubsystemLayerLink
+      operationId: deleteStructureEntityLink
       tags:
-        - Structure Links
-      summary: Delete a subsystem-layer link
-      description: Permanently removes a structural link between a subsystem and a layer. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Links
+      summary: Delete a structure entity link
+      description: Permanently removes a parent-child link between two structure entities. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4057,7 +3524,7 @@ paths:
         - name: linkId
           in: path
           required: true
-          description: Link ID
+          description: Entity link ID
           schema:
             type: string
       responses:
@@ -4069,55 +3536,55 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-links/subsystem-side-system:
+  /systems/{systemId}/structure-entity-member-links:
     get:
-      operationId: listSubsystemSideSystemLinks
+      operationId: listStructureEntityMemberLinks
       tags:
-        - Structure Links
-      summary: List subsystem-side-system links
-      description: Returns a paginated list of links between subsystems and side systems. Optionally filter by subsystem or side system ID. Rate limit 60 req/min (readDefault).
+        - Structure Entity Member Links
+      summary: List structure entity member links
+      description: Returns a paginated list of links between structure entities and members. Optionally filter by member or parent entity ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: subsystemId
+        - name: memberId
           in: query
-          description: Filter by Subsystem ID
+          description: Filter by member ID
           schema:
             type: string
-        - name: sideSystemId
+        - name: parentEntityId
           in: query
-          description: Filter by Side System ID
+          description: Filter by parent entity ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
       responses:
         "200":
-          description: Link list
+          description: Paginated entity member link list
           content:
             application/json:
               schema:
                 allOf:
                   - type: object
                     required:
-                      - links
+                      - memberLinks
                     properties:
-                      links:
+                      memberLinks:
                         type: array
                         items:
-                          $ref: "#/components/schemas/StructureLinkResponse"
+                          $ref: "#/components/schemas/StructureEntityMemberLinkResponse"
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
     post:
-      operationId: createSubsystemSideSystemLink
+      operationId: createStructureEntityMemberLink
       tags:
-        - Structure Links
-      summary: Link a subsystem to a side system
-      description: Creates a structural link between a subsystem and a side system. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Member Links
+      summary: Create a structure entity member link
+      description: Creates a link associating a member with a structure entity. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4127,14 +3594,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateSubsystemSideSystemLinkRequest"
+              $ref: "#/components/schemas/CreateStructureEntityMemberLinkRequest"
       responses:
         "201":
-          description: Link created
+          description: Entity member link created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StructureLinkResponse"
+                $ref: "#/components/schemas/StructureEntityMemberLinkResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -4143,13 +3610,13 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-links/subsystem-side-system/{linkId}:
+  /systems/{systemId}/structure-entity-member-links/{linkId}:
     delete:
-      operationId: deleteSubsystemSideSystemLink
+      operationId: deleteStructureEntityMemberLink
       tags:
-        - Structure Links
-      summary: Delete a subsystem-side-system link
-      description: Permanently removes a structural link between a subsystem and a side system. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Member Links
+      summary: Delete a structure entity member link
+      description: Permanently removes a link between a member and a structure entity. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4157,7 +3624,7 @@ paths:
         - name: linkId
           in: path
           required: true
-          description: Link ID
+          description: Entity member link ID
           schema:
             type: string
       responses:
@@ -4169,55 +3636,55 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-links/side-system-layer:
+  /systems/{systemId}/structure-entity-associations:
     get:
-      operationId: listSideSystemLayerLinks
+      operationId: listStructureEntityAssociations
       tags:
-        - Structure Links
-      summary: List side-system-layer links
-      description: Returns a paginated list of links between side systems and layers. Optionally filter by side system or layer ID. Rate limit 60 req/min (readDefault).
+        - Structure Entity Associations
+      summary: List structure entity associations
+      description: Returns a paginated list of associations between structure entities. Optionally filter by source or target entity ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: sideSystemId
+        - name: sourceEntityId
           in: query
-          description: Filter by Side System ID
+          description: Filter by source entity ID
           schema:
             type: string
-        - name: layerId
+        - name: targetEntityId
           in: query
-          description: Filter by Layer ID
+          description: Filter by target entity ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
       responses:
         "200":
-          description: Link list
+          description: Paginated entity association list
           content:
             application/json:
               schema:
                 allOf:
                   - type: object
                     required:
-                      - links
+                      - associations
                     properties:
-                      links:
+                      associations:
                         type: array
                         items:
-                          $ref: "#/components/schemas/StructureLinkResponse"
+                          $ref: "#/components/schemas/StructureEntityAssociationResponse"
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
     post:
-      operationId: createSideSystemLayerLink
+      operationId: createStructureEntityAssociation
       tags:
-        - Structure Links
-      summary: Link a side system to a layer
-      description: Creates a structural link between a side system and a layer. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Associations
+      summary: Create a structure entity association
+      description: Creates a directional association between two structure entities. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4227,14 +3694,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateSideSystemLayerLinkRequest"
+              $ref: "#/components/schemas/CreateStructureEntityAssociationRequest"
       responses:
         "201":
-          description: Link created
+          description: Entity association created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StructureLinkResponse"
+                $ref: "#/components/schemas/StructureEntityAssociationResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -4243,21 +3710,21 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-links/side-system-layer/{linkId}:
+  /systems/{systemId}/structure-entity-associations/{associationId}:
     delete:
-      operationId: deleteSideSystemLayerLink
+      operationId: deleteStructureEntityAssociation
       tags:
-        - Structure Links
-      summary: Delete a side-system-layer link
-      description: Permanently removes a structural link between a side system and a layer. Rate limit 30 req/min (writeDefault).
+        - Structure Entity Associations
+      summary: Delete a structure entity association
+      description: Permanently removes a directional association between two structure entities. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
-        - name: linkId
+        - name: associationId
           in: path
           required: true
-          description: Link ID
+          description: Entity association ID
           schema:
             type: string
       responses:
@@ -4282,6 +3749,15 @@ paths:
         - $ref: "#/components/parameters/SystemId"
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, include archived lifecycle events in the response
       responses:
         "200":
           description: Paginated lifecycle event list
@@ -4357,6 +3833,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LifecycleEventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteLifecycleEvent
+      tags:
+        - Lifecycle Events
+      summary: Delete a lifecycle event
+      description: |
+        Permanently deletes a lifecycle event. Lifecycle events have no dependents,
+        so deletion is always permitted. Use archive instead for reversible removal.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: eventId
+          in: path
+          required: true
+          description: Lifecycle Event ID (evt_ prefix)
+          schema:
+            type: string
+            pattern: ^evt_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -5229,6 +4735,1272 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions:
+    get:
+      operationId: listFrontingSessions
+      tags:
+        - Fronting Sessions
+      summary: List fronting sessions
+      description: |
+        Returns a paginated list of fronting sessions for the specified system.
+        Supports filtering by member, custom front, structure entity, date range,
+        and active-only status.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: memberId
+          in: query
+          schema:
+            type: string
+          description: Filter by member ID
+        - name: customFrontId
+          in: query
+          schema:
+            type: string
+          description: Filter by custom front ID
+        - name: structureEntityId
+          in: query
+          schema:
+            type: string
+          description: Filter by structure entity ID
+        - name: startFrom
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Filter sessions starting at or after this Unix timestamp (ms)
+        - name: startUntil
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Filter sessions starting at or before this Unix timestamp (ms)
+        - name: activeOnly
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, only return sessions with no end time
+        - name: includeArchived
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, include archived sessions in the response
+      responses:
+        "200":
+          description: Paginated fronting session list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FrontingSessionResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createFrontingSession
+      tags:
+        - Fronting Sessions
+      summary: Create a fronting session
+      description: |
+        Starts a new fronting session. At least one subject (memberId, customFrontId,
+        or structureEntityId) is required. Retroactive startTime values are allowed.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFrontingSessionRequest"
+      responses:
+        "201":
+          description: Fronting session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingSessionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}:
+    get:
+      operationId: getFrontingSession
+      tags:
+        - Fronting Sessions
+      summary: Get a fronting session
+      description: |
+        Returns a single fronting session by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+      responses:
+        "200":
+          description: Fronting session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateFrontingSession
+      tags:
+        - Fronting Sessions
+      summary: Update a fronting session
+      description: |
+        Updates the encrypted data of a fronting session. Subject fields are
+        immutable after creation. Requires version for OCC.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFrontingSessionRequest"
+      responses:
+        "200":
+          description: Updated fronting session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingSessionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteFrontingSession
+      tags:
+        - Fronting Sessions
+      summary: Delete a fronting session
+      description: |
+        Permanently deletes a fronting session. Returns 409 if the session has
+        dependent comments. Use archive instead for reversible removal.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}/end:
+    post:
+      operationId: endFrontingSession
+      tags:
+        - Fronting Sessions
+      summary: End a fronting session
+      description: |
+        Sets the endTime on an active session. endTime must be after startTime.
+        Requires version for OCC.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndFrontingSessionRequest"
+      responses:
+        "200":
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingSessionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}/archive:
+    post:
+      operationId: archiveFrontingSession
+      tags:
+        - Fronting Sessions
+      summary: Archive a fronting session
+      description: |
+        Marks a fronting session as archived. Archived sessions are hidden from
+        default list responses but remain accessible. Archival is always permitted
+        regardless of dependents.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}/restore:
+    post:
+      operationId: restoreFrontingSession
+      tags:
+        - Fronting Sessions
+      summary: Restore an archived fronting session
+      description: |
+        Removes the archived flag from a fronting session, making it visible in
+        default list responses again.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+      responses:
+        "200":
+          description: Restored fronting session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingSessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting/active:
+    get:
+      operationId: getActiveFronting
+      tags:
+        - Fronting Sessions
+      summary: Get active fronting state
+      description: |
+        Returns all currently active (no end time) fronting sessions for the system,
+        along with a convenience flag indicating whether multiple members are
+        co-fronting and a map of entity IDs to their member/custom front data.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      responses:
+        "200":
+          description: Active fronting state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActiveFrontingResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments:
+    get:
+      operationId: listFrontingComments
+      tags:
+        - Fronting Comments
+      summary: List comments on a fronting session
+      description: |
+        Returns a paginated list of comments attached to the specified fronting session,
+        ordered by ID descending (newest first).
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, include archived comments in the response
+      responses:
+        "200":
+          description: Paginated fronting comment list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FrontingCommentResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createFrontingComment
+      tags:
+        - Fronting Comments
+      summary: Create a comment on a fronting session
+      description: |
+        Adds a new comment to the specified fronting session. At least one subject
+        (memberId, customFrontId, or structureEntityId) is required to identify
+        the authoring headmate. Returns 400 if the session is archived.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFrontingCommentRequest"
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingCommentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}:
+    get:
+      operationId: getFrontingComment
+      tags:
+        - Fronting Comments
+      summary: Get a fronting comment
+      description: |
+        Returns a single fronting session comment by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+        - name: commentId
+          in: path
+          required: true
+          description: Fronting comment ID (fcom_ prefix)
+          schema:
+            type: string
+            pattern: ^fcom_
+      responses:
+        "200":
+          description: Fronting comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingCommentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateFrontingComment
+      tags:
+        - Fronting Comments
+      summary: Update a fronting comment
+      description: |
+        Updates the encrypted data of a fronting comment. Requires version for OCC.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+        - name: commentId
+          in: path
+          required: true
+          description: Fronting comment ID (fcom_ prefix)
+          schema:
+            type: string
+            pattern: ^fcom_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFrontingCommentRequest"
+      responses:
+        "200":
+          description: Updated fronting comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingCommentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteFrontingComment
+      tags:
+        - Fronting Comments
+      summary: Delete a fronting comment
+      description: |
+        Permanently deletes a fronting comment. This action is irreversible.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+        - name: commentId
+          in: path
+          required: true
+          description: Fronting comment ID (fcom_ prefix)
+          schema:
+            type: string
+            pattern: ^fcom_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}/archive:
+    post:
+      operationId: archiveFrontingComment
+      tags:
+        - Fronting Comments
+      summary: Archive a fronting comment
+      description: |
+        Marks a fronting comment as archived. Archival is always permitted.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+        - name: commentId
+          in: path
+          required: true
+          description: Fronting comment ID (fcom_ prefix)
+          schema:
+            type: string
+            pattern: ^fcom_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}/restore:
+    post:
+      operationId: restoreFrontingComment
+      tags:
+        - Fronting Comments
+      summary: Restore an archived fronting comment
+      description: |
+        Removes the archived flag from a fronting comment, making it visible in
+        default list responses again.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: sessionId
+          in: path
+          required: true
+          description: Fronting session ID (fs_ prefix)
+          schema:
+            type: string
+            pattern: ^fs_
+        - name: commentId
+          in: path
+          required: true
+          description: Fronting comment ID (fcom_ prefix)
+          schema:
+            type: string
+            pattern: ^fcom_
+      responses:
+        "200":
+          description: Fronting comment restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingCommentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/analytics/fronting:
+    get:
+      operationId: getFrontingBreakdown
+      tags:
+        - Analytics
+      summary: Get fronting breakdown
+      description: |
+        Compute per-subject fronting statistics for a system over a date range.
+        Returns total duration, session count, average session length, and
+        percentage of total for each subject (member, custom front, or structure entity).
+
+        Open sessions (no end time) are capped at the current time.
+        Co-fronting sessions each count their full duration (no dedup).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: preset
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - last-7-days
+              - last-30-days
+              - last-90-days
+              - last-year
+              - all-time
+              - custom
+            default: last-30-days
+          description: Date range preset
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Custom range start (Unix milliseconds). Required when preset is `custom`.
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Custom range end (Unix milliseconds). Required when preset is `custom`.
+      responses:
+        "200":
+          description: Fronting breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingBreakdownResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: System not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /systems/{systemId}/analytics/co-fronting:
+    get:
+      operationId: getCoFrontingBreakdown
+      tags:
+        - Analytics
+      summary: Get co-fronting breakdown
+      description: |
+        Compute co-fronting statistics for a system over a date range.
+        Detects overlapping fronting sessions between distinct members and
+        returns per-pair overlap duration, session count, and percentage.
+
+        Custom fronts and structure entities are excluded from co-fronting analysis.
+        Pair ordering is canonical (lexicographic by member ID).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: preset
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - last-7-days
+              - last-30-days
+              - last-90-days
+              - last-year
+              - all-time
+              - custom
+            default: last-30-days
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Co-fronting breakdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CoFrontingBreakdownResponse"
+        "400":
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: System not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /systems/{systemId}/fronting-reports:
+    get:
+      operationId: listFrontingReports
+      tags:
+        - Fronting Reports
+      summary: List fronting reports
+      description: List stored fronting report snapshots with cursor pagination.
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated list of fronting reports
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                  - nextCursor
+                  - hasMore
+                  - totalCount
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FrontingReportResponse"
+                  nextCursor:
+                    type: string
+                    nullable: true
+                  hasMore:
+                    type: boolean
+                  totalCount:
+                    type: integer
+                    nullable: true
+        "404":
+          description: System not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createFrontingReport
+      tags:
+        - Fronting Reports
+      summary: Create fronting report
+      description: |
+        Store an immutable encrypted report snapshot. The report is generated
+        client-side and encrypted before submission. The server stores it
+        opaquely and never decrypts the contents.
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFrontingReportRequest"
+      responses:
+        "201":
+          description: Report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingReportResponse"
+        "400":
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: System not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /systems/{systemId}/fronting-reports/{reportId}:
+    get:
+      operationId: getFrontingReport
+      tags:
+        - Fronting Reports
+      summary: Get fronting report
+      description: Retrieve a single fronting report by ID.
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fr_
+          description: Fronting report ID (prefixed with `fr_`)
+      responses:
+        "200":
+          description: Fronting report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingReportResponse"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteFrontingReport
+      tags:
+        - Fronting Reports
+      summary: Delete fronting report
+      description: Permanently delete a fronting report.
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fr_
+          description: Fronting report ID (prefixed with `fr_`)
+      responses:
+        "204":
+          description: Report deleted
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /systems/{systemId}/webhook-configs:
+    get:
+      operationId: listWebhookConfigs
+      tags:
+        - Webhook Configs
+      summary: List webhook configs
+      description: |
+        Returns a paginated list of webhook configurations for the specified system.
+        The `secret` field is never included in list responses.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, include archived configs in the response
+      responses:
+        "200":
+          description: Paginated webhook config list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/WebhookConfigResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createWebhookConfig
+      tags:
+        - Webhook Configs
+      summary: Create a webhook config
+      description: |
+        Creates a new webhook configuration and returns the generated HMAC signing
+        secret. The secret is only returned in this response and cannot be retrieved
+        again (similar to GitHub webhook secrets).
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWebhookConfigRequest"
+      responses:
+        "201":
+          description: Webhook config created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookConfigCreateResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/webhook-configs/{webhookId}:
+    get:
+      operationId: getWebhookConfig
+      tags:
+        - Webhook Configs
+      summary: Get a webhook config
+      description: |
+        Returns a single webhook configuration. The `secret` field is never included.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Webhook config ID (wh_ prefix)
+      responses:
+        "200":
+          description: Webhook config details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateWebhookConfig
+      tags:
+        - Webhook Configs
+      summary: Update a webhook config
+      description: |
+        Updates a webhook configuration. Uses optimistic concurrency control via
+        the `version` field.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWebhookConfigRequest"
+      responses:
+        "200":
+          description: Webhook config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookConfigResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      operationId: deleteWebhookConfig
+      tags:
+        - Webhook Configs
+      summary: Delete a webhook config
+      description: |
+        Permanently deletes a webhook configuration. Returns 409 if there are
+        pending deliveries.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Webhook config deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /systems/{systemId}/webhook-configs/{webhookId}/archive:
+    post:
+      operationId: archiveWebhookConfig
+      tags:
+        - Webhook Configs
+      summary: Archive a webhook config
+      description: |
+        Archives a webhook configuration. Archived configs are not triggered
+        by events.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Webhook config archived
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/webhook-configs/{webhookId}/restore:
+    post:
+      operationId: restoreWebhookConfig
+      tags:
+        - Webhook Configs
+      summary: Restore an archived webhook config
+      description: |
+        Restores an archived webhook configuration.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Webhook config restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/webhook-deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      tags:
+        - Webhook Deliveries
+      summary: List webhook deliveries
+      description: |
+        Returns a paginated list of webhook delivery records for the specified system.
+        Supports filtering by webhook config, status, and event type.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: webhookId
+          in: query
+          schema:
+            type: string
+          description: Filter by webhook config ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - pending
+              - success
+              - failed
+          description: Filter by delivery status
+        - name: eventType
+          in: query
+          schema:
+            $ref: "#/components/schemas/WebhookEventType"
+          description: Filter by event type
+      responses:
+        "200":
+          description: Paginated webhook delivery list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/WebhookDeliveryResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/webhook-deliveries/{deliveryId}:
+    get:
+      operationId: getWebhookDelivery
+      tags:
+        - Webhook Deliveries
+      summary: Get a webhook delivery
+      description: |
+        Returns a single webhook delivery record.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Webhook delivery ID (wd_ prefix)
+      responses:
+        "200":
+          description: Webhook delivery details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDeliveryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteWebhookDelivery
+      tags:
+        - Webhook Deliveries
+      summary: Delete a webhook delivery
+      description: |
+        Permanently deletes a webhook delivery record. Deliveries are leaf
+        entities and can always be deleted.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: deliveryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Webhook delivery deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
     bearerAuth:
@@ -6287,152 +7059,7 @@ components:
             bidirectional:
               type: boolean
               description: Whether the relationship applies in both directions
-    KnownArchitectureType:
-      type: string
-      enum:
-        - orbital
-        - spectrum
-        - median
-        - age-sliding
-        - webbed
-        - unknown
-        - fluid
-      example: orbital
-    ArchitectureType:
-      oneOf:
-        - type: object
-          required:
-            - kind
-            - type
-          properties:
-            kind:
-              type: string
-              const: known
-            type:
-              $ref: "#/components/schemas/KnownArchitectureType"
-        - type: object
-          required:
-            - kind
-            - value
-          properties:
-            kind:
-              type: string
-              const: custom
-            value:
-              type: string
-              minLength: 1
-              maxLength: 100
-    DiscoveryStatus:
-      type: string
-      enum:
-        - fully-mapped
-        - partially-mapped
-        - unknown
-    CreateSubsystemRequest:
-      type: object
-      required:
-        - encryptedData
-        - hasCore
-      properties:
-        encryptedData:
-          type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)
-        parentSubsystemId:
-          type: string
-          nullable: true
-          description: ID of the parent subsystem for nesting
-        architectureType:
-          oneOf:
-            - $ref: "#/components/schemas/ArchitectureType"
-            - type: "null"
-        hasCore:
-          type: boolean
-          description: Whether this subsystem has a core identity
-        discoveryStatus:
-          oneOf:
-            - $ref: "#/components/schemas/DiscoveryStatus"
-            - type: "null"
-    UpdateSubsystemRequest:
-      type: object
-      required:
-        - encryptedData
-        - hasCore
-        - version
-      properties:
-        encryptedData:
-          type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)
-        parentSubsystemId:
-          type: string
-          nullable: true
-        architectureType:
-          oneOf:
-            - $ref: "#/components/schemas/ArchitectureType"
-            - type: "null"
-        hasCore:
-          type: boolean
-        discoveryStatus:
-          oneOf:
-            - $ref: "#/components/schemas/DiscoveryStatus"
-            - type: "null"
-        version:
-          type: integer
-          minimum: 1
-    SubsystemResponse:
-      allOf:
-        - $ref: "#/components/schemas/EncryptedEntity"
-        - type: object
-          required:
-            - hasCore
-          properties:
-            parentSubsystemId:
-              type: string
-              nullable: true
-              description: ID of the parent subsystem
-            architectureType:
-              oneOf:
-                - $ref: "#/components/schemas/ArchitectureType"
-                - type: "null"
-            hasCore:
-              type: boolean
-              description: Whether this subsystem has a core identity
-            discoveryStatus:
-              type: string
-              nullable: true
-              description: How well-mapped the subsystem is
-    CreateSideSystemRequest:
-      type: object
-      required:
-        - encryptedData
-      properties:
-        encryptedData:
-          type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)
-    UpdateSideSystemRequest:
-      type: object
-      required:
-        - encryptedData
-        - version
-      properties:
-        encryptedData:
-          type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)
-        version:
-          type: integer
-          minimum: 1
-    CreateLayerRequest:
+    CreateStructureEntityTypeRequest:
       type: object
       required:
         - encryptedData
@@ -6443,12 +7070,12 @@ components:
           contentEncoding: base64
           minLength: 1
           maxLength: 87382
-          description: T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)
+          description: T1-encrypted PlaintextStructureEntityType (see ./plaintext.yaml#/PlaintextStructureEntityType)
         sortOrder:
           type: integer
           minimum: 0
-          description: Display order among layers
-    UpdateLayerRequest:
+          description: Display order among entity types
+    UpdateStructureEntityTypeRequest:
       type: object
       required:
         - encryptedData
@@ -6460,14 +7087,14 @@ components:
           contentEncoding: base64
           minLength: 1
           maxLength: 87382
-          description: T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)
+          description: T1-encrypted PlaintextStructureEntityType (see ./plaintext.yaml#/PlaintextStructureEntityType)
         sortOrder:
           type: integer
           minimum: 0
         version:
           type: integer
           minimum: 1
-    LayerResponse:
+    StructureEntityTypeResponse:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
         - type: object
@@ -6476,112 +7103,84 @@ components:
           properties:
             sortOrder:
               type: integer
-              description: Display order among layers
-    StructureMembershipResponse:
+              description: Display order among entity types
+    CreateStructureEntityRequest:
       type: object
-      description: A member's assignment to a structural entity (subsystem, side system, or layer)
       required:
-        - id
-        - systemId
-        - memberId
         - encryptedData
-        - createdAt
+        - entityTypeId
+        - sortOrder
       properties:
-        id:
-          type: string
-          description: Membership identifier
-        systemId:
-          type: string
-          description: System that owns this membership
-        memberId:
-          type: string
-          description: ID of the assigned member
         encryptedData:
           type: string
           contentEncoding: base64
-          description: T1-encrypted PlaintextStructureMembership
-        createdAt:
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted PlaintextStructureEntity (see ./plaintext.yaml#/PlaintextStructureEntity)
+        entityTypeId:
+          type: string
+          description: ID of the entity type this entity belongs to
+        sortOrder:
           type: integer
-          format: int64
-          description: Unix timestamp in milliseconds
-    SideSystemResponse:
-      description: A side system structure. Extends EncryptedEntity.
+          minimum: 0
+          description: Display order among entities of the same type
+    UpdateStructureEntityRequest:
+      type: object
+      required:
+        - encryptedData
+        - sortOrder
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted PlaintextStructureEntity (see ./plaintext.yaml#/PlaintextStructureEntity)
+        sortOrder:
+          type: integer
+          minimum: 0
+        version:
+          type: integer
+          minimum: 1
+    StructureEntityResponse:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
-    AddStructureMembershipRequest:
+        - type: object
+          required:
+            - entityTypeId
+            - sortOrder
+          properties:
+            entityTypeId:
+              type: string
+              description: ID of the entity type this entity belongs to
+            sortOrder:
+              type: integer
+              description: Display order among entities of the same type
+    CreateStructureEntityLinkRequest:
       type: object
       required:
-        - memberId
-        - encryptedData
+        - entityId
+        - sortOrder
       properties:
-        memberId:
+        entityId:
           type: string
-          description: ID of the member to add
-        encryptedData:
+          description: ID of the entity to link
+        parentEntityId:
           type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: T1-encrypted PlaintextStructureMembership (see ./plaintext.yaml#/PlaintextStructureMembership)
-    CreateSubsystemLayerLinkRequest:
-      type: object
-      required:
-        - subsystemId
-        - layerId
-      properties:
-        subsystemId:
-          type: string
-          description: ID of the subsystem to link
-        layerId:
-          type: string
-          description: ID of the layer to link
-        encryptedData:
-          type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)
-    CreateSubsystemSideSystemLinkRequest:
-      type: object
-      required:
-        - subsystemId
-        - sideSystemId
-      properties:
-        subsystemId:
-          type: string
-          description: ID of the subsystem to link
-        sideSystemId:
-          type: string
-          description: ID of the side system to link
-        encryptedData:
-          type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)
-    CreateSideSystemLayerLinkRequest:
-      type: object
-      required:
-        - sideSystemId
-        - layerId
-      properties:
-        sideSystemId:
-          type: string
-          description: ID of the side system to link
-        layerId:
-          type: string
-          description: ID of the layer to link
-        encryptedData:
-          type: string
-          contentEncoding: base64
-          minLength: 1
-          maxLength: 87382
-          description: Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)
-    StructureLinkResponse:
+          nullable: true
+          description: ID of the parent entity, or null for a top-level link
+        sortOrder:
+          type: integer
+          minimum: 0
+          description: Display order among sibling links
+    StructureEntityLinkResponse:
       type: object
       required:
         - id
         - systemId
+        - entityId
+        - sortOrder
         - createdAt
       properties:
         id:
@@ -6589,20 +7188,100 @@ components:
           description: Link identifier
         systemId:
           type: string
-        subsystemId:
+          description: System that owns this link
+        entityId:
           type: string
-          description: Present for subsystem-layer and subsystem-side-system links
-        sideSystemId:
+          description: ID of the linked entity
+        parentEntityId:
           type: string
-          description: Present for subsystem-side-system and side-system-layer links
-        layerId:
-          type: string
-          description: Present for subsystem-layer and side-system-layer links
-        encryptedData:
-          type: string
-          contentEncoding: base64
           nullable: true
-          description: Optional T1-encrypted PlaintextStructureLink
+          description: ID of the parent entity, or null for a top-level link
+        sortOrder:
+          type: integer
+          description: Display order among sibling links
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+    CreateStructureEntityMemberLinkRequest:
+      type: object
+      required:
+        - memberId
+        - sortOrder
+      properties:
+        memberId:
+          type: string
+          description: ID of the member to link
+        parentEntityId:
+          type: string
+          nullable: true
+          description: ID of the parent entity this member is linked under, or null for a top-level link
+        sortOrder:
+          type: integer
+          minimum: 0
+          description: Display order among sibling member links
+    StructureEntityMemberLinkResponse:
+      type: object
+      required:
+        - id
+        - systemId
+        - memberId
+        - sortOrder
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Link identifier
+        systemId:
+          type: string
+          description: System that owns this link
+        parentEntityId:
+          type: string
+          nullable: true
+          description: ID of the parent entity this member is linked under, or null for a top-level link
+        memberId:
+          type: string
+          description: ID of the linked member
+        sortOrder:
+          type: integer
+          description: Display order among sibling member links
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+    CreateStructureEntityAssociationRequest:
+      type: object
+      required:
+        - sourceEntityId
+        - targetEntityId
+      properties:
+        sourceEntityId:
+          type: string
+          description: ID of the source entity in the association
+        targetEntityId:
+          type: string
+          description: ID of the target entity in the association
+    StructureEntityAssociationResponse:
+      type: object
+      required:
+        - id
+        - systemId
+        - sourceEntityId
+        - targetEntityId
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Association identifier
+        systemId:
+          type: string
+          description: System that owns this association
+        sourceEntityId:
+          type: string
+          description: ID of the source entity
+        targetEntityId:
+          type: string
+          description: ID of the target entity
         createdAt:
           type: integer
           format: int64
@@ -6618,7 +7297,7 @@ components:
         - dormancy-end
         - discovery
         - archival
-        - subsystem-formation
+        - structure-entity-formation
         - form-change
         - name-change
         - structure-move
@@ -7092,6 +7771,350 @@ components:
         transitioned:
           type: boolean
           description: Whether the rotation state transitioned (e.g., to sealing or completed)
+    FrontingSessionResponse:
+      description: |
+        A fronting session. Extends EncryptedEntity with server-visible fields:
+        subject IDs (memberId/customFrontId/structureEntityId), startTime, endTime,
+        and archived status.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          properties:
+            memberId:
+              type: string
+              nullable: true
+            customFrontId:
+              type: string
+              nullable: true
+            structureEntityId:
+              type: string
+              nullable: true
+            startTime:
+              type: integer
+              format: int64
+              description: Unix milliseconds when the session started
+            endTime:
+              type: integer
+              format: int64
+              nullable: true
+              description: Unix milliseconds when the session ended (null if active)
+    CreateFrontingSessionRequest:
+      type: object
+      required:
+        - encryptedData
+        - startTime
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted PlaintextFrontingSession
+        startTime:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Unix milliseconds. Retroactive values are allowed.
+        memberId:
+          type: string
+          description: Member ID (mem_ prefix). At least one subject required.
+        customFrontId:
+          type: string
+          description: Custom front ID (cf_ prefix)
+        structureEntityId:
+          type: string
+          description: Structure entity ID (ste_ prefix)
+    UpdateFrontingSessionRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted PlaintextFrontingSession
+        version:
+          type: integer
+          minimum: 1
+    EndFrontingSessionRequest:
+      type: object
+      required:
+        - endTime
+        - version
+      properties:
+        endTime:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Unix milliseconds. Must be after startTime.
+        version:
+          type: integer
+          minimum: 1
+    ActiveFrontingResponse:
+      description: |
+        The current active fronting state for a system. Contains all sessions with
+        no end time, a co-fronting flag, and a map of subject entity IDs to their
+        encrypted entity blobs for client-side decryption.
+      type: object
+      required:
+        - sessions
+        - isCofronting
+        - entityMemberMap
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/FrontingSessionResponse"
+          description: All currently active fronting sessions (no end time)
+        isCofronting:
+          type: boolean
+          description: True if more than one session is currently active
+        entityMemberMap:
+          type: object
+          additionalProperties:
+            type: object
+          description: |
+            Map of subject entity IDs (memberId, customFrontId, or structureEntityId)
+            to their corresponding encrypted entity response objects. Populated for
+            all subjects referenced by the active sessions.
+    FrontingCommentResponse:
+      description: |
+        A comment attached to a fronting session. Extends EncryptedEntity with the
+        parent session ID and the authoring subject (member, custom front, or
+        structure entity).
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          required:
+            - frontingSessionId
+          properties:
+            frontingSessionId:
+              type: string
+              description: ID of the parent fronting session (fs_ prefix)
+            memberId:
+              type: string
+              nullable: true
+              description: Authoring member ID (mem_ prefix), if set
+            customFrontId:
+              type: string
+              nullable: true
+              description: Authoring custom front ID (cf_ prefix), if set
+            structureEntityId:
+              type: string
+              nullable: true
+              description: Authoring structure entity ID (ste_ prefix), if set
+    CreateFrontingCommentRequest:
+      type: object
+      required:
+        - encryptedData
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted comment content
+        memberId:
+          type: string
+          description: Authoring member ID (mem_ prefix). At least one subject required.
+        customFrontId:
+          type: string
+          description: Authoring custom front ID (cf_ prefix)
+        structureEntityId:
+          type: string
+          description: Authoring structure entity ID (ste_ prefix)
+    UpdateFrontingCommentRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted comment content
+        version:
+          type: integer
+          minimum: 1
+    SubjectFrontingBreakdown:
+      type: object
+      required:
+        - subjectType
+        - subjectId
+        - totalDuration
+        - sessionCount
+        - averageSessionLength
+        - percentageOfTotal
+      properties:
+        subjectType:
+          type: string
+          enum:
+            - member
+            - customFront
+            - structureEntity
+          description: The type of fronting subject
+        subjectId:
+          type: string
+          description: ID of the subject (member, custom front, or structure entity)
+        totalDuration:
+          type: integer
+          description: Total fronting duration in milliseconds
+        sessionCount:
+          type: integer
+          description: Number of fronting sessions
+        averageSessionLength:
+          type: integer
+          description: Average session length in milliseconds
+        percentageOfTotal:
+          type: number
+          description: Percentage of total fronting time (0-100)
+    FrontingBreakdownResponse:
+      type: object
+      required:
+        - systemId
+        - dateRange
+        - subjectBreakdowns
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+        dateRange:
+          type: object
+          required:
+            - preset
+            - start
+            - end
+          properties:
+            preset:
+              type: string
+              nullable: true
+              enum:
+                - last-7-days
+                - last-30-days
+                - last-90-days
+                - last-year
+                - all-time
+                - custom
+                - null
+            start:
+              type: integer
+              description: Start timestamp (Unix milliseconds)
+            end:
+              type: integer
+              description: End timestamp (Unix milliseconds)
+        subjectBreakdowns:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubjectFrontingBreakdown"
+    CoFrontingPair:
+      type: object
+      required:
+        - memberA
+        - memberB
+        - totalDuration
+        - sessionCount
+        - percentageOfTotal
+      properties:
+        memberA:
+          type: string
+          pattern: ^mem_
+          description: First member ID (lexicographically ordered)
+        memberB:
+          type: string
+          pattern: ^mem_
+          description: Second member ID (lexicographically ordered)
+        totalDuration:
+          type: integer
+          description: Total overlap duration in milliseconds
+        sessionCount:
+          type: integer
+          description: Number of overlapping session pairs
+        percentageOfTotal:
+          type: number
+          description: Percentage of total fronting time
+    CoFrontingBreakdownResponse:
+      type: object
+      required:
+        - systemId
+        - dateRange
+        - coFrontingPercentage
+        - pairs
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+        dateRange:
+          type: object
+          required:
+            - preset
+            - start
+            - end
+          properties:
+            preset:
+              type: string
+              nullable: true
+            start:
+              type: integer
+            end:
+              type: integer
+        coFrontingPercentage:
+          type: number
+          description: Percentage of total fronting time involving co-fronting
+        pairs:
+          type: array
+          items:
+            $ref: "#/components/schemas/CoFrontingPair"
+    FrontingReportResponse:
+      type: object
+      required:
+        - id
+        - systemId
+        - encryptedData
+        - format
+        - generatedAt
+      properties:
+        id:
+          type: string
+          pattern: ^fr_
+        systemId:
+          type: string
+          pattern: ^sys_
+        encryptedData:
+          type: string
+          format: base64
+          description: Encrypted report snapshot (client-generated)
+        format:
+          type: string
+          enum:
+            - html
+            - pdf
+        generatedAt:
+          type: integer
+          description: Timestamp when the report was generated (Unix milliseconds)
+    CreateFrontingReportRequest:
+      type: object
+      required:
+        - encryptedData
+        - format
+        - generatedAt
+      properties:
+        encryptedData:
+          type: string
+          format: base64
+          description: Encrypted report snapshot
+        format:
+          type: string
+          enum:
+            - html
+            - pdf
+        generatedAt:
+          type: integer
+          description: Timestamp when the report was generated (Unix milliseconds)
     UpdateSystemSettingsRequest:
       type: object
       required:
@@ -7583,13 +8606,12 @@ components:
           type: string
           nullable: true
           description: User-defined label (meaningful when type is "custom")
-    PlaintextSubsystem:
+    PlaintextStructureEntityType:
       description: |
-        **Encrypted into**: `encryptedData` on subsystem create/update endpoints.
+        **Encrypted into**: `encryptedData` on structure entity type create/update endpoints.
 
-        A nested structural group within the system. Note: `parentSubsystemId`,
-        `architectureType`, `hasCore`, and `discoveryStatus` are sent as separate
-        plaintext fields. Encryption tier: **T1**.
+        A user-defined structure entity type within the system (e.g., "Subsystem",
+        "Side System", "Layer"). Encryption tier: **T1**.
       type: object
       required:
         - name
@@ -7609,11 +8631,11 @@ components:
         emoji:
           type: string
           nullable: true
-    PlaintextSideSystem:
+    PlaintextStructureEntity:
       description: |
-        **Encrypted into**: `encryptedData` on side system create/update endpoints.
+        **Encrypted into**: `encryptedData` on structure entity create/update endpoints.
 
-        A parallel structural group alongside the main system. Encryption tier: **T1**.
+        An instance of a user-defined structure entity type. Encryption tier: **T1**.
       type: object
       required:
         - name
@@ -7633,38 +8655,16 @@ components:
         emoji:
           type: string
           nullable: true
-    PlaintextLayer:
+    PlaintextFrontingSession:
       description: |
-        **Encrypted into**: `encryptedData` on layer create/update endpoints.
+        **Encrypted into**: `encryptedData` on fronting session create/update endpoints.
 
-        A structural layer within the system. Encryption tier: **T1**.
+        Encrypted metadata for a fronting session. Note: `memberId`, `customFrontId`,
+        `structureEntityId`, `startTime`, and `endTime` are sent as separate plaintext
+        fields. Encryption tier: **T1**.
       type: object
-      required:
-        - name
       properties:
-        name:
-          type: string
-        description:
-          type: string
-          nullable: true
-        accessType:
-          type: string
-          enum:
-            - open
-            - gatekept
-        gatekeeperMemberIds:
-          type: array
-          items:
-            type: string
-          description: Member IDs that act as gatekeepers (only for gatekept layers)
-        color:
-          type: string
-          nullable: true
-        imageSource:
-          oneOf:
-            - $ref: "#/components/schemas/PlaintextImageSource"
-            - type: "null"
-        emoji:
+        notes:
           type: string
           nullable: true
     PlaintextLifecycleEvent:
@@ -7741,9 +8741,7 @@ components:
           enum:
             - member
             - landmark
-            - subsystem
-            - side-system
-            - layer
+            - structure-entity
         positionX:
           type: number
           description: X coordinate on the canvas
@@ -7762,15 +8760,9 @@ components:
         linkedMemberId:
           type: string
           description: Member ID (member entities only)
-        linkedSubsystemId:
+        linkedStructureEntityId:
           type: string
-          description: Subsystem ID (subsystem entities only)
-        linkedSideSystemId:
-          type: string
-          description: Side System ID (side-system entities only)
-        linkedLayerId:
-          type: string
-          description: Layer ID (layer entities only)
+          description: Structure entity ID (structure-entity entities only)
     PlaintextInnerworldCanvas:
       description: |
         **Encrypted into**: `encryptedData` on `PUT /systems/:systemId/innerworld/canvas`.
@@ -7944,13 +8936,12 @@ components:
         saturation:
           type: string
           description: "Term for saturation level (default: 'Saturation'). Presets: Saturation, Elaboration, Completeness"
-    PlaintextStructureMembership:
+    PlaintextStructureEntityMemberLink:
       description: |
-        **Encrypted into**: `encryptedData` on structure membership add endpoints
-        (subsystem, side system, layer memberships).
+        **Encrypted into**: `encryptedData` on structure entity member link endpoints.
 
-        Encrypted metadata for a member's assignment to a structural entity.
-        The `memberId` is sent as a separate plaintext field.
+        Encrypted metadata for a member's assignment to a structure entity.
+        The `memberId` and `parentEntityId` are sent as separate plaintext fields.
         Encryption tier: **T1**.
       type: object
       properties:
@@ -7958,18 +8949,181 @@ components:
           type: string
           nullable: true
           description: Optional notes about this membership
-    PlaintextStructureLink:
+    PlaintextStructureEntityAssociation:
       description: |
-        **Encrypted into**: `encryptedData` (optional) on structure link create endpoints.
+        **Encrypted into**: `encryptedData` (optional) on structure entity association
+        create endpoints.
 
-        Encrypted metadata for a cross-structure link (subsystem-layer,
-        subsystem-side-system, side-system-layer). The linked entity IDs are
-        sent as separate plaintext fields. Encryption tier: **T1**.
+        Encrypted metadata for a directed cross-reference between structure entities.
+        The `sourceEntityId` and `targetEntityId` are sent as separate plaintext
+        fields. Encryption tier: **T1**.
       type: object
       properties:
         notes:
           type: string
           nullable: true
+    WebhookEventType:
+      type: string
+      enum:
+        - member.created
+        - member.updated
+        - member.archived
+        - fronting.started
+        - fronting.ended
+        - group.created
+        - group.updated
+        - note.created
+        - note.updated
+        - chat.message-sent
+        - poll.created
+        - poll.closed
+        - acknowledgement.requested
+        - lifecycle.event-recorded
+        - custom-front.changed
+    WebhookConfigResponse:
+      description: |
+        A webhook configuration. The `secret` field is only included in the
+        create response and is never exposed again via GET endpoints.
+      type: object
+      properties:
+        id:
+          type: string
+          description: Webhook config ID (wh_ prefix)
+        systemId:
+          type: string
+          description: System ID (sys_ prefix)
+        url:
+          type: string
+          format: uri
+          description: Webhook target URL
+        eventTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookEventType"
+          description: Event types this webhook subscribes to
+        enabled:
+          type: boolean
+          description: Whether the webhook is currently active
+        cryptoKeyId:
+          type: string
+          nullable: true
+          description: Optional API key ID for encrypted payloads
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic concurrency version
+        archived:
+          type: boolean
+        archivedAt:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+    CreateWebhookConfigRequest:
+      type: object
+      required:
+        - url
+        - eventTypes
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: Webhook target URL. Must use HTTPS in production.
+        eventTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookEventType"
+          minItems: 1
+          maxItems: 15
+          description: Event types to subscribe to
+        enabled:
+          type: boolean
+          default: true
+          description: Whether the webhook is active on creation
+        cryptoKeyId:
+          type: string
+          description: Optional API key ID for encrypted payloads (ak_ prefix)
+    WebhookConfigCreateResponse:
+      description: |
+        Response from creating a webhook config. Includes the `secret` field
+        (base64-encoded HMAC signing key) which is only exposed once.
+      allOf:
+        - $ref: "#/components/schemas/WebhookConfigResponse"
+        - type: object
+          properties:
+            secret:
+              type: string
+              contentEncoding: base64
+              description: Base64-encoded HMAC signing secret. Only returned on create.
+    UpdateWebhookConfigRequest:
+      type: object
+      required:
+        - version
+      properties:
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: Updated webhook target URL
+        eventTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookEventType"
+          minItems: 1
+          maxItems: 15
+          description: Updated event type subscriptions
+        enabled:
+          type: boolean
+          description: Updated enabled status
+        version:
+          type: integer
+          minimum: 1
+          description: Current version for OCC check
+    WebhookDeliveryResponse:
+      description: A webhook delivery record.
+      type: object
+      properties:
+        id:
+          type: string
+          description: Delivery ID (wd_ prefix)
+        webhookId:
+          type: string
+          description: Webhook config ID
+        systemId:
+          type: string
+          description: System ID
+        eventType:
+          $ref: "#/components/schemas/WebhookEventType"
+        status:
+          type: string
+          enum:
+            - pending
+            - success
+            - failed
+        httpStatus:
+          type: integer
+          nullable: true
+          description: HTTP status code from the last delivery attempt
+        attemptCount:
+          type: integer
+          minimum: 0
+        lastAttemptAt:
+          type: integer
+          format: int64
+          nullable: true
+        nextRetryAt:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
   responses:
     NoContent:
       description: Success with no response body
@@ -8040,6 +9194,14 @@ x-tagGroups:
     tags:
       - Lifecycle Events
       - Innerworld
+  - name: Fronting
+    tags:
+      - Fronting Sessions
+      - Fronting Comments
+  - name: Analytics
+    tags:
+      - Analytics
+      - Fronting Reports
   - name: Media & Crypto
     tags:
       - Blobs

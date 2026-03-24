@@ -79,16 +79,18 @@ Epics:
 - ~~M2 audit scorecard remediation~~ [COMPLETED] — timing side-channels, structured logging, response envelope standardization, DRY violations
 - ~~M3 comprehensive audit remediation~~ [COMPLETED] — 42 HIGH+MEDIUM findings across 12 parallel worktree PRs, plus 28 LOW-severity findings
 
-## Milestone 4: Fronting Engine
+## Milestone 4: Fronting Engine [COMPLETED]
 
-Goal: Front logging, co-fronting, analytics, timers
+Goal: Front logging, co-fronting, analytics, timers, webhooks
 
 Epics:
 
-- Front logging API (features.md section 2), including outtrigger reason/sentiment (L5) and fronting structure location display (L1)
-- Analytics engine (features.md section 2)
-- Automated timers and check-in reminders (features.md section 2)
-- Webhooks event system
+- ~~Front logging API~~ [COMPLETED] — fronting session CRUD (start/end, co-fronting as parallel timelines, structure entity fronting, retroactive edits, outtrigger sentiment), fronting comments, active fronting query, CRDT sync strategies (`packages/sync`)
+- ~~Analytics engine~~ [COMPLETED] — per-subject fronting duration/percentage breakdowns, date range presets, co-fronting pair analytics, fronting report snapshots, CRDT sync
+- ~~Automated timers and check-in reminders~~ [COMPLETED] — timer config CRUD with waking hours window, check-in record CRUD with respond/dismiss lifecycle, timer scheduling worker, CRDT sync
+- ~~Webhooks event system~~ [COMPLETED] — webhook config CRUD with HMAC secret generation, delivery CRUD with status tracking, event dispatcher, delivery worker with exponential backoff, delivery cleanup job (30-day retention), secret rotation (ADR 027), CRDT sync
+- ~~Lifecycle event archive/delete~~ [COMPLETED] — archive/restore/delete endpoints, CRDT strategy upgraded from append-only to append-lww
+- ~~Tech debt / hardening~~ [COMPLETED] — branded types (RecoveryKeyDisplay, KeyVersion, DisplayKey, Sha256Hex, protocol IDs), UnixMillis helper, JobPayloadMap concrete types, N+1 query fixes, cursor TTL enforcement, retry jitter, device transfer code entropy (ADR 024), switches table removal, structured logging, BucketKeyCache LRU eviction, sync engine typed errors (15 tasks, 1 scrapped)
 
 ## Milestone 5: Communication
 
@@ -200,7 +202,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 ## Architecture Decision Records
 
-26 accepted ADRs cover the full stack:
+27 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -222,6 +224,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - [ADR 024: Device Transfer Code Entropy](../adr/024-device-transfer-code-entropy.md) — entropy trade-off for user-typed device transfer codes
 - [ADR 025: Webhook Secret Storage](../adr/025-webhook-secret-storage.md) — T3 plaintext storage for webhook signing secrets
 - [ADR 026: Lifecycle Event Type-Specific Validation](../adr/026-lifecycle-event-type-validation.md) — type-discriminated validation for lifecycle event subtypes
+- [ADR 027: Webhook Secret Rotation](../adr/027-webhook-secret-rotation.md) — procedure for rotating webhook HMAC signing secrets
 
 ## Development Sequence Rationale
 

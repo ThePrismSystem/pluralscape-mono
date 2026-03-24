@@ -1,36 +1,77 @@
 # Roadmap
 
-## Milestone: Milestone 4: Fronting Engine ([ps-mmpz](.beans/ps-mmpz--milestone-4-fronting-engine.md))
+## Milestone: Milestone 6: Privacy and Social ([ps-6itw](.beans/ps-6itw--milestone-6-privacy-and-social.md))
 
-> Front logging, co-fronting, analytics, timers
+> Privacy engine, friend network, external access
+
+- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Second-pass zero-knowledge hardening for member-identifying columns ([db-jpjm](.beans/db-jpjm--second-pass-zero-knowledge-hardening-for-member-id.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Re-evaluate audit_log.detail encryption tier (T1 vs T3) ([db-kcmt](.beans/db-kcmt--re-evaluate-audit-logdetail-encryption-tier-t1-vs.md))
+
+## Milestone: Milestone 8: Client App ([ps-7j8n](.beans/ps-7j8n--milestone-8-client-app.md))
+
+> Full-featured cross-platform UI (web, iOS, Android via Expo)
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
+
+## Milestone: Milestone 7: Data Portability ([ps-n8uk](.beans/ps-n8uk--milestone-7-data-portability.md))
+
+> Import from SP/PK, export, API surface
+
+### Epic: PluralKit import ([client-f61z](.beans/client-f61z--pluralkit-import.md))
+
+> Client-side: parse PK JSON v2 export — 5-char hids, ISO 8601, members/switches/groups only
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Convert PluralKit switches to fronting sessions on import ([client-jusn](.beans/client-jusn--convert-pluralkit-switches-to-fronting-sessions-on.md))
+
+### Miscellaneous
 
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Recovery key regeneration email confirmation ([api-nk7m](.beans/api-nk7m--recovery-key-regeneration-email-confirmation.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SQLite schema codegen from PG (Phase B) ([db-k19k](.beans/db-k19k--sqlite-schema-codegen-from-pg-phase-b.md))
+
+## Milestone: Milestone 10: Polish and Launch ([ps-9u4w](.beans/ps-9u4w--milestone-10-polish-and-launch.md))
+
+> Security audit, performance, beta testing
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
 
 ## No Milestone
 
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Second-pass zero-knowledge hardening for member-identifying columns ([db-jpjm](.beans/db-jpjm--second-pass-zero-knowledge-hardening-for-member-id.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Official client SDKs ([ps-pzai](.beans/ps-pzai--official-client-sdks.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Document webhook secret rotation procedure ([api-4pl2](.beans/api-4pl2--document-webhook-secret-rotation-procedure.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Audit and fix N+1 query patterns in API routes ([api-628l](.beans/api-628l--audit-and-fix-n1-query-patterns-in-api-routes.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire audit log cleanup job scheduling ([api-enp2](.beans/api-enp2--wire-audit-log-cleanup-job-scheduling.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Increase device transfer code to 10+ digits ([api-ex51](.beans/api-ex51--increase-device-transfer-code-to-10-digits.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate switches.memberIds belong to same system at write time ([api-gt2o](.beans/api-gt2o--validate-switchesmemberids-belong-to-same-system-a.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Enforce pagination cursor TTL expiry ([api-pfbj](.beans/api-pfbj--enforce-pagination-cursor-ttl-expiry.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add jitterFraction 0.2 to default retry policies ([api-u3jt](.beans/api-u3jt--add-jitterfraction-02-to-default-retry-policies.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add branded RecoveryKeyDisplay type ([crypto-r1go](.beans/crypto-r1go--add-branded-recoverykeydisplay-type.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Review switches table partitioning needs ([db-6lhh](.beans/db-6lhh--review-switches-table-partitioning-needs.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Implement webhook delivery cleanup ([db-nh34](.beans/db-nh34--implement-webhook-delivery-cleanup.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Abstract console methods into structured logging module ([infra-tclx](.beans/infra-tclx--abstract-console-methods-into-structured-logging-m.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Apply typed errors to sync-engine.ts ([sync-kpb2](.beans/sync-kpb2--apply-typed-errors-to-sync-enginets.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add Sha256Hex branded type for blob_metadata.checksum ([types-aqmu](.beans/types-aqmu--add-sha256hex-branded-type-for-blob-metadatachecks.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Replace 'as UnixMillis' casts with helper function ([types-ok7n](.beans/types-ok7n--replace-as-unixmillis-casts-with-helper-function.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Define concrete payload types for all 15 JobPayloadMap entries ([types-vnhp](.beans/types-vnhp--define-concrete-payload-types-for-all-15-jobpayloa.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add branded types for keyVersion and displayKey ([crypto-249b](.beans/crypto-249b--add-branded-types-for-keyversion-and-displaykey.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add cache max size / LRU eviction to BucketKeyCache ([crypto-o5dr](.beans/crypto-o5dr--add-cache-max-size-lru-eviction-to-bucketkeycache.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Re-evaluate audit_log.detail encryption tier (T1 vs T3) ([db-kcmt](.beans/db-kcmt--re-evaluate-audit-logdetail-encryption-tier-t1-vs.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Introduce branded protocol IDs ([sync-5gdu](.beans/sync-5gdu--introduce-branded-protocol-ids.md))
+### Epic: M4 audit remediation ([ps-4ioj](.beans/ps-4ioj--m4-audit-remediation.md))
+
+> Address must-fix and should-fix findings from the M4 comprehensive audit. 12 items: 4 critical/high data integrity + security, 8 should-fix performance/quality/testing.
+
+- ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix SQLite getCurrentFrontingComments join missing systemId ([db-vguh](.beans/db-vguh--fix-sqlite-getcurrentfrontingcomments-join-missing.md))
+- ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix poll-vote fieldName mismatch in CRDT strategies ([sync-uxaf](.beans/sync-uxaf--fix-poll-vote-fieldname-mismatch-in-crdt-strategie.md))
+- ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix WebhookConfig.secret typed as EncryptedString ([types-yp3m](.beans/types-yp3m--fix-webhookconfigsecret-typed-as-encryptedstring.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add webhook-delivery-cleanup unit test ([api-3rtc](.beans/api-3rtc--add-webhook-delivery-cleanup-unit-test.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add next_check_in_at column to optimize timer scheduling ([api-4kp6](.beans/api-4kp6--add-next-check-in-at-column-to-optimize-timer-sche.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Batch webhook delivery cleanup deletes ([api-7yk0](.beans/api-7yk0--batch-webhook-delivery-cleanup-deletes.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Reduce over-mocking in webhook-dispatcher unit test ([api-ao1s](.beans/api-ao1s--reduce-over-mocking-in-webhook-dispatcher-unit-tes.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add fronting-report.service integration test ([api-bn0u](.beans/api-bn0u--add-fronting-reportservice-integration-test.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add missing webhook route-level tests ([api-d8jg](.beans/api-d8jg--add-missing-webhook-route-level-tests.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add webhook secret rotation endpoint ([api-f6jg](.beans/api-f6jg--add-webhook-secret-rotation-endpoint.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add per-system webhook config limit ([api-g3xl](.beans/api-g3xl--add-per-system-webhook-config-limit.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add max date span validation for custom analytics ranges ([api-h9xu](.beans/api-h9xu--add-max-date-span-validation-for-custom-analytics.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Use EncryptedBlob type in fronting-report mapper ([api-l5fo](.beans/api-l5fo--use-encryptedblob-type-in-fronting-report-mapper.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add analytics result caching ([api-q6fu](.beans/api-q6fu--add-analytics-result-caching.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Move duplicate MS_PER_DAY to shared import ([api-q6l1](.beans/api-q6l1--move-duplicate-ms-per-day-to-shared-import.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add lifecycle-event.service integration test ([api-sumw](.beans/api-sumw--add-lifecycle-eventservice-integration-test.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add analytics and fronting-report route-level tests ([api-v3zs](.beans/api-v3zs--add-analytics-and-fronting-report-route-level-test.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Refactor deriveMasterKey backward-compat shim ([crypto-nea9](.beans/crypto-nea9--refactor-derivemasterkey-backward-compat-shim.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add partial index for check-in-generate query pattern ([db-ab1h](.beans/db-ab1h--add-partial-index-for-check-in-generate-query-patt.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add M4 tables to RLS integration test ([db-afev](.beans/db-afev--add-m4-tables-to-rls-integration-test.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add LIMIT to view query helpers ([db-cwqh](.beans/db-cwqh--add-limit-to-view-query-helpers.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Remove encryptedMasterKey nullable/legacy pattern ([db-z6rp](.beans/db-z6rp--remove-encryptedmasterkey-nullablelegacy-pattern.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add post-merge validation for fronting-comment author constraint ([sync-ht2e](.beans/sync-ht2e--add-post-merge-validation-for-fronting-comment-aut.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Handle comment/check-in migration in time-split ([sync-wh96](.beans/sync-wh96--handle-commentcheck-in-migration-in-time-split.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Deduplicate webhook event types across packages ([types-26v8](.beans/types-26v8--deduplicate-webhook-event-types-across-packages.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add sessionStartTime to FrontingComment type or document omission ([types-jf54](.beans/types-jf54--add-sessionstarttime-to-frontingcomment-type-or-do.md))
+
+### Miscellaneous
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Update docs for M4 completion ([ps-6kvn](.beans/ps-6kvn--update-docs-for-m4-completion.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) M4 comprehensive audit ([ps-6u44](.beans/ps-6u44--m4-comprehensive-audit.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Update docs for M4 completion ([ps-9ljf](.beans/ps-9ljf--update-docs-for-m4-completion.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add structure entity service with HAS_DEPENDENTS checking ([api-l9ar](.beans/api-l9ar--add-structure-entity-service-with-has-dependents-c.md))

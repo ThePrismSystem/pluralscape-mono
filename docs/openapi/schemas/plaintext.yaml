@@ -367,13 +367,12 @@ PlaintextRelationship:
       nullable: true
       description: User-defined label (meaningful when type is "custom")
 
-PlaintextSubsystem:
+PlaintextStructureEntityType:
   description: |
-    **Encrypted into**: `encryptedData` on subsystem create/update endpoints.
+    **Encrypted into**: `encryptedData` on structure entity type create/update endpoints.
 
-    A nested structural group within the system. Note: `parentSubsystemId`,
-    `architectureType`, `hasCore`, and `discoveryStatus` are sent as separate
-    plaintext fields. Encryption tier: **T1**.
+    A user-defined structure entity type within the system (e.g., "Subsystem",
+    "Side System", "Layer"). Encryption tier: **T1**.
   type: object
   required: [name]
   properties:
@@ -393,11 +392,11 @@ PlaintextSubsystem:
       type: string
       nullable: true
 
-PlaintextSideSystem:
+PlaintextStructureEntity:
   description: |
-    **Encrypted into**: `encryptedData` on side system create/update endpoints.
+    **Encrypted into**: `encryptedData` on structure entity create/update endpoints.
 
-    A parallel structural group alongside the main system. Encryption tier: **T1**.
+    An instance of a user-defined structure entity type. Encryption tier: **T1**.
   type: object
   required: [name]
   properties:
@@ -417,35 +416,16 @@ PlaintextSideSystem:
       type: string
       nullable: true
 
-PlaintextLayer:
+PlaintextFrontingSession:
   description: |
-    **Encrypted into**: `encryptedData` on layer create/update endpoints.
+    **Encrypted into**: `encryptedData` on fronting session create/update endpoints.
 
-    A structural layer within the system. Encryption tier: **T1**.
+    Encrypted metadata for a fronting session. Note: `memberId`, `customFrontId`,
+    `structureEntityId`, `startTime`, and `endTime` are sent as separate plaintext
+    fields. Encryption tier: **T1**.
   type: object
-  required: [name]
   properties:
-    name:
-      type: string
-    description:
-      type: string
-      nullable: true
-    accessType:
-      type: string
-      enum: [open, gatekept]
-    gatekeeperMemberIds:
-      type: array
-      items:
-        type: string
-      description: Member IDs that act as gatekeepers (only for gatekept layers)
-    color:
-      type: string
-      nullable: true
-    imageSource:
-      oneOf:
-        - $ref: "#/PlaintextImageSource"
-        - type: "null"
-    emoji:
+    notes:
       type: string
       nullable: true
 
@@ -514,7 +494,7 @@ PlaintextInnerworldEntity:
   properties:
     entityType:
       type: string
-      enum: [member, landmark, subsystem, side-system, layer]
+      enum: [member, landmark, structure-entity]
     positionX:
       type: number
       description: X coordinate on the canvas
@@ -533,15 +513,9 @@ PlaintextInnerworldEntity:
     linkedMemberId:
       type: string
       description: Member ID (member entities only)
-    linkedSubsystemId:
+    linkedStructureEntityId:
       type: string
-      description: Subsystem ID (subsystem entities only)
-    linkedSideSystemId:
-      type: string
-      description: Side System ID (side-system entities only)
-    linkedLayerId:
-      type: string
-      description: Layer ID (layer entities only)
+      description: Structure entity ID (structure-entity entities only)
 
 PlaintextInnerworldCanvas:
   description: |
@@ -704,13 +678,12 @@ PlaintextNomenclature:
       type: string
       description: "Term for saturation level (default: 'Saturation'). Presets: Saturation, Elaboration, Completeness"
 
-PlaintextStructureMembership:
+PlaintextStructureEntityMemberLink:
   description: |
-    **Encrypted into**: `encryptedData` on structure membership add endpoints
-    (subsystem, side system, layer memberships).
+    **Encrypted into**: `encryptedData` on structure entity member link endpoints.
 
-    Encrypted metadata for a member's assignment to a structural entity.
-    The `memberId` is sent as a separate plaintext field.
+    Encrypted metadata for a member's assignment to a structure entity.
+    The `memberId` and `parentEntityId` are sent as separate plaintext fields.
     Encryption tier: **T1**.
   type: object
   properties:
@@ -719,13 +692,14 @@ PlaintextStructureMembership:
       nullable: true
       description: Optional notes about this membership
 
-PlaintextStructureLink:
+PlaintextStructureEntityAssociation:
   description: |
-    **Encrypted into**: `encryptedData` (optional) on structure link create endpoints.
+    **Encrypted into**: `encryptedData` (optional) on structure entity association
+    create endpoints.
 
-    Encrypted metadata for a cross-structure link (subsystem-layer,
-    subsystem-side-system, side-system-layer). The linked entity IDs are
-    sent as separate plaintext fields. Encryption tier: **T1**.
+    Encrypted metadata for a directed cross-reference between structure entities.
+    The `sourceEntityId` and `targetEntityId` are sent as separate plaintext
+    fields. Encryption tier: **T1**.
   type: object
   properties:
     notes:

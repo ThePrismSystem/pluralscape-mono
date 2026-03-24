@@ -37,15 +37,16 @@
           application/json:
             schema:
               allOf:
-                - $ref: "../openapi.yaml#/components/schemas/PaginatedResponse"
                 - type: object
+                  required: [items]
                   properties:
                     items:
                       type: array
                       items:
                         $ref: "../schemas/webhooks.yaml#/WebhookDeliveryResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -76,7 +77,7 @@
             schema:
               $ref: "../schemas/webhooks.yaml#/WebhookDeliveryResponse"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -102,6 +103,6 @@
       "204":
         description: Webhook delivery deleted
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"

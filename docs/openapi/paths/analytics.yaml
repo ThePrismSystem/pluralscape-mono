@@ -1,5 +1,6 @@
 /systems/{systemId}/analytics/fronting:
   get:
+    operationId: getFrontingBreakdown
     tags: [Analytics]
     summary: Get fronting breakdown
     description: |
@@ -9,6 +10,8 @@
 
       Open sessions (no end time) are capped at the current time.
       Co-fronting sessions each count their full duration (no dedup).
+    security:
+      - bearerAuth: []
     parameters:
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - name: preset
@@ -53,6 +56,7 @@
 
 /systems/{systemId}/analytics/co-fronting:
   get:
+    operationId: getCoFrontingBreakdown
     tags: [Analytics]
     summary: Get co-fronting breakdown
     description: |
@@ -62,6 +66,8 @@
 
       Custom fronts and structure entities are excluded from co-fronting analysis.
       Pair ordering is canonical (lexicographic by member ID).
+    security:
+      - bearerAuth: []
     parameters:
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - name: preset

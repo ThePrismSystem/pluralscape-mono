@@ -15,6 +15,41 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - Added `field_definition_scopes` table for targeting custom fields to specific entity types, groups, members, or system-wide
 - Upgraded CRDT sync layer — structure entity link documents upgraded from junction-style to LWW-Map registers with parent-scoped sort normalization
 
+## Milestone 4: Fronting Engine
+
+### Added
+
+- Fronting session CRUD — start/end sessions, co-fronting as parallel timelines, structure entity fronting, retroactive edits, outtrigger sentiment, active fronting query
+- Fronting comments — unlimited-length per-session comments with polymorphic authorship (member, custom front, or structure entity)
+- Fronting analytics — per-subject duration/percentage breakdowns, date range presets (7/30/90 days, year, all-time, custom), co-fronting pair analytics
+- Fronting reports — stored analytics report snapshots with encrypted data
+- Timer configs — recurring check-in timer CRUD with interval, waking hours window, archive/restore
+- Check-in records — scheduled instances with respond/dismiss lifecycle, idempotency keys for duplicate prevention
+- Timer scheduling worker — background job for generating check-in records on schedule
+- Webhook config CRUD — endpoint registration with HMAC secret generation, event type filtering, archive/restore
+- Webhook delivery CRUD — delivery attempt read/delete with status tracking (pending/success/failed/retrying)
+- Webhook event dispatcher — creates pending deliveries for matching webhook configurations
+- Webhook delivery worker — HMAC-signed payloads with exponential backoff retry
+- Webhook delivery cleanup job — auto-purge terminal delivery records after 30 days
+- ADR 027: Webhook secret rotation procedure
+- CRDT sync strategies for fronting sessions, timers, webhooks, analytics, and lifecycle events
+- Lifecycle event archive/restore/delete — CRDT strategy upgraded from append-only to append-lww
+- E2E tests expanded — 79 tests across 24 spec files (was 51 across 14)
+
+### Fixed
+
+- Branded types across packages: `RecoveryKeyDisplay`, `KeyVersion`, `DisplayKey`, `Sha256Hex`, protocol IDs
+- Replaced `as UnixMillis` casts with type-safe helper function
+- Defined concrete payload types for all 15 `JobPayloadMap` entries
+- N+1 query pattern audit and fixes across API routes
+- Pagination cursor TTL expiry enforcement
+- Retry jitter (0.2 fraction) added to default retry policies
+- Device transfer code increased to 10+ digits (ADR 024)
+- Removed deprecated `switches` table and types
+- Structured logging module abstraction (replaced console methods)
+- LRU eviction added to `BucketKeyCache`
+- Typed errors applied to sync engine
+
 ## Milestone 3: Sync and Real-Time
 
 ### Added
