@@ -275,17 +275,17 @@ test.describe("Groups CRUD", () => {
     const listRes = await request.get(`/v1/systems/${fakeSystemId}/groups`, {
       headers: authHeaders,
     });
-    expect(listRes.ok()).toBe(false);
+    expect(listRes.status()).toBe(404);
 
     const getRes = await request.get(
       `/v1/systems/${fakeSystemId}/groups/grp_00000000-0000-0000-0000-000000000000`,
       { headers: authHeaders },
     );
-    expect(getRes.ok()).toBe(false);
+    expect(getRes.status()).toBe(404);
 
     const treeRes = await request.get(`/v1/systems/${fakeSystemId}/groups/tree`, {
       headers: authHeaders,
     });
-    expect(treeRes.ok()).toBe(false);
+    expect(treeRes.status()).toBe(404);
   });
 });

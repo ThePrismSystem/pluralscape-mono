@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, blobMetadata, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgBlobMetadataTables,
   pgInsertAccount,
@@ -16,14 +16,20 @@ import {
   getDownloadUrl,
   listBlobs,
 } from "../../services/blob.service.js";
-import { assertApiError, makeAuth, noopAudit, spyAudit } from "../helpers/integration-setup.js";
+import {
+  asDb,
+  assertApiError,
+  makeAuth,
+  noopAudit,
+  spyAudit,
+} from "../helpers/integration-setup.js";
 import { createMockBlobQuota, createMockBlobStorage } from "../helpers/mock-blob-storage.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, BlobId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, blobMetadata };
+const { blobMetadata } = schema;
 
 /** Valid 64-char hex checksum for confirmUpload. */
 const VALID_CHECKSUM = "a".repeat(64);
@@ -72,7 +78,7 @@ describe("blob.service (PGlite integration)", () => {
     overrides: Record<string, unknown> = {},
   ) {
     const upload = await createUploadUrl(
-      db as never,
+      asDb(db),
       storage,
       quota,
       systemId,
@@ -82,7 +88,7 @@ describe("blob.service (PGlite integration)", () => {
     );
 
     const confirmed = await confirmUpload(
-      db as never,
+      asDb(db),
       systemId,
       upload.blobId,
       { checksum: VALID_CHECKSUM },
@@ -100,7 +106,7 @@ describe("blob.service (PGlite integration)", () => {
       const audit = spyAudit();
 
       const result = await createUploadUrl(
-        db as never,
+        asDb(db),
         storage,
         quota,
         systemId,
@@ -132,7 +138,7 @@ describe("blob.service (PGlite integration)", () => {
       const quota = createMockBlobQuota();
 
       const upload = await createUploadUrl(
-        db as never,
+        asDb(db),
         storage,
         quota,
         systemId,
@@ -143,7 +149,7 @@ describe("blob.service (PGlite integration)", () => {
 
       const audit = spyAudit();
       const result = await confirmUpload(
-        db as never,
+        asDb(db),
         systemId,
         upload.blobId,
         { checksum: VALID_CHECKSUM },
@@ -164,7 +170,7 @@ describe("blob.service (PGlite integration)", () => {
     it("throws NOT_FOUND for non-existent blob", async () => {
       await assertApiError(
         confirmUpload(
-          db as never,
+          asDb(db),
           systemId,
           `blob_${crypto.randomUUID()}` as BlobId,
           { checksum: VALID_CHECKSUM },
@@ -183,7 +189,7 @@ describe("blob.service (PGlite integration)", () => {
       const quota = createMockBlobQuota();
       const { confirmed } = await createAndConfirmBlob(storage, quota);
 
-      const result = await getBlob(db as never, systemId, confirmed.id, auth);
+      const result = await getBlob(asDb(db), systemId, confirmed.id, auth);
 
       expect(result.id).toBe(confirmed.id);
       expect(result.systemId).toBe(systemId);
@@ -199,7 +205,7 @@ describe("blob.service (PGlite integration)", () => {
       const quota = createMockBlobQuota();
 
       const upload = await createUploadUrl(
-        db as never,
+        asDb(db),
         storage,
         quota,
         systemId,
@@ -208,7 +214,7 @@ describe("blob.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      await assertApiError(getBlob(db as never, systemId, upload.blobId, auth), "NOT_FOUND", 404);
+      await assertApiError(getBlob(asDb(db), systemId, upload.blobId, auth), "NOT_FOUND", 404);
     });
   });
 
@@ -218,7 +224,7 @@ describe("blob.service (PGlite integration)", () => {
       const quota = createMockBlobQuota();
       const { confirmed } = await createAndConfirmBlob(storage, quota);
 
-      const result = await getDownloadUrl(db as never, storage, systemId, confirmed.id, auth);
+      const result = await getDownloadUrl(asDb(db), storage, systemId, confirmed.id, auth);
 
       expect(result.blobId).toBe(confirmed.id);
       expect(result.downloadUrl).toContain("https://mock-s3.test/download/");
@@ -237,7 +243,7 @@ describe("blob.service (PGlite integration)", () => {
       });
 
       // List all
-      const result = await listBlobs(db as never, systemId, auth);
+      const result = await listBlobs(asDb(db), systemId, auth);
       expect(result.items).toHaveLength(2);
 
       const ids = result.items.map((b) => b.id);
@@ -245,11 +251,11 @@ describe("blob.service (PGlite integration)", () => {
       expect(ids).toContain(blob2.id);
 
       // Paginate: limit 1
-      const page1 = await listBlobs(db as never, systemId, auth, { limit: 1 });
+      const page1 = await listBlobs(asDb(db), systemId, auth, { limit: 1 });
       expect(page1.items).toHaveLength(1);
       expect(page1.hasMore).toBe(true);
 
-      const page2 = await listBlobs(db as never, systemId, auth, {
+      const page2 = await listBlobs(asDb(db), systemId, auth, {
         cursor: page1.items[0]?.id,
         limit: 1,
       });
@@ -265,17 +271,17 @@ describe("blob.service (PGlite integration)", () => {
       const { confirmed } = await createAndConfirmBlob(storage, quota);
 
       const audit = spyAudit();
-      await archiveBlob(db as never, systemId, confirmed.id, auth, audit);
+      await archiveBlob(asDb(db), systemId, confirmed.id, auth, audit);
 
       // Audit recorded
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("blob.archived");
 
       // getBlob should now return NOT_FOUND
-      await assertApiError(getBlob(db as never, systemId, confirmed.id, auth), "NOT_FOUND", 404);
+      await assertApiError(getBlob(asDb(db), systemId, confirmed.id, auth), "NOT_FOUND", 404);
 
       // listBlobs should exclude archived
-      const list = await listBlobs(db as never, systemId, auth);
+      const list = await listBlobs(asDb(db), systemId, auth);
       expect(list.items).toHaveLength(0);
     });
   });
@@ -287,7 +293,7 @@ describe("blob.service (PGlite integration)", () => {
       quota.rejectNext();
 
       await assertApiError(
-        createUploadUrl(db as never, storage, quota, systemId, uploadParams(), auth, noopAudit),
+        createUploadUrl(asDb(db), storage, quota, systemId, uploadParams(), auth, noopAudit),
         "QUOTA_EXCEEDED",
         413,
       );

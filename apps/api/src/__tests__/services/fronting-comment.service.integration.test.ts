@@ -1,14 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import {
-  accounts,
-  customFronts,
-  frontingComments,
-  frontingSessions,
-  members,
-  systems,
-  systemStructureEntities,
-  systemStructureEntityTypes,
-} from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgFrontingTables,
   pgInsertAccount,
@@ -40,6 +31,7 @@ import {
   noopAudit,
   spyAudit,
   testEncryptedDataBase64,
+  asDb,
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
@@ -52,16 +44,7 @@ import type {
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = {
-  accounts,
-  systems,
-  members,
-  customFronts,
-  frontingSessions,
-  frontingComments,
-  systemStructureEntityTypes,
-  systemStructureEntities,
-};
+const { customFronts, frontingSessions, frontingComments } = schema;
 
 describe("fronting-comment.service (PGlite integration)", () => {
   let client: PGlite;
@@ -94,7 +77,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
 
   async function createSession(): Promise<FrontingSessionId> {
     const result = await createFrontingSession(
-      db as never,
+      asDb(db),
       systemId,
       {
         encryptedData: testEncryptedDataBase64(),
@@ -126,7 +109,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
       const sid = await createSession();
       const audit = spyAudit();
       const result = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
@@ -145,7 +128,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("throws NOT_FOUND if parent session does not exist", async () => {
       await assertApiError(
         createFrontingComment(
-          db as never,
+          asDb(db),
           systemId,
           genFrontingSessionId(),
           commentParams(),
@@ -160,10 +143,10 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("throws SESSION_ARCHIVED for archived parent", async () => {
       const sid = await createSession();
 
-      await archiveFrontingSession(db as never, systemId, sid, auth, noopAudit);
+      await archiveFrontingSession(asDb(db), systemId, sid, auth, noopAudit);
 
       await assertApiError(
-        createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit),
+        createFrontingComment(asDb(db), systemId, sid, commentParams(), auth, noopAudit),
         "SESSION_ARCHIVED",
         400,
       );
@@ -173,7 +156,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
       const sid = await createSession();
       await assertApiError(
         createFrontingComment(
-          db as never,
+          asDb(db),
           systemId,
           sid,
           commentParams({ memberId: genMemberId() }),
@@ -189,7 +172,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
   describe("listFrontingComments", () => {
     it("throws NOT_FOUND if parent session does not exist", async () => {
       await assertApiError(
-        listFrontingComments(db as never, systemId, genFrontingSessionId(), auth),
+        listFrontingComments(asDb(db), systemId, genFrontingSessionId(), auth),
         "NOT_FOUND",
         404,
       );
@@ -198,7 +181,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("excludes archived by default", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
@@ -206,16 +189,16 @@ describe("fronting-comment.service (PGlite integration)", () => {
         noopAudit,
       );
       const c2 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
+      await archiveFrontingComment(asDb(db), systemId, sid, c1.id, auth, noopAudit);
 
-      const result = await listFrontingComments(db as never, systemId, sid, auth);
+      const result = await listFrontingComments(asDb(db), systemId, sid, auth);
       expect(result.items.length).toBe(1);
       expect(result.items[0]?.id).toBe(c2.id);
     });
@@ -223,17 +206,17 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("includes archived when includeArchived=true", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit);
-      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
+      await createFrontingComment(asDb(db), systemId, sid, commentParams(), auth, noopAudit);
+      await archiveFrontingComment(asDb(db), systemId, sid, c1.id, auth, noopAudit);
 
-      const result = await listFrontingComments(db as never, systemId, sid, auth, {
+      const result = await listFrontingComments(asDb(db), systemId, sid, auth, {
         includeArchived: true,
       });
       expect(result.items.length).toBe(2);
@@ -241,14 +224,14 @@ describe("fronting-comment.service (PGlite integration)", () => {
 
     it("supports cursor pagination by ID desc", async () => {
       const sid = await createSession();
-      await createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit);
-      await createFrontingComment(db as never, systemId, sid, commentParams(), auth, noopAudit);
+      await createFrontingComment(asDb(db), systemId, sid, commentParams(), auth, noopAudit);
+      await createFrontingComment(asDb(db), systemId, sid, commentParams(), auth, noopAudit);
 
-      const page1 = await listFrontingComments(db as never, systemId, sid, auth, { limit: 1 });
+      const page1 = await listFrontingComments(asDb(db), systemId, sid, auth, { limit: 1 });
       expect(page1.items.length).toBe(1);
       expect(page1.hasMore).toBe(true);
 
-      const page2 = await listFrontingComments(db as never, systemId, sid, auth, {
+      const page2 = await listFrontingComments(asDb(db), systemId, sid, auth, {
         cursor: page1.items[0]?.id,
         limit: 1,
       });
@@ -261,7 +244,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("throws NOT_FOUND if parent session does not exist", async () => {
       await assertApiError(
         getFrontingComment(
-          db as never,
+          asDb(db),
           systemId,
           genFrontingSessionId(),
           genFrontingCommentId(),
@@ -275,17 +258,17 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("throws NOT_FOUND for archived comment", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
+      await archiveFrontingComment(asDb(db), systemId, sid, c1.id, auth, noopAudit);
 
       await assertApiError(
-        getFrontingComment(db as never, systemId, sid, c1.id, auth),
+        getFrontingComment(asDb(db), systemId, sid, c1.id, auth),
         "NOT_FOUND",
         404,
       );
@@ -296,7 +279,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("updates on correct version", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
@@ -305,7 +288,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
       );
 
       const result = await updateFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         c1.id,
@@ -319,7 +302,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("throws CONFLICT on stale version", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
@@ -327,7 +310,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
         noopAudit,
       );
       await updateFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         c1.id,
@@ -337,7 +320,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
       );
       await assertApiError(
         updateFrontingComment(
-          db as never,
+          asDb(db),
           systemId,
           sid,
           c1.id,
@@ -355,7 +338,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("always succeeds (leaf entity)", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
@@ -363,10 +346,10 @@ describe("fronting-comment.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      await deleteFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
+      await deleteFrontingComment(asDb(db), systemId, sid, c1.id, auth, noopAudit);
 
       await assertApiError(
-        getFrontingComment(db as never, systemId, sid, c1.id, auth),
+        getFrontingComment(asDb(db), systemId, sid, c1.id, auth),
         "NOT_FOUND",
         404,
       );
@@ -375,7 +358,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("throws NOT_FOUND for nonexistent comment", async () => {
       const sid = await createSession();
       await assertApiError(
-        deleteFrontingComment(db as never, systemId, sid, genFrontingCommentId(), auth, noopAudit),
+        deleteFrontingComment(asDb(db), systemId, sid, genFrontingCommentId(), auth, noopAudit),
         "NOT_FOUND",
         404,
       );
@@ -386,7 +369,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("archives a comment", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
@@ -394,10 +377,10 @@ describe("fronting-comment.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
+      await archiveFrontingComment(asDb(db), systemId, sid, c1.id, auth, noopAudit);
 
       await assertApiError(
-        getFrontingComment(db as never, systemId, sid, c1.id, auth),
+        getFrontingComment(asDb(db), systemId, sid, c1.id, auth),
         "NOT_FOUND",
         404,
       );
@@ -406,17 +389,17 @@ describe("fronting-comment.service (PGlite integration)", () => {
     it("restores an archived comment and increments version", async () => {
       const sid = await createSession();
       const c1 = await createFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         commentParams(),
         auth,
         noopAudit,
       );
-      await archiveFrontingComment(db as never, systemId, sid, c1.id, auth, noopAudit);
+      await archiveFrontingComment(asDb(db), systemId, sid, c1.id, auth, noopAudit);
 
       const restored = await restoreFrontingComment(
-        db as never,
+        asDb(db),
         systemId,
         sid,
         c1.id,

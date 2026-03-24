@@ -103,10 +103,6 @@ test.describe("Fields CRUD", () => {
       const res = await request.delete(`${fieldsUrl}/${fieldId}`, {
         headers: authHeaders,
       });
-      if (res.status() !== 204) {
-        const body = await res.text();
-        console.error(`DELETE failed with ${String(res.status())}: ${body}`);
-      }
       expect(res.status()).toBe(204);
     });
 

@@ -71,7 +71,7 @@ jobs:
           --health-timeout=5s
           --health-retries=5
       valkey:
-        image: valkey/valkey:8
+        image: valkey/valkey:8@sha256:49ccaa10c11575272d4e70b7262b4fdfdbb88fa729147ec6730a190c9cdf3a30
         ports:
           - 6379:6379
         options: >-
@@ -92,6 +92,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Run all tests with coverage
+        env:
+          EMAIL_HASH_PEPPER: abababababababababababababababababababababababababababababababababab
+          TEST_VALKEY_PORT: "6379"
         run: pnpm test:coverage
 
       - name: Upload coverage report

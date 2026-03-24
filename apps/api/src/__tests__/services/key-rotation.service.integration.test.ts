@@ -1,11 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import {
-  bucketContentTags,
-  bucketKeyRotations,
-  bucketRotationItems,
-  buckets,
-  keyGrants,
-} from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgPrivacyTables,
   PG_DDL,
@@ -32,19 +26,14 @@ import {
   makeAuth,
   noopAudit,
   spyAudit,
+  asDb,
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, BucketId, BucketKeyRotationId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = {
-  buckets,
-  bucketContentTags,
-  bucketKeyRotations,
-  bucketRotationItems,
-  keyGrants,
-};
+const { buckets, bucketContentTags, bucketKeyRotations, bucketRotationItems, keyGrants } = schema;
 
 describe("key-rotation.service (PGlite integration)", () => {
   let client: PGlite;
@@ -128,7 +117,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 3);
 
       const result = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -152,7 +141,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 2);
 
       const result = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -187,7 +176,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         createdAt: Date.now(),
       });
 
-      await initiateRotation(db as never, systemId, bucketId, initiateParams(), auth, noopAudit);
+      await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, noopAudit);
 
       const grants = await db.select().from(keyGrants).where(eq(keyGrants.id, grantId));
       expect(grants).toHaveLength(1);
@@ -199,7 +188,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 1);
       const audit = spyAudit();
 
-      await initiateRotation(db as never, systemId, bucketId, initiateParams(), auth, audit);
+      await initiateRotation(asDb(db), systemId, bucketId, initiateParams(), auth, audit);
 
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("bucket.key_rotation.initiated");
@@ -209,7 +198,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       const fakeBucketId = genBucketId();
 
       await expect(
-        initiateRotation(db as never, systemId, fakeBucketId, initiateParams(), auth, noopAudit),
+        initiateRotation(asDb(db), systemId, fakeBucketId, initiateParams(), auth, noopAudit),
       ).rejects.toThrow();
     });
 
@@ -232,7 +221,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       });
 
       await assertApiError(
-        initiateRotation(db as never, systemId, bucketId, initiateParams(3), auth, noopAudit),
+        initiateRotation(asDb(db), systemId, bucketId, initiateParams(3), auth, noopAudit),
         "ROTATION_IN_PROGRESS",
         409,
       );
@@ -257,7 +246,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       });
 
       const result = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(3),
@@ -281,7 +270,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       // No content tags inserted
 
       const result = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -302,7 +291,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 3);
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -311,7 +300,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       const claim = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -332,7 +321,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       // No content tags — rotation has 0 items
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -341,7 +330,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       const claim = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -357,7 +346,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 5);
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -366,7 +355,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       const claim = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -382,14 +371,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       const fakeRotationId = genRotationId();
 
       await assertApiError(
-        claimRotationChunk(
-          db as never,
-          systemId,
-          bucketId,
-          fakeRotationId,
-          { chunkSize: 10 },
-          auth,
-        ),
+        claimRotationChunk(asDb(db), systemId, bucketId, fakeRotationId, { chunkSize: 10 }, auth),
         "NOT_FOUND",
         404,
       );
@@ -415,7 +397,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       });
 
       await assertApiError(
-        claimRotationChunk(db as never, systemId, bucketId, rotationId, { chunkSize: 10 }, auth),
+        claimRotationChunk(asDb(db), systemId, bucketId, rotationId, { chunkSize: 10 }, auth),
         "CONFLICT",
         409,
       );
@@ -430,7 +412,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 2);
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -439,7 +421,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       const claim = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -448,7 +430,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       const completionResult = await completeRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -473,7 +455,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 2);
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -482,7 +464,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       const claim = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -492,7 +474,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Complete first item, fail second
       const completionResult = await completeRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -527,7 +509,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       await assertApiError(
         completeRotationChunk(
-          db as never,
+          asDb(db),
           systemId,
           bucketId,
           fakeRotationId,
@@ -560,7 +542,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       await assertApiError(
         completeRotationChunk(
-          db as never,
+          asDb(db),
           systemId,
           bucketId,
           rotationId,
@@ -578,7 +560,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 1);
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -587,7 +569,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       const claim = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -597,7 +579,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       const audit = spyAudit();
       await completeRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -626,7 +608,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 4);
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -636,7 +618,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Claim and complete 2 of 4
       const claim = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -645,7 +627,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       );
 
       await completeRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -659,13 +641,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const progress = await getRotationProgress(
-        db as never,
-        systemId,
-        bucketId,
-        rotation.id,
-        auth,
-      );
+      const progress = await getRotationProgress(asDb(db), systemId, bucketId, rotation.id, auth);
 
       expect(progress.totalItems).toBe(4);
       expect(progress.completedItems).toBe(2);
@@ -678,7 +654,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       const fakeRotationId = genRotationId();
 
       await assertApiError(
-        getRotationProgress(db as never, systemId, bucketId, fakeRotationId, auth),
+        getRotationProgress(asDb(db), systemId, bucketId, fakeRotationId, auth),
         "NOT_FOUND",
         404,
       );
@@ -694,7 +670,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Step 1: Initiate
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -706,7 +682,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Step 2: Claim first chunk
       const chunk1 = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -718,7 +694,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Step 3: Complete first chunk
       const completion1 = await completeRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -737,7 +713,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Step 4: Claim remaining chunk
       const chunk2 = await claimRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -748,7 +724,7 @@ describe("key-rotation.service (PGlite integration)", () => {
 
       // Step 5: Complete remaining chunk
       const completion2 = await completeRotationChunk(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         rotation.id,
@@ -768,7 +744,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       expect(completion2.transitioned).toBe(true);
 
       // Step 6: Verify via getRotationProgress
-      const final = await getRotationProgress(db as never, systemId, bucketId, rotation.id, auth);
+      const final = await getRotationProgress(asDb(db), systemId, bucketId, rotation.id, auth);
       expect(final.state).toBe(ROTATION_STATES.completed);
       expect(final.completedItems).toBe(5);
       expect(final.totalItems).toBe(5);
@@ -779,7 +755,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       await insertContentTags(bucketId, 1);
 
       const rotation = await initiateRotation(
-        db as never,
+        asDb(db),
         systemId,
         bucketId,
         initiateParams(),
@@ -791,7 +767,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       // maxItemAttempts = 3, so we need 3 failure rounds
       for (let attempt = 0; attempt < 3; attempt++) {
         const claim = await claimRotationChunk(
-          db as never,
+          asDb(db),
           systemId,
           bucketId,
           rotation.id,
@@ -802,7 +778,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         if (claim.items.length === 0) break;
 
         await completeRotationChunk(
-          db as never,
+          asDb(db),
           systemId,
           bucketId,
           rotation.id,
@@ -817,7 +793,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         );
       }
 
-      const final = await getRotationProgress(db as never, systemId, bucketId, rotation.id, auth);
+      const final = await getRotationProgress(asDb(db), systemId, bucketId, rotation.id, auth);
       expect(final.state).toBe(ROTATION_STATES.failed);
       expect(final.failedItems).toBe(1);
     });

@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { initSodium } from "@pluralscape/crypto";
-import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,13 +19,13 @@ import {
   registerAccount,
   revokeSession,
 } from "../../services/auth.service.js";
-import { noopAudit, spyAudit } from "../helpers/integration-setup.js";
+import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { RegistrationResult } from "../../services/auth.service.js";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, authKeys, recoveryKeys, sessions, systems };
+const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
 
 describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
   let client: PGlite;
@@ -75,7 +75,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
   describe("registerAccount", () => {
     it("succeeds and returns sessionToken, recoveryKey, accountId, and accountType", async () => {
       const params = makeRegistrationParams();
-      const result = await registerAccount(db as never, params, "web", noopAudit);
+      const result = await registerAccount(asDb(db), params, "web", noopAudit);
 
       expect(typeof result.sessionToken).toBe("string");
       expect(result.sessionToken.length).toBeGreaterThan(0);
@@ -94,11 +94,11 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const email = `dup-${crypto.randomUUID()}@test.local`;
       const params = makeRegistrationParams({ email });
 
-      await registerAccount(db as never, params, "web", noopAudit);
+      await registerAccount(asDb(db), params, "web", noopAudit);
 
       let caught: unknown;
       try {
-        await registerAccount(db as never, params, "web", noopAudit);
+        await registerAccount(asDb(db), params, "web", noopAudit);
       } catch (err: unknown) {
         caught = err;
       }
@@ -127,7 +127,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
     beforeEach(async () => {
       registeredEmail = `login-${crypto.randomUUID()}@test.local`;
       registration = await registerAccount(
-        db as never,
+        asDb(db),
         makeRegistrationParams({ email: registeredEmail, password }),
         "web",
         noopAudit,
@@ -136,7 +136,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
     it("returns session token with correct credentials", async () => {
       const result = await loginAccount(
-        db as never,
+        asDb(db),
         { email: registeredEmail, password },
         "web",
         noopAudit,
@@ -157,7 +157,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
     it("returns null for wrong password", async () => {
       const result = await loginAccount(
-        db as never,
+        asDb(db),
         { email: registeredEmail, password: "WrongPassword999!" },
         "web",
         noopAudit,
@@ -169,7 +169,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
     it("returns null for non-existent account (anti-enumeration)", async () => {
       const result = await loginAccount(
-        db as never,
+        asDb(db),
         { email: `nonexistent-${crypto.randomUUID()}@test.local`, password: "SomePassword123!" },
         "web",
         noopAudit,
@@ -185,9 +185,9 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
   describe("listSessions", () => {
     it("returns at least one session after registration", async () => {
       const params = makeRegistrationParams();
-      const reg = await registerAccount(db as never, params, "web", noopAudit);
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
 
-      const { sessions: sessionList } = await listSessions(db as never, reg.accountId);
+      const { sessions: sessionList } = await listSessions(asDb(db), reg.accountId);
 
       expect(sessionList.length).toBeGreaterThanOrEqual(1);
       const first = sessionList[0];
@@ -204,19 +204,19 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
   describe("revokeSession", () => {
     it("revokes a session and removes it from the active list", async () => {
       const params = makeRegistrationParams();
-      const reg = await registerAccount(db as never, params, "web", noopAudit);
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
 
-      const { sessions: before } = await listSessions(db as never, reg.accountId);
+      const { sessions: before } = await listSessions(asDb(db), reg.accountId);
       expect(before.length).toBeGreaterThanOrEqual(1);
       const firstSession = before[0];
       expect(firstSession).toBeDefined();
       if (!firstSession) return;
 
       const audit = spyAudit();
-      const revoked = await revokeSession(db as never, firstSession.id, reg.accountId, audit);
+      const revoked = await revokeSession(asDb(db), firstSession.id, reg.accountId, audit);
       expect(revoked).toBe(true);
 
-      const { sessions: after } = await listSessions(db as never, reg.accountId);
+      const { sessions: after } = await listSessions(asDb(db), reg.accountId);
       const found = after.find((s) => s.id === firstSession.id);
       expect(found).toBeUndefined();
 

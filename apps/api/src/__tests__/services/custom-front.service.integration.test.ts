@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, customFronts, frontingSessions, members, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgFrontingTables,
   pgInsertAccount,
@@ -19,6 +19,7 @@ import {
 } from "../../services/custom-front.service.js";
 import {
   assertApiError,
+  asDb,
   genCustomFrontId,
   makeAuth,
   noopAudit,
@@ -30,13 +31,7 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = {
-  accounts,
-  systems,
-  members,
-  customFronts,
-  frontingSessions,
-};
+const { customFronts, frontingSessions } = schema;
 
 describe("custom-front.service (PGlite integration)", () => {
   let client: PGlite;
@@ -68,7 +63,7 @@ describe("custom-front.service (PGlite integration)", () => {
     it("creates a custom front and returns expected shape", async () => {
       const audit = spyAudit();
       const result = await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -92,14 +87,14 @@ describe("custom-front.service (PGlite integration)", () => {
   describe("getCustomFront", () => {
     it("retrieves a previously created custom front", async () => {
       const created = await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      const result = await getCustomFront(db as never, systemId, created.id, auth);
+      const result = await getCustomFront(asDb(db), systemId, created.id, auth);
 
       expect(result.id).toBe(created.id);
       expect(result.systemId).toBe(systemId);
@@ -112,7 +107,7 @@ describe("custom-front.service (PGlite integration)", () => {
 
     it("throws NOT_FOUND for a non-existent ID", async () => {
       await assertApiError(
-        getCustomFront(db as never, systemId, genCustomFrontId(), auth),
+        getCustomFront(asDb(db), systemId, genCustomFrontId(), auth),
         "NOT_FOUND",
         404,
       );
@@ -122,32 +117,32 @@ describe("custom-front.service (PGlite integration)", () => {
   describe("listCustomFronts", () => {
     it("lists multiple custom fronts with pagination", async () => {
       await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
       await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
       await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      const page1 = await listCustomFronts(db as never, systemId, auth, undefined, 2);
+      const page1 = await listCustomFronts(asDb(db), systemId, auth, undefined, 2);
       expect(page1.items).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
 
-      const page2 = await listCustomFronts(db as never, systemId, auth, page1.items[1]?.id, 2);
+      const page2 = await listCustomFronts(asDb(db), systemId, auth, page1.items[1]?.id, 2);
       expect(page2.items).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
       expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
@@ -158,7 +153,7 @@ describe("custom-front.service (PGlite integration)", () => {
   describe("updateCustomFront", () => {
     it("updates on correct version and increments version", async () => {
       const created = await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -167,7 +162,7 @@ describe("custom-front.service (PGlite integration)", () => {
 
       const audit = spyAudit();
       const result = await updateCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         created.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
@@ -183,7 +178,7 @@ describe("custom-front.service (PGlite integration)", () => {
 
     it("throws CONFLICT on stale version", async () => {
       const created = await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -191,7 +186,7 @@ describe("custom-front.service (PGlite integration)", () => {
       );
 
       await updateCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         created.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
@@ -201,7 +196,7 @@ describe("custom-front.service (PGlite integration)", () => {
 
       await assertApiError(
         updateCustomFront(
-          db as never,
+          asDb(db),
           systemId,
           created.id,
           { encryptedData: testEncryptedDataBase64(), version: 1 },
@@ -217,34 +212,30 @@ describe("custom-front.service (PGlite integration)", () => {
   describe("archiveCustomFront / restoreCustomFront", () => {
     it("archives a custom front so it is no longer returned by get", async () => {
       const created = await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      await archiveCustomFront(db as never, systemId, created.id, auth, noopAudit);
+      await archiveCustomFront(asDb(db), systemId, created.id, auth, noopAudit);
 
-      await assertApiError(
-        getCustomFront(db as never, systemId, created.id, auth),
-        "NOT_FOUND",
-        404,
-      );
+      await assertApiError(getCustomFront(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
     });
 
     it("restores an archived custom front", async () => {
       const created = await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      await archiveCustomFront(db as never, systemId, created.id, auth, noopAudit);
+      await archiveCustomFront(asDb(db), systemId, created.id, auth, noopAudit);
 
-      const restored = await restoreCustomFront(db as never, systemId, created.id, auth, noopAudit);
+      const restored = await restoreCustomFront(asDb(db), systemId, created.id, auth, noopAudit);
 
       expect(restored.archived).toBe(false);
       expect(restored.id).toBe(created.id);
@@ -255,7 +246,7 @@ describe("custom-front.service (PGlite integration)", () => {
   describe("deleteCustomFront", () => {
     it("deletes a custom front so it is no longer found", async () => {
       const created = await createCustomFront(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -263,13 +254,9 @@ describe("custom-front.service (PGlite integration)", () => {
       );
 
       const audit = spyAudit();
-      await deleteCustomFront(db as never, systemId, created.id, auth, audit);
+      await deleteCustomFront(asDb(db), systemId, created.id, auth, audit);
 
-      await assertApiError(
-        getCustomFront(db as never, systemId, created.id, auth),
-        "NOT_FOUND",
-        404,
-      );
+      await assertApiError(getCustomFront(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("custom-front.deleted");
     });

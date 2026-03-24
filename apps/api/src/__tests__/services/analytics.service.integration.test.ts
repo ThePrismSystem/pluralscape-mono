@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, customFronts, frontingSessions, members, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgFrontingTables,
   pgInsertAccount,
@@ -14,13 +14,13 @@ import {
   computeCoFrontingBreakdown,
   computeFrontingBreakdown,
 } from "../../services/analytics.service.js";
-import { genFrontingSessionId, makeAuth } from "../helpers/integration-setup.js";
+import { asDb, genFrontingSessionId, makeAuth } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, DateRangeFilter, MemberId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, members, customFronts, frontingSessions };
+const { members, customFronts, frontingSessions } = schema;
 
 /** Milliseconds in one hour. */
 const MS_PER_HOUR = 3_600_000;
@@ -87,7 +87,7 @@ describe("analytics.service (PGlite integration)", () => {
     it("returns empty breakdowns when no sessions exist", async () => {
       const dateRange = customRange(baseTime - 24 * MS_PER_HOUR, baseTime);
 
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toEqual([]);
       expect(result.truncated).toBe(false);
@@ -102,7 +102,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 3 * MS_PER_HOUR, baseTime);
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toHaveLength(1);
       const breakdown = result.subjectBreakdowns[0];
@@ -122,7 +122,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 3 * MS_PER_HOUR, baseTime);
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toHaveLength(1);
       expect(result.subjectBreakdowns[0]?.totalDuration).toBe(MS_PER_HOUR);
@@ -137,7 +137,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 4 * MS_PER_HOUR, baseTime - 2 * MS_PER_HOUR);
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toHaveLength(1);
       expect(result.subjectBreakdowns[0]?.totalDuration).toBe(2 * MS_PER_HOUR);
@@ -152,7 +152,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 3 * MS_PER_HOUR, baseTime);
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toEqual([]);
     });
@@ -176,7 +176,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 5 * MS_PER_HOUR, baseTime);
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toHaveLength(2);
 
@@ -195,7 +195,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 3 * MS_PER_HOUR, baseTime);
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toEqual([]);
     });
@@ -219,7 +219,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 4 * MS_PER_HOUR, baseTime);
-      const result = await computeFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.subjectBreakdowns).toHaveLength(2);
       expect(result.subjectBreakdowns[0]?.subjectId).toBe(memberB);
@@ -233,7 +233,7 @@ describe("analytics.service (PGlite integration)", () => {
     it("returns empty pairs when no sessions exist", async () => {
       const dateRange = customRange(baseTime - 24 * MS_PER_HOUR, baseTime);
 
-      const result = await computeCoFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeCoFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.pairs).toEqual([]);
       expect(result.coFrontingPercentage).toBe(0);
@@ -258,7 +258,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 4 * MS_PER_HOUR, baseTime);
-      const result = await computeCoFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeCoFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.pairs).toHaveLength(1);
       expect(result.pairs[0]?.totalDuration).toBe(MS_PER_HOUR);
@@ -283,7 +283,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 5 * MS_PER_HOUR, baseTime);
-      const result = await computeCoFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeCoFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.pairs).toEqual([]);
     });
@@ -320,7 +320,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 4 * MS_PER_HOUR, baseTime);
-      const result = await computeCoFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeCoFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.pairs).toEqual([]);
     });
@@ -348,7 +348,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 4 * MS_PER_HOUR, baseTime);
-      const result = await computeCoFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeCoFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       // A-B, A-C, B-C
       expect(result.pairs).toHaveLength(3);
@@ -375,7 +375,7 @@ describe("analytics.service (PGlite integration)", () => {
       });
 
       const dateRange = customRange(baseTime - 4 * MS_PER_HOUR, baseTime);
-      const result = await computeCoFrontingBreakdown(db as never, systemId, auth, dateRange);
+      const result = await computeCoFrontingBreakdown(asDb(db), systemId, auth, dateRange);
 
       expect(result.pairs).toHaveLength(1);
       expect(result.pairs[0]?.memberA).toBe(earlierId);

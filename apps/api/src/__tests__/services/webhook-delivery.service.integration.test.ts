@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, apiKeys, systems, webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgWebhookTables,
   pgInsertAccount,
@@ -16,6 +16,7 @@ import {
   parseWebhookDeliveryQuery,
 } from "../../services/webhook-delivery.service.js";
 import {
+  asDb,
   assertApiError,
   genWebhookDeliveryId,
   genWebhookId,
@@ -28,7 +29,7 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
+const { webhookDeliveries } = schema;
 
 describe("webhook-delivery.service (PGlite integration)", () => {
   let client: PGlite;
@@ -46,7 +47,7 @@ describe("webhook-delivery.service (PGlite integration)", () => {
     auth = makeAuth(accountId, systemId);
 
     const wh = await createWebhookConfig(
-      db as never,
+      asDb(db),
       systemId,
       {
         url: "https://example.com/hook",
@@ -90,13 +91,13 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       await insertDelivery();
       await insertDelivery({ status: "success" });
 
-      const result = await listWebhookDeliveries(db as never, systemId, auth);
+      const result = await listWebhookDeliveries(asDb(db), systemId, auth);
       expect(result.items.length).toBe(2);
     });
 
     it("filters by webhookId", async () => {
       await insertDelivery();
-      const result = await listWebhookDeliveries(db as never, systemId, auth, {
+      const result = await listWebhookDeliveries(asDb(db), systemId, auth, {
         webhookId,
       });
       expect(result.items.length).toBe(1);
@@ -108,7 +109,7 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       await insertDelivery({ status: "success" });
       await insertDelivery({ status: "failed" });
 
-      const result = await listWebhookDeliveries(db as never, systemId, auth, {
+      const result = await listWebhookDeliveries(asDb(db), systemId, auth, {
         status: "pending",
       });
       expect(result.items.length).toBe(1);
@@ -119,7 +120,7 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       await insertDelivery();
       await insertDelivery({ eventType: "fronting.ended" });
 
-      const result = await listWebhookDeliveries(db as never, systemId, auth, {
+      const result = await listWebhookDeliveries(asDb(db), systemId, auth, {
         eventType: "fronting.ended",
       });
       expect(result.items.length).toBe(1);
@@ -130,13 +131,13 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       await insertDelivery();
       await insertDelivery();
 
-      const page1 = await listWebhookDeliveries(db as never, systemId, auth, {
+      const page1 = await listWebhookDeliveries(asDb(db), systemId, auth, {
         limit: 1,
       });
       expect(page1.items.length).toBe(1);
       expect(page1.hasMore).toBe(true);
 
-      const page2 = await listWebhookDeliveries(db as never, systemId, auth, {
+      const page2 = await listWebhookDeliveries(asDb(db), systemId, auth, {
         cursor: page1.items[0]?.id,
         limit: 1,
       });
@@ -149,15 +150,15 @@ describe("webhook-delivery.service (PGlite integration)", () => {
     it("deletes and audits", async () => {
       const id = await insertDelivery();
       const audit = spyAudit();
-      await deleteWebhookDelivery(db as never, systemId, id, auth, audit);
-      await assertApiError(getWebhookDelivery(db as never, systemId, id, auth), "NOT_FOUND", 404);
+      await deleteWebhookDelivery(asDb(db), systemId, id, auth, audit);
+      await assertApiError(getWebhookDelivery(asDb(db), systemId, id, auth), "NOT_FOUND", 404);
       expect(audit.calls.length).toBe(1);
       expect(audit.calls[0]?.eventType).toBe("webhook-delivery.deleted");
     });
 
     it("throws NOT_FOUND for nonexistent", async () => {
       await assertApiError(
-        deleteWebhookDelivery(db as never, systemId, genWebhookDeliveryId(), auth, noopAudit),
+        deleteWebhookDelivery(asDb(db), systemId, genWebhookDeliveryId(), auth, noopAudit),
         "NOT_FOUND",
         404,
       );

@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { initSodium } from "@pluralscape/crypto";
-import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -25,13 +25,13 @@ import {
   regenerateRecoveryKeyBackup,
   resetPasswordWithRecoveryKey,
 } from "../../services/recovery-key.service.js";
-import { noopAudit, spyAudit } from "../helpers/integration-setup.js";
+import { noopAudit, spyAudit, asDb } from "../helpers/integration-setup.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { AccountId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, authKeys, recoveryKeys, sessions, systems };
+const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
 
 describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () => {
   let client: PGlite;
@@ -74,7 +74,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     const email = overrides.email ?? `test-${crypto.randomUUID()}@example.com`;
     const password = overrides.password ?? `P@ssw0rd!${crypto.randomUUID()}`;
     const result = await registerAccount(
-      db as never,
+      asDb(db),
       {
         email,
         password,
@@ -99,7 +99,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("returns hasActiveKey true after registration", async () => {
       const { accountId } = await registerTestAccount();
 
-      const status = await getRecoveryKeyStatus(db as never, accountId);
+      const status = await getRecoveryKeyStatus(asDb(db), accountId);
 
       expect(status.hasActiveKey).toBe(true);
       expect(status.createdAt).toBeGreaterThan(0);
@@ -108,7 +108,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("returns hasActiveKey false for nonexistent account", async () => {
       const fakeAccountId = `acct_${crypto.randomUUID()}` as AccountId;
 
-      const status = await getRecoveryKeyStatus(db as never, fakeAccountId);
+      const status = await getRecoveryKeyStatus(asDb(db), fakeAccountId);
 
       expect(status).toEqual({ hasActiveKey: false, createdAt: null });
     });
@@ -122,7 +122,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
       const audit = spyAudit();
       const result = await regenerateRecoveryKeyBackup(
-        db as never,
+        asDb(db),
         accountId,
         { currentPassword: password, confirmed: true },
         audit,
@@ -139,18 +139,18 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
     it("revokes the old key and creates a new one", async () => {
       const { accountId, password } = await registerTestAccount();
 
-      const statusBefore = await getRecoveryKeyStatus(db as never, accountId);
+      const statusBefore = await getRecoveryKeyStatus(asDb(db), accountId);
       expect(statusBefore.hasActiveKey).toBe(true);
       const createdAtBefore = statusBefore.createdAt;
 
       await regenerateRecoveryKeyBackup(
-        db as never,
+        asDb(db),
         accountId,
         { currentPassword: password, confirmed: true },
         noopAudit,
       );
 
-      const statusAfter = await getRecoveryKeyStatus(db as never, accountId);
+      const statusAfter = await getRecoveryKeyStatus(asDb(db), accountId);
       expect(statusAfter.hasActiveKey).toBe(true);
       // New key should have a different (later or equal) createdAt
       expect(statusAfter.createdAt).toBeGreaterThanOrEqual(createdAtBefore ?? 0);
@@ -161,7 +161,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
       await expect(
         regenerateRecoveryKeyBackup(
-          db as never,
+          asDb(db),
           accountId,
           { currentPassword: "WrongPassword123!", confirmed: true },
           noopAudit,
@@ -177,7 +177,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
       await expect(
         regenerateRecoveryKeyBackup(
-          db as never,
+          asDb(db),
           accountId,
           { currentPassword: password, confirmed: true },
           noopAudit,
@@ -197,7 +197,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
       const audit = spyAudit();
       const result = await resetPasswordWithRecoveryKey(
-        db as never,
+        asDb(db),
         { email, recoveryKey, newPassword },
         "web",
         audit,
@@ -215,7 +215,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
     it("returns null for nonexistent email (anti-enumeration)", async () => {
       const result = await resetPasswordWithRecoveryKey(
-        db as never,
+        asDb(db),
         {
           email: `nonexistent-${crypto.randomUUID()}@example.com`,
           recoveryKey: "ABCD-EFGH-IJKL-MNOP",
@@ -237,7 +237,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
 
       await expect(
         resetPasswordWithRecoveryKey(
-          db as never,
+          asDb(db),
           {
             email,
             recoveryKey: "ABCD-EFGH-IJKL-MNOP",
@@ -262,7 +262,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       expect(Number(sessionsBefore.rows[0]?.count)).toBeGreaterThan(0);
 
       await resetPasswordWithRecoveryKey(
-        db as never,
+        asDb(db),
         { email, recoveryKey, newPassword },
         "web",
         noopAudit,

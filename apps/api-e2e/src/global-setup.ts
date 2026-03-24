@@ -21,7 +21,9 @@ const DOCKER_PG_PORT = 15_432;
 const MINIO_CONTAINER_NAME = "pluralscape-minio-test";
 /** Default MinIO port matching TEST_MINIO_PORT in .env.example. */
 const DEFAULT_MINIO_PORT = 10_943;
-const MINIO_PORT = Number(process.env["TEST_MINIO_PORT"]) || DEFAULT_MINIO_PORT;
+const envMinioPort = process.env["TEST_MINIO_PORT"];
+const MINIO_PORT =
+  envMinioPort !== undefined && envMinioPort !== "" ? Number(envMinioPort) : DEFAULT_MINIO_PORT;
 const MINIO_READY_POLL_MS = 200;
 const MINIO_READY_TIMEOUT_MS = 30_000;
 const MINIO_BUCKET = "pluralscape-test";
@@ -136,7 +138,7 @@ function ensureMinioContainer(): boolean {
       `-p ${String(MINIO_PORT)}:9000`,
       `-e MINIO_ROOT_USER=${MINIO_ROOT_USER}`,
       `-e MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}`,
-      "minio/minio:latest server /data",
+      "minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data",
     ].join(" "),
     { stdio: "pipe" },
   );
@@ -159,17 +161,18 @@ async function waitForMinio(): Promise<void> {
 }
 
 function ensureMinioBucket(): void {
-  // Use mc CLI inside the container to create the bucket (idempotent)
+  // Alias setup MUST succeed — propagate errors so misconfiguration is visible
+  execSync(
+    `docker exec ${MINIO_CONTAINER_NAME} mc alias set local http://localhost:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}`,
+    { stdio: "pipe" },
+  );
+  // Bucket creation is idempotent — mc mb exits non-zero if bucket already exists
   try {
-    execSync(
-      `docker exec ${MINIO_CONTAINER_NAME} mc alias set local http://localhost:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} 2>/dev/null`,
-      { stdio: "pipe" },
-    );
-    execSync(`docker exec ${MINIO_CONTAINER_NAME} mc mb local/${MINIO_BUCKET} 2>/dev/null`, {
+    execSync(`docker exec ${MINIO_CONTAINER_NAME} mc mb local/${MINIO_BUCKET}`, {
       stdio: "pipe",
     });
   } catch {
-    // Bucket may already exist — mc mb exits non-zero if so, which is fine
+    // Bucket already exists — expected on reused containers
   }
 }
 
@@ -208,6 +211,10 @@ async function globalSetup(): Promise<void> {
     console.info("[e2e] Ensuring MinIO bucket exists...");
     ensureMinioBucket();
     console.info("[e2e] MinIO is ready.");
+  } else {
+    console.warn(
+      "[e2e] Docker not available — MinIO setup skipped. Blob-related E2E tests may fail.",
+    );
   }
 
   // Store for teardown

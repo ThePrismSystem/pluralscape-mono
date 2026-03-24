@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, checkInRecords, members, systems, timerConfigs } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgTimerTables,
   pgInsertAccount,
@@ -29,13 +29,14 @@ import {
   noopAudit,
   spyAudit,
   testEncryptedDataBase64,
+  asDb,
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, MemberId, SystemId, TimerId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, members, timerConfigs, checkInRecords };
+const { checkInRecords } = schema;
 
 describe("check-in-record.service (PGlite integration)", () => {
   let client: PGlite;
@@ -58,7 +59,7 @@ describe("check-in-record.service (PGlite integration)", () => {
     auth = makeAuth(accountId, systemId);
 
     const t = await createTimerConfig(
-      db as never,
+      asDb(db),
       systemId,
       { encryptedData: testEncryptedDataBase64() },
       auth,
@@ -79,7 +80,7 @@ describe("check-in-record.service (PGlite integration)", () => {
     it("creates linked to timer config", async () => {
       const audit = spyAudit();
       const result = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
@@ -96,7 +97,7 @@ describe("check-in-record.service (PGlite integration)", () => {
     it("rejects unknown timer config", async () => {
       await assertApiError(
         createCheckInRecord(
-          db as never,
+          asDb(db),
           systemId,
           { timerConfigId: genTimerId(), scheduledAt: Date.now() },
           auth,
@@ -111,20 +112,20 @@ describe("check-in-record.service (PGlite integration)", () => {
   describe("getCheckInRecord", () => {
     it("returns the record by ID", async () => {
       const created = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      const fetched = await getCheckInRecord(db as never, systemId, created.id, auth);
+      const fetched = await getCheckInRecord(asDb(db), systemId, created.id, auth);
       expect(fetched.id).toBe(created.id);
       expect(fetched.timerConfigId).toBe(timerId);
     });
 
     it("throws NOT_FOUND for nonexistent ID", async () => {
       await assertApiError(
-        getCheckInRecord(db as never, systemId, genCheckInRecordId(), auth),
+        getCheckInRecord(asDb(db), systemId, genCheckInRecordId(), auth),
         "NOT_FOUND",
         404,
       );
@@ -134,7 +135,7 @@ describe("check-in-record.service (PGlite integration)", () => {
   describe("respondCheckInRecord", () => {
     it("sets respondedByMemberId and respondedAt", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
@@ -142,7 +143,7 @@ describe("check-in-record.service (PGlite integration)", () => {
       );
 
       const result = await respondCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         record.id,
         { respondedByMemberId: memberId },
@@ -156,14 +157,14 @@ describe("check-in-record.service (PGlite integration)", () => {
 
     it("throws ALREADY_RESPONDED", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
       await respondCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         record.id,
         { respondedByMemberId: memberId },
@@ -173,7 +174,7 @@ describe("check-in-record.service (PGlite integration)", () => {
 
       await assertApiError(
         respondCheckInRecord(
-          db as never,
+          asDb(db),
           systemId,
           record.id,
           { respondedByMemberId: memberId },
@@ -187,17 +188,17 @@ describe("check-in-record.service (PGlite integration)", () => {
 
     it("throws ALREADY_DISMISSED", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      await dismissCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
+      await dismissCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit);
 
       await assertApiError(
         respondCheckInRecord(
-          db as never,
+          asDb(db),
           systemId,
           record.id,
           { respondedByMemberId: memberId },
@@ -211,7 +212,7 @@ describe("check-in-record.service (PGlite integration)", () => {
 
     it("validates member exists in system", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
@@ -219,7 +220,7 @@ describe("check-in-record.service (PGlite integration)", () => {
       );
       await assertApiError(
         respondCheckInRecord(
-          db as never,
+          asDb(db),
           systemId,
           record.id,
           { respondedByMemberId: genMemberId() },
@@ -235,28 +236,28 @@ describe("check-in-record.service (PGlite integration)", () => {
   describe("dismissCheckInRecord", () => {
     it("sets dismissed=true", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
 
-      const result = await dismissCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
+      const result = await dismissCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit);
       expect(result.status).toBe("dismissed");
       expect(result.dismissed).toBe(true);
     });
 
     it("throws ALREADY_RESPONDED", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
       await respondCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         record.id,
         { respondedByMemberId: memberId },
@@ -265,7 +266,7 @@ describe("check-in-record.service (PGlite integration)", () => {
       );
 
       await assertApiError(
-        dismissCheckInRecord(db as never, systemId, record.id, auth, noopAudit),
+        dismissCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit),
         "ALREADY_RESPONDED",
         409,
       );
@@ -273,16 +274,16 @@ describe("check-in-record.service (PGlite integration)", () => {
 
     it("throws ALREADY_DISMISSED", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      await dismissCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
+      await dismissCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit);
 
       await assertApiError(
-        dismissCheckInRecord(db as never, systemId, record.id, auth, noopAudit),
+        dismissCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit),
         "ALREADY_DISMISSED",
         409,
       );
@@ -292,14 +293,14 @@ describe("check-in-record.service (PGlite integration)", () => {
   describe("listCheckInRecords", () => {
     it("filters by timerConfigId", async () => {
       const created = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
 
-      const result = await listCheckInRecords(db as never, systemId, auth, {
+      const result = await listCheckInRecords(asDb(db), systemId, auth, {
         timerConfigId: timerId,
       });
       expect(result.items.length).toBe(1);
@@ -308,21 +309,21 @@ describe("check-in-record.service (PGlite integration)", () => {
 
     it("filters pending records", async () => {
       const r1 = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
       const r2 = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
       await respondCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         r1.id,
         { respondedByMemberId: memberId },
@@ -330,7 +331,7 @@ describe("check-in-record.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const result = await listCheckInRecords(db as never, systemId, auth, {
+      const result = await listCheckInRecords(asDb(db), systemId, auth, {
         pending: true,
       });
       expect(result.items.length).toBe(1);
@@ -342,26 +343,22 @@ describe("check-in-record.service (PGlite integration)", () => {
     it("always succeeds", async () => {
       const audit = spyAudit();
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      await deleteCheckInRecord(db as never, systemId, record.id, auth, audit);
+      await deleteCheckInRecord(asDb(db), systemId, record.id, auth, audit);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("check-in-record.deleted");
 
-      await assertApiError(
-        getCheckInRecord(db as never, systemId, record.id, auth),
-        "NOT_FOUND",
-        404,
-      );
+      await assertApiError(getCheckInRecord(asDb(db), systemId, record.id, auth), "NOT_FOUND", 404);
     });
 
     it("throws NOT_FOUND for nonexistent record", async () => {
       await assertApiError(
-        deleteCheckInRecord(db as never, systemId, genCheckInRecordId(), auth, noopAudit),
+        deleteCheckInRecord(asDb(db), systemId, genCheckInRecordId(), auth, noopAudit),
         "NOT_FOUND",
         404,
       );
@@ -371,32 +368,28 @@ describe("check-in-record.service (PGlite integration)", () => {
   describe("archiveCheckInRecord", () => {
     it("archives a pending record", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      await archiveCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
+      await archiveCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit);
 
-      await assertApiError(
-        getCheckInRecord(db as never, systemId, record.id, auth),
-        "NOT_FOUND",
-        404,
-      );
+      await assertApiError(getCheckInRecord(asDb(db), systemId, record.id, auth), "NOT_FOUND", 404);
     });
 
     it("throws ALREADY_ARCHIVED", async () => {
       const record = await createCheckInRecord(
-        db as never,
+        asDb(db),
         systemId,
         { timerConfigId: timerId, scheduledAt: Date.now() },
         auth,
         noopAudit,
       );
-      await archiveCheckInRecord(db as never, systemId, record.id, auth, noopAudit);
+      await archiveCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit);
       await assertApiError(
-        archiveCheckInRecord(db as never, systemId, record.id, auth, noopAudit),
+        archiveCheckInRecord(asDb(db), systemId, record.id, auth, noopAudit),
         "ALREADY_ARCHIVED",
         409,
       );

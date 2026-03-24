@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, apiKeys, systems, webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgWebhookTables,
   pgInsertAccount,
@@ -10,13 +10,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { WEBHOOK_DELIVERY_RETENTION_DAYS } from "../../service.constants.js";
 import { cleanupWebhookDeliveries } from "../../services/webhook-delivery-cleanup.js";
-import { genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
+import { asDb, genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
 
 import type { AccountId, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const MS_PER_DAY = 86_400_000;
-const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
+const { webhookConfigs, webhookDeliveries } = schema;
 
 describe("webhook-delivery-cleanup (PGlite integration)", () => {
   let client: PGlite;
@@ -75,7 +75,7 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
     await insertDelivery("success", WEBHOOK_DELIVERY_RETENTION_DAYS + 1);
     await insertDelivery("failed", WEBHOOK_DELIVERY_RETENTION_DAYS + 5);
 
-    const count = await cleanupWebhookDeliveries(db as never);
+    const count = await cleanupWebhookDeliveries(asDb(db));
     expect(count).toBe(2);
 
     const remaining = await db.select().from(webhookDeliveries);
@@ -85,7 +85,7 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
   it("preserves pending deliveries regardless of age", async () => {
     await insertDelivery("pending", WEBHOOK_DELIVERY_RETENTION_DAYS + 10);
 
-    const count = await cleanupWebhookDeliveries(db as never);
+    const count = await cleanupWebhookDeliveries(asDb(db));
     expect(count).toBe(0);
 
     const remaining = await db.select().from(webhookDeliveries);
@@ -96,7 +96,7 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
     await insertDelivery("success", 1);
     await insertDelivery("failed", 5);
 
-    const count = await cleanupWebhookDeliveries(db as never);
+    const count = await cleanupWebhookDeliveries(asDb(db));
     expect(count).toBe(0);
 
     const remaining = await db.select().from(webhookDeliveries);
@@ -106,10 +106,10 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
   it("respects custom retention days", async () => {
     await insertDelivery("success", 10);
 
-    const countDefault = await cleanupWebhookDeliveries(db as never);
+    const countDefault = await cleanupWebhookDeliveries(asDb(db));
     expect(countDefault).toBe(0);
 
-    const countCustom = await cleanupWebhookDeliveries(db as never, 5);
+    const countCustom = await cleanupWebhookDeliveries(asDb(db), 5);
     expect(countCustom).toBe(1);
   });
 });

@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, members, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgMemberTables,
   pgInsertAccount,
@@ -16,6 +16,7 @@ import {
   updateSystemProfile,
 } from "../../services/system.service.js";
 import {
+  asDb,
   assertApiError,
   genAccountId,
   makeAuth,
@@ -27,7 +28,7 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, members };
+const { systems, members } = schema;
 
 describe("system.service (PGlite integration)", () => {
   let client: PGlite;
@@ -58,7 +59,7 @@ describe("system.service (PGlite integration)", () => {
 
   describe("getSystemProfile", () => {
     it("returns profile with id matching systemId", async () => {
-      const result = await getSystemProfile(db as never, systemId, auth);
+      const result = await getSystemProfile(asDb(db), systemId, auth);
 
       expect(result.id).toBe(systemId);
       expect(result.version).toBeTypeOf("number");
@@ -70,13 +71,13 @@ describe("system.service (PGlite integration)", () => {
       const otherAccountId = genAccountId();
       const otherAuth = makeAuth(otherAccountId, systemId);
 
-      await assertApiError(getSystemProfile(db as never, systemId, otherAuth), "NOT_FOUND", 404);
+      await assertApiError(getSystemProfile(asDb(db), systemId, otherAuth), "NOT_FOUND", 404);
     });
   });
 
   describe("listSystems", () => {
     it("returns systems for account with pagination shape", async () => {
-      const result = await listSystems(db as never, accountId);
+      const result = await listSystems(asDb(db), accountId);
 
       expect(result.items).toBeInstanceOf(Array);
       expect(result.items.length).toBeGreaterThanOrEqual(1);
@@ -87,10 +88,10 @@ describe("system.service (PGlite integration)", () => {
 
   describe("updateSystemProfile", () => {
     it("updates encrypted data and increments version", async () => {
-      const initial = await getSystemProfile(db as never, systemId, auth);
+      const initial = await getSystemProfile(asDb(db), systemId, auth);
 
       const result = await updateSystemProfile(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64(), version: initial.version },
         auth,
@@ -102,10 +103,10 @@ describe("system.service (PGlite integration)", () => {
     });
 
     it("throws CONFLICT on stale version", async () => {
-      const current = await getSystemProfile(db as never, systemId, auth);
+      const current = await getSystemProfile(asDb(db), systemId, auth);
       // Advance to version+1
       await updateSystemProfile(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64(), version: current.version },
         auth,
@@ -115,7 +116,7 @@ describe("system.service (PGlite integration)", () => {
       // Try updating with the now-stale version
       await assertApiError(
         updateSystemProfile(
-          db as never,
+          asDb(db),
           systemId,
           { encryptedData: testEncryptedDataBase64(), version: current.version },
           auth,
@@ -135,7 +136,7 @@ describe("system.service (PGlite integration)", () => {
       await pgInsertMember(db, secondSystemId);
 
       await assertApiError(
-        archiveSystem(db as never, secondSystemId, secondAuth, noopAudit),
+        archiveSystem(asDb(db), secondSystemId, secondAuth, noopAudit),
         "HAS_DEPENDENTS",
         409,
       );
@@ -146,14 +147,10 @@ describe("system.service (PGlite integration)", () => {
       const freshSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
       const freshAuth = makeAuth(accountId, freshSystemId);
 
-      await archiveSystem(db as never, freshSystemId, freshAuth, noopAudit);
+      await archiveSystem(asDb(db), freshSystemId, freshAuth, noopAudit);
 
       // Confirm it's no longer visible via getSystemProfile
-      await assertApiError(
-        getSystemProfile(db as never, freshSystemId, freshAuth),
-        "NOT_FOUND",
-        404,
-      );
+      await assertApiError(getSystemProfile(asDb(db), freshSystemId, freshAuth), "NOT_FOUND", 404);
     });
   });
 });

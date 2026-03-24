@@ -7,7 +7,7 @@ import {
   DecryptionFailedError,
   PWHASH_SALT_BYTES,
 } from "@pluralscape/crypto";
-import { accounts, deviceTransferRequests, sessions } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, pgInsertAccount } from "@pluralscape/db/test-helpers/pg-helpers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
@@ -21,7 +21,7 @@ import {
   completeTransfer,
   initiateTransfer,
 } from "../../services/device-transfer.service.js";
-import { noopAudit, spyAudit } from "../helpers/integration-setup.js";
+import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
 import type { AccountId, SessionId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -56,7 +56,7 @@ vi.mock("@pluralscape/crypto", async () => {
 
 // ── Schema for drizzle ────────────────────────────────────────────────
 
-const schema = { accounts, sessions, deviceTransferRequests };
+const { sessions, deviceTransferRequests } = schema;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -122,7 +122,7 @@ describe("device-transfer.service (PGlite integration)", () => {
     it("creates a pending transfer request and returns transferId + expiresAt", async () => {
       const audit = spyAudit();
       const result = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -156,7 +156,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       await expect(
         initiateTransfer(
-          db as never,
+          asDb(db),
           accountId,
           sessionId,
           { codeSaltHex: badSaltHex, encryptedKeyMaterialHex: validEncryptedHex() },
@@ -168,7 +168,7 @@ describe("device-transfer.service (PGlite integration)", () => {
     it("rejects invalid hex in codeSalt", async () => {
       await expect(
         initiateTransfer(
-          db as never,
+          asDb(db),
           accountId,
           sessionId,
           { codeSaltHex: "not-valid-hex!!", encryptedKeyMaterialHex: validEncryptedHex() },
@@ -182,7 +182,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       await expect(
         initiateTransfer(
-          db as never,
+          asDb(db),
           accountId,
           sessionId,
           { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: tooShortHex },
@@ -198,7 +198,7 @@ describe("device-transfer.service (PGlite integration)", () => {
     it("returns encrypted key material hex on valid code", async () => {
       // Initiate a transfer first
       const { transferId } = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -209,7 +209,7 @@ describe("device-transfer.service (PGlite integration)", () => {
       const audit = spyAudit();
 
       const result = await completeTransfer(
-        db as never,
+        asDb(db),
         transferId,
         accountId,
         targetSessionId,
@@ -238,7 +238,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       await expect(
         completeTransfer(
-          db as never,
+          asDb(db),
           "dtr_nonexistent",
           accountId,
           targetSessionId,
@@ -250,7 +250,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
     it("throws TransferValidationError for invalid code format", async () => {
       const { transferId } = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -261,13 +261,13 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       // "abc" is not a valid 10-digit transfer code
       await expect(
-        completeTransfer(db as never, transferId, accountId, targetSessionId, "abc", noopAudit),
+        completeTransfer(asDb(db), transferId, accountId, targetSessionId, "abc", noopAudit),
       ).rejects.toThrow(TransferValidationError);
     });
 
     it("throws TransferNotFoundError for wrong accountId", async () => {
       const { transferId } = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -280,7 +280,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       await expect(
         completeTransfer(
-          db as never,
+          asDb(db),
           transferId,
           otherAccountId,
           otherSessionId,
@@ -297,7 +297,7 @@ describe("device-transfer.service (PGlite integration)", () => {
     it("throws TransferNotFoundError for an already-completed (deleted) transfer", async () => {
       // Initiate and complete a transfer
       const { transferId } = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -306,7 +306,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       const targetSessionId = await insertSession(db, accountId);
       await completeTransfer(
-        db as never,
+        asDb(db),
         transferId,
         accountId,
         targetSessionId,
@@ -318,7 +318,7 @@ describe("device-transfer.service (PGlite integration)", () => {
       const secondTargetSessionId = await insertSession(db, accountId);
       await expect(
         completeTransfer(
-          db as never,
+          asDb(db),
           transferId,
           accountId,
           secondTargetSessionId,
@@ -330,7 +330,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
     it("throws TransferNotFoundError when transfer has been manually expired", async () => {
       const { transferId } = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -345,20 +345,13 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       const targetSessionId = await insertSession(db, accountId);
       await expect(
-        completeTransfer(
-          db as never,
-          transferId,
-          accountId,
-          targetSessionId,
-          "1234567890",
-          noopAudit,
-        ),
+        completeTransfer(asDb(db), transferId, accountId, targetSessionId, "1234567890", noopAudit),
       ).rejects.toThrow(TransferNotFoundError);
     });
 
     it("throws TransferNotFoundError when expiresAt is in the past", async () => {
       const { transferId } = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -376,14 +369,7 @@ describe("device-transfer.service (PGlite integration)", () => {
       const targetSessionId = await insertSession(db, accountId);
       // The WHERE clause filters by gt(expiresAt, sql`now()`) so expired records are invisible
       await expect(
-        completeTransfer(
-          db as never,
-          transferId,
-          accountId,
-          targetSessionId,
-          "1234567890",
-          noopAudit,
-        ),
+        completeTransfer(asDb(db), transferId, accountId, targetSessionId, "1234567890", noopAudit),
       ).rejects.toThrow(TransferNotFoundError);
     });
 
@@ -394,7 +380,7 @@ describe("device-transfer.service (PGlite integration)", () => {
       });
 
       const { transferId } = await initiateTransfer(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { codeSaltHex: validSaltHex(), encryptedKeyMaterialHex: validEncryptedHex() },
@@ -408,7 +394,7 @@ describe("device-transfer.service (PGlite integration)", () => {
       for (let i = 1; i <= 4; i++) {
         await expect(
           completeTransfer(
-            db as never,
+            asDb(db),
             transferId,
             accountId,
             targetSessionId,
@@ -420,14 +406,7 @@ describe("device-transfer.service (PGlite integration)", () => {
 
       // Fifth attempt triggers expiration
       await expect(
-        completeTransfer(
-          db as never,
-          transferId,
-          accountId,
-          targetSessionId,
-          "1234567890",
-          noopAudit,
-        ),
+        completeTransfer(asDb(db), transferId, accountId, targetSessionId, "1234567890", noopAudit),
       ).rejects.toThrow(TransferExpiredError);
 
       // Verify the status was set to expired in the DB

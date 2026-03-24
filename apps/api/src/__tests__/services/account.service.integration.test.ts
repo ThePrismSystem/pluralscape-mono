@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { initSodium } from "@pluralscape/crypto";
-import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -16,12 +16,12 @@ vi.mock("../../env.js", () => ({
 
 import { changeEmail, changePassword, getAccountInfo } from "../../services/account.service.js";
 import { registerAccount, ValidationError } from "../../services/auth.service.js";
-import { noopAudit, spyAudit } from "../helpers/integration-setup.js";
+import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
 import type { AccountId, SessionId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, authKeys, recoveryKeys, sessions, systems };
+const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
 
 describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
   let client: PGlite;
@@ -59,7 +59,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     const email = overrides.email ?? `test-${crypto.randomUUID()}@example.com`;
     const password = overrides.password ?? `P@ssw0rd!${crypto.randomUUID()}`;
     const result = await registerAccount(
-      db as never,
+      asDb(db),
       {
         email,
         password,
@@ -82,7 +82,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("returns account info for a registered account", async () => {
       const { accountId } = await registerTestAccount();
 
-      const info = await getAccountInfo(db as never, accountId);
+      const info = await getAccountInfo(asDb(db), accountId);
 
       expect(info).not.toBeNull();
       expect(info?.accountId).toBe(accountId);
@@ -95,7 +95,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     });
 
     it("returns null for a nonexistent account", async () => {
-      const info = await getAccountInfo(db as never, `acct_${crypto.randomUUID()}` as AccountId);
+      const info = await getAccountInfo(asDb(db), `acct_${crypto.randomUUID()}` as AccountId);
       expect(info).toBeNull();
     });
   });
@@ -116,7 +116,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       const newPassword = `NewP@ss!${crypto.randomUUID()}`;
 
       const result = await changePassword(
-        db as never,
+        asDb(db),
         accountId,
         sessionId,
         { currentPassword: password, newPassword },
@@ -140,7 +140,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       await expect(
         changePassword(
-          db as never,
+          asDb(db),
           accountId,
           sessionId,
           { currentPassword: "WrongPassword123!", newPassword: "AnotherP@ss1" },
@@ -160,7 +160,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       const newEmail = `changed-${crypto.randomUUID()}@example.com`;
 
       const result = await changeEmail(
-        db as never,
+        asDb(db),
         accountId,
         { email: newEmail, currentPassword: password },
         audit,
@@ -176,7 +176,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       await expect(
         changeEmail(
-          db as never,
+          asDb(db),
           accountId,
           { email: `new-${crypto.randomUUID()}@example.com`, currentPassword: "WrongPassword!" },
           noopAudit,

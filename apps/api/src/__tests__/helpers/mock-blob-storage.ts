@@ -23,9 +23,9 @@ const MOCK_PRESIGNED_TTL_MS = 3_600_000;
  * All presigned URLs point to `https://mock-s3.test/`.
  */
 export function createMockBlobStorage(): BlobStorageAdapter & {
-  blobs: Map<StorageKey, StoredBlobMetadata>;
+  blobs: Map<StorageKey, { meta: StoredBlobMetadata; data: Uint8Array }>;
 } {
-  const blobs = new Map<StorageKey, StoredBlobMetadata>();
+  const blobs = new Map<StorageKey, { meta: StoredBlobMetadata; data: Uint8Array }>();
 
   return {
     blobs,
@@ -38,14 +38,14 @@ export function createMockBlobStorage(): BlobStorageAdapter & {
         checksum: params.checksum,
         uploadedAt: toUnixMillis(Date.now()),
       };
-      blobs.set(params.storageKey, meta);
+      blobs.set(params.storageKey, { meta, data: new Uint8Array(params.data) });
       return Promise.resolve(meta);
     }),
 
     download: vi.fn((storageKey: StorageKey): Promise<Uint8Array> => {
-      const meta = blobs.get(storageKey);
-      if (!meta) return Promise.reject(new Error(`Blob not found: ${storageKey}`));
-      return Promise.resolve(new Uint8Array(meta.sizeBytes));
+      const entry = blobs.get(storageKey);
+      if (!entry) return Promise.reject(new Error(`Blob not found: ${storageKey}`));
+      return Promise.resolve(new Uint8Array(entry.data));
     }),
 
     delete: vi.fn((storageKey: StorageKey): Promise<void> => {
@@ -58,7 +58,8 @@ export function createMockBlobStorage(): BlobStorageAdapter & {
     }),
 
     getMetadata: vi.fn((storageKey: StorageKey): Promise<StoredBlobMetadata | null> => {
-      return Promise.resolve(blobs.get(storageKey) ?? null);
+      const entry = blobs.get(storageKey);
+      return Promise.resolve(entry?.meta ?? null);
     }),
 
     generatePresignedUploadUrl: vi.fn(

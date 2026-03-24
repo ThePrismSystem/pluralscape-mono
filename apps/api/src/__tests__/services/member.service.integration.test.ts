@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, members, systems } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgAllTables,
   pgInsertAccount,
@@ -19,6 +19,7 @@ import {
 } from "../../services/member.service.js";
 import {
   assertApiError,
+  asDb,
   genMemberId,
   makeAuth,
   noopAudit,
@@ -30,7 +31,7 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, members };
+const { members } = schema;
 
 describe("member.service (PGlite integration)", () => {
   let client: PGlite;
@@ -60,7 +61,7 @@ describe("member.service (PGlite integration)", () => {
   describe("createMember", () => {
     it("creates a member with correct id prefix and version", async () => {
       const result = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -77,7 +78,7 @@ describe("member.service (PGlite integration)", () => {
     it("writes an audit entry on create", async () => {
       const audit = spyAudit();
       await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -93,14 +94,14 @@ describe("member.service (PGlite integration)", () => {
   describe("getMember", () => {
     it("returns a previously created member", async () => {
       const created = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      const result = await getMember(db as never, systemId, created.id, auth);
+      const result = await getMember(asDb(db), systemId, created.id, auth);
 
       expect(result.id).toBe(created.id);
       expect(result.systemId).toBe(systemId);
@@ -109,12 +110,12 @@ describe("member.service (PGlite integration)", () => {
     });
 
     it("throws NOT_FOUND for a non-existent member", async () => {
-      await assertApiError(getMember(db as never, systemId, genMemberId(), auth), "NOT_FOUND", 404);
+      await assertApiError(getMember(asDb(db), systemId, genMemberId(), auth), "NOT_FOUND", 404);
     });
 
     it("throws NOT_FOUND when queried with a different system's auth", async () => {
       const created = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -126,7 +127,7 @@ describe("member.service (PGlite integration)", () => {
       const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
       await assertApiError(
-        getMember(db as never, otherSystemId, created.id, otherAuth),
+        getMember(asDb(db), otherSystemId, created.id, otherAuth),
         "NOT_FOUND",
         404,
       );
@@ -136,28 +137,28 @@ describe("member.service (PGlite integration)", () => {
   describe("listMembers", () => {
     it("paginates with limit and cursor", async () => {
       await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
       await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
       await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      const page1 = await listMembers(db as never, systemId, auth, { limit: 2 });
+      const page1 = await listMembers(asDb(db), systemId, auth, { limit: 2 });
       expect(page1.items).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeDefined();
@@ -166,7 +167,7 @@ describe("member.service (PGlite integration)", () => {
       const lastItemId = page1.items[page1.items.length - 1]?.id;
       expect(lastItemId).toBeDefined();
 
-      const page2 = await listMembers(db as never, systemId, auth, {
+      const page2 = await listMembers(asDb(db), systemId, auth, {
         cursor: lastItemId,
         limit: 2,
       });
@@ -178,7 +179,7 @@ describe("member.service (PGlite integration)", () => {
   describe("updateMember", () => {
     it("increments version on successful update", async () => {
       const created = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -186,7 +187,7 @@ describe("member.service (PGlite integration)", () => {
       );
 
       const updated = await updateMember(
-        db as never,
+        asDb(db),
         systemId,
         created.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
@@ -199,7 +200,7 @@ describe("member.service (PGlite integration)", () => {
 
     it("throws CONFLICT on stale version", async () => {
       const created = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
@@ -207,7 +208,7 @@ describe("member.service (PGlite integration)", () => {
       );
 
       await updateMember(
-        db as never,
+        asDb(db),
         systemId,
         created.id,
         { encryptedData: testEncryptedDataBase64(), version: 1 },
@@ -217,7 +218,7 @@ describe("member.service (PGlite integration)", () => {
 
       await assertApiError(
         updateMember(
-          db as never,
+          asDb(db),
           systemId,
           created.id,
           { encryptedData: testEncryptedDataBase64(), version: 1 },
@@ -233,31 +234,31 @@ describe("member.service (PGlite integration)", () => {
   describe("archiveMember", () => {
     it("archives a member so getMember returns NOT_FOUND", async () => {
       const created = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      await archiveMember(db as never, systemId, created.id, auth, noopAudit);
+      await archiveMember(asDb(db), systemId, created.id, auth, noopAudit);
 
-      await assertApiError(getMember(db as never, systemId, created.id, auth), "NOT_FOUND", 404);
+      await assertApiError(getMember(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
     });
   });
 
   describe("restoreMember", () => {
     it("restores an archived member", async () => {
       const created = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      await archiveMember(db as never, systemId, created.id, auth, noopAudit);
-      const restored = await restoreMember(db as never, systemId, created.id, auth, noopAudit);
+      await archiveMember(asDb(db), systemId, created.id, auth, noopAudit);
+      const restored = await restoreMember(asDb(db), systemId, created.id, auth, noopAudit);
 
       expect(restored.archived).toBe(false);
       expect(restored.archivedAt).toBeNull();
@@ -268,16 +269,16 @@ describe("member.service (PGlite integration)", () => {
   describe("deleteMember", () => {
     it("removes the member so getMember returns NOT_FOUND", async () => {
       const created = await createMember(
-        db as never,
+        asDb(db),
         systemId,
         { encryptedData: testEncryptedDataBase64() },
         auth,
         noopAudit,
       );
 
-      await deleteMember(db as never, systemId, created.id, auth, noopAudit);
+      await deleteMember(asDb(db), systemId, created.id, auth, noopAudit);
 
-      await assertApiError(getMember(db as never, systemId, created.id, auth), "NOT_FOUND", 404);
+      await assertApiError(getMember(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
     });
   });
 });
