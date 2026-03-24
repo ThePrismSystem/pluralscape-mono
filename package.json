@@ -54,7 +54,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@trpc/server": "11.14.1",
+      "@trpc/server": "11.15.0",
       "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.6.2",
       "ioredis": "5.10.1",
       "esbuild": ">=0.25.0",
