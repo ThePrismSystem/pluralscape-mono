@@ -64,12 +64,20 @@ erDiagram
         timestamp expires_at
     }
 
+    biometric_tokens {
+        varchar id PK
+        varchar session_id FK
+        varchar token_hash "unique"
+        timestamp created_at
+    }
+
     accounts ||--o{ auth_keys : "has"
     accounts ||--o{ sessions : "has"
     accounts ||--o{ recovery_keys : "has"
     accounts ||--o{ device_transfer_requests : "initiates"
     sessions ||--o{ device_transfer_requests : "source_session"
     sessions ||--o{ device_transfer_requests : "target_session"
+    sessions ||--o{ biometric_tokens : "enrolls"
 ```
 
 ---
@@ -104,34 +112,9 @@ erDiagram
         blob encrypted_data "T1"
     }
 
-    timer_configs {
-        varchar id PK
-        varchar system_id FK
-        boolean enabled
-        integer interval_minutes "nullable"
-        boolean waking_hours_only
-        varchar waking_start "nullable"
-        varchar waking_end "nullable"
-        blob encrypted_data "T1"
-    }
-
-    check_in_records {
-        varchar id PK
-        varchar system_id FK
-        varchar timer_config_id FK
-        timestamp scheduled_at
-        timestamp responded_at
-        boolean dismissed
-        varchar responded_by_member_id FK
-        blob encrypted_data "T1"
-    }
-
     accounts ||--|| systems : "owns"
     systems ||--o| system_settings : "has"
     systems ||--o| nomenclature_settings : "has"
-    systems ||--o{ timer_configs : "configures"
-    timer_configs ||--o{ check_in_records : "generates"
-    systems ||--o{ check_in_records : "scopes"
 ```
 
 ---

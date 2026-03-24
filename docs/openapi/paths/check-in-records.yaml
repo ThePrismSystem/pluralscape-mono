@@ -67,7 +67,7 @@
             schema:
               $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
       "400":
-        $ref: "../openapi.yaml#/components/responses/BadRequest"
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
 

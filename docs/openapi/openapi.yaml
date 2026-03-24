@@ -479,12 +479,12 @@ components:
       $ref: "./schemas/plaintext.yaml#/PlaintextFieldValue"
     PlaintextRelationship:
       $ref: "./schemas/plaintext.yaml#/PlaintextRelationship"
-    PlaintextSubsystem:
-      $ref: "./schemas/plaintext.yaml#/PlaintextSubsystem"
-    PlaintextSideSystem:
-      $ref: "./schemas/plaintext.yaml#/PlaintextSideSystem"
-    PlaintextLayer:
-      $ref: "./schemas/plaintext.yaml#/PlaintextLayer"
+    PlaintextStructureEntityType:
+      $ref: "./schemas/plaintext.yaml#/PlaintextStructureEntityType"
+    PlaintextStructureEntity:
+      $ref: "./schemas/plaintext.yaml#/PlaintextStructureEntity"
+    PlaintextFrontingSession:
+      $ref: "./schemas/plaintext.yaml#/PlaintextFrontingSession"
     PlaintextLifecycleEvent:
       $ref: "./schemas/plaintext.yaml#/PlaintextLifecycleEvent"
     PlaintextInnerworldRegion:
@@ -497,10 +497,10 @@ components:
       $ref: "./schemas/plaintext.yaml#/PlaintextSystemSettings"
     PlaintextNomenclature:
       $ref: "./schemas/plaintext.yaml#/PlaintextNomenclature"
-    PlaintextStructureMembership:
-      $ref: "./schemas/plaintext.yaml#/PlaintextStructureMembership"
-    PlaintextStructureLink:
-      $ref: "./schemas/plaintext.yaml#/PlaintextStructureLink"
+    PlaintextStructureEntityMemberLink:
+      $ref: "./schemas/plaintext.yaml#/PlaintextStructureEntityMemberLink"
+    PlaintextStructureEntityAssociation:
+      $ref: "./schemas/plaintext.yaml#/PlaintextStructureEntityAssociation"
 
   responses:
     NoContent:

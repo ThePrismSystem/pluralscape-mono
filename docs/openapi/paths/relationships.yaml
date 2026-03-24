@@ -5,7 +5,7 @@
     summary: List relationships
     description: |
       Returns a paginated list of all inter-member relationships for the
-      specified system (e.g., "friends", "rivals", "is a subsystem of").
+      specified system (e.g., "friends", "rivals", "protector of").
 
       Rate limit: 60 req/min (readDefault)
     security:
