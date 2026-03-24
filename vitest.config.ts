@@ -28,11 +28,28 @@ function projectConfig(name: string, root: string) {
   };
 }
 
+function integrationProjectConfig(name: string, root: string) {
+  return {
+    test: {
+      name: `${name}-integration`,
+      root,
+      environment: "node",
+      include: ["src/**/*.integration.{test,spec}.ts"],
+      globals: false,
+      restoreMocks: true,
+      testTimeout: 30000,
+      hookTimeout: 30000,
+    },
+  };
+}
+
 export default defineConfig({
   test: {
     projects: [
       ...PACKAGES.map((name) => projectConfig(name, `packages/${name}`)),
+      ...PACKAGES.map((name) => integrationProjectConfig(name, `packages/${name}`)),
       projectConfig("api", "apps/api"),
+      integrationProjectConfig("api", "apps/api"),
       {
         test: {
           name: "i18n",

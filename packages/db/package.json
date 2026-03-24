@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./pg": "./src/schema/pg/index.ts",
-    "./sqlite": "./src/schema/sqlite/index.ts"
+    "./sqlite": "./src/schema/sqlite/index.ts",
+    "./test-helpers/pg-helpers": "./src/__tests__/helpers/pg-helpers.ts"
   },
   "dependencies": {
     "@pluralscape/crypto": "workspace:*",
