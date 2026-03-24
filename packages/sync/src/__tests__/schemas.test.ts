@@ -71,7 +71,7 @@ function makeSystemCoreDoc(): Automerge.Doc<SystemCoreDocument> {
 }
 
 function makeFrontingDoc(): Automerge.Doc<FrontingDocument> {
-  return fromDoc<FrontingDocument>({
+  return fromDoc({
     sessions: {},
     comments: {},
     checkInRecords: {},
@@ -101,7 +101,7 @@ function makeChatDoc(): Automerge.Doc<ChatDocument> {
 }
 
 function makeJournalDoc(): Automerge.Doc<JournalDocument> {
-  return fromDoc<JournalDocument>({
+  return fromDoc({
     entries: {},
     wikiPages: {},
     notes: {},
@@ -109,7 +109,7 @@ function makeJournalDoc(): Automerge.Doc<JournalDocument> {
 }
 
 function makePrivacyConfigDoc(): Automerge.Doc<PrivacyConfigDocument> {
-  return fromDoc<PrivacyConfigDocument>({
+  return fromDoc({
     buckets: {},
     contentTags: {},
     friendConnections: {},

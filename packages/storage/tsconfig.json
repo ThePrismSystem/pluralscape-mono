@@ -1,5 +1,5 @@
 {
-  "extends": "@pluralscape/tsconfig/base.json",
+  "extends": "@pluralscape/tsconfig/node.json",
   "compilerOptions": {
     "outDir": "dist"
   },

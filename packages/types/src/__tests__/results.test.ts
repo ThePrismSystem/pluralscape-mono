@@ -71,7 +71,7 @@ describe("ActionResult", () => {
   });
 
   it("accepts valid action result", () => {
-    assertType<ActionResult>({ success: true });
+    assertType({ success: true });
   });
 });
 
