@@ -6,6 +6,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { toCursor } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { throwOnUniqueViolation } from "../lib/unique-violation.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
@@ -60,7 +61,7 @@ export async function addMember(
   const { memberId } = parsed.data;
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify group exists and is not archived
     const [group] = await tx
       .select({ id: groups.id })
@@ -127,7 +128,7 @@ export async function removeMember(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const deleted = await tx
       .delete(groupMemberships)
       .where(
@@ -164,51 +165,53 @@ export async function listGroupMembers(
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);
 
-  // Verify group exists
-  const [group] = await db
-    .select({ id: groups.id })
-    .from(groups)
-    .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
-    .limit(1);
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    // Verify group exists
+    const [group] = await tx
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
+      .limit(1);
 
-  if (!group) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
-  }
+    if (!group) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
+    }
 
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
+    const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  const conditions = [
-    eq(groupMemberships.groupId, groupId),
-    eq(groupMemberships.systemId, systemId),
-  ];
+    const conditions = [
+      eq(groupMemberships.groupId, groupId),
+      eq(groupMemberships.systemId, systemId),
+    ];
 
-  if (cursor) {
-    conditions.push(gt(groupMemberships.memberId, cursor));
-  }
+    if (cursor) {
+      conditions.push(gt(groupMemberships.memberId, cursor));
+    }
 
-  const rows = await db
-    .select({
-      groupId: groupMemberships.groupId,
-      memberId: groupMemberships.memberId,
-      systemId: groupMemberships.systemId,
-      createdAt: groupMemberships.createdAt,
-    })
-    .from(groupMemberships)
-    .where(and(...conditions))
-    .orderBy(groupMemberships.memberId)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select({
+        groupId: groupMemberships.groupId,
+        memberId: groupMemberships.memberId,
+        systemId: groupMemberships.systemId,
+        createdAt: groupMemberships.createdAt,
+      })
+      .from(groupMemberships)
+      .where(and(...conditions))
+      .orderBy(groupMemberships.memberId)
+      .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.memberId) : null;
+    const hasMore = rows.length > effectiveLimit;
+    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
+    const lastItem = items[items.length - 1];
+    const nextCursor = hasMore && lastItem ? toCursor(lastItem.memberId) : null;
 
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+    return {
+      items,
+      nextCursor,
+      hasMore,
+      totalCount: null,
+    };
+  });
 }
 
 // ── LIST MEMBER'S GROUP MEMBERSHIPS ─────────────────────────────────
@@ -223,51 +226,53 @@ export async function listMemberGroupMemberships(
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);
 
-  // Verify member exists
-  const [member] = await db
-    .select({ id: members.id })
-    .from(members)
-    .where(
-      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
-    )
-    .limit(1);
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    // Verify member exists
+    const [member] = await tx
+      .select({ id: members.id })
+      .from(members)
+      .where(
+        and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+      )
+      .limit(1);
 
-  if (!member) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
-  }
+    if (!member) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
 
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
+    const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  const conditions = [
-    eq(groupMemberships.memberId, memberId),
-    eq(groupMemberships.systemId, systemId),
-  ];
+    const conditions = [
+      eq(groupMemberships.memberId, memberId),
+      eq(groupMemberships.systemId, systemId),
+    ];
 
-  if (cursor) {
-    conditions.push(gt(groupMemberships.groupId, cursor));
-  }
+    if (cursor) {
+      conditions.push(gt(groupMemberships.groupId, cursor));
+    }
 
-  const rows = await db
-    .select({
-      groupId: groupMemberships.groupId,
-      memberId: groupMemberships.memberId,
-      systemId: groupMemberships.systemId,
-      createdAt: groupMemberships.createdAt,
-    })
-    .from(groupMemberships)
-    .where(and(...conditions))
-    .orderBy(groupMemberships.groupId)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select({
+        groupId: groupMemberships.groupId,
+        memberId: groupMemberships.memberId,
+        systemId: groupMemberships.systemId,
+        createdAt: groupMemberships.createdAt,
+      })
+      .from(groupMemberships)
+      .where(and(...conditions))
+      .orderBy(groupMemberships.groupId)
+      .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.groupId) : null;
+    const hasMore = rows.length > effectiveLimit;
+    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
+    const lastItem = items[items.length - 1];
+    const nextCursor = hasMore && lastItem ? toCursor(lastItem.groupId) : null;
 
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+    return {
+      items,
+      nextCursor,
+      hasMore,
+      totalCount: null,
+    };
+  });
 }

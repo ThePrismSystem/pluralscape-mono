@@ -23,6 +23,7 @@ import {
   serializeEncryptedPayload,
 } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
+import { withAccountTransaction } from "../lib/rls-context.js";
 import { EMAIL_CHANGE_FAILED_ERROR } from "../routes/account/account.constants.js";
 import { EMAIL_SALT_BYTES } from "../routes/auth/auth.constants.js";
 
@@ -50,40 +51,42 @@ export async function getAccountInfo(
   db: PostgresJsDatabase,
   accountId: AccountId,
 ): Promise<AccountInfo | null> {
-  const [row] = await db
-    .select({
-      accountId: accounts.id,
-      accountType: accounts.accountType,
-      auditLogIpTracking: accounts.auditLogIpTracking,
-      version: accounts.version,
-      createdAt: accounts.createdAt,
-      updatedAt: accounts.updatedAt,
-    })
-    .from(accounts)
-    .where(eq(accounts.id, accountId))
-    .limit(1);
-
-  if (!row) return null;
-
-  let systemId: SystemId | null = null;
-  if (row.accountType === "system") {
-    const [system] = await db
-      .select({ id: systems.id })
-      .from(systems)
-      .where(eq(systems.accountId, accountId))
+  return withAccountTransaction(db, accountId, async (tx) => {
+    const [row] = await tx
+      .select({
+        accountId: accounts.id,
+        accountType: accounts.accountType,
+        auditLogIpTracking: accounts.auditLogIpTracking,
+        version: accounts.version,
+        createdAt: accounts.createdAt,
+        updatedAt: accounts.updatedAt,
+      })
+      .from(accounts)
+      .where(eq(accounts.id, accountId))
       .limit(1);
-    systemId = system ? (system.id as SystemId) : null;
-  }
 
-  return {
-    accountId: row.accountId as AccountId,
-    accountType: row.accountType,
-    systemId,
-    auditLogIpTracking: row.auditLogIpTracking,
-    version: row.version,
-    createdAt: toUnixMillis(row.createdAt),
-    updatedAt: toUnixMillis(row.updatedAt),
-  };
+    if (!row) return null;
+
+    let systemId: SystemId | null = null;
+    if (row.accountType === "system") {
+      const [system] = await tx
+        .select({ id: systems.id })
+        .from(systems)
+        .where(eq(systems.accountId, accountId))
+        .limit(1);
+      systemId = system ? (system.id as SystemId) : null;
+    }
+
+    return {
+      accountId: row.accountId as AccountId,
+      accountType: row.accountType,
+      systemId,
+      auditLogIpTracking: row.auditLogIpTracking,
+      version: row.version,
+      createdAt: toUnixMillis(row.createdAt),
+      updatedAt: toUnixMillis(row.updatedAt),
+    };
+  });
 }
 
 // ── Change Email ──────────────────────────────────────────────────
@@ -126,7 +129,7 @@ export async function changeEmail(
   const timestamp = now();
 
   try {
-    await db.transaction(async (tx) => {
+    await withAccountTransaction(db, accountId, async (tx) => {
       const updated = await tx
         .update(accounts)
         .set({
@@ -229,7 +232,7 @@ export async function changePassword(
 
     const timestamp = now();
 
-    const revokedSessionCount = await db.transaction(async (tx) => {
+    const revokedSessionCount = await withAccountTransaction(db, accountId, async (tx) => {
       const updated = await tx
         .update(accounts)
         .set({
@@ -294,7 +297,7 @@ export async function updateAccountSettings(
 
   const timestamp = now();
 
-  const updated = await db.transaction(async (tx) => {
+  const updated = await withAccountTransaction(db, accountId, async (tx) => {
     const [row] = await tx
       .update(accounts)
       .set({

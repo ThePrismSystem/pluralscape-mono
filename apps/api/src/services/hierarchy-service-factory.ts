@@ -7,6 +7,7 @@ import { parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -77,7 +78,7 @@ export function createHierarchyService<
     const entityId = createId(idPrefix);
     const timestamp = now();
 
-    return db.transaction(async (tx) => {
+    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
       // Validate parent exists in same system if non-null
       const parsedRecord = parsed as Record<string, unknown>;
       const rawParentId = parentFieldName in parsedRecord ? parsedRecord[parentFieldName] : null;
@@ -147,20 +148,22 @@ export function createHierarchyService<
 
     const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-    const conditions = [eq(columns.systemId, systemId), eq(columns.archived, false)];
+    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+      const conditions = [eq(columns.systemId, systemId), eq(columns.archived, false)];
 
-    if (cursor) {
-      conditions.push(gt(columns.id, cursor));
-    }
+      if (cursor) {
+        conditions.push(gt(columns.id, cursor));
+      }
 
-    const rows = await db
-      .select()
-      .from(table)
-      .where(and(...conditions))
-      .orderBy(columns.id)
-      .limit(effectiveLimit + 1);
+      const rows = await tx
+        .select()
+        .from(table)
+        .where(and(...conditions))
+        .orderBy(columns.id)
+        .limit(effectiveLimit + 1);
 
-    return buildPaginatedResult(rows, effectiveLimit, (row) => toResult(row as TRow));
+      return buildPaginatedResult(rows, effectiveLimit, (row) => toResult(row as TRow));
+    });
   }
 
   // ── GET ───────────────────────────────────────────────────────────
@@ -173,19 +176,25 @@ export function createHierarchyService<
   ): Promise<TResult> {
     assertSystemOwnership(systemId, auth);
 
-    const [row] = await db
-      .select()
-      .from(table)
-      .where(
-        and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, false)),
-      )
-      .limit(1);
+    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(table)
+        .where(
+          and(
+            eq(columns.id, entityId),
+            eq(columns.systemId, systemId),
+            eq(columns.archived, false),
+          ),
+        )
+        .limit(1);
 
-    if (!row) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
-    }
+      if (!row) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
+      }
 
-    return toResult(row as TRow);
+      return toResult(row as TRow);
+    });
   }
 
   // ── UPDATE ────────────────────────────────────────────────────────
@@ -209,7 +218,7 @@ export function createHierarchyService<
     const timestamp = now();
     const parsedRecord = parsed as Record<string, unknown>;
 
-    return db.transaction(async (tx) => {
+    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
       if (cfg.beforeUpdate) {
         await cfg.beforeUpdate(tx, entityId, parsedRecord, systemId);
       }
@@ -275,7 +284,7 @@ export function createHierarchyService<
   ): Promise<void> {
     assertSystemOwnership(systemId, auth);
 
-    await db.transaction(async (tx) => {
+    await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
       // Verify entity exists
       const [existing] = await tx
         .select({ id: columns.id })
@@ -334,7 +343,7 @@ export function createHierarchyService<
 
     const timestamp = now();
 
-    return db.transaction(async (tx) => {
+    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
       const [existing] = await tx
         .select({ id: columns.id, parentId: columns.parentId })
         .from(table)

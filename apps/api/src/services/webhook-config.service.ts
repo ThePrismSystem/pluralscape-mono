@@ -15,6 +15,7 @@ import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../service.constants.js";
 
@@ -145,7 +146,7 @@ export async function createWebhookConfig(
   const timestamp = now();
   const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .insert(webhookConfigs)
       .values({
@@ -280,7 +281,7 @@ export async function updateWebhookConfig(
     setFields.enabled = enabled;
   }
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(webhookConfigs)
       .set(setFields)
@@ -335,7 +336,7 @@ export async function deleteWebhookConfig(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: webhookConfigs.id })
       .from(webhookConfigs)
@@ -346,6 +347,7 @@ export async function deleteWebhookConfig(
           eq(webhookConfigs.archived, false),
         ),
       )
+      .for("update")
       .limit(1);
 
     if (!existing) {

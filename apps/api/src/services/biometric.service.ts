@@ -2,7 +2,7 @@ import { GENERIC_HASH_BYTES_MAX, getSodium } from "@pluralscape/crypto";
 import { biometricTokens, systemSettings } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { BiometricEnrollBodySchema, BiometricVerifyBodySchema } from "@pluralscape/validation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -100,12 +100,16 @@ export async function verifyBiometric(
   const tokenHash = hashToken(parsed.data.token);
 
   const [match] = await db
-    .select({ id: biometricTokens.id })
-    .from(biometricTokens)
+    .update(biometricTokens)
+    .set({ usedAt: now() })
     .where(
-      and(eq(biometricTokens.sessionId, auth.sessionId), eq(biometricTokens.tokenHash, tokenHash)),
+      and(
+        eq(biometricTokens.sessionId, auth.sessionId),
+        eq(biometricTokens.tokenHash, tokenHash),
+        isNull(biometricTokens.usedAt),
+      ),
     )
-    .limit(1);
+    .returning({ id: biometricTokens.id });
 
   if (!match) {
     void audit(db, {

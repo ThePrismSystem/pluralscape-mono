@@ -12,6 +12,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -108,7 +109,7 @@ export async function createRelationship(
   const relationshipId = createId(ID_PREFIXES.relationship);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Validate both members exist in the same system
     const memberRows = await tx
       .select({ id: members.id })
@@ -172,30 +173,32 @@ export async function listRelationships(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(relationships.systemId, systemId), eq(relationships.archived, false)];
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const conditions = [eq(relationships.systemId, systemId), eq(relationships.archived, false)];
 
-  if (cursor) {
-    conditions.push(gt(relationships.id, cursor));
-  }
-
-  if (memberId) {
-    const memberFilter = or(
-      eq(relationships.sourceMemberId, memberId),
-      eq(relationships.targetMemberId, memberId),
-    );
-    if (memberFilter) {
-      conditions.push(memberFilter);
+    if (cursor) {
+      conditions.push(gt(relationships.id, cursor));
     }
-  }
 
-  const rows = await db
-    .select()
-    .from(relationships)
-    .where(and(...conditions))
-    .orderBy(relationships.id)
-    .limit(effectiveLimit + 1);
+    if (memberId) {
+      const memberFilter = or(
+        eq(relationships.sourceMemberId, memberId),
+        eq(relationships.targetMemberId, memberId),
+      );
+      if (memberFilter) {
+        conditions.push(memberFilter);
+      }
+    }
 
-  return buildPaginatedResult(rows, effectiveLimit, toRelationshipResult);
+    const rows = await tx
+      .select()
+      .from(relationships)
+      .where(and(...conditions))
+      .orderBy(relationships.id)
+      .limit(effectiveLimit + 1);
+
+    return buildPaginatedResult(rows, effectiveLimit, toRelationshipResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -208,23 +211,25 @@ export async function getRelationship(
 ): Promise<RelationshipResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(relationships)
-    .where(
-      and(
-        eq(relationships.id, relationshipId),
-        eq(relationships.systemId, systemId),
-        eq(relationships.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(relationships)
+      .where(
+        and(
+          eq(relationships.id, relationshipId),
+          eq(relationships.systemId, systemId),
+          eq(relationships.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Relationship not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Relationship not found");
+    }
 
-  return toRelationshipResult(row);
+    return toRelationshipResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -247,7 +252,7 @@ export async function updateRelationship(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(relationships)
       .set({
@@ -308,7 +313,7 @@ export async function deleteRelationship(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify relationship exists
     const [existing] = await tx
       .select({ id: relationships.id })

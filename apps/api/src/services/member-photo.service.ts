@@ -8,6 +8,7 @@ import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constan
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertMemberActive } from "../lib/member-helpers.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -112,7 +113,7 @@ export async function createMemberPhoto(
   const photoId = createId(ID_PREFIXES.memberPhoto);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Check quota inside transaction to prevent TOCTOU races
     const [countResult] = await tx
       .select({ count: count() })
@@ -186,21 +187,24 @@ export async function listMemberPhotos(
   auth: AuthContext,
 ): Promise<MemberPhotoResult[]> {
   assertSystemOwnership(systemId, auth);
-  await assertMemberActive(db, systemId, memberId);
 
-  const rows = await db
-    .select()
-    .from(memberPhotos)
-    .where(
-      and(
-        eq(memberPhotos.memberId, memberId),
-        eq(memberPhotos.systemId, systemId),
-        eq(memberPhotos.archived, false),
-      ),
-    )
-    .orderBy(memberPhotos.sortOrder);
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    await assertMemberActive(tx, systemId, memberId);
 
-  return rows.map(toPhotoResult);
+    const rows = await tx
+      .select()
+      .from(memberPhotos)
+      .where(
+        and(
+          eq(memberPhotos.memberId, memberId),
+          eq(memberPhotos.systemId, systemId),
+          eq(memberPhotos.archived, false),
+        ),
+      )
+      .orderBy(memberPhotos.sortOrder);
+
+    return rows.map(toPhotoResult);
+  });
 }
 
 // ── REORDER ─────────────────────────────────────────────────────────
@@ -223,7 +227,7 @@ export async function reorderMemberPhotos(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify all photo IDs belong to this member
     const existingPhotos = await tx
       .select({ id: memberPhotos.id })
@@ -323,7 +327,7 @@ export async function archiveMemberPhoto(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: memberPhotos.id })
       .from(memberPhotos)
@@ -375,7 +379,7 @@ export async function restoreMemberPhoto(
 ): Promise<MemberPhotoResult> {
   assertSystemOwnership(systemId, auth);
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select()
       .from(memberPhotos)
@@ -434,7 +438,7 @@ export async function deleteMemberPhoto(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: memberPhotos.id })
       .from(memberPhotos)

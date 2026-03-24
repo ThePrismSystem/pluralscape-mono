@@ -15,21 +15,26 @@ import {
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
-import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull, ne, or } from "drizzle-orm";
 
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
 import { toCursor } from "../lib/pagination.js";
+import { withAccountTransaction } from "../lib/rls-context.js";
 import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
 import { getAccountLoginStore } from "../middleware/stores/account-login-store.js";
 import {
   ANTI_ENUM_TARGET_MS,
+  BASE32_BITS_PER_CHAR,
+  BASE32_CHAR_MASK,
+  BITS_PER_BYTE,
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
+  MAX_SESSIONS_PER_ACCOUNT,
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,
@@ -112,7 +117,7 @@ export async function registerAccount(
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
   try {
-    await db.transaction(async (tx) => {
+    await withAccountTransaction(db, accountId, async (tx) => {
       await tx.insert(accounts).values({
         id: accountId,
         accountType,
@@ -248,12 +253,14 @@ export async function loginAccount(
       );
     }
     // Record failure for throttling on non-existent accounts too
-    void loginStore.recordFailure(emailHash).catch((throttleErr: unknown) => {
+    try {
+      await loginStore.recordFailure(emailHash);
+    } catch (throttleErr: unknown) {
       log.error(
         "Failed to record login failure for throttle",
         throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
       );
-    });
+    }
     // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
     // Uses a zeroed account ID since no real account exists for this email.
     void audit(db, {
@@ -327,7 +334,29 @@ export async function loginAccount(
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
-  await db.transaction(async (tx) => {
+  await withAccountTransaction(db, account.id, async (tx) => {
+    // Enforce per-account session limit: evict oldest session if at capacity
+    const currentTime = now();
+    const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
+    const [sessionCount] = await tx
+      .select({ value: count() })
+      .from(sessions)
+      .where(and(eq(sessions.accountId, account.id), eq(sessions.revoked, false), notExpired))
+      .limit(1);
+
+    if (sessionCount && sessionCount.value >= MAX_SESSIONS_PER_ACCOUNT) {
+      const [oldest] = await tx
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(and(eq(sessions.accountId, account.id), eq(sessions.revoked, false), notExpired))
+        .orderBy(asc(sessions.lastActive))
+        .limit(1);
+
+      if (oldest) {
+        await tx.update(sessions).set({ revoked: true }).where(eq(sessions.id, oldest.id));
+      }
+    }
+
     await tx.insert(sessions).values({
       id: sessionId,
       accountId: account.id,
@@ -411,7 +440,7 @@ export async function revokeSession(
   actorAccountId: string,
   audit: AuditWriter,
 ): Promise<boolean> {
-  return db.transaction(async (tx) => {
+  return withAccountTransaction(db, actorAccountId, async (tx) => {
     const updated = await tx
       .update(sessions)
       .set({ revoked: true })
@@ -444,7 +473,7 @@ export async function revokeAllSessions(
   exceptSessionId: string,
   audit: AuditWriter,
 ): Promise<number> {
-  return db.transaction(async (tx) => {
+  return withAccountTransaction(db, accountId, async (tx) => {
     const result = await tx
       .update(sessions)
       .set({ revoked: true })
@@ -473,7 +502,7 @@ export async function logoutCurrentSession(
   accountId: string,
   audit: AuditWriter,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
+  await withAccountTransaction(db, accountId, async (tx) => {
     await tx
       .update(sessions)
       .set({ revoked: true })
@@ -537,16 +566,29 @@ function generateFakeRecoveryKey(): string {
   const adapter = getSodium();
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const totalChars = RECOVERY_KEY_GROUP_COUNT * RECOVERY_KEY_GROUP_SIZE;
-  const randomBytes = adapter.randomBytes(totalChars);
-  const groups: string[] = [];
+  // Use 5-bit extraction (matching real base32 encoding in packages/crypto/src/recovery.ts)
+  // Each base32 char needs 5 bits; allocate enough random bytes to cover all characters
+  const bitsNeeded = totalChars * BASE32_BITS_PER_CHAR;
+  const bytesNeeded = Math.ceil(bitsNeeded / BITS_PER_BYTE);
+  const randomBytes = adapter.randomBytes(bytesNeeded);
+
+  let buffer = 0;
+  let bitsLeft = 0;
   let byteIdx = 0;
-  for (let g = 0; g < RECOVERY_KEY_GROUP_COUNT; g++) {
-    let group = "";
-    for (let c = 0; c < RECOVERY_KEY_GROUP_SIZE; c++) {
-      const byte = randomBytes[byteIdx++] ?? 0;
-      group += chars[byte % chars.length] ?? "A";
+  let encoded = "";
+
+  for (let i = 0; i < totalChars; i++) {
+    while (bitsLeft < BASE32_BITS_PER_CHAR) {
+      buffer = (buffer << BITS_PER_BYTE) | (randomBytes[byteIdx++] ?? 0);
+      bitsLeft += BITS_PER_BYTE;
     }
-    groups.push(group);
+    bitsLeft -= BASE32_BITS_PER_CHAR;
+    encoded += chars[(buffer >> bitsLeft) & BASE32_CHAR_MASK] ?? "A";
+  }
+
+  const groups: string[] = [];
+  for (let g = 0; g < RECOVERY_KEY_GROUP_COUNT; g++) {
+    groups.push(encoded.slice(g * RECOVERY_KEY_GROUP_SIZE, (g + 1) * RECOVERY_KEY_GROUP_SIZE));
   }
   return groups.join("-");
 }

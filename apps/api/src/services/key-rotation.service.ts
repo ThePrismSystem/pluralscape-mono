@@ -23,6 +23,7 @@ import { and, eq, inArray, lt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -124,7 +125,7 @@ export async function initiateRotation(
   const rotationId = createId(ID_PREFIXES.bucketKeyRotation);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Get all content tags for this bucket
     const tags = await tx
       .select()
@@ -344,7 +345,7 @@ export async function completeRotationChunk(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid completion payload");
   }
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Lock the rotation record to prevent concurrent sealing transitions
     const [rotation] = await tx
       .select()
@@ -414,7 +415,8 @@ export async function completeRotationChunk(
         .from(bucketContentTags)
         .where(
           and(eq(bucketContentTags.bucketId, bucketId), eq(bucketContentTags.systemId, systemId)),
-        );
+        )
+        .for("update");
 
       // Find items that aren't in the rotation set
       const existingItemKeys = new Set(

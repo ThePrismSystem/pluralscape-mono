@@ -25,25 +25,59 @@ export class ConnectionManager {
   private readonly connections = new Map<string, SyncConnectionState>();
   private readonly accountIndex = new Map<string, Set<string>>();
   private readonly docIndex = new Map<string, Set<string>>();
+  private readonly ipUnauthCount = new Map<string, number>();
   private unauthCount = 0;
   private shuttingDown = false;
 
   /** Reserve a slot for an unauthenticated connection (before onOpen fires). */
-  reserveUnauthSlot(): void {
+  reserveUnauthSlot(ip?: string): void {
     this.unauthCount++;
+    if (ip) {
+      this.ipUnauthCount.set(ip, (this.ipUnauthCount.get(ip) ?? 0) + 1);
+    }
   }
 
   /** Release a reserved unauthenticated slot (if onOpen never fires). */
-  releaseUnauthSlot(): void {
+  releaseUnauthSlot(ip?: string): void {
     this.unauthCount = Math.max(0, this.unauthCount - 1);
+    if (ip) {
+      const current = this.ipUnauthCount.get(ip) ?? 0;
+      if (current <= 1) {
+        this.ipUnauthCount.delete(ip);
+      } else {
+        this.ipUnauthCount.set(ip, current - 1);
+      }
+    }
+  }
+
+  /** Check if a new unauthenticated connection from the given IP can be accepted. */
+  canAcceptFromIp(ip: string, limit: number): boolean {
+    return (this.ipUnauthCount.get(ip) ?? 0) < limit;
+  }
+
+  /** Decrement the per-IP unauthenticated counter (no-op if ip is undefined). */
+  private releaseIpSlot(ip: string | undefined): void {
+    if (!ip) return;
+    const current = this.ipUnauthCount.get(ip) ?? 0;
+    if (current <= 1) {
+      this.ipUnauthCount.delete(ip);
+    } else {
+      this.ipUnauthCount.set(ip, current - 1);
+    }
   }
 
   /** Register a new unauthenticated connection. Does not increment unauthCount (caller pre-reserves). */
-  register(connectionId: string, ws: WSContext, connectedAt: number): AwaitingAuthState {
+  register(
+    connectionId: string,
+    ws: WSContext,
+    connectedAt: number,
+    clientIp?: string,
+  ): AwaitingAuthState {
     const state: AwaitingAuthState = {
       connectionId,
       ws,
       connectedAt,
+      clientIp,
       phase: "awaiting-auth",
       auth: null,
       systemId: null,
@@ -80,6 +114,7 @@ export class ConnectionManager {
         connectionId: state.connectionId,
         ws: state.ws,
         connectedAt: state.connectedAt,
+        clientIp: state.clientIp,
         phase: "authenticated",
         auth,
         systemId,
@@ -92,6 +127,7 @@ export class ConnectionManager {
       };
       this.connections.set(connectionId, authenticated);
       this.unauthCount = Math.max(0, this.unauthCount - 1);
+      this.releaseIpSlot(state.clientIp);
 
       // Update account index
       let accountSet = this.accountIndex.get(auth.accountId);
@@ -173,6 +209,7 @@ export class ConnectionManager {
     // Decrement unauth counter if not yet authenticated
     if (state.phase === "awaiting-auth") {
       this.unauthCount = Math.max(0, this.unauthCount - 1);
+      this.releaseIpSlot(state.clientIp);
     }
 
     // Remove from account index
@@ -248,6 +285,7 @@ export class ConnectionManager {
     this.connections.clear();
     this.accountIndex.clear();
     this.docIndex.clear();
+    this.ipUnauthCount.clear();
     this.unauthCount = 0;
   }
 
@@ -292,6 +330,7 @@ export class ConnectionManager {
     this.connections.clear();
     this.accountIndex.clear();
     this.docIndex.clear();
+    this.ipUnauthCount.clear();
     this.unauthCount = 0;
   }
 

@@ -16,6 +16,7 @@ export const biometricTokens = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 128 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
+    usedAt: pgTimestamp("used_at"),
   },
   (t) => [
     index("biometric_tokens_session_id_idx").on(t.sessionId),

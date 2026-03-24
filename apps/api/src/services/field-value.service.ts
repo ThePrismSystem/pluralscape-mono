@@ -8,6 +8,7 @@ import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constan
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertFieldDefinitionActive, assertMemberActive } from "../lib/member-helpers.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import { MAX_ENCRYPTED_FIELD_VALUE_BYTES } from "./field-value.constants.js";
@@ -112,7 +113,7 @@ export async function setFieldValue(
   const valueId = createId(ID_PREFIXES.fieldValue);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     await assertMemberActive(tx, systemId, memberId);
     await assertFieldDefinitionActive(tx, systemId, fieldDefId);
     // Check for existing value (unique constraint)
@@ -168,7 +169,7 @@ export async function listFieldValues(
 ): Promise<FieldValueResult[]> {
   assertSystemOwnership(systemId, auth);
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     await assertMemberActive(tx, systemId, memberId);
 
     const rows = await tx
@@ -201,7 +202,7 @@ export async function updateFieldValue(
   const blob = parseAndValidateValueBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     await assertMemberActive(tx, systemId, memberId);
     await assertFieldDefinitionActive(tx, systemId, fieldDefId);
 
@@ -266,7 +267,7 @@ export async function deleteFieldValue(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     await assertMemberActive(tx, systemId, memberId);
 
     const deleted = await tx

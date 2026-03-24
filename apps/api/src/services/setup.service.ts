@@ -10,6 +10,7 @@ import { and, eq } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import { getRecoveryKeyStatus } from "./recovery-key.service.js";
@@ -230,7 +231,7 @@ export async function setupComplete(
   const timestamp = now();
 
   // Atomic insert with onConflictDoNothing to avoid TOCTOU race
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const inserted = await tx
       .insert(systemSettings)
       .values({

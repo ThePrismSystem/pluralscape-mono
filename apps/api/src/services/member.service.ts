@@ -25,6 +25,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_MEMBER_LIMIT,
@@ -101,7 +102,7 @@ export async function createMember(
   const memberId = createId(ID_PREFIXES.member);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .insert(members)
       .values({
@@ -143,24 +144,27 @@ export async function listMembers(
   assertSystemOwnership(systemId, auth);
 
   const limit = Math.min(opts?.limit ?? DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT);
-  const conditions = [eq(members.systemId, systemId)];
 
-  if (!opts?.includeArchived) {
-    conditions.push(eq(members.archived, false));
-  }
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const conditions = [eq(members.systemId, systemId)];
 
-  if (opts?.cursor) {
-    conditions.push(gt(members.id, opts.cursor));
-  }
+    if (!opts?.includeArchived) {
+      conditions.push(eq(members.archived, false));
+    }
 
-  const rows = await db
-    .select()
-    .from(members)
-    .where(and(...conditions))
-    .orderBy(members.id)
-    .limit(limit + 1);
+    if (opts?.cursor) {
+      conditions.push(gt(members.id, opts.cursor));
+    }
 
-  return buildPaginatedResult(rows, limit, toMemberResult);
+    const rows = await tx
+      .select()
+      .from(members)
+      .where(and(...conditions))
+      .orderBy(members.id)
+      .limit(limit + 1);
+
+    return buildPaginatedResult(rows, limit, toMemberResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -173,19 +177,21 @@ export async function getMember(
 ): Promise<MemberResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(members)
-    .where(
-      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
-    )
-    .limit(1);
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(members)
+      .where(
+        and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
 
-  return toMemberResult(row);
+    return toMemberResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -208,7 +214,7 @@ export async function updateMember(
   const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(members)
       .set({
@@ -277,7 +283,7 @@ export async function duplicateMember(
   const newMemberId = createId(ID_PREFIXES.member);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify source member inside transaction to prevent TOCTOU
     const [source] = await tx
       .select()
@@ -416,7 +422,7 @@ export async function archiveMember(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: members.id })
       .from(members)
@@ -468,7 +474,7 @@ export async function restoreMember(
 ): Promise<MemberResult> {
   assertSystemOwnership(systemId, auth);
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select()
       .from(members)
@@ -516,7 +522,7 @@ export async function deleteMember(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: members.id })
       .from(members)
@@ -694,7 +700,7 @@ export async function listAllMemberMemberships(
 ): Promise<MemberMembershipsResult> {
   assertSystemOwnership(systemId, auth);
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify member exists
     const [member] = await tx
       .select({ id: members.id })

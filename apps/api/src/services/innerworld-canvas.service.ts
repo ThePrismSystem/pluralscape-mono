@@ -6,6 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { MAX_ENCRYPTED_DATA_BYTES } from "../service.constants.js";
 
@@ -83,7 +84,7 @@ export async function upsertCanvas(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ version: innerworldCanvas.version })
       .from(innerworldCanvas)

@@ -12,6 +12,8 @@ import {
   verifyEnvelopeSignature,
 } from "@pluralscape/sync";
 
+import { logger } from "../lib/logger.js";
+
 import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
@@ -365,8 +367,17 @@ async function collectAllEnvelopes(
  * Configurable via VERIFY_ENVELOPE_SIGNATURES env var for performance tuning.
  * Defaults to true (secure by default).
  */
+let envelopeVerificationWarningLogged = false;
 function shouldVerifyEnvelopeSignatures(): boolean {
   const envVal = process.env["VERIFY_ENVELOPE_SIGNATURES"];
   if (envVal === undefined) return true;
-  return envVal !== "false" && envVal !== "0";
+  const enabled = envVal !== "false" && envVal !== "0";
+  if (!enabled && !envelopeVerificationWarningLogged) {
+    envelopeVerificationWarningLogged = true;
+    logger.warn(
+      "VERIFY_ENVELOPE_SIGNATURES is disabled — server will accept unsigned sync envelopes. " +
+        "This weakens E2E encryption integrity. Only disable for performance profiling.",
+    );
+  }
+  return enabled;
 }

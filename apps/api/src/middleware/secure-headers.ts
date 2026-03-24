@@ -24,5 +24,10 @@ export function createSecureHeaders(): MiddlewareHandler {
     strictTransportSecurity: isProduction
       ? `max-age=${String(HSTS_MAX_AGE_SECONDS)}; includeSubDomains; preload`
       : false,
+    permissionsPolicy: {
+      camera: [],
+      microphone: [],
+      geolocation: [],
+    },
   });
 }

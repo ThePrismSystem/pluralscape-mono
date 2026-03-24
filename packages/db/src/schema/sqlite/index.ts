@@ -1,4 +1,5 @@
 export { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
+export { biometricTokens } from "./biometric-tokens.js";
 export { frontingReports } from "./analytics.js";
 export { apiKeys } from "./api-keys.js";
 export { auditLog } from "./audit-log.js";
@@ -82,6 +83,7 @@ export type {
   DeviceTransferRequestRow,
   NewDeviceTransferRequest,
 } from "./auth.js";
+export type { BiometricTokenRow, NewBiometricToken } from "./biometric-tokens.js";
 export type { SystemRow, NewSystem } from "./systems.js";
 export type { MemberRow, NewMember, MemberPhotoRow, NewMemberPhoto } from "./members.js";
 

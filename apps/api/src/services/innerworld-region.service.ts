@@ -8,6 +8,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -86,7 +87,7 @@ export async function createRegion(
   const regionId = createId(ID_PREFIXES.innerWorldRegion);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Validate parentRegionId exists in same system if provided
     const parentRegionId = parsed.parentRegionId ?? null;
     if (parentRegionId !== null) {
@@ -219,7 +220,7 @@ export async function updateRegion(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(innerworldRegions)
       .set({
@@ -280,7 +281,7 @@ export async function archiveRegion(
 
   const timestamp = now();
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldRegions.id })
       .from(innerworldRegions)
@@ -365,7 +366,7 @@ export async function restoreRegion(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldRegions.id, parentRegionId: innerworldRegions.parentRegionId })
       .from(innerworldRegions)
@@ -441,7 +442,7 @@ export async function deleteRegion(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Verify region exists
     const [existing] = await tx
       .select({ id: innerworldRegions.id })

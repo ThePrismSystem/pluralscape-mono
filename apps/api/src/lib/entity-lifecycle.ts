@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
+import { withTenantTransaction } from "./rls-context.js";
 import { assertSystemOwnership } from "./system-ownership.js";
 
 import type { AuditWriter } from "./audit-writer.js";
@@ -54,7 +55,7 @@ export async function archiveEntity(
   const timestamp = now();
   const { table, columns, entityName, archiveEvent } = cfg;
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(table)
       .set({
@@ -118,7 +119,7 @@ export async function restoreEntity<TResult>(
   const timestamp = now();
   const { table, columns, entityName, restoreEvent } = cfg;
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(table)
       .set({

@@ -63,6 +63,21 @@ describe("secureHeaders middleware", () => {
     expect(res.headers.get("strict-transport-security")).toBeNull();
   });
 
+  it("sets Referrer-Policy header", async () => {
+    const app = createApp();
+    const res = await app.request("/test");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+  });
+
+  it("sets Permissions-Policy header restricting browser APIs", async () => {
+    const app = createApp();
+    const res = await app.request("/test");
+    const pp = res.headers.get("permissions-policy");
+    expect(pp).toContain("camera=()");
+    expect(pp).toContain("microphone=()");
+    expect(pp).toContain("geolocation=()");
+  });
+
   it("does not interfere with response body", async () => {
     const app = createApp();
     const res = await app.request("/test");

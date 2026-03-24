@@ -9,6 +9,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity as archiveEntityGeneric } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -88,7 +89,7 @@ export async function createEntity(
   const entityId = createId(ID_PREFIXES.innerWorldEntity);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Validate regionId exists in same system if provided
     const regionId = parsed.regionId ?? null;
     if (regionId !== null) {
@@ -226,7 +227,7 @@ export async function updateEntity(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(innerworldEntities)
       .set({
@@ -307,7 +308,7 @@ export async function restoreEntity(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldEntities.id, regionId: innerworldEntities.regionId })
       .from(innerworldEntities)
@@ -378,7 +379,7 @@ export async function deleteEntity(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldEntities.id })
       .from(innerworldEntities)

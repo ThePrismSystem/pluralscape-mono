@@ -13,6 +13,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -133,7 +134,7 @@ export async function createTimerConfig(
   const timerId = createId(ID_PREFIXES.timer);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [row] = await tx
       .insert(timerConfigs)
       .values({
@@ -246,7 +247,7 @@ export async function updateTimerConfig(
   const version = parsed.version;
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const setClause: Partial<typeof timerConfigs.$inferInsert> = {
       encryptedData: blob,
       updatedAt: timestamp,
@@ -327,7 +328,7 @@ export async function deleteTimerConfig(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: timerConfigs.id })
       .from(timerConfigs)

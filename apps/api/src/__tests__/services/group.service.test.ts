@@ -415,7 +415,10 @@ describe("deleteGroup", () => {
     // Start deleteGroup without awaiting — sequential impl would deadlock here
     const done = deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
 
-    // Flush microtasks so existence check resolves and dependent queries dispatch
+    // Flush microtasks so RLS context set + existence check resolves and dependent queries dispatch
+    await new Promise<void>((r) => {
+      queueMicrotask(r);
+    });
     await new Promise<void>((r) => {
       queueMicrotask(r);
     });

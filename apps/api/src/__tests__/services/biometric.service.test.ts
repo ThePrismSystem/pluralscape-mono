@@ -22,6 +22,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     sessionId: "biometricTokens.sessionId",
     tokenHash: "biometricTokens.tokenHash",
     createdAt: "biometricTokens.createdAt",
+    usedAt: "biometricTokens.usedAt",
   },
   systemSettings: {
     biometricEnabled: "systemSettings.biometricEnabled",
@@ -42,6 +43,7 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col, val) => ({ col, val, op: "eq" })),
   and: vi.fn((...args: unknown[]) => ({ args, op: "and" })),
+  isNull: vi.fn((col) => ({ col, op: "isNull" })),
 }));
 
 // ── Imports after mocks ──────────────────────────────────────────
@@ -156,7 +158,7 @@ describe("verifyBiometric", () => {
 
   it("returns verified: true on matching token", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: "bt_test123" }]);
+    chain.returning.mockResolvedValueOnce([{ id: "bt_test123" }]);
 
     const result = await verifyBiometric(db, VALID_VERIFY_BODY, createAuth(), mockAudit);
 
@@ -177,7 +179,7 @@ describe("verifyBiometric", () => {
 
   it("throws INVALID_TOKEN when no matching token is found", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.returning.mockResolvedValueOnce([]);
 
     await expect(
       verifyBiometric(db, VALID_VERIFY_BODY, createAuth(), mockAudit),
@@ -189,7 +191,7 @@ describe("verifyBiometric", () => {
 
   it("fires audit for failed biometric verification (fire-and-forget)", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.returning.mockResolvedValueOnce([]);
     const auth = createAuth();
 
     await expect(verifyBiometric(db, VALID_VERIFY_BODY, auth, mockAudit)).rejects.toMatchObject({
@@ -209,7 +211,7 @@ describe("verifyBiometric", () => {
 
   it("returns 401 even when audit write fails", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.returning.mockResolvedValueOnce([]);
     const auth = createAuth();
     const failingAudit = vi.fn().mockRejectedValue(new Error("DB down")) as AuditWriter;
 
@@ -221,7 +223,7 @@ describe("verifyBiometric", () => {
 
   it("audits the verification event", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: "bt_test123" }]);
+    chain.returning.mockResolvedValueOnce([{ id: "bt_test123" }]);
     const auth = createAuth();
 
     await verifyBiometric(db, VALID_VERIFY_BODY, auth, mockAudit);

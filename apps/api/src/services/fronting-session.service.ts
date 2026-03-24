@@ -18,6 +18,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
@@ -125,7 +126,7 @@ export async function createFrontingSession(
   const fsId = createId(ID_PREFIXES.frontingSession);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     await validateSubjectIds(tx, systemId, parsed);
 
     const [row] = await tx
@@ -170,48 +171,50 @@ export async function listFrontingSessions(
 
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(frontingSessions.systemId, systemId)];
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const conditions = [eq(frontingSessions.systemId, systemId)];
 
-  if (!opts.includeArchived) {
-    conditions.push(eq(frontingSessions.archived, false));
-  }
+    if (!opts.includeArchived) {
+      conditions.push(eq(frontingSessions.archived, false));
+    }
 
-  if (opts.memberId) {
-    conditions.push(eq(frontingSessions.memberId, opts.memberId));
-  }
+    if (opts.memberId) {
+      conditions.push(eq(frontingSessions.memberId, opts.memberId));
+    }
 
-  if (opts.customFrontId) {
-    conditions.push(eq(frontingSessions.customFrontId, opts.customFrontId));
-  }
+    if (opts.customFrontId) {
+      conditions.push(eq(frontingSessions.customFrontId, opts.customFrontId));
+    }
 
-  if (opts.structureEntityId) {
-    conditions.push(eq(frontingSessions.structureEntityId, opts.structureEntityId));
-  }
+    if (opts.structureEntityId) {
+      conditions.push(eq(frontingSessions.structureEntityId, opts.structureEntityId));
+    }
 
-  if (opts.startFrom !== undefined) {
-    conditions.push(gte(frontingSessions.startTime, opts.startFrom));
-  }
+    if (opts.startFrom !== undefined) {
+      conditions.push(gte(frontingSessions.startTime, opts.startFrom));
+    }
 
-  if (opts.startUntil !== undefined) {
-    conditions.push(lte(frontingSessions.startTime, opts.startUntil));
-  }
+    if (opts.startUntil !== undefined) {
+      conditions.push(lte(frontingSessions.startTime, opts.startUntil));
+    }
 
-  if (opts.activeOnly) {
-    conditions.push(isNull(frontingSessions.endTime));
-  }
+    if (opts.activeOnly) {
+      conditions.push(isNull(frontingSessions.endTime));
+    }
 
-  if (opts.cursor) {
-    conditions.push(lt(frontingSessions.id, opts.cursor));
-  }
+    if (opts.cursor) {
+      conditions.push(lt(frontingSessions.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(frontingSessions)
-    .where(and(...conditions))
-    .orderBy(desc(frontingSessions.id))
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(frontingSessions)
+      .where(and(...conditions))
+      .orderBy(desc(frontingSessions.id))
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toFrontingSessionResult);
+    return buildPaginatedResult(rows, effectiveLimit, toFrontingSessionResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -224,23 +227,25 @@ export async function getFrontingSession(
 ): Promise<FrontingSessionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(frontingSessions)
-    .where(
-      and(
-        eq(frontingSessions.id, sessionId),
-        eq(frontingSessions.systemId, systemId),
-        eq(frontingSessions.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(frontingSessions)
+      .where(
+        and(
+          eq(frontingSessions.id, sessionId),
+          eq(frontingSessions.systemId, systemId),
+          eq(frontingSessions.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
+    }
 
-  return toFrontingSessionResult(row);
+    return toFrontingSessionResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -263,7 +268,7 @@ export async function updateFrontingSession(
   const version = parsed.version;
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const updated = await tx
       .update(frontingSessions)
       .set({
@@ -330,7 +335,7 @@ export async function endFrontingSession(
   const { endTime, version } = result.data;
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     // Read current session to validate state and endTime > startTime
     const [current] = await tx
       .select({
@@ -424,7 +429,7 @@ export async function deleteFrontingSession(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
     const [existing] = await tx
       .select({ id: frontingSessions.id, startTime: frontingSessions.startTime })
       .from(frontingSessions)
@@ -532,63 +537,67 @@ export async function getActiveFronting(
 ): Promise<ActiveFrontingResult> {
   assertSystemOwnership(systemId, auth);
 
-  const rows = await db
-    .select()
-    .from(frontingSessions)
-    .where(
-      and(
-        eq(frontingSessions.systemId, systemId),
-        isNull(frontingSessions.endTime),
-        eq(frontingSessions.archived, false),
-      ),
-    )
-    .orderBy(desc(frontingSessions.startTime))
-    .limit(MAX_ACTIVE_SESSIONS);
-
-  const sessions = rows.map(toFrontingSessionResult);
-
-  // Collect structure entity IDs from active sessions
-  const entityIds = rows.map((r) => r.structureEntityId).filter((id): id is string => id !== null);
-
-  // Resolve member associations for fronting structure entities
-  const entityMemberMap: Record<string, readonly string[]> = {};
-  if (entityIds.length > 0) {
-    const links = await db
-      .select({
-        parentEntityId: systemStructureEntityMemberLinks.parentEntityId,
-        memberId: systemStructureEntityMemberLinks.memberId,
-      })
-      .from(systemStructureEntityMemberLinks)
+  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(frontingSessions)
       .where(
         and(
-          eq(systemStructureEntityMemberLinks.systemId, systemId),
-          inArray(systemStructureEntityMemberLinks.parentEntityId, entityIds),
+          eq(frontingSessions.systemId, systemId),
+          isNull(frontingSessions.endTime),
+          eq(frontingSessions.archived, false),
         ),
-      );
+      )
+      .orderBy(desc(frontingSessions.startTime))
+      .limit(MAX_ACTIVE_SESSIONS);
 
-    for (const link of links) {
-      if (link.parentEntityId) {
-        const existing = entityMemberMap[link.parentEntityId];
-        if (existing) {
-          entityMemberMap[link.parentEntityId] = [...existing, link.memberId];
-        } else {
-          entityMemberMap[link.parentEntityId] = [link.memberId];
+    const sessions = rows.map(toFrontingSessionResult);
+
+    // Collect structure entity IDs from active sessions
+    const entityIds = rows
+      .map((r) => r.structureEntityId)
+      .filter((id): id is string => id !== null);
+
+    // Resolve member associations for fronting structure entities
+    const entityMemberMap: Record<string, readonly string[]> = {};
+    if (entityIds.length > 0) {
+      const links = await tx
+        .select({
+          parentEntityId: systemStructureEntityMemberLinks.parentEntityId,
+          memberId: systemStructureEntityMemberLinks.memberId,
+        })
+        .from(systemStructureEntityMemberLinks)
+        .where(
+          and(
+            eq(systemStructureEntityMemberLinks.systemId, systemId),
+            inArray(systemStructureEntityMemberLinks.parentEntityId, entityIds),
+          ),
+        );
+
+      for (const link of links) {
+        if (link.parentEntityId) {
+          const existing = entityMemberMap[link.parentEntityId];
+          if (existing) {
+            entityMemberMap[link.parentEntityId] = [...existing, link.memberId];
+          } else {
+            entityMemberMap[link.parentEntityId] = [link.memberId];
+          }
         }
       }
     }
-  }
 
-  // Custom fronts represent abstract cognitive states (e.g. "Dissociated"), not members.
-  // Only count sessions with a member or structure entity subject for co-fronting.
-  const memberSessions = sessions.filter(
-    (s) => s.memberId !== null || s.structureEntityId !== null,
-  );
+    // Custom fronts represent abstract cognitive states (e.g. "Dissociated"), not members.
+    // Only count sessions with a member or structure entity subject for co-fronting.
+    const memberSessions = sessions.filter(
+      (s) => s.memberId !== null || s.structureEntityId !== null,
+    );
 
-  return {
-    sessions,
-    isCofronting: memberSessions.length > 1,
-    entityMemberMap,
-  };
+    return {
+      sessions,
+      isCofronting: memberSessions.length > 1,
+      entityMemberMap,
+    };
+  });
 }
 
 // ── PARSE QUERY PARAMS ──────────────────────────────────────────────

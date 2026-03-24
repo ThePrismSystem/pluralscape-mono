@@ -360,6 +360,8 @@ export async function resetPasswordWithRecoveryKey(
       adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.ciphertext);
       adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.nonce);
     }
+    // Ensure timing equalization on ALL exit paths (including crypto failure)
+    await equalizeAntiEnumTiming(startTime);
   }
 }
 
