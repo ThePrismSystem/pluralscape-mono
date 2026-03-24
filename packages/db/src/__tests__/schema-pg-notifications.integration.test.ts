@@ -500,7 +500,7 @@ describe("PG notifications schema", () => {
       expect(rows[0]?.enabledEventTypes).toEqual(["friend-switch-alert"]);
     });
 
-    it("cascades on friend_connection deletion", async () => {
+    it("restricts friend_connection deletion when referenced by preference", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
       const fcId = crypto.randomUUID();
@@ -525,12 +525,9 @@ describe("PG notifications schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(friendConnections).where(eq(friendConnections.id, fcId));
-      const rows = await db
-        .select()
-        .from(friendNotificationPreferences)
-        .where(eq(friendNotificationPreferences.id, id));
-      expect(rows).toHaveLength(0);
+      await expect(
+        db.delete(friendConnections).where(eq(friendConnections.id, fcId)),
+      ).rejects.toThrow();
     });
 
     it("enforces unique (account_id, friend_connection_id)", async () => {

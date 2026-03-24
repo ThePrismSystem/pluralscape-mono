@@ -112,11 +112,10 @@ describe("PG webhooks schema", () => {
       expect(rows).toHaveLength(0);
     });
 
-    it("sets crypto_key_id to NULL on api_key deletion", async () => {
+    it("restricts api_key deletion when referenced by webhook config", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const keyId = crypto.randomUUID();
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(apiKeys).values({
@@ -131,7 +130,7 @@ describe("PG webhooks schema", () => {
       });
 
       await db.insert(webhookConfigs).values({
-        id,
+        id: crypto.randomUUID(),
         systemId,
         url: "https://example.com/hook",
         secret: new Uint8Array([1]),
@@ -141,10 +140,7 @@ describe("PG webhooks schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(apiKeys).where(eq(apiKeys.id, keyId));
-      const rows = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.cryptoKeyId).toBeNull();
+      await expect(db.delete(apiKeys).where(eq(apiKeys.id, keyId))).rejects.toThrow();
     });
 
     it("stores enabled as false correctly", async () => {
@@ -502,11 +498,10 @@ describe("PG webhooks schema", () => {
       expect(remaining.map((r) => r.id).sort()).toEqual([pendingOldId, recentId].sort());
     });
 
-    it("cascades on webhook config deletion", async () => {
+    it("restricts webhook config deletion when referenced by delivery", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const whId = crypto.randomUUID();
-      const delId = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(webhookConfigs).values({
@@ -520,16 +515,14 @@ describe("PG webhooks schema", () => {
       });
 
       await db.insert(webhookDeliveries).values({
-        id: delId,
+        id: crypto.randomUUID(),
         webhookId: whId,
         systemId,
         eventType: "member.created",
         createdAt: now,
       });
 
-      await db.delete(webhookConfigs).where(eq(webhookConfigs.id, whId));
-      const rows = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, delId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(webhookConfigs).where(eq(webhookConfigs.id, whId))).rejects.toThrow();
     });
 
     it("queries retryable deliveries by system_id", async () => {

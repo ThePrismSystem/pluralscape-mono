@@ -303,8 +303,8 @@ export const SQLITE_DDL = {
       archived_at INTEGER,
       CHECK (end_time IS NULL OR end_time > start_time),
       UNIQUE (id, system_id),
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
-      FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE RESTRICT,
       FOREIGN KEY (structure_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
       CHECK (version >= 1),
       CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL OR structure_entity_id IS NOT NULL),
@@ -343,16 +343,21 @@ export const SQLITE_DDL = {
       fronting_session_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       member_id TEXT,
+      custom_front_id TEXT,
+      structure_entity_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE RESTRICT,
+      FOREIGN KEY (structure_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
       CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
+      CHECK ((archived = true) = (archived_at IS NOT NULL)),
+      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL OR structure_entity_id IS NOT NULL)
     )
   `,
   frontingCommentsIndexes: `
@@ -534,8 +539,8 @@ export const SQLITE_DDL = {
   `,
   fieldBucketVisibility: `
     CREATE TABLE field_bucket_visibility (
-      field_definition_id TEXT NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
-      bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      field_definition_id TEXT NOT NULL REFERENCES field_definitions(id) ON DELETE RESTRICT,
+      bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE RESTRICT,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       PRIMARY KEY (field_definition_id, bucket_id)
     )
@@ -648,12 +653,20 @@ export const SQLITE_DDL = {
       event_type TEXT NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')),
       occurred_at INTEGER NOT NULL,
       recorded_at INTEGER NOT NULL,
-      encrypted_data BLOB NOT NULL
+      updated_at INTEGER NOT NULL,
+      encrypted_data BLOB NOT NULL,
+      plaintext_metadata TEXT,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   lifecycleEventsIndexes: `
     CREATE INDEX lifecycle_events_system_occurred_idx ON lifecycle_events (system_id, occurred_at);
-    CREATE INDEX lifecycle_events_system_recorded_idx ON lifecycle_events (system_id, recorded_at)
+    CREATE INDEX lifecycle_events_system_recorded_idx ON lifecycle_events (system_id, recorded_at);
+    CREATE INDEX lifecycle_events_system_archived_idx ON lifecycle_events (system_id, archived)
   `,
   // Safe Mode Content
   safeModeContent: `
@@ -1055,12 +1068,14 @@ export const SQLITE_DDL = {
       secret BLOB NOT NULL,
       event_types TEXT NOT NULL,
       enabled INTEGER NOT NULL DEFAULT 1,
-      crypto_key_id TEXT REFERENCES api_keys(id) ON DELETE SET NULL,
+      crypto_key_id TEXT REFERENCES api_keys(id) ON DELETE RESTRICT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       UNIQUE (id, system_id),
+      CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
@@ -1079,10 +1094,11 @@ export const SQLITE_DDL = {
       last_attempt_at INTEGER,
       next_retry_at INTEGER,
       encrypted_data BLOB,
+      payload_data TEXT,
       created_at INTEGER NOT NULL,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE RESTRICT,
       CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
       CHECK (status IS NULL OR status IN ('pending', 'success', 'failed')),
       CHECK (attempt_count >= 0),
@@ -1109,18 +1125,21 @@ export const SQLITE_DDL = {
       bucket_id TEXT,
       purpose TEXT NOT NULL,
       thumbnail_of_blob_id TEXT,
-      checksum TEXT NOT NULL,
-      uploaded_at INTEGER NOT NULL,
+      checksum TEXT,
+      created_at INTEGER NOT NULL,
+      uploaded_at INTEGER,
+      expires_at INTEGER,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       UNIQUE (id, system_id),
-      FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
-      FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
+      FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE RESTRICT,
+      FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE RESTRICT,
       CHECK (purpose IS NULL OR purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
       CHECK (size_bytes > 0),
       CHECK (size_bytes <= 10737418240),
       CHECK (encryption_tier IN (1, 2)),
-      CHECK (length(checksum) = 64),
+      CHECK (checksum IS NULL OR length(checksum) = 64),
+      CHECK ((checksum IS NULL) = (uploaded_at IS NULL)),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
@@ -1181,10 +1200,12 @@ export const SQLITE_DDL = {
       dismissed INTEGER NOT NULL DEFAULT 0,
       responded_by_member_id TEXT,
       encrypted_data BLOB,
+      idempotency_key TEXT,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (responded_by_member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT,
+      UNIQUE (idempotency_key),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
@@ -1663,6 +1684,10 @@ export function createSqliteJournalTables(client: InstanceType<typeof Database>)
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.membersIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypes);
+  client.exec(SQLITE_DDL.systemStructureEntityTypesIndexes);
+  client.exec(SQLITE_DDL.systemStructureEntities);
+  client.exec(SQLITE_DDL.systemStructureEntitiesIndexes);
   client.exec(SQLITE_DDL.customFronts);
   client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);

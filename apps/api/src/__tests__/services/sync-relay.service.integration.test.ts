@@ -25,14 +25,14 @@ const DDL = [
     password_hash VARCHAR(512) NOT NULL,
     kdf_salt VARCHAR(255) NOT NULL,
     account_type VARCHAR(50) NOT NULL DEFAULT 'system',
-    created_at BIGINT NOT NULL,
-    updated_at BIGINT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS systems (
     id VARCHAR(255) PRIMARY KEY,
     account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-    created_at BIGINT NOT NULL,
-    updated_at BIGINT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS sync_documents (
     document_id VARCHAR(512) PRIMARY KEY,
@@ -46,8 +46,8 @@ const DDL = [
     key_type VARCHAR(50) NOT NULL DEFAULT 'derived',
     bucket_id VARCHAR(255),
     channel_id VARCHAR(255),
-    created_at BIGINT NOT NULL,
-    updated_at BIGINT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS sync_documents_system_id_idx ON sync_documents(system_id)`,
   `CREATE TABLE IF NOT EXISTS sync_changes (
@@ -58,7 +58,7 @@ const DDL = [
     author_public_key BYTEA NOT NULL,
     nonce BYTEA NOT NULL,
     signature BYTEA NOT NULL,
-    created_at BIGINT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS sync_changes_document_id_seq_idx ON sync_changes(document_id, seq)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS sync_changes_dedup_idx ON sync_changes(document_id, author_public_key, nonce)`,
@@ -69,7 +69,7 @@ const DDL = [
     author_public_key BYTEA NOT NULL,
     nonce BYTEA NOT NULL,
     signature BYTEA NOT NULL,
-    created_at BIGINT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL
   )`,
 ];
 
@@ -95,14 +95,14 @@ describe("PgSyncRelayService (PGlite integration)", () => {
     // Seed account + system
     const accountId = crypto.randomUUID();
     systemId = `sys_${crypto.randomUUID().slice(0, 8)}`;
-    const now = Date.now();
+    const now = new Date().toISOString();
     await client.exec(
       `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at)
-       VALUES ('${accountId}', 'hash', 'salt', 'pw', 'kdf', ${String(now)}, ${String(now)})`,
+       VALUES ('${accountId}', 'hash', 'salt', 'pw', 'kdf', '${now}', '${now}')`,
     );
     await client.exec(
       `INSERT INTO systems (id, account_id, created_at, updated_at)
-       VALUES ('${systemId}', '${accountId}', ${String(now)}, ${String(now)})`,
+       VALUES ('${systemId}', '${accountId}', '${now}', '${now}')`,
     );
 
     service = new PgSyncRelayService(db as never);

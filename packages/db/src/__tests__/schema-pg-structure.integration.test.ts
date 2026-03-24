@@ -208,15 +208,14 @@ describe("PG structure schema", () => {
       ).rejects.toThrow(/check|constraint|failed query/i);
     });
 
-    it("sets sourceMemberId to null on member deletion", async () => {
+    it("restricts member deletion when referenced as source in relationship", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(relationships).values({
-        id,
+        id: crypto.randomUUID(),
         systemId,
         sourceMemberId: memberId,
         type: "sibling",
@@ -225,9 +224,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(members).where(eq(members.id, memberId));
-      const rows = await db.select().from(relationships).where(eq(relationships.id, id));
-      expect(rows[0]?.sourceMemberId).toBeNull();
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
 
     it("rejects nonexistent sourceMemberId FK", async () => {
@@ -248,15 +245,14 @@ describe("PG structure schema", () => {
       ).rejects.toThrow();
     });
 
-    it("sets targetMemberId to null on member deletion", async () => {
+    it("restricts member deletion when referenced as target in relationship", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(relationships).values({
-        id,
+        id: crypto.randomUUID(),
         systemId,
         targetMemberId: memberId,
         type: "sibling",
@@ -265,9 +261,7 @@ describe("PG structure schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(members).where(eq(members.id, memberId));
-      const rows = await db.select().from(relationships).where(eq(relationships.id, id));
-      expect(rows[0]?.targetMemberId).toBeNull();
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
 
     it("rejects nonexistent targetMemberId FK", async () => {

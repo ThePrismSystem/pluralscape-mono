@@ -341,7 +341,7 @@ describe("PG custom fields schema", () => {
       expect(rows[0]?.version).toBe(1);
     });
 
-    it("cascades on field definition deletion", async () => {
+    it("restricts field definition deletion when referenced by field value", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
@@ -357,9 +357,9 @@ describe("PG custom fields schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId));
-      const rows = await db.select().from(fieldValues).where(eq(fieldValues.id, valueId));
-      expect(rows).toHaveLength(0);
+      await expect(
+        db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId)),
+      ).rejects.toThrow();
     });
 
     it("cascades on system deletion", async () => {
@@ -593,7 +593,7 @@ describe("PG custom fields schema", () => {
       expect(rows[0]?.bucketId).toBe(bucketId);
     });
 
-    it("cascades on field definition deletion", async () => {
+    it("restricts field definition deletion when referenced by visibility", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
@@ -605,15 +605,12 @@ describe("PG custom fields schema", () => {
         systemId,
       });
 
-      await db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId));
-      const rows = await db
-        .select()
-        .from(fieldBucketVisibility)
-        .where(eq(fieldBucketVisibility.fieldDefinitionId, fieldDefId));
-      expect(rows).toHaveLength(0);
+      await expect(
+        db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId)),
+      ).rejects.toThrow();
     });
 
-    it("cascades on bucket deletion", async () => {
+    it("restricts bucket deletion when referenced by visibility", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fieldDefId = await insertFieldDefinition(systemId);
@@ -625,12 +622,7 @@ describe("PG custom fields schema", () => {
         systemId,
       });
 
-      await db.delete(buckets).where(eq(buckets.id, bucketId));
-      const rows = await db
-        .select()
-        .from(fieldBucketVisibility)
-        .where(eq(fieldBucketVisibility.bucketId, bucketId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(buckets).where(eq(buckets.id, bucketId))).rejects.toThrow();
     });
 
     it("rejects duplicate composite primary key", async () => {

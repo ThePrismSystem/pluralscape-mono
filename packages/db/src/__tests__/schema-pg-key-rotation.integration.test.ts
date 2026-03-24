@@ -209,19 +209,13 @@ describe("PG key-rotation schema", () => {
       ).rejects.toThrow();
     });
 
-    it("cascades delete when bucket is deleted", async () => {
+    it("restricts bucket deletion when referenced by rotation", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const rotationId = await insertRotation(bucketId, systemId);
+      await insertRotation(bucketId, systemId);
 
-      await db.delete(buckets).where(eq(buckets.id, bucketId));
-
-      const rows = await db
-        .select()
-        .from(bucketKeyRotations)
-        .where(eq(bucketKeyRotations.id, rotationId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(buckets).where(eq(buckets.id, bucketId))).rejects.toThrow();
     });
   });
 
@@ -301,57 +295,40 @@ describe("PG key-rotation schema", () => {
       ).rejects.toThrow();
     });
 
-    it("cascades delete when rotation is deleted", async () => {
+    it("restricts rotation deletion when referenced by item", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
       const rotationId = await insertRotation(bucketId, systemId);
-      const itemId = crypto.randomUUID();
 
       await db.insert(bucketRotationItems).values({
-        id: itemId,
+        id: crypto.randomUUID(),
         rotationId,
         systemId,
         entityType: "member",
         entityId: crypto.randomUUID(),
       });
 
-      await db.delete(bucketKeyRotations).where(eq(bucketKeyRotations.id, rotationId));
-
-      const rows = await db
-        .select()
-        .from(bucketRotationItems)
-        .where(eq(bucketRotationItems.id, itemId));
-      expect(rows).toHaveLength(0);
+      await expect(
+        db.delete(bucketKeyRotations).where(eq(bucketKeyRotations.id, rotationId)),
+      ).rejects.toThrow();
     });
 
-    it("cascades delete transitively when bucket is deleted", async () => {
+    it("restricts bucket deletion when referenced transitively via rotation", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
       const rotationId = await insertRotation(bucketId, systemId);
-      const itemId = crypto.randomUUID();
 
       await db.insert(bucketRotationItems).values({
-        id: itemId,
+        id: crypto.randomUUID(),
         rotationId,
         systemId,
         entityType: "member",
         entityId: crypto.randomUUID(),
       });
 
-      await db.delete(buckets).where(eq(buckets.id, bucketId));
-
-      const rotationRows = await db
-        .select()
-        .from(bucketKeyRotations)
-        .where(eq(bucketKeyRotations.id, rotationId));
-      const itemRows = await db
-        .select()
-        .from(bucketRotationItems)
-        .where(eq(bucketRotationItems.id, itemId));
-      expect(rotationRows).toHaveLength(0);
-      expect(itemRows).toHaveLength(0);
+      await expect(db.delete(buckets).where(eq(buckets.id, bucketId))).rejects.toThrow();
     });
   });
 });
