@@ -11,7 +11,7 @@
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "eslint": "^10.0.3",
-    "typescript": "^5.7.3"
+    "typescript": "^6.0.0"
   },
   "scripts": {
     "test": "vitest run",

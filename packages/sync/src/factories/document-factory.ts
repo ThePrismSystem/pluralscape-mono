@@ -110,7 +110,7 @@ export function createSystemCoreDocument(): Automerge.Doc<SystemCoreDocument> {
 
 /** Creates an empty fronting document. */
 export function createFrontingDocument(): Automerge.Doc<FrontingDocument> {
-  return fromDoc<FrontingDocument>({
+  return fromDoc({
     sessions: {},
     comments: {},
     checkInRecords: {},
@@ -147,7 +147,7 @@ export function createChatDocument(): Automerge.Doc<ChatDocument> {
 
 /** Creates an empty journal document. */
 export function createJournalDocument(): Automerge.Doc<JournalDocument> {
-  return fromDoc<JournalDocument>({
+  return fromDoc({
     entries: {},
     wikiPages: {},
     notes: {},
@@ -156,7 +156,7 @@ export function createJournalDocument(): Automerge.Doc<JournalDocument> {
 
 /** Creates an empty privacy-config document. */
 export function createPrivacyConfigDocument(): Automerge.Doc<PrivacyConfigDocument> {
-  return fromDoc<PrivacyConfigDocument>({
+  return fromDoc({
     buckets: {},
     contentTags: {},
     friendConnections: {},

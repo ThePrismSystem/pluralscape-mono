@@ -83,7 +83,7 @@ function createSessionWithWebhookConfigs(
   keys: DocumentKeys,
   docId: string,
 ): EncryptedSyncSession<WebhookTestDocument> {
-  const base = fromDoc<WebhookTestDocument>({
+  const base = fromDoc({
     timers: {},
     webhookConfigs: {},
   });
