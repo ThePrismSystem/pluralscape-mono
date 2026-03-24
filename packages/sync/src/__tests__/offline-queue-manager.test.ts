@@ -373,4 +373,142 @@ describe("replayOfflineQueue", () => {
       }),
     ).rejects.toThrow("DB connection lost");
   });
+
+  // ── isRetriableError behavior (via replayEntry) ─────────────────────
+
+  describe("non-retriable vs retriable errors", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("does not retry on non-retriable 4xx (403 Forbidden)", async () => {
+      const entries = [makeEntry("e1", "doc_a", 1000)];
+      const submitChange = vi.fn().mockRejectedValue({ status: 403 });
+      const onError = vi.fn();
+
+      const result = await replayOfflineQueue({
+        offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+        networkAdapter: mockNetworkAdapter({ submitChange }),
+        storageAdapter: mockStorageAdapter(),
+        onError,
+      });
+
+      expect(submitChange).toHaveBeenCalledTimes(1);
+      expect(result.failed).toBe(1);
+      expect(onError).toHaveBeenCalledWith(
+        expect.stringContaining("permanently failed"),
+        expect.objectContaining({ status: 403 }),
+      );
+    });
+
+    it("does not retry on non-retriable 4xx (422 Unprocessable)", async () => {
+      const entries = [makeEntry("e1", "doc_a", 1000)];
+      const submitChange = vi.fn().mockRejectedValue({ status: 422 });
+      const onError = vi.fn();
+
+      const result = await replayOfflineQueue({
+        offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+        networkAdapter: mockNetworkAdapter({ submitChange }),
+        storageAdapter: mockStorageAdapter(),
+        onError,
+      });
+
+      expect(submitChange).toHaveBeenCalledTimes(1);
+      expect(result.failed).toBe(1);
+      expect(onError).toHaveBeenCalledWith(
+        expect.stringContaining("permanently failed"),
+        expect.objectContaining({ status: 422 }),
+      );
+    });
+
+    it("retries on retriable 5xx (500 Internal Server Error)", async () => {
+      vi.useFakeTimers();
+      const entries = [makeEntry("e1", "doc_a", 1000)];
+      const submitChange = vi.fn().mockRejectedValue({ status: 500 });
+      const onError = vi.fn();
+
+      const replayPromise = replayOfflineQueue({
+        offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+        networkAdapter: mockNetworkAdapter({ submitChange }),
+        storageAdapter: mockStorageAdapter(),
+        onError,
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      const result = await replayPromise;
+
+      expect(submitChange).toHaveBeenCalledTimes(3);
+      expect(result.failed).toBe(1);
+      const permanentCalls = onError.mock.calls.filter(
+        (call: unknown[]) =>
+          typeof call[0] === "string" && (call[0]).includes("permanently"),
+      );
+      expect(permanentCalls).toHaveLength(0);
+    });
+
+    it("retries on retriable 408 Request Timeout", async () => {
+      vi.useFakeTimers();
+      const entries = [makeEntry("e1", "doc_a", 1000)];
+      const submitChange = vi.fn().mockRejectedValue({ status: 408 });
+      const onError = vi.fn();
+
+      const replayPromise = replayOfflineQueue({
+        offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+        networkAdapter: mockNetworkAdapter({ submitChange }),
+        storageAdapter: mockStorageAdapter(),
+        onError,
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      const result = await replayPromise;
+
+      expect(submitChange).toHaveBeenCalledTimes(3);
+      expect(result.failed).toBe(1);
+    });
+
+    it("retries on retriable 429 Too Many Requests", async () => {
+      vi.useFakeTimers();
+      const entries = [makeEntry("e1", "doc_a", 1000)];
+      const submitChange = vi.fn().mockRejectedValue({ status: 429 });
+      const onError = vi.fn();
+
+      const replayPromise = replayOfflineQueue({
+        offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+        networkAdapter: mockNetworkAdapter({ submitChange }),
+        storageAdapter: mockStorageAdapter(),
+        onError,
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      const result = await replayPromise;
+
+      expect(submitChange).toHaveBeenCalledTimes(3);
+      expect(result.failed).toBe(1);
+    });
+
+    it("retries when error has no status property", async () => {
+      vi.useFakeTimers();
+      const entries = [makeEntry("e1", "doc_a", 1000)];
+      const submitChange = vi.fn().mockRejectedValue({ code: "ECONNREFUSED" });
+      const onError = vi.fn();
+
+      const replayPromise = replayOfflineQueue({
+        offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+        networkAdapter: mockNetworkAdapter({ submitChange }),
+        storageAdapter: mockStorageAdapter(),
+        onError,
+      });
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      const result = await replayPromise;
+
+      expect(submitChange).toHaveBeenCalledTimes(3);
+      expect(result.failed).toBe(1);
+      const permanentCalls = onError.mock.calls.filter(
+        (call: unknown[]) =>
+          typeof call[0] === "string" && (call[0]).includes("permanently"),
+      );
+      expect(permanentCalls).toHaveLength(0);
+    });
+  });
 });

@@ -190,6 +190,53 @@ describe("setFieldValue", () => {
     );
   });
 
+  it("throws 400 when encrypted blob fails deserialization", async () => {
+    const { deserializeEncryptedBlob } = await import("@pluralscape/crypto");
+    const { InvalidInputError } = await import("@pluralscape/crypto");
+    vi.mocked(deserializeEncryptedBlob).mockImplementationOnce(() => {
+      throw new InvalidInputError("Invalid encrypted blob header");
+    });
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
+
+    await expect(
+      setFieldValue(
+        db,
+        SYSTEM_ID,
+        MEMBER_ID,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("rethrows non-InvalidInputError from deserialization", async () => {
+    const { deserializeEncryptedBlob } = await import("@pluralscape/crypto");
+    vi.mocked(deserializeEncryptedBlob).mockImplementationOnce(() => {
+      throw new TypeError("Unexpected buffer layout");
+    });
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
+
+    await expect(
+      setFieldValue(
+        db,
+        SYSTEM_ID,
+        MEMBER_ID,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(TypeError);
+  });
+
   it("rejects cross-system access", async () => {
     mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();

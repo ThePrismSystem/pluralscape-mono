@@ -835,6 +835,36 @@ describe("computeCoFrontingBreakdown", () => {
     expect(result.truncated).toBe(false);
   });
 
+  it("skips sessions that clamp to zero duration outside the date range", async () => {
+    const { db, chain } = mockDb();
+    const dateRange = makeDateRange({
+      start: (NOW - 7_200_000) as DateRangeFilter["start"],
+      end: NOW as DateRangeFilter["end"],
+    });
+    // Session A is within range, session B ended before range start
+    const rows = [
+      makeSessionRow({
+        id: "fs_1",
+        memberId: "mem_a",
+        startTime: NOW - 7_200_000,
+        endTime: NOW,
+      }),
+      makeSessionRow({
+        id: "fs_2",
+        memberId: "mem_b",
+        startTime: NOW - 86_400_000, // 24h ago
+        endTime: NOW - 82_800_000, // 23h ago — entirely before range
+      }),
+    ];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await computeCoFrontingBreakdown(db, SYSTEM_ID, AUTH, dateRange);
+
+    // Session B is clamped to zero duration, so no pair is produced
+    expect(result.pairs).toEqual([]);
+    expect(result.truncated).toBe(false);
+  });
+
   it("accumulates sessionCount across multiple overlapping session records", async () => {
     const { db, chain } = mockDb();
     // Two members each with two non-overlapping sessions that cross-overlap

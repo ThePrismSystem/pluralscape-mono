@@ -94,4 +94,17 @@ describe("formatDateTime", () => {
     const result = formatDateTime(DATE, EN, "us");
     expect(result).toContain("03/15/2026");
   });
+
+  it("uses relative text with time for recent dates", () => {
+    const now = new Date(DATE.getTime() + 3_600_000); // 1 hour later
+    const result = formatDateTime(DATE, EN, "relative", now);
+    expect(result).toContain(",");
+  });
+
+  it("uses Intl full format for old dates with relative preference", () => {
+    const now = new Date(DATE.getTime() + 30 * 86_400_000); // 30 days later
+    const result = formatDateTime(DATE, EN, "relative", now);
+    expect(result).toContain("2026");
+    expect(result).toContain("March");
+  });
 });

@@ -193,4 +193,28 @@ describe("serializePublicKey", () => {
     const serialized = serializePublicKey(zeroKey as import("../types.js").BoxPublicKey);
     expect(serialized).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
+
+  it("handles 1-byte key (key.length % 3 === 1)", () => {
+    const key = new Uint8Array([0xff]);
+    const serialized = serializePublicKey(key as import("../types.js").BoxPublicKey);
+    expect(serialized).toMatch(/^[A-Za-z0-9_-]+$/);
+    // 1 byte → 2 base64url chars
+    expect(serialized.length).toBe(2);
+  });
+
+  it("handles 2-byte key (key.length % 3 === 2)", () => {
+    const key = new Uint8Array([0xff, 0x00]);
+    const serialized = serializePublicKey(key as import("../types.js").BoxPublicKey);
+    expect(serialized).toMatch(/^[A-Za-z0-9_-]+$/);
+    // 2 bytes → 3 base64url chars
+    expect(serialized.length).toBe(3);
+  });
+
+  it("handles 3-byte key (exact multiple of 3)", () => {
+    const key = new Uint8Array([0xab, 0xcd, 0xef]);
+    const serialized = serializePublicKey(key as import("../types.js").BoxPublicKey);
+    expect(serialized).toMatch(/^[A-Za-z0-9_-]+$/);
+    // 3 bytes → 4 base64url chars
+    expect(serialized.length).toBe(4);
+  });
 });

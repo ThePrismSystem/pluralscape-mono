@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { enumCheck } from "../helpers/check.js";
 import {
   parseBucketContentEntityType,
+  parseSearchableEntityType,
   ACCOUNT_TYPES,
   ACCOUNT_PURGE_STATUSES,
   API_KEY_KEY_TYPES,
@@ -337,5 +338,21 @@ describe("parseBucketContentEntityType", () => {
     expect(() => parseBucketContentEntityType("nonexistent")).toThrow(
       "Unknown BucketContentEntityType",
     );
+  });
+});
+
+describe("parseSearchableEntityType", () => {
+  it("returns valid SearchableEntityType for known value", () => {
+    expect(parseSearchableEntityType("member")).toBe("member");
+    expect(parseSearchableEntityType("custom-field")).toBe("custom-field");
+  });
+
+  it("throws for non-string input", () => {
+    expect(() => parseSearchableEntityType(null)).toThrow("Expected entity_type string");
+    expect(() => parseSearchableEntityType(42)).toThrow("Expected entity_type string");
+  });
+
+  it("throws for unknown string", () => {
+    expect(() => parseSearchableEntityType("nonexistent")).toThrow("Unknown SearchableEntityType");
   });
 });

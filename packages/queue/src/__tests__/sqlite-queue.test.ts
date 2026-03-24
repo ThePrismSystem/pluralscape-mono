@@ -130,6 +130,31 @@ describe("SqliteJobQueue-specific", () => {
     });
   });
 
+  describe("SqliteJobWorker poll catch branch", () => {
+    it("calls handlePollFailure when queue.dequeue throws", async () => {
+      const queue = createQueue();
+      const errorFn = vi.fn();
+      const worker = new SqliteJobWorker(queue, {
+        pollIntervalMs: 50,
+        logger: { info: vi.fn(), warn: vi.fn(), error: errorFn },
+      });
+      worker.registerHandler("sync-push", () => Promise.resolve());
+
+      vi.spyOn(queue, "dequeue").mockRejectedValue(new Error("dequeue exploded"));
+
+      await worker.start();
+
+      await vi.waitFor(() => {
+        expect(errorFn).toHaveBeenCalledWith(
+          "worker.poll-failed",
+          expect.objectContaining({ error: "dequeue exploded" }),
+        );
+      });
+
+      await worker.stop();
+    });
+  });
+
   describe("logger forwarding", () => {
     it("forwards logger to fireHook when hook throws", async () => {
       const errorFn = vi.fn();
