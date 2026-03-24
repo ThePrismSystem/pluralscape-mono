@@ -62,6 +62,7 @@ function makeAuth(accountId: string, systemId: string) {
     sessionId: "sess_test" as SessionId,
     accountType: "system" as const,
     ownedSystemIds: new Set([systemId as SystemId]),
+    auditLogIpTracking: false,
   };
 }
 

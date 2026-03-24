@@ -17,6 +17,16 @@ vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: writeAuditLogSpy,
 }));
 
+const mockLogger = {
+  warn: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+};
+vi.mock("../../lib/logger.js", () => ({
+  getContextLogger: () => mockLogger,
+}));
+
 const { createAuditWriter } = await import("../../lib/audit-writer.js");
 
 /** Build a minimal mock Hono context with the given headers. */
@@ -52,6 +62,7 @@ function createAuth(overrides?: Partial<AuthContext>): AuthContext {
     sessionId: "ses_test-session" as AuthContext["sessionId"],
     accountType: "system" as AuthContext["accountType"],
     ownedSystemIds: new Set(["sys_test-system" as AuthContext["systemId"] & string]),
+    auditLogIpTracking: false,
     ...overrides,
   };
 }
@@ -60,6 +71,7 @@ describe("createAuditWriter", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     writeAuditLogSpy.mockReset().mockResolvedValue(undefined);
+    mockLogger.warn.mockReset();
   });
 
   it("passes auth context accountId and systemId to writeAuditLog", async () => {
@@ -120,9 +132,10 @@ describe("createAuditWriter", () => {
     expect(mockParams(0).systemId).toBe("sys_explicit");
   });
 
-  it("captures user-agent from request context", async () => {
+  it("captures user-agent when auth.auditLogIpTracking is true", async () => {
     const c = createMockContext({ "user-agent": "PluralscapeApp/2.0" });
-    const audit = createAuditWriter(c);
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
     const db = createMockDb();
 
     await audit(db, {
@@ -133,11 +146,47 @@ describe("createAuditWriter", () => {
     expect(mockParams(0).userAgent).toBe("PluralscapeApp/2.0");
   });
 
-  it("captures IP from x-forwarded-for when TRUST_PROXY=true", async () => {
+  it("excludes user-agent when auth.auditLogIpTracking is false", async () => {
+    const c = createMockContext({ "user-agent": "PluralscapeApp/2.0" });
+    const auth = createAuth({ auditLogIpTracking: false });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockParams(0).userAgent).toBeNull();
+  });
+
+  it("excludes IP/UA when no auth provided (unauthenticated)", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const audit = createAuditWriter(c);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.register",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockParams(0).ipAddress).toBeNull();
+    expect(mockParams(0).userAgent).toBeNull();
+
+    mockEnv.TRUST_PROXY = false;
+  });
+
+  it("captures IP from x-forwarded-for when opted in and TRUST_PROXY=true", async () => {
     mockEnv.TRUST_PROXY = true;
 
     const c = createMockContext({ "x-forwarded-for": "203.0.113.50, 10.0.0.1" });
-    const audit = createAuditWriter(c);
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
     const db = createMockDb();
 
     await audit(db, {
@@ -194,7 +243,7 @@ describe("createAuditWriter", () => {
 
   it("can be called multiple times with different params", async () => {
     const c = createMockContext({ "user-agent": "TestAgent" });
-    const auth = createAuth();
+    const auth = createAuth({ auditLogIpTracking: true });
     const audit = createAuditWriter(c, auth);
     const db = createMockDb();
 
@@ -211,8 +260,105 @@ describe("createAuditWriter", () => {
     expect(writeAuditLogSpy).toHaveBeenCalledTimes(2);
     expect(mockParams(0).eventType).toBe("auth.login");
     expect(mockParams(1).eventType).toBe("auth.logout");
-    // Both calls share the same userAgent from context
+    // Both calls share the same userAgent from context (opted in)
     expect(mockParams(0).userAgent).toBe("TestAgent");
     expect(mockParams(1).userAgent).toBe("TestAgent");
+  });
+
+  it("includes IP/UA when overrideTrackIp is true even if auth tracking is false", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const auth = createAuth({ auditLogIpTracking: false });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "settings.changed",
+      actor: { kind: "account", id: "acc_test" },
+      overrideTrackIp: true,
+    });
+
+    expect(mockParams(0).ipAddress).toBe("203.0.113.50");
+    expect(mockParams(0).userAgent).toBe("TestAgent");
+
+    mockEnv.TRUST_PROXY = false;
+  });
+
+  it("excludes IP/UA when overrideTrackIp is false even if auth tracking is true", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "settings.changed",
+      actor: { kind: "account", id: "acc_test" },
+      overrideTrackIp: false,
+    });
+
+    expect(mockParams(0).ipAddress).toBeNull();
+    expect(mockParams(0).userAgent).toBeNull();
+
+    mockEnv.TRUST_PROXY = false;
+  });
+
+  it("falls back to auth.auditLogIpTracking when overrideTrackIp is undefined", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockParams(0).ipAddress).toBe("203.0.113.50");
+    expect(mockParams(0).userAgent).toBe("TestAgent");
+
+    mockEnv.TRUST_PROXY = false;
+  });
+
+  it("logs a warning when IP tracking is enabled but no IP is available", async () => {
+    // TRUST_PROXY is false by default, so no IP will be extracted
+    const c = createMockContext({ "user-agent": "TestAgent" });
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("TRUST_PROXY"));
+  });
+
+  it("does not log a warning when IP tracking is disabled", async () => {
+    const c = createMockContext({ "user-agent": "TestAgent" });
+    const auth = createAuth({ auditLogIpTracking: false });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockLogger.warn).not.toHaveBeenCalled();
   });
 });

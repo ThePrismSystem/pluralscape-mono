@@ -30,6 +30,7 @@ function mockAuth(accountId = "acct_test" as AccountId) {
     sessionId: "sess_test" as SessionId,
     accountType: "system" as const,
     ownedSystemIds: new Set(["sys_test" as SystemId]),
+    auditLogIpTracking: false,
   };
 }
 

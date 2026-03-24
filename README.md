@@ -195,7 +195,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 27 accepted ADRs cover the full stack from licensing through webhook secret rotation. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 28 accepted ADRs cover the full stack from licensing through webhook secret rotation. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 

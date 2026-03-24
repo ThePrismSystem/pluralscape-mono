@@ -279,6 +279,7 @@ export async function loginAccount(
       actor: { kind: "account", id: account.id },
       detail: "Invalid password",
       accountId: account.id as AccountId,
+      overrideTrackIp: account.auditLogIpTracking,
     }).catch((auditError: unknown) => {
       log.error(
         "Failed to write auth.login-failed audit event",
@@ -342,6 +343,7 @@ export async function loginAccount(
       detail: `Login via ${platform}`,
       accountId: account.id as AccountId,
       systemId: systemId as SystemId | null,
+      overrideTrackIp: account.auditLogIpTracking,
     });
   });
 

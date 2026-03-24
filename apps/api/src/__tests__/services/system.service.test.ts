@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fromCursor } from "../../lib/pagination.js";
 import { mockDb } from "../helpers/mock-db.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
@@ -37,13 +38,11 @@ const { listSystems, getSystemProfile, updateSystemProfile, archiveSystem, creat
 
 const SYSTEM_ID = "sys_test-system" as SystemId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-};
+  sessionId: "sess_test-session",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -394,10 +393,12 @@ describe("createSystem", () => {
 
   it("throws 403 for viewer accounts", async () => {
     const { db } = mockDb();
-    const viewerAuth: AuthContext = {
-      ...AUTH,
+    const viewerAuth: AuthContext = makeTestAuth({
+      accountId: "acct_test-account",
+      systemId: SYSTEM_ID,
+      sessionId: "sess_test-session",
       accountType: "viewer",
-    };
+    });
 
     await expect(createSystem(db, viewerAuth, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 403, code: "FORBIDDEN" }),

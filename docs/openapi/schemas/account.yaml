@@ -1,6 +1,6 @@
 AccountInfo:
   type: object
-  required: [accountId, accountType, createdAt, updatedAt]
+  required: [accountId, accountType, createdAt, updatedAt, auditLogIpTracking, version]
   properties:
     accountId:
       type: string
@@ -25,6 +25,12 @@ AccountInfo:
       format: int64
       description: Unix timestamp in milliseconds
       example: 1710000000000
+    auditLogIpTracking:
+      type: boolean
+      description: Whether IP address and user-agent logging is enabled in the audit log
+    version:
+      type: integer
+      description: Optimistic concurrency version counter
 
 ChangeEmailRequest:
   type: object
@@ -125,3 +131,24 @@ AuditLogResponse:
       nullable: true
     hasMore:
       type: boolean
+
+UpdateAccountSettingsRequest:
+  type: object
+  required: [auditLogIpTracking, version]
+  properties:
+    auditLogIpTracking:
+      type: boolean
+    version:
+      type: integer
+      description: Optimistic concurrency version counter (must match current version)
+
+UpdateAccountSettingsResponse:
+  type: object
+  required: [ok, auditLogIpTracking, version]
+  properties:
+    ok:
+      type: boolean
+    auditLogIpTracking:
+      type: boolean
+    version:
+      type: integer

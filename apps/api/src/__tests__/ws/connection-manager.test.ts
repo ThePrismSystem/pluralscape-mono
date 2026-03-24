@@ -19,6 +19,7 @@ function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContextWith
     sessionId: crypto.randomUUID() as SessionId,
     accountType: "system",
     ownedSystemIds: new Set([systemId]),
+    auditLogIpTracking: false,
   };
 }
 

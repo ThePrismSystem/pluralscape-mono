@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { toCursor } from "../../lib/pagination.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { GroupId, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -55,13 +55,11 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const SYSTEM_ID = "sys_test-system" as SystemId;
 const GROUP_ID = "grp_test-group" as GroupId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-};
+  sessionId: "sess_test-session",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -840,7 +838,11 @@ describe("copyGroup", () => {
   it("throws 404 for wrong system ownership (fail-closed privacy)", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]); // ownership check returns no matching system
-    const wrongAuth = { ...AUTH, systemId: "sys_other" as SystemId };
+    const wrongAuth = makeTestAuth({
+      accountId: "acct_test-account",
+      systemId: "sys_other",
+      sessionId: "sess_test-session",
+    });
 
     await expect(copyGroup(db, SYSTEM_ID, GROUP_ID, {}, wrongAuth, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),

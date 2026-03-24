@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
@@ -14,13 +15,11 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const SYSTEM_ID = "sys_test-system" as SystemId;
 const OTHER_SYSTEM_ID = "sys_other-system" as SystemId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-};
+  sessionId: "sess_test-session",
+});
 
 // ── Tests ─────────────────────────────────────────────────────────────
 
@@ -44,10 +43,12 @@ describe("assertSystemOwnership", () => {
   });
 
   it("throws 404 when ownedSystemIds is empty", () => {
-    const emptyAuth: AuthContext = {
-      ...AUTH,
+    const emptyAuth: AuthContext = makeTestAuth({
+      accountId: "acct_test-account",
+      systemId: SYSTEM_ID,
+      sessionId: "sess_test-session",
       ownedSystemIds: new Set(),
-    };
+    });
     expect(() => {
       assertSystemOwnership(SYSTEM_ID, emptyAuth);
     }).toThrow(
@@ -59,10 +60,12 @@ describe("assertSystemOwnership", () => {
   });
 
   it("does not throw when checking one of multiple owned systems", () => {
-    const multiAuth: AuthContext = {
-      ...AUTH,
+    const multiAuth: AuthContext = makeTestAuth({
+      accountId: "acct_test-account",
+      systemId: SYSTEM_ID,
+      sessionId: "sess_test-session",
       ownedSystemIds: new Set([SYSTEM_ID, OTHER_SYSTEM_ID]),
-    };
+    });
     expect(() => {
       assertSystemOwnership(OTHER_SYSTEM_ID, multiAuth);
     }).not.toThrow();
@@ -75,10 +78,12 @@ describe("assertSystemOwnership", () => {
   });
 
   it("throws for the second system when only one is owned", () => {
-    const singleAuth: AuthContext = {
-      ...AUTH,
+    const singleAuth: AuthContext = makeTestAuth({
+      accountId: "acct_test-account",
+      systemId: SYSTEM_ID,
+      sessionId: "sess_test-session",
       ownedSystemIds: new Set([OTHER_SYSTEM_ID]),
-    };
+    });
     expect(() => {
       assertSystemOwnership(SYSTEM_ID, singleAuth);
     }).toThrow(

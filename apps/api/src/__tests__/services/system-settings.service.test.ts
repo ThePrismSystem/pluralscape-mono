@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
@@ -55,13 +55,7 @@ const { clearSettingsCache, getSystemSettings, updateSystemSettings } =
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-const AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_test" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set(["sys_test" as SystemId]),
-};
+const AUTH = makeTestAuth();
 
 const SYSTEM_ID = "sys_test" as SystemId;
 

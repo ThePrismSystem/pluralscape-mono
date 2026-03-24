@@ -10,7 +10,11 @@ import {
 } from "@pluralscape/crypto";
 import { accounts, sessions, systems } from "@pluralscape/db/pg";
 import { now, toUnixMillis } from "@pluralscape/types";
-import { ChangeEmailSchema, ChangePasswordSchema } from "@pluralscape/validation";
+import {
+  ChangeEmailSchema,
+  ChangePasswordSchema,
+  UpdateAccountSettingsSchema,
+} from "@pluralscape/validation";
 import { and, eq, ne } from "drizzle-orm";
 
 import { hashEmail } from "../lib/email-hash.js";
@@ -36,6 +40,8 @@ export interface AccountInfo {
   readonly accountId: AccountId;
   readonly accountType: AccountType;
   readonly systemId: SystemId | null;
+  readonly auditLogIpTracking: boolean;
+  readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
 }
@@ -48,6 +54,8 @@ export async function getAccountInfo(
     .select({
       accountId: accounts.id,
       accountType: accounts.accountType,
+      auditLogIpTracking: accounts.auditLogIpTracking,
+      version: accounts.version,
       createdAt: accounts.createdAt,
       updatedAt: accounts.updatedAt,
     })
@@ -71,6 +79,8 @@ export async function getAccountInfo(
     accountId: row.accountId as AccountId,
     accountType: row.accountType,
     systemId,
+    auditLogIpTracking: row.auditLogIpTracking,
+    version: row.version,
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };
@@ -266,10 +276,65 @@ export async function changePassword(
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────
+// ── Update Account Settings ──────────────────────────────────────
 
-class ConcurrencyError extends Error {
-  override readonly name = "ConcurrencyError" as const;
+export interface UpdateAccountSettingsResult {
+  readonly ok: true;
+  readonly auditLogIpTracking: boolean;
+  readonly version: number;
 }
 
-export { ConcurrencyError };
+export async function updateAccountSettings(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  params: unknown,
+  audit: AuditWriter,
+): Promise<UpdateAccountSettingsResult> {
+  const parsed = UpdateAccountSettingsSchema.parse(params);
+
+  const timestamp = now();
+
+  const updated = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(accounts)
+      .set({
+        auditLogIpTracking: parsed.auditLogIpTracking,
+        updatedAt: timestamp,
+        version: parsed.version + 1,
+      })
+      .where(and(eq(accounts.id, accountId), eq(accounts.version, parsed.version)))
+      .returning({
+        auditLogIpTracking: accounts.auditLogIpTracking,
+        version: accounts.version,
+      });
+
+    if (!row) {
+      throw new ConcurrencyError("Account was modified concurrently");
+    }
+
+    const detail = parsed.auditLogIpTracking
+      ? "Audit log IP tracking enabled"
+      : "Audit log IP tracking disabled";
+
+    await audit(tx, {
+      eventType: "settings.changed",
+      actor: { kind: "account", id: accountId },
+      detail,
+      overrideTrackIp: parsed.auditLogIpTracking,
+    });
+
+    return row;
+  });
+
+  return {
+    ok: true,
+    auditLogIpTracking: updated.auditLogIpTracking,
+    version: updated.version,
+  };
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+
+export class ConcurrencyError extends Error {
+  override readonly name = "ConcurrencyError" as const;
+}

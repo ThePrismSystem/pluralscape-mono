@@ -6,6 +6,7 @@ export {
   PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
   RegistrationInputSchema,
+  UpdateAccountSettingsSchema,
 } from "./auth.js";
 export { UpdateSystemBodySchema } from "./system.js";
 export {

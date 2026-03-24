@@ -8,7 +8,11 @@ vi.mock("drizzle-orm", () => ({
 
 // Mock @pluralscape/db/pg — schema tables are used only as column references
 vi.mock("@pluralscape/db/pg", () => ({
-  accounts: { id: "accounts.id", accountType: "accounts.accountType" },
+  accounts: {
+    id: "accounts.id",
+    accountType: "accounts.accountType",
+    auditLogIpTracking: "accounts.auditLogIpTracking",
+  },
   sessions: {
     id: "sessions.id",
     accountId: "sessions.accountId",
@@ -77,6 +81,7 @@ function createMockDb(
   sessionResult: Array<{
     session: MockSession;
     accountType: string;
+    auditLogIpTracking?: boolean;
   }> = [],
   systemRows: Array<{ id: string }> = [],
 ) {
@@ -184,6 +189,35 @@ describe("validateSession", () => {
     });
     if (result.ok) {
       expect(result.auth.ownedSystemIds).toEqual(new Set(["sys_001"]));
+    }
+  });
+
+  it("propagates auditLogIpTracking from account row to AuthContext", async () => {
+    const session = makeSession();
+    const db = createMockDb(
+      [{ session, accountType: "system", auditLogIpTracking: true }],
+      [{ id: "sys_001" }],
+    );
+    mockNow.mockReturnValue(session.createdAt + 1000);
+
+    const result = await validateSession(db as never, session.id);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.auth.auditLogIpTracking).toBe(true);
+    }
+  });
+
+  it("defaults auditLogIpTracking to false when not set", async () => {
+    const session = makeSession();
+    const db = createMockDb([{ session, accountType: "system" }], [{ id: "sys_001" }]);
+    mockNow.mockReturnValue(session.createdAt + 1000);
+
+    const result = await validateSession(db as never, session.id);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.auth.auditLogIpTracking).toBeFalsy();
     }
   });
 

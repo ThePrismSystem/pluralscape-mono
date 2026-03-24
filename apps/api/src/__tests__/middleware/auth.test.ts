@@ -113,6 +113,7 @@ function makeValidResult(
       sessionId: "sess_00000000-0000-0000-0000-000000000001" as AuthContext["sessionId"],
       accountType: "system",
       ownedSystemIds: new Set(["sys_001" as AuthContext["systemId"] & string]),
+      auditLogIpTracking: false,
       ...authOverrides,
     },
     session: session as ValidateSessionResult extends { ok: true; session: infer S } ? S : never,

@@ -263,6 +263,10 @@ components:
       $ref: "./schemas/account.yaml#/AuditLogEntry"
     AuditLogResponse:
       $ref: "./schemas/account.yaml#/AuditLogResponse"
+    UpdateAccountSettingsRequest:
+      $ref: "./schemas/account.yaml#/UpdateAccountSettingsRequest"
+    UpdateAccountSettingsResponse:
+      $ref: "./schemas/account.yaml#/UpdateAccountSettingsResponse"
     # Systems
     SystemProfile:
       $ref: "./schemas/systems.yaml#/SystemProfile"
@@ -579,6 +583,8 @@ paths:
     $ref: "./paths/account.yaml#/~1account~1password"
   /account/audit-log:
     $ref: "./paths/account.yaml#/~1account~1audit-log"
+  /account/settings:
+    $ref: "./paths/account.yaml#/~1account~1settings"
   # Systems
   /systems:
     $ref: "./paths/systems.yaml#/~1systems"

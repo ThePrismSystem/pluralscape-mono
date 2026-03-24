@@ -147,3 +147,38 @@
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/settings:
+  put:
+    operationId: updateAccountSettings
+    tags: [Account]
+    summary: Update account settings
+    description: |
+      Update account-level settings. Currently supports enabling/disabling
+      IP address and user-agent logging in the audit log (ADR 028).
+      Uses optimistic concurrency control via the version field.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/UpdateAccountSettingsRequest"
+    responses:
+      "200":
+        description: Settings updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/UpdateAccountSettingsResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

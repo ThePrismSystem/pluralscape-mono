@@ -40,7 +40,7 @@ vi.mock("../../lib/email-hash.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getAccountInfo, changeEmail, changePassword, ConcurrencyError } =
+const { getAccountInfo, changeEmail, changePassword, updateAccountSettings, ConcurrencyError } =
   await import("../../services/account.service.js");
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -72,6 +72,8 @@ describe("account service", () => {
           {
             accountId: "acct_123",
             accountType: "system",
+            auditLogIpTracking: false,
+            version: 1,
             createdAt: 1000,
             updatedAt: 2000,
           },
@@ -83,6 +85,8 @@ describe("account service", () => {
         accountId: "acct_123",
         accountType: "system",
         systemId: "sys_456",
+        auditLogIpTracking: false,
+        version: 1,
         createdAt: 1000,
         updatedAt: 2000,
       });
@@ -94,6 +98,8 @@ describe("account service", () => {
         {
           accountId: "acct_789",
           accountType: "viewer",
+          auditLogIpTracking: false,
+          version: 1,
           createdAt: 1000,
           updatedAt: 2000,
         },
@@ -111,6 +117,8 @@ describe("account service", () => {
           {
             accountId: "acct_123",
             accountType: "system",
+            auditLogIpTracking: false,
+            version: 1,
             createdAt: 1000,
             updatedAt: 2000,
           },
@@ -428,6 +436,111 @@ describe("account service", () => {
           mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
+    });
+  });
+
+  // ── updateAccountSettings ───────────────────────────────────────
+
+  describe("updateAccountSettings", () => {
+    it("returns updated settings on success", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ auditLogIpTracking: true, version: 2 }]);
+
+      const result = await updateAccountSettings(
+        db,
+        "acct_123" as AccountId,
+        { auditLogIpTracking: true, version: 1 },
+        mockAudit,
+      );
+      expect(result).toEqual({ ok: true, auditLogIpTracking: true, version: 2 });
+    });
+
+    it("throws ConcurrencyError when no rows updated", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        updateAccountSettings(
+          db,
+          "acct_123" as AccountId,
+          { auditLogIpTracking: true, version: 1 },
+          mockAudit,
+        ),
+      ).rejects.toThrow("Account was modified concurrently");
+    });
+
+    it("throws ZodError on invalid input type", async () => {
+      const { db } = mockDb();
+      await expect(
+        updateAccountSettings(
+          db,
+          "acct_123" as AccountId,
+          { auditLogIpTracking: "yes" },
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
+    });
+
+    it("throws ZodError when version is missing", async () => {
+      const { db } = mockDb();
+      await expect(
+        updateAccountSettings(db, "acct_123" as AccountId, { auditLogIpTracking: true }, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
+    });
+
+    it("calls audit with correct detail when enabling", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ auditLogIpTracking: true, version: 2 }]);
+
+      await updateAccountSettings(
+        db,
+        "acct_123" as AccountId,
+        { auditLogIpTracking: true, version: 1 },
+        mockAudit,
+      );
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          eventType: "settings.changed",
+          detail: "Audit log IP tracking enabled",
+          overrideTrackIp: true,
+        }),
+      );
+    });
+
+    it("calls audit with correct detail when disabling", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ auditLogIpTracking: false, version: 3 }]);
+
+      await updateAccountSettings(
+        db,
+        "acct_123" as AccountId,
+        { auditLogIpTracking: false, version: 2 },
+        mockAudit,
+      );
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          eventType: "settings.changed",
+          detail: "Audit log IP tracking disabled",
+          overrideTrackIp: false,
+        }),
+      );
+    });
+
+    it("uses transaction", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ auditLogIpTracking: true, version: 2 }]);
+
+      await updateAccountSettings(
+        db,
+        "acct_123" as AccountId,
+        { auditLogIpTracking: true, version: 1 },
+        mockAudit,
+      );
+      expect(chain.transaction).toHaveBeenCalledOnce();
     });
   });
 

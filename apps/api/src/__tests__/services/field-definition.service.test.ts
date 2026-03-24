@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { FieldDefinitionId, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -50,13 +50,11 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const SYSTEM_ID = "sys_test-system" as SystemId;
 const FIELD_ID = "fld_test-field" as FieldDefinitionId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_test-account" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_test-account",
   systemId: SYSTEM_ID,
-  sessionId: "sess_test-session" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-};
+  sessionId: "sess_test-session",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");

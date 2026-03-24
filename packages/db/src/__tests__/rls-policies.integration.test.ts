@@ -168,6 +168,7 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -346,6 +347,7 @@ describe("RLS cross-tenant isolation — account scope (PGlite)", () => {
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -440,6 +442,7 @@ describe("RLS cross-tenant isolation — account-pk scope (PGlite)", () => {
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -506,6 +509,7 @@ describe("RLS cross-tenant isolation — system-pk scope (PGlite)", () => {
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -609,6 +613,7 @@ describe("RLS cross-tenant isolation — dual scope (PGlite)", () => {
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -788,6 +793,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -950,6 +956,7 @@ describe("RLS cross-tenant isolation — bucket_rotation_items (system scope, PG
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -1122,6 +1129,7 @@ describe("RLS cross-tenant isolation — account-fk scope (PGlite)", () => {
         kdf_salt VARCHAR(255),
         encrypted_master_key BYTEA,
         account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1

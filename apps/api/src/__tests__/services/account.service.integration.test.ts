@@ -14,7 +14,13 @@ vi.mock("../../env.js", () => ({
   },
 }));
 
-import { changeEmail, changePassword, getAccountInfo } from "../../services/account.service.js";
+import {
+  changeEmail,
+  changePassword,
+  ConcurrencyError,
+  getAccountInfo,
+  updateAccountSettings,
+} from "../../services/account.service.js";
 import { registerAccount, ValidationError } from "../../services/auth.service.js";
 import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
@@ -92,6 +98,8 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
       expect(typeof info?.updatedAt).toBe("number");
       expect(info?.createdAt).toBeGreaterThan(0);
       expect(info?.updatedAt).toBeGreaterThanOrEqual(info?.createdAt ?? 0);
+      expect(info?.auditLogIpTracking).toBe(false);
+      expect(info?.version).toBe(1);
     });
 
     it("returns null for a nonexistent account", async () => {
@@ -182,6 +190,67 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
           noopAudit,
         ),
       ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  // ── updateAccountSettings ──────────────────────────────────────
+
+  describe("updateAccountSettings", () => {
+    it("enables audit log IP tracking", async () => {
+      const { accountId } = await registerTestAccount();
+
+      const audit = spyAudit();
+      const result = await updateAccountSettings(
+        asDb(db),
+        accountId,
+        { auditLogIpTracking: true, version: 1 },
+        audit,
+      );
+
+      expect(result).toEqual({ ok: true, auditLogIpTracking: true, version: 2 });
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("settings.changed");
+      expect(audit.calls[0]?.detail).toBe("Audit log IP tracking enabled");
+      expect(audit.calls[0]?.overrideTrackIp).toBe(true);
+    });
+
+    it("throws ConcurrencyError on version mismatch", async () => {
+      const { accountId } = await registerTestAccount();
+
+      await expect(
+        updateAccountSettings(
+          asDb(db),
+          accountId,
+          { auditLogIpTracking: true, version: 99 },
+          noopAudit,
+        ),
+      ).rejects.toThrow(ConcurrencyError);
+    });
+
+    it("roundtrips enable then disable", async () => {
+      const { accountId } = await registerTestAccount();
+
+      const r1 = await updateAccountSettings(
+        asDb(db),
+        accountId,
+        { auditLogIpTracking: true, version: 1 },
+        noopAudit,
+      );
+      expect(r1.auditLogIpTracking).toBe(true);
+      expect(r1.version).toBe(2);
+
+      const r2 = await updateAccountSettings(
+        asDb(db),
+        accountId,
+        { auditLogIpTracking: false, version: 2 },
+        noopAudit,
+      );
+      expect(r2.auditLogIpTracking).toBe(false);
+      expect(r2.version).toBe(3);
+
+      const info = await getAccountInfo(asDb(db), accountId);
+      expect(info?.auditLogIpTracking).toBe(false);
+      expect(info?.version).toBe(3);
     });
   });
 });

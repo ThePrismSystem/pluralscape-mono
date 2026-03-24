@@ -3,8 +3,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { VALID_BLOB_BASE64 } from "../helpers/mock-crypto.js";
 import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { MockChain } from "../helpers/mock-db.js";
 import type { CheckInRecordId, MemberId, SystemId, TimerId } from "@pluralscape/types";
 
@@ -45,13 +45,11 @@ const RECORD_ID = "cir_00000000-0000-4000-a000-000000000002" as CheckInRecordId;
 const TIMER_ID = "tmr_00000000-0000-4000-a000-000000000003" as TimerId;
 const MEMBER_ID = "mem_00000000-0000-4000-a000-000000000004" as MemberId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_00000000-0000-4000-a000-000000000005" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_00000000-0000-4000-a000-000000000005",
   systemId: SYSTEM_ID,
-  sessionId: "sess_00000000-0000-4000-a000-000000000006" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-};
+  sessionId: "sess_00000000-0000-4000-a000-000000000006",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 

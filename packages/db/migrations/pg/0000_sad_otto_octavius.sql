@@ -19,6 +19,7 @@ CREATE TABLE "accounts" (
 	"password_hash" varchar(255) NOT NULL,
 	"kdf_salt" varchar(255) NOT NULL,
 	"encrypted_master_key" "bytea",
+	"audit_log_ip_tracking" boolean DEFAULT false NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,

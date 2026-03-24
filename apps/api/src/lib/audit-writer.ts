@@ -1,4 +1,5 @@
 import { writeAuditLog } from "./audit-log.js";
+import { getContextLogger } from "./logger.js";
 import { extractRequestMeta } from "./request-meta.js";
 
 import type { AuthContext } from "./auth-context.js";
@@ -16,6 +17,8 @@ export interface AuditWriteParams {
   readonly accountId?: AccountId | null;
   /** Override systemId from auth context. */
   readonly systemId?: SystemId | null;
+  /** Override the captured auditLogIpTracking flag for this specific write (e.g. settings changes). */
+  readonly overrideTrackIp?: boolean;
 }
 
 /** A pre-bound audit log writer that captures request metadata at creation time. */
@@ -38,16 +41,24 @@ export type AuditWriter = (
  */
 export function createAuditWriter(c: Context, auth?: AuthContext | null): AuditWriter {
   const requestMeta = extractRequestMeta(c);
+  const log = getContextLogger(c);
+  const trackIp = auth?.auditLogIpTracking === true;
 
   return async (db: PgDatabase<PgQueryResultHKT>, params: AuditWriteParams): Promise<void> => {
+    const shouldTrackIp = params.overrideTrackIp ?? trackIp;
+
+    if (shouldTrackIp && !requestMeta.ipAddress) {
+      log.warn("Audit IP tracking enabled but no IP address extracted (check TRUST_PROXY setting)");
+    }
+
     await writeAuditLog(db, {
       accountId: params.accountId ?? auth?.accountId ?? null,
       systemId: params.systemId ?? auth?.systemId ?? null,
       eventType: params.eventType,
       actor: params.actor,
       detail: params.detail,
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
+      ipAddress: shouldTrackIp ? requestMeta.ipAddress : null,
+      userAgent: shouldTrackIp ? requestMeta.userAgent : null,
     });
   };
 }

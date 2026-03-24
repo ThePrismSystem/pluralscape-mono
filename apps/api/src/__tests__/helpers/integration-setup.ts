@@ -57,6 +57,7 @@ export function makeAuth(accountId: AccountId, systemId: SystemId): AuthContext 
     sessionId: `sess_${crypto.randomUUID()}` as SessionId,
     accountType: "system",
     ownedSystemIds: new Set([systemId]),
+    auditLogIpTracking: false,
   };
 }
 

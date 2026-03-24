@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId, WebhookId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -53,13 +53,11 @@ const {
 const SYSTEM_ID = "sys_00000000-0000-4000-a000-000000000001" as SystemId;
 const WH_ID = "wh_00000000-0000-4000-a000-000000000002" as WebhookId;
 
-const AUTH: AuthContext = {
-  accountId: "acct_00000000-0000-4000-a000-000000000003" as AuthContext["accountId"],
+const AUTH = makeTestAuth({
+  accountId: "acct_00000000-0000-4000-a000-000000000003",
   systemId: SYSTEM_ID,
-  sessionId: "sess_00000000-0000-4000-a000-000000000004" as AuthContext["sessionId"],
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-};
+  sessionId: "sess_00000000-0000-4000-a000-000000000004",
+});
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
 
