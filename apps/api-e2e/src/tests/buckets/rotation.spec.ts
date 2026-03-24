@@ -1,0 +1,169 @@
+import { expect, test } from "../../fixtures/auth.fixture.js";
+import { getSystemId } from "../../fixtures/entity-helpers.js";
+
+/**
+ * Bucket Key Rotation E2E Tests
+ *
+ * The full rotation lifecycle (initiate -> claim -> complete -> verify progress)
+ * requires privacy bucket infrastructure that does not yet exist in E2E:
+ *   - A bucket creation endpoint (no POST /v1/systems/:systemId/buckets route exists)
+ *   - Content tagged to the bucket via bucketContentTags
+ *   - Key grants for the bucket
+ *
+ * Without a bucket creation API, the "happy path" rotation lifecycle cannot be
+ * meaningfully tested end-to-end because initiateRotation on a non-existent
+ * bucket silently creates a rotation with 0 items (no content to re-encrypt).
+ *
+ * TODO: Once bucket CRUD routes are added, implement the full lifecycle test:
+ *   1. Create a privacy bucket
+ *   2. Tag content (e.g. a member) to the bucket
+ *   3. Initiate rotation with wrappedNewKey + newKeyVersion
+ *   4. Claim a chunk of items
+ *   5. Complete the chunk with re-encrypted data
+ *   6. Verify progress shows completed state
+ */
+
+test.describe("Bucket Key Rotation", () => {
+  test("rotation lifecycle on empty bucket", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+
+    // Use a fabricated bucket ID — no bucket creation endpoint exists yet.
+    // The rotation service does not validate bucket existence; it queries
+    // bucketContentTags and proceeds with 0 items if the bucket has no content.
+    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000001";
+    const rotationsUrl = `/v1/systems/${systemId}/buckets/${fakeBucketId}/rotations`;
+
+    let rotationId: string;
+
+    await test.step("initiate rotation", async () => {
+      const res = await request.post(rotationsUrl, {
+        headers: authHeaders,
+        data: {
+          wrappedNewKey: "dGVzdC13cmFwcGVkLWtleQ==",
+          newKeyVersion: 2,
+          friendKeyGrants: [],
+        },
+      });
+      expect(res.status()).toBe(201);
+
+      const body = await res.json();
+      expect(body).toHaveProperty("id");
+      expect(body).toHaveProperty("bucketId", fakeBucketId);
+      expect(body).toHaveProperty("fromKeyVersion", 1);
+      expect(body).toHaveProperty("toKeyVersion", 2);
+      expect(body).toHaveProperty("state", "initiated");
+      expect(body).toHaveProperty("totalItems", 0);
+      expect(body).toHaveProperty("completedItems", 0);
+      expect(body).toHaveProperty("failedItems", 0);
+      rotationId = body.id as string;
+    });
+
+    await test.step("claim chunk returns empty items for zero-item rotation", async () => {
+      const claimUrl = `${rotationsUrl}/${rotationId}/claim`;
+      const res = await request.post(claimUrl, {
+        headers: authHeaders,
+        data: { chunkSize: 10 },
+      });
+      expect(res.status()).toBe(200);
+
+      const body = await res.json();
+      expect(body).toHaveProperty("items");
+      expect(body.items).toHaveLength(0);
+      expect(body).toHaveProperty("rotationState");
+    });
+
+    await test.step("verify progress via GET", async () => {
+      const progressUrl = `${rotationsUrl}/${rotationId}`;
+      const res = await request.get(progressUrl, { headers: authHeaders });
+      expect(res.status()).toBe(200);
+
+      const body = await res.json();
+      expect(body.id).toBe(rotationId);
+      expect(body.bucketId).toBe(fakeBucketId);
+      expect(body.totalItems).toBe(0);
+    });
+  });
+
+  test("get progress on non-existent rotation returns 404", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000002";
+    const fakeRotationId = "bkr_00000000-0000-0000-0000-000000000099";
+    const progressUrl = `/v1/systems/${systemId}/buckets/${fakeBucketId}/rotations/${fakeRotationId}`;
+
+    const res = await request.get(progressUrl, { headers: authHeaders });
+    expect(res.status()).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("code", "NOT_FOUND");
+  });
+
+  test("claim on non-existent rotation returns 404", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000003";
+    const fakeRotationId = "bkr_00000000-0000-0000-0000-000000000099";
+    const claimUrl = `/v1/systems/${systemId}/buckets/${fakeBucketId}/rotations/${fakeRotationId}/claim`;
+
+    const res = await request.post(claimUrl, {
+      headers: authHeaders,
+      data: { chunkSize: 10 },
+    });
+    expect(res.status()).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("code", "NOT_FOUND");
+  });
+
+  test("complete chunk on non-existent rotation returns 404", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000004";
+    const fakeRotationId = "bkr_00000000-0000-0000-0000-000000000099";
+    const completeUrl = `/v1/systems/${systemId}/buckets/${fakeBucketId}/rotations/${fakeRotationId}/complete`;
+
+    const res = await request.post(completeUrl, {
+      headers: authHeaders,
+      data: {
+        items: [{ itemId: "bri_00000000-0000-0000-0000-000000000001", status: "completed" }],
+      },
+    });
+    expect(res.status()).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("code", "NOT_FOUND");
+  });
+
+  test("initiate rotation with invalid body returns 400", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000005";
+    const rotationsUrl = `/v1/systems/${systemId}/buckets/${fakeBucketId}/rotations`;
+
+    const res = await request.post(rotationsUrl, {
+      headers: authHeaders,
+      data: {
+        // Missing required fields: wrappedNewKey, newKeyVersion, friendKeyGrants
+      },
+    });
+    expect(res.status()).toBe(400);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("code", "VALIDATION_ERROR");
+  });
+
+  test("initiate rotation on wrong system returns 404", async ({ request, authHeaders }) => {
+    const fakeSystemId = "sys_00000000-0000-0000-0000-000000000000";
+    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000006";
+    const rotationsUrl = `/v1/systems/${fakeSystemId}/buckets/${fakeBucketId}/rotations`;
+
+    const res = await request.post(rotationsUrl, {
+      headers: authHeaders,
+      data: {
+        wrappedNewKey: "dGVzdC13cmFwcGVkLWtleQ==",
+        newKeyVersion: 2,
+        friendKeyGrants: [],
+      },
+    });
+    expect(res.status()).toBe(404);
+
+    const body = await res.json();
+    expect(body).toHaveProperty("code", "NOT_FOUND");
+  });
+});
