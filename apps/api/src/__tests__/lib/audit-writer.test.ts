@@ -253,4 +253,72 @@ describe("createAuditWriter", () => {
     expect(mockParams(0).userAgent).toBe("TestAgent");
     expect(mockParams(1).userAgent).toBe("TestAgent");
   });
+
+  it("includes IP/UA when overrideTrackIp is true even if auth tracking is false", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const auth = createAuth({ auditLogIpTracking: false });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "settings.changed",
+      actor: { kind: "account", id: "acc_test" },
+      overrideTrackIp: true,
+    });
+
+    expect(mockParams(0).ipAddress).toBe("203.0.113.50");
+    expect(mockParams(0).userAgent).toBe("TestAgent");
+
+    mockEnv.TRUST_PROXY = false;
+  });
+
+  it("excludes IP/UA when overrideTrackIp is false even if auth tracking is true", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "settings.changed",
+      actor: { kind: "account", id: "acc_test" },
+      overrideTrackIp: false,
+    });
+
+    expect(mockParams(0).ipAddress).toBeNull();
+    expect(mockParams(0).userAgent).toBeNull();
+
+    mockEnv.TRUST_PROXY = false;
+  });
+
+  it("falls back to auth.auditLogIpTracking when overrideTrackIp is undefined", async () => {
+    mockEnv.TRUST_PROXY = true;
+
+    const c = createMockContext({
+      "x-forwarded-for": "203.0.113.50",
+      "user-agent": "TestAgent",
+    });
+    const auth = createAuth({ auditLogIpTracking: true });
+    const audit = createAuditWriter(c, auth);
+    const db = createMockDb();
+
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
+
+    expect(mockParams(0).ipAddress).toBe("203.0.113.50");
+    expect(mockParams(0).userAgent).toBe("TestAgent");
+
+    mockEnv.TRUST_PROXY = false;
+  });
 });

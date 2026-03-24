@@ -308,7 +308,8 @@ export async function updateAccountSettings(
         version: accounts.version,
       });
 
-    if (rows.length === 0) {
+    const [row] = rows;
+    if (!row) {
       throw new ConcurrencyError("Account was modified concurrently");
     }
 
@@ -320,10 +321,10 @@ export async function updateAccountSettings(
       eventType: "settings.changed",
       actor: { kind: "account", id: accountId },
       detail,
+      overrideTrackIp: parsed.auditLogIpTracking,
     });
 
-    // rows[0] is guaranteed to exist after the length check above
-    return rows[0] as (typeof rows)[0];
+    return row;
   });
 
   return {

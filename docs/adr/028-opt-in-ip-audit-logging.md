@@ -16,9 +16,16 @@ Add an `audit_log_ip_tracking` boolean column to the `accounts` table, default `
 
 The setting is carried on `AuthContext`, populated during session validation (which already JOINs to the accounts table). No additional database query per request.
 
-For unauthenticated routes (register, login, password-reset), no auth context exists, so IP/UA is never logged. This is the correct default.
+For unauthenticated routes (register, login, password-reset), no auth context exists, so IP/UA is never logged. This is the correct default — the user has not yet consented (or does not yet have an account to store the preference). This means login audit entries are always IP-free, even for opted-in accounts.
 
 Enabling the setting requires a `PUT /account/settings` request. A future client-side implementation will surface a confirmation dialog and email verification before toggling this on, to prevent accidental enablement.
+
+### Audit log entry for the setting change itself
+
+The audit entry written when toggling `audit_log_ip_tracking` uses the _new_ tracking state via `overrideTrackIp` on `AuditWriteParams`, not the stale auth context captured at request start:
+
+- **Enabling**: the "settings.changed" entry includes IP/UA (the user just consented)
+- **Disabling**: the "settings.changed" entry excludes IP/UA (consent was just revoked)
 
 ## Consequences
 

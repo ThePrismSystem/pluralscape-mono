@@ -7,6 +7,7 @@ import {
   PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
   RegistrationInputSchema,
+  UpdateAccountSettingsSchema,
 } from "../auth.js";
 import {
   AUTH_MIN_PASSWORD_LENGTH,
@@ -459,6 +460,98 @@ describe("PasswordResetViaRecoveryKeySchema", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data).toEqual(validInput);
+      expect("admin" in result.data).toBe(false);
+    }
+  });
+});
+
+// ── UpdateAccountSettingsSchema ──────────────────────────────────────
+
+describe("UpdateAccountSettingsSchema", () => {
+  it("parses valid input", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({
+      auditLogIpTracking: true,
+      version: 1,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing auditLogIpTracking", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({ version: 1 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["auditLogIpTracking"]);
+    }
+  });
+
+  it("rejects missing version", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({ auditLogIpTracking: true });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["version"]);
+    }
+  });
+
+  it("rejects non-boolean auditLogIpTracking", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({
+      auditLogIpTracking: "true",
+      version: 1,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["auditLogIpTracking"]);
+    }
+  });
+
+  it("rejects non-integer version", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({
+      auditLogIpTracking: true,
+      version: 1.5,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["version"]);
+    }
+  });
+
+  it("rejects negative version", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({
+      auditLogIpTracking: true,
+      version: -1,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["version"]);
+    }
+  });
+
+  it("accepts version zero", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({
+      auditLogIpTracking: true,
+      version: 0,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("strips unknown properties", () => {
+    const result = UpdateAccountSettingsSchema.safeParse({
+      auditLogIpTracking: false,
+      version: 0,
+      admin: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ auditLogIpTracking: false, version: 0 });
       expect("admin" in result.data).toBe(false);
     }
   });

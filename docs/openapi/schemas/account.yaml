@@ -1,6 +1,6 @@
 AccountInfo:
   type: object
-  required: [accountId, accountType, createdAt, updatedAt]
+  required: [accountId, accountType, createdAt, updatedAt, auditLogIpTracking, version]
   properties:
     accountId:
       type: string
@@ -134,10 +134,13 @@ AuditLogResponse:
 
 UpdateAccountSettingsRequest:
   type: object
-  required: [auditLogIpTracking]
+  required: [auditLogIpTracking, version]
   properties:
     auditLogIpTracking:
       type: boolean
+    version:
+      type: integer
+      description: Optimistic concurrency version counter (must match current version)
 
 UpdateAccountSettingsResponse:
   type: object

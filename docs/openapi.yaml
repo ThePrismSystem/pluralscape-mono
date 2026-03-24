@@ -6439,6 +6439,8 @@ components:
         - accountType
         - createdAt
         - updatedAt
+        - auditLogIpTracking
+        - version
       properties:
         accountId:
           type: string
@@ -6580,9 +6582,13 @@ components:
       type: object
       required:
         - auditLogIpTracking
+        - version
       properties:
         auditLogIpTracking:
           type: boolean
+        version:
+          type: integer
+          description: Optimistic concurrency version counter (must match current version)
     UpdateAccountSettingsResponse:
       type: object
       required:
