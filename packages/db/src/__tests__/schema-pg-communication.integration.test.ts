@@ -134,15 +134,13 @@ describe("PG communication schema", () => {
       ).rejects.toThrow();
     });
 
-    it("self-ref FK sets parentId to null on parent delete", async () => {
+    it("restricts parent channel deletion when referenced by child channel", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const parentId = await insertChannel(systemId, { type: "category" });
-      const childId = await insertChannel(systemId, { parentId });
+      await insertChannel(systemId, { parentId });
 
-      await db.delete(channels).where(eq(channels.id, parentId));
-      const rows = await db.select().from(channels).where(eq(channels.id, childId));
-      expect(rows[0]?.parentId).toBeNull();
+      await expect(db.delete(channels).where(eq(channels.id, parentId))).rejects.toThrow();
     });
 
     it("cascades on system deletion", async () => {
@@ -334,7 +332,7 @@ describe("PG communication schema", () => {
       expect(rows[0]?.editedAt).toBe(editedAt);
     });
 
-    it("cascades on channel deletion", async () => {
+    it("restricts channel deletion when referenced by message", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const channelId = await insertChannel(systemId);
@@ -351,9 +349,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(channels).where(eq(channels.id, channelId));
-      const rows = await db.select().from(messages).where(eq(messages.id, msgId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(channels).where(eq(channels.id, channelId))).rejects.toThrow();
     });
 
     it("cascades on system deletion", async () => {
@@ -686,7 +682,7 @@ describe("PG communication schema", () => {
       expect(rows[0]?.memberId).toBeNull();
     });
 
-    it("sets memberId to null on member deletion (SET NULL)", async () => {
+    it("restricts member deletion when referenced by note", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
@@ -702,9 +698,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(members).where(eq(members.id, memberId));
-      const rows = await db.select().from(notes).where(eq(notes.id, id));
-      expect(rows[0]?.memberId).toBeNull();
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
 
     it("defaults archived to false and archivedAt to null", async () => {
@@ -943,7 +937,7 @@ describe("PG communication schema", () => {
       ).rejects.toThrow(/check|constraint|failed query/i);
     });
 
-    it("sets createdByMemberId to null on member deletion", async () => {
+    it("restricts member deletion when referenced by poll", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
@@ -964,9 +958,7 @@ describe("PG communication schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(members).where(eq(members.id, memberId));
-      const rows = await db.select().from(polls).where(eq(polls.id, id));
-      expect(rows[0]?.createdByMemberId).toBeNull();
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
 
     it("rejects nonexistent createdByMemberId FK", async () => {
@@ -1108,7 +1100,7 @@ describe("PG communication schema", () => {
       ).rejects.toThrow();
     });
 
-    it("cascades on poll deletion", async () => {
+    it("restricts poll deletion when referenced by vote", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
@@ -1123,9 +1115,7 @@ describe("PG communication schema", () => {
         createdAt: now,
       });
 
-      await db.delete(polls).where(eq(polls.id, pollId));
-      const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, voteId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(polls).where(eq(polls.id, pollId))).rejects.toThrow();
     });
 
     it("cascades on system deletion", async () => {
@@ -1385,7 +1375,7 @@ describe("PG communication schema", () => {
       expect(rows[0]?.createdByMemberId).toBeNull();
     });
 
-    it("sets createdByMemberId to null on member deletion", async () => {
+    it("restricts member deletion when referenced by acknowledgement", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
@@ -1400,9 +1390,7 @@ describe("PG communication schema", () => {
         createdAt: now,
       });
 
-      await db.delete(members).where(eq(members.id, memberId));
-      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
-      expect(rows[0]?.createdByMemberId).toBeNull();
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
 
     it("rejects nonexistent createdByMemberId FK", async () => {

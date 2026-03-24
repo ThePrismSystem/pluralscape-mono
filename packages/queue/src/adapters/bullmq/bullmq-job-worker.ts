@@ -42,8 +42,24 @@ export class BullMQJobWorker extends BaseJobWorker {
   // ── Lifecycle hooks ───────────────────────────────────────────────
 
   protected override onStart(): void {
+    // Pass connection config (not the instance) so BullMQ fully owns
+    // the internal connection lifecycle. See BullMQJobQueue constructor.
+    // Forwards auth, TLS, db, and sentinel options alongside host/port.
+    const { host, port, password, username, db, tls, keyPrefix, sentinels, natMap } =
+      this.connection.options;
+    const connOpts = {
+      host,
+      port,
+      ...(password !== undefined && { password }),
+      ...(username !== undefined && { username }),
+      ...(db !== undefined && { db }),
+      ...(tls !== undefined && { tls }),
+      ...(keyPrefix !== undefined && { keyPrefix }),
+      ...(sentinels !== undefined && { sentinels }),
+      ...(natMap !== undefined && { natMap }),
+    };
     this.worker = new Worker(this.queueName, undefined, {
-      connection: this.connection,
+      connection: connOpts,
       autorun: false,
     });
   }

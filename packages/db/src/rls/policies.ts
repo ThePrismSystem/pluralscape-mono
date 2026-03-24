@@ -6,7 +6,13 @@
  */
 
 /** Policy scoping type for each table. */
-export type RlsScopeType = "system" | "account" | "system-pk" | "account-pk" | "dual";
+export type RlsScopeType =
+  | "system"
+  | "account"
+  | "system-pk"
+  | "account-pk"
+  | "dual"
+  | "account-fk";
 
 /**
  * Returns a SQL expression for reading a GUC variable fail-closed.
@@ -64,6 +70,35 @@ export function dualTenantRlsPolicy(tableName: string): string {
   );
 }
 
+/**
+ * FK-to-tenant column mappings for account-fk scoped tables.
+ * Key: table name, Value: { fkColumn, fkTable, fkTenantColumn }
+ */
+const ACCOUNT_FK_MAPPING: Readonly<
+  Record<string, { fkColumn: string; fkTable: string; fkTenantColumn: string }>
+> = {
+  biometric_tokens: { fkColumn: "session_id", fkTable: "sessions", fkTenantColumn: "account_id" },
+};
+
+/**
+ * Creates an RLS policy scoped via a foreign key to a tenant-holding parent table.
+ * Uses a subquery to verify the FK references a row belonging to the current tenant.
+ */
+export function accountFkRlsPolicy(
+  tableName: string,
+  fkColumn: string,
+  fkTable: string,
+  fkTenantColumn: string,
+): string {
+  const policyName = `${tableName}_account_isolation`;
+  const setting = currentSettingSql("app.current_account_id");
+  return (
+    `CREATE POLICY ${policyName} ON ${tableName} ` +
+    `USING (${fkColumn} IN (SELECT id FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting})) ` +
+    `WITH CHECK (${fkColumn} IN (SELECT id FROM ${fkTable} WHERE ${fkTenantColumn} = ${setting}))`
+  );
+}
+
 /** Tables where system-pk scope uses `id` instead of `system_id`. */
 const SYSTEM_PK_ID_COLUMN: Readonly<Record<string, string>> = { systems: "id" };
 
@@ -95,6 +130,9 @@ export const RLS_TABLE_POLICIES = {
   sessions: "account",
   recovery_keys: "account",
   device_transfer_requests: "account",
+
+  // Account-scoped via FK (subquery through parent table)
+  biometric_tokens: "account-fk",
 
   // Special PK tables
   accounts: "account-pk",
@@ -201,6 +239,16 @@ export function generateRlsStatements(tableName: RlsTableName): string[] {
     case "dual":
       statements.push(dualTenantRlsPolicy(tableName));
       break;
+    case "account-fk": {
+      const mapping = ACCOUNT_FK_MAPPING[tableName];
+      if (!mapping) {
+        throw new Error(`No FK mapping for account-fk table: ${tableName}`);
+      }
+      statements.push(
+        accountFkRlsPolicy(tableName, mapping.fkColumn, mapping.fkTable, mapping.fkTenantColumn),
+      );
+      break;
+    }
     default: {
       const _exhaustive: never = scopeType;
       throw new Error(`Unknown RLS scope type: ${_exhaustive as string}`);

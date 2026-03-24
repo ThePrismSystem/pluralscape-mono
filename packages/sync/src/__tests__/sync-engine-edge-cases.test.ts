@@ -321,6 +321,137 @@ describe("SyncEngine edge cases", () => {
     });
   });
 
+  describe("onConflict callback", () => {
+    it("invokes onConflict for each notification from post-merge validation", async () => {
+      const keyResolver = createKeyResolver();
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
+
+      const doc = Automerge.from<Record<string, unknown>>({ items: {} });
+      const senderSession = new EncryptedSyncSession({
+        doc,
+        keys,
+        documentId: SYSTEM_CORE_DOC_ID,
+        sodium,
+      });
+
+      const envelope = senderSession.change((d) => {
+        (d as Record<string, Record<string, string>>)["items"] = { k1: "v1" };
+      });
+
+      const change: EncryptedChangeEnvelope = { ...envelope, seq: 10 };
+
+      const notification1: ConflictNotification = {
+        entityType: "member",
+        entityId: "mem_1",
+        fieldName: "name",
+        resolution: "lww-field",
+        detectedAt: Date.now(),
+        summary: "conflict A",
+      };
+      const notification2: ConflictNotification = {
+        entityType: "group",
+        entityId: "grp_1",
+        fieldName: "order",
+        resolution: "lww-field",
+        detectedAt: Date.now(),
+        summary: "conflict B",
+      };
+
+      vi.spyOn(postMergeValidator, "runAllValidations").mockReturnValue({
+        cycleBreaks: [],
+        sortOrderPatches: [],
+        checkInNormalizations: 0,
+        friendConnectionNormalizations: 0,
+        frontingSessionNormalizations: 0,
+        timerConfigNormalizations: 0,
+        webhookConfigIssues: 0,
+        correctionEnvelopes: [],
+        notifications: [notification1, notification2],
+        errors: [],
+      });
+
+      const onConflict = vi.fn();
+      const engine = await createBootstrappedEngine({ onConflict });
+
+      await engine.handleIncomingChanges(SYSTEM_CORE_DOC_ID, [change]);
+
+      expect(onConflict).toHaveBeenCalledTimes(2);
+      expect(onConflict).toHaveBeenCalledWith(notification1);
+      expect(onConflict).toHaveBeenCalledWith(notification2);
+
+      engine.dispose();
+    });
+  });
+
+  describe("conflict retry buffer overflow", () => {
+    it("drops oldest entries when buffer exceeds maxConflictRetryBatches", async () => {
+      const keyResolver = createKeyResolver();
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
+
+      const doc = Automerge.from<Record<string, unknown>>({ items: {} });
+      const senderSession = new EncryptedSyncSession({
+        doc,
+        keys,
+        documentId: SYSTEM_CORE_DOC_ID,
+        sodium,
+      });
+
+      const saveConflicts = vi.fn().mockRejectedValue(new Error("DB write failed"));
+      const conflictPersistenceAdapter: ConflictPersistenceAdapter = {
+        saveConflicts,
+        deleteOlderThan: vi.fn().mockResolvedValue(0),
+      };
+
+      const fakeNotification: ConflictNotification = {
+        entityType: "test",
+        entityId: "test-overflow",
+        fieldName: "value",
+        resolution: "lww-field",
+        detectedAt: Date.now(),
+        summary: "overflow conflict",
+      };
+
+      vi.spyOn(postMergeValidator, "runAllValidations").mockReturnValue({
+        cycleBreaks: [],
+        sortOrderPatches: [],
+        checkInNormalizations: 0,
+        friendConnectionNormalizations: 0,
+        frontingSessionNormalizations: 0,
+        timerConfigNormalizations: 0,
+        webhookConfigIssues: 0,
+        correctionEnvelopes: [],
+        notifications: [fakeNotification],
+        errors: [],
+      });
+
+      const onError = vi.fn();
+      const engine = await createBootstrappedEngine({
+        conflictPersistenceAdapter,
+        maxConflictRetryBatches: 2,
+        onError,
+      });
+
+      // Each handleIncomingChanges call produces 1 notification that fails to persist,
+      // adding 1 entry to failedConflictPersistence. After 3+ calls the buffer exceeds cap=2.
+      for (let i = 0; i < 4; i++) {
+        const envelope = senderSession.change((d) => {
+          (d as Record<string, Record<string, string>>)["items"] = {
+            [`key${String(i)}`]: `val${String(i)}`,
+          };
+        });
+        const change: EncryptedChangeEnvelope = { ...envelope, seq: 20 + i };
+        await engine.handleIncomingChanges(SYSTEM_CORE_DOC_ID, [change]);
+      }
+
+      const overflowCalls = onError.mock.calls.filter(
+        (call: unknown[]) => typeof call[0] === "string" && call[0].includes("exceeded cap"),
+      );
+      expect(overflowCalls.length).toBeGreaterThanOrEqual(1);
+
+      engine.dispose();
+    });
+  });
+
   describe("dispose() with active subscriptions", () => {
     it("unsubscribes all and clears state even if a subscription throws", async () => {
       const throwingUnsubscribe = vi.fn().mockImplementation(() => {

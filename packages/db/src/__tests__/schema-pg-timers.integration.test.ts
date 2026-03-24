@@ -365,11 +365,10 @@ describe("PG timers schema", () => {
       expect(rows[0]?.encryptedData).toEqual(data);
     });
 
-    it("cascades on timer config deletion", async () => {
+    it("restricts timer config deletion when referenced by check-in record", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -381,15 +380,13 @@ describe("PG timers schema", () => {
       });
 
       await db.insert(checkInRecords).values({
-        id,
+        id: crypto.randomUUID(),
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,
       });
 
-      await db.delete(timerConfigs).where(eq(timerConfigs.id, timerId));
-      const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(timerConfigs).where(eq(timerConfigs.id, timerId))).rejects.toThrow();
     });
 
     it("cascades on system deletion", async () => {
@@ -500,12 +497,11 @@ describe("PG timers schema", () => {
       expect(rows[0]?.respondedByMemberId).toBeNull();
     });
 
-    it("sets respondedByMemberId to null on member deletion", async () => {
+    it("restricts member deletion when referenced by check-in record", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
       const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(timerConfigs).values({
@@ -517,16 +513,14 @@ describe("PG timers schema", () => {
       });
 
       await db.insert(checkInRecords).values({
-        id,
+        id: crypto.randomUUID(),
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,
         respondedByMemberId: memberId,
       });
 
-      await db.delete(members).where(eq(members.id, memberId));
-      const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
-      expect(rows[0]?.respondedByMemberId).toBeNull();
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
 
     it("rejects nonexistent respondedByMemberId FK", async () => {

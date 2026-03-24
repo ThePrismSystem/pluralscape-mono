@@ -311,11 +311,10 @@ describe("PG Innerworld Schema", () => {
     expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([10, 20, 30])));
   });
 
-  it("sets parentRegionId to null when parent region is deleted (SET NULL)", async () => {
+  it("restricts parent region deletion when referenced by child region", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
     const parentId = crypto.randomUUID();
-    const childId = crypto.randomUUID();
 
     await db.insert(innerworldRegions).values({
       id: parentId,
@@ -326,7 +325,7 @@ describe("PG Innerworld Schema", () => {
     });
 
     await db.insert(innerworldRegions).values({
-      id: childId,
+      id: crypto.randomUUID(),
       systemId,
       parentRegionId: parentId,
       encryptedData: testBlob(new Uint8Array([2])),
@@ -334,19 +333,15 @@ describe("PG Innerworld Schema", () => {
       updatedAt: now,
     });
 
-    await client.query("DELETE FROM innerworld_regions WHERE id = $1", [parentId]);
-
-    const rows = await db.select().from(innerworldRegions).where(eq(innerworldRegions.id, childId));
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.parentRegionId).toBeNull();
+    await expect(
+      client.query("DELETE FROM innerworld_regions WHERE id = $1", [parentId]),
+    ).rejects.toThrow();
   });
 
-  it("sets entity regionId to null when region is deleted (SET NULL)", async () => {
+  it("restricts region deletion when referenced by entity", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
     const regionId = crypto.randomUUID();
-    const entityId = crypto.randomUUID();
 
     await db.insert(innerworldRegions).values({
       id: regionId,
@@ -357,7 +352,7 @@ describe("PG Innerworld Schema", () => {
     });
 
     await db.insert(innerworldEntities).values({
-      id: entityId,
+      id: crypto.randomUUID(),
       systemId,
       regionId,
       encryptedData: testBlob(new Uint8Array([2])),
@@ -365,15 +360,9 @@ describe("PG Innerworld Schema", () => {
       updatedAt: now,
     });
 
-    await client.query("DELETE FROM innerworld_regions WHERE id = $1", [regionId]);
-
-    const rows = await db
-      .select()
-      .from(innerworldEntities)
-      .where(eq(innerworldEntities.id, entityId));
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.regionId).toBeNull();
+    await expect(
+      client.query("DELETE FROM innerworld_regions WHERE id = $1", [regionId]),
+    ).rejects.toThrow();
   });
 
   it("cascades system delete to all 3 innerworld tables", async () => {

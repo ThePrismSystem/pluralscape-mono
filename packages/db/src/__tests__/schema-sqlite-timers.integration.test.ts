@@ -402,11 +402,10 @@ describe("SQLite timers schema", () => {
       expect(rows[0]?.encryptedData).toEqual(data);
     });
 
-    it("cascades on timer config deletion", () => {
+    it("restricts timer config deletion when referenced by check-in record", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -420,17 +419,12 @@ describe("SQLite timers schema", () => {
         .run();
 
       db.insert(checkInRecords)
-        .values({
-          id,
-          systemId,
-          timerConfigId: timerId,
-          scheduledAt: now,
-        })
+        .values({ id: crypto.randomUUID(), systemId, timerConfigId: timerId, scheduledAt: now })
         .run();
 
-      db.delete(timerConfigs).where(eq(timerConfigs.id, timerId)).run();
-      const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
-      expect(rows).toHaveLength(0);
+      expect(() => db.delete(timerConfigs).where(eq(timerConfigs.id, timerId)).run()).toThrow(
+        /FOREIGN KEY|constraint/i,
+      );
     });
 
     it("cascades on system deletion", () => {
@@ -557,12 +551,11 @@ describe("SQLite timers schema", () => {
       expect(rows[0]?.respondedByMemberId).toBeNull();
     });
 
-    it("sets respondedByMemberId to null on member deletion", () => {
+    it("restricts member deletion when referenced by check-in record", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
       const timerId = crypto.randomUUID();
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(timerConfigs)
@@ -577,7 +570,7 @@ describe("SQLite timers schema", () => {
 
       db.insert(checkInRecords)
         .values({
-          id,
+          id: crypto.randomUUID(),
           systemId,
           timerConfigId: timerId,
           scheduledAt: now,
@@ -585,9 +578,9 @@ describe("SQLite timers schema", () => {
         })
         .run();
 
-      db.delete(members).where(eq(members.id, memberId)).run();
-      const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
-      expect(rows[0]?.respondedByMemberId).toBeNull();
+      expect(() => db.delete(members).where(eq(members.id, memberId)).run()).toThrow(
+        /FOREIGN KEY|constraint/i,
+      );
     });
 
     it("rejects nonexistent respondedByMemberId FK", () => {

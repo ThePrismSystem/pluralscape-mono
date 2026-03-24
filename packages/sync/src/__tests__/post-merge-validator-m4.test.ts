@@ -137,9 +137,9 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
       expect(result.count).toBe(1);
       expect(result.envelope).not.toBeNull();
       expect(result.notifications).toHaveLength(1);
-      expect(result.notifications[0]!.fieldName).toBe("intervalMinutes");
-      expect(result.notifications[0]!.resolution).toBe("post-merge-timer-normalize");
-      expect(session.document.timers["tmr_1"]!.enabled).toBe(false);
+      expect(result.notifications[0]?.fieldName).toBe("intervalMinutes");
+      expect(result.notifications[0]?.resolution).toBe("post-merge-timer-normalize");
+      expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
     },
   );
 
@@ -168,7 +168,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
 
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
-    expect(session.document.timers["tmr_1"]!.enabled).toBe(false);
+    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
   });
 
   it("disables timer with wakingHoursOnly=true and start >= end (start=22:00, end=08:00)", () => {
@@ -186,8 +186,8 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
 
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
-    expect(result.notifications[0]!.fieldName).toBe("wakingHours");
-    expect(session.document.timers["tmr_1"]!.enabled).toBe(false);
+    expect(result.notifications[0]?.fieldName).toBe("wakingHours");
+    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
   });
 
   it.each([
@@ -210,8 +210,8 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
 
       expect(result.count).toBe(1);
       expect(result.notifications).toHaveLength(1);
-      expect(result.notifications[0]!.fieldName).toBe("wakingHours");
-      expect(session.document.timers["tmr_1"]!.enabled).toBe(false);
+      expect(result.notifications[0]?.fieldName).toBe("wakingHours");
+      expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
     },
   );
 
@@ -331,9 +331,9 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
 
     expect(result.count).toBe(2);
     expect(result.notifications).toHaveLength(2);
-    expect(session.document.timers["tmr_valid"]!.enabled).toBe(true);
-    expect(session.document.timers["tmr_zero"]!.enabled).toBe(false);
-    expect(session.document.timers["tmr_hours"]!.enabled).toBe(false);
+    expect(session.document.timers["tmr_valid"]?.enabled).toBe(true);
+    expect(session.document.timers["tmr_zero"]?.enabled).toBe(false);
+    expect(session.document.timers["tmr_hours"]?.enabled).toBe(false);
   });
 
   it("returns count=0 for empty timers map", () => {
@@ -367,9 +367,9 @@ describe("normalizeWebhookConfigs (M4)", () => {
 
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
-    expect(result.notifications[0]!.fieldName).toBe("url");
-    expect(result.notifications[0]!.resolution).toBe("notification-only");
-    expect(result.notifications[0]!.summary).toContain("invalid URL format");
+    expect(result.notifications[0]?.fieldName).toBe("url");
+    expect(result.notifications[0]?.resolution).toBe("notification-only");
+    expect(result.notifications[0]?.summary).toContain("invalid URL format");
     expect(result.envelope).toBeNull();
   });
 
@@ -384,8 +384,8 @@ describe("normalizeWebhookConfigs (M4)", () => {
 
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
-    expect(result.notifications[0]!.fieldName).toBe("url");
-    expect(result.notifications[0]!.summary).toContain("non-HTTP(S) URL");
+    expect(result.notifications[0]?.fieldName).toBe("url");
+    expect(result.notifications[0]?.summary).toContain("non-HTTP(S) URL");
   });
 
   it("produces no notification for config with valid HTTPS URL", () => {
@@ -422,16 +422,12 @@ describe("normalizeWebhookConfigs (M4)", () => {
     const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-plain-url");
 
     session.change((d) => {
-      d.webhookConfigs["wh_1"] = {
-        url: "https://example.com/hook",
-        eventTypes: [s("member.created")],
-        enabled: true,
-      };
+      d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", ["member.created"]);
     });
 
     const result = normalizeWebhookConfigs(session);
 
-    // URL validation skipped because typeof url !== "object" → urlVal is null
+    // URL validation runs normally — valid HTTPS URL produces no notification
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
   });
@@ -449,8 +445,8 @@ describe("normalizeWebhookConfigs (M4)", () => {
 
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
-    expect(result.notifications[0]!.fieldName).toBe("eventTypes");
-    expect(result.notifications[0]!.summary).toContain("unknown event type");
+    expect(result.notifications[0]?.fieldName).toBe("eventTypes");
+    expect(result.notifications[0]?.summary).toContain("unknown event type");
   });
 
   it("produces no notification for config with all valid event types", () => {
@@ -474,16 +470,15 @@ describe("normalizeWebhookConfigs (M4)", () => {
     const session = createSessionWithWebhookConfigs(keys, "doc-m4-wh-plain-str-evt");
 
     session.change((d) => {
-      d.webhookConfigs["wh_1"] = {
-        url: s("https://example.com/hook"),
-        eventTypes: ["member.created", "fronting.started"],
-        enabled: true,
-      };
+      d.webhookConfigs["wh_1"] = makeWebhookConfig("https://example.com/hook", [
+        "member.created",
+        "fronting.started",
+      ]);
     });
 
     const result = normalizeWebhookConfigs(session);
 
-    // Plain strings are handled by the typeof === "string" fallback branch
+    // Valid event types handled via ImmutableString .val extraction
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
   });
@@ -503,7 +498,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
 
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
-    expect(result.notifications[0]!.fieldName).toBe("eventTypes");
+    expect(result.notifications[0]?.fieldName).toBe("eventTypes");
   });
 
   it("returns count=0 for empty configs map", () => {
@@ -592,7 +587,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     expect(result.notifications.some((n) => n.resolution === "post-merge-timer-normalize")).toBe(
       true,
     );
-    expect(session.document.timers["tmr_1"]!.enabled).toBe(false);
+    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
   });
 
   it("triggers normalizeWebhookConfigs when document has webhookConfigs field", () => {
@@ -695,6 +690,6 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     expect(result.notifications.some((n) => n.resolution === "post-merge-timer-normalize")).toBe(
       true,
     );
-    expect(session.document.timers["tmr_1"]!.enabled).toBe(false);
+    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
   });
 });

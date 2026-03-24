@@ -368,16 +368,15 @@ describe("SQLite custom fields schema", () => {
       expect(rows[0]?.version).toBe(1);
     });
 
-    it("cascades on field definition deletion", () => {
+    it("restricts field definition deletion when referenced by field value", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(fieldValues)
         .values({
-          id,
+          id: crypto.randomUUID(),
           fieldDefinitionId: fieldDefId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -386,9 +385,9 @@ describe("SQLite custom fields schema", () => {
         })
         .run();
 
-      db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId)).run();
-      const rows = db.select().from(fieldValues).where(eq(fieldValues.id, id)).all();
-      expect(rows).toHaveLength(0);
+      expect(() =>
+        db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId)).run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
 
     it("cascades on system deletion", () => {
@@ -648,50 +647,34 @@ describe("SQLite custom fields schema", () => {
       expect(rows[0]?.bucketId).toBe(bucketId);
     });
 
-    it("cascades on field definition deletion", () => {
+    it("restricts field definition deletion when referenced by visibility", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const bucketId = insertBucket(systemId);
 
       db.insert(fieldBucketVisibility)
-        .values({
-          fieldDefinitionId: fieldDefId,
-          bucketId,
-          systemId,
-        })
+        .values({ fieldDefinitionId: fieldDefId, bucketId, systemId })
         .run();
 
-      db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId)).run();
-      const rows = db
-        .select()
-        .from(fieldBucketVisibility)
-        .where(eq(fieldBucketVisibility.fieldDefinitionId, fieldDefId))
-        .all();
-      expect(rows).toHaveLength(0);
+      expect(() =>
+        db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId)).run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
 
-    it("cascades on bucket deletion", () => {
+    it("restricts bucket deletion when referenced by visibility", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fieldDefId = insertFieldDefinition(systemId);
       const bucketId = insertBucket(systemId);
 
       db.insert(fieldBucketVisibility)
-        .values({
-          fieldDefinitionId: fieldDefId,
-          bucketId,
-          systemId,
-        })
+        .values({ fieldDefinitionId: fieldDefId, bucketId, systemId })
         .run();
 
-      db.delete(buckets).where(eq(buckets.id, bucketId)).run();
-      const rows = db
-        .select()
-        .from(fieldBucketVisibility)
-        .where(eq(fieldBucketVisibility.bucketId, bucketId))
-        .all();
-      expect(rows).toHaveLength(0);
+      expect(() => db.delete(buckets).where(eq(buckets.id, bucketId)).run()).toThrow(
+        /FOREIGN KEY|constraint/i,
+      );
     });
 
     it("composite PK prevents duplicate entries", () => {

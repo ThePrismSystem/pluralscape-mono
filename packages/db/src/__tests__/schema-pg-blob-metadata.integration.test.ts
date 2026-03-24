@@ -186,11 +186,10 @@ describe("PG blob_metadata schema", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("sets bucket_id to NULL on bucket deletion", async () => {
+  it("restricts bucket deletion when referenced by blob metadata", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const bucketId = crypto.randomUUID();
-    const id = crypto.randomUUID();
     const now = Date.now();
 
     await db.insert(buckets).values({
@@ -202,7 +201,7 @@ describe("PG blob_metadata schema", () => {
     });
 
     await db.insert(blobMetadata).values({
-      id,
+      id: crypto.randomUUID(),
       systemId,
       storageKey: `blobs/${crypto.randomUUID()}`,
       sizeBytes: 100,
@@ -214,10 +213,7 @@ describe("PG blob_metadata schema", () => {
       uploadedAt: now,
     });
 
-    await db.delete(buckets).where(eq(buckets.id, bucketId));
-    const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.bucketId).toBeNull();
+    await expect(db.delete(buckets).where(eq(buckets.id, bucketId))).rejects.toThrow();
   });
 
   it("allows null checksum when uploadedAt is also null (pending upload)", async () => {

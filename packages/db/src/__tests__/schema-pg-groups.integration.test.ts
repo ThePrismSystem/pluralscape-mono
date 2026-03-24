@@ -118,23 +118,13 @@ describe("PG groups schema", () => {
       expect(rows[0]?.archivedAt).toBeNull();
     });
 
-    it("self-ref FK sets parentGroupId to null on parent delete", async () => {
+    it("restricts parent group deletion when referenced by child group", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const parentId = await insertGroup(systemId);
-      const childId = await insertGroup(systemId, { parentGroupId: parentId });
+      await insertGroup(systemId, { parentGroupId: parentId });
 
-      // verify child references parent
-      let rows = await db.select().from(groups).where(eq(groups.id, childId));
-      expect(rows[0]?.parentGroupId).toBe(parentId);
-
-      // delete parent
-      await db.delete(groups).where(eq(groups.id, parentId));
-
-      // child still exists, parentGroupId is null
-      rows = await db.select().from(groups).where(eq(groups.id, childId));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.parentGroupId).toBeNull();
+      await expect(db.delete(groups).where(eq(groups.id, parentId))).rejects.toThrow();
     });
 
     it("rejects negative sort_order via CHECK", async () => {
@@ -288,7 +278,7 @@ describe("PG groups schema", () => {
       expect(rows[0]?.createdAt).toBe(now);
     });
 
-    it("cascades on group deletion", async () => {
+    it("restricts group deletion when referenced by membership", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const groupId = await insertGroup(systemId);
@@ -296,15 +286,10 @@ describe("PG groups schema", () => {
 
       await insertGroupMembership(groupId, memberId, systemId);
 
-      await db.delete(groups).where(eq(groups.id, groupId));
-      const rows = await db
-        .select()
-        .from(groupMemberships)
-        .where(and(eq(groupMemberships.groupId, groupId), eq(groupMemberships.memberId, memberId)));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(groups).where(eq(groups.id, groupId))).rejects.toThrow();
     });
 
-    it("cascades on member deletion", async () => {
+    it("restricts member deletion when referenced by membership", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const groupId = await insertGroup(systemId);
@@ -312,12 +297,7 @@ describe("PG groups schema", () => {
 
       await insertGroupMembership(groupId, memberId, systemId);
 
-      await client.query("DELETE FROM members WHERE id = $1", [memberId]);
-      const rows = await db
-        .select()
-        .from(groupMemberships)
-        .where(and(eq(groupMemberships.groupId, groupId), eq(groupMemberships.memberId, memberId)));
-      expect(rows).toHaveLength(0);
+      await expect(client.query("DELETE FROM members WHERE id = $1", [memberId])).rejects.toThrow();
     });
 
     it("rejects duplicate groupId+memberId pair", async () => {

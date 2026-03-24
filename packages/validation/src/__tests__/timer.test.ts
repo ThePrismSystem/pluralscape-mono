@@ -113,6 +113,39 @@ describe("UpdateTimerConfigBodySchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rejects when wakingStart >= wakingEnd (equal times)", () => {
+    const result = UpdateTimerConfigBodySchema.safeParse({
+      encryptedData: "dGVzdA==",
+      version: 1,
+      wakingHoursOnly: true,
+      wakingStart: "10:00",
+      wakingEnd: "10:00",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects when wakingStart > wakingEnd (inverted range)", () => {
+    const result = UpdateTimerConfigBodySchema.safeParse({
+      encryptedData: "dGVzdA==",
+      version: 1,
+      wakingHoursOnly: true,
+      wakingStart: "22:00",
+      wakingEnd: "08:00",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid waking hours range", () => {
+    const result = UpdateTimerConfigBodySchema.safeParse({
+      encryptedData: "dGVzdA==",
+      version: 1,
+      wakingHoursOnly: true,
+      wakingStart: "08:00",
+      wakingEnd: "22:00",
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("TimerConfigQuerySchema", () => {

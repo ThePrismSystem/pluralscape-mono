@@ -136,11 +136,10 @@ describe("SQLite blob_metadata schema", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("sets bucket_id to NULL on bucket deletion", () => {
+  it("restricts bucket deletion when referenced by blob metadata", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);
     const bucketId = crypto.randomUUID();
-    const id = crypto.randomUUID();
     const now = Date.now();
 
     db.insert(buckets)
@@ -155,7 +154,7 @@ describe("SQLite blob_metadata schema", () => {
 
     db.insert(blobMetadata)
       .values({
-        id,
+        id: crypto.randomUUID(),
         systemId,
         storageKey: `blobs/${crypto.randomUUID()}`,
         sizeBytes: 100,
@@ -168,10 +167,9 @@ describe("SQLite blob_metadata schema", () => {
       })
       .run();
 
-    db.delete(buckets).where(eq(buckets.id, bucketId)).run();
-    const rows = db.select().from(blobMetadata).where(eq(blobMetadata.id, id)).all();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.bucketId).toBeNull();
+    expect(() => db.delete(buckets).where(eq(buckets.id, bucketId)).run()).toThrow(
+      /FOREIGN KEY|constraint/i,
+    );
   });
 
   it("rejects invalid purpose", () => {
@@ -346,8 +344,8 @@ describe("SQLite blob_metadata schema", () => {
     expect(() =>
       client
         .prepare(
-          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           crypto.randomUUID(),
@@ -357,6 +355,7 @@ describe("SQLite blob_metadata schema", () => {
           1,
           "avatar",
           "a".repeat(64),
+          now,
           now,
         ),
     ).not.toThrow();

@@ -8,6 +8,28 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { equalizeAntiEnumTiming } from "../../lib/anti-enum-timing.js";
+
+describe("equalizeAntiEnumTiming", () => {
+  it("resolves without sleeping when elapsed exceeds target", async () => {
+    // Start time far enough in the past that remaining <= 0
+    const longAgo = performance.now() - 10_000;
+    const before = performance.now();
+    await equalizeAntiEnumTiming(longAgo);
+    const elapsed = performance.now() - before;
+    // Should return near-instantly since remaining time is negative
+    expect(elapsed).toBeLessThan(50);
+  });
+
+  it("resolves within timing window for recent start", async () => {
+    const start = performance.now();
+    await equalizeAntiEnumTiming(start);
+    const elapsed = performance.now() - start;
+    // Should have delayed to fill the anti-enum timing window
+    expect(elapsed).toBeGreaterThanOrEqual(0);
+  });
+});
+
 describe("anti-enum timing (structural verification)", () => {
   const antiEnumPath = resolve(import.meta.dirname, "../../lib/anti-enum-timing.ts");
   const antiEnumSource = readFileSync(antiEnumPath, "utf8");

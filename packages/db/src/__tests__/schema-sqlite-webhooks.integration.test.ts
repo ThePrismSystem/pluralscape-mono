@@ -120,11 +120,10 @@ describe("SQLite webhooks schema", () => {
       expect(rows).toHaveLength(0);
     });
 
-    it("sets crypto_key_id to NULL on api_key deletion", () => {
+    it("restricts api_key deletion when referenced by webhook config", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const keyId = crypto.randomUUID();
-      const id = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(apiKeys)
@@ -142,7 +141,7 @@ describe("SQLite webhooks schema", () => {
 
       db.insert(webhookConfigs)
         .values({
-          id,
+          id: crypto.randomUUID(),
           systemId,
           url: "https://example.com/hook",
           secret: new Uint8Array([1]),
@@ -153,10 +152,9 @@ describe("SQLite webhooks schema", () => {
         })
         .run();
 
-      db.delete(apiKeys).where(eq(apiKeys.id, keyId)).run();
-      const rows = db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id)).all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.cryptoKeyId).toBeNull();
+      expect(() => db.delete(apiKeys).where(eq(apiKeys.id, keyId)).run()).toThrow(
+        /FOREIGN KEY|constraint/i,
+      );
     });
 
     it("stores enabled as false correctly", () => {
@@ -485,13 +483,12 @@ describe("SQLite webhooks schema", () => {
       expect(remaining.map((r) => r.id).sort()).toEqual([pendingOldId, recentId].sort());
     });
 
-    it("cascades on webhook config deletion", () => {
-      const delId = crypto.randomUUID();
+    it("restricts webhook config deletion when referenced by delivery", () => {
       const now = Date.now();
 
       db.insert(webhookDeliveries)
         .values({
-          id: delId,
+          id: crypto.randomUUID(),
           webhookId: deliveryWhId,
           systemId: deliverySystemId,
           eventType: "member.created",
@@ -499,9 +496,9 @@ describe("SQLite webhooks schema", () => {
         })
         .run();
 
-      db.delete(webhookConfigs).where(eq(webhookConfigs.id, deliveryWhId)).run();
-      const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, delId)).all();
-      expect(rows).toHaveLength(0);
+      expect(() =>
+        db.delete(webhookConfigs).where(eq(webhookConfigs.id, deliveryWhId)).run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
 
     it("queries retryable deliveries by system_id", () => {

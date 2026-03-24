@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { createId, now, toISO } from "../runtime.js";
+import { createId, extractErrorMessage, now, toISO } from "../runtime.js";
 import { toUnixMillis } from "../timestamps.js";
 
 import type { SystemId } from "../ids.js";
@@ -69,5 +69,18 @@ describe("toISO", () => {
   it("returns a branded ISOTimestamp", () => {
     const ms = toUnixMillis(0);
     expectTypeOf(toISO(ms)).toEqualTypeOf<ISOTimestamp>();
+  });
+});
+
+describe("extractErrorMessage", () => {
+  it("returns the message property when given an Error instance", () => {
+    const err = new Error("something went wrong");
+    expect(extractErrorMessage(err)).toBe("something went wrong");
+  });
+
+  it("converts non-Error values to string using String()", () => {
+    expect(extractErrorMessage("a plain string")).toBe("a plain string");
+    expect(extractErrorMessage(42)).toBe("42");
+    expect(extractErrorMessage(null)).toBe("null");
   });
 });

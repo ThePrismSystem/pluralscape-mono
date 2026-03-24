@@ -148,4 +148,18 @@ describe("pgJsonb mapping", () => {
   it("throws on empty string", () => {
     expect(() => jsonFromDriver("")).toThrow("Failed to parse JSON from database");
   });
+
+  it("returns pre-parsed objects unchanged (PGlite JSONB behavior)", () => {
+    const obj = { name: "test", nested: [1, 2] };
+    expect(jsonFromDriver(obj)).toBe(obj);
+  });
+
+  it("returns pre-parsed arrays unchanged", () => {
+    const arr = [1, 2, 3];
+    expect(jsonFromDriver(arr)).toBe(arr);
+  });
+
+  it("returns null unchanged", () => {
+    expect(jsonFromDriver(null)).toBeNull();
+  });
 });

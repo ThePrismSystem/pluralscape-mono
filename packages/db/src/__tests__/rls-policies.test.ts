@@ -232,6 +232,7 @@ describe("RLS_TABLE_POLICIES", () => {
       "system-pk",
       "account-pk",
       "dual",
+      "account-fk",
     ]);
 
     for (const [table, scope] of Object.entries(RLS_TABLE_POLICIES)) {

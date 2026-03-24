@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  accountFkRlsPolicy,
   accountRlsPolicy,
   dualTenantRlsPolicy,
   enableRls,
@@ -88,6 +89,15 @@ describe("RLS policy SQL generation", () => {
     expect(result).not.toContain("account_id =");
   });
 
+  it("accountFkRlsPolicy generates subquery-based policy", () => {
+    const result = accountFkRlsPolicy("biometric_tokens", "session_id", "sessions", "account_id");
+    expect(result).toContain("CREATE POLICY biometric_tokens_account_isolation");
+    expect(result).toContain("session_id IN (SELECT id FROM sessions WHERE account_id =");
+    expect(result).toContain("USING");
+    expect(result).toContain("WITH CHECK");
+    expect(result).toContain("NULLIF(current_setting('app.current_account_id', true), '')");
+  });
+
   it("generateRlsStatements for system-scoped table returns enable + policy", () => {
     const stmts = generateRlsStatements("members");
     expect(stmts).toHaveLength(3);
@@ -121,6 +131,7 @@ describe("RLS policy SQL generation", () => {
       "bucket_content_tags",
       "friend_bucket_assignments",
       "field_bucket_visibility",
+      "biometric_tokens",
     ];
     for (const table of expectedTables) {
       expect(RLS_TABLE_POLICIES).toHaveProperty(table);
@@ -169,7 +180,9 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -505,7 +518,9 @@ describe("RLS cross-tenant isolation — system-pk scope (PGlite)", () => {
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -606,7 +621,9 @@ describe("RLS cross-tenant isolation — dual scope (PGlite)", () => {
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -783,7 +800,9 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -943,7 +962,9 @@ describe("RLS cross-tenant isolation — bucket_rotation_items (system scope, PG
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -1070,5 +1091,150 @@ describe("RLS cross-tenant isolation — bucket_rotation_items (system scope, PG
 
     const result = await db.execute(sql`SELECT * FROM bucket_rotation_items WHERE id = ${itemIdB}`);
     expect(result.rows).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. RLS cross-tenant isolation — account-fk scope (PGlite integration tests)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — account-fk scope (PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const sessionIdA = crypto.randomUUID();
+  const sessionIdB = crypto.randomUUID();
+  const tokenIdA = crypto.randomUUID();
+  const tokenIdB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await client.query(`
+      CREATE TABLE accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        email_hash VARCHAR(255) NOT NULL UNIQUE,
+        email_salt VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
+        encrypted_master_key BYTEA,
+        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE sessions (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        token_hash VARCHAR(255) NOT NULL UNIQUE,
+        refresh_token_hash VARCHAR(255) NOT NULL UNIQUE,
+        device_info VARCHAR(255),
+        created_at TIMESTAMPTZ NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        last_active_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    await client.query(`
+      CREATE TABLE biometric_tokens (
+        id VARCHAR(255) PRIMARY KEY,
+        session_id VARCHAR(255) NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+        token_hash VARCHAR(128) NOT NULL UNIQUE,
+        created_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+
+    // Seed data
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+
+    const now = new Date().toISOString();
+    await client.query(
+      `INSERT INTO sessions (id, account_id, token_hash, refresh_token_hash, device_info, created_at, expires_at, last_active_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [sessionIdA, accountIdA, crypto.randomUUID(), crypto.randomUUID(), "test", now, now, now],
+    );
+    await client.query(
+      `INSERT INTO sessions (id, account_id, token_hash, refresh_token_hash, device_info, created_at, expires_at, last_active_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [sessionIdB, accountIdB, crypto.randomUUID(), crypto.randomUUID(), "test", now, now, now],
+    );
+
+    await client.query(
+      `INSERT INTO biometric_tokens (id, session_id, token_hash, created_at) VALUES ($1, $2, $3, $4)`,
+      [tokenIdA, sessionIdA, crypto.randomUUID(), now],
+    );
+    await client.query(
+      `INSERT INTO biometric_tokens (id, session_id, token_hash, created_at) VALUES ($1, $2, $3, $4)`,
+      [tokenIdB, sessionIdB, crypto.randomUUID(), now],
+    );
+
+    // Create role, grant permissions, enable RLS
+    await client.query(`CREATE ROLE ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON accounts TO ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON sessions TO ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON biometric_tokens TO ${APP_ROLE}`);
+
+    // Enable RLS on sessions (required for FK subquery to work correctly)
+    for (const stmt of enableRls("sessions")) {
+      await client.query(stmt);
+    }
+    await client.query(accountRlsPolicy("sessions"));
+
+    // Enable RLS on biometric_tokens with FK-based policy
+    for (const stmt of enableRls("biometric_tokens")) {
+      await client.query(stmt);
+    }
+    await client.query(
+      accountFkRlsPolicy("biometric_tokens", "session_id", "sessions", "account_id"),
+    );
+
+    await client.query(`SET ROLE ${APP_ROLE}`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("only sees biometric tokens for current account", async () => {
+    await setSessionAccountId(db, accountIdA);
+
+    const result = await db.execute(sql`SELECT * FROM biometric_tokens`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(tokenIdA);
+  });
+
+  it("returns empty when no account context (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM biometric_tokens`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("switching account shows different tokens", async () => {
+    await setSessionAccountId(db, accountIdB);
+
+    const result = await db.execute(sql`SELECT * FROM biometric_tokens`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(tokenIdB);
+  });
+
+  it("cross-tenant token not visible", async () => {
+    await setSessionAccountId(db, accountIdA);
+
+    const result = await db.execute(sql`SELECT * FROM biometric_tokens WHERE id = ${tokenIdB}`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("WITH CHECK prevents inserting token for another account's session", async () => {
+    await setSessionAccountId(db, accountIdA);
+
+    await expect(
+      db.execute(
+        sql`INSERT INTO biometric_tokens (id, session_id, token_hash, created_at) VALUES (${crypto.randomUUID()}, ${sessionIdB}, ${crypto.randomUUID()}, NOW())`,
+      ),
+    ).rejects.toThrow();
   });
 });

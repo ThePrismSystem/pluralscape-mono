@@ -292,7 +292,7 @@ describe("PG privacy schema", () => {
       expect(rows[0]?.entityId).toBe(entityId);
     });
 
-    it("cascades on bucket deletion", async () => {
+    it("restricts bucket deletion when referenced by content tag", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
@@ -304,12 +304,7 @@ describe("PG privacy schema", () => {
         systemId,
       });
 
-      await db.delete(buckets).where(eq(buckets.id, bucketId));
-      const rows = await db
-        .select()
-        .from(bucketContentTags)
-        .where(eq(bucketContentTags.bucketId, bucketId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(buckets).where(eq(buckets.id, bucketId))).rejects.toThrow();
     });
 
     it("rejects invalid entityType CHECK", async () => {
@@ -423,17 +418,16 @@ describe("PG privacy schema", () => {
       expect(rows[0]?.revokedAt).toBeNull();
     });
 
-    it("cascades on bucket deletion", async () => {
+    it("restricts bucket deletion when referenced by key grant", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
       const friendAccountId = await insertAccount();
       await insertSystem(friendAccountId);
-      const grantId = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(keyGrants).values({
-        id: grantId,
+        id: crypto.randomUUID(),
         bucketId,
         systemId,
         friendAccountId,
@@ -442,9 +436,7 @@ describe("PG privacy schema", () => {
         createdAt: now,
       });
 
-      await db.delete(buckets).where(eq(buckets.id, bucketId));
-      const rows = await db.select().from(keyGrants).where(eq(keyGrants.id, grantId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(buckets).where(eq(buckets.id, bucketId))).rejects.toThrow();
     });
 
     it("rejects keyVersion = 0 via CHECK", async () => {
@@ -1065,7 +1057,7 @@ describe("PG privacy schema", () => {
       expect(rows[0]?.bucketId).toBe(bucketId);
     });
 
-    it("cascades on connection deletion", async () => {
+    it("restricts connection deletion when referenced by assignment", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const friendAccountId = await insertAccount();
@@ -1079,15 +1071,12 @@ describe("PG privacy schema", () => {
         systemId,
       });
 
-      await db.delete(friendConnections).where(eq(friendConnections.id, connectionId));
-      const rows = await db
-        .select()
-        .from(friendBucketAssignments)
-        .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
-      expect(rows).toHaveLength(0);
+      await expect(
+        db.delete(friendConnections).where(eq(friendConnections.id, connectionId)),
+      ).rejects.toThrow();
     });
 
-    it("cascades on bucket deletion", async () => {
+    it("restricts bucket deletion when referenced by assignment", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const friendAccountId = await insertAccount();
@@ -1101,12 +1090,7 @@ describe("PG privacy schema", () => {
         systemId,
       });
 
-      await db.delete(buckets).where(eq(buckets.id, bucketId));
-      const rows = await db
-        .select()
-        .from(friendBucketAssignments)
-        .where(eq(friendBucketAssignments.bucketId, bucketId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(buckets).where(eq(buckets.id, bucketId))).rejects.toThrow();
     });
 
     it("composite PK prevents duplicates", async () => {

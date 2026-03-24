@@ -13,7 +13,7 @@ import { execSync } from "node:child_process";
 import type { S3AdapterConfig } from "../adapters/s3/s3-config.js";
 
 const CONTAINER_NAME = "pluralscape-minio-test";
-const MINIO_PORT = 9000;
+const MINIO_PORT = Number(process.env["TEST_MINIO_PORT"]) || 10_943;
 const CONNECT_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 500;
 const ACCESS_KEY = "minioadmin";
@@ -23,7 +23,9 @@ const TEST_BUCKET = "pluralscape-test";
 function exec(cmd: string): string {
   try {
     return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[minio-container] exec failed: ${msg}\n`);
     return "";
   }
 }

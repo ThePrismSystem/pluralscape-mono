@@ -19,6 +19,7 @@ import {
   recoveryKeys,
   sessions,
 } from "../../schema/pg/auth.js";
+import { biometricTokens } from "../../schema/pg/biometric-tokens.js";
 import { blobMetadata } from "../../schema/pg/blob-metadata.js";
 import {
   acknowledgements,
@@ -136,6 +137,8 @@ export const PG_DDL = {
   recoveryKeysIndexes: indexDDL(recoveryKeys),
   deviceTransferRequests: pgTableToCreateDDL(deviceTransferRequests),
   deviceTransferRequestsIndexes: indexDDL(deviceTransferRequests),
+  biometricTokens: pgTableToCreateDDL(biometricTokens),
+  biometricTokensIndexes: indexDDL(biometricTokens),
   // --- Systems & Members ---
   systems: pgTableToCreateDDL(systems),
   systemsIndexes: indexDDL(systems),
@@ -586,6 +589,10 @@ export async function createPgJournalTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.membersIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypes);
+  await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
+  await pgExec(client, PG_DDL.systemStructureEntities);
+  await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
   await pgExec(client, PG_DDL.customFronts);
   await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingSessions);
@@ -732,6 +739,8 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.recoveryKeysIndexes);
   await pgExec(client, PG_DDL.deviceTransferRequests);
   await pgExec(client, PG_DDL.deviceTransferRequestsIndexes);
+  await pgExec(client, PG_DDL.biometricTokens);
+  await pgExec(client, PG_DDL.biometricTokensIndexes);
   await pgExec(client, PG_DDL.systems);
   await pgExec(client, PG_DDL.systemsIndexes);
   // Members

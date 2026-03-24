@@ -328,15 +328,14 @@ describe("PG members schema", () => {
       expect(rows[0]?.version).toBe(1);
     });
 
-    it("cascades on member deletion", async () => {
+    it("restricts member deletion when referenced by photo", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
-      const photoId = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(memberPhotos).values({
-        id: photoId,
+        id: crypto.randomUUID(),
         memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -344,9 +343,7 @@ describe("PG members schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(members).where(eq(members.id, memberId));
-      const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, photoId));
-      expect(rows).toHaveLength(0);
+      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
     });
 
     it("cascades on system deletion", async () => {

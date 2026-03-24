@@ -67,6 +67,11 @@ describe("PG views / query helpers", () => {
     await pgExec(client, PG_DDL.deviceTransferRequestsIndexes);
     // Members (needed for groups)
     await pgExec(client, PG_DDL.members);
+    // Structure (needed for fronting FKs)
+    await pgExec(client, PG_DDL.systemStructureEntityTypes);
+    await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
+    await pgExec(client, PG_DDL.systemStructureEntities);
+    await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
     // Fronting
     await pgExec(client, PG_DDL.customFronts);
     await pgExec(client, PG_DDL.customFrontsIndexes);
@@ -97,12 +102,8 @@ describe("PG views / query helpers", () => {
     await pgExec(client, PG_DDL.webhookConfigsIndexes);
     await pgExec(client, PG_DDL.webhookDeliveries);
     await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
-    // Structure
+    // Structure (types + entities already created above for fronting FKs)
     await pgExec(client, PG_DDL.relationships);
-    await pgExec(client, PG_DDL.systemStructureEntityTypes);
-    await pgExec(client, PG_DDL.systemStructureEntityTypesIndexes);
-    await pgExec(client, PG_DDL.systemStructureEntities);
-    await pgExec(client, PG_DDL.systemStructureEntitiesIndexes);
     await pgExec(client, PG_DDL.systemStructureEntityAssociations);
     await pgExec(client, PG_DDL.systemStructureEntityAssociationsIndexes);
   });
@@ -566,6 +567,7 @@ describe("PG views / query helpers", () => {
           frontingSessionId: activeSessionId,
           systemId,
           sessionStartTime: now - 60000,
+          memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -575,6 +577,7 @@ describe("PG views / query helpers", () => {
           frontingSessionId: endedSessionId,
           systemId,
           sessionStartTime: now - 120000,
+          memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -632,6 +635,7 @@ describe("PG views / query helpers", () => {
         frontingSessionId: sessionIdA,
         systemId,
         sessionStartTime: startTimeA,
+        memberId,
         encryptedData: testBlob(new Uint8Array([3])),
         createdAt: now,
         updatedAt: now,
@@ -643,6 +647,7 @@ describe("PG views / query helpers", () => {
         frontingSessionId: sessionIdB,
         systemId: otherSystemId,
         sessionStartTime: startTimeB,
+        memberId: otherMemberId,
         encryptedData: testBlob(new Uint8Array([4])),
         createdAt: now,
         updatedAt: now,

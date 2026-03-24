@@ -79,4 +79,12 @@ describe("formatRelativeTime", () => {
       expect(result).toMatch(/in 3 hours/);
     });
   });
+
+  describe("default now", () => {
+    it("uses current time when now is omitted", () => {
+      const recent = new Date(Date.now() - 5 * MINUTE);
+      const result = formatRelativeTime(recent, EN);
+      expect(result).toMatch(/5 minutes ago/);
+    });
+  });
 });
