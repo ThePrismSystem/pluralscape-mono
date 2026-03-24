@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import { SnapshotVersionConflictError } from "@pluralscape/sync";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ import {
   makeSnapshotEnvelope,
   nonce,
 } from "../helpers/crypto-test-fixtures.js";
+import { asDb } from "../helpers/integration-setup.js";
 
 import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -75,7 +76,7 @@ const DDL = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-const schema = { syncDocuments, syncChanges, syncSnapshots };
+const { syncDocuments, syncChanges, syncSnapshots } = schema;
 
 // ── Tests ────────────────────────────────────────────────────────────────
 
@@ -105,7 +106,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
        VALUES ('${systemId}', '${accountId}', '${now}', '${now}')`,
     );
 
-    service = new PgSyncRelayService(db as never);
+    service = new PgSyncRelayService(asDb(db));
   });
 
   afterAll(async () => {

@@ -9,13 +9,18 @@ import { ApiHttpError } from "../../lib/api-error.js";
 
 import type { AuditWriteParams, AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
+import type * as schema from "@pluralscape/db/pg";
 import type {
   AccountId,
   ApiErrorCode,
+  BlobId,
+  BucketId,
+  BucketKeyRotationId,
   CheckInRecordId,
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
+  GroupId,
   MemberId,
   SessionId,
   SystemId,
@@ -24,8 +29,15 @@ import type {
   WebhookDeliveryId,
   WebhookId,
 } from "@pluralscape/types";
+import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 export { testBlob };
+
+/** Cast PGlite DB to PostgresJsDatabase for service functions. Centralizes the type bridge. */
+export function asDb(db: PgliteDatabase<typeof schema>): PostgresJsDatabase {
+  return db as never;
+}
 
 /**
  * Create a base64-encoded serialized EncryptedBlob suitable for service params.
@@ -124,4 +136,24 @@ export function genCheckInRecordId(): CheckInRecordId {
 
 export function genStructureEntityId(): SystemStructureEntityId {
   return `ste_${crypto.randomUUID()}` as SystemStructureEntityId;
+}
+
+export function genGroupId(): GroupId {
+  return `grp_${crypto.randomUUID()}` as GroupId;
+}
+
+export function genBlobId(): BlobId {
+  return `blob_${crypto.randomUUID()}` as BlobId;
+}
+
+export function genBucketId(): BucketId {
+  return `bkt_${crypto.randomUUID()}` as BucketId;
+}
+
+export function genRotationId(): BucketKeyRotationId {
+  return `rot_${crypto.randomUUID()}` as BucketKeyRotationId;
+}
+
+export function genAccountId(): AccountId {
+  return `acc_${crypto.randomUUID()}` as AccountId;
 }

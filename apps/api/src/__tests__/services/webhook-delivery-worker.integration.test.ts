@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from "node:crypto";
 
 import { PGlite } from "@electric-sql/pglite";
-import { accounts, apiKeys, systems, webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
+import * as schema from "@pluralscape/db/pg";
 import {
   createPgWebhookTables,
   pgInsertAccount,
@@ -26,12 +26,12 @@ import {
   findPendingDeliveries,
   processWebhookDelivery,
 } from "../../services/webhook-delivery-worker.js";
-import { genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
+import { asDb, genWebhookDeliveryId, genWebhookId } from "../helpers/integration-setup.js";
 
 import type { AccountId, SystemId, WebhookDeliveryId, WebhookId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
+const { webhookConfigs, webhookDeliveries } = schema;
 
 describe("webhook-delivery-worker (PGlite integration)", () => {
   let client: PGlite;
@@ -111,7 +111,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
 
       const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-      await processWebhookDelivery(db as never, deliveryId, payload, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, payload, mockFetch as never);
 
       // Verify the fetch was called with correct signature and timestamp
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -147,7 +147,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -165,7 +165,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       });
       const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -191,7 +191,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery({ webhookId: disabledWhId });
       const mockFetch = vi.fn();
 
-      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
 
       expect(mockFetch).not.toHaveBeenCalled();
       const [row] = await db
@@ -209,7 +209,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -224,7 +224,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-      await processWebhookDelivery(db as never, deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
 
       const call = mockFetch.mock.calls[0] ?? [];
       const headers = new Headers((call[1] as RequestInit | undefined)?.headers);
@@ -237,20 +237,20 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
   describe("findPendingDeliveries", () => {
     it("finds deliveries with status=pending and no nextRetryAt", async () => {
       const deliveryId = await insertDelivery();
-      const results = await findPendingDeliveries(db as never, 10);
+      const results = await findPendingDeliveries(asDb(db), 10);
       expect(results.length).toBe(1);
       expect(results[0]?.id).toBe(deliveryId);
     });
 
     it("excludes deliveries with future nextRetryAt", async () => {
       await insertDelivery({ nextRetryAt: Date.now() + 60000 });
-      const results = await findPendingDeliveries(db as never, 10);
+      const results = await findPendingDeliveries(asDb(db), 10);
       expect(results.length).toBe(0);
     });
 
     it("includes deliveries with past nextRetryAt", async () => {
       const deliveryId = await insertDelivery({ nextRetryAt: Date.now() - 1000 });
-      const results = await findPendingDeliveries(db as never, 10);
+      const results = await findPendingDeliveries(asDb(db), 10);
       expect(results.length).toBe(1);
       expect(results[0]?.id).toBe(deliveryId);
     });
