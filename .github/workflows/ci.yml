@@ -93,7 +93,6 @@ jobs:
 
       - name: Run all tests with coverage
         env:
-          EMAIL_HASH_PEPPER: abababababababababababababababababababababababababababababababababab
           TEST_VALKEY_PORT: "6379"
         run: pnpm test:coverage
 
