@@ -106,10 +106,12 @@ describe("RLS partial-failure atomicity", () => {
     await client.query(`
       CREATE TABLE accounts (
         id VARCHAR(50) PRIMARY KEY,
+        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
         email_hash VARCHAR(255) NOT NULL UNIQUE,
         email_salt VARCHAR(255) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         kdf_salt VARCHAR(255) NOT NULL,
+        encrypted_master_key BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1

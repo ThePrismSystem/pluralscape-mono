@@ -67,8 +67,14 @@ export class BullMQJobQueue implements JobQueue {
     this.prefix = `psq:${queueName}`;
     this.token = `token-${createId("tk_")}`;
 
+    // Pass connection config (not the instance) to BullMQ so it creates and
+    // fully owns its internal connections. This prevents "Connection is closed"
+    // unhandled rejections during teardown — BullMQ's close() cleanly shuts
+    // down connections it created, but races with duplicated instances.
+    const connOpts = { host: connection.options.host, port: connection.options.port };
+
     this.queue = new Queue(queueName, {
-      connection,
+      connection: connOpts,
       defaultJobOptions: {
         removeOnComplete: false,
         removeOnFail: false,
@@ -78,7 +84,7 @@ export class BullMQJobQueue implements JobQueue {
 
     // Worker without processor — used only for getNextJob() in dequeue()
     this.fetchWorker = new Worker(queueName, undefined, {
-      connection,
+      connection: connOpts,
       autorun: false,
     });
   }

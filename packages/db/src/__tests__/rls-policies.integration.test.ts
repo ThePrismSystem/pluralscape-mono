@@ -169,7 +169,9 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -505,7 +507,9 @@ describe("RLS cross-tenant isolation — system-pk scope (PGlite)", () => {
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -606,7 +610,9 @@ describe("RLS cross-tenant isolation — dual scope (PGlite)", () => {
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -783,7 +789,9 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`
@@ -943,7 +951,9 @@ describe("RLS cross-tenant isolation — bucket_rotation_items (system scope, PG
         encrypted_data BYTEA,
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
       )
     `);
     await client.query(`

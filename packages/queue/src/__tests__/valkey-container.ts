@@ -14,7 +14,7 @@ import { execSync } from "node:child_process";
 import IORedis from "ioredis";
 
 const CONTAINER_NAME = "pluralscape-valkey-test";
-const VALKEY_PORT = 6379;
+const VALKEY_PORT = Number(process.env["TEST_VALKEY_PORT"]) || 10_944;
 const CONNECT_TIMEOUT_MS = 5_000;
 const POLL_INTERVAL_MS = 200;
 
@@ -117,11 +117,14 @@ export async function ensureValkey(): Promise<ValkeyTestContext> {
     }
   }
 
-  // Reconnect
+  // Reconnect — retryStrategy: null prevents ioredis from attempting reconnects
+  // after close(), which would otherwise produce unhandled rejections when BullMQ
+  // duplicates this connection and then tears it down.
   const redis2 = new IORedis({
     host: "localhost",
     port: VALKEY_PORT,
     maxRetriesPerRequest: null,
+    retryStrategy: () => null,
   });
 
   const ready = await waitForReady(redis2);

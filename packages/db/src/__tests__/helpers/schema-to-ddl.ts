@@ -58,6 +58,7 @@ export function pgTableToCreateDDL(table: PgTable): string {
     if (col.hasDefault) line += ` DEFAULT ${escapeDefault(col.default)}`;
     // Only add inline PRIMARY KEY for single-column PKs (not composite)
     if (col.primary && compositePkCols.size === 0) line += " PRIMARY KEY";
+    if (col.isUnique) line += " UNIQUE";
     lines.push(line);
   }
 

@@ -94,10 +94,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
 
     // Verify all deliveries exist in the DB
     for (const id of ids) {
-      const [row] = await db
-        .select()
-        .from(webhookDeliveries)
-        .where(eq(webhookDeliveries.id, id));
+      const [row] = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id));
       expect(row).toBeDefined();
       expect(row?.status).toBe("pending");
     }

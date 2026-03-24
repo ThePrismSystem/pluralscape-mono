@@ -427,7 +427,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
 
     const result = normalizeWebhookConfigs(session);
 
-    // URL validation skipped because typeof url !== "object" → urlVal is null
+    // URL validation runs normally — valid HTTPS URL produces no notification
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
   });
@@ -478,7 +478,7 @@ describe("normalizeWebhookConfigs (M4)", () => {
 
     const result = normalizeWebhookConfigs(session);
 
-    // Plain strings are handled by the typeof === "string" fallback branch
+    // Valid event types handled via ImmutableString .val extraction
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
   });
