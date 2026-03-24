@@ -7,11 +7,9 @@ import type { AuditMetadata } from "../utility.js";
 import type {
   ArchivedWebhookConfig,
   ArchivedWebhookDelivery,
-  EncryptedWebhookPayload,
-  PlaintextWebhookPayload,
   WebhookConfig,
   WebhookDelivery,
-  WebhookDeliveryPayload,
+  WebhookDeliveryStatus,
   WebhookEventType,
 } from "../webhooks.js";
 
@@ -90,30 +88,19 @@ describe("WebhookConfig", () => {
   });
 });
 
-describe("WebhookDeliveryPayload", () => {
-  it("discriminates on encrypted field", () => {
-    function handlePayload(payload: WebhookDeliveryPayload): string {
-      if (payload.encrypted) {
-        expectTypeOf(payload).toEqualTypeOf<EncryptedWebhookPayload>();
-        return payload.ciphertext;
-      }
-      expectTypeOf(payload).toEqualTypeOf<PlaintextWebhookPayload>();
-      return JSON.stringify(payload.body);
-    }
-    expectTypeOf(handlePayload).toBeFunction();
-  });
-});
-
 describe("WebhookDelivery", () => {
   it("has correct field types", () => {
     expectTypeOf<WebhookDelivery["id"]>().toEqualTypeOf<WebhookDeliveryId>();
     expectTypeOf<WebhookDelivery["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<WebhookDelivery["webhookId"]>().toEqualTypeOf<WebhookId>();
     expectTypeOf<WebhookDelivery["eventType"]>().toEqualTypeOf<WebhookEventType>();
-    expectTypeOf<WebhookDelivery["payload"]>().toEqualTypeOf<WebhookDeliveryPayload>();
-    expectTypeOf<WebhookDelivery["statusCode"]>().toEqualTypeOf<number | null>();
-    expectTypeOf<WebhookDelivery["deliveredAt"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<WebhookDelivery["success"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<WebhookDelivery["status"]>().toEqualTypeOf<WebhookDeliveryStatus>();
+    expectTypeOf<WebhookDelivery["httpStatus"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<WebhookDelivery["attemptCount"]>().toEqualTypeOf<number>();
+    expectTypeOf<WebhookDelivery["lastAttemptAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<WebhookDelivery["nextRetryAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<WebhookDelivery["createdAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<WebhookDelivery["archivedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 
   it("has archived as false literal", () => {

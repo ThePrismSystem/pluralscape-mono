@@ -120,14 +120,31 @@ describe("timer-config.service (PGlite integration)", () => {
       );
     });
 
-    it("rejects wakingStart >= wakingEnd", async () => {
+    it("allows overnight waking hours (start > end crosses midnight)", async () => {
+      const result = await createTimerConfig(
+        db as never,
+        systemId,
+        createParams({
+          wakingHoursOnly: true,
+          wakingStart: "22:00",
+          wakingEnd: "08:00",
+        }),
+        auth,
+        noopAudit,
+      );
+      expect(result.wakingHoursOnly).toBe(true);
+      expect(result.wakingStart).toBe("22:00");
+      expect(result.wakingEnd).toBe("08:00");
+    });
+
+    it("rejects wakingStart === wakingEnd", async () => {
       await assertApiError(
         createTimerConfig(
           db as never,
           systemId,
           createParams({
             wakingHoursOnly: true,
-            wakingStart: "22:00",
+            wakingStart: "08:00",
             wakingEnd: "08:00",
           }),
           auth,

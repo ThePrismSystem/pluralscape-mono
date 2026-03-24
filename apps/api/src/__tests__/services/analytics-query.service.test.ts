@@ -1,4 +1,5 @@
 import { MS_PER_DAY } from "@pluralscape/types";
+import { MAX_ANALYTICS_CUSTOM_RANGE_MS } from "@pluralscape/validation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -75,14 +76,14 @@ describe("parseAnalyticsQuery", () => {
     });
   });
 
-  it("returns start=0 and end=now for all-time preset", () => {
+  it("returns bounded start and end=now for all-time preset", () => {
     vi.spyOn(Date, "now").mockReturnValue(FAKE_NOW);
 
     const result = parseAnalyticsQuery({ preset: "all-time" });
 
     expect(result).toEqual({
       preset: "all-time",
-      start: 0,
+      start: Math.max(0, FAKE_NOW - MAX_ANALYTICS_CUSTOM_RANGE_MS),
       end: FAKE_NOW,
     });
   });

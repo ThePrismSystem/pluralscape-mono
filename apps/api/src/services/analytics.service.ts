@@ -228,28 +228,47 @@ export async function computeCoFrontingBreakdown(
   // Only include sessions with a member subject for co-fronting analysis
   const memberSessions = rows.filter((r) => r.memberId !== null);
 
+  // Pre-compute clamped bounds to avoid redundant recalculation in sort + loops
+  const boundsMap = new Map<string, { start: number; end: number }>();
+  for (const session of memberSessions) {
+    boundsMap.set(session.id, getClampedBounds(session, dateRange));
+  }
+
   // Calculate pair overlaps
   const pairMap = new Map<
     string,
     { memberA: string; memberB: string; totalDuration: number; sessionCount: number }
   >();
 
-  for (let i = 0; i < memberSessions.length; i++) {
-    const sessionA = memberSessions[i];
+  // Sort by clamped start time ascending for early termination
+  const sorted = [...memberSessions].sort((a, b) => {
+    const boundsA = boundsMap.get(a.id);
+    const boundsB = boundsMap.get(b.id);
+    if (!boundsA || !boundsB) return 0;
+    return boundsA.start - boundsB.start;
+  });
+
+  for (let i = 0; i < sorted.length; i++) {
+    const sessionA = sorted[i];
     if (!sessionA) continue;
 
-    for (let j = i + 1; j < memberSessions.length; j++) {
-      const sessionB = memberSessions[j];
+    const boundsA = boundsMap.get(sessionA.id);
+    if (!boundsA || boundsA.end <= boundsA.start) continue;
+
+    for (let j = i + 1; j < sorted.length; j++) {
+      const sessionB = sorted[j];
       if (!sessionB) continue;
+
+      const boundsB = boundsMap.get(sessionB.id);
+      if (!boundsB) continue;
+
+      // Since sorted by start, if B starts after A ends, no more overlaps for A
+      if (boundsB.start >= boundsA.end) break;
 
       // Skip if same member
       if (sessionA.memberId === sessionB.memberId) continue;
 
-      // Calculate overlap using clamped bounds
-      const boundsA = getClampedBounds(sessionA, dateRange);
-      const boundsB = getClampedBounds(sessionB, dateRange);
-
-      if (boundsA.end <= boundsA.start || boundsB.end <= boundsB.start) continue;
+      if (boundsB.end <= boundsB.start) continue;
 
       const overlapStart = Math.max(boundsA.start, boundsB.start);
       const overlapEnd = Math.min(boundsA.end, boundsB.end);
@@ -287,8 +306,8 @@ export async function computeCoFrontingBreakdown(
   }
   const events: SweepEvent[] = [];
   for (const session of memberSessions) {
-    const bounds = getClampedBounds(session, dateRange);
-    if (bounds.end <= bounds.start) continue;
+    const bounds = boundsMap.get(session.id);
+    if (!bounds || bounds.end <= bounds.start) continue;
     events.push({ time: bounds.start, delta: 1 }, { time: bounds.end, delta: -1 });
   }
   // Sort by time; at the same time, process starts before ends

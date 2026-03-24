@@ -58,6 +58,44 @@ describe("AnalyticsQuerySchema", () => {
       expect(result.data.endDate).toBe(2000);
     }
   });
+
+  it("accepts custom range within 366-day limit", () => {
+    const start = 1_000_000;
+    const end = start + 365 * 86_400_000;
+    const result = AnalyticsQuerySchema.safeParse({
+      preset: "custom",
+      startDate: String(start),
+      endDate: String(end),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts custom range at exactly 366 days", () => {
+    const start = 1_000_000;
+    const end = start + 366 * 86_400_000;
+    const result = AnalyticsQuerySchema.safeParse({
+      preset: "custom",
+      startDate: String(start),
+      endDate: String(end),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects custom range exceeding 366 days", () => {
+    const start = 1_000_000;
+    const end = start + 367 * 86_400_000;
+    const result = AnalyticsQuerySchema.safeParse({
+      preset: "custom",
+      startDate: String(start),
+      endDate: String(end),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("does not apply max range check to non-custom presets", () => {
+    const result = AnalyticsQuerySchema.safeParse({ preset: "all-time" });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("CreateFrontingReportBodySchema", () => {

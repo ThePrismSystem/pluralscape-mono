@@ -171,14 +171,33 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
   });
 
-  it("disables timer with wakingHoursOnly=true and start >= end (start=22:00, end=08:00)", () => {
-    const session = createTimerSession(keys, "doc-m4-timer-hours-inv");
+  it("does not disable timer with overnight waking hours (start=22:00, end=08:00)", () => {
+    const session = createTimerSession(keys, "doc-m4-timer-hours-overnight");
 
     session.change((d) => {
       d.timers["tmr_1"] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: s("22:00"),
         wakingEnd: s("08:00"),
+      });
+    });
+
+    const result = normalizeTimerConfig(session);
+
+    expect(result.count).toBe(0);
+    expect(result.envelope).toBeNull();
+    expect(result.notifications).toHaveLength(0);
+    expect(session.document.timers["tmr_1"]?.enabled).toBe(true);
+  });
+
+  it("disables timer with wakingHoursOnly=true and start equals end", () => {
+    const session = createTimerSession(keys, "doc-m4-timer-hours-eq");
+
+    session.change((d) => {
+      d.timers["tmr_1"] = makeTimer("tmr_1", {
+        wakingHoursOnly: true,
+        wakingStart: s("10:00"),
+        wakingEnd: s("10:00"),
       });
     });
 
@@ -309,7 +328,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     expect(result.notifications).toHaveLength(0);
   });
 
-  it("disables only invalid timers in a mixed set", () => {
+  it("disables only invalid timers in a mixed set (overnight range is valid)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-mixed");
 
     session.change((d) => {
@@ -325,6 +344,11 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
         wakingStart: s("20:00"),
         wakingEnd: s("06:00"),
       });
+      d.timers["tmr_equal"] = makeTimer("tmr_equal", {
+        wakingHoursOnly: true,
+        wakingStart: s("12:00"),
+        wakingEnd: s("12:00"),
+      });
     });
 
     const result = normalizeTimerConfig(session);
@@ -333,7 +357,8 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     expect(result.notifications).toHaveLength(2);
     expect(session.document.timers["tmr_valid"]?.enabled).toBe(true);
     expect(session.document.timers["tmr_zero"]?.enabled).toBe(false);
-    expect(session.document.timers["tmr_hours"]?.enabled).toBe(false);
+    expect(session.document.timers["tmr_hours"]?.enabled).toBe(true);
+    expect(session.document.timers["tmr_equal"]?.enabled).toBe(false);
   });
 
   it("returns count=0 for empty timers map", () => {

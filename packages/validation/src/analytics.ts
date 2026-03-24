@@ -1,7 +1,7 @@
 import { DATE_RANGE_PRESETS } from "@pluralscape/types";
 import { z } from "zod/v4";
 
-import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
+import { MAX_ANALYTICS_CUSTOM_RANGE_MS, MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
 // ── Analytics query params ─────────────────────────────────────
 
@@ -36,6 +36,15 @@ export const AnalyticsQuerySchema = z
       return true;
     },
     { message: "endDate must be >= startDate" },
+  )
+  .refine(
+    (data) => {
+      if (data.preset === "custom" && data.startDate !== undefined && data.endDate !== undefined) {
+        return data.endDate - data.startDate <= MAX_ANALYTICS_CUSTOM_RANGE_MS;
+      }
+      return true;
+    },
+    { message: "Custom date range must not exceed 366 days" },
   );
 
 // ── Create fronting report ─────────────────────────────────────

@@ -38,12 +38,22 @@ describe("CreateTimerConfigBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects when wakingStart >= wakingEnd", () => {
+  it("accepts overnight waking hours range (start > end)", () => {
     const result = CreateTimerConfigBodySchema.safeParse({
       encryptedData: "dGVzdA==",
       wakingHoursOnly: true,
       wakingStart: "22:00",
       wakingEnd: "08:00",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects when wakingStart equals wakingEnd", () => {
+    const result = CreateTimerConfigBodySchema.safeParse({
+      encryptedData: "dGVzdA==",
+      wakingHoursOnly: true,
+      wakingStart: "10:00",
+      wakingEnd: "10:00",
     });
     expect(result.success).toBe(false);
   });
@@ -114,7 +124,7 @@ describe("UpdateTimerConfigBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects when wakingStart >= wakingEnd (equal times)", () => {
+  it("rejects when wakingStart equals wakingEnd", () => {
     const result = UpdateTimerConfigBodySchema.safeParse({
       encryptedData: "dGVzdA==",
       version: 1,
@@ -125,7 +135,7 @@ describe("UpdateTimerConfigBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects when wakingStart > wakingEnd (inverted range)", () => {
+  it("accepts overnight waking hours range (start > end)", () => {
     const result = UpdateTimerConfigBodySchema.safeParse({
       encryptedData: "dGVzdA==",
       version: 1,
@@ -133,7 +143,7 @@ describe("UpdateTimerConfigBodySchema", () => {
       wakingStart: "22:00",
       wakingEnd: "08:00",
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it("accepts valid waking hours range", () => {

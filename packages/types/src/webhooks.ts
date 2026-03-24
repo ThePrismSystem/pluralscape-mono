@@ -40,32 +40,20 @@ export interface WebhookConfig extends AuditMetadata {
 /** An archived webhook config. */
 export type ArchivedWebhookConfig = Archived<WebhookConfig>;
 
-/** A plaintext webhook delivery payload. */
-export interface PlaintextWebhookPayload {
-  readonly encrypted: false;
-  readonly body: Readonly<Record<string, unknown>>;
-}
-
-/** An encrypted webhook delivery payload. */
-export interface EncryptedWebhookPayload {
-  readonly encrypted: true;
-  readonly ciphertext: string;
-}
-
-/** Discriminated union of webhook delivery payloads. */
-export type WebhookDeliveryPayload = PlaintextWebhookPayload | EncryptedWebhookPayload;
-
-/** A record of a webhook delivery attempt. */
+/** A record of a webhook delivery attempt with retry lifecycle. */
 export interface WebhookDelivery {
   readonly id: WebhookDeliveryId;
   readonly systemId: SystemId;
   readonly webhookId: WebhookId;
   readonly eventType: WebhookEventType;
-  readonly payload: WebhookDeliveryPayload;
-  readonly statusCode: number | null;
-  readonly deliveredAt: UnixMillis;
-  readonly success: boolean;
+  readonly status: WebhookDeliveryStatus;
+  readonly httpStatus: number | null;
+  readonly attemptCount: number;
+  readonly lastAttemptAt: UnixMillis | null;
+  readonly nextRetryAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
   readonly archived: false;
+  readonly archivedAt: UnixMillis | null;
 }
 
 /** An archived webhook delivery. */

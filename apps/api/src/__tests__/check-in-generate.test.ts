@@ -64,6 +64,32 @@ describe("isWithinWakingHours", () => {
   it("returns false at exact end", () => {
     expect(isWithinWakingHours(1320, 480, 1320)).toBe(false);
   });
+
+  // Overnight range tests (start > end, e.g. 22:00-06:00 = 1320-360)
+  it("returns true during late night in overnight range", () => {
+    // 23:00 (1380) is within 22:00-06:00 (1320-360)
+    expect(isWithinWakingHours(1380, 1320, 360)).toBe(true);
+  });
+
+  it("returns true during early morning in overnight range", () => {
+    // 03:00 (180) is within 22:00-06:00 (1320-360)
+    expect(isWithinWakingHours(180, 1320, 360)).toBe(true);
+  });
+
+  it("returns false during daytime in overnight range", () => {
+    // 12:00 (720) is outside 22:00-06:00 (1320-360)
+    expect(isWithinWakingHours(720, 1320, 360)).toBe(false);
+  });
+
+  it("returns true at exact start of overnight range", () => {
+    // 22:00 (1320) is within 22:00-06:00 (1320-360)
+    expect(isWithinWakingHours(1320, 1320, 360)).toBe(true);
+  });
+
+  it("returns false at exact end of overnight range", () => {
+    // 06:00 (360) is outside 22:00-06:00 (1320-360)
+    expect(isWithinWakingHours(360, 1320, 360)).toBe(false);
+  });
 });
 
 describe("getCurrentMinutesUtc", () => {
@@ -278,7 +304,7 @@ describe("createCheckInGenerateHandler", () => {
     expect(chain.onConflictDoNothing).toHaveBeenCalledOnce();
   });
 
-  it("isolates per-config errors and continues", async () => {
+  it("isolates per-config errors and continues processing remaining configs", async () => {
     const { db, chain } = mockDb();
 
     const config1 = makeConfig({ id: "tmr_test-1" });
@@ -294,7 +320,8 @@ describe("createCheckInGenerateHandler", () => {
 
     const handler = createCheckInGenerateHandler(db);
 
-    await handler(stubJob(), stubCtx());
+    // Handler still processes all configs, then throws at the end
+    await expect(handler(stubJob(), stubCtx())).rejects.toThrow("errored during processing");
 
     expect(loggerWarnMock).toHaveBeenCalledOnce();
     expect(chain.insert).toHaveBeenCalledTimes(2);
@@ -367,7 +394,7 @@ describe("createCheckInGenerateHandler", () => {
     );
   });
 
-  it("logs error summary when configs fail", async () => {
+  it("throws when configs fail during processing", async () => {
     const { db, chain } = mockDb();
 
     chain.limit.mockResolvedValue([makeConfig({ id: "tmr_test-1" })]);
@@ -376,11 +403,7 @@ describe("createCheckInGenerateHandler", () => {
     });
 
     const handler = createCheckInGenerateHandler(db);
-    await handler(stubJob(), stubCtx());
 
-    expect(loggerErrorMock).toHaveBeenCalledOnce();
-    expect(loggerErrorMock).toHaveBeenCalledWith("Check-in generation completed with errors", {
-      errorCount: 1,
-    });
+    await expect(handler(stubJob(), stubCtx())).rejects.toThrow("errored during processing");
   });
 });

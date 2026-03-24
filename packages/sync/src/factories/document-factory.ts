@@ -100,6 +100,8 @@ export function createSystemCoreDocument(): Automerge.Doc<SystemCoreDocument> {
     innerWorldEntities: {},
     innerWorldRegions: {},
     timers: {},
+    webhookConfigs: {},
+    frontingReports: {},
     groupMemberships: {},
     structureEntityLinks: {},
     structureEntityMemberLinks: {},

@@ -12,6 +12,7 @@ import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
+import { resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -95,13 +96,28 @@ function toWebhookConfigResult(row: {
   };
 }
 
-function validateUrlProtocol(url: string): void {
-  const isProduction = process.env.NODE_ENV === "production";
-  if (isProduction && !url.startsWith("https://")) {
+/**
+ * Validate a webhook URL for protocol and SSRF safety.
+ *
+ * - Enforces HTTPS in production.
+ * - Resolves the hostname and checks all resolved IPs against private/reserved ranges.
+ */
+async function validateWebhookUrl(url: string): Promise<void> {
+  if (process.env.NODE_ENV === "production" && !url.startsWith("https://")) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
       "Webhook URL must use HTTPS in production",
+    );
+  }
+
+  try {
+    await resolveAndValidateUrl(url);
+  } catch (error: unknown) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      error instanceof Error ? error.message : "Webhook URL validation failed",
     );
   }
 }
@@ -123,7 +139,7 @@ export async function createWebhookConfig(
   }
 
   const { url, eventTypes, enabled, cryptoKeyId } = result.data;
-  validateUrlProtocol(url);
+  await validateWebhookUrl(url);
 
   const whId = createId(ID_PREFIXES.webhook);
   const timestamp = now();
@@ -244,7 +260,7 @@ export async function updateWebhookConfig(
   const { url, eventTypes, enabled, version } = parseResult.data;
 
   if (url !== undefined) {
-    validateUrlProtocol(url);
+    await validateWebhookUrl(url);
   }
 
   const timestamp = now();

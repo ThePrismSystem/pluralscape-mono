@@ -1,2 +1,0 @@
-ALTER TABLE "webhook_configs" ADD COLUMN "version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "webhook_configs" ADD CONSTRAINT "webhook_configs_version_check" CHECK ("webhook_configs"."version" >= 1);

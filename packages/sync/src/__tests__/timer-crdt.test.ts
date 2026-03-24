@@ -190,9 +190,9 @@ describe("normalizeTimerConfig", () => {
     expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
   });
 
-  it("disables timer when wakingHoursOnly=true but wakingStart >= wakingEnd", () => {
+  it("does not disable timer with overnight waking hours (start > end)", () => {
     const base = createSystemCoreDocument();
-    const docId = asSyncDocId("doc-timer-waking");
+    const docId = asSyncDocId("doc-timer-waking-overnight");
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
@@ -205,6 +205,31 @@ describe("normalizeTimerConfig", () => {
         wakingHoursOnly: true,
         wakingStart: s("22:00"),
         wakingEnd: s("08:00"),
+      });
+    });
+
+    const result = normalizeTimerConfig(session);
+
+    expect(result.count).toBe(0);
+    expect(result.notifications).toHaveLength(0);
+    expect(session.document.timers["tmr_1"]?.enabled).toBe(true);
+  });
+
+  it("disables timer when wakingHoursOnly=true but wakingStart equals wakingEnd", () => {
+    const base = createSystemCoreDocument();
+    const docId = asSyncDocId("doc-timer-waking-eq");
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: docId,
+      sodium,
+    });
+
+    session.change((d) => {
+      d.timers["tmr_1"] = makeTimer("tmr_1", {
+        wakingHoursOnly: true,
+        wakingStart: s("10:00"),
+        wakingEnd: s("10:00"),
       });
     });
 

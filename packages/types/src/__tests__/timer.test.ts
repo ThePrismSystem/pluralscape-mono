@@ -36,8 +36,8 @@ describe("TimerConfig", () => {
 });
 
 describe("CheckInRecord", () => {
-  it("extends AuditMetadata", () => {
-    expectTypeOf<CheckInRecord>().toExtend<AuditMetadata>();
+  it("does not extend AuditMetadata (log-like entity without OCC)", () => {
+    expectTypeOf<CheckInRecord>().not.toExtend<AuditMetadata>();
   });
 
   it("has exactly the expected keys", () => {
@@ -50,9 +50,7 @@ describe("CheckInRecord", () => {
       | "respondedAt"
       | "dismissed"
       | "archived"
-      | "createdAt"
-      | "updatedAt"
-      | "version"
+      | "archivedAt"
     >();
   });
 
@@ -64,10 +62,8 @@ describe("CheckInRecord", () => {
     expectTypeOf<CheckInRecord["respondedByMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<CheckInRecord["respondedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<CheckInRecord["dismissed"]>().toEqualTypeOf<boolean>();
-  });
-
-  it("has archived as false literal", () => {
     expectTypeOf<CheckInRecord["archived"]>().toEqualTypeOf<false>();
+    expectTypeOf<CheckInRecord["archivedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 
   it("ArchivedCheckInRecord has archived as true literal", () => {

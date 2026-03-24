@@ -39,5 +39,11 @@ export const WEBHOOK_MAX_RETRY_ATTEMPTS = 5;
 /** Base backoff delay in milliseconds for webhook delivery retries. */
 export const WEBHOOK_BASE_BACKOFF_MS = 1000;
 
+/** HTTP header name for the HMAC-SHA256 webhook signature. */
+export const WEBHOOK_SIGNATURE_HEADER = "X-Pluralscape-Signature";
+
+/** HTTP header name for the delivery timestamp (Unix seconds). */
+export const WEBHOOK_TIMESTAMP_HEADER = "X-Pluralscape-Timestamp";
+
 /** Maximum age in days for terminal (success/failed) webhook deliveries before cleanup. */
 export const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
