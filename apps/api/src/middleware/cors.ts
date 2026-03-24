@@ -28,6 +28,12 @@ export function createCorsMiddleware(): MiddlewareHandler {
     return (_, next) => next();
   }
 
+  if (origins.includes("*")) {
+    throw new Error(
+      'CORS_ORIGIN must not contain bare "*". Use explicit origins (e.g., "https://app.example.com") or wildcard subdomains (e.g., "*.example.com").',
+    );
+  }
+
   return cors({
     origin: (requestOrigin) => (isOriginAllowed(requestOrigin, origins) ? requestOrigin : null),
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
