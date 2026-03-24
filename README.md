@@ -8,15 +8,15 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-3 complete, starting Milestone 4 (Fronting Engine).**
+**Active development — Milestones 0-4 complete, starting Milestone 5 (Communication).**
 
-Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), and 3 (Sync and Real-Time) are complete. The full REST API is implemented with 155 operations across 20 route domains, documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
+Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), and 4 (Fronting Engine) are complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-Milestone 3 delivered encrypted CRDT sync, WebSocket/SSE transport, offline queue with replay, conflict resolution, multi-device key transfer, a Playwright E2E suite, and comprehensive security audit remediation. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
+Milestone 4 delivered the fronting engine: session CRUD with co-fronting as parallel timelines, per-subject analytics with date range presets, automated check-in timers, a webhook event system with HMAC-signed payloads, and CRDT sync strategies for all new entities. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 
-Unit and integration tests run via Vitest; E2E tests via Playwright (`apps/api-e2e`). Coverage is enforced in CI — run `pnpm test:coverage` for a current report.
+Unit and integration tests run via Vitest; E2E tests via Playwright (`apps/api-e2e`). Coverage is enforced in CI at 85% minimum (lines, functions, branches, statements).
 
 ```bash
 pnpm test              # Run all tests
@@ -25,6 +25,17 @@ pnpm test:integration  # Integration tests only
 pnpm test:coverage     # Tests with coverage report
 pnpm test:e2e          # E2E tests (Playwright)
 ```
+
+### Current Coverage
+
+| Metric     | Coverage |
+| ---------- | -------- |
+| Statements | 95.54%   |
+| Branches   | 87.37%   |
+| Functions  | 96.22%   |
+| Lines      | 96.06%   |
+
+E2E suite: 79 tests across 24 spec files covering auth, CRUD, fronting, sync, webhooks, timers, and real-time notifications. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 
@@ -184,7 +195,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 26 accepted ADRs cover the full stack from licensing through lifecycle event validation. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 27 accepted ADRs cover the full stack from licensing through webhook secret rotation. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 

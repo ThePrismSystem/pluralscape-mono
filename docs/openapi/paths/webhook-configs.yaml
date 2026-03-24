@@ -27,15 +27,16 @@
           application/json:
             schema:
               allOf:
-                - $ref: "../openapi.yaml#/components/schemas/PaginatedResponse"
                 - type: object
+                  required: [items]
                   properties:
                     items:
                       type: array
                       items:
                         $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -67,9 +68,9 @@
             schema:
               $ref: "../schemas/webhooks.yaml#/WebhookConfigCreateResponse"
       "400":
-        $ref: "../openapi.yaml#/components/responses/BadRequest"
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -100,7 +101,7 @@
             schema:
               $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -136,9 +137,9 @@
             schema:
               $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
       "400":
-        $ref: "../openapi.yaml#/components/responses/BadRequest"
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
       "409":
@@ -166,7 +167,7 @@
       "204":
         description: Webhook config deleted
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
       "409":
@@ -195,7 +196,7 @@
       "204":
         description: Webhook config archived
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
@@ -225,6 +226,6 @@
             schema:
               $ref: "../schemas/webhooks.yaml#/WebhookConfigResponse"
       "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthorized"
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"

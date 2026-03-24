@@ -1,5 +1,6 @@
 /systems/{systemId}/fronting-reports:
   get:
+    operationId: listFrontingReports
     tags: [Fronting Reports]
     summary: List fronting reports
     description: List stored fronting report snapshots with cursor pagination.
@@ -35,6 +36,7 @@
             schema:
               $ref: "../schemas/common.yaml#/ErrorResponse"
   post:
+    operationId: createFrontingReport
     tags: [Fronting Reports]
     summary: Create fronting report
     description: |
@@ -71,6 +73,7 @@
 
 /systems/{systemId}/fronting-reports/{reportId}:
   get:
+    operationId: getFrontingReport
     tags: [Fronting Reports]
     summary: Get fronting report
     description: Retrieve a single fronting report by ID.
@@ -97,6 +100,7 @@
             schema:
               $ref: "../schemas/common.yaml#/ErrorResponse"
   delete:
+    operationId: deleteFrontingReport
     tags: [Fronting Reports]
     summary: Delete fronting report
     description: Permanently delete a fronting report.
