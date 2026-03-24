@@ -1,12 +1,25 @@
 import { createHmac } from "node:crypto";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { WEBHOOK_SIGNATURE_HEADER, WEBHOOK_TIMESTAMP_HEADER } from "../../service.constants.js";
+import {
+  WEBHOOK_MAX_RETRY_ATTEMPTS,
+  WEBHOOK_SIGNATURE_HEADER,
+  WEBHOOK_TIMESTAMP_HEADER,
+} from "../../service.constants.js";
 import {
   calculateBackoffMs,
   computeWebhookSignature,
+  findPendingDeliveries,
+  processWebhookDelivery,
 } from "../../services/webhook-delivery-worker.js";
+import { mockDb } from "../helpers/mock-db.js";
+
+import type { WebhookDeliveryId } from "@pluralscape/types";
+
+vi.mock("../../lib/logger.js", () => ({
+  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
+}));
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -106,5 +119,220 @@ describe("webhook header constants", () => {
 
   it("WEBHOOK_TIMESTAMP_HEADER has the correct header name", () => {
     expect(WEBHOOK_TIMESTAMP_HEADER).toBe("X-Pluralscape-Timestamp");
+  });
+});
+
+// ── Fixtures ──────────────────────────────────────────────────────
+
+const DELIVERY_ROW = {
+  id: "wd_test-delivery",
+  webhookId: "wh_test-config",
+  systemId: "sys_test-system",
+  eventType: "fronting.started",
+  attemptCount: 0,
+};
+
+const CONFIG_ROW = {
+  id: "wh_test-config",
+  url: "https://example.com/webhook",
+  secret: "dGVzdC1zZWNyZXQta2V5",
+  enabled: true,
+};
+
+// ── processWebhookDelivery ────────────────────────────────────────
+
+describe("processWebhookDelivery (unit)", () => {
+  it("returns early when delivery not found", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await processWebhookDelivery(db, "wd_missing" as WebhookDeliveryId, {});
+
+    expect(chain.update).not.toHaveBeenCalled();
+  });
+
+  it("marks as failed when config not found", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ ...DELIVERY_ROW }]).mockResolvedValueOnce([]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("marks as failed when config is disabled", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW, enabled: false }]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("calls fetch with correct URL and payload on success", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+
+    // Bun's fetch includes a static `preconnect` method that vi.fn() can't satisfy
+    await processWebhookDelivery(
+      db,
+      "wd_test" as WebhookDeliveryId,
+      { event: "test" },
+      mockFetch as never,
+    );
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const call = mockFetch.mock.calls[0] ?? [];
+    const [url, options] = call as [string, RequestInit];
+    expect(url).toBe("https://example.com/webhook");
+    expect(options.method).toBe("POST");
+    expect(options.body).toBe(JSON.stringify({ event: "test" }));
+  });
+
+  it("sends correct headers (Content-Type, Signature, Timestamp)", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+
+    await processWebhookDelivery(
+      db,
+      "wd_test" as WebhookDeliveryId,
+      { event: "test" },
+      mockFetch as never,
+    );
+
+    const call = mockFetch.mock.calls[0] ?? [];
+    const options = call[1] as RequestInit;
+    const headers = options.headers as Record<string, string>;
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers[WEBHOOK_SIGNATURE_HEADER]).toMatch(/^[0-9a-f]{64}$/);
+    expect(headers[WEBHOOK_TIMESTAMP_HEADER]).toMatch(/^\d+$/);
+  });
+
+  it("marks as success on 2xx response", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "success" }));
+  });
+
+  it("schedules retry on non-2xx when under max attempts", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW, attemptCount: 0 }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+
+    const setCall = chain.set.mock.calls[0] ?? [];
+    const setArg = setCall[0] as Record<string, unknown>;
+    expect(setArg.httpStatus).toBe(500);
+    expect(setArg.nextRetryAt).toBeDefined();
+    expect(setArg.status).toBeUndefined();
+  });
+
+  it("marks as failed when max retries exceeded", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW, attemptCount: WEBHOOK_MAX_RETRY_ATTEMPTS - 1 }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("handles TypeError (network error) without rethrowing", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+
+    const setCall = chain.set.mock.calls[0] ?? [];
+    const setArg = setCall[0] as Record<string, unknown>;
+    expect(setArg.httpStatus).toBeNull();
+  });
+
+  it("handles AbortError (timeout) without rethrowing", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const abortErr = new DOMException("The operation was aborted", "AbortError");
+    const mockFetch = vi.fn().mockRejectedValue(abortErr);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+
+    const setCall = chain.set.mock.calls[0] ?? [];
+    const setArg = setCall[0] as Record<string, unknown>;
+    expect(setArg.httpStatus).toBeNull();
+  });
+
+  it("rethrows unexpected errors", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
+      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+
+    const mockFetch = vi.fn().mockRejectedValue(new Error("unexpected"));
+
+    await expect(
+      processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never),
+    ).rejects.toThrow("unexpected");
+  });
+});
+
+// ── findPendingDeliveries ─────────────────────────────────────────
+
+describe("findPendingDeliveries (unit)", () => {
+  it("passes limit to the query", async () => {
+    const { db, chain } = mockDb();
+    const TEST_LIMIT = 25;
+
+    await findPendingDeliveries(db, TEST_LIMIT);
+
+    expect(chain.limit).toHaveBeenCalledWith(TEST_LIMIT);
+  });
+
+  it("returns the query result", async () => {
+    const { db, chain } = mockDb();
+    const mockResults = [
+      {
+        id: "wd_1",
+        webhookId: "wh_1",
+        systemId: "sys_1",
+        eventType: "fronting.started",
+      },
+    ];
+    chain.limit.mockResolvedValueOnce(mockResults);
+
+    const result = await findPendingDeliveries(db, 10);
+
+    expect(result).toEqual(mockResults);
   });
 });

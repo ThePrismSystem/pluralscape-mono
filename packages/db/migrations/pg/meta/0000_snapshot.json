@@ -1,5 +1,5 @@
 {
-  "id": "619de438-94e1-4987-8e35-ee6dcba37ba8",
+  "id": "f632b7d8-62a2-4f54-bace-1c1f4cbff961",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -726,7 +726,7 @@
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
-          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')"
+          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'lifecycle-event.archived', 'lifecycle-event.restored', 'lifecycle-event.deleted', 'timer-config.created', 'timer-config.updated', 'timer-config.archived', 'timer-config.restored', 'timer-config.deleted', 'check-in-record.created', 'check-in-record.responded', 'check-in-record.dismissed', 'check-in-record.archived', 'check-in-record.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived', 'fronting-report.created', 'fronting-report.deleted', 'fronting-session.created', 'fronting-session.updated', 'fronting-session.ended', 'fronting-session.archived', 'fronting-session.restored', 'fronting-session.deleted', 'fronting-comment.created', 'fronting-comment.updated', 'fronting-comment.archived', 'fronting-comment.restored', 'fronting-comment.deleted', 'webhook-config.created', 'webhook-config.updated', 'webhook-config.archived', 'webhook-config.restored', 'webhook-config.deleted', 'webhook-delivery.deleted')"
         },
         "audit_log_detail_length_check": {
           "name": "audit_log_detail_length_check",
@@ -1952,6 +1952,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "archived": {
           "name": "archived",
           "type": "boolean",
@@ -2065,7 +2071,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "check_in_records_idempotency_key_unique": {
+          "name": "check_in_records_idempotency_key_unique",
+          "nullsNotDistinct": false,
+          "columns": ["idempotency_key"]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "check_in_records_archived_consistency_check": {
@@ -3869,6 +3881,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "custom_front_id": {
+          "name": "custom_front_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "structure_entity_id": {
+          "name": "structure_entity_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "encrypted_data": {
           "name": "encrypted_data",
           "type": "bytea",
@@ -3994,6 +4018,24 @@
           "columnsTo": ["id", "system_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
+        },
+        "fronting_comments_custom_front_id_custom_fronts_id_fk": {
+          "name": "fronting_comments_custom_front_id_custom_fronts_id_fk",
+          "tableFrom": "fronting_comments",
+          "tableTo": "custom_fronts",
+          "columnsFrom": ["custom_front_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "fronting_comments_structure_entity_id_system_id_system_structure_entities_id_system_id_fk": {
+          "name": "fronting_comments_structure_entity_id_system_id_system_structure_entities_id_system_id_fk",
+          "tableFrom": "fronting_comments",
+          "tableTo": "system_structure_entities",
+          "columnsFrom": ["structure_entity_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4007,6 +4049,10 @@
         "fronting_comments_archived_consistency_check": {
           "name": "fronting_comments_archived_consistency_check",
           "value": "(\"fronting_comments\".\"archived\" = true) = (\"fronting_comments\".\"archived_at\" IS NOT NULL)"
+        },
+        "fronting_comments_author_check": {
+          "name": "fronting_comments_author_check",
+          "value": "(\"fronting_comments\".\"member_id\" IS NOT NULL OR \"fronting_comments\".\"custom_front_id\" IS NOT NULL OR \"fronting_comments\".\"structure_entity_id\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -4372,7 +4418,7 @@
         },
         "fronting_sessions_subject_check": {
           "name": "fronting_sessions_subject_check",
-          "value": "\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL OR \"fronting_sessions\".\"structure_entity_id\" IS NOT NULL"
+          "value": "(\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL OR \"fronting_sessions\".\"structure_entity_id\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -5477,6 +5523,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
         "encrypted_data": {
           "name": "encrypted_data",
           "type": "bytea",
@@ -5486,6 +5538,26 @@
         "plaintext_metadata": {
           "name": "plaintext_metadata",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
           "primaryKey": false,
           "notNull": false
         }
@@ -5532,6 +5604,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "lifecycle_events_system_archived_idx": {
+          "name": "lifecycle_events_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -5552,6 +5645,14 @@
         "lifecycle_events_event_type_check": {
           "name": "lifecycle_events_event_type_check",
           "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'structure-entity-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')"
+        },
+        "lifecycle_events_version_check": {
+          "name": "lifecycle_events_version_check",
+          "value": "\"lifecycle_events\".\"version\" >= 1"
+        },
+        "lifecycle_events_archived_consistency_check": {
+          "name": "lifecycle_events_archived_consistency_check",
+          "value": "(\"lifecycle_events\".\"archived\" = true) = (\"lifecycle_events\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -8080,9 +8181,15 @@
         }
       },
       "indexes": {
-        "system_structure_entity_associations_source_idx": {
-          "name": "system_structure_entity_associations_source_idx",
+        "system_structure_entity_associations_system_source_idx": {
+          "name": "system_structure_entity_associations_system_source_idx",
           "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "source_entity_id",
               "isExpression": false,
@@ -8095,26 +8202,17 @@
           "method": "btree",
           "with": {}
         },
-        "system_structure_entity_associations_target_idx": {
-          "name": "system_structure_entity_associations_target_idx",
-          "columns": [
-            {
-              "expression": "target_entity_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "system_structure_entity_associations_system_id_idx": {
-          "name": "system_structure_entity_associations_system_id_idx",
+        "system_structure_entity_associations_system_target_idx": {
+          "name": "system_structure_entity_associations_system_target_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8214,9 +8312,15 @@
         }
       },
       "indexes": {
-        "system_structure_entity_links_entity_id_idx": {
-          "name": "system_structure_entity_links_entity_id_idx",
+        "system_structure_entity_links_system_entity_idx": {
+          "name": "system_structure_entity_links_system_entity_idx",
           "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "entity_id",
               "isExpression": false,
@@ -8229,26 +8333,17 @@
           "method": "btree",
           "with": {}
         },
-        "system_structure_entity_links_parent_entity_id_idx": {
-          "name": "system_structure_entity_links_parent_entity_id_idx",
-          "columns": [
-            {
-              "expression": "parent_entity_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "system_structure_entity_links_system_id_idx": {
-          "name": "system_structure_entity_links_system_id_idx",
+        "system_structure_entity_links_system_parent_idx": {
+          "name": "system_structure_entity_links_system_parent_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "parent_entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8290,7 +8385,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "system_structure_entity_links_entity_parent_uniq": {
+          "name": "system_structure_entity_links_entity_parent_uniq",
+          "nullsNotDistinct": true,
+          "columns": ["entity_id", "parent_entity_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -8337,24 +8438,15 @@
         }
       },
       "indexes": {
-        "system_structure_entity_member_links_parent_entity_id_idx": {
-          "name": "system_structure_entity_member_links_parent_entity_id_idx",
+        "system_structure_entity_member_links_system_member_idx": {
+          "name": "system_structure_entity_member_links_system_member_idx",
           "columns": [
             {
-              "expression": "parent_entity_id",
+              "expression": "system_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "system_structure_entity_member_links_member_id_idx": {
-          "name": "system_structure_entity_member_links_member_id_idx",
-          "columns": [
+            },
             {
               "expression": "member_id",
               "isExpression": false,
@@ -8367,11 +8459,17 @@
           "method": "btree",
           "with": {}
         },
-        "system_structure_entity_member_links_system_id_idx": {
-          "name": "system_structure_entity_member_links_system_id_idx",
+        "system_structure_entity_member_links_system_parent_idx": {
+          "name": "system_structure_entity_member_links_system_parent_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "parent_entity_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8413,7 +8511,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "system_structure_entity_member_links_member_parent_uniq": {
+          "name": "system_structure_entity_member_links_member_parent_uniq",
+          "nullsNotDistinct": true,
+          "columns": ["member_id", "parent_entity_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -8846,6 +8950,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
         "archived": {
           "name": "archived",
           "type": "boolean",
@@ -8913,6 +9024,10 @@
       },
       "policies": {},
       "checkConstraints": {
+        "webhook_configs_version_check": {
+          "name": "webhook_configs_version_check",
+          "value": "\"webhook_configs\".\"version\" >= 1"
+        },
         "webhook_configs_archived_consistency_check": {
           "name": "webhook_configs_archived_consistency_check",
           "value": "(\"webhook_configs\".\"archived\" = true) = (\"webhook_configs\".\"archived_at\" IS NOT NULL)"
@@ -8983,6 +9098,12 @@
         "encrypted_data": {
           "name": "encrypted_data",
           "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payload_data": {
+          "name": "payload_data",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

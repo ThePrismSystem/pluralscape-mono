@@ -68,7 +68,7 @@ CREATE TABLE "audit_log" (
 	"detail" text,
 	CONSTRAINT "audit_log_id_timestamp_pk" PRIMARY KEY("id","timestamp"),
 	CONSTRAINT "audit_log_id_unique" UNIQUE("id","timestamp"),
-	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')),
+	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'lifecycle-event.archived', 'lifecycle-event.restored', 'lifecycle-event.deleted', 'timer-config.created', 'timer-config.updated', 'timer-config.archived', 'timer-config.restored', 'timer-config.deleted', 'check-in-record.created', 'check-in-record.responded', 'check-in-record.dismissed', 'check-in-record.archived', 'check-in-record.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived', 'fronting-report.created', 'fronting-report.deleted', 'fronting-session.created', 'fronting-session.updated', 'fronting-session.ended', 'fronting-session.archived', 'fronting-session.restored', 'fronting-session.deleted', 'fronting-comment.created', 'fronting-comment.updated', 'fronting-comment.archived', 'fronting-comment.restored', 'fronting-comment.deleted', 'webhook-config.created', 'webhook-config.updated', 'webhook-config.archived', 'webhook-config.restored', 'webhook-config.deleted', 'webhook-delivery.deleted')),
 	CONSTRAINT "audit_log_detail_length_check" CHECK ("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint
@@ -213,8 +213,10 @@ CREATE TABLE "check_in_records" (
 	"dismissed" boolean DEFAULT false NOT NULL,
 	"responded_by_member_id" varchar(50),
 	"encrypted_data" "bytea",
+	"idempotency_key" varchar(255),
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
+	CONSTRAINT "check_in_records_idempotency_key_unique" UNIQUE("idempotency_key"),
 	CONSTRAINT "check_in_records_archived_consistency_check" CHECK (("check_in_records"."archived" = true) = ("check_in_records"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -386,6 +388,8 @@ CREATE TABLE "fronting_comments" (
 	"system_id" varchar(50) NOT NULL,
 	"session_start_time" timestamptz NOT NULL,
 	"member_id" varchar(50),
+	"custom_front_id" varchar(50),
+	"structure_entity_id" varchar(50),
 	"encrypted_data" "bytea" NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
@@ -393,7 +397,8 @@ CREATE TABLE "fronting_comments" (
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
 	CONSTRAINT "fronting_comments_version_check" CHECK ("fronting_comments"."version" >= 1),
-	CONSTRAINT "fronting_comments_archived_consistency_check" CHECK (("fronting_comments"."archived" = true) = ("fronting_comments"."archived_at" IS NOT NULL))
+	CONSTRAINT "fronting_comments_archived_consistency_check" CHECK (("fronting_comments"."archived" = true) = ("fronting_comments"."archived_at" IS NOT NULL)),
+	CONSTRAINT "fronting_comments_author_check" CHECK (("fronting_comments"."member_id" IS NOT NULL OR "fronting_comments"."custom_front_id" IS NOT NULL OR "fronting_comments"."structure_entity_id" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "fronting_reports" (
@@ -424,7 +429,7 @@ CREATE TABLE "fronting_sessions" (
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK ("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
 	CONSTRAINT "fronting_sessions_version_check" CHECK ("fronting_sessions"."version" >= 1),
 	CONSTRAINT "fronting_sessions_archived_consistency_check" CHECK (("fronting_sessions"."archived" = true) = ("fronting_sessions"."archived_at" IS NOT NULL)),
-	CONSTRAINT "fronting_sessions_subject_check" CHECK ("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL OR "fronting_sessions"."structure_entity_id" IS NOT NULL)
+	CONSTRAINT "fronting_sessions_subject_check" CHECK (("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL OR "fronting_sessions"."structure_entity_id" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "group_memberships" (
@@ -544,9 +549,15 @@ CREATE TABLE "lifecycle_events" (
 	"event_type" varchar(50) NOT NULL,
 	"occurred_at" timestamptz NOT NULL,
 	"recorded_at" timestamptz NOT NULL,
+	"updated_at" timestamptz NOT NULL,
 	"encrypted_data" "bytea" NOT NULL,
 	"plaintext_metadata" jsonb,
-	CONSTRAINT "lifecycle_events_event_type_check" CHECK ("lifecycle_events"."event_type" IS NULL OR "lifecycle_events"."event_type" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'structure-entity-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move'))
+	"version" integer DEFAULT 1 NOT NULL,
+	"archived" boolean DEFAULT false NOT NULL,
+	"archived_at" timestamptz,
+	CONSTRAINT "lifecycle_events_event_type_check" CHECK ("lifecycle_events"."event_type" IS NULL OR "lifecycle_events"."event_type" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'structure-entity-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')),
+	CONSTRAINT "lifecycle_events_version_check" CHECK ("lifecycle_events"."version" >= 1),
+	CONSTRAINT "lifecycle_events_archived_consistency_check" CHECK (("lifecycle_events"."archived" = true) = ("lifecycle_events"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "member_photos" (
@@ -852,7 +863,8 @@ CREATE TABLE "system_structure_entity_links" (
 	"entity_id" varchar(50) NOT NULL,
 	"parent_entity_id" varchar(50),
 	"sort_order" integer NOT NULL,
-	"created_at" timestamptz NOT NULL
+	"created_at" timestamptz NOT NULL,
+	CONSTRAINT "system_structure_entity_links_entity_parent_uniq" UNIQUE NULLS NOT DISTINCT("entity_id","parent_entity_id")
 );
 --> statement-breakpoint
 CREATE TABLE "system_structure_entity_member_links" (
@@ -861,7 +873,8 @@ CREATE TABLE "system_structure_entity_member_links" (
 	"parent_entity_id" varchar(50),
 	"member_id" varchar(50) NOT NULL,
 	"sort_order" integer NOT NULL,
-	"created_at" timestamptz NOT NULL
+	"created_at" timestamptz NOT NULL,
+	CONSTRAINT "system_structure_entity_member_links_member_parent_uniq" UNIQUE NULLS NOT DISTINCT("member_id","parent_entity_id")
 );
 --> statement-breakpoint
 CREATE TABLE "system_structure_entity_types" (
@@ -924,9 +937,11 @@ CREATE TABLE "webhook_configs" (
 	"crypto_key_id" varchar(50),
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
 	CONSTRAINT "webhook_configs_id_system_id_unique" UNIQUE("id","system_id"),
+	CONSTRAINT "webhook_configs_version_check" CHECK ("webhook_configs"."version" >= 1),
 	CONSTRAINT "webhook_configs_archived_consistency_check" CHECK (("webhook_configs"."archived" = true) = ("webhook_configs"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -941,6 +956,7 @@ CREATE TABLE "webhook_deliveries" (
 	"last_attempt_at" timestamptz,
 	"next_retry_at" timestamptz,
 	"encrypted_data" "bytea",
+	"payload_data" jsonb,
 	"created_at" timestamptz NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
@@ -1023,6 +1039,8 @@ ALTER TABLE "friend_notification_preferences" ADD CONSTRAINT "friend_notificatio
 ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_fronting_session_id_system_id_session_start_time_fronting_sessions_id_system_id_start_time_fk" FOREIGN KEY ("fronting_session_id","system_id","session_start_time") REFERENCES "public"."fronting_sessions"("id","system_id","start_time") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_custom_front_id_custom_fronts_id_fk" FOREIGN KEY ("custom_front_id") REFERENCES "public"."custom_fronts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fronting_comments" ADD CONSTRAINT "fronting_comments_structure_entity_id_system_id_system_structure_entities_id_system_id_fk" FOREIGN KEY ("structure_entity_id","system_id") REFERENCES "public"."system_structure_entities"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fronting_reports" ADD CONSTRAINT "fronting_reports_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fronting_sessions" ADD CONSTRAINT "fronting_sessions_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fronting_sessions" ADD CONSTRAINT "fronting_sessions_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -1183,6 +1201,7 @@ CREATE INDEX "key_grants_friend_revoked_idx" ON "key_grants" USING btree ("frien
 CREATE INDEX "key_grants_revoked_at_idx" ON "key_grants" USING btree ("revoked_at");--> statement-breakpoint
 CREATE INDEX "lifecycle_events_system_occurred_idx" ON "lifecycle_events" USING btree ("system_id","occurred_at");--> statement-breakpoint
 CREATE INDEX "lifecycle_events_system_recorded_idx" ON "lifecycle_events" USING btree ("system_id","recorded_at");--> statement-breakpoint
+CREATE INDEX "lifecycle_events_system_archived_idx" ON "lifecycle_events" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "member_photos_system_archived_idx" ON "member_photos" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "member_photos_member_sort_idx" ON "member_photos" USING btree ("member_id","sort_order");--> statement-breakpoint
 CREATE INDEX "members_system_id_archived_idx" ON "members" USING btree ("system_id","archived");--> statement-breakpoint
@@ -1215,15 +1234,12 @@ CREATE INDEX "sync_documents_system_id_doc_type_idx" ON "sync_documents" USING b
 CREATE INDEX "system_snapshots_system_created_idx" ON "system_snapshots" USING btree ("system_id","created_at");--> statement-breakpoint
 CREATE INDEX "system_structure_entities_system_archived_idx" ON "system_structure_entities" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "system_structure_entities_entity_type_id_idx" ON "system_structure_entities" USING btree ("system_id","entity_type_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_associations_source_idx" ON "system_structure_entity_associations" USING btree ("source_entity_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_associations_target_idx" ON "system_structure_entity_associations" USING btree ("target_entity_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_associations_system_id_idx" ON "system_structure_entity_associations" USING btree ("system_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_links_entity_id_idx" ON "system_structure_entity_links" USING btree ("entity_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_links_parent_entity_id_idx" ON "system_structure_entity_links" USING btree ("parent_entity_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_links_system_id_idx" ON "system_structure_entity_links" USING btree ("system_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_member_links_parent_entity_id_idx" ON "system_structure_entity_member_links" USING btree ("parent_entity_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_member_links_member_id_idx" ON "system_structure_entity_member_links" USING btree ("member_id");--> statement-breakpoint
-CREATE INDEX "system_structure_entity_member_links_system_id_idx" ON "system_structure_entity_member_links" USING btree ("system_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entity_associations_system_source_idx" ON "system_structure_entity_associations" USING btree ("system_id","source_entity_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entity_associations_system_target_idx" ON "system_structure_entity_associations" USING btree ("system_id","target_entity_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entity_links_system_entity_idx" ON "system_structure_entity_links" USING btree ("system_id","entity_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entity_links_system_parent_idx" ON "system_structure_entity_links" USING btree ("system_id","parent_entity_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entity_member_links_system_member_idx" ON "system_structure_entity_member_links" USING btree ("system_id","member_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entity_member_links_system_parent_idx" ON "system_structure_entity_member_links" USING btree ("system_id","parent_entity_id");--> statement-breakpoint
 CREATE INDEX "system_structure_entity_types_system_archived_idx" ON "system_structure_entity_types" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "systems_account_id_idx" ON "systems" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "timer_configs_system_archived_idx" ON "timer_configs" USING btree ("system_id","archived");--> statement-breakpoint
