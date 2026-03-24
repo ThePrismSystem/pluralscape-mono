@@ -184,7 +184,7 @@ importers:
         version: link:../../packages/types
       '@tanstack/react-query':
         specifier: ^5.66.9
-        version: 5.91.3(react@19.2.4)
+        version: 5.95.2(react@19.2.4)
       expo:
         specifier: ~55.0.5
         version: 55.0.8(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.6)(expo-router@55.0.7)(react-dom@19.2.4(react@19.2.4))(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
@@ -2965,11 +2965,11 @@ packages:
       zod:
         optional: true
 
-  '@tanstack/query-core@5.91.2':
-    resolution: {integrity: sha512-Uz2pTgPC1mhqrrSGg18RKCWT/pkduAYtxbcyIyKBhw7dTWjXZIzqmpzO2lBkyWr4hlImQgpu1m1pei3UnkFRWw==}
+  '@tanstack/query-core@5.95.2':
+    resolution: {integrity: sha512-o4T8vZHZET4Bib3jZ/tCW9/7080urD4c+0/AUaYVpIqOsr7y0reBc1oX3ttNaSW5mYyvZHctiQ/UOP2PfdmFEQ==}
 
-  '@tanstack/react-query@5.91.3':
-    resolution: {integrity: sha512-D8jsCexxS5crZxAeiH6VlLHOUzmHOxeW5c11y8rZu0c34u/cy18hUKQXA/gn1Ila3ZIFzP+Pzv76YnliC0EtZQ==}
+  '@tanstack/react-query@5.95.2':
+    resolution: {integrity: sha512-/wGkvLj/st5Ud1Q76KF1uFxScV7WeqN1slQx5280ycwAyYkIPGaRZAEgHxe3bjirSd5Zpwkj6zNcR4cqYni/ZA==}
     peerDependencies:
       react: ^18 || ^19
 
@@ -9803,11 +9803,11 @@ snapshots:
       typescript: 5.9.3
       zod: 4.3.6
 
-  '@tanstack/query-core@5.91.2': {}
+  '@tanstack/query-core@5.95.2': {}
 
-  '@tanstack/react-query@5.91.3(react@19.2.4)':
+  '@tanstack/react-query@5.95.2(react@19.2.4)':
     dependencies:
-      '@tanstack/query-core': 5.91.2
+      '@tanstack/query-core': 5.95.2
       react: 19.2.4
 
   '@testing-library/dom@10.4.1':
