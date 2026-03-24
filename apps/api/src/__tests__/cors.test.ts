@@ -119,6 +119,16 @@ describe("corsMiddleware", () => {
     expect(vary).toContain("Origin");
   });
 
+  it('throws when CORS_ORIGIN contains bare "*"', () => {
+    mockEnv.CORS_ORIGIN = "*";
+    expect(() => createCorsMiddleware()).toThrow("CORS_ORIGIN must not contain bare");
+  });
+
+  it('throws when bare "*" is among multiple origins', () => {
+    mockEnv.CORS_ORIGIN = "https://app.example.com,*";
+    expect(() => createCorsMiddleware()).toThrow("CORS_ORIGIN must not contain bare");
+  });
+
   // ── Wildcard pattern support ─────────────────────────────────────
 
   it("matches wildcard origin pattern", async () => {
