@@ -114,6 +114,7 @@ function filterOwnerLite(
       }
 
       case "journal":
+      case "note":
         available.push(entry);
         break;
 

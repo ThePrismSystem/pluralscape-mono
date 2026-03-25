@@ -7,6 +7,7 @@ import type { BucketProjectionDocument } from "../schemas/bucket.js";
 import type { ChatDocument } from "../schemas/chat.js";
 import type { FrontingDocument } from "../schemas/fronting.js";
 import type { JournalDocument } from "../schemas/journal.js";
+import type { NoteDocument } from "../schemas/notes.js";
 import type { PrivacyConfigDocument } from "../schemas/privacy-config.js";
 import type { SystemCoreDocument } from "../schemas/system-core.js";
 
@@ -106,6 +107,11 @@ function makeJournalDoc(): Automerge.Doc<JournalDocument> {
   return fromDoc({
     entries: {},
     wikiPages: {},
+  });
+}
+
+function makeNoteDoc(): Automerge.Doc<NoteDocument> {
+  return fromDoc({
     notes: {},
   });
 }
@@ -791,7 +797,6 @@ describe("JournalDocument schema", () => {
     const doc = makeJournalDoc();
     expect(Object.keys(doc.entries)).toHaveLength(0);
     expect(Object.keys(doc.wikiPages)).toHaveLength(0);
-    expect(Object.keys(doc.notes)).toHaveLength(0);
   });
 
   it("adds a journal entry with mutable content (append-lww)", () => {
@@ -827,10 +832,64 @@ describe("JournalDocument schema", () => {
   it("saves and loads via binary serialization", () => {
     let doc = makeJournalDoc();
     doc = Automerge.change(doc, (d) => {
+      d.entries["je_1"] = {
+        id: s("je_1"),
+        systemId: s("sys_test"),
+        author: null,
+        frontingSessionId: null,
+        title: s("Roundtrip entry"),
+        blocks: s("[]"),
+        tags: s("[]"),
+        linkedEntities: s("[]"),
+        frontingSnapshots: null,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    const bytes = Automerge.save(doc);
+    const loaded = Automerge.load<JournalDocument>(bytes);
+    expect(loaded.entries["je_1"]?.title.val).toBe("Roundtrip entry");
+  });
+});
+
+// ── NoteDocument ────────────────────────────────────────────────────
+
+describe("NoteDocument schema", () => {
+  it("initializes with empty notes map", () => {
+    const doc = makeNoteDoc();
+    expect(Object.keys(doc.notes)).toHaveLength(0);
+  });
+
+  it("adds and reads a note", () => {
+    let doc = makeNoteDoc();
+    doc = Automerge.change(doc, (d) => {
       d.notes["note_1"] = {
         id: s("note_1"),
         systemId: s("sys_test"),
-        memberId: null,
+        authorEntityType: s("member"),
+        authorEntityId: s("mem_1"),
+        title: s("My note"),
+        content: s("Note content"),
+        backgroundColor: s("#FFEB3B"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    expect(doc.notes["note_1"]?.title.val).toBe("My note");
+    expect(doc.notes["note_1"]?.authorEntityType?.val).toBe("member");
+    expect(doc.notes["note_1"]?.backgroundColor?.val).toBe("#FFEB3B");
+  });
+
+  it("saves and loads via binary serialization", () => {
+    let doc = makeNoteDoc();
+    doc = Automerge.change(doc, (d) => {
+      d.notes["note_1"] = {
+        id: s("note_1"),
+        systemId: s("sys_test"),
+        authorEntityType: null,
+        authorEntityId: null,
         title: s("Quick note"),
         content: s("Reminder"),
         backgroundColor: null,
@@ -840,8 +899,9 @@ describe("JournalDocument schema", () => {
       };
     });
     const bytes = Automerge.save(doc);
-    const loaded = Automerge.load<JournalDocument>(bytes);
+    const loaded = Automerge.load<NoteDocument>(bytes);
     expect(loaded.notes["note_1"]?.title.val).toBe("Quick note");
+    expect(loaded.notes["note_1"]?.authorEntityType).toBeNull();
   });
 });
 

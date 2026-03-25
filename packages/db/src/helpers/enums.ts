@@ -113,6 +113,7 @@ export const SYNC_DOC_TYPES = [
   "system-core",
   "fronting",
   "chat",
+  "note",
   "journal",
   "privacy-config",
   "bucket",

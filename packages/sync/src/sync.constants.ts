@@ -27,6 +27,9 @@ export const CHAT_SPLIT_THRESHOLD_BYTES = 5 * MiB;
 /** Time-split threshold for journal documents: 10 MiB. */
 export const JOURNAL_SPLIT_THRESHOLD_BYTES = 10 * MiB;
 
+/** Time-split threshold for note documents: 10 MiB. */
+export const NOTE_SPLIT_THRESHOLD_BYTES = 10 * MiB;
+
 // ── Document size limits ────────────────────────────────────────────
 
 /** Maximum size for system-core documents: 10 MiB. */
@@ -40,6 +43,9 @@ export const CHAT_SIZE_LIMIT_BYTES = 20 * MiB;
 
 /** Maximum size for journal documents: 50 MiB. */
 export const JOURNAL_SIZE_LIMIT_BYTES = 50 * MiB;
+
+/** Maximum size for note documents: 15 MiB. */
+export const NOTE_SIZE_LIMIT_BYTES = 15 * MiB;
 
 /** Maximum size for privacy-config documents: 5 MiB. */
 export const PRIVACY_CONFIG_SIZE_LIMIT_BYTES = 5 * MiB;

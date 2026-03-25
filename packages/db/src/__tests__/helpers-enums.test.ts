@@ -94,6 +94,7 @@ describe("enum arrays", () => {
       "system-core",
       "fronting",
       "chat",
+      "note",
       "journal",
       "privacy-config",
       "bucket",
@@ -286,7 +287,7 @@ describe("enum arrays", () => {
     expect(FRIEND_CONNECTION_STATUSES).toHaveLength(4);
     expect(AUTH_KEY_TYPES).toHaveLength(2);
     expect(DEVICE_TRANSFER_STATUSES).toHaveLength(3);
-    expect(SYNC_DOC_TYPES).toHaveLength(6);
+    expect(SYNC_DOC_TYPES).toHaveLength(7);
     expect(SYNC_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(16);

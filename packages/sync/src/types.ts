@@ -9,6 +9,8 @@ import {
   FRONTING_SPLIT_THRESHOLD_BYTES,
   JOURNAL_SIZE_LIMIT_BYTES,
   JOURNAL_SPLIT_THRESHOLD_BYTES,
+  NOTE_SIZE_LIMIT_BYTES,
+  NOTE_SPLIT_THRESHOLD_BYTES,
   PRIVACY_CONFIG_SIZE_LIMIT_BYTES,
   SYSTEM_CORE_SIZE_LIMIT_BYTES,
 } from "./sync.constants.js";
@@ -80,6 +82,11 @@ export const TIME_SPLIT_CONFIGS: readonly TimeSplitConfig[] = [
     splitUnit: "year",
     splitThresholdBytes: JOURNAL_SPLIT_THRESHOLD_BYTES,
   },
+  {
+    documentType: "note",
+    splitUnit: "year",
+    splitThresholdBytes: NOTE_SPLIT_THRESHOLD_BYTES,
+  },
 ] as const;
 
 /** Maximum document size limits per document type (bytes). */
@@ -88,6 +95,7 @@ export const DOCUMENT_SIZE_LIMITS: Record<SyncDocumentType, number> = {
   fronting: FRONTING_SIZE_LIMIT_BYTES,
   chat: CHAT_SIZE_LIMIT_BYTES,
   journal: JOURNAL_SIZE_LIMIT_BYTES,
+  note: NOTE_SIZE_LIMIT_BYTES,
   "privacy-config": PRIVACY_CONFIG_SIZE_LIMIT_BYTES,
   bucket: BUCKET_SIZE_LIMIT_BYTES,
 } as const;
@@ -107,7 +115,8 @@ export type SyncPriorityCategory =
   | SyncDocumentType
   | "fronting-historical"
   | "chat-historical"
-  | "journal-historical";
+  | "journal-historical"
+  | "note-historical";
 
 /**
  * Sync priority order for constrained-storage scenarios.
@@ -119,10 +128,12 @@ export const SYNC_PRIORITY_ORDER: readonly SyncPriorityCategory[] = [
   "fronting",
   "chat",
   "journal",
+  "note",
   "bucket",
   "fronting-historical",
   "chat-historical",
   "journal-historical",
+  "note-historical",
 ] as const;
 
 /** Result of checking whether a document is eligible for compaction. */

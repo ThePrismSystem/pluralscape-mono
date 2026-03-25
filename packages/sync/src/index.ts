@@ -94,6 +94,7 @@ export {
   createFrontingDocument,
   createChatDocument,
   createJournalDocument,
+  createNoteDocument,
   createPrivacyConfigDocument,
   createBucketDocument,
   fromDoc,

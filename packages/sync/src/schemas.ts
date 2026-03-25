@@ -38,12 +38,8 @@ export type {
   CrdtAcknowledgementRequest,
   ChatDocument,
 } from "./schemas/chat.js";
-export type {
-  CrdtJournalEntry,
-  CrdtWikiPage,
-  CrdtNote,
-  JournalDocument,
-} from "./schemas/journal.js";
+export type { CrdtJournalEntry, CrdtWikiPage, JournalDocument } from "./schemas/journal.js";
+export type { CrdtNote, NoteDocument } from "./schemas/notes.js";
 export type {
   CrdtPrivacyBucket,
   CrdtBucketContentTag,

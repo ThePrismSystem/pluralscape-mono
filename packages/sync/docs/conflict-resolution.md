@@ -205,6 +205,13 @@ ChatDocument {
 JournalDocument {
   entries: Record<id, CrdtJournalEntry>               // append-lww
   wikiPages: Record<id, CrdtWikiPage>                 // lww-map
+}
+```
+
+### NoteDocument
+
+```
+NoteDocument {
   notes: Record<id, CrdtNote>                         // lww-map
 }
 ```

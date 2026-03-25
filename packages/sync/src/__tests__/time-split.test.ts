@@ -274,7 +274,7 @@ describe("splitDocument", () => {
 
   it("journal: new doc starts empty", () => {
     const keys = makeKeys(sodium);
-    const doc = Automerge.from({ entries: {}, wikiPages: {}, notes: {} });
+    const doc = Automerge.from({ entries: {}, wikiPages: {} });
     const session = new EncryptedSyncSession({
       doc,
       keys,

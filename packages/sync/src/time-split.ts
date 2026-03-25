@@ -6,6 +6,7 @@ import {
   createChatDocument,
   createFrontingDocument,
   createJournalDocument,
+  createNoteDocument,
 } from "./factories/document-factory.js";
 import { TIME_SPLIT_CONFIGS } from "./types.js";
 
@@ -13,6 +14,7 @@ import type { ParsedDocumentId } from "./document-types.js";
 import type { ChatDocument } from "./schemas/chat.js";
 import type { FrontingDocument } from "./schemas/fronting.js";
 import type { JournalDocument } from "./schemas/journal.js";
+import type { NoteDocument } from "./schemas/notes.js";
 import type { TimeSplitConfig, TimeSplitUnit } from "./types.js";
 
 /** Result of splitting a time-based document into a new period. */
@@ -31,6 +33,11 @@ export type TimeSplitResult =
       readonly documentType: "journal";
       readonly newDocId: string;
       readonly newDoc: Automerge.Doc<JournalDocument>;
+    }
+  | {
+      readonly documentType: "note";
+      readonly newDocId: string;
+      readonly newDoc: Automerge.Doc<NoteDocument>;
     };
 
 /** Computes the current time period string for a given split unit. */
@@ -66,6 +73,8 @@ export function computeNewDocumentId(parsed: ParsedDocumentId, timePeriod: strin
       return `chat-${parsed.entityId}-${timePeriod}`;
     case "journal":
       return `journal-${parsed.entityId}-${timePeriod}`;
+    case "note":
+      return `note-${parsed.entityId}-${timePeriod}`;
     case "system-core":
     case "privacy-config":
     case "bucket":
@@ -148,6 +157,10 @@ export function splitDocument<T>(
 
   if (parsed.documentType === "chat") {
     return { documentType: "chat", newDocId, newDoc: createChatDocument() };
+  }
+
+  if (parsed.documentType === "note") {
+    return { documentType: "note", newDocId, newDoc: createNoteDocument() };
   }
 
   return { documentType: "journal", newDocId, newDoc: createJournalDocument() };

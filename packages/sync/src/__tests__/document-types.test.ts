@@ -93,6 +93,28 @@ describe("parseDocumentId", () => {
     });
   });
 
+  describe("note documents", () => {
+    it("parses note-{systemId}", () => {
+      const result = parseDocumentId("note-sys_abc");
+      expect(result).toEqual({
+        documentType: "note",
+        keyType: "derived",
+        entityId: "sys_abc",
+        timePeriod: null,
+      });
+    });
+
+    it("parses note-{systemId}-{YYYY}", () => {
+      const result = parseDocumentId("note-sys_x-2026");
+      expect(result).toEqual({
+        documentType: "note",
+        keyType: "derived",
+        entityId: "sys_x",
+        timePeriod: "2026",
+      });
+    });
+  });
+
   describe("privacy-config documents", () => {
     it("parses privacy-config-{systemId}", () => {
       const result = parseDocumentId("privacy-config-sys_abc");
@@ -124,6 +146,7 @@ describe("parseDocumentId", () => {
         "fronting-sys_a",
         "chat-ch_a",
         "journal-sys_a",
+        "note-sys_a",
         "privacy-config-sys_a",
       ];
       for (const docId of derivedDocs) {
