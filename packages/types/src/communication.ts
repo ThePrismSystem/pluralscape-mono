@@ -97,6 +97,9 @@ export interface PollOption {
 /** The kind of poll — standard yes/no-style or custom option set. */
 export type PollKind = "standard" | "custom";
 
+/** Poll kind values as a tuple for runtime validation. */
+export const POLL_KINDS = ["standard", "custom"] as const satisfies readonly PollKind[];
+
 /** A poll for system-internal decision making. */
 export interface Poll extends AuditMetadata {
   readonly id: PollId;

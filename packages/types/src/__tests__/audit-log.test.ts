@@ -187,6 +187,14 @@ describe("AuditEventType", () => {
         case "note.archived":
         case "note.restored":
         case "note.deleted":
+        case "poll.created":
+        case "poll.updated":
+        case "poll.closed":
+        case "poll.archived":
+        case "poll.restored":
+        case "poll.deleted":
+        case "poll-vote.cast":
+        case "poll-vote.vetoed":
           return type;
         default: {
           const _exhaustive: never = type;

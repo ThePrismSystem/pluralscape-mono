@@ -166,7 +166,15 @@ export type AuditEventType =
   | "note.updated"
   | "note.archived"
   | "note.restored"
-  | "note.deleted";
+  | "note.deleted"
+  | "poll.created"
+  | "poll.updated"
+  | "poll.closed"
+  | "poll.archived"
+  | "poll.restored"
+  | "poll.deleted"
+  | "poll-vote.cast"
+  | "poll-vote.vetoed";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

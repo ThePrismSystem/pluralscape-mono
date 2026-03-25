@@ -126,6 +126,13 @@ export {
 } from "./board-message.js";
 export { CreateNoteBodySchema, UpdateNoteBodySchema, NoteQuerySchema } from "./note.js";
 export {
+  CreatePollBodySchema,
+  UpdatePollBodySchema,
+  CastVoteBodySchema,
+  PollQuerySchema,
+  PollVoteQuerySchema,
+} from "./poll.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_ENCRYPTED_SYSTEM_DATA_SIZE,

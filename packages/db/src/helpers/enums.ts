@@ -305,6 +305,14 @@ export const AUDIT_EVENT_TYPES = [
   "note.archived",
   "note.restored",
   "note.deleted",
+  "poll.created",
+  "poll.updated",
+  "poll.closed",
+  "poll.archived",
+  "poll.restored",
+  "poll.deleted",
+  "poll-vote.cast",
+  "poll-vote.vetoed",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
