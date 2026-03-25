@@ -517,6 +517,112 @@ describe("ConnectionManager", () => {
     });
   });
 
+  describe("canAcceptFromIp", () => {
+    it("returns true when IP count is below the limit", () => {
+      manager = new ConnectionManager();
+      const ip = `192.0.2.${String(Math.floor(Math.random() * 254) + 1)}`;
+      manager.reserveUnauthSlot(ip);
+      expect(manager.canAcceptFromIp(ip, 2)).toBe(true);
+    });
+
+    it("returns false when IP count equals the limit", () => {
+      manager = new ConnectionManager();
+      const ip = `198.51.100.${String(Math.floor(Math.random() * 254) + 1)}`;
+      manager.reserveUnauthSlot(ip);
+      manager.reserveUnauthSlot(ip);
+      expect(manager.canAcceptFromIp(ip, 2)).toBe(false);
+    });
+
+    it("returns true for an IP with no tracked connections", () => {
+      manager = new ConnectionManager();
+      const ip = `203.0.113.${String(Math.floor(Math.random() * 254) + 1)}`;
+      expect(manager.canAcceptFromIp(ip, 1)).toBe(true);
+    });
+
+    it("tracks multiple IPs independently", () => {
+      manager = new ConnectionManager();
+      const ipA = "192.0.2.1";
+      const ipB = "192.0.2.2";
+
+      manager.reserveUnauthSlot(ipA);
+      manager.reserveUnauthSlot(ipA);
+      manager.reserveUnauthSlot(ipB);
+
+      expect(manager.canAcceptFromIp(ipA, 2)).toBe(false);
+      expect(manager.canAcceptFromIp(ipB, 2)).toBe(true);
+    });
+  });
+
+  describe("reserveUnauthSlot / releaseUnauthSlot with IP tracking", () => {
+    it("reserveUnauthSlot with IP increments both global and per-IP counts", () => {
+      manager = new ConnectionManager();
+      const ip = "192.0.2.10";
+      manager.reserveUnauthSlot(ip);
+
+      expect(manager.unauthenticatedCount).toBe(1);
+      expect(manager.canAcceptFromIp(ip, 1)).toBe(false);
+    });
+
+    it("reserveUnauthSlot without IP only increments global count", () => {
+      manager = new ConnectionManager();
+      const ip = "192.0.2.11";
+      manager.reserveUnauthSlot(); // no IP
+
+      expect(manager.unauthenticatedCount).toBe(1);
+      // IP slot unaffected — still considered zero for that IP
+      expect(manager.canAcceptFromIp(ip, 1)).toBe(true);
+    });
+
+    it("releaseUnauthSlot with IP decrements both global and per-IP counts", () => {
+      manager = new ConnectionManager();
+      const ip = "192.0.2.20";
+      manager.reserveUnauthSlot(ip);
+      manager.reserveUnauthSlot(ip);
+
+      manager.releaseUnauthSlot(ip);
+
+      expect(manager.unauthenticatedCount).toBe(1);
+      // One slot released: IP count is now 1, still blocks at limit=1
+      expect(manager.canAcceptFromIp(ip, 1)).toBe(false);
+      // But below limit=2
+      expect(manager.canAcceptFromIp(ip, 2)).toBe(true);
+    });
+
+    it("releaseUnauthSlot without IP only decrements global count with no IP side-effects", () => {
+      manager = new ConnectionManager();
+      const ip = "192.0.2.21";
+      manager.reserveUnauthSlot(ip);
+
+      // Release without specifying the IP — global decrements, IP entry untouched
+      manager.releaseUnauthSlot();
+
+      expect(manager.unauthenticatedCount).toBe(0);
+      // IP slot still has 1 entry (not released without IP)
+      expect(manager.canAcceptFromIp(ip, 1)).toBe(false);
+    });
+
+    it("releaseUnauthSlot removes the IP entry when count reaches zero", () => {
+      manager = new ConnectionManager();
+      const ip = "192.0.2.30";
+      manager.reserveUnauthSlot(ip);
+
+      manager.releaseUnauthSlot(ip);
+
+      // IP entry deleted — now accepts connections again
+      expect(manager.canAcceptFromIp(ip, 1)).toBe(true);
+    });
+
+    it("global unauthenticatedCount never goes below zero on over-release", () => {
+      manager = new ConnectionManager();
+      manager.reserveUnauthSlot();
+
+      manager.releaseUnauthSlot();
+      manager.releaseUnauthSlot(); // extra release
+
+      expect(manager.unauthenticatedCount).toBe(0);
+    });
+  });
+
   describe("get / getByAccount", () => {
     it("returns undefined for unknown connectionId", () => {
       manager = new ConnectionManager();

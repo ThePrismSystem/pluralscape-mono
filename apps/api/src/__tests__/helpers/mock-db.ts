@@ -2,9 +2,17 @@ import { vi } from "vitest";
 
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** Cast a test mock to PostgresJsDatabase. Breaks the TSAsExpression nesting pattern. */
-export function asDb(mock: unknown): PostgresJsDatabase {
-  return mock as PostgresJsDatabase;
+/**
+ * Cast a mock chain to PostgresJsDatabase for service function calls.
+ *
+ * MockChain provides the same chainable API as PostgresJsDatabase at runtime
+ * but the nominal types don't overlap. This dedicated cast function keeps the
+ * bridge in one place rather than scattering `as` casts across every test.
+ */
+export function asDb(
+  mock: MockChain | Record<string, ReturnType<typeof vi.fn>>,
+): PostgresJsDatabase {
+  return mock as never as PostgresJsDatabase;
 }
 
 export interface MockChain {
@@ -22,6 +30,7 @@ export interface MockChain {
   transaction: ReturnType<typeof vi.fn>;
   for: ReturnType<typeof vi.fn>;
   onConflictDoNothing: ReturnType<typeof vi.fn>;
+  execute: ReturnType<typeof vi.fn>;
 }
 
 /** Build a mock Drizzle DB with chainable select/insert/update/delete methods. */
@@ -44,6 +53,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
     transaction: vi.fn(),
     for: vi.fn(),
     onConflictDoNothing: vi.fn(),
+    execute: vi.fn(),
     ...overrides,
   };
 
@@ -61,10 +71,13 @@ export function mockDb(overrides?: Partial<MockChain>): {
   chain.delete.mockReturnValue(chain);
   chain.for.mockReturnValue(chain);
   chain.onConflictDoNothing.mockReturnValue(chain);
-  // transaction passes the chain as tx and awaits the callback
-  chain.transaction = vi
-    .fn()
-    .mockImplementation((fn: (tx: MockChain) => Promise<unknown>) => fn(chain));
+  // execute is used by RLS context helpers (setTenantContext, setAccountId)
+  chain.execute.mockResolvedValue(undefined);
+  // transaction passes the chain as tx and awaits the callback.
+  // Typed fn avoids no-misused-promises: the mock knows it returns a Promise.
+  chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) =>
+    fn(chain),
+  );
 
   return { db: asDb(chain), chain };
 }

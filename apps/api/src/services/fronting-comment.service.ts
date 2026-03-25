@@ -11,7 +11,9 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -134,7 +136,7 @@ export async function createFrontingComment(
   const commentId = createId(ID_PREFIXES.frontingComment);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const sessionStartTime = await resolveSessionStartTime(tx, sessionId, systemId);
     await validateSubjectIds(tx, systemId, parsed);
 
@@ -180,40 +182,42 @@ export async function listFrontingComments(
 ): Promise<PaginatedResult<FrontingCommentResult>> {
   assertSystemOwnership(systemId, auth);
 
-  // Verify parent session exists and belongs to this system
-  const [session] = await db
-    .select({ id: frontingSessions.id })
-    .from(frontingSessions)
-    .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)))
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    // Verify parent session exists and belongs to this system
+    const [session] = await tx
+      .select({ id: frontingSessions.id })
+      .from(frontingSessions)
+      .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)))
+      .limit(1);
 
-  if (!session) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
-  }
+    if (!session) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
+    }
 
-  const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+    const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [
-    eq(frontingComments.systemId, systemId),
-    eq(frontingComments.frontingSessionId, sessionId),
-  ];
+    const conditions = [
+      eq(frontingComments.systemId, systemId),
+      eq(frontingComments.frontingSessionId, sessionId),
+    ];
 
-  if (!opts?.includeArchived) {
-    conditions.push(eq(frontingComments.archived, false));
-  }
+    if (!opts?.includeArchived) {
+      conditions.push(eq(frontingComments.archived, false));
+    }
 
-  if (opts?.cursor) {
-    conditions.push(lt(frontingComments.id, opts.cursor));
-  }
+    if (opts?.cursor) {
+      conditions.push(lt(frontingComments.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(frontingComments)
-    .where(and(...conditions))
-    .orderBy(desc(frontingComments.id))
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(frontingComments)
+      .where(and(...conditions))
+      .orderBy(desc(frontingComments.id))
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toFrontingCommentResult);
+    return buildPaginatedResult(rows, effectiveLimit, toFrontingCommentResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -227,35 +231,37 @@ export async function getFrontingComment(
 ): Promise<FrontingCommentResult> {
   assertSystemOwnership(systemId, auth);
 
-  // Verify parent session exists and belongs to this system
-  const [session] = await db
-    .select({ id: frontingSessions.id })
-    .from(frontingSessions)
-    .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)))
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    // Verify parent session exists and belongs to this system
+    const [session] = await tx
+      .select({ id: frontingSessions.id })
+      .from(frontingSessions)
+      .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)))
+      .limit(1);
 
-  if (!session) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
-  }
+    if (!session) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
+    }
 
-  const [row] = await db
-    .select()
-    .from(frontingComments)
-    .where(
-      and(
-        eq(frontingComments.id, commentId),
-        eq(frontingComments.systemId, systemId),
-        eq(frontingComments.frontingSessionId, sessionId),
-        eq(frontingComments.archived, false),
-      ),
-    )
-    .limit(1);
+    const [row] = await tx
+      .select()
+      .from(frontingComments)
+      .where(
+        and(
+          eq(frontingComments.id, commentId),
+          eq(frontingComments.systemId, systemId),
+          eq(frontingComments.frontingSessionId, sessionId),
+          eq(frontingComments.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting comment not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting comment not found");
+    }
 
-  return toFrontingCommentResult(row);
+    return toFrontingCommentResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -279,7 +285,7 @@ export async function updateFrontingComment(
   const version = parsed.version;
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(frontingComments)
       .set({
@@ -341,7 +347,7 @@ export async function deleteFrontingComment(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: frontingComments.id })
       .from(frontingComments)
@@ -392,7 +398,7 @@ export async function archiveFrontingComment(
 
   const timestamp = now();
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(frontingComments)
       .set({
@@ -457,7 +463,7 @@ export async function restoreFrontingComment(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(frontingComments)
       .set({

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { mockDb } from "../helpers/mock-db.js";
 
+import type { MockChain } from "../helpers/mock-db.js";
 import type { AccountId, SessionId } from "@pluralscape/types";
 
 // ── Mock external dependencies ───────────────────────────────────────
@@ -37,6 +38,13 @@ vi.mock("../../lib/audit-log.js", () => ({
 vi.mock("../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
+
+// Pass-through mock: ensures vitest module resolution for drizzle-orm remains
+// stable when other mocked modules (rls-context, entity-lifecycle) import it.
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("drizzle-orm")>();
+  return { ...actual };
+});
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -184,7 +192,9 @@ describe("account service", () => {
         mockAudit,
       );
       expect(result).toEqual({ ok: true });
-      expect(chain.transaction).not.toHaveBeenCalled();
+      // Transaction is called once for the withAccountRead lookup,
+      // but NOT a second time for the write path (email is unchanged)
+      expect(chain.transaction).toHaveBeenCalledOnce();
     });
 
     it("returns ok on successful email change", async () => {
@@ -222,7 +232,14 @@ describe("account service", () => {
         code: PG_UNIQUE_VIOLATION,
         constraint_name: "accounts_email_hash_idx",
       });
-      chain.transaction.mockRejectedValueOnce(pgError);
+      // First transaction call is the withAccountRead (succeeds normally),
+      // second rejects with duplicate email error.
+      let txCallCount = 0;
+      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) => {
+        txCallCount++;
+        if (txCallCount === 2) return Promise.reject(pgError);
+        return fn(chain);
+      });
 
       await expect(
         changeEmail(
@@ -368,7 +385,8 @@ describe("account service", () => {
         validParams,
         mockAudit,
       );
-      expect(chain.transaction).toHaveBeenCalledOnce();
+      // Two transaction calls: withAccountRead (read) + withAccountTransaction (write)
+      expect(chain.transaction).toHaveBeenCalledTimes(2);
     });
 
     it("throws on optimistic lock failure", async () => {

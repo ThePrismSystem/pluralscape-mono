@@ -40,6 +40,10 @@ vi.mock("../../ws/bun-adapter.js", () => ({
   websocket: { open: vi.fn(), close: vi.fn(), message: vi.fn() },
 }));
 
+vi.mock("hono/bun", () => ({
+  getConnInfo: vi.fn(() => ({ remote: { address: "127.0.0.1" } })),
+}));
+
 vi.mock("../../middleware/access-log.js", () => ({
   accessLogMiddleware: vi.fn(() => async (_c: unknown, next: () => Promise<void>) => {
     await next();

@@ -2,12 +2,13 @@ import { GENERIC_HASH_BYTES_MAX, getSodium } from "@pluralscape/crypto";
 import { biometricTokens, systemSettings } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { BiometricEnrollBodySchema, BiometricVerifyBodySchema } from "@pluralscape/validation";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { toHex } from "../lib/hex.js";
-import { logger } from "../lib/logger.js";
+import { withTenantTransaction } from "../lib/rls-context.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -41,11 +42,21 @@ export async function enrollBiometric(
   }
 
   // Guard: biometric must be enabled in system settings
-  if (auth.systemId) {
-    const [settings] = await db
+  if (!auth.systemId) {
+    throw new ApiHttpError(
+      HTTP_FORBIDDEN,
+      "BIOMETRIC_DISABLED",
+      "Biometric authentication requires an active system",
+    );
+  }
+
+  const systemId = auth.systemId;
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const [settings] = await tx
       .select({ biometricEnabled: systemSettings.biometricEnabled })
       .from(systemSettings)
-      .where(eq(systemSettings.systemId, auth.systemId))
+      .where(eq(systemSettings.systemId, systemId))
       .limit(1);
 
     if (!settings?.biometricEnabled) {
@@ -55,33 +66,27 @@ export async function enrollBiometric(
         "Biometric authentication is not enabled for this system",
       );
     }
-  } else {
-    throw new ApiHttpError(
-      HTTP_FORBIDDEN,
-      "BIOMETRIC_DISABLED",
-      "Biometric authentication requires an active system",
-    );
-  }
 
-  const tokenHash = hashToken(parsed.data.token);
-  const id = createId(ID_PREFIXES.biometricToken) as BiometricTokenId;
-  const timestamp = now();
+    const tokenHash = hashToken(parsed.data.token);
+    const id = createId(ID_PREFIXES.biometricToken) as BiometricTokenId;
+    const timestamp = now();
 
-  await db.insert(biometricTokens).values({
-    id,
-    sessionId: auth.sessionId,
-    tokenHash,
-    createdAt: timestamp,
+    await tx.insert(biometricTokens).values({
+      id,
+      sessionId: auth.sessionId,
+      tokenHash,
+      createdAt: timestamp,
+    });
+
+    await audit(tx, {
+      eventType: "auth.biometric-enrolled",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Biometric token enrolled",
+      systemId,
+    });
+
+    return { id };
   });
-
-  await audit(db, {
-    eventType: "auth.biometric-enrolled",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "Biometric token enrolled",
-    systemId: auth.systemId,
-  });
-
-  return { id };
 }
 
 // ── Verify ──────────────────────────────────────────────────────────
@@ -97,36 +102,52 @@ export async function verifyBiometric(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid verify payload");
   }
 
-  const tokenHash = hashToken(parsed.data.token);
-
-  const [match] = await db
-    .select({ id: biometricTokens.id })
-    .from(biometricTokens)
-    .where(
-      and(eq(biometricTokens.sessionId, auth.sessionId), eq(biometricTokens.tokenHash, tokenHash)),
-    )
-    .limit(1);
-
-  if (!match) {
-    void audit(db, {
-      eventType: "auth.biometric-failed",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Biometric verification failed",
-      systemId: auth.systemId,
-    }).catch((auditError: unknown) => {
-      logger.error("Failed to write auth.biometric-failed audit", {
-        err: auditError instanceof Error ? auditError : { message: String(auditError) },
-      });
-    });
-    throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_TOKEN", "Biometric token is invalid");
+  if (!auth.systemId) {
+    throw new ApiHttpError(
+      HTTP_FORBIDDEN,
+      "BIOMETRIC_DISABLED",
+      "Biometric authentication requires an active system",
+    );
   }
 
-  await audit(db, {
-    eventType: "auth.biometric-verified",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "Biometric token verified",
-    systemId: auth.systemId,
+  const systemId = auth.systemId;
+  const tokenHash = hashToken(parsed.data.token);
+
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const [match] = await tx
+      .update(biometricTokens)
+      .set({ usedAt: now() })
+      .where(
+        and(
+          eq(biometricTokens.sessionId, auth.sessionId),
+          eq(biometricTokens.tokenHash, tokenHash),
+          isNull(biometricTokens.usedAt),
+        ),
+      )
+      .returning({ id: biometricTokens.id });
+
+    if (!match) {
+      await audit(tx, {
+        eventType: "auth.biometric-failed",
+        actor: { kind: "account", id: auth.accountId },
+        detail: "Biometric verification failed",
+        systemId,
+      });
+      return { verified: false } as const;
+    }
+
+    await audit(tx, {
+      eventType: "auth.biometric-verified",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Biometric token verified",
+      systemId,
+    });
+
+    return { verified: true } as const;
   });
 
+  if (!result.verified) {
+    throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_TOKEN", "Biometric token is invalid");
+  }
   return { verified: true };
 }

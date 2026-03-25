@@ -232,7 +232,9 @@ describe("createUploadUrl", () => {
       ),
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR", status: 400 });
 
-    expect(mockAudit).not.toHaveBeenCalled();
+    // Audit fires inside the transaction (before the S3 call), so it IS called
+    // even when the presigned URL generation subsequently fails.
+    expect(mockAudit).toHaveBeenCalledOnce();
   });
 });
 
@@ -264,6 +266,8 @@ describe("confirmUpload", () => {
     expect(result.checksum).toBe(VALID_CHECKSUM);
     expect(result.uploadedAt).toBe(2000);
     expect(mockAudit).toHaveBeenCalledOnce();
+    // Verify SELECT ... FOR UPDATE row-level lock to prevent race conditions
+    expect(chain.for).toHaveBeenCalledWith("update");
   });
 
   it("returns existing result idempotently when already confirmed", async () => {

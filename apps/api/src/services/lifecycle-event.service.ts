@@ -15,7 +15,9 @@ import {
   restoreEntity,
   type ArchivableEntityConfig,
 } from "../lib/entity-lifecycle.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -148,7 +150,7 @@ export async function createLifecycleEvent(
     metadata = parsed.plaintextMetadata;
   }
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(lifecycleEvents)
       .values({
@@ -193,41 +195,43 @@ export async function listLifecycleEvents(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(lifecycleEvents.systemId, systemId)];
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const conditions = [eq(lifecycleEvents.systemId, systemId)];
 
-  if (!includeArchived) {
-    conditions.push(eq(lifecycleEvents.archived, false));
-  }
+    if (!includeArchived) {
+      conditions.push(eq(lifecycleEvents.archived, false));
+    }
 
-  if (eventType) {
-    conditions.push(sql`${lifecycleEvents.eventType} = ${eventType}`);
-  }
+    if (eventType) {
+      conditions.push(sql`${lifecycleEvents.eventType} = ${eventType}`);
+    }
 
-  if (cursor) {
-    const parsed = decodeCursor(cursor);
-    conditions.push(
-      sql`(${lifecycleEvents.occurredAt} < ${parsed.occurredAt} OR (${lifecycleEvents.occurredAt} = ${parsed.occurredAt} AND ${lifecycleEvents.id} < ${parsed.id}))`,
-    );
-  }
+    if (cursor) {
+      const parsed = decodeCursor(cursor);
+      conditions.push(
+        sql`(${lifecycleEvents.occurredAt} < ${parsed.occurredAt} OR (${lifecycleEvents.occurredAt} = ${parsed.occurredAt} AND ${lifecycleEvents.id} < ${parsed.id}))`,
+      );
+    }
 
-  const rows = await db
-    .select()
-    .from(lifecycleEvents)
-    .where(and(...conditions))
-    .orderBy(sql`${lifecycleEvents.occurredAt} DESC, ${lifecycleEvents.id} DESC`)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(lifecycleEvents)
+      .where(and(...conditions))
+      .orderBy(sql`${lifecycleEvents.occurredAt} DESC, ${lifecycleEvents.id} DESC`)
+      .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toLifecycleEventResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.occurredAt, lastItem.id) : null;
+    const hasMore = rows.length > effectiveLimit;
+    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toLifecycleEventResult);
+    const lastItem = items[items.length - 1];
+    const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.occurredAt, lastItem.id) : null;
 
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+    return {
+      items,
+      nextCursor,
+      hasMore,
+      totalCount: null,
+    };
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -240,17 +244,19 @@ export async function getLifecycleEvent(
 ): Promise<LifecycleEventResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(lifecycleEvents)
-    .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)))
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(lifecycleEvents)
+      .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)))
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Lifecycle event not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Lifecycle event not found");
+    }
 
-  return toLifecycleEventResult(row);
+    return toLifecycleEventResult(row);
+  });
 }
 
 // ── DELETE ──────────────────────────────────────────────────────────
@@ -264,7 +270,7 @@ export async function deleteLifecycleEvent(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const deleted = await tx
       .delete(lifecycleEvents)
       .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)))

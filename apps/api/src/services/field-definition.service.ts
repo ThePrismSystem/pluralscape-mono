@@ -19,7 +19,9 @@ import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { QueryCache } from "../lib/query-cache.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -167,7 +169,7 @@ export async function createFieldDefinition(
   const fieldId = createId(ID_PREFIXES.fieldDefinition);
   const timestamp = now();
 
-  const result = await db.transaction(async (tx) => {
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Check quota inside transaction to prevent TOCTOU races
     const [countResult] = await tx
       .select({ count: count() })
@@ -232,24 +234,26 @@ export async function listFieldDefinitions(
   const cached = fieldDefCache.get(cacheKey);
   if (cached) return cached;
 
-  const conditions = [eq(fieldDefinitions.systemId, systemId)];
+  const result = await withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const conditions = [eq(fieldDefinitions.systemId, systemId)];
 
-  if (!opts?.includeArchived) {
-    conditions.push(eq(fieldDefinitions.archived, false));
-  }
+    if (!opts?.includeArchived) {
+      conditions.push(eq(fieldDefinitions.archived, false));
+    }
 
-  if (opts?.cursor) {
-    conditions.push(gt(fieldDefinitions.id, opts.cursor));
-  }
+    if (opts?.cursor) {
+      conditions.push(gt(fieldDefinitions.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(fieldDefinitions)
-    .where(and(...conditions))
-    .orderBy(fieldDefinitions.id)
-    .limit(limit + 1);
+    const rows = await tx
+      .select()
+      .from(fieldDefinitions)
+      .where(and(...conditions))
+      .orderBy(fieldDefinitions.id)
+      .limit(limit + 1);
 
-  const result = buildPaginatedResult(rows, limit, toFieldDefinitionResult);
+    return buildPaginatedResult(rows, limit, toFieldDefinitionResult);
+  });
   fieldDefCache.set(cacheKey, result);
   return result;
 }
@@ -264,23 +268,25 @@ export async function getFieldDefinition(
 ): Promise<FieldDefinitionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(fieldDefinitions)
-    .where(
-      and(
-        eq(fieldDefinitions.id, fieldId),
-        eq(fieldDefinitions.systemId, systemId),
-        eq(fieldDefinitions.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(fieldDefinitions)
+      .where(
+        and(
+          eq(fieldDefinitions.id, fieldId),
+          eq(fieldDefinitions.systemId, systemId),
+          eq(fieldDefinitions.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
+    }
 
-  return toFieldDefinitionResult(row);
+    return toFieldDefinitionResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -316,7 +322,7 @@ export async function updateFieldDefinition(
     setClause.sortOrder = parsed.data.sortOrder;
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(fieldDefinitions)
       .set(setClause)
@@ -373,7 +379,7 @@ export async function archiveFieldDefinition(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: fieldDefinitions.id })
       .from(fieldDefinitions)
@@ -418,7 +424,7 @@ export async function restoreFieldDefinition(
 ): Promise<FieldDefinitionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const result = await db.transaction(async (tx) => {
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select()
       .from(fieldDefinitions)
@@ -473,7 +479,7 @@ export async function deleteFieldDefinition(
   assertSystemOwnership(systemId, auth);
   const force = opts?.force === true;
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: fieldDefinitions.id })
       .from(fieldDefinitions)

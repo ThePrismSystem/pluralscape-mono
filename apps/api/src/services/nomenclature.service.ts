@@ -7,7 +7,9 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -51,17 +53,19 @@ export async function getNomenclatureSettings(
 ): Promise<NomenclatureSettingsResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(nomenclatureSettings)
-    .where(eq(nomenclatureSettings.systemId, systemId))
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(nomenclatureSettings)
+      .where(eq(nomenclatureSettings.systemId, systemId))
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Nomenclature settings not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Nomenclature settings not found");
+    }
 
-  return toResult(row);
+    return toResult(row);
+  });
 }
 
 // ── PUT ─────────────────────────────────────────────────────────────
@@ -83,7 +87,7 @@ export async function updateNomenclatureSettings(
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(nomenclatureSettings)
       .set({

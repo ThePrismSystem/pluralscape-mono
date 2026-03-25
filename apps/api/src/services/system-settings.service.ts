@@ -9,7 +9,9 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { SYSTEM_SETTINGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { QueryCache } from "../lib/query-cache.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -74,17 +76,20 @@ export async function getSystemSettings(
   const cached = settingsCache.get(systemId);
   if (cached) return cached;
 
-  const [row] = await db
-    .select()
-    .from(systemSettings)
-    .where(eq(systemSettings.systemId, systemId))
-    .limit(1);
+  const result = await withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(systemSettings)
+      .where(eq(systemSettings.systemId, systemId))
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");
+    }
 
-  const result = toSystemSettingsResult(row);
+    return toSystemSettingsResult(row);
+  });
+
   settingsCache.set(systemId, result);
   return result;
 }
@@ -108,7 +113,7 @@ export async function updateSystemSettings(
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  const result = await db.transaction(async (tx) => {
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(systemSettings)
       .set({

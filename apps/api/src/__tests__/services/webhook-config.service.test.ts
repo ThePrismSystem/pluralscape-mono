@@ -578,6 +578,15 @@ describe("webhook-config service", () => {
         deleteWebhookConfig(db, "sys_other" as SystemId, WH_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
+
+    it("calls .for('update') on the existence check query to prevent race conditions", async () => {
+      const { db, chain } = mockDb();
+      setupDeleteMocks(chain, [{ id: WH_ID }], [{ count: 0 }]);
+
+      await deleteWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
+
+      expect(chain.for).toHaveBeenCalledWith("update");
+    });
   });
 
   // ── archiveWebhookConfig ───────────────────────────────────────────

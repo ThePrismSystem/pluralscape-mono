@@ -23,6 +23,7 @@ import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { RegistrationResult } from "../../services/auth.service.js";
+import type { AccountId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
@@ -187,7 +188,7 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const params = makeRegistrationParams();
       const reg = await registerAccount(asDb(db), params, "web", noopAudit);
 
-      const { sessions: sessionList } = await listSessions(asDb(db), reg.accountId);
+      const { sessions: sessionList } = await listSessions(asDb(db), reg.accountId as AccountId);
 
       expect(sessionList.length).toBeGreaterThanOrEqual(1);
       const first = sessionList[0];
@@ -206,17 +207,22 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       const params = makeRegistrationParams();
       const reg = await registerAccount(asDb(db), params, "web", noopAudit);
 
-      const { sessions: before } = await listSessions(asDb(db), reg.accountId);
+      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
       expect(before.length).toBeGreaterThanOrEqual(1);
       const firstSession = before[0];
       expect(firstSession).toBeDefined();
       if (!firstSession) return;
 
       const audit = spyAudit();
-      const revoked = await revokeSession(asDb(db), firstSession.id, reg.accountId, audit);
+      const revoked = await revokeSession(
+        asDb(db),
+        firstSession.id,
+        reg.accountId as AccountId,
+        audit,
+      );
       expect(revoked).toBe(true);
 
-      const { sessions: after } = await listSessions(asDb(db), reg.accountId);
+      const { sessions: after } = await listSessions(asDb(db), reg.accountId as AccountId);
       const found = after.find((s) => s.id === firstSession.id);
       expect(found).toBeUndefined();
 

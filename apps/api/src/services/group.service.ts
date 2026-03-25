@@ -13,7 +13,9 @@ import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import { createHierarchyService } from "./hierarchy-service-factory.js";
 import { mapBaseFields } from "./hierarchy-service-helpers.js";
@@ -188,7 +190,7 @@ export async function moveGroup(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // If targetParentGroupId non-null, verify it exists and is not archived
     if (targetParentGroupId !== null) {
       const [target] = await tx
@@ -286,7 +288,7 @@ export async function copyGroup(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Fetch source group
     const [source] = await tx
       .select()
@@ -400,11 +402,13 @@ export async function getGroupTree(
 ): Promise<GroupResultTree[]> {
   assertSystemOwnership(systemId, auth);
 
-  const rows = await db
-    .select()
-    .from(groups)
-    .where(and(eq(groups.systemId, systemId), eq(groups.archived, false)))
-    .orderBy(groups.sortOrder);
+  const rows = await withTenantRead(db, tenantCtx(systemId, auth), (tx) =>
+    tx
+      .select()
+      .from(groups)
+      .where(and(eq(groups.systemId, systemId), eq(groups.archived, false)))
+      .orderBy(groups.sortOrder),
+  );
 
   // Build tree in-memory
   const nodeMap = new Map<string, GroupResultTree>();
@@ -448,7 +452,7 @@ export async function reorderGroups(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid reorder payload");
   }
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Pre-flight: verify all target groups exist and are active
     const groupIds = parsed.data.operations.map((op) => op.groupId);
     const existing = await tx

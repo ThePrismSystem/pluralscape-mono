@@ -59,8 +59,11 @@ export const RECOVERY_KEY_GROUP_COUNT = 13;
 /** Characters per group in a recovery key. */
 export const RECOVERY_KEY_GROUP_SIZE = 4;
 
-/** Target registration time (ms) for anti-enumeration timing equalization. */
+/** Target time (ms) for anti-enumeration timing equalization. */
 export const ANTI_ENUM_TARGET_MS = 500;
 
 /** Expected length of EMAIL_HASH_PEPPER hex string (32 bytes = 64 hex chars). */
 export const PEPPER_HEX_LENGTH = 64;
+
+/** Maximum concurrent active sessions per account. Oldest session is evicted when exceeded. */
+export const MAX_SESSIONS_PER_ACCOUNT = 50;

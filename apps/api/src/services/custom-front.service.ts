@@ -9,7 +9,9 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -84,7 +86,7 @@ export async function createCustomFront(
   const cfId = createId(ID_PREFIXES.customFront);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(customFronts)
       .values({
@@ -124,20 +126,22 @@ export async function listCustomFronts(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(customFronts.systemId, systemId), eq(customFronts.archived, false)];
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const conditions = [eq(customFronts.systemId, systemId), eq(customFronts.archived, false)];
 
-  if (cursor) {
-    conditions.push(gt(customFronts.id, cursor));
-  }
+    if (cursor) {
+      conditions.push(gt(customFronts.id, cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(customFronts)
-    .where(and(...conditions))
-    .orderBy(customFronts.id)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(customFronts)
+      .where(and(...conditions))
+      .orderBy(customFronts.id)
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toCustomFrontResult);
+    return buildPaginatedResult(rows, effectiveLimit, toCustomFrontResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -150,23 +154,25 @@ export async function getCustomFront(
 ): Promise<CustomFrontResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(customFronts)
-    .where(
-      and(
-        eq(customFronts.id, customFrontId),
-        eq(customFronts.systemId, systemId),
-        eq(customFronts.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(customFronts)
+      .where(
+        and(
+          eq(customFronts.id, customFrontId),
+          eq(customFronts.systemId, systemId),
+          eq(customFronts.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Custom front not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Custom front not found");
+    }
 
-  return toCustomFrontResult(row);
+    return toCustomFrontResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -189,7 +195,7 @@ export async function updateCustomFront(
   const version = parsed.version;
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(customFronts)
       .set({
@@ -248,7 +254,7 @@ export async function deleteCustomFront(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: customFronts.id })
       .from(customFronts)

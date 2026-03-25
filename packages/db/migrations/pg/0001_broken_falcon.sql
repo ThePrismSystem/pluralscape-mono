@@ -1,0 +1,1 @@
+ALTER TABLE "biometric_tokens" ADD COLUMN "used_at" timestamptz;

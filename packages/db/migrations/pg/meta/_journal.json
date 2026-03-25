@@ -8,6 +8,20 @@
       "when": 1774382310362,
       "tag": "0000_sad_otto_octavius",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774393775728,
+      "tag": "0001_broken_falcon",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774395681749,
+      "tag": "0002_chubby_salo",
+      "breakpoints": true
     }
   ]
 }

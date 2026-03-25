@@ -1,7 +1,9 @@
 import { frontingSessions } from "@pluralscape/db/pg";
 import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 
+import { withTenantRead } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -101,40 +103,43 @@ function toOneDecimalPercent(numerator: number, denominator: number): number {
 async function fetchSessionsInRange(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  auth: AuthContext,
   dateRange: DateRangeFilter,
 ): Promise<{ rows: readonly SessionRow[]; truncated: boolean }> {
-  const conditions = [
-    eq(frontingSessions.systemId, systemId),
-    eq(frontingSessions.archived, false),
-  ];
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const conditions = [
+      eq(frontingSessions.systemId, systemId),
+      eq(frontingSessions.archived, false),
+    ];
 
-  // Only apply date range filters for non-all-time presets
-  if (dateRange.preset !== "all-time") {
-    // Sessions that overlap the range: startTime <= end AND (endTime > start OR endTime IS NULL)
-    conditions.push(lte(frontingSessions.startTime, dateRange.end));
-    const endTimeOverlap = or(
-      isNull(frontingSessions.endTime),
-      gt(frontingSessions.endTime, dateRange.start),
-    );
-    if (endTimeOverlap) conditions.push(endTimeOverlap);
-  }
+    // Only apply date range filters for non-all-time presets
+    if (dateRange.preset !== "all-time") {
+      // Sessions that overlap the range: startTime <= end AND (endTime > start OR endTime IS NULL)
+      conditions.push(lte(frontingSessions.startTime, dateRange.end));
+      const endTimeOverlap = or(
+        isNull(frontingSessions.endTime),
+        gt(frontingSessions.endTime, dateRange.start),
+      );
+      if (endTimeOverlap) conditions.push(endTimeOverlap);
+    }
 
-  const rows = await db
-    .select({
-      id: frontingSessions.id,
-      systemId: frontingSessions.systemId,
-      memberId: frontingSessions.memberId,
-      customFrontId: frontingSessions.customFrontId,
-      structureEntityId: frontingSessions.structureEntityId,
-      startTime: frontingSessions.startTime,
-      endTime: frontingSessions.endTime,
-    })
-    .from(frontingSessions)
-    .where(and(...conditions))
-    .orderBy(desc(frontingSessions.startTime))
-    .limit(MAX_ANALYTICS_SESSIONS);
+    const rows = await tx
+      .select({
+        id: frontingSessions.id,
+        systemId: frontingSessions.systemId,
+        memberId: frontingSessions.memberId,
+        customFrontId: frontingSessions.customFrontId,
+        structureEntityId: frontingSessions.structureEntityId,
+        startTime: frontingSessions.startTime,
+        endTime: frontingSessions.endTime,
+      })
+      .from(frontingSessions)
+      .where(and(...conditions))
+      .orderBy(desc(frontingSessions.startTime))
+      .limit(MAX_ANALYTICS_SESSIONS);
 
-  return { rows, truncated: rows.length >= MAX_ANALYTICS_SESSIONS };
+    return { rows, truncated: rows.length >= MAX_ANALYTICS_SESSIONS };
+  });
 }
 
 // ── computeFrontingBreakdown ─────────────────────────────────────────
@@ -147,7 +152,7 @@ export async function computeFrontingBreakdown(
 ): Promise<FrontingAnalytics> {
   assertSystemOwnership(systemId, auth);
 
-  const { rows, truncated } = await fetchSessionsInRange(db, systemId, dateRange);
+  const { rows, truncated } = await fetchSessionsInRange(db, systemId, auth, dateRange);
 
   // Group by subject
   const subjectMap = new Map<
@@ -223,7 +228,7 @@ export async function computeCoFrontingBreakdown(
 ): Promise<CoFrontingAnalytics> {
   assertSystemOwnership(systemId, auth);
 
-  const { rows, truncated } = await fetchSessionsInRange(db, systemId, dateRange);
+  const { rows, truncated } = await fetchSessionsInRange(db, systemId, auth, dateRange);
 
   // Only include sessions with a member subject for co-fronting analysis
   const memberSessions = rows.filter((r) => r.memberId !== null);

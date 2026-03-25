@@ -6,7 +6,9 @@ import { and, desc, eq, lt, or } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -110,7 +112,7 @@ export async function createFrontingReport(
 
   const reportId = createId(ID_PREFIXES.frontingReport);
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(frontingReports)
       .values({
@@ -149,40 +151,42 @@ export async function listFrontingReports(
 
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(frontingReports.systemId, systemId)];
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const conditions = [eq(frontingReports.systemId, systemId)];
 
-  if (opts.cursor) {
-    const cursor = decodeCursor(opts.cursor);
-    const cursorCondition = or(
-      lt(frontingReports.generatedAt, cursor.t),
-      and(eq(frontingReports.generatedAt, cursor.t), lt(frontingReports.id, cursor.i)),
-    );
-    if (cursorCondition) conditions.push(cursorCondition);
-  }
+    if (opts.cursor) {
+      const cursor = decodeCursor(opts.cursor);
+      const cursorCondition = or(
+        lt(frontingReports.generatedAt, cursor.t),
+        and(eq(frontingReports.generatedAt, cursor.t), lt(frontingReports.id, cursor.i)),
+      );
+      if (cursorCondition) conditions.push(cursorCondition);
+    }
 
-  const rows = await db
-    .select()
-    .from(frontingReports)
-    .where(and(...conditions))
-    .orderBy(desc(frontingReports.generatedAt), desc(frontingReports.id))
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(frontingReports)
+      .where(and(...conditions))
+      .orderBy(desc(frontingReports.generatedAt), desc(frontingReports.id))
+      .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toFrontingReportResult);
-  const lastItem = hasMore && items.length > 0 ? items[items.length - 1] : null;
+    const hasMore = rows.length > effectiveLimit;
+    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toFrontingReportResult);
+    const lastItem = hasMore && items.length > 0 ? items[items.length - 1] : null;
 
-  return {
-    items,
-    nextCursor:
-      hasMore && lastItem
-        ? (encodeCursor({
-            t: lastItem.generatedAt as number,
-            i: lastItem.id,
-          }) as PaginatedResult<FrontingReportResult>["nextCursor"])
-        : null,
-    hasMore,
-    totalCount: null,
-  };
+    return {
+      items,
+      nextCursor:
+        hasMore && lastItem
+          ? (encodeCursor({
+              t: lastItem.generatedAt as number,
+              i: lastItem.id,
+            }) as PaginatedResult<FrontingReportResult>["nextCursor"])
+          : null,
+      hasMore,
+      totalCount: null,
+    };
+  });
 }
 
 // ── GET ──────────────────────────────────────────────────────────────
@@ -195,17 +199,19 @@ export async function getFrontingReport(
 ): Promise<FrontingReportResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(frontingReports)
-    .where(and(eq(frontingReports.id, reportId), eq(frontingReports.systemId, systemId)))
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(frontingReports)
+      .where(and(eq(frontingReports.id, reportId), eq(frontingReports.systemId, systemId)))
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting report not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting report not found");
+    }
 
-  return toFrontingReportResult(row);
+    return toFrontingReportResult(row);
+  });
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────
@@ -219,7 +225,7 @@ export async function deleteFrontingReport(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: frontingReports.id })
       .from(frontingReports)

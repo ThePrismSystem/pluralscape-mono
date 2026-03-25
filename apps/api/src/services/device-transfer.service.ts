@@ -14,6 +14,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { deserializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
 import { WorkerError, deriveTransferKeyOffload } from "../lib/pwhash-offload.js";
+import { withAccountTransaction } from "../lib/rls-context.js";
 import { MAX_TRANSFER_CODE_ATTEMPTS } from "../routes/account/device-transfer.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -93,7 +94,7 @@ export async function initiateTransfer(
   // under the Argon2id-derived transfer key, which is never stored.
   const expiresAt = toUnixMillis(createdAt + TRANSFER_TIMEOUT_MS);
 
-  await db.transaction(async (tx) => {
+  await withAccountTransaction(db, accountId, async (tx) => {
     await tx.insert(deviceTransferRequests).values({
       id: transferId,
       accountId,
@@ -146,23 +147,26 @@ export async function completeTransfer(
   }
 
   // Select only the fields we need, use DB time for expiry comparison
-  const [row] = await db
-    .select({
-      id: deviceTransferRequests.id,
-      encryptedKeyMaterial: deviceTransferRequests.encryptedKeyMaterial,
-      codeSalt: deviceTransferRequests.codeSalt,
-      codeAttempts: deviceTransferRequests.codeAttempts,
-    })
-    .from(deviceTransferRequests)
-    .where(
-      and(
-        eq(deviceTransferRequests.id, transferId),
-        eq(deviceTransferRequests.accountId, accountId),
-        eq(deviceTransferRequests.status, "pending"),
-        gt(deviceTransferRequests.expiresAt, sql`now()`),
-      ),
-    )
-    .limit(1);
+  const row = await withAccountTransaction(db, accountId, async (tx) => {
+    const [result] = await tx
+      .select({
+        id: deviceTransferRequests.id,
+        encryptedKeyMaterial: deviceTransferRequests.encryptedKeyMaterial,
+        codeSalt: deviceTransferRequests.codeSalt,
+        codeAttempts: deviceTransferRequests.codeAttempts,
+      })
+      .from(deviceTransferRequests)
+      .where(
+        and(
+          eq(deviceTransferRequests.id, transferId),
+          eq(deviceTransferRequests.accountId, accountId),
+          eq(deviceTransferRequests.status, "pending"),
+          gt(deviceTransferRequests.expiresAt, sql`now()`),
+        ),
+      )
+      .limit(1);
+    return result ?? null;
+  });
 
   if (!row) {
     throw new TransferNotFoundError("Transfer request not found or expired");
@@ -198,31 +202,36 @@ export async function completeTransfer(
 
   if (!codeCorrect) {
     // Atomic counter increment with status guard to prevent TOCTOU race
-    const [updated] = await db
-      .update(deviceTransferRequests)
-      .set({ codeAttempts: sql`${deviceTransferRequests.codeAttempts} + 1` })
-      .where(
-        and(
-          eq(deviceTransferRequests.id, transferId),
-          eq(deviceTransferRequests.status, "pending"),
-        ),
-      )
-      .returning({ codeAttempts: deviceTransferRequests.codeAttempts });
+    const updated = await withAccountTransaction(db, accountId, async (tx) => {
+      const [result] = await tx
+        .update(deviceTransferRequests)
+        .set({ codeAttempts: sql`${deviceTransferRequests.codeAttempts} + 1` })
+        .where(
+          and(
+            eq(deviceTransferRequests.id, transferId),
+            eq(deviceTransferRequests.status, "pending"),
+          ),
+        )
+        .returning({ codeAttempts: deviceTransferRequests.codeAttempts });
+      return result ?? null;
+    });
 
     if (!updated) {
       throw new TransferNotFoundError("Transfer expired");
     }
 
     if (updated.codeAttempts >= MAX_TRANSFER_CODE_ATTEMPTS) {
-      await db
-        .update(deviceTransferRequests)
-        .set({ status: "expired" })
-        .where(
-          and(
-            eq(deviceTransferRequests.id, transferId),
-            eq(deviceTransferRequests.status, "pending"),
-          ),
-        );
+      await withAccountTransaction(db, accountId, async (tx) => {
+        await tx
+          .update(deviceTransferRequests)
+          .set({ status: "expired" })
+          .where(
+            and(
+              eq(deviceTransferRequests.id, transferId),
+              eq(deviceTransferRequests.status, "pending"),
+            ),
+          );
+      });
       throw new TransferExpiredError("Too many incorrect attempts");
     }
 
@@ -233,7 +242,7 @@ export async function completeTransfer(
   // offline brute-force attacks against the stored encrypted key material.
   const encryptedKeyMaterialHex = toHex(row.encryptedKeyMaterial);
 
-  await db.transaction(async (tx) => {
+  await withAccountTransaction(db, accountId, async (tx) => {
     await audit(tx, {
       eventType: "auth.device-transfer-completed",
       actor: { kind: "account", id: accountId },

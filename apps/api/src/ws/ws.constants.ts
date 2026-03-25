@@ -30,6 +30,9 @@ export const WS_READ_RATE_WINDOW_MS = 10_000;
 /** Global cap on unauthenticated WebSocket connections (Slowloris prevention). */
 export const WS_MAX_UNAUTHED_CONNECTIONS = 500;
 
+/** Maximum unauthenticated WebSocket connections per IP address. */
+export const WS_MAX_UNAUTHED_CONNECTIONS_PER_IP = 50;
+
 /** Maximum concurrent WebSocket connections per account. */
 export const WS_MAX_CONNECTIONS_PER_ACCOUNT = 10;
 

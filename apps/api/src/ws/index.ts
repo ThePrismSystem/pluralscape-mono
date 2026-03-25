@@ -8,8 +8,11 @@
  * and the Bun WebSocket handler (for Bun.serve() wiring).
  */
 import { Hono } from "hono";
+import { getConnInfo } from "hono/bun";
 import { v7 as uuidv7 } from "uuid";
 
+import { env } from "../env.js";
+import { isValidIpFormat } from "../lib/ip-validation.js";
 import { getContextLogger } from "../lib/logger.js";
 import { accessLogMiddleware } from "../middleware/access-log.js";
 import { requestIdMiddleware } from "../middleware/request-id.js";
@@ -25,6 +28,7 @@ import {
   WS_GRACEFUL_SHUTDOWN_TIMEOUT_MS,
   WS_MAX_MESSAGE_BYTES,
   WS_MAX_UNAUTHED_CONNECTIONS,
+  WS_MAX_UNAUTHED_CONNECTIONS_PER_IP,
   WS_RELAY_MAX_DOCUMENTS,
   WS_SUBPROTOCOL,
   WS_UPGRADE_SAFETY_TIMEOUT_MS,
@@ -84,9 +88,27 @@ syncWsApp.get(
       };
     }
 
-    // Pre-upgrade: reject if unauthenticated connection cap reached
-    if (!connectionManager.canAcceptUnauthenticated(WS_MAX_UNAUTHED_CONNECTIONS)) {
-      log.warn("WebSocket upgrade rejected: unauthenticated connection limit reached");
+    // Extract client IP: behind a proxy, use X-Forwarded-For; otherwise fall
+    // back to the raw socket address from Bun so per-IP limiting works in all
+    // deployment modes. Validate format to reject garbage header values.
+    const rawIp = env.TRUST_PROXY
+      ? c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+      : getConnInfo(c).remote.address;
+    const clientIp = rawIp && isValidIpFormat(rawIp) ? rawIp : undefined;
+    if (!clientIp) {
+      log.warn("WebSocket upgrade: could not determine client IP — per-IP limiting disabled", {
+        rawIp: rawIp ?? "none",
+      });
+    }
+
+    // Pre-upgrade: reject if unauthenticated connection cap reached (global or per-IP)
+    if (
+      !connectionManager.canAcceptUnauthenticated(WS_MAX_UNAUTHED_CONNECTIONS) ||
+      (clientIp && !connectionManager.canAcceptFromIp(clientIp, WS_MAX_UNAUTHED_CONNECTIONS_PER_IP))
+    ) {
+      log.warn("WebSocket upgrade rejected: unauthenticated connection limit reached", {
+        clientIp: clientIp ?? "unknown",
+      });
       return {
         onOpen(_, ws) {
           ws.close(WS_CLOSE_POLICY_VIOLATION, "Too many pending connections");
@@ -95,7 +117,7 @@ syncWsApp.get(
     }
 
     // Reserve slot synchronously before upgrade completes (Slowloris prevention)
-    connectionManager.reserveUnauthSlot();
+    connectionManager.reserveUnauthSlot(clientIp);
 
     const connectionId = uuidv7();
     let opened = false;
@@ -104,7 +126,7 @@ syncWsApp.get(
     const upgradeTimeout = setTimeout(() => {
       if (!opened) {
         log.warn("WebSocket upgrade timeout — onOpen never fired", { connectionId });
-        connectionManager.releaseUnauthSlot();
+        connectionManager.releaseUnauthSlot(clientIp);
       }
     }, WS_UPGRADE_SAFETY_TIMEOUT_MS);
 
@@ -114,7 +136,7 @@ syncWsApp.get(
       onOpen(_, ws) {
         opened = true;
         clearTimeout(upgradeTimeout);
-        const state = connectionManager.register(connectionId, ws, Date.now());
+        const state = connectionManager.register(connectionId, ws, Date.now(), clientIp);
 
         // Auth timeout — connection must authenticate within WS_AUTH_TIMEOUT_MS
         state.authTimeoutHandle = setTimeout(() => {
@@ -199,7 +221,7 @@ syncWsApp.get(
         clearTimeout(upgradeTimeout);
         if (!opened) {
           // onOpen never fired — release reserved slot
-          connectionManager.releaseUnauthSlot();
+          connectionManager.releaseUnauthSlot(clientIp);
         } else {
           connectionManager.remove(connectionId);
         }

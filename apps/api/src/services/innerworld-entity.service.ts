@@ -9,7 +9,9 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity as archiveEntityGeneric } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -88,7 +90,7 @@ export async function createEntity(
   const entityId = createId(ID_PREFIXES.innerWorldEntity);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Validate regionId exists in same system if provided
     const regionId = parsed.regionId ?? null;
     if (regionId !== null) {
@@ -151,30 +153,32 @@ export async function listEntities(
 ): Promise<PaginatedResult<EntityResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(innerworldEntities.systemId, systemId)];
+    const conditions = [eq(innerworldEntities.systemId, systemId)];
 
-  if (!opts?.includeArchived) {
-    conditions.push(eq(innerworldEntities.archived, false));
-  }
+    if (!opts?.includeArchived) {
+      conditions.push(eq(innerworldEntities.archived, false));
+    }
 
-  if (opts?.regionId) {
-    conditions.push(eq(innerworldEntities.regionId, opts.regionId));
-  }
+    if (opts?.regionId) {
+      conditions.push(eq(innerworldEntities.regionId, opts.regionId));
+    }
 
-  if (opts?.cursor) {
-    conditions.push(gt(innerworldEntities.id, opts.cursor));
-  }
+    if (opts?.cursor) {
+      conditions.push(gt(innerworldEntities.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(innerworldEntities)
-    .where(and(...conditions))
-    .orderBy(innerworldEntities.id)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(innerworldEntities)
+      .where(and(...conditions))
+      .orderBy(innerworldEntities.id)
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toEntityResult);
+    return buildPaginatedResult(rows, effectiveLimit, toEntityResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -187,23 +191,25 @@ export async function getEntity(
 ): Promise<EntityResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(innerworldEntities)
-    .where(
-      and(
-        eq(innerworldEntities.id, entityId),
-        eq(innerworldEntities.systemId, systemId),
-        eq(innerworldEntities.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(innerworldEntities)
+      .where(
+        and(
+          eq(innerworldEntities.id, entityId),
+          eq(innerworldEntities.systemId, systemId),
+          eq(innerworldEntities.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Entity not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Entity not found");
+    }
 
-  return toEntityResult(row);
+    return toEntityResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -226,7 +232,7 @@ export async function updateEntity(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(innerworldEntities)
       .set({
@@ -307,7 +313,7 @@ export async function restoreEntity(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldEntities.id, regionId: innerworldEntities.regionId })
       .from(innerworldEntities)
@@ -378,7 +384,7 @@ export async function deleteEntity(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldEntities.id })
       .from(innerworldEntities)

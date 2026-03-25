@@ -58,10 +58,14 @@ vi.mock("@pluralscape/validation", () => ({
   },
 }));
 
-vi.mock("drizzle-orm", () => ({
-  and: vi.fn((...args: unknown[]) => ({ type: "and", args })),
-  eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
-}));
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("drizzle-orm")>();
+  return {
+    ...actual,
+    and: vi.fn((...args: unknown[]) => ({ type: "and", args })),
+    eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
+  };
+});
 
 vi.mock("../../services/recovery-key.service.js", () => ({
   getRecoveryKeyStatus: vi.fn(),

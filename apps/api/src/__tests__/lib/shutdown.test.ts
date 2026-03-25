@@ -10,6 +10,10 @@ vi.mock("../../ws/bun-adapter.js", () => ({
   websocket: { open: vi.fn(), close: vi.fn(), message: vi.fn() },
 }));
 
+vi.mock("hono/bun", () => ({
+  getConnInfo: vi.fn(() => ({ remote: { address: "127.0.0.1" } })),
+}));
+
 const { mockGetRawClient, mockLogInfo, mockLogWarn, mockLogError } = vi.hoisted(() => ({
   mockGetRawClient: vi.fn<() => Closeable | null>(),
   mockLogInfo: vi.fn(),

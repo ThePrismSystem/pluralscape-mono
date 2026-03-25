@@ -6,7 +6,9 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -97,34 +99,36 @@ export async function listWebhookDeliveries(
 ): Promise<PaginatedResult<WebhookDeliveryResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(webhookDeliveries.systemId, systemId)];
+    const conditions = [eq(webhookDeliveries.systemId, systemId)];
 
-  if (opts.webhookId) {
-    conditions.push(eq(webhookDeliveries.webhookId, opts.webhookId));
-  }
+    if (opts.webhookId) {
+      conditions.push(eq(webhookDeliveries.webhookId, opts.webhookId));
+    }
 
-  if (opts.status) {
-    conditions.push(eq(webhookDeliveries.status, opts.status));
-  }
+    if (opts.status) {
+      conditions.push(eq(webhookDeliveries.status, opts.status));
+    }
 
-  if (opts.eventType) {
-    conditions.push(eq(webhookDeliveries.eventType, opts.eventType));
-  }
+    if (opts.eventType) {
+      conditions.push(eq(webhookDeliveries.eventType, opts.eventType));
+    }
 
-  if (opts.cursor) {
-    conditions.push(lt(webhookDeliveries.id, opts.cursor));
-  }
+    if (opts.cursor) {
+      conditions.push(lt(webhookDeliveries.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select(WEBHOOK_DELIVERY_SELECT_COLUMNS)
-    .from(webhookDeliveries)
-    .where(and(...conditions))
-    .orderBy(desc(webhookDeliveries.id))
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select(WEBHOOK_DELIVERY_SELECT_COLUMNS)
+      .from(webhookDeliveries)
+      .where(and(...conditions))
+      .orderBy(desc(webhookDeliveries.id))
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toWebhookDeliveryResult);
+    return buildPaginatedResult(rows, effectiveLimit, toWebhookDeliveryResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -137,17 +141,19 @@ export async function getWebhookDelivery(
 ): Promise<WebhookDeliveryResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select(WEBHOOK_DELIVERY_SELECT_COLUMNS)
-    .from(webhookDeliveries)
-    .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.systemId, systemId)))
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select(WEBHOOK_DELIVERY_SELECT_COLUMNS)
+      .from(webhookDeliveries)
+      .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.systemId, systemId)))
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Webhook delivery not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Webhook delivery not found");
+    }
 
-  return toWebhookDeliveryResult(row);
+    return toWebhookDeliveryResult(row);
+  });
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────
@@ -161,7 +167,7 @@ export async function deleteWebhookDelivery(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const deleted = await tx
       .delete(webhookDeliveries)
       .where(and(eq(webhookDeliveries.id, deliveryId), eq(webhookDeliveries.systemId, systemId)))

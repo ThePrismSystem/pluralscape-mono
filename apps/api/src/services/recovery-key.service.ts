@@ -26,6 +26,7 @@ import {
   serializeEncryptedPayload,
 } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
+import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { DUMMY_ARGON2_HASH } from "../routes/auth/auth.constants.js";
 
@@ -49,20 +50,22 @@ export async function getRecoveryKeyStatus(
   db: PostgresJsDatabase,
   accountId: AccountId,
 ): Promise<RecoveryKeyStatus> {
-  const rows = await db
-    .select({
-      id: recoveryKeys.id,
-      createdAt: recoveryKeys.createdAt,
-    })
-    .from(recoveryKeys)
-    .where(and(eq(recoveryKeys.accountId, accountId), isNull(recoveryKeys.revokedAt)))
-    .limit(1);
+  return withAccountRead(db, accountId, async (tx) => {
+    const rows = await tx
+      .select({
+        id: recoveryKeys.id,
+        createdAt: recoveryKeys.createdAt,
+      })
+      .from(recoveryKeys)
+      .where(and(eq(recoveryKeys.accountId, accountId), isNull(recoveryKeys.revokedAt)))
+      .limit(1);
 
-  const row = rows[0];
-  if (!row) {
-    return { hasActiveKey: false, createdAt: null };
-  }
-  return { hasActiveKey: true, createdAt: toUnixMillis(row.createdAt) };
+    const row = rows[0];
+    if (!row) {
+      return { hasActiveKey: false, createdAt: null };
+    }
+    return { hasActiveKey: true, createdAt: toUnixMillis(row.createdAt) };
+  });
 }
 
 // ── Regenerate Recovery Key ──────────────────────────────────────
@@ -79,39 +82,6 @@ export async function regenerateRecoveryKeyBackup(
 ): Promise<RegenerateRecoveryKeyResult> {
   const parsed = RegenerateRecoveryKeySchema.parse(params);
 
-  const [account] = await db
-    .select({
-      passwordHash: accounts.passwordHash,
-      kdfSalt: accounts.kdfSalt,
-      encryptedMasterKey: accounts.encryptedMasterKey,
-    })
-    .from(accounts)
-    .where(eq(accounts.id, accountId))
-    .limit(1);
-
-  if (!account) {
-    throw new ValidationError(INCORRECT_PASSWORD_ERROR);
-  }
-
-  const valid = verifyPassword(account.passwordHash, parsed.currentPassword);
-  if (!valid) {
-    throw new ValidationError(INCORRECT_PASSWORD_ERROR);
-  }
-
-  // Look up active recovery key before doing crypto work
-  const activeRows = await db
-    .select({
-      id: recoveryKeys.id,
-    })
-    .from(recoveryKeys)
-    .where(and(eq(recoveryKeys.accountId, accountId), isNull(recoveryKeys.revokedAt)))
-    .limit(1);
-
-  const activeKey = activeRows[0];
-  if (!activeKey) {
-    throw new NoActiveRecoveryKeyError("No active recovery key to revoke");
-  }
-
   const adapter = getSodium();
   let kek: AeadKey | undefined;
   let masterKey: KdfMasterKey | undefined;
@@ -119,31 +89,64 @@ export async function regenerateRecoveryKeyBackup(
   let newRecoveryKeyResult: RecoveryKeyResult | undefined;
 
   try {
-    const encMasterKeyBytes = account.encryptedMasterKey;
-    if (!encMasterKeyBytes) {
-      throw new Error("Account missing encrypted master key");
-    }
-    const payload = deserializeEncryptedPayload(
-      encMasterKeyBytes instanceof Uint8Array
-        ? encMasterKeyBytes
-        : new Uint8Array(encMasterKeyBytes),
-    );
+    const result = await withAccountTransaction(db, accountId, async (tx) => {
+      const [account] = await tx
+        .select({
+          passwordHash: accounts.passwordHash,
+          kdfSalt: accounts.kdfSalt,
+          encryptedMasterKey: accounts.encryptedMasterKey,
+        })
+        .from(accounts)
+        .where(eq(accounts.id, accountId))
+        .limit(1);
 
-    const salt = fromHex(account.kdfSalt);
-    if (salt.length !== PWHASH_SALT_BYTES) {
-      throw new Error("Stored KDF salt has invalid length");
-    }
-    kek = await derivePasswordKey(parsed.currentPassword, salt as PwhashSalt, "server");
-    masterKey = unwrapMasterKey(payload, kek);
+      if (!account) {
+        throw new ValidationError(INCORRECT_PASSWORD_ERROR);
+      }
 
-    const result = regenerateRecoveryKey(masterKey);
-    newRecoveryKeyResult = result.newRecoveryKey;
-    serializedBackup = result.serializedBackup;
-    const backupForInsert = serializedBackup;
-    const timestamp = now();
-    const newId = createId(ID_PREFIXES.recoveryKey);
+      const valid = verifyPassword(account.passwordHash, parsed.currentPassword);
+      if (!valid) {
+        throw new ValidationError(INCORRECT_PASSWORD_ERROR);
+      }
 
-    await db.transaction(async (tx) => {
+      // Look up active recovery key before doing crypto work
+      const activeRows = await tx
+        .select({
+          id: recoveryKeys.id,
+        })
+        .from(recoveryKeys)
+        .where(and(eq(recoveryKeys.accountId, accountId), isNull(recoveryKeys.revokedAt)))
+        .limit(1);
+
+      const activeKey = activeRows[0];
+      if (!activeKey) {
+        throw new NoActiveRecoveryKeyError("No active recovery key to revoke");
+      }
+
+      const encMasterKeyBytes = account.encryptedMasterKey;
+      if (!encMasterKeyBytes) {
+        throw new Error("Account missing encrypted master key");
+      }
+      const payload = deserializeEncryptedPayload(
+        encMasterKeyBytes instanceof Uint8Array
+          ? encMasterKeyBytes
+          : new Uint8Array(encMasterKeyBytes),
+      );
+
+      const salt = fromHex(account.kdfSalt);
+      if (salt.length !== PWHASH_SALT_BYTES) {
+        throw new Error("Stored KDF salt has invalid length");
+      }
+      kek = await derivePasswordKey(parsed.currentPassword, salt as PwhashSalt, "server");
+      masterKey = unwrapMasterKey(payload, kek);
+
+      const regenResult = regenerateRecoveryKey(masterKey);
+      newRecoveryKeyResult = regenResult.newRecoveryKey;
+      serializedBackup = regenResult.serializedBackup;
+      const backupForInsert = serializedBackup;
+      const timestamp = now();
+      const newId = createId(ID_PREFIXES.recoveryKey);
+
       const revoked = await tx
         .update(recoveryKeys)
         .set({ revokedAt: timestamp })
@@ -166,9 +169,11 @@ export async function regenerateRecoveryKeyBackup(
         actor: { kind: "account", id: accountId },
         detail: "Recovery key regenerated",
       });
+
+      return { displayKey: regenResult.newRecoveryKey.displayKey };
     });
 
-    return { recoveryKey: newRecoveryKeyResult.displayKey };
+    return { recoveryKey: result.displayKey };
   } finally {
     if (kek) adapter.memzero(kek);
     if (masterKey) adapter.memzero(masterKey);
@@ -226,15 +231,18 @@ export async function resetPasswordWithRecoveryKey(
     return null;
   }
 
-  // Fetch active recovery key's encrypted backup
-  const [activeKey] = await db
-    .select({
-      id: recoveryKeys.id,
-      encryptedMasterKey: recoveryKeys.encryptedMasterKey,
-    })
-    .from(recoveryKeys)
-    .where(and(eq(recoveryKeys.accountId, account.id), isNull(recoveryKeys.revokedAt)))
-    .limit(1);
+  // Fetch active recovery key's encrypted backup (account-scoped read)
+  const activeKey = await withAccountRead(db, account.id as AccountId, async (tx) => {
+    const [row] = await tx
+      .select({
+        id: recoveryKeys.id,
+        encryptedMasterKey: recoveryKeys.encryptedMasterKey,
+      })
+      .from(recoveryKeys)
+      .where(and(eq(recoveryKeys.accountId, account.id), isNull(recoveryKeys.revokedAt)))
+      .limit(1);
+    return row ?? null;
+  });
 
   if (!activeKey) {
     // Anti-enumeration: match the verifyPassword latency of the "no account" path
@@ -290,7 +298,7 @@ export async function resetPasswordWithRecoveryKey(
     const timeouts = SESSION_TIMEOUTS[platform];
     const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
-    await db.transaction(async (tx) => {
+    await withAccountTransaction(db, account.id as AccountId, async (tx) => {
       // Update account: new password hash, KDF salt, encrypted master key
       await tx
         .update(accounts)
@@ -360,6 +368,8 @@ export async function resetPasswordWithRecoveryKey(
       adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.ciphertext);
       adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.nonce);
     }
+    // Ensure timing equalization on ALL exit paths (including crypto failure)
+    await equalizeAntiEnumTiming(startTime);
   }
 }
 

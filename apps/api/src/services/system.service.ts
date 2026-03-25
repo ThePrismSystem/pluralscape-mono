@@ -9,6 +9,13 @@ import { encryptedBlobToBase64OrNull, parseAndValidateBlob } from "../lib/encryp
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import {
+  withAccountRead,
+  withAccountTransaction,
+  withTenantRead,
+  withTenantTransaction,
+} from "../lib/rls-context.js";
+import { tenantCtx } from "../lib/tenant-context.js";
+import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_SYSTEM_DATA_BYTES,
   MAX_PAGE_LIMIT,
@@ -63,20 +70,22 @@ export async function listSystems(
 ): Promise<PaginatedResult<SystemProfileResult>> {
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(systems.accountId, accountId), eq(systems.archived, false)];
+  return withAccountRead(db, accountId, async (tx) => {
+    const conditions = [eq(systems.accountId, accountId), eq(systems.archived, false)];
 
-  if (cursor) {
-    conditions.push(gt(systems.id, cursor));
-  }
+    if (cursor) {
+      conditions.push(gt(systems.id, cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(systems)
-    .where(and(...conditions))
-    .orderBy(systems.id)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(systems)
+      .where(and(...conditions))
+      .orderBy(systems.id)
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toSystemProfileResult);
+    return buildPaginatedResult(rows, effectiveLimit, toSystemProfileResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -86,23 +95,25 @@ export async function getSystemProfile(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<SystemProfileResult> {
-  const [row] = await db
-    .select()
-    .from(systems)
-    .where(
-      and(
-        eq(systems.id, systemId),
-        eq(systems.accountId, auth.accountId),
-        eq(systems.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(systems)
+      .where(
+        and(
+          eq(systems.id, systemId),
+          eq(systems.accountId, auth.accountId),
+          eq(systems.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
+    }
 
-  return toSystemProfileResult(row);
+    return toSystemProfileResult(row);
+  });
 }
 
 // ── PUT ─────────────────────────────────────────────────────────────
@@ -122,7 +133,7 @@ export async function updateSystemProfile(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(systems)
       .set({
@@ -178,7 +189,7 @@ export async function archiveSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // 1. Verify ownership of non-archived system
     const [existing] = await tx
       .select({ id: systems.id })
@@ -268,7 +279,7 @@ export async function createSystem(
   const systemId = createId(ID_PREFIXES.system);
   const timestamp = now();
 
-  const [row] = await db.transaction(async (tx) => {
+  const [row] = await withAccountTransaction(db, auth.accountId, async (tx) => {
     const inserted = await tx
       .insert(systems)
       .values({

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
@@ -16,10 +17,14 @@ export const biometricTokens = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 128 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
+    usedAt: pgTimestamp("used_at"),
   },
   (t) => [
     index("biometric_tokens_session_id_idx").on(t.sessionId),
     uniqueIndex("biometric_tokens_token_hash_idx").on(t.tokenHash),
+    index("biometric_tokens_unused_idx")
+      .on(t.tokenHash)
+      .where(sql`used_at IS NULL`),
   ],
 );
 

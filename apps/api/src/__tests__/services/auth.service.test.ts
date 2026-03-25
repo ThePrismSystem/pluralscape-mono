@@ -12,7 +12,13 @@ vi.mock("../../env.js", () => ({ env: mockEnv }));
 import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { fromCursor } from "../../lib/pagination.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
-import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
+import {
+  CLIENT_PLATFORM_HEADER,
+  DEFAULT_PLATFORM,
+  MAX_SESSIONS_PER_ACCOUNT,
+  RECOVERY_KEY_GROUP_COUNT,
+  RECOVERY_KEY_GROUP_SIZE,
+} from "../../routes/auth/auth.constants.js";
 import {
   ValidationError,
   listSessions,
@@ -25,7 +31,18 @@ import {
 import { mockDb } from "../helpers/mock-db.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
+import type { AccountId } from "@pluralscape/types";
 import type { Context } from "hono";
+
+const TEST_ACCOUNT_ID = "acct_123" as AccountId;
+const ATTACKER_ACCOUNT_ID = "acct_attacker" as AccountId;
+
+// ── Local test interfaces ─────────────────────────────────────────────
+
+/** Shape of the object passed to `chain.set()` when revoking a session. */
+interface SessionRevocation {
+  revoked: boolean;
+}
 
 // ── Mock helpers ─────────────────────────────────────────────────────
 
@@ -94,6 +111,11 @@ vi.mock("../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
 
+const mockEqualizeAntiEnumTiming = vi.fn<(startTime: number) => Promise<void>>();
+vi.mock("../../lib/anti-enum-timing.js", () => ({
+  equalizeAntiEnumTiming: (startTime: number) => mockEqualizeAntiEnumTiming(startTime),
+}));
+
 // Mock now() so tests can control the current time
 const mockNow = vi.fn<() => number>();
 vi.mock("@pluralscape/types", async (importOriginal) => {
@@ -112,6 +134,7 @@ describe("auth service", () => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
     mockVerifyPassword.mockClear();
+    mockEqualizeAntiEnumTiming.mockClear();
     logMethods.error.mockClear();
     logMethods.warn.mockClear();
     logMethods.info.mockClear();
@@ -481,7 +504,9 @@ describe("auth service", () => {
             accountType: "system",
           },
         ])
-        // Second limit() call: system lookup
+        // Second limit() call: session eviction check (inside withAccountTransaction)
+        .mockResolvedValueOnce([])
+        // Third limit() call: system lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -575,6 +600,50 @@ describe("auth service", () => {
         loginAccount(db, { email: "bad", password: "test" }, "web", mockAudit, mockLogger),
       ).rejects.toThrow();
     });
+
+    it("calls equalizeAntiEnumTiming when account is not found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("calls equalizeAntiEnumTiming when password is invalid", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("does not call equalizeAntiEnumTiming on successful login", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_123",
+            emailHash: "hashed_test@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "system",
+          },
+        ])
+        // Session eviction check
+        .mockResolvedValueOnce([])
+        // System lookup
+        .mockResolvedValueOnce([{ id: "sys_456" }]);
+      chain.returning.mockResolvedValueOnce([{ id: "sess_new" }]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(mockEqualizeAntiEnumTiming).not.toHaveBeenCalled();
+    });
   });
 
   // ── listSessions ──────────────────────────────────────────────────
@@ -584,7 +653,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toEqual([]);
       expect(result.nextCursor).toBeNull();
     });
@@ -597,7 +666,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toHaveLength(2);
       expect(result.nextCursor).toBeNull();
     });
@@ -612,7 +681,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123", undefined, 2);
+      const result = await listSessions(db, TEST_ACCOUNT_ID, undefined, 2);
       expect(result.sessions).toHaveLength(2);
       const { nextCursor } = result;
       expect(nextCursor).not.toBeNull();
@@ -630,7 +699,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123", "sess_1", 25);
+      const result = await listSessions(db, TEST_ACCOUNT_ID, "sess_1", 25);
       expect(result.sessions).toHaveLength(2);
       expect(result.sessions[0]?.id).toBe("sess_2");
       expect(result.sessions[1]?.id).toBe("sess_3");
@@ -648,7 +717,7 @@ describe("auth service", () => {
       const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toHaveLength(1);
     });
 
@@ -666,7 +735,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toHaveLength(1);
     });
   });
@@ -678,7 +747,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_999", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_999", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
 
@@ -687,7 +756,7 @@ describe("auth service", () => {
       // UPDATE with accountId in WHERE matches zero rows
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
 
@@ -695,7 +764,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
-      const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(true);
       expect(chain.transaction).toHaveBeenCalled();
     });
@@ -705,7 +774,7 @@ describe("auth service", () => {
       // The UPDATE should match zero rows (accountId mismatch in WHERE clause)
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_target", "acct_attacker", mockAudit);
+      const result = await revokeSession(db, "sess_target", ATTACKER_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
       // Audit should NOT be called for unauthorized attempts
       expect(mockAudit).not.toHaveBeenCalled();
@@ -716,7 +785,7 @@ describe("auth service", () => {
       // WHERE includes revoked = false, so already-revoked sessions match zero rows
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
   });
@@ -728,7 +797,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const count = await revokeAllSessions(db, "acct_123", "sess_keep", mockAudit);
+      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
       expect(count).toBe(0);
     });
 
@@ -736,7 +805,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }, { id: "sess_2" }, { id: "sess_3" }]);
 
-      const count = await revokeAllSessions(db, "acct_123", "sess_keep", mockAudit);
+      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
       expect(count).toBe(3);
     });
 
@@ -744,7 +813,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
-      await revokeAllSessions(db, "acct_123", "sess_keep", mockAudit);
+      await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
       expect(chain.set).toHaveBeenCalledWith({ revoked: true });
     });
   });
@@ -755,7 +824,7 @@ describe("auth service", () => {
     it("revokes the session and returns void", async () => {
       const { db, chain } = mockDb();
 
-      await logoutCurrentSession(db, "sess_1", "acct_123", mockAudit);
+      await logoutCurrentSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(chain.update).toHaveBeenCalled();
       expect(chain.set).toHaveBeenCalledWith({ revoked: true });
     });
@@ -764,8 +833,155 @@ describe("auth service", () => {
       const { db } = mockDb();
 
       await expect(
-        logoutCurrentSession(db, "sess_1", "acct_123", mockAudit),
+        logoutCurrentSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  // ── Per-account session limiting ───────────────────────────────────
+
+  describe("loginAccount — per-account session limiting", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const credentials = { email: "session-limit@example.com", password: "securepassword123" };
+
+    it("does not evict sessions when count is below MAX_SESSIONS_PER_ACCOUNT", async () => {
+      const { db, chain } = mockDb();
+
+      // Account lookup returns a valid account
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_sess_limit_low",
+            emailHash: "hashed_session-limit@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        // Session window-function query returns total < MAX_SESSIONS_PER_ACCOUNT
+        .mockResolvedValueOnce([{ id: "sess_old", total: 10 }]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+
+      // The session eviction UPDATE should NOT have been called for the oldest session
+      // (update IS called for new session insert, but set() with revoked: true should not happen
+      // for the eviction path when count is below limit)
+      const setCalls = chain.set.mock.calls;
+      const revocationCall = setCalls.find(
+        (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
+      );
+      expect(revocationCall).toBeUndefined();
+    });
+
+    it("evicts oldest session when count reaches MAX_SESSIONS_PER_ACCOUNT", async () => {
+      const { db, chain } = mockDb();
+
+      // Account lookup
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_sess_limit_full",
+            emailHash: "hashed_session-limit@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        // Session window-function query returns total === MAX_SESSIONS_PER_ACCOUNT
+        .mockResolvedValueOnce([{ id: "sess_oldest", total: MAX_SESSIONS_PER_ACCOUNT }]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+
+      // The eviction UPDATE must have been called with revoked: true
+      expect(chain.update).toHaveBeenCalled();
+      expect(chain.set).toHaveBeenCalledWith({ revoked: true });
+    });
+
+    it("handles zero active sessions gracefully (no eviction)", async () => {
+      const { db, chain } = mockDb();
+
+      // Account lookup
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_sess_limit_zero",
+            emailHash: "hashed_session-limit@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "caregiver",
+          },
+        ])
+        // Session window-function query returns empty (no active sessions)
+        .mockResolvedValueOnce([]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+
+      // No eviction: set({ revoked: true }) should not appear
+      const setCalls = chain.set.mock.calls;
+      const revocationCall = setCalls.find(
+        (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
+      );
+      expect(revocationCall).toBeUndefined();
+    });
+  });
+
+  // ── generateFakeRecoveryKey format (via registerAccount anti-enumeration) ──
+
+  describe("generateFakeRecoveryKey format", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    const validParams = {
+      email: "fake-key-format@example.com",
+      password: "securepassword123",
+      recoveryKeyBackupConfirmed: true,
+    };
+
+    it("fake recovery key has exactly RECOVERY_KEY_GROUP_COUNT groups", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+
+      const result = await registerAccount(db, validParams, "web", mockAudit);
+      const groups = result.recoveryKey.split("-");
+      expect(groups).toHaveLength(RECOVERY_KEY_GROUP_COUNT);
+    });
+
+    it("each group of fake recovery key has exactly RECOVERY_KEY_GROUP_SIZE characters", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+
+      const result = await registerAccount(db, validParams, "web", mockAudit);
+      const groups = result.recoveryKey.split("-");
+      for (const group of groups) {
+        expect(group).toHaveLength(RECOVERY_KEY_GROUP_SIZE);
+      }
+    });
+
+    it("each group of fake recovery key uses only base32 alphabet (A-Z, 2-7)", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
+      chain.transaction.mockRejectedValueOnce(pgError);
+
+      const result = await registerAccount(db, validParams, "web", mockAudit);
+      const groups = result.recoveryKey.split("-");
+      for (const group of groups) {
+        expect(group).toMatch(/^[A-Z2-7]+$/);
+      }
     });
   });
 });

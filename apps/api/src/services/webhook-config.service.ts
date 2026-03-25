@@ -15,7 +15,9 @@ import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -145,7 +147,7 @@ export async function createWebhookConfig(
   const timestamp = now();
   const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(webhookConfigs)
       .values({
@@ -189,26 +191,28 @@ export async function listWebhookConfigs(
 ): Promise<PaginatedResult<WebhookConfigResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(webhookConfigs.systemId, systemId)];
+    const conditions = [eq(webhookConfigs.systemId, systemId)];
 
-  if (!opts.includeArchived) {
-    conditions.push(eq(webhookConfigs.archived, false));
-  }
+    if (!opts.includeArchived) {
+      conditions.push(eq(webhookConfigs.archived, false));
+    }
 
-  if (opts.cursor) {
-    conditions.push(lt(webhookConfigs.id, opts.cursor));
-  }
+    if (opts.cursor) {
+      conditions.push(lt(webhookConfigs.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select(WEBHOOK_CONFIG_SELECT_COLUMNS)
-    .from(webhookConfigs)
-    .where(and(...conditions))
-    .orderBy(desc(webhookConfigs.id))
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select(WEBHOOK_CONFIG_SELECT_COLUMNS)
+      .from(webhookConfigs)
+      .where(and(...conditions))
+      .orderBy(desc(webhookConfigs.id))
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toWebhookConfigResult);
+    return buildPaginatedResult(rows, effectiveLimit, toWebhookConfigResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -221,23 +225,25 @@ export async function getWebhookConfig(
 ): Promise<WebhookConfigResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select(WEBHOOK_CONFIG_SELECT_COLUMNS)
-    .from(webhookConfigs)
-    .where(
-      and(
-        eq(webhookConfigs.id, webhookId),
-        eq(webhookConfigs.systemId, systemId),
-        eq(webhookConfigs.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select(WEBHOOK_CONFIG_SELECT_COLUMNS)
+      .from(webhookConfigs)
+      .where(
+        and(
+          eq(webhookConfigs.id, webhookId),
+          eq(webhookConfigs.systemId, systemId),
+          eq(webhookConfigs.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Webhook config not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Webhook config not found");
+    }
 
-  return toWebhookConfigResult(row);
+    return toWebhookConfigResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -280,7 +286,7 @@ export async function updateWebhookConfig(
     setFields.enabled = enabled;
   }
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(webhookConfigs)
       .set(setFields)
@@ -335,7 +341,7 @@ export async function deleteWebhookConfig(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: webhookConfigs.id })
       .from(webhookConfigs)
@@ -346,6 +352,7 @@ export async function deleteWebhookConfig(
           eq(webhookConfigs.archived, false),
         ),
       )
+      .for("update")
       .limit(1);
 
     if (!existing) {

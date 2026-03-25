@@ -14,7 +14,9 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONTENT_TOO_LARGE, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_BLOB_LIMIT,
   MAX_BLOB_LIMIT,
@@ -106,22 +108,32 @@ export async function createUploadUrl(
   const timestamp = now();
   const expiresAt = toUnixMillis(timestamp + PRESIGNED_UPLOAD_TTL_MS);
 
-  // Insert pending row
-  await db.insert(blobMetadata).values({
-    id: blobId,
-    systemId,
-    storageKey,
-    mimeType,
-    sizeBytes,
-    encryptionTier,
-    purpose,
-    checksum: null,
-    createdAt: timestamp,
-    uploadedAt: null,
-    expiresAt,
+  // DB insert + audit inside transaction; S3 presigned URL outside to avoid
+  // holding a DB connection open during external network I/O.
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    await tx.insert(blobMetadata).values({
+      id: blobId,
+      systemId,
+      storageKey,
+      mimeType,
+      sizeBytes,
+      encryptionTier,
+      purpose,
+      checksum: null,
+      createdAt: timestamp,
+      uploadedAt: null,
+      expiresAt,
+    });
+
+    await audit(tx, {
+      eventType: "blob.upload-requested",
+      actor: { kind: "account", id: auth.accountId },
+      detail: `Upload requested: ${purpose} (${String(sizeBytes)} bytes)`,
+      systemId,
+    });
   });
 
-  // Generate presigned URL
+  // Generate presigned URL outside the transaction
   const presigned = await storageAdapter.generatePresignedUploadUrl({
     storageKey,
     mimeType,
@@ -136,13 +148,6 @@ export async function createUploadUrl(
       "Presigned uploads not supported by storage backend",
     );
   }
-
-  await audit(db, {
-    eventType: "blob.upload-requested",
-    actor: { kind: "account", id: auth.accountId },
-    detail: `Upload requested: ${purpose} (${String(sizeBytes)} bytes)`,
-    systemId,
-  });
 
   return {
     blobId: blobId as BlobId,
@@ -171,7 +176,7 @@ export async function confirmUpload(
   const { checksum, thumbnailOfBlobId } = result.data;
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Find pending blob
     const [pending] = await tx
       .select()
@@ -183,6 +188,7 @@ export async function confirmUpload(
           eq(blobMetadata.archived, false),
         ),
       )
+      .for("update")
       .limit(1);
 
     if (!pending) {
@@ -250,24 +256,26 @@ export async function getBlob(
 ): Promise<BlobResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(blobMetadata)
-    .where(
-      and(
-        eq(blobMetadata.id, blobId),
-        eq(blobMetadata.systemId, systemId),
-        sql`${blobMetadata.uploadedAt} IS NOT NULL`,
-        eq(blobMetadata.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(blobMetadata)
+      .where(
+        and(
+          eq(blobMetadata.id, blobId),
+          eq(blobMetadata.systemId, systemId),
+          sql`${blobMetadata.uploadedAt} IS NOT NULL`,
+          eq(blobMetadata.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
+    }
 
-  return toBlobResult(row);
+    return toBlobResult(row);
+  });
 }
 
 // ── LIST BLOBS ──────────────────────────────────────────────────────
@@ -285,27 +293,30 @@ export async function listBlobs(
   assertSystemOwnership(systemId, auth);
 
   const limit = Math.min(opts?.limit ?? DEFAULT_BLOB_LIMIT, MAX_BLOB_LIMIT);
-  const conditions = [
-    eq(blobMetadata.systemId, systemId),
-    sql`${blobMetadata.uploadedAt} IS NOT NULL`,
-  ];
 
-  if (!opts?.includeArchived) {
-    conditions.push(eq(blobMetadata.archived, false));
-  }
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const conditions = [
+      eq(blobMetadata.systemId, systemId),
+      sql`${blobMetadata.uploadedAt} IS NOT NULL`,
+    ];
 
-  if (opts?.cursor) {
-    conditions.push(gt(blobMetadata.id, opts.cursor));
-  }
+    if (!opts?.includeArchived) {
+      conditions.push(eq(blobMetadata.archived, false));
+    }
 
-  const rows = await db
-    .select()
-    .from(blobMetadata)
-    .where(and(...conditions))
-    .orderBy(blobMetadata.id)
-    .limit(limit + 1);
+    if (opts?.cursor) {
+      conditions.push(gt(blobMetadata.id, opts.cursor));
+    }
 
-  return buildPaginatedResult(rows, limit, toBlobResult);
+    const rows = await tx
+      .select()
+      .from(blobMetadata)
+      .where(and(...conditions))
+      .orderBy(blobMetadata.id)
+      .limit(limit + 1);
+
+    return buildPaginatedResult(rows, limit, toBlobResult);
+  });
 }
 
 // ── DOWNLOAD URL ────────────────────────────────────────────────────
@@ -319,26 +330,30 @@ export async function getDownloadUrl(
 ): Promise<DownloadUrlResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select({ storageKey: blobMetadata.storageKey })
-    .from(blobMetadata)
-    .where(
-      and(
-        eq(blobMetadata.id, blobId),
-        eq(blobMetadata.systemId, systemId),
-        sql`${blobMetadata.uploadedAt} IS NOT NULL`,
-        eq(blobMetadata.archived, false),
-      ),
-    )
-    .limit(1);
+  // Fetch storage key inside read context; generate presigned URL outside
+  // to avoid holding a DB connection open during external S3 I/O.
+  const storageKey = await withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select({ storageKey: blobMetadata.storageKey })
+      .from(blobMetadata)
+      .where(
+        and(
+          eq(blobMetadata.id, blobId),
+          eq(blobMetadata.systemId, systemId),
+          sql`${blobMetadata.uploadedAt} IS NOT NULL`,
+          eq(blobMetadata.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
+    }
 
-  const presigned = await storageAdapter.generatePresignedDownloadUrl({
-    storageKey: row.storageKey as StorageKey,
+    return row.storageKey as StorageKey;
   });
+
+  const presigned = await storageAdapter.generatePresignedDownloadUrl({ storageKey });
 
   if (!presigned.supported) {
     throw new ApiHttpError(
@@ -368,7 +383,7 @@ export async function archiveBlob(
 
   const timestamp = now();
 
-  await db.transaction(async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: blobMetadata.id })
       .from(blobMetadata)

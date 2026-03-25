@@ -15,21 +15,23 @@ import {
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
-import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
+import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
 import { toCursor } from "../lib/pagination.js";
+import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
 import { getAccountLoginStore } from "../middleware/stores/account-login-store.js";
 import {
-  ANTI_ENUM_TARGET_MS,
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
+  MAX_SESSIONS_PER_ACCOUNT,
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,
@@ -112,7 +114,7 @@ export async function registerAccount(
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
   try {
-    await db.transaction(async (tx) => {
+    await withAccountTransaction(db, accountId as AccountId, async (tx) => {
       await tx.insert(accounts).values({
         id: accountId,
         accountType,
@@ -179,11 +181,7 @@ export async function registerAccount(
   } catch (error: unknown) {
     // Anti-enumeration: if email already exists (unique constraint), return a fake success
     if (isDuplicateEmailError(error)) {
-      const elapsed = performance.now() - startTime;
-      const remaining = ANTI_ENUM_TARGET_MS - elapsed;
-      if (remaining > 0) {
-        await new Promise<void>((resolve) => setTimeout(resolve, remaining));
-      }
+      await equalizeAntiEnumTiming(startTime);
       const fakeToken = generateSessionToken();
       hashSessionToken(fakeToken); // match timing of real path
       return {
@@ -220,6 +218,7 @@ export async function loginAccount(
   audit: AuditWriter,
   log: AppLogger,
 ): Promise<LoginResult | null> {
+  const startTime = performance.now();
   const parsed = LoginCredentialsSchema.parse(credentials);
   const emailHash = hashEmail(parsed.email);
 
@@ -231,6 +230,7 @@ export async function loginAccount(
     throw new LoginThrottledError(throttleState.windowResetAt);
   }
 
+  // Pre-auth lookup by emailHash — intentionally outside RLS (no accountId known yet)
   const [account] = await db
     .select()
     .from(accounts)
@@ -238,7 +238,7 @@ export async function loginAccount(
     .limit(1);
 
   if (!account) {
-    // Anti-enumeration: run verification against dummy hash to equalize timing
+    // Anti-enumeration: run verification against dummy hash to equalize crypto timing
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.password);
     } catch (err: unknown) {
@@ -247,13 +247,16 @@ export async function loginAccount(
         err instanceof Error ? { err } : { error: String(err) },
       );
     }
-    // Record failure for throttling on non-existent accounts too
-    void loginStore.recordFailure(emailHash).catch((throttleErr: unknown) => {
+    // Record failure for throttling — try/catch keeps timing symmetric with the
+    // valid-account path. Both paths tolerate Valkey outages gracefully.
+    try {
+      await loginStore.recordFailure(emailHash);
+    } catch (throttleErr: unknown) {
       log.error(
         "Failed to record login failure for throttle",
         throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
       );
-    });
+    }
     // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
     // Uses a zeroed account ID since no real account exists for this email.
     void audit(db, {
@@ -265,13 +268,24 @@ export async function loginAccount(
         err: auditError instanceof Error ? auditError : { message: String(auditError) },
       });
     });
+    // Pad total elapsed time so attackers cannot distinguish "not found" from
+    // "wrong password" via request duration differences.
+    await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
-    // Record failed attempt for throttling
-    await loginStore.recordFailure(emailHash);
+    // Record failed attempt — symmetric try/catch with the non-existent path
+    // so both paths behave identically during Valkey outages.
+    try {
+      await loginStore.recordFailure(emailHash);
+    } catch (throttleErr: unknown) {
+      log.error(
+        "Failed to record login failure for throttle",
+        throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
+      );
+    }
 
     // Fire-and-forget: we don't block the response on audit writes for failed attempts.
     void audit(db, {
@@ -286,19 +300,32 @@ export async function loginAccount(
         auditError instanceof Error ? { err: auditError } : { error: String(auditError) },
       );
     });
+    // Pad total elapsed time so attackers cannot distinguish "wrong password"
+    // from "not found" via request duration differences.
+    await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
-  // Successful login: reset the throttle counter
-  await loginStore.reset(emailHash);
+  // Successful login: reset the throttle counter.
+  // try/catch keeps this symmetric with the failure paths — both tolerate Valkey outages.
+  try {
+    await loginStore.reset(emailHash);
+  } catch (throttleErr: unknown) {
+    log.error(
+      "Failed to reset login throttle after successful login",
+      throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
+    );
+  }
 
-  // Fire-and-forget: rehash password if it uses old params
+  // Fire-and-forget: rehash password if it uses old params (inside RLS context)
   if (needsRehash(account.passwordHash)) {
     const newHash = hashPassword(parsed.password, "server");
-    void db
-      .update(accounts)
-      .set({ passwordHash: newHash, updatedAt: now() })
-      .where(and(eq(accounts.id, account.id), eq(accounts.passwordHash, account.passwordHash)))
+    void withAccountTransaction(db, account.id as AccountId, async (tx) => {
+      await tx
+        .update(accounts)
+        .set({ passwordHash: newHash, updatedAt: now() })
+        .where(and(eq(accounts.id, account.id), eq(accounts.passwordHash, account.passwordHash)));
+    })
       .then(() => {
         log.info("Rehashed password to current params", { accountId: account.id });
       })
@@ -310,16 +337,6 @@ export async function loginAccount(
       });
   }
 
-  let systemId: string | null = null;
-  if (account.accountType === "system") {
-    const [system] = await db
-      .select({ id: systems.id })
-      .from(systems)
-      .where(eq(systems.accountId, account.id))
-      .limit(1);
-    systemId = system?.id ?? null;
-  }
-
   const sessionId = createId(ID_PREFIXES.session);
   const rawToken = generateSessionToken();
   const tokenHash = hashSessionToken(rawToken);
@@ -327,7 +344,35 @@ export async function loginAccount(
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
-  await db.transaction(async (tx) => {
+  const systemId = await withAccountTransaction(db, account.id as AccountId, async (tx) => {
+    // Enforce per-account session limit: evict oldest session if at capacity
+    const currentTime = now();
+    const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
+    const [oldest] = await tx
+      .select({
+        id: sessions.id,
+        total: sql<number>`count(*) over()`.as("total"),
+      })
+      .from(sessions)
+      .where(and(eq(sessions.accountId, account.id), eq(sessions.revoked, false), notExpired))
+      .orderBy(asc(sessions.lastActive))
+      .limit(1);
+
+    if (oldest && oldest.total >= MAX_SESSIONS_PER_ACCOUNT) {
+      await tx.update(sessions).set({ revoked: true }).where(eq(sessions.id, oldest.id));
+    }
+
+    // System lookup inside the transaction so it uses the RLS context
+    let sysId: string | null = null;
+    if (account.accountType === "system") {
+      const [system] = await tx
+        .select({ id: systems.id })
+        .from(systems)
+        .where(eq(systems.accountId, account.id))
+        .limit(1);
+      sysId = system?.id ?? null;
+    }
+
     await tx.insert(sessions).values({
       id: sessionId,
       accountId: account.id,
@@ -342,9 +387,11 @@ export async function loginAccount(
       actor: { kind: "account", id: account.id },
       detail: `Login via ${platform}`,
       accountId: account.id as AccountId,
-      systemId: systemId as SystemId | null,
+      systemId: sysId as SystemId | null,
       overrideTrackIp: account.auditLogIpTracking,
     });
+
+    return sysId;
   });
 
   return {
@@ -366,52 +413,54 @@ export interface SessionInfo {
 
 export async function listSessions(
   db: PostgresJsDatabase,
-  accountId: string,
+  accountId: AccountId,
   cursor?: string,
   limit = DEFAULT_SESSION_LIMIT,
 ): Promise<{ sessions: SessionInfo[]; nextCursor: PaginationCursor | null }> {
   const effectiveLimit = Math.min(limit, MAX_SESSION_LIMIT);
 
-  const currentTime = now();
-  const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
+  return withAccountRead(db, accountId, async (tx) => {
+    const currentTime = now();
+    const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
 
-  const conditions = [
-    eq(sessions.accountId, accountId),
-    eq(sessions.revoked, false),
-    notExpired,
-    buildIdleTimeoutFilter(currentTime),
-  ];
-  if (cursor) {
-    conditions.push(gt(sessions.id, cursor));
-  }
+    const conditions = [
+      eq(sessions.accountId, accountId),
+      eq(sessions.revoked, false),
+      notExpired,
+      buildIdleTimeoutFilter(currentTime),
+    ];
+    if (cursor) {
+      conditions.push(gt(sessions.id, cursor));
+    }
 
-  const rows = await db
-    .select({
-      id: sessions.id,
-      createdAt: sessions.createdAt,
-      lastActive: sessions.lastActive,
-      expiresAt: sessions.expiresAt,
-    })
-    .from(sessions)
-    .where(and(...conditions))
-    .orderBy(sessions.id)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select({
+        id: sessions.id,
+        createdAt: sessions.createdAt,
+        lastActive: sessions.lastActive,
+        expiresAt: sessions.expiresAt,
+      })
+      .from(sessions)
+      .where(and(...conditions))
+      .orderBy(sessions.id)
+      .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const result = hasMore ? rows.slice(0, effectiveLimit) : rows;
-  const lastId = result[result.length - 1]?.id;
-  const nextCursor = hasMore && lastId ? toCursor(lastId) : null;
+    const hasMore = rows.length > effectiveLimit;
+    const result = hasMore ? rows.slice(0, effectiveLimit) : rows;
+    const lastId = result[result.length - 1]?.id;
+    const nextCursor = hasMore && lastId ? toCursor(lastId) : null;
 
-  return { sessions: result, nextCursor };
+    return { sessions: result, nextCursor };
+  });
 }
 
 export async function revokeSession(
   db: PostgresJsDatabase,
   sessionId: string,
-  actorAccountId: string,
+  actorAccountId: AccountId,
   audit: AuditWriter,
 ): Promise<boolean> {
-  return db.transaction(async (tx) => {
+  return withAccountTransaction(db, actorAccountId, async (tx) => {
     const updated = await tx
       .update(sessions)
       .set({ revoked: true })
@@ -440,11 +489,11 @@ export async function revokeSession(
 
 export async function revokeAllSessions(
   db: PostgresJsDatabase,
-  accountId: string,
+  accountId: AccountId,
   exceptSessionId: string,
   audit: AuditWriter,
 ): Promise<number> {
-  return db.transaction(async (tx) => {
+  return withAccountTransaction(db, accountId, async (tx) => {
     const result = await tx
       .update(sessions)
       .set({ revoked: true })
@@ -470,10 +519,10 @@ export async function revokeAllSessions(
 export async function logoutCurrentSession(
   db: PostgresJsDatabase,
   sessionId: string,
-  accountId: string,
+  accountId: AccountId,
   audit: AuditWriter,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
+  await withAccountTransaction(db, accountId, async (tx) => {
     await tx
       .update(sessions)
       .set({ revoked: true })
@@ -532,19 +581,22 @@ export function needsRehash(hash: string): boolean {
   return iterations < PWHASH_OPSLIMIT_SENSITIVE;
 }
 
-/** Generate a fake recovery key that looks like a real one for anti-enumeration. */
+/**
+ * Generate a fake recovery key that looks like a real one for anti-enumeration.
+ * Uses byte % chars.length which has zero modulo bias since 256 divides evenly by 32 (chars.length).
+ */
 function generateFakeRecoveryKey(): string {
   const adapter = getSodium();
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const totalChars = RECOVERY_KEY_GROUP_COUNT * RECOVERY_KEY_GROUP_SIZE;
   const randomBytes = adapter.randomBytes(totalChars);
+
   const groups: string[] = [];
-  let byteIdx = 0;
   for (let g = 0; g < RECOVERY_KEY_GROUP_COUNT; g++) {
     let group = "";
     for (let c = 0; c < RECOVERY_KEY_GROUP_SIZE; c++) {
-      const byte = randomBytes[byteIdx++] ?? 0;
-      group += chars[byte % chars.length] ?? "A";
+      const byteVal = randomBytes[g * RECOVERY_KEY_GROUP_SIZE + c] ?? 0;
+      group += chars[byteVal % chars.length] ?? "A";
     }
     groups.push(group);
   }

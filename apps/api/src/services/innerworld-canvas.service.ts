@@ -6,7 +6,9 @@ import { eq, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { MAX_ENCRYPTED_DATA_BYTES } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -51,17 +53,19 @@ export async function getCanvas(
 ): Promise<CanvasResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(innerworldCanvas)
-    .where(eq(innerworldCanvas.systemId, systemId))
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(innerworldCanvas)
+      .where(eq(innerworldCanvas.systemId, systemId))
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Canvas not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Canvas not found");
+    }
 
-  return toCanvasResult(row);
+    return toCanvasResult(row);
+  });
 }
 
 // ── UPSERT ──────────────────────────────────────────────────────────
@@ -83,7 +87,7 @@ export async function upsertCanvas(
 
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ version: innerworldCanvas.version })
       .from(innerworldCanvas)

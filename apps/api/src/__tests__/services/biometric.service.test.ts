@@ -22,6 +22,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     sessionId: "biometricTokens.sessionId",
     tokenHash: "biometricTokens.tokenHash",
     createdAt: "biometricTokens.createdAt",
+    usedAt: "biometricTokens.usedAt",
   },
   systemSettings: {
     biometricEnabled: "systemSettings.biometricEnabled",
@@ -42,6 +43,8 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col, val) => ({ col, val, op: "eq" })),
   and: vi.fn((...args: unknown[]) => ({ args, op: "and" })),
+  isNull: vi.fn((col) => ({ col, op: "isNull" })),
+  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values, _tag: "sql" }),
 }));
 
 // ── Imports after mocks ──────────────────────────────────────────
@@ -156,7 +159,7 @@ describe("verifyBiometric", () => {
 
   it("returns verified: true on matching token", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: "bt_test123" }]);
+    chain.returning.mockResolvedValueOnce([{ id: "bt_test123" }]);
 
     const result = await verifyBiometric(db, VALID_VERIFY_BODY, createAuth(), mockAudit);
 
@@ -177,7 +180,7 @@ describe("verifyBiometric", () => {
 
   it("throws INVALID_TOKEN when no matching token is found", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.returning.mockResolvedValueOnce([]);
 
     await expect(
       verifyBiometric(db, VALID_VERIFY_BODY, createAuth(), mockAudit),
@@ -187,9 +190,9 @@ describe("verifyBiometric", () => {
     });
   });
 
-  it("fires audit for failed biometric verification (fire-and-forget)", async () => {
+  it("awaits audit for failed biometric verification before throwing", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.returning.mockResolvedValueOnce([]);
     const auth = createAuth();
 
     await expect(verifyBiometric(db, VALID_VERIFY_BODY, auth, mockAudit)).rejects.toMatchObject({
@@ -207,13 +210,34 @@ describe("verifyBiometric", () => {
     );
   });
 
-  it("returns 401 even when audit write fails", async () => {
+  it("propagates audit write failure on failed verification", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
-    const auth = createAuth();
+    chain.returning.mockResolvedValueOnce([]);
     const failingAudit = vi.fn().mockRejectedValue(new Error("DB down")) as AuditWriter;
 
-    await expect(verifyBiometric(db, VALID_VERIFY_BODY, auth, failingAudit)).rejects.toMatchObject({
+    await expect(
+      verifyBiometric(db, VALID_VERIFY_BODY, createAuth(), failingAudit),
+    ).rejects.toThrow("DB down");
+  });
+
+  it("rejects second use of same biometric token (replay prevention)", async () => {
+    // First use: token found and marked as used
+    const { db: db1, chain: chain1 } = mockDb();
+    chain1.returning.mockResolvedValueOnce([{ id: "bt_test123" }]);
+
+    const result = await verifyBiometric(db1, VALID_VERIFY_BODY, createAuth(), mockAudit);
+    expect(result).toEqual({ verified: true });
+
+    vi.clearAllMocks();
+    mockAudit = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    // Second use: UPDATE ... WHERE usedAt IS NULL matches zero rows (already used)
+    const { db: db2, chain: chain2 } = mockDb();
+    chain2.returning.mockResolvedValueOnce([]);
+
+    await expect(
+      verifyBiometric(db2, VALID_VERIFY_BODY, createAuth(), mockAudit),
+    ).rejects.toMatchObject({
       code: "INVALID_TOKEN",
       status: 401,
     });
@@ -221,7 +245,7 @@ describe("verifyBiometric", () => {
 
   it("audits the verification event", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: "bt_test123" }]);
+    chain.returning.mockResolvedValueOnce([{ id: "bt_test123" }]);
     const auth = createAuth();
 
     await verifyBiometric(db, VALID_VERIFY_BODY, auth, mockAudit);

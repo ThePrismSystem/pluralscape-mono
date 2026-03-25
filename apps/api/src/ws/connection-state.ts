@@ -14,6 +14,8 @@ interface ConnectionBase {
   readonly connectionId: string;
   readonly ws: WSContext;
   readonly connectedAt: number;
+  /** Client IP for per-IP unauthenticated connection limiting (ephemeral, never persisted). */
+  readonly clientIp: string | undefined;
   readonly subscribedDocs: Set<string>;
   readonly mutationWindow: SlidingWindowCounter;
   readonly readWindow: SlidingWindowCounter;
