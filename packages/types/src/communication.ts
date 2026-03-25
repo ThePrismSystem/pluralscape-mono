@@ -66,7 +66,7 @@ export type ArchivedBoardMessage = Archived<BoardMessage>;
 export interface Note extends AuditMetadata {
   readonly id: NoteId;
   readonly systemId: SystemId;
-  readonly memberId: MemberId | null;
+  readonly author: EntityReference<"member" | "structure-entity"> | null;
   readonly title: string;
   readonly content: string;
   readonly backgroundColor: HexColor | null;

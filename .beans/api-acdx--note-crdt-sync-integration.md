@@ -1,11 +1,11 @@
 ---
 # api-acdx
 title: Note CRDT sync integration
-status: done
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-25T05:59:19Z
-updated_at: 2026-03-25T14:45:27Z
+updated_at: 2026-03-25T15:14:22Z
 parent: api-i16z
 blocked_by:
   - api-yirj
@@ -26,3 +26,7 @@ Extracted notes from JournalDocument into a standalone NoteDocument CRDT schema:
 - Updated all exhaustive switches: subscription-filter, time-split, document-factory
 - Updated bucket.ts to import CrdtNote from notes.ts instead of journal.ts
 - Updated barrel exports, conflict-resolution docs, and all affected tests
+
+## Summary of Changes
+
+Created `packages/sync/src/schemas/notes.ts` with CrdtNote and NoteDocument types (independent from JournalDocument). Wired into sync infrastructure: document-types.ts (prefix + ParsedDocumentId), document-factory.ts (createNoteDocument + createDocument switch), types.ts (TIME_SPLIT_CONFIGS, DOCUMENT_SIZE_LIMITS, SyncPriorityCategory, SYNC_PRIORITY_ORDER), sync.constants.ts (NOTE_SPLIT_THRESHOLD_BYTES, NOTE_SIZE_LIMIT_BYTES). All tests passing.

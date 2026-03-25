@@ -1,11 +1,11 @@
 ---
 # api-i16z
 title: Private notes
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-25T05:59:18Z
+updated_at: 2026-03-25T15:19:42Z
 parent: ps-53up
 ---
 
@@ -36,3 +36,16 @@ Notes are leaf entities — always deletable. Archival always allowed.
 - `packages/types/src/encryption.ts` — ServerNote type
 - `packages/types/src/utility.ts` — EntityReference polymorphic pattern
 - `packages/types/src/journal.ts` — Journal entry author pattern (exemplar for polymorphic authorship)
+
+## Summary of Changes
+
+Implemented full Private Notes API with polymorphic authorship (member, structure-entity, or system-wide). All 6 child tasks completed:
+
+- DB schema updated: `memberId` → `authorEntityType` + `authorEntityId` (PG + SQLite)
+- Types updated: `Note.author`, `ServerNote.authorEntityType/authorEntityId`, 5 audit event types
+- Validation schemas: create, update, query with author filtering
+- CRUD service: create, get, list (cursor pagination, author filtering), update (OCC), delete, archive, restore
+- API routes: 8 route files registered at `/:systemId/notes`
+- CRDT sync: standalone NoteDocument schema, document factory, time-split config
+- E2E tests: lifecycle, filtering, OCC, error cases
+- Migrations regenerated from scratch

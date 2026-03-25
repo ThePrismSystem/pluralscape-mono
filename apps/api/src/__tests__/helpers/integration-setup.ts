@@ -25,6 +25,7 @@ import type {
   GroupId,
   MemberId,
   MessageId,
+  NoteId,
   SessionId,
   SystemId,
   SystemStructureEntityId,
@@ -172,4 +173,8 @@ export function genMessageId(): MessageId {
 
 export function genBoardMessageId(): BoardMessageId {
   return `bm_${crypto.randomUUID()}` as BoardMessageId;
+}
+
+export function genNoteId(): NoteId {
+  return `note_${crypto.randomUUID()}` as NoteId;
 }

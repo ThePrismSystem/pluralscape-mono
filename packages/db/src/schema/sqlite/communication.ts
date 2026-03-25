@@ -18,8 +18,13 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
-import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
+import { enumCheck, nullPairCheck } from "../../helpers/check.js";
+import {
+  CHANNEL_TYPES,
+  NOTE_AUTHOR_ENTITY_TYPES,
+  POLL_KINDS,
+  POLL_STATUSES,
+} from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -119,7 +124,8 @@ export const notes = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    memberId: text("member_id"),
+    authorEntityType: text("author_entity_type"),
+    authorEntityId: text("author_entity_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -127,11 +133,13 @@ export const notes = sqliteTable(
   },
   (t) => [
     index("notes_system_archived_idx").on(t.systemId, t.archived),
-    index("notes_member_id_idx").on(t.memberId),
-    foreignKey({
-      columns: [t.memberId, t.systemId],
-      foreignColumns: [members.id, members.systemId],
-    }).onDelete("restrict"),
+    index("notes_system_author_type_archived_idx").on(t.systemId, t.authorEntityType, t.archived),
+    index("notes_author_entity_id_idx").on(t.authorEntityId),
+    check("notes_author_null_pair_check", nullPairCheck(t.authorEntityType, t.authorEntityId)),
+    check(
+      "notes_author_entity_type_check",
+      enumCheck(t.authorEntityType, NOTE_AUTHOR_ENTITY_TYPES),
+    ),
     versionCheckFor("notes", t.version),
     archivableConsistencyCheckFor("notes", t.archived, t.archivedAt),
   ],

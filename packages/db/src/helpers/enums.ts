@@ -300,6 +300,11 @@ export const AUDIT_EVENT_TYPES = [
   "board-message.archived",
   "board-message.restored",
   "board-message.deleted",
+  "note.created",
+  "note.updated",
+  "note.archived",
+  "note.restored",
+  "note.deleted",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
@@ -325,6 +330,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   "sync-conflict",
   "friend-switch-alert",
 ] as const satisfies readonly NotificationEventType[];
+export const NOTE_AUTHOR_ENTITY_TYPES = ["member", "structure-entity"] as const;
 export const WEBHOOK_EVENT_TYPES = [
   "member.created",
   "member.updated",

@@ -309,12 +309,13 @@ export type ClientBoardMessage = BoardMessage;
 /**
  * Server-side note representation.
  * T1 encrypted: title, content, backgroundColor
- * T3 plaintext: memberId, archived
+ * T3 plaintext: authorEntityType, authorEntityId, archived
  */
 export interface ServerNote extends AuditMetadata {
   readonly id: NoteId;
   readonly systemId: SystemId;
-  readonly memberId: MemberId | null;
+  readonly authorEntityType: "member" | "structure-entity" | null;
+  readonly authorEntityId: string | null;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
 }

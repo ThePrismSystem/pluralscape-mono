@@ -573,7 +573,7 @@ describe("SQLite communication schema", () => {
   });
 
   describe("notes", () => {
-    it("round-trips with nullable memberId", () => {
+    it("round-trips system-wide note (null author)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -591,10 +591,11 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(notes).where(eq(notes.id, id)).all();
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.authorEntityType).toBeNull();
+      expect(rows[0]?.authorEntityId).toBeNull();
     });
 
-    it("sets memberId to null on member deletion (SET NULL)", () => {
+    it("round-trips member-bound note", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
@@ -605,16 +606,17 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          memberId,
+          authorEntityType: "member",
+          authorEntityId: memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
         .run();
 
-      db.delete(members).where(eq(members.id, memberId)).run();
       const rows = db.select().from(notes).where(eq(notes.id, id)).all();
-      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.authorEntityType).toBe("member");
+      expect(rows[0]?.authorEntityId).toBe(memberId);
     });
 
     it("defaults archived to false and archivedAt to null", () => {
@@ -635,7 +637,7 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(notes).where(eq(notes.id, id)).all();
       expect(rows[0]?.archived).toBe(false);
-      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.authorEntityType).toBeNull();
     });
 
     it("round-trips archived state", () => {
