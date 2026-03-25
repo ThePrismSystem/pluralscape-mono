@@ -1,0 +1,2 @@
+ALTER TABLE "sync_documents" DROP CONSTRAINT "sync_documents_doc_type_check";--> statement-breakpoint
+ALTER TABLE "sync_documents" ADD CONSTRAINT "sync_documents_doc_type_check" CHECK ("sync_documents"."doc_type" IS NULL OR "sync_documents"."doc_type" IN ('system-core', 'fronting', 'chat', 'note', 'journal', 'privacy-config', 'bucket'));

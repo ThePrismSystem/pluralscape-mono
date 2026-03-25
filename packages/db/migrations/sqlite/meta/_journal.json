@@ -43,6 +43,13 @@
       "when": 1774443469659,
       "tag": "0005_lame_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1774451375663,
+      "tag": "0006_high_morgan_stark",
+      "breakpoints": true
     }
   ]
 }

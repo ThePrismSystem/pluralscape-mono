@@ -43,6 +43,13 @@
       "when": 1774443464214,
       "tag": "0005_fuzzy_wind_dancer",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774451373637,
+      "tag": "0006_unique_quicksilver",
+      "breakpoints": true
     }
   ]
 }
