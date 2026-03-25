@@ -143,7 +143,17 @@ export type AuditEventType =
   | "webhook-config.archived"
   | "webhook-config.restored"
   | "webhook-config.deleted"
-  | "webhook-delivery.deleted";
+  | "webhook-delivery.deleted"
+  | "channel.created"
+  | "channel.updated"
+  | "channel.archived"
+  | "channel.restored"
+  | "channel.deleted"
+  | "message.created"
+  | "message.updated"
+  | "message.archived"
+  | "message.restored"
+  | "message.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =
