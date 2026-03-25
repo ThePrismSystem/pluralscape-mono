@@ -7,6 +7,8 @@ priority: normal
 created_at: 2026-03-25T05:59:19Z
 updated_at: 2026-03-25T05:59:19Z
 parent: api-i16z
+blocked_by:
+  - api-yirj
 ---
 
 Register note.created/updated/archived/restored/deleted event types. Tests: unit (event type validation) + integration (lifecycle event persistence).

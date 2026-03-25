@@ -11,10 +11,6 @@ parent: ps-53up
 
 Member-bound, system-wide, rich text
 
-### Deletion pattern
-
-Notes: leaf entities, always deletable. Archival always allowed regardless of dependents.
-
 ## Scope
 
 Rich text notes that can be member-bound, structure-entity-bound, or system-wide. Authors are polymorphic: EntityReference<"member" | "structure-entity"> (null = system-wide). Content is T1 encrypted; author reference is T3 plaintext. Notes are leaf entities (always deletable). Gets its own NoteDocument CRDT schema (independent from ChatDocument).

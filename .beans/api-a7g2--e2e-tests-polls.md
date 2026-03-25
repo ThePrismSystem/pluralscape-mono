@@ -7,6 +7,8 @@ priority: normal
 created_at: 2026-03-25T05:59:20Z
 updated_at: 2026-03-25T05:59:20Z
 parent: api-8lt2
+blocked_by:
+  - api-zdqb
 ---
 
 apps/api-e2e/src/tests/polls/crud.spec.ts (poll lifecycle) + voting.spec.ts (voting flows). Cover: create with options, vote, multi-vote, veto, abstain, close, archive/delete, consensus analytics, auth, error codes.

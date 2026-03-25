@@ -7,6 +7,9 @@ priority: normal
 created_at: 2026-03-25T05:59:20Z
 updated_at: 2026-03-25T05:59:20Z
 parent: api-jjb0
+blocked_by:
+  - api-dtor
+  - api-d0py
 ---
 
 Test dispatcher fires for each communication event type. Test delivery worker processes communication events. PGlite + real webhook infrastructure.
