@@ -432,6 +432,7 @@ export type {
   ArchivedChatMessage,
   BoardMessage,
   ArchivedBoardMessage,
+  NoteAuthorEntityType,
   Note,
   ArchivedNote,
   PollOption,
@@ -443,6 +444,7 @@ export type {
   AcknowledgementRequest,
   ArchivedAcknowledgementRequest,
 } from "./communication.js";
+export { NOTE_AUTHOR_ENTITY_TYPES } from "./communication.js";
 
 // ── Lifecycle ─────────────────────────────────────────────────────
 export type {

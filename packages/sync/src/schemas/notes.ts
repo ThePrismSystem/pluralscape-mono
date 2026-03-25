@@ -4,7 +4,7 @@ import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.j
 export interface CrdtNote extends CrdtAuditFields {
   id: CrdtString;
   systemId: CrdtString;
-  /** JSON-serialized "member" | "structure-entity" | null */
+  /** @see NoteAuthorEntityType — "member" | "structure-entity" | null */
   authorEntityType: CrdtOptionalString;
   authorEntityId: CrdtOptionalString;
   title: CrdtString;

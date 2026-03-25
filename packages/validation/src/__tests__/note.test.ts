@@ -171,8 +171,11 @@ describe("NoteQuerySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("parses authorEntityId filter", () => {
-    const result = NoteQuerySchema.safeParse({ authorEntityId: "mem_abc" });
+  it("parses authorEntityId filter with authorEntityType", () => {
+    const result = NoteQuerySchema.safeParse({
+      authorEntityType: "member",
+      authorEntityId: "mem_abc",
+    });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.authorEntityId).toBe("mem_abc");
@@ -185,5 +188,27 @@ describe("NoteQuerySchema", () => {
     if (result.success) {
       expect(result.data.systemWide).toBe(true);
     }
+  });
+
+  it("rejects authorEntityId without authorEntityType", () => {
+    const result = NoteQuerySchema.safeParse({ authorEntityId: "mem_abc" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects systemWide with authorEntityType", () => {
+    const result = NoteQuerySchema.safeParse({
+      systemWide: "true",
+      authorEntityType: "member",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects systemWide with authorEntityId", () => {
+    const result = NoteQuerySchema.safeParse({
+      systemWide: "true",
+      authorEntityType: "member",
+      authorEntityId: "mem_abc",
+    });
+    expect(result.success).toBe(false);
   });
 });

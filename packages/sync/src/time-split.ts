@@ -133,35 +133,41 @@ export function splitDocument<T>(
   const timePeriod = computeNextTimePeriod(config.splitUnit, nowMs);
   const newDocId = computeNewDocumentId(parsed, timePeriod);
 
-  if (parsed.documentType === "fronting") {
-    const currentDoc = session.document;
-    if (!isFrontingDocument(currentDoc)) {
-      throw new Error(`Document "${docId}" does not match expected FrontingDocument shape`);
+  switch (parsed.documentType) {
+    case "fronting": {
+      const currentDoc = session.document;
+      if (!isFrontingDocument(currentDoc)) {
+        throw new Error(`Document "${docId}" does not match expected FrontingDocument shape`);
+      }
+
+      const newDoc = createFrontingDocument();
+      const activeEntries = Object.entries(currentDoc.sessions).filter(
+        ([, fs]) => fs.endTime === null,
+      );
+
+      if (activeEntries.length > 0) {
+        const migrated = Automerge.change(newDoc, (d) => {
+          for (const [id, fs] of activeEntries) {
+            d.sessions[id] = fs;
+          }
+        });
+        return { documentType: "fronting", newDocId, newDoc: migrated };
+      }
+      return { documentType: "fronting", newDocId, newDoc };
     }
-
-    const newDoc = createFrontingDocument();
-    const activeEntries = Object.entries(currentDoc.sessions).filter(
-      ([, fs]) => fs.endTime === null,
-    );
-
-    if (activeEntries.length > 0) {
-      const migrated = Automerge.change(newDoc, (d) => {
-        for (const [id, fs] of activeEntries) {
-          d.sessions[id] = fs;
-        }
-      });
-      return { documentType: "fronting", newDocId, newDoc: migrated };
+    case "chat":
+      return { documentType: "chat", newDocId, newDoc: createChatDocument() };
+    case "note":
+      return { documentType: "note", newDocId, newDoc: createNoteDocument() };
+    case "journal":
+      return { documentType: "journal", newDocId, newDoc: createJournalDocument() };
+    case "system-core":
+    case "privacy-config":
+    case "bucket":
+      throw new UnsupportedDocumentTypeError(parsed.documentType, "time-splitting");
+    default: {
+      const _exhaustive: never = parsed;
+      throw new Error(`Unhandled document type in splitDocument: ${String(_exhaustive)}`);
     }
-    return { documentType: "fronting", newDocId, newDoc };
   }
-
-  if (parsed.documentType === "chat") {
-    return { documentType: "chat", newDocId, newDoc: createChatDocument() };
-  }
-
-  if (parsed.documentType === "note") {
-    return { documentType: "note", newDocId, newDoc: createNoteDocument() };
-  }
-
-  return { documentType: "journal", newDocId, newDoc: createJournalDocument() };
 }

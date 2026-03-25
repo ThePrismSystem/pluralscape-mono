@@ -12,10 +12,11 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 
 export const noteRoutes = new Hono<AuthEnv>();
 
+// Static paths first to avoid /:noteId capture
 noteRoutes.route("/", listRoute);
+noteRoutes.route("/", createRoute);
 noteRoutes.route("/", getRoute);
 noteRoutes.route("/", updateRoute);
 noteRoutes.route("/", deleteRoute);
-noteRoutes.route("/", createRoute);
 noteRoutes.route("/", archiveRoute);
 noteRoutes.route("/", restoreRoute);

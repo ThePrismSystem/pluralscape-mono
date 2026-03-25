@@ -337,6 +337,17 @@ describe("note.service (PGlite integration)", () => {
       expect(result.items).toHaveLength(3);
       expect(result.hasMore).toBe(true);
     });
+
+    it("rejects systemWide combined with authorEntityType", async () => {
+      await assertApiError(
+        listNotes(asDb(db), systemId, auth, {
+          systemWide: true,
+          authorEntityType: "member",
+        }),
+        "VALIDATION_ERROR",
+        400,
+      );
+    });
   });
 
   // ── UPDATE ──────────────────────────────────────────────────────

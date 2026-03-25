@@ -330,7 +330,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   "sync-conflict",
   "friend-switch-alert",
 ] as const satisfies readonly NotificationEventType[];
-export const NOTE_AUTHOR_ENTITY_TYPES = ["member", "structure-entity"] as const;
+export { NOTE_AUTHOR_ENTITY_TYPES } from "@pluralscape/types";
 export const WEBHOOK_EVENT_TYPES = [
   "member.created",
   "member.updated",

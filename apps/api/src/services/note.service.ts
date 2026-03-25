@@ -30,6 +30,7 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
+  NoteAuthorEntityType,
   NoteId,
   PaginatedResult,
   PaginationCursor,
@@ -43,7 +44,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export interface NoteResult {
   readonly id: NoteId;
   readonly systemId: SystemId;
-  readonly authorEntityType: "member" | "structure-entity" | null;
+  readonly authorEntityType: NoteAuthorEntityType | null;
   readonly authorEntityId: string | null;
   readonly encryptedData: string;
   readonly version: number;
@@ -57,7 +58,7 @@ interface ListNoteOpts {
   readonly cursor?: string;
   readonly limit?: number;
   readonly includeArchived?: boolean;
-  readonly authorEntityType?: "member" | "structure-entity";
+  readonly authorEntityType?: NoteAuthorEntityType;
   readonly authorEntityId?: string;
   readonly systemWide?: boolean;
 }
@@ -68,7 +69,7 @@ function toNoteResult(row: typeof notes.$inferSelect): NoteResult {
   return {
     id: row.id as NoteId,
     systemId: row.systemId as SystemId,
-    authorEntityType: row.authorEntityType as "member" | "structure-entity" | null,
+    authorEntityType: row.authorEntityType as NoteAuthorEntityType | null,
     authorEntityId: row.authorEntityId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
@@ -91,25 +92,33 @@ interface DecodedNoteCursor {
 }
 
 function fromNoteCursor(cursor: string): DecodedNoteCursor {
+  let raw: string;
   try {
-    const raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-    const parsed = JSON.parse(raw) as unknown;
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      typeof (parsed as { t?: unknown }).t !== "number" ||
-      typeof (parsed as { i?: unknown }).i !== "string"
-    ) {
-      throw new Error("shape");
-    }
-    const { t, i } = parsed as { t: number; i: string };
-    return { createdAt: t, id: i };
+    raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
   } catch (error) {
     if (error instanceof CursorInvalidError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
     }
+    throw error;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed note cursor");
   }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as { t?: unknown }).t !== "number" ||
+    typeof (parsed as { i?: unknown }).i !== "string"
+  ) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed note cursor");
+  }
+  const { t, i } = parsed as { t: number; i: string };
+  return { createdAt: t, id: i };
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────
@@ -196,6 +205,17 @@ export async function listNotes(
 ): Promise<PaginatedResult<NoteResult>> {
   assertSystemOwnership(systemId, auth);
 
+  if (
+    opts.systemWide &&
+    (opts.authorEntityType !== undefined || opts.authorEntityId !== undefined)
+  ) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "systemWide cannot be combined with author filters",
+    );
+  }
+
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
@@ -219,6 +239,7 @@ export async function listNotes(
 
     if (opts.cursor) {
       const decoded = fromNoteCursor(opts.cursor);
+      // or() returns SQL | undefined in drizzle types; always defined with concrete args
       const cursorCondition = or(
         lt(notes.createdAt, decoded.createdAt),
         and(eq(notes.createdAt, decoded.createdAt), lt(notes.id, decoded.id)),
@@ -246,6 +267,10 @@ export async function listNotes(
 
 // ── UPDATE ──────────────────────────────────────────────────────────
 
+/**
+ * Updates a note's encrypted data with optimistic concurrency control.
+ * Author (entityType/entityId) is immutable after creation.
+ */
 export async function updateNote(
   db: PostgresJsDatabase,
   systemId: SystemId,
