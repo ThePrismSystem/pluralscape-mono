@@ -13,6 +13,7 @@ import type {
   Channel,
   ChatMessage,
   Note,
+  NoteAuthorEntityType,
   Poll,
   PollOption,
   PollVote,
@@ -140,7 +141,7 @@ describe("Note", () => {
   it("has correct field types", () => {
     expectTypeOf<Note["id"]>().toEqualTypeOf<NoteId>();
     expectTypeOf<Note["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Note["memberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<Note["author"]>().toEqualTypeOf<EntityReference<NoteAuthorEntityType> | null>();
     expectTypeOf<Note["title"]>().toBeString();
     expectTypeOf<Note["content"]>().toBeString();
     expectTypeOf<Note["backgroundColor"]>().toEqualTypeOf<HexColor | null>();

@@ -69,7 +69,7 @@ CREATE TABLE "audit_log" (
 	"detail" text,
 	CONSTRAINT "audit_log_id_timestamp_pk" PRIMARY KEY("id","timestamp"),
 	CONSTRAINT "audit_log_id_unique" UNIQUE("id","timestamp"),
-	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-definition.deleted', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'lifecycle-event.archived', 'lifecycle-event.restored', 'lifecycle-event.deleted', 'timer-config.created', 'timer-config.updated', 'timer-config.archived', 'timer-config.restored', 'timer-config.deleted', 'check-in-record.created', 'check-in-record.responded', 'check-in-record.dismissed', 'check-in-record.archived', 'check-in-record.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived', 'fronting-report.created', 'fronting-report.deleted', 'fronting-session.created', 'fronting-session.updated', 'fronting-session.ended', 'fronting-session.archived', 'fronting-session.restored', 'fronting-session.deleted', 'fronting-comment.created', 'fronting-comment.updated', 'fronting-comment.archived', 'fronting-comment.restored', 'fronting-comment.deleted', 'webhook-config.created', 'webhook-config.updated', 'webhook-config.archived', 'webhook-config.restored', 'webhook-config.deleted', 'webhook-delivery.deleted')),
+	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-definition.deleted', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'lifecycle-event.archived', 'lifecycle-event.restored', 'lifecycle-event.deleted', 'timer-config.created', 'timer-config.updated', 'timer-config.archived', 'timer-config.restored', 'timer-config.deleted', 'check-in-record.created', 'check-in-record.responded', 'check-in-record.dismissed', 'check-in-record.archived', 'check-in-record.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived', 'fronting-report.created', 'fronting-report.deleted', 'fronting-session.created', 'fronting-session.updated', 'fronting-session.ended', 'fronting-session.archived', 'fronting-session.restored', 'fronting-session.deleted', 'fronting-comment.created', 'fronting-comment.updated', 'fronting-comment.archived', 'fronting-comment.restored', 'fronting-comment.deleted', 'webhook-config.created', 'webhook-config.updated', 'webhook-config.archived', 'webhook-config.restored', 'webhook-config.deleted', 'webhook-delivery.deleted', 'channel.created', 'channel.updated', 'channel.archived', 'channel.restored', 'channel.deleted', 'message.created', 'message.updated', 'message.archived', 'message.restored', 'message.deleted', 'board-message.created', 'board-message.updated', 'board-message.pinned', 'board-message.unpinned', 'board-message.reordered', 'board-message.archived', 'board-message.restored', 'board-message.deleted', 'note.created', 'note.updated', 'note.archived', 'note.restored', 'note.deleted')),
 	CONSTRAINT "audit_log_detail_length_check" CHECK ("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint
@@ -87,7 +87,8 @@ CREATE TABLE "biometric_tokens" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"session_id" varchar(50) NOT NULL,
 	"token_hash" varchar(128) NOT NULL,
-	"created_at" timestamptz NOT NULL
+	"created_at" timestamptz NOT NULL,
+	"used_at" timestamptz
 );
 --> statement-breakpoint
 CREATE TABLE "blob_metadata" (
@@ -622,13 +623,16 @@ CREATE TABLE "nomenclature_settings" (
 CREATE TABLE "notes" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"system_id" varchar(50) NOT NULL,
-	"member_id" varchar(50),
+	"author_entity_type" varchar(50),
+	"author_entity_id" varchar(50),
 	"encrypted_data" "bytea" NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
+	CONSTRAINT "notes_author_null_pair_check" CHECK (("notes"."author_entity_type" IS NULL) = ("notes"."author_entity_id" IS NULL)),
+	CONSTRAINT "notes_author_entity_type_check" CHECK ("notes"."author_entity_type" IS NULL OR "notes"."author_entity_type" IN ('member', 'structure-entity')),
 	CONSTRAINT "notes_version_check" CHECK ("notes"."version" >= 1),
 	CONSTRAINT "notes_archived_consistency_check" CHECK (("notes"."archived" = true) = ("notes"."archived_at" IS NOT NULL))
 );
@@ -790,7 +794,7 @@ CREATE TABLE "sync_documents" (
 	"channel_id" varchar(50),
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
-	CONSTRAINT "sync_documents_doc_type_check" CHECK ("sync_documents"."doc_type" IS NULL OR "sync_documents"."doc_type" IN ('system-core', 'fronting', 'chat', 'journal', 'privacy-config', 'bucket')),
+	CONSTRAINT "sync_documents_doc_type_check" CHECK ("sync_documents"."doc_type" IS NULL OR "sync_documents"."doc_type" IN ('system-core', 'fronting', 'chat', 'note', 'journal', 'privacy-config', 'bucket')),
 	CONSTRAINT "sync_documents_key_type_check" CHECK ("sync_documents"."key_type" IS NULL OR "sync_documents"."key_type" IN ('derived', 'bucket')),
 	CONSTRAINT "sync_documents_size_bytes_check" CHECK ("sync_documents"."size_bytes" >= 0),
 	CONSTRAINT "sync_documents_snapshot_version_check" CHECK ("sync_documents"."snapshot_version" >= 0),
@@ -1071,7 +1075,6 @@ ALTER TABLE "messages" ADD CONSTRAINT "messages_system_id_systems_id_fk" FOREIGN
 ALTER TABLE "messages" ADD CONSTRAINT "messages_channel_id_system_id_channels_id_system_id_fk" FOREIGN KEY ("channel_id","system_id") REFERENCES "public"."channels"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "nomenclature_settings" ADD CONSTRAINT "nomenclature_settings_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notes" ADD CONSTRAINT "notes_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "notes" ADD CONSTRAINT "notes_member_id_system_id_members_id_system_id_fk" FOREIGN KEY ("member_id","system_id") REFERENCES "public"."members"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_configs" ADD CONSTRAINT "notification_configs_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pk_bridge_configs" ADD CONSTRAINT "pk_bridge_configs_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "poll_votes" ADD CONSTRAINT "poll_votes_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -1126,6 +1129,7 @@ CREATE INDEX "audit_log_timestamp_idx" ON "audit_log" USING btree ("timestamp");
 CREATE INDEX "auth_keys_account_id_idx" ON "auth_keys" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "biometric_tokens_session_id_idx" ON "biometric_tokens" USING btree ("session_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "biometric_tokens_token_hash_idx" ON "biometric_tokens" USING btree ("token_hash");--> statement-breakpoint
+CREATE INDEX "biometric_tokens_unused_idx" ON "biometric_tokens" USING btree ("token_hash") WHERE used_at IS NULL;--> statement-breakpoint
 CREATE INDEX "blob_metadata_system_id_purpose_idx" ON "blob_metadata" USING btree ("system_id","purpose");--> statement-breakpoint
 CREATE INDEX "blob_metadata_system_archived_idx" ON "blob_metadata" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE UNIQUE INDEX "blob_metadata_storage_key_idx" ON "blob_metadata" USING btree ("storage_key");--> statement-breakpoint
@@ -1211,7 +1215,8 @@ CREATE INDEX "messages_channel_id_timestamp_idx" ON "messages" USING btree ("cha
 CREATE INDEX "messages_system_archived_idx" ON "messages" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "messages_reply_to_id_idx" ON "messages" USING btree ("reply_to_id");--> statement-breakpoint
 CREATE INDEX "notes_system_archived_idx" ON "notes" USING btree ("system_id","archived");--> statement-breakpoint
-CREATE INDEX "notes_member_id_idx" ON "notes" USING btree ("member_id");--> statement-breakpoint
+CREATE INDEX "notes_system_author_type_archived_idx" ON "notes" USING btree ("system_id","author_entity_type","archived");--> statement-breakpoint
+CREATE INDEX "notes_author_entity_id_idx" ON "notes" USING btree ("author_entity_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "notification_configs_system_id_event_type_idx" ON "notification_configs" USING btree ("system_id","event_type") WHERE "notification_configs"."archived" = false;--> statement-breakpoint
 CREATE UNIQUE INDEX "pk_bridge_configs_system_id_idx" ON "pk_bridge_configs" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "poll_votes_poll_id_idx" ON "poll_votes" USING btree ("poll_id");--> statement-breakpoint

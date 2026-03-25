@@ -94,6 +94,7 @@ describe("enum arrays", () => {
       "system-core",
       "fronting",
       "chat",
+      "note",
       "journal",
       "privacy-config",
       "bucket",
@@ -115,7 +116,7 @@ describe("enum arrays", () => {
   });
 
   it("AUDIT_EVENT_TYPES matches AuditEventType union", () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(153);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(158);
     expect(AUDIT_EVENT_TYPES).toContain("auth.login");
     expect(AUDIT_EVENT_TYPES).toContain("device.security.jailbreak_warning_shown");
     expect(AUDIT_EVENT_TYPES).toContain("auth.password-reset-via-recovery");
@@ -286,11 +287,11 @@ describe("enum arrays", () => {
     expect(FRIEND_CONNECTION_STATUSES).toHaveLength(4);
     expect(AUTH_KEY_TYPES).toHaveLength(2);
     expect(DEVICE_TRANSFER_STATUSES).toHaveLength(3);
-    expect(SYNC_DOC_TYPES).toHaveLength(6);
+    expect(SYNC_DOC_TYPES).toHaveLength(7);
     expect(SYNC_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(16);
-    expect(AUDIT_EVENT_TYPES).toHaveLength(153);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(158);
     expect(CHANNEL_TYPES).toHaveLength(2);
     expect(POLL_STATUSES).toHaveLength(2);
     expect(POLL_KINDS).toHaveLength(2);

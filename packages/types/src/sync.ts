@@ -7,6 +7,7 @@ export type SyncDocumentType =
   | "fronting"
   | "chat"
   | "journal"
+  | "note"
   | "privacy-config"
   | "bucket";
 

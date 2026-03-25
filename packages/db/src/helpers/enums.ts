@@ -113,6 +113,7 @@ export const SYNC_DOC_TYPES = [
   "system-core",
   "fronting",
   "chat",
+  "note",
   "journal",
   "privacy-config",
   "bucket",
@@ -299,6 +300,11 @@ export const AUDIT_EVENT_TYPES = [
   "board-message.archived",
   "board-message.restored",
   "board-message.deleted",
+  "note.created",
+  "note.updated",
+  "note.archived",
+  "note.restored",
+  "note.deleted",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
@@ -324,6 +330,7 @@ export const NOTIFICATION_EVENT_TYPES = [
   "sync-conflict",
   "friend-switch-alert",
 ] as const satisfies readonly NotificationEventType[];
+export { NOTE_AUTHOR_ENTITY_TYPES } from "@pluralscape/types";
 export const WEBHOOK_EVENT_TYPES = [
   "member.created",
   "member.updated",

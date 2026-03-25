@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1774382315630,
-      "tag": "0000_talented_epoch",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1774393778011,
-      "tag": "0001_soft_siren",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1774395687498,
-      "tag": "0002_military_rawhide_kid",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1774425078428,
-      "tag": "0003_calm_umar",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1774441484732,
-      "tag": "0004_overconfident_black_bird",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1774443469659,
-      "tag": "0005_lame_lyja",
+      "when": 1774469602092,
+      "tag": "0000_premium_fat_cobra",
       "breakpoints": true
     }
   ]

@@ -6,6 +6,7 @@ import {
   createChatDocument,
   createFrontingDocument,
   createJournalDocument,
+  createNoteDocument,
 } from "./factories/document-factory.js";
 import { TIME_SPLIT_CONFIGS } from "./types.js";
 
@@ -13,6 +14,7 @@ import type { ParsedDocumentId } from "./document-types.js";
 import type { ChatDocument } from "./schemas/chat.js";
 import type { FrontingDocument } from "./schemas/fronting.js";
 import type { JournalDocument } from "./schemas/journal.js";
+import type { NoteDocument } from "./schemas/notes.js";
 import type { TimeSplitConfig, TimeSplitUnit } from "./types.js";
 
 /** Result of splitting a time-based document into a new period. */
@@ -31,6 +33,11 @@ export type TimeSplitResult =
       readonly documentType: "journal";
       readonly newDocId: string;
       readonly newDoc: Automerge.Doc<JournalDocument>;
+    }
+  | {
+      readonly documentType: "note";
+      readonly newDocId: string;
+      readonly newDoc: Automerge.Doc<NoteDocument>;
     };
 
 /** Computes the current time period string for a given split unit. */
@@ -66,6 +73,8 @@ export function computeNewDocumentId(parsed: ParsedDocumentId, timePeriod: strin
       return `chat-${parsed.entityId}-${timePeriod}`;
     case "journal":
       return `journal-${parsed.entityId}-${timePeriod}`;
+    case "note":
+      return `note-${parsed.entityId}-${timePeriod}`;
     case "system-core":
     case "privacy-config":
     case "bucket":
@@ -124,31 +133,41 @@ export function splitDocument<T>(
   const timePeriod = computeNextTimePeriod(config.splitUnit, nowMs);
   const newDocId = computeNewDocumentId(parsed, timePeriod);
 
-  if (parsed.documentType === "fronting") {
-    const currentDoc = session.document;
-    if (!isFrontingDocument(currentDoc)) {
-      throw new Error(`Document "${docId}" does not match expected FrontingDocument shape`);
+  switch (parsed.documentType) {
+    case "fronting": {
+      const currentDoc = session.document;
+      if (!isFrontingDocument(currentDoc)) {
+        throw new Error(`Document "${docId}" does not match expected FrontingDocument shape`);
+      }
+
+      const newDoc = createFrontingDocument();
+      const activeEntries = Object.entries(currentDoc.sessions).filter(
+        ([, fs]) => fs.endTime === null,
+      );
+
+      if (activeEntries.length > 0) {
+        const migrated = Automerge.change(newDoc, (d) => {
+          for (const [id, fs] of activeEntries) {
+            d.sessions[id] = fs;
+          }
+        });
+        return { documentType: "fronting", newDocId, newDoc: migrated };
+      }
+      return { documentType: "fronting", newDocId, newDoc };
     }
-
-    const newDoc = createFrontingDocument();
-    const activeEntries = Object.entries(currentDoc.sessions).filter(
-      ([, fs]) => fs.endTime === null,
-    );
-
-    if (activeEntries.length > 0) {
-      const migrated = Automerge.change(newDoc, (d) => {
-        for (const [id, fs] of activeEntries) {
-          d.sessions[id] = fs;
-        }
-      });
-      return { documentType: "fronting", newDocId, newDoc: migrated };
+    case "chat":
+      return { documentType: "chat", newDocId, newDoc: createChatDocument() };
+    case "note":
+      return { documentType: "note", newDocId, newDoc: createNoteDocument() };
+    case "journal":
+      return { documentType: "journal", newDocId, newDoc: createJournalDocument() };
+    case "system-core":
+    case "privacy-config":
+    case "bucket":
+      throw new UnsupportedDocumentTypeError(parsed.documentType, "time-splitting");
+    default: {
+      const _exhaustive: never = parsed;
+      throw new Error(`Unhandled document type in splitDocument: ${String(_exhaustive)}`);
     }
-    return { documentType: "fronting", newDocId, newDoc };
   }
-
-  if (parsed.documentType === "chat") {
-    return { documentType: "chat", newDocId, newDoc: createChatDocument() };
-  }
-
-  return { documentType: "journal", newDocId, newDoc: createJournalDocument() };
 }

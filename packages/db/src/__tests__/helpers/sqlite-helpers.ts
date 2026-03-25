@@ -757,21 +757,24 @@ export const SQLITE_DDL = {
     CREATE TABLE notes (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      member_id TEXT,
+      author_entity_type TEXT,
+      author_entity_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK ((author_entity_type IS NULL) = (author_entity_id IS NULL)),
+      CHECK (author_entity_type IS NULL OR author_entity_type IN ('member', 'structure-entity')),
       CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   notesIndexes: `
     CREATE INDEX notes_system_archived_idx ON notes (system_id, archived);
-    CREATE INDEX notes_member_id_idx ON notes (member_id)
+    CREATE INDEX notes_system_author_type_archived_idx ON notes (system_id, author_entity_type, archived);
+    CREATE INDEX notes_author_entity_id_idx ON notes (author_entity_id)
   `,
   polls: `
     CREATE TABLE polls (

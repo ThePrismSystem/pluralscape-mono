@@ -40,6 +40,12 @@ export type ParsedDocumentId =
       readonly timePeriod: string | null;
     }
   | {
+      readonly documentType: "note";
+      readonly keyType: "derived";
+      readonly entityId: SystemId;
+      readonly timePeriod: string | null;
+    }
+  | {
       readonly documentType: "privacy-config";
       readonly keyType: "derived";
       readonly entityId: SystemId;
@@ -91,6 +97,7 @@ const PREFIX_CONFIGS = [
   },
   { prefix: "chat-", documentType: "chat", keyType: "derived", timeSplitPattern: MONTH_RE },
   { prefix: "journal-", documentType: "journal", keyType: "derived", timeSplitPattern: YEAR_RE },
+  { prefix: "note-", documentType: "note", keyType: "derived", timeSplitPattern: YEAR_RE },
   { prefix: "bucket-", documentType: "bucket", keyType: "bucket", timeSplitPattern: null },
 ] as const satisfies readonly {
   prefix: string;
@@ -107,6 +114,7 @@ const PREFIX_CONFIGS = [
  * - `fronting-{systemId}[-YYYY-QN]`
  * - `chat-{channelId}[-YYYY-MM]`
  * - `journal-{systemId}[-YYYY]`
+ * - `note-{systemId}[-YYYY]`
  * - `privacy-config-{systemId}`
  * - `bucket-{bucketId}`
  *

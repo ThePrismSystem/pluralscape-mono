@@ -1,6 +1,7 @@
 import type { CrdtChannel, CrdtChatMessage } from "./chat.js";
 import type { CrdtFrontingSession } from "./fronting.js";
-import type { CrdtJournalEntry, CrdtNote } from "./journal.js";
+import type { CrdtJournalEntry } from "./journal.js";
+import type { CrdtNote } from "./notes.js";
 import type {
   CrdtCustomFront,
   CrdtFieldDefinition,

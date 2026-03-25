@@ -124,6 +124,7 @@ export {
   ReorderBoardMessagesBodySchema,
   BoardMessageQuerySchema,
 } from "./board-message.js";
+export { CreateNoteBodySchema, UpdateNoteBodySchema, NoteQuerySchema } from "./note.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,

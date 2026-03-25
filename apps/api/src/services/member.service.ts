@@ -577,7 +577,10 @@ export async function deleteMember(
             eq(relationships.targetMemberId, memberId),
           ),
         ),
-      tx.select({ count: count() }).from(notes).where(eq(notes.memberId, memberId)),
+      tx
+        .select({ count: count() })
+        .from(notes)
+        .where(and(eq(notes.authorEntityType, "member"), eq(notes.authorEntityId, memberId))),
       tx
         .select({ count: count() })
         .from(frontingComments)

@@ -7,6 +7,7 @@ import {
   createDocument,
   createFrontingDocument,
   createJournalDocument,
+  createNoteDocument,
   createPrivacyConfigDocument,
   createSystemCoreDocument,
 } from "../factories/document-factory.js";
@@ -18,6 +19,7 @@ const ALL_DOCUMENT_TYPES: readonly SyncDocumentType[] = [
   "fronting",
   "chat",
   "journal",
+  "note",
   "privacy-config",
   "bucket",
 ];
@@ -138,18 +140,35 @@ describe("Document factories", () => {
       const doc = createJournalDocument();
       expect(doc.entries).toBeDefined();
       expect(doc.wikiPages).toBeDefined();
-      expect(doc.notes).toBeDefined();
     });
 
     it("all maps are initially empty", () => {
       const doc = createJournalDocument();
       expect(Object.keys(doc.entries)).toHaveLength(0);
       expect(Object.keys(doc.wikiPages)).toHaveLength(0);
-      expect(Object.keys(doc.notes)).toHaveLength(0);
     });
 
     it("survives save/load roundtrip", () => {
       const doc = createJournalDocument();
+      const bytes = Automerge.save(doc);
+      const loaded = Automerge.load(bytes);
+      expect(loaded).toBeDefined();
+    });
+  });
+
+  describe("createNoteDocument", () => {
+    it("produces a valid Automerge doc with notes map", () => {
+      const doc = createNoteDocument();
+      expect(doc.notes).toBeDefined();
+    });
+
+    it("notes map is initially empty", () => {
+      const doc = createNoteDocument();
+      expect(Object.keys(doc.notes)).toHaveLength(0);
+    });
+
+    it("survives save/load roundtrip", () => {
+      const doc = createNoteDocument();
       const bytes = Automerge.save(doc);
       const loaded = Automerge.load(bytes);
       expect(loaded).toBeDefined();

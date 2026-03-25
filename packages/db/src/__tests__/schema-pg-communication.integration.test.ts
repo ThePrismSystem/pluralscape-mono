@@ -663,7 +663,7 @@ describe("PG communication schema", () => {
   });
 
   describe("notes", () => {
-    it("round-trips with nullable memberId", async () => {
+    it("round-trips system-wide note (null author)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -679,10 +679,11 @@ describe("PG communication schema", () => {
 
       const rows = await db.select().from(notes).where(eq(notes.id, id));
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.authorEntityType).toBeNull();
+      expect(rows[0]?.authorEntityId).toBeNull();
     });
 
-    it("restricts member deletion when referenced by note", async () => {
+    it("round-trips member-bound note", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
@@ -692,13 +693,42 @@ describe("PG communication schema", () => {
       await db.insert(notes).values({
         id,
         systemId,
-        memberId,
+        authorEntityType: "member",
+        authorEntityId: memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
 
-      await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
+      const rows = await db.select().from(notes).where(eq(notes.id, id));
+      expect(rows[0]?.authorEntityType).toBe("member");
+      expect(rows[0]?.authorEntityId).toBe(memberId);
+    });
+
+    it("rejects mismatched author null pair", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = new Date(Date.now()).toISOString();
+
+      await expect(
+        client.query(
+          "INSERT INTO notes (id, system_id, author_entity_type, encrypted_data, created_at, updated_at, version, archived) VALUES ($1, $2, 'member', '\\x0102'::bytea, $3, $4, 1, false)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects invalid authorEntityType", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = new Date(Date.now()).toISOString();
+
+      await expect(
+        client.query(
+          "INSERT INTO notes (id, system_id, author_entity_type, author_entity_id, encrypted_data, created_at, updated_at, version, archived) VALUES ($1, $2, 'invalid', 'some_id', '\\x0102'::bytea, $3, $4, 1, false)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
 
     it("defaults archived to false and archivedAt to null", async () => {

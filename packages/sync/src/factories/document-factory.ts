@@ -11,6 +11,7 @@ import type { BucketProjectionDocument } from "../schemas/bucket.js";
 import type { ChatDocument } from "../schemas/chat.js";
 import type { FrontingDocument } from "../schemas/fronting.js";
 import type { JournalDocument } from "../schemas/journal.js";
+import type { NoteDocument } from "../schemas/notes.js";
 import type { PrivacyConfigDocument } from "../schemas/privacy-config.js";
 import type { SystemCoreDocument } from "../schemas/system-core.js";
 
@@ -152,6 +153,12 @@ export function createJournalDocument(): Automerge.Doc<JournalDocument> {
   return fromDoc({
     entries: {},
     wikiPages: {},
+  });
+}
+
+/** Creates an empty note document. */
+export function createNoteDocument(): Automerge.Doc<NoteDocument> {
+  return fromDoc({
     notes: {},
   });
 }
@@ -200,6 +207,7 @@ export function createDocument(
   | Automerge.Doc<FrontingDocument>
   | Automerge.Doc<ChatDocument>
   | Automerge.Doc<JournalDocument>
+  | Automerge.Doc<NoteDocument>
   | Automerge.Doc<PrivacyConfigDocument>
   | Automerge.Doc<BucketProjectionDocument> {
   switch (type) {
@@ -211,6 +219,8 @@ export function createDocument(
       return createChatDocument();
     case "journal":
       return createJournalDocument();
+    case "note":
+      return createNoteDocument();
     case "privacy-config":
       return createPrivacyConfigDocument();
     case "bucket":

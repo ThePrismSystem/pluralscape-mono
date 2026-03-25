@@ -44,25 +44,12 @@ export interface CrdtWikiPage extends CrdtAuditFields {
   archived: boolean;
 }
 
-// ── note ─────────────────────────────────────────────────────────────
-
-/** CRDT representation of a Note (LWW map, keyed by NoteId). */
-export interface CrdtNote extends CrdtAuditFields {
-  id: CrdtString;
-  systemId: CrdtString;
-  memberId: CrdtOptionalString;
-  title: CrdtString;
-  content: CrdtString;
-  backgroundColor: CrdtOptionalString;
-  archived: boolean;
-}
-
 // ── document ─────────────────────────────────────────────────────────
 
 /**
  * Automerge document schema for the journal document.
  *
- * Contains long-form writing — journal entries, wiki pages, and notes.
+ * Contains long-form writing — journal entries and wiki pages.
  * Time-split by year when document exceeds 10 MB.
  *
  * Encryption key: Master key
@@ -73,6 +60,4 @@ export interface JournalDocument {
   entries: Record<string, CrdtJournalEntry>;
   /** LWW map keyed by WikiPageId. */
   wikiPages: Record<string, CrdtWikiPage>;
-  /** LWW map keyed by NoteId. */
-  notes: Record<string, CrdtNote>;
 }

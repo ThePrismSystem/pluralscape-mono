@@ -806,7 +806,7 @@ describe("Storage budget", () => {
 
   it("SYNC_PRIORITY_ORDER has system-core first and historical last", () => {
     expect(SYNC_PRIORITY_ORDER[0]).toBe("system-core");
-    expect(SYNC_PRIORITY_ORDER[SYNC_PRIORITY_ORDER.length - 1]).toBe("journal-historical");
+    expect(SYNC_PRIORITY_ORDER[SYNC_PRIORITY_ORDER.length - 1]).toBe("note-historical");
   });
 });
 

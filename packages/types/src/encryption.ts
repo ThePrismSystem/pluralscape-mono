@@ -4,6 +4,7 @@ import type {
   ChatMessage,
   BoardMessage,
   Note,
+  NoteAuthorEntityType,
   Poll,
   PollKind,
   PollVote,
@@ -309,12 +310,13 @@ export type ClientBoardMessage = BoardMessage;
 /**
  * Server-side note representation.
  * T1 encrypted: title, content, backgroundColor
- * T3 plaintext: memberId, archived
+ * T3 plaintext: authorEntityType, authorEntityId, archived
  */
 export interface ServerNote extends AuditMetadata {
   readonly id: NoteId;
   readonly systemId: SystemId;
-  readonly memberId: MemberId | null;
+  readonly authorEntityType: NoteAuthorEntityType | null;
+  readonly authorEntityId: string | null;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
 }
@@ -688,7 +690,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Channel: T1 (name) | T3 (type, parentId, sortOrder, archived)
 // ChatMessage: T1 (content, attachments, senderId) | T3 (channelId, replyToId, timestamp, editedAt, archived)
 // BoardMessage: T1 (content, senderId) | T3 (pinned, sortOrder, archived)
-// Note: T1 (title, content, backgroundColor) | T3 (memberId, archived)
+// Note: T1 (title, content, backgroundColor) | T3 (authorEntityType, authorEntityId, archived)
 // FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder, archived)
 // FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId, structureEntityId, groupId)
 // InnerWorldEntity: T1 (linked entity refs, description, visual, entityType, positionX, positionY) | T3 (regionId, archived)

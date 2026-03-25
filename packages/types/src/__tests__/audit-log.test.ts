@@ -182,6 +182,11 @@ describe("AuditEventType", () => {
         case "board-message.archived":
         case "board-message.restored":
         case "board-message.deleted":
+        case "note.created":
+        case "note.updated":
+        case "note.archived":
+        case "note.restored":
+        case "note.deleted":
           return type;
         default: {
           const _exhaustive: never = type;
