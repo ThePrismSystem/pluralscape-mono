@@ -119,6 +119,12 @@ export {
   MessageTimestampQuerySchema,
 } from "./message.js";
 export {
+  CreateBoardMessageBodySchema,
+  UpdateBoardMessageBodySchema,
+  ReorderBoardMessagesBodySchema,
+  BoardMessageQuerySchema,
+} from "./board-message.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_ENCRYPTED_SYSTEM_DATA_SIZE,
