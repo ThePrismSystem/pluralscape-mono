@@ -1,11 +1,11 @@
 ---
 # api-ryy0
 title: Chat system
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-25T05:59:18Z
+updated_at: 2026-03-25T07:45:30Z
 parent: ps-53up
 ---
 
@@ -41,3 +41,5 @@ Depends on existing infrastructure: PG schema (`packages/db/src/schema/pg/commun
 - `packages/types/src/encryption.ts` — ServerChannel, ServerMessage types
 - `docs/adr/016-messages-partitioning.md` — Hash-based message partitioning
 - `docs/adr/007-realtime.md` — Real-time architecture
+
+## Summary of Changes\n\nImplemented the complete chat system API layer:\n- Channel CRUD with category/channel hierarchy, cursor pagination, 409 HAS_DEPENDENTS\n- Message CRUD with partition-aware composite (timestamp, id) cursor pagination\n- Optional timestamp query param on single-entity message endpoints for partition pruning\n- 16 route files, 2 services, 2 validation schemas, 10 audit event types, INVALID_HIERARCHY error code\n- DB migration for audit_log CHECK constraint update\n- Integration tests (PGlite) + E2E tests (12 Playwright specs)\n- Proxy switching (api-00ih) confirmed as client-side concern (senderId is T1 encrypted)\n- CRDT sync infrastructure verified (factory, subscription filter, document types all in place)

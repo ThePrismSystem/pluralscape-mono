@@ -16,12 +16,14 @@ import type {
   BlobId,
   BucketId,
   BucketKeyRotationId,
+  ChannelId,
   CheckInRecordId,
   CustomFrontId,
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
   MemberId,
+  MessageId,
   SessionId,
   SystemId,
   SystemStructureEntityId,
@@ -157,4 +159,12 @@ export function genRotationId(): BucketKeyRotationId {
 
 export function genAccountId(): AccountId {
   return `acc_${crypto.randomUUID()}` as AccountId;
+}
+
+export function genChannelId(): ChannelId {
+  return `ch_${crypto.randomUUID()}` as ChannelId;
+}
+
+export function genMessageId(): MessageId {
+  return `msg_${crypto.randomUUID()}` as MessageId;
 }

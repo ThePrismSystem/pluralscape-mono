@@ -17,6 +17,7 @@ export {
   CopyGroupBodySchema,
   AddGroupMemberBodySchema,
 } from "./group.js";
+export { CreateChannelBodySchema, UpdateChannelBodySchema, ChannelQuerySchema } from "./channel.js";
 export { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "./custom-front.js";
 export {
   BiometricEnrollBodySchema,
@@ -111,6 +112,12 @@ export {
   WebhookConfigQuerySchema,
   WebhookDeliveryQuerySchema,
 } from "./webhook.js";
+export {
+  CreateMessageBodySchema,
+  UpdateMessageBodySchema,
+  MessageQuerySchema,
+  MessageTimestampQuerySchema,
+} from "./message.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,

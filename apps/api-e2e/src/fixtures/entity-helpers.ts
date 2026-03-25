@@ -149,6 +149,54 @@ export async function createRelationship(
 }
 
 /**
+ * Create a channel in the given system and return its ID and version.
+ */
+export async function createChannel(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  opts: { type?: "category" | "channel"; parentId?: string; name?: string } = {},
+): Promise<{ id: string; version: number }> {
+  const { type = "channel", parentId, name = "E2E Test Channel" } = opts;
+  const data: Record<string, unknown> = {
+    encryptedData: encryptForApi({ name }),
+    type,
+    sortOrder: 0,
+  };
+  if (parentId) data.parentId = parentId;
+  const res = await request.post(`/v1/systems/${systemId}/channels`, {
+    headers,
+    data,
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { id: string; version: number };
+  return { id: body.id, version: body.version };
+}
+
+/**
+ * Create a message in a channel and return its ID and version.
+ */
+export async function createMessage(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  channelId: string,
+  content = "E2E Test Message",
+): Promise<{ id: string; version: number; timestamp: number }> {
+  const timestamp = Date.now();
+  const res = await request.post(`/v1/systems/${systemId}/channels/${channelId}/messages`, {
+    headers,
+    data: {
+      encryptedData: encryptForApi({ content }),
+      timestamp,
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { id: string; version: number; timestamp: number };
+  return { id: body.id, version: body.version, timestamp: body.timestamp };
+}
+
+/**
  * Create an innerworld region in the given system and return its ID and version.
  */
 export async function createInnerworldRegion(

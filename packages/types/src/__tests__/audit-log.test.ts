@@ -164,6 +164,16 @@ describe("AuditEventType", () => {
         case "webhook-config.restored":
         case "webhook-config.deleted":
         case "webhook-delivery.deleted":
+        case "channel.created":
+        case "channel.updated":
+        case "channel.archived":
+        case "channel.restored":
+        case "channel.deleted":
+        case "message.created":
+        case "message.updated":
+        case "message.archived":
+        case "message.restored":
+        case "message.deleted":
           return type;
         default: {
           const _exhaustive: never = type;
