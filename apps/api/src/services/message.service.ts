@@ -79,8 +79,20 @@ interface DecodedMessageCursor {
 }
 
 function fromMessageCursor(cursor: string): DecodedMessageCursor {
-  const raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-  const parsed: unknown = JSON.parse(raw);
+  let raw: string;
+  try {
+    raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
+  } catch {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed message cursor");
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed message cursor");
+  }
+
   if (
     typeof parsed !== "object" ||
     parsed === null ||
@@ -229,14 +241,15 @@ export async function listMessages(
       conditions.push(lt(messages.timestamp, opts.before));
     }
     if (opts.after !== undefined) {
-      conditions.push(sql`${messages.timestamp} > ${opts.after}`);
+      conditions.push(sql`${messages.timestamp} > ${new Date(opts.after).toISOString()}`);
     }
 
     // Composite cursor: (timestamp, id) descending
     if (opts.cursor) {
       const decoded = fromMessageCursor(opts.cursor);
+      const cursorTs = new Date(decoded.timestamp).toISOString();
       conditions.push(
-        sql`(${messages.timestamp} < ${decoded.timestamp} OR (${messages.timestamp} = ${decoded.timestamp} AND ${messages.id} < ${decoded.id}))`,
+        sql`(${messages.timestamp} < ${cursorTs} OR (${messages.timestamp} = ${cursorTs} AND ${messages.id} < ${decoded.id}))`,
       );
     }
 

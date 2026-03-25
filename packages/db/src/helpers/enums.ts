@@ -281,6 +281,16 @@ export const AUDIT_EVENT_TYPES = [
   "webhook-config.restored",
   "webhook-config.deleted",
   "webhook-delivery.deleted",
+  "channel.created",
+  "channel.updated",
+  "channel.archived",
+  "channel.restored",
+  "channel.deleted",
+  "message.created",
+  "message.updated",
+  "message.archived",
+  "message.restored",
+  "message.deleted",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
