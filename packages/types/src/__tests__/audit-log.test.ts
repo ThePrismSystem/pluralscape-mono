@@ -176,6 +176,8 @@ describe("AuditEventType", () => {
         case "message.deleted":
         case "board-message.created":
         case "board-message.updated":
+        case "board-message.pinned":
+        case "board-message.unpinned":
         case "board-message.reordered":
         case "board-message.archived":
         case "board-message.restored":

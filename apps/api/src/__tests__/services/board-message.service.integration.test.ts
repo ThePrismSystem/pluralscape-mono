@@ -8,7 +8,6 @@ import {
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { parseCursor } from "../../lib/pagination.js";
 import {
   archiveBoardMessage,
   createBoardMessage,
@@ -157,7 +156,7 @@ describe("board-message.service (PGlite integration)", () => {
       expect(page1.hasMore).toBe(true);
     });
 
-    it("returns items with sortOrder field for client-side ordering", async () => {
+    it("returns items ordered by sortOrder ascending", async () => {
       await createBoardMessage(
         asDb(db),
         systemId,
@@ -172,12 +171,19 @@ describe("board-message.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
+      await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        auth,
+        noopAudit,
+      );
 
       const result = await listBoardMessages(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(2);
-      for (const item of result.items) {
-        expect(typeof item.sortOrder).toBe("number");
-      }
+      expect(result.items).toHaveLength(3);
+      expect(result.items[0]?.sortOrder).toBe(0);
+      expect(result.items[1]?.sortOrder).toBe(1);
+      expect(result.items[2]?.sortOrder).toBe(2);
     });
 
     it("filters by pinned", async () => {
@@ -199,6 +205,27 @@ describe("board-message.service (PGlite integration)", () => {
       const pinned = await listBoardMessages(asDb(db), systemId, auth, { pinned: true });
       expect(pinned.items).toHaveLength(1);
       expect(pinned.items[0]?.pinned).toBe(true);
+    });
+
+    it("filters by pinned=false", async () => {
+      await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: true },
+        auth,
+        noopAudit,
+      );
+      await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        auth,
+        noopAudit,
+      );
+
+      const unpinned = await listBoardMessages(asDb(db), systemId, auth, { pinned: false });
+      expect(unpinned.items).toHaveLength(1);
+      expect(unpinned.items[0]?.pinned).toBe(false);
     });
 
     it("excludes archived by default", async () => {
@@ -247,7 +274,7 @@ describe("board-message.service (PGlite integration)", () => {
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listBoardMessages(asDb(db), systemId, auth, {
-        cursor: parseCursor(page1.nextCursor ?? undefined),
+        cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
       expect(page2.items).toHaveLength(1);
@@ -372,6 +399,31 @@ describe("board-message.service (PGlite integration)", () => {
         404,
       );
     });
+
+    it("throws CONFLICT when message was concurrently archived", async () => {
+      const created = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      await archiveBoardMessage(asDb(db), systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        updateBoardMessage(
+          asDb(db),
+          systemId,
+          created.id,
+          { encryptedData: testEncryptedDataBase64(), version: 1 },
+          auth,
+          noopAudit,
+        ),
+        "CONFLICT",
+        409,
+      );
+    });
   });
 
   // ── PIN / UNPIN ─────────────────────────────────────────────────
@@ -391,8 +443,26 @@ describe("board-message.service (PGlite integration)", () => {
 
       expect(result.pinned).toBe(true);
       expect(result.version).toBe(2);
-      expect(audit.calls[0]?.eventType).toBe("board-message.updated");
+      expect(audit.calls[0]?.eventType).toBe("board-message.pinned");
       expect(audit.calls[0]?.detail).toBe("Board message pinned");
+    });
+
+    it("throws ALREADY_ARCHIVED when message is archived", async () => {
+      const created = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      await archiveBoardMessage(asDb(db), systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        pinBoardMessage(asDb(db), systemId, created.id, auth, noopAudit),
+        "ALREADY_ARCHIVED",
+        409,
+      );
     });
 
     it("throws ALREADY_PINNED when already pinned", async () => {
@@ -435,8 +505,26 @@ describe("board-message.service (PGlite integration)", () => {
 
       expect(result.pinned).toBe(false);
       expect(result.version).toBe(2);
-      expect(audit.calls[0]?.eventType).toBe("board-message.updated");
+      expect(audit.calls[0]?.eventType).toBe("board-message.unpinned");
       expect(audit.calls[0]?.detail).toBe("Board message unpinned");
+    });
+
+    it("throws ALREADY_ARCHIVED when message is archived", async () => {
+      const created = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0, pinned: true },
+        auth,
+        noopAudit,
+      );
+
+      await archiveBoardMessage(asDb(db), systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        unpinBoardMessage(asDb(db), systemId, created.id, auth, noopAudit),
+        "ALREADY_ARCHIVED",
+        409,
+      );
     });
 
     it("throws NOT_PINNED when not pinned", async () => {
@@ -528,6 +616,33 @@ describe("board-message.service (PGlite integration)", () => {
         400,
       );
     });
+
+    it("throws VALIDATION_ERROR for duplicate board message IDs", async () => {
+      const bm = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      await assertApiError(
+        reorderBoardMessages(
+          asDb(db),
+          systemId,
+          {
+            operations: [
+              { boardMessageId: bm.id, sortOrder: 0 },
+              { boardMessageId: bm.id, sortOrder: 1 },
+            ],
+          },
+          auth,
+          noopAudit,
+        ),
+        "VALIDATION_ERROR",
+        400,
+      );
+    });
   });
 
   // ── ARCHIVE / RESTORE ──────────────────────────────────────────
@@ -576,11 +691,15 @@ describe("board-message.service (PGlite integration)", () => {
       );
 
       await archiveBoardMessage(asDb(db), systemId, created.id, auth, noopAudit);
-      const restored = await restoreBoardMessage(asDb(db), systemId, created.id, auth, noopAudit);
+      const audit = spyAudit();
+      const restored = await restoreBoardMessage(asDb(db), systemId, created.id, auth, audit);
 
       expect(restored.archived).toBe(false);
+      expect(restored.archivedAt).toBeNull();
       expect(restored.id).toBe(created.id);
       expect(restored.version).toBe(3);
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("board-message.restored");
     });
 
     it("throws NOT_ARCHIVED when not archived", async () => {

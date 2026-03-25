@@ -4,7 +4,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
-import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
+import { parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { listBoardMessages } from "../../services/board-message.service.js";
@@ -18,7 +18,6 @@ listRoute.use("*", createCategoryRateLimiter("readDefault"));
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
-  const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
   const query = BoardMessageQuerySchema.parse({
     includeArchived: c.req.query("includeArchived"),
@@ -27,7 +26,7 @@ listRoute.get("/", async (c) => {
 
   const db = await getDb();
   const result = await listBoardMessages(db, systemId, auth, {
-    cursor: parseCursor(cursorParam),
+    cursor: c.req.query("cursor"),
     limit,
     includeArchived: query.includeArchived,
     pinned: query.pinned,

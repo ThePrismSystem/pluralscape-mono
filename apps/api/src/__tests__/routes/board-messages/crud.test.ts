@@ -5,6 +5,7 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
+  mockSystemOwnershipFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH, postJSON, putJSON } from "../../helpers/route-test-setup.js";
 
@@ -27,6 +28,7 @@ vi.mock("../../../services/board-message.service.js", () => ({
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
+vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
@@ -44,6 +46,7 @@ const {
   pinBoardMessage,
   unpinBoardMessage,
 } = await import("../../../services/board-message.service.js");
+const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -99,6 +102,23 @@ describe("POST /systems/:id/board-messages (create)", () => {
     expect(body.id).toBe(BM_ID);
   });
 
+  it("forwards systemId, body, auth, and audit writer to service", async () => {
+    vi.mocked(createBoardMessage).mockResolvedValueOnce(MOCK_RESULT);
+
+    await postJSON(createApp(), BASE, {
+      encryptedData: "dGVzdA==",
+      sortOrder: 0,
+    });
+
+    expect(vi.mocked(createBoardMessage)).toHaveBeenCalledWith(
+      expect.anything(),
+      "sys_550e8400-e29b-41d4-a716-446655440000",
+      expect.objectContaining({ encryptedData: "dGVzdA==", sortOrder: 0 }),
+      MOCK_AUTH,
+      expect.any(Function),
+    );
+  });
+
   it("returns 500 on unexpected error", async () => {
     vi.mocked(createBoardMessage).mockRejectedValueOnce(new Error("DB timeout"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -139,6 +159,25 @@ describe("GET /systems/:id/board-messages/:boardMessageId", () => {
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe(BM_ID);
   });
+
+  it("returns 404 when board message not found", async () => {
+    vi.mocked(getBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+    );
+
+    const res = await createApp().request(`${BASE}/${BM_ID}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 500 on unexpected error", async () => {
+    vi.mocked(getBoardMessage).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const res = await createApp().request(`${BASE}/${BM_ID}`);
+
+    expect(res.status).toBe(500);
+  });
 });
 
 describe("PUT /systems/:id/board-messages/:boardMessageId", () => {
@@ -152,6 +191,32 @@ describe("PUT /systems/:id/board-messages/:boardMessageId", () => {
 
     expect(res.status).toBe(200);
   });
+
+  it("returns 409 on version conflict", async () => {
+    vi.mocked(updateBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(409, "CONFLICT", "Version conflict"),
+    );
+
+    const res = await putJSON(createApp(), `${BASE}/${BM_ID}`, {
+      encryptedData: "dGVzdA==",
+      version: 1,
+    });
+
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 404 when board message not found", async () => {
+    vi.mocked(updateBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+    );
+
+    const res = await putJSON(createApp(), `${BASE}/${BM_ID}`, {
+      encryptedData: "dGVzdA==",
+      version: 1,
+    });
+
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("DELETE /systems/:id/board-messages/:boardMessageId", () => {
@@ -162,6 +227,16 @@ describe("DELETE /systems/:id/board-messages/:boardMessageId", () => {
 
     expect(res.status).toBe(204);
   });
+
+  it("returns 404 when board message not found", async () => {
+    vi.mocked(deleteBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+    );
+
+    const res = await createApp().request(`${BASE}/${BM_ID}`, { method: "DELETE" });
+
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /systems/:id/board-messages/:boardMessageId/archive", () => {
@@ -171,6 +246,26 @@ describe("POST /systems/:id/board-messages/:boardMessageId/archive", () => {
     const res = await postJSON(createApp(), `${BASE}/${BM_ID}/archive`, {});
 
     expect(res.status).toBe(204);
+  });
+
+  it("returns 409 when already archived", async () => {
+    vi.mocked(archiveBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(409, "ALREADY_ARCHIVED", "Board message is already archived"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/archive`, {});
+
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 404 when board message not found", async () => {
+    vi.mocked(archiveBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/archive`, {});
+
+    expect(res.status).toBe(404);
   });
 });
 
@@ -187,6 +282,26 @@ describe("POST /systems/:id/board-messages/:boardMessageId/restore", () => {
     const body = (await res.json()) as { version: number };
     expect(body.version).toBe(3);
   });
+
+  it("returns 409 when not archived", async () => {
+    vi.mocked(restoreBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(409, "NOT_ARCHIVED", "Board message is not archived"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/restore`, {});
+
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 404 when board message not found", async () => {
+    vi.mocked(restoreBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/restore`, {});
+
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /systems/:id/board-messages/reorder", () => {
@@ -198,6 +313,18 @@ describe("POST /systems/:id/board-messages/reorder", () => {
     });
 
     expect(res.status).toBe(204);
+  });
+
+  it("returns 400 when service throws VALIDATION_ERROR", async () => {
+    vi.mocked(reorderBoardMessages).mockRejectedValueOnce(
+      new ApiHttpError(400, "VALIDATION_ERROR", "Duplicate board message IDs"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/reorder`, {
+      operations: [{ boardMessageId: BM_ID, sortOrder: 0 }],
+    });
+
+    expect(res.status).toBe(400);
   });
 });
 
@@ -211,6 +338,40 @@ describe("POST /systems/:id/board-messages/:boardMessageId/pin", () => {
     const body = (await res.json()) as { pinned: boolean };
     expect(body.pinned).toBe(true);
   });
+
+  it("forwards systemId, boardMessageId, auth, and audit writer to service", async () => {
+    vi.mocked(pinBoardMessage).mockResolvedValueOnce({ ...MOCK_RESULT, pinned: true });
+
+    await postJSON(createApp(), `${BASE}/${BM_ID}/pin`, {});
+
+    expect(vi.mocked(pinBoardMessage)).toHaveBeenCalledWith(
+      expect.anything(),
+      "sys_550e8400-e29b-41d4-a716-446655440000",
+      BM_ID,
+      MOCK_AUTH,
+      expect.any(Function),
+    );
+  });
+
+  it("returns 409 when already pinned", async () => {
+    vi.mocked(pinBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(409, "ALREADY_PINNED", "Board message is already pinned"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/pin`, {});
+
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 404 when board message not found", async () => {
+    vi.mocked(pinBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/pin`, {});
+
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("POST /systems/:id/board-messages/:boardMessageId/unpin", () => {
@@ -222,5 +383,25 @@ describe("POST /systems/:id/board-messages/:boardMessageId/unpin", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { pinned: boolean };
     expect(body.pinned).toBe(false);
+  });
+
+  it("returns 409 when not pinned", async () => {
+    vi.mocked(unpinBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(409, "NOT_PINNED", "Board message is not pinned"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/unpin`, {});
+
+    expect(res.status).toBe(409);
+  });
+
+  it("returns 404 when board message not found", async () => {
+    vi.mocked(unpinBoardMessage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+    );
+
+    const res = await postJSON(createApp(), `${BASE}/${BM_ID}/unpin`, {});
+
+    expect(res.status).toBe(404);
   });
 });

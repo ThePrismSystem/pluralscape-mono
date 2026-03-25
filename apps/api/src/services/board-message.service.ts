@@ -1,18 +1,26 @@
 import { boardMessages } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  CursorInvalidError,
+  ID_PREFIXES,
+  PAGINATION,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateBoardMessageBodySchema,
   ReorderBoardMessagesBodySchema,
   UpdateBoardMessageBodySchema,
 } from "@pluralscape/validation";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
+import { fromCursor, toCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -24,7 +32,15 @@ import {
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { BoardMessageId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  ApiErrorCode,
+  AuditEventType,
+  BoardMessageId,
+  PaginatedResult,
+  PaginationCursor,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -64,6 +80,39 @@ function toBoardMessageResult(row: typeof boardMessages.$inferSelect): BoardMess
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };
+}
+
+// ── Cursor helpers (composite sortOrder+id) ─────────────────────────
+
+function toBoardMessageCursor(sortOrder: number, id: string): PaginationCursor {
+  return toCursor(JSON.stringify({ s: sortOrder, i: id }));
+}
+
+interface DecodedBoardMessageCursor {
+  readonly sortOrder: number;
+  readonly id: string;
+}
+
+function fromBoardMessageCursor(cursor: string): DecodedBoardMessageCursor {
+  try {
+    const raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as { s?: unknown }).s !== "number" ||
+      typeof (parsed as { i?: unknown }).i !== "string"
+    ) {
+      throw new Error("shape");
+    }
+    const { s, i } = parsed as { s: number; i: string };
+    return { sortOrder: s, id: i };
+  } catch (error) {
+    if (error instanceof CursorInvalidError) {
+      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
+    }
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed board message cursor");
+  }
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────
@@ -139,17 +188,30 @@ export async function listBoardMessages(
     }
 
     if (opts.cursor) {
-      conditions.push(gt(boardMessages.id, opts.cursor));
+      const decoded = fromBoardMessageCursor(opts.cursor);
+      const cursorCondition = or(
+        gt(boardMessages.sortOrder, decoded.sortOrder),
+        and(eq(boardMessages.sortOrder, decoded.sortOrder), gt(boardMessages.id, decoded.id)),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
     }
 
     const rows = await tx
       .select()
       .from(boardMessages)
       .where(and(...conditions))
-      .orderBy(boardMessages.id)
+      .orderBy(boardMessages.sortOrder, boardMessages.id)
       .limit(effectiveLimit + 1);
 
-    return buildPaginatedResult(rows, effectiveLimit, toBoardMessageResult);
+    const hasMore = rows.length > effectiveLimit;
+    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toBoardMessageResult);
+    const lastItem = items[items.length - 1];
+    const nextCursor =
+      hasMore && lastItem ? toBoardMessageCursor(lastItem.sortOrder, lastItem.id) : null;
+
+    return { items, nextCursor, hasMore, totalCount: null };
   });
 }
 
@@ -238,13 +300,7 @@ export async function updateBoardMessage(
         const [existing] = await tx
           .select({ id: boardMessages.id })
           .from(boardMessages)
-          .where(
-            and(
-              eq(boardMessages.id, boardMessageId),
-              eq(boardMessages.systemId, systemId),
-              eq(boardMessages.archived, false),
-            ),
-          )
+          .where(and(eq(boardMessages.id, boardMessageId), eq(boardMessages.systemId, systemId)))
           .limit(1);
         return existing;
       },
@@ -264,12 +320,34 @@ export async function updateBoardMessage(
 
 // ── PIN / UNPIN ─────────────────────────────────────────────────────
 
-export async function pinBoardMessage(
+interface TogglePinConfig {
+  readonly targetValue: boolean;
+  readonly alreadyError: { readonly code: ApiErrorCode; readonly message: string };
+  readonly auditEvent: AuditEventType;
+  readonly auditDetail: string;
+}
+
+const PIN_CONFIG: TogglePinConfig = {
+  targetValue: true,
+  alreadyError: { code: "ALREADY_PINNED", message: "Board message is already pinned" },
+  auditEvent: "board-message.pinned",
+  auditDetail: "Board message pinned",
+};
+
+const UNPIN_CONFIG: TogglePinConfig = {
+  targetValue: false,
+  alreadyError: { code: "NOT_PINNED", message: "Board message is not pinned" },
+  auditEvent: "board-message.unpinned",
+  auditDetail: "Board message unpinned",
+};
+
+async function togglePinned(
   db: PostgresJsDatabase,
   systemId: SystemId,
   boardMessageId: BoardMessageId,
   auth: AuthContext,
   audit: AuditWriter,
+  cfg: TogglePinConfig,
 ): Promise<BoardMessageResult> {
   assertSystemOwnership(systemId, auth);
 
@@ -279,7 +357,7 @@ export async function pinBoardMessage(
     const updated = await tx
       .update(boardMessages)
       .set({
-        pinned: true,
+        pinned: cfg.targetValue,
         updatedAt: timestamp,
         version: sql`${boardMessages.version} + 1`,
       })
@@ -287,7 +365,7 @@ export async function pinBoardMessage(
         and(
           eq(boardMessages.id, boardMessageId),
           eq(boardMessages.systemId, systemId),
-          eq(boardMessages.pinned, false),
+          eq(boardMessages.pinned, !cfg.targetValue),
           eq(boardMessages.archived, false),
         ),
       )
@@ -295,32 +373,47 @@ export async function pinBoardMessage(
 
     if (updated.length === 0) {
       const [existing] = await tx
-        .select({ id: boardMessages.id, pinned: boardMessages.pinned })
+        .select({
+          id: boardMessages.id,
+          pinned: boardMessages.pinned,
+          archived: boardMessages.archived,
+        })
         .from(boardMessages)
-        .where(
-          and(
-            eq(boardMessages.id, boardMessageId),
-            eq(boardMessages.systemId, systemId),
-            eq(boardMessages.archived, false),
-          ),
-        )
+        .where(and(eq(boardMessages.id, boardMessageId), eq(boardMessages.systemId, systemId)))
         .limit(1);
 
+      if (existing?.archived) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "ALREADY_ARCHIVED",
+          "Board message is already archived",
+        );
+      }
       if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_PINNED", "Board message is already pinned");
+        throw new ApiHttpError(HTTP_CONFLICT, cfg.alreadyError.code, cfg.alreadyError.message);
       }
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Board message not found");
     }
 
     await audit(tx, {
-      eventType: "board-message.updated",
+      eventType: cfg.auditEvent,
       actor: { kind: "account", id: auth.accountId },
-      detail: "Board message pinned",
+      detail: cfg.auditDetail,
       systemId,
     });
 
     return toBoardMessageResult(updated[0] as typeof boardMessages.$inferSelect);
   });
+}
+
+export async function pinBoardMessage(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  boardMessageId: BoardMessageId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<BoardMessageResult> {
+  return togglePinned(db, systemId, boardMessageId, auth, audit, PIN_CONFIG);
 }
 
 export async function unpinBoardMessage(
@@ -330,56 +423,7 @@ export async function unpinBoardMessage(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BoardMessageResult> {
-  assertSystemOwnership(systemId, auth);
-
-  const timestamp = now();
-
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    const updated = await tx
-      .update(boardMessages)
-      .set({
-        pinned: false,
-        updatedAt: timestamp,
-        version: sql`${boardMessages.version} + 1`,
-      })
-      .where(
-        and(
-          eq(boardMessages.id, boardMessageId),
-          eq(boardMessages.systemId, systemId),
-          eq(boardMessages.pinned, true),
-          eq(boardMessages.archived, false),
-        ),
-      )
-      .returning();
-
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: boardMessages.id, pinned: boardMessages.pinned })
-        .from(boardMessages)
-        .where(
-          and(
-            eq(boardMessages.id, boardMessageId),
-            eq(boardMessages.systemId, systemId),
-            eq(boardMessages.archived, false),
-          ),
-        )
-        .limit(1);
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "NOT_PINNED", "Board message is not pinned");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Board message not found");
-    }
-
-    await audit(tx, {
-      eventType: "board-message.updated",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Board message unpinned",
-      systemId,
-    });
-
-    return toBoardMessageResult(updated[0] as typeof boardMessages.$inferSelect);
-  });
+  return togglePinned(db, systemId, boardMessageId, auth, audit, UNPIN_CONFIG);
 }
 
 // ── REORDER ─────────────────────────────────────────────────────────
@@ -399,8 +443,17 @@ export async function reorderBoardMessages(
   }
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Pre-flight: verify all target board messages exist and are active
+    // Reject duplicate board message IDs
     const targetIds = parsed.data.operations.map((op) => op.boardMessageId);
+    if (new Set(targetIds).size !== targetIds.length) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "VALIDATION_ERROR",
+        "Duplicate board message IDs in reorder operations",
+      );
+    }
+
+    // Pre-flight: verify all target board messages exist and are active
     const existing = await tx
       .select({ id: boardMessages.id })
       .from(boardMessages)
