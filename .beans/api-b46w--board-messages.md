@@ -1,11 +1,11 @@
 ---
 # api-b46w
 title: Board messages
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-25T05:59:18Z
+updated_at: 2026-03-25T11:35:28Z
 parent: ps-53up
 ---
 
@@ -31,3 +31,16 @@ Persistent noticeboard messages that are immune to chat scroll. Supports drag-an
 - `packages/db/src/schema/pg/communication.ts` — board_messages table
 - `packages/sync/src/schemas/chat.ts` — CrdtBoardMessage (append-lww)
 - `packages/types/src/encryption.ts` — ServerBoardMessage type
+
+## Summary of Changes
+
+All 6 child tasks completed:
+
+- **api-7oey**: Validation schemas (4 Zod schemas, 29 unit tests)
+- **api-lmdm**: Audit event types (6 board-message events registered)
+- **api-pcak**: CRUD service (10 functions, 31 integration tests)
+- **api-sfms**: API routes (11 route files, 11 route unit tests)
+- **api-b0qf**: CRDT sync verified (existing tests sufficient)
+- **api-amlf**: E2E tests (lifecycle + error scenarios)
+
+Board messages are served at `/v1/systems/:systemId/board-messages` with full CRUD, pin/unpin, batch reorder, archive/restore, and delete. Leaf entity deletion (no dependent checks). OCC for updates. ALREADY_PINNED/NOT_PINNED error codes added.
