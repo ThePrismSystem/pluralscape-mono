@@ -291,6 +291,14 @@ export const AUDIT_EVENT_TYPES = [
   "message.archived",
   "message.restored",
   "message.deleted",
+  "board-message.created",
+  "board-message.updated",
+  "board-message.pinned",
+  "board-message.unpinned",
+  "board-message.reordered",
+  "board-message.archived",
+  "board-message.restored",
+  "board-message.deleted",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",

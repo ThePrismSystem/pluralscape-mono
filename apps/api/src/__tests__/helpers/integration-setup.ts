@@ -14,6 +14,7 @@ import type {
   AccountId,
   ApiErrorCode,
   BlobId,
+  BoardMessageId,
   BucketId,
   BucketKeyRotationId,
   ChannelId,
@@ -167,4 +168,8 @@ export function genChannelId(): ChannelId {
 
 export function genMessageId(): MessageId {
   return `msg_${crypto.randomUUID()}` as MessageId;
+}
+
+export function genBoardMessageId(): BoardMessageId {
+  return `bm_${crypto.randomUUID()}` as BoardMessageId;
 }

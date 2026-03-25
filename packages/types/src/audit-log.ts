@@ -153,7 +153,15 @@ export type AuditEventType =
   | "message.updated"
   | "message.archived"
   | "message.restored"
-  | "message.deleted";
+  | "message.deleted"
+  | "board-message.created"
+  | "board-message.updated"
+  | "board-message.pinned"
+  | "board-message.unpinned"
+  | "board-message.reordered"
+  | "board-message.archived"
+  | "board-message.restored"
+  | "board-message.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =
