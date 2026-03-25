@@ -8,6 +8,7 @@ import {
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { parseCursor } from "../../lib/pagination.js";
 import {
   archiveChannel,
   createChannel,
@@ -276,6 +277,63 @@ describe("channel.service (PGlite integration)", () => {
       const filtered = await listChannels(asDb(db), systemId, auth, { parentId: category.id });
       expect(filtered.items).toHaveLength(1);
       expect(filtered.items[0]?.parentId).toBe(category.id);
+    });
+
+    it("excludes archived channels by default", async () => {
+      const ch = await createChannel(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      await archiveChannel(asDb(db), systemId, ch.id, auth, noopAudit);
+
+      const result = await listChannels(asDb(db), systemId, auth);
+      expect(result.items.every((c) => c.id !== ch.id)).toBe(true);
+    });
+
+    it("includes archived channels when includeArchived is true", async () => {
+      const ch = await createChannel(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      await archiveChannel(asDb(db), systemId, ch.id, auth, noopAudit);
+
+      const result = await listChannels(asDb(db), systemId, auth, { includeArchived: true });
+      expect(result.items.some((c) => c.id === ch.id)).toBe(true);
+    });
+
+    it("follows cursor to page 2 with no overlap", async () => {
+      for (let i = 0; i < 3; i++) {
+        await createChannel(
+          asDb(db),
+          systemId,
+          { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: i },
+          auth,
+          noopAudit,
+        );
+      }
+
+      const page1 = await listChannels(asDb(db), systemId, auth, { limit: 2 });
+      expect(page1.items).toHaveLength(2);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.nextCursor).toBeTruthy();
+
+      const page2 = await listChannels(asDb(db), systemId, auth, {
+        cursor: parseCursor(page1.nextCursor ?? undefined),
+        limit: 2,
+      });
+      expect(page2.items).toHaveLength(1);
+      expect(page2.hasMore).toBe(false);
+
+      const allIds = [...page1.items.map((c) => c.id), ...page2.items.map((c) => c.id)];
+      expect(new Set(allIds).size).toBe(3);
     });
   });
 

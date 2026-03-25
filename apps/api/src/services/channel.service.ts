@@ -20,22 +20,14 @@ import {
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type {
-  ChannelId,
-  EncryptedBlob,
-  PaginatedResult,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { ChannelId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface ChannelResult {
+interface BaseChannelResult {
   readonly id: ChannelId;
   readonly systemId: SystemId;
-  readonly type: "category" | "channel";
-  readonly parentId: ChannelId | null;
   readonly sortOrder: number;
   readonly encryptedData: string;
   readonly version: number;
@@ -44,6 +36,18 @@ export interface ChannelResult {
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
 }
+
+export interface CategoryResult extends BaseChannelResult {
+  readonly type: "category";
+  readonly parentId: null;
+}
+
+export interface ChannelItemResult extends BaseChannelResult {
+  readonly type: "channel";
+  readonly parentId: ChannelId | null;
+}
+
+export type ChannelResult = CategoryResult | ChannelItemResult;
 
 interface ListChannelOpts {
   readonly cursor?: string;
@@ -55,24 +59,10 @@ interface ListChannelOpts {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function toChannelResult(row: {
-  id: string;
-  systemId: string;
-  type: string;
-  parentId: string | null;
-  sortOrder: number;
-  encryptedData: EncryptedBlob;
-  version: number;
-  archived: boolean;
-  archivedAt: number | null;
-  createdAt: number;
-  updatedAt: number;
-}): ChannelResult {
-  return {
+function toChannelResult(row: typeof channels.$inferSelect): ChannelResult {
+  const base = {
     id: row.id as ChannelId,
     systemId: row.systemId as SystemId,
-    type: row.type as "category" | "channel",
-    parentId: (row.parentId as ChannelId | null) ?? null,
     sortOrder: row.sortOrder,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
@@ -81,6 +71,10 @@ function toChannelResult(row: {
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };
+  if (row.type === "category") {
+    return { ...base, type: "category", parentId: null };
+  }
+  return { ...base, type: "channel", parentId: (row.parentId as ChannelId | null) ?? null };
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────
@@ -259,15 +253,12 @@ export async function updateChannel(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    const setValues: Record<string, unknown> = {
+    const setValues = {
       encryptedData: blob,
       updatedAt: timestamp,
       version: sql`${channels.version} + 1`,
+      ...(parsed.sortOrder !== undefined ? { sortOrder: parsed.sortOrder } : {}),
     };
-
-    if (parsed.sortOrder !== undefined) {
-      setValues.sortOrder = parsed.sortOrder;
-    }
 
     const updated = await tx
       .update(channels)
@@ -342,16 +333,28 @@ export async function deleteChannel(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Channel not found");
     }
 
-    // Check for dependents in parallel
+    // Check for non-archived dependents in parallel
     const [childChannelResult, messageResult] = await Promise.all([
       tx
         .select({ count: count() })
         .from(channels)
-        .where(and(eq(channels.parentId, channelId), eq(channels.systemId, systemId))),
+        .where(
+          and(
+            eq(channels.parentId, channelId),
+            eq(channels.systemId, systemId),
+            eq(channels.archived, false),
+          ),
+        ),
       tx
         .select({ count: count() })
         .from(messages)
-        .where(and(eq(messages.channelId, channelId), eq(messages.systemId, systemId))),
+        .where(
+          and(
+            eq(messages.channelId, channelId),
+            eq(messages.systemId, systemId),
+            eq(messages.archived, false),
+          ),
+        ),
     ]);
 
     const dependents: { type: ChannelDependentType; count: number }[] = [];

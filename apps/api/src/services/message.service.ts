@@ -1,5 +1,6 @@
 import { channels, messages } from "@pluralscape/db/pg";
 import {
+  CursorInvalidError,
   ID_PREFIXES,
   PAGINATION,
   createId,
@@ -8,7 +9,7 @@ import {
   toUnixMillisOrNull,
 } from "@pluralscape/types";
 import { CreateMessageBodySchema, UpdateMessageBodySchema } from "@pluralscape/validation";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, gt, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -29,7 +30,6 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   ChannelId,
-  EncryptedBlob,
   MessageId,
   PaginatedResult,
   PaginationCursor,
@@ -58,13 +58,13 @@ export interface MessageResult {
 interface ListMessageOpts {
   readonly cursor?: string;
   readonly limit?: number;
-  readonly before?: number;
-  readonly after?: number;
+  readonly before?: UnixMillis;
+  readonly after?: UnixMillis;
   readonly includeArchived?: boolean;
 }
 
 interface TimestampHint {
-  readonly timestamp?: number;
+  readonly timestamp?: UnixMillis;
 }
 
 // ── Cursor helpers (composite timestamp+id) ─────────────────────────
@@ -79,50 +79,30 @@ interface DecodedMessageCursor {
 }
 
 function fromMessageCursor(cursor: string): DecodedMessageCursor {
-  let raw: string;
   try {
-    raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-  } catch {
+    const raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      typeof (parsed as { t?: unknown }).t !== "number" ||
+      typeof (parsed as { i?: unknown }).i !== "string"
+    ) {
+      throw new Error("shape");
+    }
+    const { t, i } = parsed as { t: number; i: string };
+    return { timestamp: t, id: i };
+  } catch (error) {
+    if (error instanceof CursorInvalidError) {
+      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
+    }
     throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed message cursor");
   }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed message cursor");
-  }
-
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    typeof (parsed as Record<string, unknown>).t !== "number" ||
-    typeof (parsed as Record<string, unknown>).i !== "string"
-  ) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed message cursor");
-  }
-  return {
-    timestamp: (parsed as { t: number }).t,
-    id: (parsed as { i: string }).i,
-  };
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function toMessageResult(row: {
-  id: string;
-  channelId: string;
-  systemId: string;
-  replyToId: string | null;
-  timestamp: number;
-  editedAt: number | null;
-  encryptedData: EncryptedBlob;
-  version: number;
-  archived: boolean;
-  archivedAt: number | null;
-  createdAt: number;
-  updatedAt: number;
-}): MessageResult {
+function toMessageResult(row: typeof messages.$inferSelect): MessageResult {
   return {
     id: row.id as MessageId,
     channelId: row.channelId as ChannelId,
@@ -170,7 +150,7 @@ export async function createMessage(
   const ts = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Verify channel exists
+    // Verify channel exists and is a channel (not a category)
     const [channel] = await tx
       .select({ id: channels.id })
       .from(channels)
@@ -179,6 +159,7 @@ export async function createMessage(
           eq(channels.id, channelId),
           eq(channels.systemId, systemId),
           eq(channels.archived, false),
+          eq(channels.type, "channel"),
         ),
       )
       .limit(1);
@@ -241,16 +222,19 @@ export async function listMessages(
       conditions.push(lt(messages.timestamp, opts.before));
     }
     if (opts.after !== undefined) {
-      conditions.push(sql`${messages.timestamp} > ${new Date(opts.after).toISOString()}`);
+      conditions.push(gt(messages.timestamp, opts.after));
     }
 
     // Composite cursor: (timestamp, id) descending
     if (opts.cursor) {
       const decoded = fromMessageCursor(opts.cursor);
-      const cursorTs = new Date(decoded.timestamp).toISOString();
-      conditions.push(
-        sql`(${messages.timestamp} < ${cursorTs} OR (${messages.timestamp} = ${cursorTs} AND ${messages.id} < ${decoded.id}))`,
+      const cursorCondition = or(
+        lt(messages.timestamp, decoded.timestamp),
+        and(eq(messages.timestamp, decoded.timestamp), lt(messages.id, decoded.id)),
       );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
     }
 
     const rows = await tx
@@ -391,7 +375,9 @@ export async function deleteMessage(
       systemId,
     });
 
-    await tx.delete(messages).where(and(...messageIdConditions(messageId, systemId, hint)));
+    await tx
+      .delete(messages)
+      .where(and(...messageIdConditions(messageId, systemId, hint), eq(messages.archived, false)));
   });
 }
 

@@ -8,7 +8,7 @@ import {
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createChannel } from "../../services/channel.service.js";
+import { archiveChannel, createChannel } from "../../services/channel.service.js";
 import {
   archiveMessage,
   createMessage,
@@ -31,7 +31,7 @@ import {
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { ChannelResult } from "../../services/channel.service.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AccountId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { channels, messages } = schema;
@@ -141,6 +141,46 @@ describe("message.service (PGlite integration)", () => {
         404,
       );
     });
+
+    it("throws NOT_FOUND when channel is archived", async () => {
+      await archiveChannel(asDb(db), systemId, testChannel.id, auth, noopAudit);
+
+      await assertApiError(
+        createMessage(
+          asDb(db),
+          systemId,
+          testChannel.id,
+          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+          auth,
+          noopAudit,
+        ),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("throws NOT_FOUND when channel is a category", async () => {
+      const category = await createChannel(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), type: "category", sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      await assertApiError(
+        createMessage(
+          asDb(db),
+          systemId,
+          category.id,
+          { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+          auth,
+          noopAudit,
+        ),
+        "NOT_FOUND",
+        404,
+      );
+    });
   });
 
   // ── GET ─────────────────────────────────────────────────────────
@@ -172,7 +212,9 @@ describe("message.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      const result = await getMessage(asDb(db), systemId, created.id, auth, { timestamp: ts });
+      const result = await getMessage(asDb(db), systemId, created.id, auth, {
+        timestamp: ts as UnixMillis,
+      });
       expect(result.id).toBe(created.id);
     });
 
@@ -253,7 +295,7 @@ describe("message.service (PGlite integration)", () => {
       );
 
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth, {
-        before: baseTs + 5_000,
+        before: (baseTs + 5_000) as UnixMillis,
       });
       expect(result.items).toHaveLength(1);
       expect(result.items[0]?.timestamp).toBe(baseTs);
@@ -278,6 +320,66 @@ describe("message.service (PGlite integration)", () => {
 
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth);
       expect(result.items).toHaveLength(0);
+    });
+
+    it("filters with after timestamp", async () => {
+      const baseTs = Date.now();
+      await createMessage(
+        asDb(db),
+        systemId,
+        testChannel.id,
+        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs },
+        auth,
+        noopAudit,
+      );
+      await createMessage(
+        asDb(db),
+        systemId,
+        testChannel.id,
+        { encryptedData: testEncryptedDataBase64(), timestamp: baseTs + 10_000 },
+        auth,
+        noopAudit,
+      );
+
+      const result = await listMessages(asDb(db), systemId, testChannel.id, auth, {
+        after: (baseTs + 5_000) as UnixMillis,
+      });
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.timestamp).toBe(baseTs + 10_000);
+    });
+
+    it("excludes archived messages by default", async () => {
+      const msg = await createMessage(
+        asDb(db),
+        systemId,
+        testChannel.id,
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        auth,
+        noopAudit,
+      );
+
+      await archiveMessage(asDb(db), systemId, msg.id, auth, noopAudit);
+
+      const result = await listMessages(asDb(db), systemId, testChannel.id, auth);
+      expect(result.items.every((m) => m.id !== msg.id)).toBe(true);
+    });
+
+    it("includes archived messages when includeArchived is true", async () => {
+      const msg = await createMessage(
+        asDb(db),
+        systemId,
+        testChannel.id,
+        { encryptedData: testEncryptedDataBase64(), timestamp: Date.now() },
+        auth,
+        noopAudit,
+      );
+
+      await archiveMessage(asDb(db), systemId, msg.id, auth, noopAudit);
+
+      const result = await listMessages(asDb(db), systemId, testChannel.id, auth, {
+        includeArchived: true,
+      });
+      expect(result.items.some((m) => m.id === msg.id)).toBe(true);
     });
   });
 
@@ -417,7 +519,9 @@ describe("message.service (PGlite integration)", () => {
         noopAudit,
       );
 
-      await deleteMessage(asDb(db), systemId, created.id, auth, noopAudit, { timestamp: ts });
+      await deleteMessage(asDb(db), systemId, created.id, auth, noopAudit, {
+        timestamp: ts as UnixMillis,
+      });
       await assertApiError(getMessage(asDb(db), systemId, created.id, auth), "NOT_FOUND", 404);
     });
   });
