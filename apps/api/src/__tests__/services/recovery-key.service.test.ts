@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../helpers/mock-db.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
+import type { MockChain } from "../helpers/mock-db.js";
 import type { AccountId } from "@pluralscape/types";
 
 // ── Mock external dependencies ───────────────────────────────────────
@@ -62,6 +63,11 @@ vi.mock("../../lib/email-hash.js", () => ({
   hashEmail: vi.fn().mockReturnValue("hashed_email_hex"),
   getEmailHashPepper: vi.fn().mockReturnValue(new Uint8Array(32)),
 }));
+
+vi.mock("drizzle-orm", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("drizzle-orm")>();
+  return { ...actual };
+});
 
 const mockEqualizeAntiEnumTiming = vi
   .fn<(startTime: number) => Promise<void>>()
@@ -283,7 +289,7 @@ describe("recovery-key service", () => {
 
     it("calls memzero on KEK and master key even on transaction failure", async () => {
       const { db, chain } = mockDb();
-      // Account lookup
+      // Account lookup (inside withAccountTransaction callback)
       chain.limit.mockResolvedValueOnce([
         {
           passwordHash: "$argon2id$fake$valid",
@@ -291,12 +297,16 @@ describe("recovery-key service", () => {
           encryptedMasterKey: new Uint8Array(72),
         },
       ]);
-      // Active recovery key lookup
+      // Active recovery key lookup (inside withAccountTransaction callback)
       chain.limit.mockResolvedValueOnce([
         { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
       ]);
-      // Transaction fails
-      chain.transaction.mockRejectedValueOnce(new Error("DB error"));
+      // Revoke returns success so callback completes
+      chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
+      // Transaction runs the callback then rejects (simulating DB commit failure).
+      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) =>
+        fn(chain).then(() => Promise.reject(new Error("DB error"))),
+      );
 
       await expect(
         regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
@@ -462,7 +472,8 @@ describe("recovery-key service", () => {
 
       await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
 
-      expect(chain.transaction).toHaveBeenCalledOnce();
+      // Two transaction calls: withAccountRead (recovery key lookup) + withAccountTransaction (atomic update)
+      expect(chain.transaction).toHaveBeenCalledTimes(2);
     });
 
     it("calls memzero on all crypto material after success", async () => {
@@ -532,12 +543,18 @@ describe("recovery-key service", () => {
           encryptedMasterKey: new Uint8Array(72),
         },
       ]);
-      // Active recovery key found
+      // Active recovery key found (inside withAccountRead transaction)
       chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
       mockEqualizeAntiEnumTiming.mockClear();
 
-      // Make the transaction throw to simulate crypto failure mid-operation
-      chain.transaction.mockRejectedValueOnce(new Error("crypto failure"));
+      // First transaction (withAccountRead) succeeds normally,
+      // second transaction (withAccountTransaction) fails to simulate crypto failure
+      let txCallCount = 0;
+      chain.transaction = vi.fn<(fn: (tx: MockChain) => Promise<void>) => Promise<void>>((fn) => {
+        txCallCount++;
+        if (txCallCount === 2) return Promise.reject(new Error("crypto failure"));
+        return fn(chain);
+      });
 
       await expect(
         resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger),

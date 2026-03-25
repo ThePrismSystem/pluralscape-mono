@@ -11,8 +11,9 @@ import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constan
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64OrNull, validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -150,7 +151,7 @@ export async function createCheckInRecord(
 
   const recordId = createId(ID_PREFIXES.checkInRecord);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Validate timerConfigId belongs to this system
     const [timerConfig] = await tx
       .select({ id: timerConfigs.id })
@@ -208,34 +209,36 @@ export async function listCheckInRecords(
 ): Promise<PaginatedResult<CheckInRecordResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(checkInRecords.systemId, systemId)];
+    const conditions = [eq(checkInRecords.systemId, systemId)];
 
-  if (opts.timerConfigId) {
-    conditions.push(eq(checkInRecords.timerConfigId, opts.timerConfigId));
-  }
+    if (opts.timerConfigId) {
+      conditions.push(eq(checkInRecords.timerConfigId, opts.timerConfigId));
+    }
 
-  if (opts.pending) {
-    conditions.push(isNull(checkInRecords.respondedAt));
-    conditions.push(eq(checkInRecords.dismissed, false));
-    conditions.push(eq(checkInRecords.archived, false));
-  } else if (!opts.includeArchived) {
-    conditions.push(eq(checkInRecords.archived, false));
-  }
+    if (opts.pending) {
+      conditions.push(isNull(checkInRecords.respondedAt));
+      conditions.push(eq(checkInRecords.dismissed, false));
+      conditions.push(eq(checkInRecords.archived, false));
+    } else if (!opts.includeArchived) {
+      conditions.push(eq(checkInRecords.archived, false));
+    }
 
-  if (opts.cursor) {
-    conditions.push(lt(checkInRecords.id, opts.cursor));
-  }
+    if (opts.cursor) {
+      conditions.push(lt(checkInRecords.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(checkInRecords)
-    .where(and(...conditions))
-    .orderBy(desc(checkInRecords.id))
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(checkInRecords)
+      .where(and(...conditions))
+      .orderBy(desc(checkInRecords.id))
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toCheckInRecordResult);
+    return buildPaginatedResult(rows, effectiveLimit, toCheckInRecordResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────
@@ -248,23 +251,25 @@ export async function getCheckInRecord(
 ): Promise<CheckInRecordResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(checkInRecords)
-    .where(
-      and(
-        eq(checkInRecords.id, recordId),
-        eq(checkInRecords.systemId, systemId),
-        eq(checkInRecords.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(checkInRecords)
+      .where(
+        and(
+          eq(checkInRecords.id, recordId),
+          eq(checkInRecords.systemId, systemId),
+          eq(checkInRecords.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
+    }
 
-  return toCheckInRecordResult(row);
+    return toCheckInRecordResult(row);
+  });
 }
 
 // ── Helpers: state guards ───────────────────────────────────────
@@ -314,7 +319,7 @@ export async function respondCheckInRecord(
   const { respondedByMemberId } = parseResult.data;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     await fetchPendingCheckIn(tx, recordId, systemId);
 
     // Validate member exists in this system
@@ -381,7 +386,7 @@ export async function dismissCheckInRecord(
 ): Promise<CheckInRecordResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     await fetchPendingCheckIn(tx, recordId, systemId);
 
     // State guards in WHERE prevent concurrent overwrites
@@ -436,7 +441,7 @@ export async function archiveCheckInRecord(
 
   const timestamp = now();
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(checkInRecords)
       .set({
@@ -489,7 +494,7 @@ export async function deleteCheckInRecord(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: checkInRecords.id })
       .from(checkInRecords)

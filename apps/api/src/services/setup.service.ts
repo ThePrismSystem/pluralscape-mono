@@ -10,8 +10,9 @@ import { and, eq } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import { getRecoveryKeyStatus } from "./recovery-key.service.js";
 import { toSystemSettingsResult } from "./system-settings.service.js";
@@ -38,31 +39,36 @@ export async function getSetupStatus(
 ): Promise<SetupStatus> {
   assertSystemOwnership(systemId, auth);
 
-  const [nomenclatureRow, systemRow, settingsRow, recoveryStatus] = await Promise.all([
-    db
-      .select({ systemId: nomenclatureSettings.systemId })
-      .from(nomenclatureSettings)
-      .where(eq(nomenclatureSettings.systemId, systemId))
-      .limit(1)
-      .then((rows) => rows[0]),
-    db
-      .select({ encryptedData: systems.encryptedData })
-      .from(systems)
-      .where(eq(systems.id, systemId))
-      .limit(1)
-      .then((rows) => rows[0]),
-    db
-      .select({ id: systemSettings.id })
-      .from(systemSettings)
-      .where(eq(systemSettings.systemId, systemId))
-      .limit(1)
-      .then((rows) => rows[0]),
+  const [tenantResult, recoveryStatus] = await Promise.all([
+    withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+      const [nomenclatureRow, systemRow, settingsRow] = await Promise.all([
+        tx
+          .select({ systemId: nomenclatureSettings.systemId })
+          .from(nomenclatureSettings)
+          .where(eq(nomenclatureSettings.systemId, systemId))
+          .limit(1)
+          .then((rows) => rows[0]),
+        tx
+          .select({ encryptedData: systems.encryptedData })
+          .from(systems)
+          .where(eq(systems.id, systemId))
+          .limit(1)
+          .then((rows) => rows[0]),
+        tx
+          .select({ id: systemSettings.id })
+          .from(systemSettings)
+          .where(eq(systemSettings.systemId, systemId))
+          .limit(1)
+          .then((rows) => rows[0]),
+      ]);
+      return { nomenclatureRow, systemRow, settingsRow };
+    }),
     getRecoveryKeyStatus(db, auth.accountId),
   ]);
 
-  const nomenclatureComplete = !!nomenclatureRow;
-  const profileComplete = !!systemRow?.encryptedData;
-  const settingsCreated = !!settingsRow;
+  const nomenclatureComplete = !!tenantResult.nomenclatureRow;
+  const profileComplete = !!tenantResult.systemRow?.encryptedData;
+  const settingsCreated = !!tenantResult.settingsRow;
   const recoveryKeyBackedUp = recoveryStatus.hasActiveKey;
 
   return {
@@ -97,28 +103,30 @@ export async function setupNomenclatureStep(
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  // UPSERT: INSERT ON CONFLICT DO UPDATE for idempotency
-  await db
-    .insert(nomenclatureSettings)
-    .values({
-      systemId,
-      encryptedData: blob,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    })
-    .onConflictDoUpdate({
-      target: nomenclatureSettings.systemId,
-      set: {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // UPSERT: INSERT ON CONFLICT DO UPDATE for idempotency
+    await tx
+      .insert(nomenclatureSettings)
+      .values({
+        systemId,
         encryptedData: blob,
+        createdAt: timestamp,
         updatedAt: timestamp,
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: nomenclatureSettings.systemId,
+        set: {
+          encryptedData: blob,
+          updatedAt: timestamp,
+        },
+      });
 
-  await audit(db, {
-    eventType: "setup.step-completed",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "nomenclature" satisfies SetupStepName,
-    systemId,
+    await audit(tx, {
+      eventType: "setup.step-completed",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "nomenclature" satisfies SetupStepName,
+      systemId,
+    });
   });
 
   return { success: true };
@@ -143,24 +151,26 @@ export async function setupProfileStep(
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  const updated = await db
-    .update(systems)
-    .set({
-      encryptedData: blob,
-      updatedAt: timestamp,
-    })
-    .where(and(eq(systems.id, systemId), eq(systems.accountId, auth.accountId)))
-    .returning({ id: systems.id });
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const updated = await tx
+      .update(systems)
+      .set({
+        encryptedData: blob,
+        updatedAt: timestamp,
+      })
+      .where(and(eq(systems.id, systemId), eq(systems.accountId, auth.accountId)))
+      .returning({ id: systems.id });
 
-  if (updated.length === 0) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-  }
+    if (updated.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
+    }
 
-  await audit(db, {
-    eventType: "setup.step-completed",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "profile" satisfies SetupStepName,
-    systemId,
+    await audit(tx, {
+      eventType: "setup.step-completed",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "profile" satisfies SetupStepName,
+      systemId,
+    });
   });
 
   return { success: true };
@@ -195,20 +205,27 @@ export async function setupComplete(
   }
 
   // Check preconditions: nomenclature and profile must exist
-  const [nomenclatureRow, systemRow] = await Promise.all([
-    db
-      .select({ systemId: nomenclatureSettings.systemId })
-      .from(nomenclatureSettings)
-      .where(eq(nomenclatureSettings.systemId, systemId))
-      .limit(1)
-      .then((rows) => rows[0]),
-    db
-      .select({ encryptedData: systems.encryptedData })
-      .from(systems)
-      .where(eq(systems.id, systemId))
-      .limit(1)
-      .then((rows) => rows[0]),
-  ]);
+  const { nomenclatureRow, systemRow } = await withTenantRead(
+    db,
+    tenantCtx(systemId, auth),
+    async (tx) => {
+      const [nRow, sRow] = await Promise.all([
+        tx
+          .select({ systemId: nomenclatureSettings.systemId })
+          .from(nomenclatureSettings)
+          .where(eq(nomenclatureSettings.systemId, systemId))
+          .limit(1)
+          .then((rows) => rows[0]),
+        tx
+          .select({ encryptedData: systems.encryptedData })
+          .from(systems)
+          .where(eq(systems.id, systemId))
+          .limit(1)
+          .then((rows) => rows[0]),
+      ]);
+      return { nomenclatureRow: nRow, systemRow: sRow };
+    },
+  );
 
   if (!nomenclatureRow) {
     throw new ApiHttpError(
@@ -231,7 +248,7 @@ export async function setupComplete(
   const timestamp = now();
 
   // Atomic insert with onConflictDoNothing to avoid TOCTOU race
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const inserted = await tx
       .insert(systemSettings)
       .values({

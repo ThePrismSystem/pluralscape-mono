@@ -99,15 +99,18 @@ export async function changeEmail(
 ): Promise<{ ok: true }> {
   const parsed = ChangeEmailSchema.parse(params);
 
-  const [account] = await db
-    .select({
-      passwordHash: accounts.passwordHash,
-      emailHash: accounts.emailHash,
-      version: accounts.version,
-    })
-    .from(accounts)
-    .where(eq(accounts.id, accountId))
-    .limit(1);
+  const account = await withAccountRead(db, accountId, async (tx) => {
+    const [row] = await tx
+      .select({
+        passwordHash: accounts.passwordHash,
+        emailHash: accounts.emailHash,
+        version: accounts.version,
+      })
+      .from(accounts)
+      .where(eq(accounts.id, accountId))
+      .limit(1);
+    return row ?? null;
+  });
 
   if (!account) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);
@@ -177,16 +180,19 @@ export async function changePassword(
 ): Promise<ChangePasswordResult> {
   const parsed = ChangePasswordSchema.parse(params);
 
-  const [account] = await db
-    .select({
-      passwordHash: accounts.passwordHash,
-      kdfSalt: accounts.kdfSalt,
-      encryptedMasterKey: accounts.encryptedMasterKey,
-      version: accounts.version,
-    })
-    .from(accounts)
-    .where(eq(accounts.id, accountId))
-    .limit(1);
+  const account = await withAccountRead(db, accountId, async (tx) => {
+    const [row] = await tx
+      .select({
+        passwordHash: accounts.passwordHash,
+        kdfSalt: accounts.kdfSalt,
+        encryptedMasterKey: accounts.encryptedMasterKey,
+        version: accounts.version,
+      })
+      .from(accounts)
+      .where(eq(accounts.id, accountId))
+      .limit(1);
+    return row ?? null;
+  });
 
   if (!account) {
     throw new ValidationError(INCORRECT_PASSWORD_ERROR);

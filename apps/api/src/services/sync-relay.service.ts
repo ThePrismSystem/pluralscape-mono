@@ -4,8 +4,11 @@ import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscap
 import { createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { WS_ENVELOPE_PAGE_SIZE } from "../ws/ws.constants.js";
 
+import type { TenantContext } from "../lib/rls-context.js";
+import type { PgExecutor } from "@pluralscape/db";
 import type { SyncChangeRow, SyncSnapshotRow } from "@pluralscape/db/pg";
 import type {
   EncryptedChangeEnvelope,
@@ -19,10 +22,29 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
 export class PgSyncRelayService implements SyncRelayService {
-  constructor(private readonly db: PostgresJsDatabase) {}
+  constructor(
+    private readonly db: PostgresJsDatabase,
+    private readonly context?: TenantContext,
+  ) {}
+
+  /**
+   * Execute a callback with RLS context when available, or a plain transaction
+   * when no context is provided (e.g. system-level operations, tests).
+   */
+  private async withCtx<T>(
+    fn: (tx: PostgresJsDatabase & PgExecutor) => Promise<T>,
+    readOnly = false,
+  ): Promise<T> {
+    if (!this.context) {
+      return this.db.transaction(async (tx) => fn(tx));
+    }
+    return readOnly
+      ? withTenantRead(this.db, this.context, fn)
+      : withTenantTransaction(this.db, this.context, fn);
+  }
 
   async submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<number> {
-    return await this.db.transaction(async (tx) => {
+    return this.withCtx(async (tx) => {
       const now = Date.now();
 
       // M8: Atomically increment last_seq and get the new value (query 1 of 2)
@@ -100,25 +122,27 @@ export class PgSyncRelayService implements SyncRelayService {
     sinceSeq: number,
     limit: number = WS_ENVELOPE_PAGE_SIZE,
   ): Promise<PaginatedEnvelopes> {
-    // Fetch limit + 1 rows so we can detect whether more exist beyond the page
-    const rows = await this.db
-      .select()
-      .from(syncChanges)
-      .where(and(eq(syncChanges.documentId, documentId), gt(syncChanges.seq, sinceSeq)))
-      .orderBy(syncChanges.seq)
-      .limit(limit + 1);
+    return this.withCtx(async (tx) => {
+      // Fetch limit + 1 rows so we can detect whether more exist beyond the page
+      const rows = await tx
+        .select()
+        .from(syncChanges)
+        .where(and(eq(syncChanges.documentId, documentId), gt(syncChanges.seq, sinceSeq)))
+        .orderBy(syncChanges.seq)
+        .limit(limit + 1);
 
-    const hasMore = rows.length > limit;
-    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+      const hasMore = rows.length > limit;
+      const pageRows = hasMore ? rows.slice(0, limit) : rows;
 
-    return {
-      envelopes: pageRows.map((row) => this.mapChangeRow(row)),
-      hasMore,
-    };
+      return {
+        envelopes: pageRows.map((row) => this.mapChangeRow(row)),
+        hasMore,
+      };
+    }, true);
   }
 
   async submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {
-    await this.db.transaction(async (tx) => {
+    await this.withCtx(async (tx) => {
       const now = Date.now();
 
       // Atomic conditional UPDATE eliminates TOCTOU race
@@ -176,38 +200,42 @@ export class PgSyncRelayService implements SyncRelayService {
   }
 
   async getLatestSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {
-    const [row] = await this.db
-      .select()
-      .from(syncSnapshots)
-      .where(eq(syncSnapshots.documentId, documentId));
+    return this.withCtx(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(syncSnapshots)
+        .where(eq(syncSnapshots.documentId, documentId));
 
-    if (!row) return null;
+      if (!row) return null;
 
-    return this.mapSnapshotRow(row);
+      return this.mapSnapshotRow(row);
+    }, true);
   }
 
   async getManifest(systemId: SystemId): Promise<SyncManifest> {
-    const rows = await this.db
-      .select()
-      .from(syncDocuments)
-      .where(eq(syncDocuments.systemId, systemId));
+    return this.withCtx(async (tx) => {
+      const rows = await tx
+        .select()
+        .from(syncDocuments)
+        .where(eq(syncDocuments.systemId, systemId));
 
-    const documents: SyncManifestEntry[] = rows.map((row) => ({
-      docId: row.documentId as SyncDocumentId,
-      docType: row.docType,
-      keyType: row.keyType,
-      bucketId: row.bucketId as BucketId | null,
-      channelId: row.channelId as ChannelId | null,
-      timePeriod: row.timePeriod,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      sizeBytes: row.sizeBytes,
-      snapshotVersion: row.snapshotVersion,
-      lastSeq: row.lastSeq,
-      archived: row.archived,
-    }));
+      const documents: SyncManifestEntry[] = rows.map((row) => ({
+        docId: row.documentId as SyncDocumentId,
+        docType: row.docType,
+        keyType: row.keyType,
+        bucketId: row.bucketId as BucketId | null,
+        channelId: row.channelId as ChannelId | null,
+        timePeriod: row.timePeriod,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        sizeBytes: row.sizeBytes,
+        snapshotVersion: row.snapshotVersion,
+        lastSeq: row.lastSeq,
+        archived: row.archived,
+      }));
 
-    return { documents, systemId };
+      return { documents, systemId };
+    }, true);
   }
 
   private mapChangeRow(row: SyncChangeRow): EncryptedChangeEnvelope {

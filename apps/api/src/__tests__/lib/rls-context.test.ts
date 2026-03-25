@@ -1,5 +1,5 @@
 import * as db from "@pluralscape/db";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // vi.mock is hoisted by Vitest. The factory runs before module-level variable
 // assignments, so mocks are created inline and retrieved via vi.mocked() below.
@@ -48,35 +48,85 @@ function makeContext(): { systemId: SystemId; accountId: AccountId } {
   };
 }
 
+// ── Parameterized test cases ─────────────────────────────────────────────────
+
+interface RlsTestCase {
+  name: string;
+  fn: (...args: never[]) => Promise<unknown>;
+  setupFn: "setTenantContext" | "setAccountId";
+  readOnly: boolean;
+  callArgs: (db: ReturnType<typeof asDb>, callback: ReturnType<typeof vi.fn>) => unknown[];
+}
+
+const cases: RlsTestCase[] = [
+  {
+    name: "withTenantTransaction",
+    fn: withTenantTransaction as (...args: never[]) => Promise<unknown>,
+    setupFn: "setTenantContext",
+    readOnly: false,
+    callArgs: (db, callback) => {
+      const ctx = makeContext();
+      return [db, ctx, callback];
+    },
+  },
+  {
+    name: "withTenantRead",
+    fn: withTenantRead as (...args: never[]) => Promise<unknown>,
+    setupFn: "setTenantContext",
+    readOnly: true,
+    callArgs: (db, callback) => {
+      const ctx = makeContext();
+      return [db, ctx, callback];
+    },
+  },
+  {
+    name: "withAccountTransaction",
+    fn: withAccountTransaction as (...args: never[]) => Promise<unknown>,
+    setupFn: "setAccountId",
+    readOnly: false,
+    callArgs: (db, callback) => {
+      const accountId = crypto.randomUUID() as AccountId;
+      return [db, accountId, callback];
+    },
+  },
+  {
+    name: "withAccountRead",
+    fn: withAccountRead as (...args: never[]) => Promise<unknown>,
+    setupFn: "setAccountId",
+    readOnly: true,
+    callArgs: (db, callback) => {
+      const accountId = crypto.randomUUID() as AccountId;
+      return [db, accountId, callback];
+    },
+  },
+];
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-describe("withTenantTransaction", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe.each(cases)("$name", ({ fn, setupFn, readOnly, callArgs }) => {
+  const mockSetup = setupFn === "setTenantContext" ? mockSetTenantContext : mockSetAccountId;
 
   afterEach(() => {
+    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
-  it("calls setTenantContext with the tx and context before invoking the callback", async () => {
-    const { db: mockDb, tx } = createMockDb();
-    const context = makeContext();
+  it("calls setup function before invoking the callback", async () => {
+    const { db: mockDb } = createMockDb();
     const callback = vi.fn().mockResolvedValue("ok");
+    const args = callArgs(mockDb, callback);
 
-    await withTenantTransaction(mockDb, context, callback);
+    await (fn as (...a: unknown[]) => Promise<unknown>)(...args);
 
-    expect(mockSetTenantContext).toHaveBeenCalledOnce();
-    expect(mockSetTenantContext).toHaveBeenCalledWith(tx, context);
+    expect(mockSetup).toHaveBeenCalledOnce();
   });
 
-  it("calls setTenantContext BEFORE the user callback", async () => {
+  it("calls setup function BEFORE the user callback", async () => {
     const { db: mockDb } = createMockDb();
-    const context = makeContext();
     const callOrder: string[] = [];
 
-    mockSetTenantContext.mockImplementation(() => {
-      callOrder.push("setTenantContext");
+    mockSetup.mockImplementation(() => {
+      callOrder.push(setupFn);
       return Promise.resolve();
     });
 
@@ -85,9 +135,12 @@ describe("withTenantTransaction", () => {
       return Promise.resolve("done");
     });
 
-    await withTenantTransaction(mockDb, context, callback);
+    const args = callArgs(mockDb, callback);
+    await (fn as (...a: unknown[]) => Promise<unknown>)(...args);
 
-    expect(callOrder).toEqual(["setTenantContext", "callback"]);
+    expect(callOrder[0]).toBe(setupFn);
+    expect(callOrder).toContain("callback");
+    expect(callOrder.indexOf(setupFn)).toBeLessThan(callOrder.indexOf("callback"));
   });
 
   it("returns the value from the callback", async () => {
@@ -95,194 +148,48 @@ describe("withTenantTransaction", () => {
     const expected = { data: crypto.randomUUID() };
     const callback = vi.fn().mockResolvedValue(expected);
 
-    const result = await withTenantTransaction(mockDb, makeContext(), callback);
+    const args = callArgs(mockDb, callback);
+    const result = await (fn as (...a: unknown[]) => Promise<unknown>)(...args);
 
     expect(result).toBe(expected);
   });
 
   it("propagates errors thrown by the callback", async () => {
     const { db: mockDb } = createMockDb();
-    const error = new Error(`tx-error-${crypto.randomUUID()}`);
+    const error = new Error(`error-${crypto.randomUUID()}`);
     const callback = vi.fn().mockRejectedValue(error);
 
-    await expect(withTenantTransaction(mockDb, makeContext(), callback)).rejects.toThrow(error);
-  });
-});
-
-describe("withTenantRead", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+    const args = callArgs(mockDb, callback);
+    await expect((fn as (...a: unknown[]) => Promise<unknown>)(...args)).rejects.toThrow(error);
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  if (readOnly) {
+    it("executes SET TRANSACTION READ ONLY", async () => {
+      const { db: mockDb, tx } = createMockDb();
+      const callback = vi.fn().mockResolvedValue("ok");
 
-  it("calls setTenantContext with the tx and context before invoking the callback", async () => {
-    const { db: mockDb, tx } = createMockDb();
-    const context = makeContext();
-    const callback = vi.fn().mockResolvedValue("ok");
+      const args = callArgs(mockDb, callback);
+      await (fn as (...a: unknown[]) => Promise<unknown>)(...args);
 
-    await withTenantRead(mockDb, context, callback);
-
-    expect(mockSetTenantContext).toHaveBeenCalledOnce();
-    expect(mockSetTenantContext).toHaveBeenCalledWith(tx, context);
-  });
-
-  it("calls setTenantContext BEFORE the user callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const callOrder: string[] = [];
-
-    mockSetTenantContext.mockImplementation(() => {
-      callOrder.push("setTenantContext");
-      return Promise.resolve();
+      // Read variants call tx.execute(sql`SET TRANSACTION READ ONLY`).
+      // setTenantContext/setAccountId are mocked stubs, so the only
+      // tx.execute call comes from the READ ONLY enforcement.
+      expect(tx.execute).toHaveBeenCalledOnce();
+      const sqlArg = tx.execute.mock.calls[0]?.[0] as { queryChunks: { value: string[] }[] };
+      // The drizzle sql tag stores raw strings in queryChunks.
+      // Verify the SQL object contains the READ ONLY directive.
+      const serialized = JSON.stringify(sqlArg);
+      expect(serialized).toContain("READ ONLY");
     });
+  } else {
+    it("does not execute SET TRANSACTION READ ONLY", async () => {
+      const { db: mockDb, tx } = createMockDb();
+      const callback = vi.fn().mockResolvedValue("ok");
 
-    const callback = vi.fn().mockImplementation(() => {
-      callOrder.push("callback");
-      return Promise.resolve();
+      const args = callArgs(mockDb, callback);
+      await (fn as (...a: unknown[]) => Promise<unknown>)(...args);
+
+      expect(tx.execute).not.toHaveBeenCalled();
     });
-
-    await withTenantRead(mockDb, makeContext(), callback);
-
-    expect(callOrder).toEqual(["setTenantContext", "callback"]);
-  });
-
-  it("returns the value from the callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const expected = [crypto.randomUUID(), crypto.randomUUID()];
-    const callback = vi.fn().mockResolvedValue(expected);
-
-    const result = await withTenantRead(mockDb, makeContext(), callback);
-
-    expect(result).toBe(expected);
-  });
-
-  it("propagates errors thrown by the callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const error = new Error(`read-error-${crypto.randomUUID()}`);
-    const callback = vi.fn().mockRejectedValue(error);
-
-    await expect(withTenantRead(mockDb, makeContext(), callback)).rejects.toThrow(error);
-  });
-});
-
-describe("withAccountTransaction", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("calls setAccountId with the tx and accountId before invoking the callback", async () => {
-    const { db: mockDb, tx } = createMockDb();
-    const accountId = crypto.randomUUID() as AccountId;
-    const callback = vi.fn().mockResolvedValue("ok");
-
-    await withAccountTransaction(mockDb, accountId, callback);
-
-    expect(mockSetAccountId).toHaveBeenCalledOnce();
-    expect(mockSetAccountId).toHaveBeenCalledWith(tx, accountId);
-  });
-
-  it("calls setAccountId BEFORE the user callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const callOrder: string[] = [];
-
-    mockSetAccountId.mockImplementation(() => {
-      callOrder.push("setAccountId");
-      return Promise.resolve();
-    });
-
-    const callback = vi.fn().mockImplementation(() => {
-      callOrder.push("callback");
-      return Promise.resolve();
-    });
-
-    await withAccountTransaction(mockDb, crypto.randomUUID() as AccountId, callback);
-
-    expect(callOrder).toEqual(["setAccountId", "callback"]);
-  });
-
-  it("returns the value from the callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const expected = { rows: [{ id: crypto.randomUUID() }] };
-    const callback = vi.fn().mockResolvedValue(expected);
-
-    const result = await withAccountTransaction(mockDb, crypto.randomUUID() as AccountId, callback);
-
-    expect(result).toBe(expected);
-  });
-
-  it("propagates errors thrown by the callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const error = new Error(`acct-tx-error-${crypto.randomUUID()}`);
-    const callback = vi.fn().mockRejectedValue(error);
-
-    await expect(
-      withAccountTransaction(mockDb, crypto.randomUUID() as AccountId, callback),
-    ).rejects.toThrow(error);
-  });
-});
-
-describe("withAccountRead", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("calls setAccountId with the tx and accountId before invoking the callback", async () => {
-    const { db: mockDb, tx } = createMockDb();
-    const accountId = crypto.randomUUID() as AccountId;
-    const callback = vi.fn().mockResolvedValue("ok");
-
-    await withAccountRead(mockDb, accountId, callback);
-
-    expect(mockSetAccountId).toHaveBeenCalledOnce();
-    expect(mockSetAccountId).toHaveBeenCalledWith(tx, accountId);
-  });
-
-  it("calls setAccountId BEFORE the user callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const callOrder: string[] = [];
-
-    mockSetAccountId.mockImplementation(() => {
-      callOrder.push("setAccountId");
-      return Promise.resolve();
-    });
-
-    const callback = vi.fn().mockImplementation(() => {
-      callOrder.push("callback");
-      return Promise.resolve();
-    });
-
-    await withAccountRead(mockDb, crypto.randomUUID() as AccountId, callback);
-
-    expect(callOrder).toEqual(["setAccountId", "callback"]);
-  });
-
-  it("returns the value from the callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const expected = { count: 42 };
-    const callback = vi.fn().mockResolvedValue(expected);
-
-    const result = await withAccountRead(mockDb, crypto.randomUUID() as AccountId, callback);
-
-    expect(result).toBe(expected);
-  });
-
-  it("propagates errors thrown by the callback", async () => {
-    const { db: mockDb } = createMockDb();
-    const error = new Error(`acct-read-error-${crypto.randomUUID()}`);
-    const callback = vi.fn().mockRejectedValue(error);
-
-    await expect(
-      withAccountRead(mockDb, crypto.randomUUID() as AccountId, callback),
-    ).rejects.toThrow(error);
-  });
+  }
 });

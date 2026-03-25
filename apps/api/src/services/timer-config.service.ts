@@ -13,8 +13,9 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -134,7 +135,7 @@ export async function createTimerConfig(
   const timerId = createId(ID_PREFIXES.timer);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(timerConfigs)
       .values({
@@ -176,26 +177,28 @@ export async function listTimerConfigs(
 ): Promise<PaginatedResult<TimerConfigResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(timerConfigs.systemId, systemId)];
+    const conditions = [eq(timerConfigs.systemId, systemId)];
 
-  if (!opts.includeArchived) {
-    conditions.push(eq(timerConfigs.archived, false));
-  }
+    if (!opts.includeArchived) {
+      conditions.push(eq(timerConfigs.archived, false));
+    }
 
-  if (opts.cursor) {
-    conditions.push(lt(timerConfigs.id, opts.cursor));
-  }
+    if (opts.cursor) {
+      conditions.push(lt(timerConfigs.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(timerConfigs)
-    .where(and(...conditions))
-    .orderBy(desc(timerConfigs.id))
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(timerConfigs)
+      .where(and(...conditions))
+      .orderBy(desc(timerConfigs.id))
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toTimerConfigResult);
+    return buildPaginatedResult(rows, effectiveLimit, toTimerConfigResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────
@@ -208,23 +211,25 @@ export async function getTimerConfig(
 ): Promise<TimerConfigResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(timerConfigs)
-    .where(
-      and(
-        eq(timerConfigs.id, timerId),
-        eq(timerConfigs.systemId, systemId),
-        eq(timerConfigs.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(timerConfigs)
+      .where(
+        and(
+          eq(timerConfigs.id, timerId),
+          eq(timerConfigs.systemId, systemId),
+          eq(timerConfigs.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Timer config not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Timer config not found");
+    }
 
-  return toTimerConfigResult(row);
+    return toTimerConfigResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────
@@ -247,7 +252,7 @@ export async function updateTimerConfig(
   const version = parsed.version;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const setClause: Partial<typeof timerConfigs.$inferInsert> = {
       encryptedData: blob,
       updatedAt: timestamp,
@@ -328,7 +333,7 @@ export async function deleteTimerConfig(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: timerConfigs.id })
       .from(timerConfigs)

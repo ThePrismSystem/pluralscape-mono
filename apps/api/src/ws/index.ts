@@ -8,9 +8,11 @@
  * and the Bun WebSocket handler (for Bun.serve() wiring).
  */
 import { Hono } from "hono";
+import { getConnInfo } from "hono/bun";
 import { v7 as uuidv7 } from "uuid";
 
 import { env } from "../env.js";
+import { isValidIpFormat } from "../lib/ip-validation.js";
 import { getContextLogger } from "../lib/logger.js";
 import { accessLogMiddleware } from "../middleware/access-log.js";
 import { requestIdMiddleware } from "../middleware/request-id.js";
@@ -86,11 +88,13 @@ syncWsApp.get(
       };
     }
 
-    // Extract client IP using TRUST_PROXY pattern (same as HTTP rate limiter).
-    // When TRUST_PROXY=0, clientIp is undefined and per-IP limiting is disabled.
-    const clientIp = env.TRUST_PROXY
-      ? (c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined)
-      : undefined;
+    // Extract client IP: behind a proxy, use X-Forwarded-For; otherwise fall
+    // back to the raw socket address from Bun so per-IP limiting works in all
+    // deployment modes. Validate format to reject garbage header values.
+    const rawIp = env.TRUST_PROXY
+      ? c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
+      : getConnInfo(c).remote.address;
+    const clientIp = rawIp && isValidIpFormat(rawIp) ? rawIp : undefined;
 
     // Pre-upgrade: reject if unauthenticated connection cap reached (global or per-IP)
     if (

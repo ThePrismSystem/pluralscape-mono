@@ -33,6 +33,7 @@ vi.mock("@pluralscape/validation", () => ({
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
+  sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values, _tag: "sql" }),
 }));
 
 vi.mock("../../lib/system-ownership.js", () => ({
@@ -131,7 +132,9 @@ describe("pin service", () => {
 
     it("succeeds when current PIN is correct", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
+      // removePin uses .limit(1).for("update") — limit must return chain, for returns data
+      chain.limit.mockReturnValueOnce(chain);
+      chain.for.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
       vi.mocked(verifyPinOffload).mockResolvedValueOnce(true);
 
       await removePin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit);
@@ -144,7 +147,8 @@ describe("pin service", () => {
 
     it("throws NOT_FOUND when settings not found", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
+      chain.limit.mockReturnValueOnce(chain);
+      chain.for.mockResolvedValueOnce([]);
 
       await expect(
         removePin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit),
@@ -156,7 +160,8 @@ describe("pin service", () => {
 
     it("throws NOT_FOUND when no PIN is set", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ pinHash: null }]);
+      chain.limit.mockReturnValueOnce(chain);
+      chain.for.mockResolvedValueOnce([{ pinHash: null }]);
 
       await expect(
         removePin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit),
@@ -168,7 +173,8 @@ describe("pin service", () => {
 
     it("throws INVALID_PIN when current PIN is wrong", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
+      chain.limit.mockReturnValueOnce(chain);
+      chain.for.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
       vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
 
       await expect(

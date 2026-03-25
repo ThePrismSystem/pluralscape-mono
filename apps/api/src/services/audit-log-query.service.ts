@@ -4,6 +4,7 @@ import { and, desc, eq, gt, like, lt, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { withAccountRead } from "../lib/rls-context.js";
 
 import type {
   AccountId,
@@ -113,27 +114,29 @@ export async function queryAuditLog(
     }
   }
 
-  const rows = await db
-    .select()
-    .from(auditLog)
-    .where(and(...conditions))
-    .orderBy(desc(auditLog.timestamp), desc(auditLog.id))
-    .limit(params.limit + 1);
+  return withAccountRead(db, accountId, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(auditLog)
+      .where(and(...conditions))
+      .orderBy(desc(auditLog.timestamp), desc(auditLog.id))
+      .limit(params.limit + 1);
 
-  const hasMore = rows.length > params.limit;
-  const items = hasMore ? rows.slice(0, params.limit) : rows;
-  const lastItem = items[items.length - 1];
+    const hasMore = rows.length > params.limit;
+    const items = hasMore ? rows.slice(0, params.limit) : rows;
+    const lastItem = items[items.length - 1];
 
-  return {
-    items: items.map(toEntryResult),
-    nextCursor:
-      hasMore && lastItem
-        ? (encodeCursor({
-            t: lastItem.timestamp,
-            i: lastItem.id,
-          }) as PaginatedResult<AuditLogEntryResult>["nextCursor"])
-        : null,
-    hasMore,
-    totalCount: null,
-  };
+    return {
+      items: items.map(toEntryResult),
+      nextCursor:
+        hasMore && lastItem
+          ? (encodeCursor({
+              t: lastItem.timestamp,
+              i: lastItem.id,
+            }) as PaginatedResult<AuditLogEntryResult>["nextCursor"])
+          : null,
+      hasMore,
+      totalCount: null,
+    };
+  });
 }

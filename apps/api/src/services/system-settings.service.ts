@@ -9,8 +9,9 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { SYSTEM_SETTINGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { QueryCache } from "../lib/query-cache.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -75,17 +76,20 @@ export async function getSystemSettings(
   const cached = settingsCache.get(systemId);
   if (cached) return cached;
 
-  const [row] = await db
-    .select()
-    .from(systemSettings)
-    .where(eq(systemSettings.systemId, systemId))
-    .limit(1);
+  const result = await withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(systemSettings)
+      .where(eq(systemSettings.systemId, systemId))
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");
+    }
 
-  const result = toSystemSettingsResult(row);
+    return toSystemSettingsResult(row);
+  });
+
   settingsCache.set(systemId, result);
   return result;
 }
@@ -109,54 +113,47 @@ export async function updateSystemSettings(
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  const result = await withTenantTransaction(
-    db,
-    { systemId, accountId: auth.accountId },
-    async (tx) => {
-      const updated = await tx
-        .update(systemSettings)
-        .set({
-          encryptedData: blob,
-          ...(parsed.data.locale !== undefined && { locale: parsed.data.locale }),
-          ...(parsed.data.biometricEnabled !== undefined && {
-            biometricEnabled: parsed.data.biometricEnabled,
-          }),
-          updatedAt: timestamp,
-          version: sql`${systemSettings.version} + 1`,
-        })
-        .where(
-          and(
-            eq(systemSettings.systemId, systemId),
-            eq(systemSettings.version, parsed.data.version),
-          ),
-        )
-        .returning();
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const updated = await tx
+      .update(systemSettings)
+      .set({
+        encryptedData: blob,
+        ...(parsed.data.locale !== undefined && { locale: parsed.data.locale }),
+        ...(parsed.data.biometricEnabled !== undefined && {
+          biometricEnabled: parsed.data.biometricEnabled,
+        }),
+        updatedAt: timestamp,
+        version: sql`${systemSettings.version} + 1`,
+      })
+      .where(
+        and(eq(systemSettings.systemId, systemId), eq(systemSettings.version, parsed.data.version)),
+      )
+      .returning();
 
-      if (updated.length === 0) {
-        const [existing] = await tx
-          .select({ id: systemSettings.id })
-          .from(systemSettings)
-          .where(eq(systemSettings.systemId, systemId))
-          .limit(1);
+    if (updated.length === 0) {
+      const [existing] = await tx
+        .select({ id: systemSettings.id })
+        .from(systemSettings)
+        .where(eq(systemSettings.systemId, systemId))
+        .limit(1);
 
-        if (existing) {
-          throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-        }
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");
+      if (existing) {
+        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
       }
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");
+    }
 
-      const [row] = updated as [(typeof updated)[number], ...typeof updated];
+    const [row] = updated as [(typeof updated)[number], ...typeof updated];
 
-      await audit(tx, {
-        eventType: "settings.changed",
-        actor: { kind: "account", id: auth.accountId },
-        detail: "System settings updated",
-        systemId,
-      });
+    await audit(tx, {
+      eventType: "settings.changed",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "System settings updated",
+      systemId,
+    });
 
-      return toSystemSettingsResult(row);
-    },
-  );
+    return toSystemSettingsResult(row);
+  });
   settingsCache.invalidate(systemId);
   return result;
 }

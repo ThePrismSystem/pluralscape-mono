@@ -266,6 +266,8 @@ describe("confirmUpload", () => {
     expect(result.checksum).toBe(VALID_CHECKSUM);
     expect(result.uploadedAt).toBe(2000);
     expect(mockAudit).toHaveBeenCalledOnce();
+    // Verify SELECT ... FOR UPDATE row-level lock to prevent race conditions
+    expect(chain.for).toHaveBeenCalledWith("update");
   });
 
   it("returns existing result idempotently when already confirmed", async () => {

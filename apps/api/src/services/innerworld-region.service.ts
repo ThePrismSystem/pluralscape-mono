@@ -8,8 +8,9 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -87,7 +88,7 @@ export async function createRegion(
   const regionId = createId(ID_PREFIXES.innerWorldRegion);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Validate parentRegionId exists in same system if provided
     const parentRegionId = parsed.parentRegionId ?? null;
     if (parentRegionId !== null) {
@@ -149,26 +150,28 @@ export async function listRegions(
 ): Promise<PaginatedResult<RegionResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  const conditions = [eq(innerworldRegions.systemId, systemId)];
+    const conditions = [eq(innerworldRegions.systemId, systemId)];
 
-  if (!opts?.includeArchived) {
-    conditions.push(eq(innerworldRegions.archived, false));
-  }
+    if (!opts?.includeArchived) {
+      conditions.push(eq(innerworldRegions.archived, false));
+    }
 
-  if (opts?.cursor) {
-    conditions.push(gt(innerworldRegions.id, opts.cursor));
-  }
+    if (opts?.cursor) {
+      conditions.push(gt(innerworldRegions.id, opts.cursor));
+    }
 
-  const rows = await db
-    .select()
-    .from(innerworldRegions)
-    .where(and(...conditions))
-    .orderBy(innerworldRegions.id)
-    .limit(effectiveLimit + 1);
+    const rows = await tx
+      .select()
+      .from(innerworldRegions)
+      .where(and(...conditions))
+      .orderBy(innerworldRegions.id)
+      .limit(effectiveLimit + 1);
 
-  return buildPaginatedResult(rows, effectiveLimit, toRegionResult);
+    return buildPaginatedResult(rows, effectiveLimit, toRegionResult);
+  });
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -181,23 +184,25 @@ export async function getRegion(
 ): Promise<RegionResult> {
   assertSystemOwnership(systemId, auth);
 
-  const [row] = await db
-    .select()
-    .from(innerworldRegions)
-    .where(
-      and(
-        eq(innerworldRegions.id, regionId),
-        eq(innerworldRegions.systemId, systemId),
-        eq(innerworldRegions.archived, false),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(innerworldRegions)
+      .where(
+        and(
+          eq(innerworldRegions.id, regionId),
+          eq(innerworldRegions.systemId, systemId),
+          eq(innerworldRegions.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Region not found");
-  }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Region not found");
+    }
 
-  return toRegionResult(row);
+    return toRegionResult(row);
+  });
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
@@ -220,7 +225,7 @@ export async function updateRegion(
 
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(innerworldRegions)
       .set({
@@ -281,7 +286,7 @@ export async function archiveRegion(
 
   const timestamp = now();
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldRegions.id })
       .from(innerworldRegions)
@@ -366,7 +371,7 @@ export async function restoreRegion(
 
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: innerworldRegions.id, parentRegionId: innerworldRegions.parentRegionId })
       .from(innerworldRegions)
@@ -442,7 +447,7 @@ export async function deleteRegion(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify region exists
     const [existing] = await tx
       .select({ id: innerworldRegions.id })

@@ -31,7 +31,18 @@ import {
 import { mockDb } from "../helpers/mock-db.js";
 import { createMockLogger } from "../helpers/mock-logger.js";
 
+import type { AccountId } from "@pluralscape/types";
 import type { Context } from "hono";
+
+const TEST_ACCOUNT_ID = "acct_123" as AccountId;
+const ATTACKER_ACCOUNT_ID = "acct_attacker" as AccountId;
+
+// ── Local test interfaces ─────────────────────────────────────────────
+
+/** Shape of the object passed to `chain.set()` when revoking a session. */
+interface SessionRevocation {
+  revoked: boolean;
+}
 
 // ── Mock helpers ─────────────────────────────────────────────────────
 
@@ -487,7 +498,9 @@ describe("auth service", () => {
             accountType: "system",
           },
         ])
-        // Second limit() call: system lookup
+        // Second limit() call: session eviction check (inside withAccountTransaction)
+        .mockResolvedValueOnce([])
+        // Third limit() call: system lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
@@ -590,7 +603,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toEqual([]);
       expect(result.nextCursor).toBeNull();
     });
@@ -603,7 +616,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toHaveLength(2);
       expect(result.nextCursor).toBeNull();
     });
@@ -618,7 +631,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123", undefined, 2);
+      const result = await listSessions(db, TEST_ACCOUNT_ID, undefined, 2);
       expect(result.sessions).toHaveLength(2);
       const { nextCursor } = result;
       expect(nextCursor).not.toBeNull();
@@ -636,7 +649,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123", "sess_1", 25);
+      const result = await listSessions(db, TEST_ACCOUNT_ID, "sess_1", 25);
       expect(result.sessions).toHaveLength(2);
       expect(result.sessions[0]?.id).toBe("sess_2");
       expect(result.sessions[1]?.id).toBe("sess_3");
@@ -654,7 +667,7 @@ describe("auth service", () => {
       const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toHaveLength(1);
     });
 
@@ -672,7 +685,7 @@ describe("auth service", () => {
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123");
+      const result = await listSessions(db, TEST_ACCOUNT_ID);
       expect(result.sessions).toHaveLength(1);
     });
   });
@@ -684,7 +697,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_999", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_999", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
 
@@ -693,7 +706,7 @@ describe("auth service", () => {
       // UPDATE with accountId in WHERE matches zero rows
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
 
@@ -701,7 +714,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
-      const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(true);
       expect(chain.transaction).toHaveBeenCalled();
     });
@@ -711,7 +724,7 @@ describe("auth service", () => {
       // The UPDATE should match zero rows (accountId mismatch in WHERE clause)
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_target", "acct_attacker", mockAudit);
+      const result = await revokeSession(db, "sess_target", ATTACKER_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
       // Audit should NOT be called for unauthorized attempts
       expect(mockAudit).not.toHaveBeenCalled();
@@ -722,7 +735,7 @@ describe("auth service", () => {
       // WHERE includes revoked = false, so already-revoked sessions match zero rows
       chain.returning.mockResolvedValueOnce([]);
 
-      const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
+      const result = await revokeSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(result).toBe(false);
     });
   });
@@ -734,7 +747,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([]);
 
-      const count = await revokeAllSessions(db, "acct_123", "sess_keep", mockAudit);
+      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
       expect(count).toBe(0);
     });
 
@@ -742,7 +755,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }, { id: "sess_2" }, { id: "sess_3" }]);
 
-      const count = await revokeAllSessions(db, "acct_123", "sess_keep", mockAudit);
+      const count = await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
       expect(count).toBe(3);
     });
 
@@ -750,7 +763,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
-      await revokeAllSessions(db, "acct_123", "sess_keep", mockAudit);
+      await revokeAllSessions(db, TEST_ACCOUNT_ID, "sess_keep", mockAudit);
       expect(chain.set).toHaveBeenCalledWith({ revoked: true });
     });
   });
@@ -761,7 +774,7 @@ describe("auth service", () => {
     it("revokes the session and returns void", async () => {
       const { db, chain } = mockDb();
 
-      await logoutCurrentSession(db, "sess_1", "acct_123", mockAudit);
+      await logoutCurrentSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit);
       expect(chain.update).toHaveBeenCalled();
       expect(chain.set).toHaveBeenCalledWith({ revoked: true });
     });
@@ -770,7 +783,7 @@ describe("auth service", () => {
       const { db } = mockDb();
 
       await expect(
-        logoutCurrentSession(db, "sess_1", "acct_123", mockAudit),
+        logoutCurrentSession(db, "sess_1", TEST_ACCOUNT_ID, mockAudit),
       ).resolves.toBeUndefined();
     });
   });
@@ -807,10 +820,7 @@ describe("auth service", () => {
       // for the eviction path when count is below limit)
       const setCalls = chain.set.mock.calls;
       const revocationCall = setCalls.find(
-        (call) =>
-          call[0] &&
-          typeof call[0] === "object" &&
-          (call[0] as Record<string, unknown>).revoked === true,
+        (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
       );
       expect(revocationCall).toBeUndefined();
     });
@@ -859,10 +869,7 @@ describe("auth service", () => {
       // No eviction: set({ revoked: true }) should not appear
       const setCalls = chain.set.mock.calls;
       const revocationCall = setCalls.find(
-        (call) =>
-          call[0] &&
-          typeof call[0] === "object" &&
-          (call[0] as Record<string, unknown>).revoked === true,
+        (call) => call[0] && typeof call[0] === "object" && (call[0] as SessionRevocation).revoked,
       );
       expect(revocationCall).toBeUndefined();
     });

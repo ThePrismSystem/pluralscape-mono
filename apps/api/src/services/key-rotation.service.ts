@@ -23,8 +23,9 @@ import { and, eq, inArray, lt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { withTenantTransaction } from "../lib/rls-context.js";
+import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -89,43 +90,43 @@ export async function initiateRotation(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid initiate payload");
   }
 
-  // Check for active rotation on this bucket
-  const [activeRotation] = await db
-    .select()
-    .from(bucketKeyRotations)
-    .where(
-      and(
-        eq(bucketKeyRotations.bucketId, bucketId),
-        eq(bucketKeyRotations.systemId, systemId),
-        inArray(bucketKeyRotations.state, [
-          ROTATION_STATES.initiated,
-          ROTATION_STATES.migrating,
-          ROTATION_STATES.sealing,
-        ]),
-      ),
-    )
-    .limit(1);
-
-  if (activeRotation) {
-    if (activeRotation.state === ROTATION_STATES.initiated) {
-      // Cancel the unclaimed rotation and proceed
-      await db
-        .update(bucketKeyRotations)
-        .set({ state: ROTATION_STATES.failed })
-        .where(eq(bucketKeyRotations.id, activeRotation.id));
-    } else {
-      throw new ApiHttpError(
-        HTTP_CONFLICT,
-        "ROTATION_IN_PROGRESS",
-        "A rotation is already in progress for this bucket",
-      );
-    }
-  }
-
   const rotationId = createId(ID_PREFIXES.bucketKeyRotation);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Check for active rotation on this bucket (inside transaction to prevent TOCTOU)
+    const [activeRotation] = await tx
+      .select()
+      .from(bucketKeyRotations)
+      .where(
+        and(
+          eq(bucketKeyRotations.bucketId, bucketId),
+          eq(bucketKeyRotations.systemId, systemId),
+          inArray(bucketKeyRotations.state, [
+            ROTATION_STATES.initiated,
+            ROTATION_STATES.migrating,
+            ROTATION_STATES.sealing,
+          ]),
+        ),
+      )
+      .limit(1);
+
+    if (activeRotation) {
+      if (activeRotation.state === ROTATION_STATES.initiated) {
+        // Cancel the unclaimed rotation and proceed
+        await tx
+          .update(bucketKeyRotations)
+          .set({ state: ROTATION_STATES.failed })
+          .where(eq(bucketKeyRotations.id, activeRotation.id));
+      } else {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "ROTATION_IN_PROGRESS",
+          "A rotation is already in progress for this bucket",
+        );
+      }
+    }
+
     // Get all content tags for this bucket
     const tags = await tx
       .select()
@@ -226,105 +227,107 @@ export async function claimRotationChunk(
 
   const chunkSize = parsed.data.chunkSize;
 
-  // Verify rotation exists and belongs to this system/bucket
-  const [rotation] = await db
-    .select()
-    .from(bucketKeyRotations)
-    .where(
-      and(
-        eq(bucketKeyRotations.id, rotationId),
-        eq(bucketKeyRotations.bucketId, bucketId),
-        eq(bucketKeyRotations.systemId, systemId),
-      ),
-    )
-    .limit(1);
-
-  if (!rotation) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Rotation not found");
-  }
-
-  if (
-    rotation.state !== ROTATION_STATES.initiated &&
-    rotation.state !== ROTATION_STATES.migrating
-  ) {
-    throw new ApiHttpError(
-      HTTP_CONFLICT,
-      "CONFLICT",
-      `Rotation is in state "${rotation.state}" — cannot claim chunks`,
-    );
-  }
-
-  const timestamp = now();
-  const staleThreshold = toUnixMillis(timestamp - KEY_ROTATION.staleClaimTimeoutMs);
-
-  // Reclaim stale items
-  await db
-    .update(bucketRotationItems)
-    .set({ status: ROTATION_ITEM_STATUSES.pending, claimedBy: null, claimedAt: null })
-    .where(
-      and(
-        eq(bucketRotationItems.rotationId, rotationId),
-        eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.claimed),
-        lt(bucketRotationItems.claimedAt, staleThreshold),
-      ),
-    );
-
-  // Select pending items
-  const pendingItems = await db
-    .select({ id: bucketRotationItems.id })
-    .from(bucketRotationItems)
-    .where(
-      and(
-        eq(bucketRotationItems.rotationId, rotationId),
-        eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.pending),
-      ),
-    )
-    .limit(chunkSize);
-
-  if (pendingItems.length === 0) {
-    return {
-      items: [],
-      rotationState: rotation.state as RotationState,
-    };
-  }
-
-  const pendingIds = pendingItems.map((item) => item.id);
-
-  // CAS claim
-  const claimedRows = await db
-    .update(bucketRotationItems)
-    .set({
-      status: ROTATION_ITEM_STATUSES.claimed,
-      claimedBy: auth.sessionId,
-      claimedAt: timestamp,
-    })
-    .where(
-      and(
-        inArray(bucketRotationItems.id, pendingIds),
-        eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.pending),
-      ),
-    )
-    .returning();
-
-  // Transition initiated → migrating on first claim
-  let currentState = rotation.state as RotationState;
-  if (currentState === ROTATION_STATES.initiated && claimedRows.length > 0) {
-    await db
-      .update(bucketKeyRotations)
-      .set({ state: ROTATION_STATES.migrating })
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Verify rotation exists and belongs to this system/bucket
+    const [rotation] = await tx
+      .select()
+      .from(bucketKeyRotations)
       .where(
         and(
           eq(bucketKeyRotations.id, rotationId),
-          eq(bucketKeyRotations.state, ROTATION_STATES.initiated),
+          eq(bucketKeyRotations.bucketId, bucketId),
+          eq(bucketKeyRotations.systemId, systemId),
+        ),
+      )
+      .limit(1);
+
+    if (!rotation) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Rotation not found");
+    }
+
+    if (
+      rotation.state !== ROTATION_STATES.initiated &&
+      rotation.state !== ROTATION_STATES.migrating
+    ) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "CONFLICT",
+        `Rotation is in state "${rotation.state}" — cannot claim chunks`,
+      );
+    }
+
+    const timestamp = now();
+    const staleThreshold = toUnixMillis(timestamp - KEY_ROTATION.staleClaimTimeoutMs);
+
+    // Reclaim stale items
+    await tx
+      .update(bucketRotationItems)
+      .set({ status: ROTATION_ITEM_STATUSES.pending, claimedBy: null, claimedAt: null })
+      .where(
+        and(
+          eq(bucketRotationItems.rotationId, rotationId),
+          eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.claimed),
+          lt(bucketRotationItems.claimedAt, staleThreshold),
         ),
       );
-    currentState = ROTATION_STATES.migrating;
-  }
 
-  return {
-    items: claimedRows.map(toItemResult),
-    rotationState: currentState,
-  };
+    // Select pending items
+    const pendingItems = await tx
+      .select({ id: bucketRotationItems.id })
+      .from(bucketRotationItems)
+      .where(
+        and(
+          eq(bucketRotationItems.rotationId, rotationId),
+          eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.pending),
+        ),
+      )
+      .limit(chunkSize);
+
+    if (pendingItems.length === 0) {
+      return {
+        items: [],
+        rotationState: rotation.state as RotationState,
+      };
+    }
+
+    const pendingIds = pendingItems.map((item) => item.id);
+
+    // CAS claim
+    const claimedRows = await tx
+      .update(bucketRotationItems)
+      .set({
+        status: ROTATION_ITEM_STATUSES.claimed,
+        claimedBy: auth.sessionId,
+        claimedAt: timestamp,
+      })
+      .where(
+        and(
+          inArray(bucketRotationItems.id, pendingIds),
+          eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.pending),
+        ),
+      )
+      .returning();
+
+    // Transition initiated → migrating on first claim
+    let currentState = rotation.state as RotationState;
+    if (currentState === ROTATION_STATES.initiated && claimedRows.length > 0) {
+      await tx
+        .update(bucketKeyRotations)
+        .set({ state: ROTATION_STATES.migrating })
+        .where(
+          and(
+            eq(bucketKeyRotations.id, rotationId),
+            eq(bucketKeyRotations.state, ROTATION_STATES.initiated),
+          ),
+        );
+      currentState = ROTATION_STATES.migrating;
+    }
+
+    return {
+      items: claimedRows.map(toItemResult),
+      rotationState: currentState,
+    };
+  });
 }
 
 // ── COMPLETE CHUNK ──────────────────────────────────────────────────
@@ -345,7 +348,7 @@ export async function completeRotationChunk(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid completion payload");
   }
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Lock the rotation record to prevent concurrent sealing transitions
     const [rotation] = await tx
       .select()
@@ -543,21 +546,23 @@ export async function getRotationProgress(
 ): Promise<BucketKeyRotation> {
   assertSystemOwnership(systemId, auth);
 
-  const [rotation] = await db
-    .select()
-    .from(bucketKeyRotations)
-    .where(
-      and(
-        eq(bucketKeyRotations.id, rotationId),
-        eq(bucketKeyRotations.bucketId, bucketId),
-        eq(bucketKeyRotations.systemId, systemId),
-      ),
-    )
-    .limit(1);
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [rotation] = await tx
+      .select()
+      .from(bucketKeyRotations)
+      .where(
+        and(
+          eq(bucketKeyRotations.id, rotationId),
+          eq(bucketKeyRotations.bucketId, bucketId),
+          eq(bucketKeyRotations.systemId, systemId),
+        ),
+      )
+      .limit(1);
 
-  if (!rotation) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Rotation not found");
-  }
+    if (!rotation) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Rotation not found");
+    }
 
-  return toRotationResult(rotation);
+    return toRotationResult(rotation);
+  });
 }

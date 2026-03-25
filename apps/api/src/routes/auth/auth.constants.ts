@@ -59,7 +59,7 @@ export const RECOVERY_KEY_GROUP_COUNT = 13;
 /** Characters per group in a recovery key. */
 export const RECOVERY_KEY_GROUP_SIZE = 4;
 
-/** Target registration time (ms) for anti-enumeration timing equalization. */
+/** Target time (ms) for anti-enumeration timing equalization. */
 export const ANTI_ENUM_TARGET_MS = 500;
 
 /** Expected length of EMAIL_HASH_PEPPER hex string (32 bytes = 64 hex chars). */
@@ -68,13 +68,14 @@ export const PEPPER_HEX_LENGTH = 64;
 /** Maximum concurrent active sessions per account. Oldest session is evicted when exceeded. */
 export const MAX_SESSIONS_PER_ACCOUNT = 50;
 
-// ── Base32 Encoding Constants ────────────────────────────────────
-
-/** Bits per base32 character (2^5 = 32 characters). */
-export const BASE32_BITS_PER_CHAR = 5;
-
-/** Bits per byte. */
-export const BITS_PER_BYTE = 8;
-
-/** Bitmask for extracting a single base32 character (5 low bits). */
-export const BASE32_CHAR_MASK = 0x1f;
+/**
+ * Pad elapsed time to at least {@link ANTI_ENUM_TARGET_MS} to prevent
+ * timing side-channels that distinguish real vs non-existent accounts.
+ */
+export async function equalizeAntiEnumTiming(startTime: number): Promise<void> {
+  const elapsed = performance.now() - startTime;
+  const remaining = ANTI_ENUM_TARGET_MS - elapsed;
+  if (remaining > 0) {
+    await new Promise<void>((resolve) => setTimeout(resolve, remaining));
+  }
+}

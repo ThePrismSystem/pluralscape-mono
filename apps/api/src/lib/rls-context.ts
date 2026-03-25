@@ -1,4 +1,5 @@
 import { setAccountId, setTenantContext } from "@pluralscape/db";
+import { sql } from "drizzle-orm";
 
 import type { PgExecutor } from "@pluralscape/db";
 import type { AccountId, SystemId } from "@pluralscape/types";
@@ -13,10 +14,41 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  *    so session-scoped SET would leak context across requests
  * 3. A transaction pins a single connection for the duration, ensuring the GUC and queries share it
  *
- * "Read" variants are semantically identical to "Transaction" variants but signal that the
- * enclosed operations are read-only. This distinction enables future optimisation (e.g.
- * connection reservation without BEGIN/COMMIT) and makes write vs read intent explicit in code.
+ * "Read" variants enforce `SET TRANSACTION READ ONLY` so the DB rejects any accidental
+ * INSERT/UPDATE/DELETE within the callback, providing a runtime safety net.
  */
+
+/** Shared tenant context shape used by tenant-scoped helpers. */
+export interface TenantContext {
+  readonly systemId: SystemId;
+  readonly accountId: AccountId;
+}
+
+type TxCallback<T> = (tx: PostgresJsDatabase & PgExecutor) => Promise<T>;
+
+// ── Private helpers ──────────────────────────────────────────────
+
+async function withTenant<T>(
+  db: PostgresJsDatabase,
+  context: TenantContext,
+  fn: TxCallback<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await setTenantContext(tx, context);
+    return fn(tx);
+  });
+}
+
+async function withAccount<T>(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  fn: TxCallback<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await setAccountId(tx, accountId);
+    return fn(tx);
+  });
+}
 
 // ── Write Helpers (transactions with INSERT/UPDATE/DELETE) ───────
 
@@ -27,13 +59,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  */
 export async function withTenantTransaction<T>(
   db: PostgresJsDatabase,
-  context: { systemId: SystemId | string; accountId: AccountId | string },
-  fn: (tx: PostgresJsDatabase & PgExecutor) => Promise<T>,
+  context: TenantContext,
+  fn: TxCallback<T>,
 ): Promise<T> {
-  return db.transaction(async (tx) => {
-    await setTenantContext(tx, context);
-    return fn(tx);
-  });
+  return withTenant(db, context, fn);
 }
 
 /**
@@ -42,43 +71,42 @@ export async function withTenantTransaction<T>(
  */
 export async function withAccountTransaction<T>(
   db: PostgresJsDatabase,
-  accountId: AccountId | string,
-  fn: (tx: PostgresJsDatabase & PgExecutor) => Promise<T>,
+  accountId: AccountId,
+  fn: TxCallback<T>,
 ): Promise<T> {
-  return db.transaction(async (tx) => {
-    await setAccountId(tx, accountId);
-    return fn(tx);
-  });
+  return withAccount(db, accountId, fn);
 }
 
 // ── Read Helpers (SELECT-only operations) ────────────────────────
 
 /**
  * Execute a read-only query with RLS tenant context set.
- * Internally uses a transaction for connection pinning (see module-level comment).
+ * Enforces `SET TRANSACTION READ ONLY` — the DB will reject any write statements.
  */
 export async function withTenantRead<T>(
   db: PostgresJsDatabase,
-  context: { systemId: SystemId | string; accountId: AccountId | string },
-  fn: (tx: PostgresJsDatabase & PgExecutor) => Promise<T>,
+  context: TenantContext,
+  fn: TxCallback<T>,
 ): Promise<T> {
   return db.transaction(async (tx) => {
     await setTenantContext(tx, context);
+    await tx.execute(sql`SET TRANSACTION READ ONLY`);
     return fn(tx);
   });
 }
 
 /**
  * Execute a read-only query with RLS account context set.
- * Internally uses a transaction for connection pinning (see module-level comment).
+ * Enforces `SET TRANSACTION READ ONLY` — the DB will reject any write statements.
  */
 export async function withAccountRead<T>(
   db: PostgresJsDatabase,
-  accountId: AccountId | string,
-  fn: (tx: PostgresJsDatabase & PgExecutor) => Promise<T>,
+  accountId: AccountId,
+  fn: TxCallback<T>,
 ): Promise<T> {
   return db.transaction(async (tx) => {
     await setAccountId(tx, accountId);
+    await tx.execute(sql`SET TRANSACTION READ ONLY`);
     return fn(tx);
   });
 }
