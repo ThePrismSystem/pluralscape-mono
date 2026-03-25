@@ -8,6 +8,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { toCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { throwOnUniqueViolation } from "../lib/unique-violation.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
@@ -61,7 +62,7 @@ export async function addMember(
   const { memberId } = parsed.data;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify group exists and is not archived
     const [group] = await tx
       .select({ id: groups.id })
@@ -128,7 +129,7 @@ export async function removeMember(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const deleted = await tx
       .delete(groupMemberships)
       .where(
@@ -165,7 +166,7 @@ export async function listGroupMembers(
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify group exists
     const [group] = await tx
       .select({ id: groups.id })
@@ -226,7 +227,7 @@ export async function listMemberGroupMemberships(
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify member exists
     const [member] = await tx
       .select({ id: members.id })

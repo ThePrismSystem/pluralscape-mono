@@ -17,6 +17,7 @@ import {
 } from "../lib/entity-lifecycle.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -149,7 +150,7 @@ export async function createLifecycleEvent(
     metadata = parsed.plaintextMetadata;
   }
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(lifecycleEvents)
       .values({
@@ -194,7 +195,7 @@ export async function listLifecycleEvents(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [eq(lifecycleEvents.systemId, systemId)];
 
     if (!includeArchived) {
@@ -243,7 +244,7 @@ export async function getLifecycleEvent(
 ): Promise<LifecycleEventResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .select()
       .from(lifecycleEvents)
@@ -269,7 +270,7 @@ export async function deleteLifecycleEvent(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const deleted = await tx
       .delete(lifecycleEvents)
       .where(and(eq(lifecycleEvents.id, eventId), eq(lifecycleEvents.systemId, systemId)))

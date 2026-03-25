@@ -14,6 +14,7 @@ import {
   withTenantRead,
   withTenantTransaction,
 } from "../lib/rls-context.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_SYSTEM_DATA_BYTES,
@@ -94,7 +95,7 @@ export async function getSystemProfile(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<SystemProfileResult> {
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .select()
       .from(systems)
@@ -132,7 +133,7 @@ export async function updateSystemProfile(
 
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(systems)
       .set({
@@ -188,7 +189,7 @@ export async function archiveSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // 1. Verify ownership of non-archived system
     const [existing] = await tx
       .select({ id: systems.id })

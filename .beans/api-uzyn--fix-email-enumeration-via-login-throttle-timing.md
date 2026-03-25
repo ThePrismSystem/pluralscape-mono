@@ -9,7 +9,7 @@ updated_at: 2026-03-24T22:01:15Z
 parent: ps-8al7
 ---
 
-Login throttle state differs for valid vs invalid emails. After cooldown, attacker can probe email existence by observing whether throttle persists. Store dummy throttle entries for non-existent emails.
+Login throttle state differs for valid vs invalid emails. After cooldown, attacker can probe email existence by observing whether throttle persists. Equalize throttle recording behavior across both paths.
 
 **Audit ref:** Finding 3 (MEDIUM) — A07 Auth Failures / Spoofing
 **File:** apps/api/src/middleware/stores/account-login-store.ts

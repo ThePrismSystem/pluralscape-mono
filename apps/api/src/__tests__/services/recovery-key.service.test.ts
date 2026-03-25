@@ -64,6 +64,8 @@ vi.mock("../../lib/email-hash.js", () => ({
   getEmailHashPepper: vi.fn().mockReturnValue(new Uint8Array(32)),
 }));
 
+// Pass-through mock: ensures vitest module resolution for drizzle-orm remains
+// stable when other mocked modules (rls-context, entity-lifecycle) import it.
 vi.mock("drizzle-orm", async (importOriginal) => {
   const actual = await importOriginal<typeof import("drizzle-orm")>();
   return { ...actual };

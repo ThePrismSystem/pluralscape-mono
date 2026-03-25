@@ -14,6 +14,7 @@ import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -109,7 +110,7 @@ export async function createRelationship(
   const relationshipId = createId(ID_PREFIXES.relationship);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Validate both members exist in the same system
     const memberRows = await tx
       .select({ id: members.id })
@@ -173,7 +174,7 @@ export async function listRelationships(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [eq(relationships.systemId, systemId), eq(relationships.archived, false)];
 
     if (cursor) {
@@ -211,7 +212,7 @@ export async function getRelationship(
 ): Promise<RelationshipResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .select()
       .from(relationships)
@@ -252,7 +253,7 @@ export async function updateRelationship(
 
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(relationships)
       .set({
@@ -313,7 +314,7 @@ export async function deleteRelationship(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify relationship exists
     const [existing] = await tx
       .select({ id: relationships.id })

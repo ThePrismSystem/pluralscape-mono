@@ -9,6 +9,7 @@ import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -78,7 +79,7 @@ export function createHierarchyService<
     const entityId = createId(idPrefix);
     const timestamp = now();
 
-    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
       // Validate parent exists in same system if non-null
       const parsedRecord = parsed as Record<string, unknown>;
       const rawParentId = parentFieldName in parsedRecord ? parsedRecord[parentFieldName] : null;
@@ -148,7 +149,7 @@ export function createHierarchyService<
 
     const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-    return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
       const conditions = [eq(columns.systemId, systemId), eq(columns.archived, false)];
 
       if (cursor) {
@@ -176,7 +177,7 @@ export function createHierarchyService<
   ): Promise<TResult> {
     assertSystemOwnership(systemId, auth);
 
-    return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
       const [row] = await tx
         .select()
         .from(table)
@@ -218,7 +219,7 @@ export function createHierarchyService<
     const timestamp = now();
     const parsedRecord = parsed as Record<string, unknown>;
 
-    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
       if (cfg.beforeUpdate) {
         await cfg.beforeUpdate(tx, entityId, parsedRecord, systemId);
       }
@@ -284,7 +285,7 @@ export function createHierarchyService<
   ): Promise<void> {
     assertSystemOwnership(systemId, auth);
 
-    await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
       // Verify entity exists
       const [existing] = await tx
         .select({ id: columns.id })
@@ -343,7 +344,7 @@ export function createHierarchyService<
 
     const timestamp = now();
 
-    return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
       const [existing] = await tx
         .select({ id: columns.id, parentId: columns.parentId })
         .from(table)

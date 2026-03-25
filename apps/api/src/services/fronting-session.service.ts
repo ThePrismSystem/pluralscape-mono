@@ -20,6 +20,7 @@ import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -126,7 +127,7 @@ export async function createFrontingSession(
   const fsId = createId(ID_PREFIXES.frontingSession);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     await validateSubjectIds(tx, systemId, parsed);
 
     const [row] = await tx
@@ -171,7 +172,7 @@ export async function listFrontingSessions(
 
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [eq(frontingSessions.systemId, systemId)];
 
     if (!opts.includeArchived) {
@@ -227,7 +228,7 @@ export async function getFrontingSession(
 ): Promise<FrontingSessionResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .select()
       .from(frontingSessions)
@@ -268,7 +269,7 @@ export async function updateFrontingSession(
   const version = parsed.version;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(frontingSessions)
       .set({
@@ -335,7 +336,7 @@ export async function endFrontingSession(
   const { endTime, version } = result.data;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Read current session to validate state and endTime > startTime
     const [current] = await tx
       .select({
@@ -429,7 +430,7 @@ export async function deleteFrontingSession(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: frontingSessions.id, startTime: frontingSessions.startTime })
       .from(frontingSessions)
@@ -537,7 +538,7 @@ export async function getActiveFronting(
 ): Promise<ActiveFrontingResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const rows = await tx
       .select()
       .from(frontingSessions)

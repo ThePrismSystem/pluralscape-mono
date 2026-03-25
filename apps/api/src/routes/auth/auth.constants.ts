@@ -67,15 +67,3 @@ export const PEPPER_HEX_LENGTH = 64;
 
 /** Maximum concurrent active sessions per account. Oldest session is evicted when exceeded. */
 export const MAX_SESSIONS_PER_ACCOUNT = 50;
-
-/**
- * Pad elapsed time to at least {@link ANTI_ENUM_TARGET_MS} to prevent
- * timing side-channels that distinguish real vs non-existent accounts.
- */
-export async function equalizeAntiEnumTiming(startTime: number): Promise<void> {
-  const elapsed = performance.now() - startTime;
-  const remaining = ANTI_ENUM_TARGET_MS - elapsed;
-  if (remaining > 0) {
-    await new Promise<void>((resolve) => setTimeout(resolve, remaining));
-  }
-}

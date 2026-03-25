@@ -26,30 +26,6 @@ export interface TenantContext {
 
 type TxCallback<T> = (tx: PostgresJsDatabase & PgExecutor) => Promise<T>;
 
-// ── Private helpers ──────────────────────────────────────────────
-
-async function withTenant<T>(
-  db: PostgresJsDatabase,
-  context: TenantContext,
-  fn: TxCallback<T>,
-): Promise<T> {
-  return db.transaction(async (tx) => {
-    await setTenantContext(tx, context);
-    return fn(tx);
-  });
-}
-
-async function withAccount<T>(
-  db: PostgresJsDatabase,
-  accountId: AccountId,
-  fn: TxCallback<T>,
-): Promise<T> {
-  return db.transaction(async (tx) => {
-    await setAccountId(tx, accountId);
-    return fn(tx);
-  });
-}
-
 // ── Write Helpers (transactions with INSERT/UPDATE/DELETE) ───────
 
 /**
@@ -62,7 +38,10 @@ export async function withTenantTransaction<T>(
   context: TenantContext,
   fn: TxCallback<T>,
 ): Promise<T> {
-  return withTenant(db, context, fn);
+  return db.transaction(async (tx) => {
+    await setTenantContext(tx, context);
+    return fn(tx);
+  });
 }
 
 /**
@@ -74,7 +53,10 @@ export async function withAccountTransaction<T>(
   accountId: AccountId,
   fn: TxCallback<T>,
 ): Promise<T> {
-  return withAccount(db, accountId, fn);
+  return db.transaction(async (tx) => {
+    await setAccountId(tx, accountId);
+    return fn(tx);
+  });
 }
 
 // ── Read Helpers (SELECT-only operations) ────────────────────────

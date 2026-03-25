@@ -13,6 +13,7 @@ import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -135,7 +136,7 @@ export async function createFrontingComment(
   const commentId = createId(ID_PREFIXES.frontingComment);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const sessionStartTime = await resolveSessionStartTime(tx, sessionId, systemId);
     await validateSubjectIds(tx, systemId, parsed);
 
@@ -181,7 +182,7 @@ export async function listFrontingComments(
 ): Promise<PaginatedResult<FrontingCommentResult>> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify parent session exists and belongs to this system
     const [session] = await tx
       .select({ id: frontingSessions.id })
@@ -230,7 +231,7 @@ export async function getFrontingComment(
 ): Promise<FrontingCommentResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify parent session exists and belongs to this system
     const [session] = await tx
       .select({ id: frontingSessions.id })
@@ -284,7 +285,7 @@ export async function updateFrontingComment(
   const version = parsed.version;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(frontingComments)
       .set({
@@ -346,7 +347,7 @@ export async function deleteFrontingComment(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: frontingComments.id })
       .from(frontingComments)
@@ -397,7 +398,7 @@ export async function archiveFrontingComment(
 
   const timestamp = now();
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(frontingComments)
       .set({
@@ -462,7 +463,7 @@ export async function restoreFrontingComment(
 
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(frontingComments)
       .set({

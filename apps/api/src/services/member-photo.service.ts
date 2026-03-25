@@ -10,6 +10,7 @@ import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertMemberActive } from "../lib/member-helpers.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -113,7 +114,7 @@ export async function createMemberPhoto(
   const photoId = createId(ID_PREFIXES.memberPhoto);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Check quota inside transaction to prevent TOCTOU races
     const [countResult] = await tx
       .select({ count: count() })
@@ -188,7 +189,7 @@ export async function listMemberPhotos(
 ): Promise<MemberPhotoResult[]> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     await assertMemberActive(tx, systemId, memberId);
 
     const rows = await tx
@@ -227,7 +228,7 @@ export async function reorderMemberPhotos(
 
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Verify all photo IDs belong to this member
     const existingPhotos = await tx
       .select({ id: memberPhotos.id })
@@ -327,7 +328,7 @@ export async function archiveMemberPhoto(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: memberPhotos.id })
       .from(memberPhotos)
@@ -379,7 +380,7 @@ export async function restoreMemberPhoto(
 ): Promise<MemberPhotoResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select()
       .from(memberPhotos)
@@ -438,7 +439,7 @@ export async function deleteMemberPhoto(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: memberPhotos.id })
       .from(memberPhotos)

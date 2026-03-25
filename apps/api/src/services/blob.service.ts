@@ -16,6 +16,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_BLOB_LIMIT,
   MAX_BLOB_LIMIT,
@@ -109,7 +110,7 @@ export async function createUploadUrl(
 
   // DB insert + audit inside transaction; S3 presigned URL outside to avoid
   // holding a DB connection open during external network I/O.
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     await tx.insert(blobMetadata).values({
       id: blobId,
       systemId,
@@ -175,7 +176,7 @@ export async function confirmUpload(
   const { checksum, thumbnailOfBlobId } = result.data;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Find pending blob
     const [pending] = await tx
       .select()
@@ -255,7 +256,7 @@ export async function getBlob(
 ): Promise<BlobResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .select()
       .from(blobMetadata)
@@ -293,7 +294,7 @@ export async function listBlobs(
 
   const limit = Math.min(opts?.limit ?? DEFAULT_BLOB_LIMIT, MAX_BLOB_LIMIT);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [
       eq(blobMetadata.systemId, systemId),
       sql`${blobMetadata.uploadedAt} IS NOT NULL`,
@@ -331,30 +332,26 @@ export async function getDownloadUrl(
 
   // Fetch storage key inside read context; generate presigned URL outside
   // to avoid holding a DB connection open during external S3 I/O.
-  const storageKey = await withTenantRead(
-    db,
-    { systemId, accountId: auth.accountId },
-    async (tx) => {
-      const [row] = await tx
-        .select({ storageKey: blobMetadata.storageKey })
-        .from(blobMetadata)
-        .where(
-          and(
-            eq(blobMetadata.id, blobId),
-            eq(blobMetadata.systemId, systemId),
-            sql`${blobMetadata.uploadedAt} IS NOT NULL`,
-            eq(blobMetadata.archived, false),
-          ),
-        )
-        .limit(1);
+  const storageKey = await withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select({ storageKey: blobMetadata.storageKey })
+      .from(blobMetadata)
+      .where(
+        and(
+          eq(blobMetadata.id, blobId),
+          eq(blobMetadata.systemId, systemId),
+          sql`${blobMetadata.uploadedAt} IS NOT NULL`,
+          eq(blobMetadata.archived, false),
+        ),
+      )
+      .limit(1);
 
-      if (!row) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
-      }
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Blob not found");
+    }
 
-      return row.storageKey as StorageKey;
-    },
-  );
+    return row.storageKey as StorageKey;
+  });
 
   const presigned = await storageAdapter.generatePresignedDownloadUrl({ storageKey });
 
@@ -386,7 +383,7 @@ export async function archiveBlob(
 
   const timestamp = now();
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: blobMetadata.id })
       .from(blobMetadata)

@@ -17,6 +17,7 @@ import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@plu
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
 import { and, asc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
+import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
@@ -34,7 +35,6 @@ import {
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,
-  equalizeAntiEnumTiming,
 } from "../routes/auth/auth.constants.js";
 
 import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
@@ -300,11 +300,22 @@ export async function loginAccount(
         auditError instanceof Error ? { err: auditError } : { error: String(auditError) },
       );
     });
+    // Pad total elapsed time so attackers cannot distinguish "wrong password"
+    // from "not found" via request duration differences.
+    await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
-  // Successful login: reset the throttle counter
-  await loginStore.reset(emailHash);
+  // Successful login: reset the throttle counter.
+  // try/catch keeps this symmetric with the failure paths — both tolerate Valkey outages.
+  try {
+    await loginStore.reset(emailHash);
+  } catch (throttleErr: unknown) {
+    log.error(
+      "Failed to reset login throttle after successful login",
+      throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
+    );
+  }
 
   // Fire-and-forget: rehash password if it uses old params (inside RLS context)
   if (needsRehash(account.passwordHash)) {
@@ -572,7 +583,7 @@ export function needsRehash(hash: string): boolean {
 
 /**
  * Generate a fake recovery key that looks like a real one for anti-enumeration.
- * Uses byte % 32 which has zero modulo bias since 256 divides evenly by 32.
+ * Uses byte % chars.length which has zero modulo bias since 256 divides evenly by 32 (chars.length).
  */
 function generateFakeRecoveryKey(): string {
   const adapter = getSodium();

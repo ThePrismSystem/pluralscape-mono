@@ -11,6 +11,7 @@ import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -85,7 +86,7 @@ export async function createCustomFront(
   const cfId = createId(ID_PREFIXES.customFront);
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(customFronts)
       .values({
@@ -125,7 +126,7 @@ export async function listCustomFronts(
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [eq(customFronts.systemId, systemId), eq(customFronts.archived, false)];
 
     if (cursor) {
@@ -153,7 +154,7 @@ export async function getCustomFront(
 ): Promise<CustomFrontResult> {
   assertSystemOwnership(systemId, auth);
 
-  return withTenantRead(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .select()
       .from(customFronts)
@@ -194,7 +195,7 @@ export async function updateCustomFront(
   const version = parsed.version;
   const timestamp = now();
 
-  return withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(customFronts)
       .set({
@@ -253,7 +254,7 @@ export async function deleteCustomFront(
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
       .select({ id: customFronts.id })
       .from(customFronts)

@@ -190,7 +190,7 @@ describe("verifyBiometric", () => {
     });
   });
 
-  it("fires audit for failed biometric verification (fire-and-forget)", async () => {
+  it("awaits audit for failed biometric verification before throwing", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
     const auth = createAuth();
@@ -210,16 +210,14 @@ describe("verifyBiometric", () => {
     );
   });
 
-  it("returns 401 even when audit write fails", async () => {
+  it("propagates audit write failure on failed verification", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
-    const auth = createAuth();
     const failingAudit = vi.fn().mockRejectedValue(new Error("DB down")) as AuditWriter;
 
-    await expect(verifyBiometric(db, VALID_VERIFY_BODY, auth, failingAudit)).rejects.toMatchObject({
-      code: "INVALID_TOKEN",
-      status: 401,
-    });
+    await expect(
+      verifyBiometric(db, VALID_VERIFY_BODY, createAuth(), failingAudit),
+    ).rejects.toThrow("DB down");
   });
 
   it("rejects second use of same biometric token (replay prevention)", async () => {

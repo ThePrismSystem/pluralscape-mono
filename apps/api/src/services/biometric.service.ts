@@ -7,7 +7,6 @@ import { and, eq, isNull } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { toHex } from "../lib/hex.js";
-import { logger } from "../lib/logger.js";
 import { withTenantTransaction } from "../lib/rls-context.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
@@ -114,7 +113,7 @@ export async function verifyBiometric(
   const systemId = auth.systemId;
   const tokenHash = hashToken(parsed.data.token);
 
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [match] = await tx
       .update(biometricTokens)
       .set({ usedAt: now() })
@@ -128,17 +127,13 @@ export async function verifyBiometric(
       .returning({ id: biometricTokens.id });
 
     if (!match) {
-      void audit(tx, {
+      await audit(tx, {
         eventType: "auth.biometric-failed",
         actor: { kind: "account", id: auth.accountId },
         detail: "Biometric verification failed",
         systemId,
-      }).catch((auditError: unknown) => {
-        logger.error("Failed to write auth.biometric-failed audit", {
-          err: auditError instanceof Error ? auditError : { message: String(auditError) },
-        });
       });
-      throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_TOKEN", "Biometric token is invalid");
+      return { verified: false } as const;
     }
 
     await audit(tx, {
@@ -148,6 +143,11 @@ export async function verifyBiometric(
       systemId,
     });
 
-    return { verified: true };
+    return { verified: true } as const;
   });
+
+  if (!result.verified) {
+    throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_TOKEN", "Biometric token is invalid");
+  }
+  return { verified: true };
 }

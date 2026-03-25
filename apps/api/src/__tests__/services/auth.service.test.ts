@@ -111,6 +111,11 @@ vi.mock("../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
 
+const mockEqualizeAntiEnumTiming = vi.fn<(startTime: number) => Promise<void>>();
+vi.mock("../../lib/anti-enum-timing.js", () => ({
+  equalizeAntiEnumTiming: (startTime: number) => mockEqualizeAntiEnumTiming(startTime),
+}));
+
 // Mock now() so tests can control the current time
 const mockNow = vi.fn<() => number>();
 vi.mock("@pluralscape/types", async (importOriginal) => {
@@ -129,6 +134,7 @@ describe("auth service", () => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
     mockVerifyPassword.mockClear();
+    mockEqualizeAntiEnumTiming.mockClear();
     logMethods.error.mockClear();
     logMethods.warn.mockClear();
     logMethods.info.mockClear();
@@ -593,6 +599,50 @@ describe("auth service", () => {
       await expect(
         loginAccount(db, { email: "bad", password: "test" }, "web", mockAudit, mockLogger),
       ).rejects.toThrow();
+    });
+
+    it("calls equalizeAntiEnumTiming when account is not found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("calls equalizeAntiEnumTiming when password is invalid", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(mockEqualizeAntiEnumTiming).toHaveBeenCalledOnce();
+    });
+
+    it("does not call equalizeAntiEnumTiming on successful login", async () => {
+      const { db, chain } = mockDb();
+      chain.limit
+        .mockResolvedValueOnce([
+          {
+            id: "acct_123",
+            emailHash: "hashed_test@example.com",
+            passwordHash: "$argon2id$fake$valid",
+            accountType: "system",
+          },
+        ])
+        // Session eviction check
+        .mockResolvedValueOnce([])
+        // System lookup
+        .mockResolvedValueOnce([{ id: "sys_456" }]);
+      chain.returning.mockResolvedValueOnce([{ id: "sess_new" }]);
+
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
+      expect(mockEqualizeAntiEnumTiming).not.toHaveBeenCalled();
     });
   });
 

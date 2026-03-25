@@ -4,6 +4,7 @@ import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscap
 import { createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
+import { logger } from "../lib/logger.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { WS_ENVELOPE_PAGE_SIZE } from "../ws/ws.constants.js";
 
@@ -36,6 +37,7 @@ export class PgSyncRelayService implements SyncRelayService {
     readOnly = false,
   ): Promise<T> {
     if (!this.context) {
+      logger.warn("PgSyncRelayService: operating without RLS context — no tenant isolation");
       return this.db.transaction(async (tx) => fn(tx));
     }
     return readOnly

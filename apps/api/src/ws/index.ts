@@ -95,6 +95,11 @@ syncWsApp.get(
       ? c.req.header("x-forwarded-for")?.split(",")[0]?.trim()
       : getConnInfo(c).remote.address;
     const clientIp = rawIp && isValidIpFormat(rawIp) ? rawIp : undefined;
+    if (!clientIp) {
+      log.warn("WebSocket upgrade: could not determine client IP — per-IP limiting disabled", {
+        rawIp: rawIp ?? "none",
+      });
+    }
 
     // Pre-upgrade: reject if unauthenticated connection cap reached (global or per-IP)
     if (
