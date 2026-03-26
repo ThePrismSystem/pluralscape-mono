@@ -40,10 +40,20 @@ afterAll(async () => {
 
 // ── Contract tests ─────────────────────────────────────────────────
 
-// Track queues for cleanup
+// Track queues and workers for cleanup
 const activeQueues: BullMQJobQueue[] = [];
+const activeWorkers: BullMQJobWorker[] = [];
 
 afterEach(async () => {
+  for (const w of activeWorkers) {
+    try {
+      if (w.isRunning()) await w.stop();
+    } catch {
+      // Worker may already be stopped
+    }
+  }
+  activeWorkers.length = 0;
+
   for (const q of activeQueues) {
     try {
       await q.obliterate();
@@ -73,7 +83,12 @@ describe.skipIf(!ctx.available)("BullMQJobWorker", () => {
     (queue) => {
       const q = queue as BullMQJobQueue;
       if (redis === null) throw new Error("Valkey not available");
-      return new BullMQJobWorker(q.name, redis, queue, { pollIntervalMs: 50, logger: mockLogger });
+      const worker = new BullMQJobWorker(q.name, redis, queue, {
+        pollIntervalMs: 50,
+        logger: mockLogger,
+      });
+      activeWorkers.push(worker);
+      return worker;
     },
   );
 });
