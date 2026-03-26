@@ -467,8 +467,7 @@ describe("board-message service", () => {
       const row = makeBoardMessageRow({ version: 4, pinned: true });
 
       vi.mocked(restoreEntity).mockImplementationOnce(
-        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) =>
-          Promise.resolve(toResult(row)),
+        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) => Promise.resolve(toResult(row)),
       );
 
       const result = await restoreBoardMessage(db, SYSTEM_ID, BM_ID, AUTH, mockAudit);

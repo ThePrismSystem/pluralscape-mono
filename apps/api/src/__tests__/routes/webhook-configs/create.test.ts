@@ -10,7 +10,6 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-
 import type { WebhookConfigCreateResult } from "../../../services/webhook-config.service.js";
 
 // ── Mocks ────────────────────────────────────────────────────────

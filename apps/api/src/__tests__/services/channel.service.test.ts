@@ -459,8 +459,7 @@ describe("channel service", () => {
       const row = makeChannelRow({ version: 5, type: "category" });
 
       vi.mocked(restoreEntity).mockImplementationOnce(
-        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) =>
-          Promise.resolve(toResult(row)),
+        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) => Promise.resolve(toResult(row)),
       );
 
       const result = await restoreChannel(db, SYSTEM_ID, CHANNEL_ID, AUTH, mockAudit);

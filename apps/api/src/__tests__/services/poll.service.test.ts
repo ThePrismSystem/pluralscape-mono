@@ -434,8 +434,7 @@ describe("poll service", () => {
       const row = makePollRow({ version: 4, status: "closed" });
 
       vi.mocked(restoreEntity).mockImplementationOnce(
-        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) =>
-          Promise.resolve(toResult(row)),
+        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) => Promise.resolve(toResult(row)),
       );
 
       const result = await restorePoll(db, SYSTEM_ID, POLL_ID, AUTH, mockAudit);

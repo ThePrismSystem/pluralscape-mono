@@ -370,8 +370,7 @@ describe("message service", () => {
       const row = makeMessageRow({ version: 3 });
 
       vi.mocked(restoreEntity).mockImplementationOnce(
-        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) =>
-          Promise.resolve(toResult(row)),
+        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) => Promise.resolve(toResult(row)),
       );
 
       const result = await restoreMessage(db, SYSTEM_ID, MESSAGE_ID, AUTH, mockAudit);

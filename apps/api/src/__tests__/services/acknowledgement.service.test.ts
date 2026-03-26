@@ -396,8 +396,7 @@ describe("acknowledgement service", () => {
       const row = makeAckRow({ version: 3, confirmed: true });
 
       vi.mocked(restoreEntity).mockImplementationOnce(
-        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) =>
-          Promise.resolve(toResult(row)),
+        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) => Promise.resolve(toResult(row)),
       );
 
       const result = await restoreAcknowledgement(db, SYSTEM_ID, ACK_ID, AUTH, mockAudit);

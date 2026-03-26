@@ -365,8 +365,7 @@ describe("note service", () => {
       const row = makeNoteRow({ version: 3, authorEntityType: "member" });
 
       vi.mocked(restoreEntity).mockImplementationOnce(
-        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) =>
-          Promise.resolve(toResult(row)),
+        async (_db, _sId, _eid, _auth, _audit, _cfg, toResult) => Promise.resolve(toResult(row)),
       );
 
       const result = await restoreNote(db, SYSTEM_ID, NOTE_ID, AUTH, mockAudit);
