@@ -1,20 +1,12 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
-import {
-  CursorInvalidError,
-  ID_PREFIXES,
-  PAGINATION,
-  createId,
-  now,
-  toUnixMillis,
-  toUnixMillisOrNull,
-} from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CastVoteBodySchema } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { fromCursor, toCursor } from "../lib/pagination.js";
+import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -27,9 +19,10 @@ import {
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  EntityReference,
   PaginatedResult,
-  PaginationCursor,
   PollId,
+  PollOptionId,
   PollVoteId,
   SystemId,
   UnixMillis,
@@ -41,8 +34,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export interface PollVoteResult {
   readonly id: PollVoteId;
   readonly pollId: PollId;
-  readonly optionId: string | null;
-  readonly voter: { entityType: string; entityId: string } | null;
+  readonly optionId: PollOptionId | null;
+  readonly voter: EntityReference<"member" | "structure-entity"> | null;
   readonly isVeto: boolean;
   readonly votedAt: UnixMillis | null;
   readonly encryptedData: string;
@@ -63,8 +56,8 @@ function toVoteResult(row: typeof pollVotes.$inferSelect): PollVoteResult {
   return {
     id: row.id as PollVoteId,
     pollId: row.pollId as PollId,
-    optionId: row.optionId ?? null,
-    voter: row.voter as PollVoteResult["voter"],
+    optionId: (row.optionId ?? null) as PollOptionId | null,
+    voter: row.voter,
     isVeto: row.isVeto,
     votedAt: toUnixMillisOrNull(row.votedAt),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
@@ -72,47 +65,6 @@ function toVoteResult(row: typeof pollVotes.$inferSelect): PollVoteResult {
     archivedAt: toUnixMillisOrNull(row.archivedAt),
     createdAt: toUnixMillis(row.createdAt),
   };
-}
-
-// ── Cursor helpers (composite createdAt+id, descending) ─────────────
-
-function toVoteCursor(createdAt: number, id: string): PaginationCursor {
-  return toCursor(JSON.stringify({ t: createdAt, i: id }));
-}
-
-interface DecodedVoteCursor {
-  readonly createdAt: number;
-  readonly id: string;
-}
-
-function fromVoteCursor(cursor: string): DecodedVoteCursor {
-  let raw: string;
-  try {
-    raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-  } catch (error) {
-    if (error instanceof CursorInvalidError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
-    }
-    throw error;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed vote cursor");
-  }
-
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    typeof (parsed as { t?: unknown }).t !== "number" ||
-    typeof (parsed as { i?: unknown }).i !== "string"
-  ) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed vote cursor");
-  }
-  const { t, i } = parsed as { t: number; i: string };
-  return { createdAt: t, id: i };
 }
 
 // ── CAST VOTE ───────────────────────────────────────────────────────
@@ -134,12 +86,13 @@ export async function castVote(
   );
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // 1. Fetch the poll
+    // 1. Fetch the poll (FOR UPDATE to serialize concurrent vote casts)
     const [poll] = await tx
       .select()
       .from(polls)
       .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId), eq(polls.archived, false)))
-      .limit(1);
+      .limit(1)
+      .for("update");
 
     if (!poll) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
@@ -150,8 +103,13 @@ export async function castVote(
       throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
     }
 
+    // 2b. Check time-based expiry
+    if (poll.endsAt !== null && now() >= poll.endsAt) {
+      throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll has ended");
+    }
+
     // 3. Abstain check
-    const optionId = parsed.optionId ?? null;
+    const optionId = parsed.optionId;
     if (optionId === null && !poll.allowAbstain) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
@@ -177,12 +135,14 @@ export async function castVote(
       .where(
         and(
           eq(pollVotes.pollId, pollId),
+          eq(pollVotes.systemId, systemId),
           sql`${pollVotes.voter}->>'entityType' = ${voter.entityType} AND ${pollVotes.voter}->>'entityId' = ${voter.entityId}`,
         ),
       );
 
     const existingCount = voteCountResult?.count ?? 0;
-    if (existingCount >= poll.maxVotesPerMember) {
+    const effectiveMax = poll.allowMultipleVotes ? poll.maxVotesPerMember : 1;
+    if (existingCount >= effectiveMax) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "TOO_MANY_VOTES",
@@ -239,6 +199,17 @@ export async function listVotes(
   const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    // Verify poll exists
+    const pollArchiveConditions = opts.includeArchived ? [] : [eq(polls.archived, false)];
+    const [poll] = await tx
+      .select({ id: polls.id })
+      .from(polls)
+      .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId), ...pollArchiveConditions))
+      .limit(1);
+    if (!poll) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+    }
+
     const conditions = [eq(pollVotes.pollId, pollId), eq(pollVotes.systemId, systemId)];
 
     if (!opts.includeArchived) {
@@ -246,10 +217,10 @@ export async function listVotes(
     }
 
     if (opts.cursor) {
-      const decoded = fromVoteCursor(opts.cursor);
+      const decoded = fromCompositeCursor(opts.cursor, "vote");
       const cursorCondition = or(
-        lt(pollVotes.createdAt, decoded.createdAt),
-        and(eq(pollVotes.createdAt, decoded.createdAt), lt(pollVotes.id, decoded.id)),
+        lt(pollVotes.createdAt, decoded.sortValue),
+        and(eq(pollVotes.createdAt, decoded.sortValue), lt(pollVotes.id, decoded.id)),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);
@@ -266,7 +237,8 @@ export async function listVotes(
     const hasMore = rows.length > effectiveLimit;
     const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toVoteResult);
     const lastItem = items[items.length - 1];
-    const nextCursor = hasMore && lastItem ? toVoteCursor(lastItem.createdAt, lastItem.id) : null;
+    const nextCursor =
+      hasMore && lastItem ? toCompositeCursor(lastItem.createdAt, lastItem.id) : null;
 
     return { items, nextCursor, hasMore, totalCount: null };
   });

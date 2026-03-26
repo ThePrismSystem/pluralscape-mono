@@ -234,6 +234,26 @@ test.describe("Poll Voting", () => {
     expect((body as { error: { code: string } }).error.code).toBe("POLL_CLOSED");
   });
 
+  test("vote on expired poll returns 409 POLL_CLOSED", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const poll = await createPoll(request, authHeaders, systemId, {
+      endsAt: Date.now() - 60_000,
+    });
+
+    const res = await request.post(`/v1/systems/${systemId}/polls/${poll.id}/votes`, {
+      headers: authHeaders,
+      data: {
+        voter: { entityType: "member", entityId: "mem_expired-voter" },
+        optionId: "po_option-1",
+        isVeto: false,
+        encryptedData: encryptForApi({ comment: null }),
+      },
+    });
+    expect(res.status()).toBe(409);
+    const body = await res.json();
+    expect((body as { error: { code: string } }).error.code).toBe("POLL_CLOSED");
+  });
+
   test("delete poll with votes returns 409", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
     const poll = await createPoll(request, authHeaders, systemId);

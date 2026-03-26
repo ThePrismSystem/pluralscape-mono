@@ -136,6 +136,20 @@ describe("poll.service (PGlite integration)", () => {
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("poll.created");
     });
+
+    it("rejects creation with allowMultipleVotes=false and maxVotesPerMember > 1", async () => {
+      await assertApiError(
+        createPoll(
+          asDb(db),
+          systemId,
+          makeCreateParams({ allowMultipleVotes: false, maxVotesPerMember: 3 }),
+          auth,
+          noopAudit,
+        ),
+        "VALIDATION_ERROR",
+        400,
+      );
+    });
   });
 
   // ── GET ─────────────────────────────────────────────────────────
@@ -225,6 +239,14 @@ describe("poll.service (PGlite integration)", () => {
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });
+
+    it("returns INVALID_CURSOR for garbage cursor string", async () => {
+      await assertApiError(
+        listPolls(asDb(db), systemId, auth, { cursor: "not-a-valid-cursor" }),
+        "INVALID_CURSOR",
+        400,
+      );
+    });
   });
 
   // ── UPDATE ──────────────────────────────────────────────────────
@@ -307,6 +329,25 @@ describe("poll.service (PGlite integration)", () => {
       );
     });
 
+    it("returns NOT_FOUND for archived poll", async () => {
+      const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
+
+      await archivePoll(asDb(db), systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        updatePoll(
+          asDb(db),
+          systemId,
+          created.id,
+          { encryptedData: testEncryptedDataBase64(), version: 2 },
+          auth,
+          noopAudit,
+        ),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
     it("writes audit event poll.updated", async () => {
       const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
 
@@ -353,6 +394,31 @@ describe("poll.service (PGlite integration)", () => {
     it("returns NOT_FOUND for nonexistent poll", async () => {
       await assertApiError(
         closePoll(asDb(db), systemId, genPollId(), auth, noopAudit),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("returns NOT_FOUND for archived poll", async () => {
+      const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
+
+      await archivePoll(asDb(db), systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        closePoll(asDb(db), systemId, created.id, auth, noopAudit),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("returns NOT_FOUND for archived+closed poll", async () => {
+      const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
+
+      await closePoll(asDb(db), systemId, created.id, auth, noopAudit);
+      await archivePoll(asDb(db), systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        closePoll(asDb(db), systemId, created.id, auth, noopAudit),
         "NOT_FOUND",
         404,
       );
@@ -406,6 +472,18 @@ describe("poll.service (PGlite integration)", () => {
     it("returns NOT_FOUND for nonexistent poll", async () => {
       await assertApiError(
         deletePoll(asDb(db), systemId, genPollId(), auth, noopAudit),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("returns NOT_FOUND for archived poll", async () => {
+      const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
+
+      await archivePoll(asDb(db), systemId, created.id, auth, noopAudit);
+
+      await assertApiError(
+        deletePoll(asDb(db), systemId, created.id, auth, noopAudit),
         "NOT_FOUND",
         404,
       );

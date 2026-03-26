@@ -1,13 +1,5 @@
 import { boardMessages } from "@pluralscape/db/pg";
-import {
-  CursorInvalidError,
-  ID_PREFIXES,
-  PAGINATION,
-  createId,
-  now,
-  toUnixMillis,
-  toUnixMillisOrNull,
-} from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CreateBoardMessageBodySchema,
   ReorderBoardMessagesBodySchema,
@@ -20,7 +12,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
-import { fromCursor, toCursor } from "../lib/pagination.js";
+import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -37,7 +29,6 @@ import type {
   AuditEventType,
   BoardMessageId,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -80,39 +71,6 @@ function toBoardMessageResult(row: typeof boardMessages.$inferSelect): BoardMess
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };
-}
-
-// ── Cursor helpers (composite sortOrder+id) ─────────────────────────
-
-function toBoardMessageCursor(sortOrder: number, id: string): PaginationCursor {
-  return toCursor(JSON.stringify({ s: sortOrder, i: id }));
-}
-
-interface DecodedBoardMessageCursor {
-  readonly sortOrder: number;
-  readonly id: string;
-}
-
-function fromBoardMessageCursor(cursor: string): DecodedBoardMessageCursor {
-  try {
-    const raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-    const parsed = JSON.parse(raw) as unknown;
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      typeof (parsed as { s?: unknown }).s !== "number" ||
-      typeof (parsed as { i?: unknown }).i !== "string"
-    ) {
-      throw new Error("shape");
-    }
-    const { s, i } = parsed as { s: number; i: string };
-    return { sortOrder: s, id: i };
-  } catch (error) {
-    if (error instanceof CursorInvalidError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
-    }
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed board message cursor");
-  }
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────
@@ -188,10 +146,10 @@ export async function listBoardMessages(
     }
 
     if (opts.cursor) {
-      const decoded = fromBoardMessageCursor(opts.cursor);
+      const decoded = fromCompositeCursor(opts.cursor, "board message");
       const cursorCondition = or(
-        gt(boardMessages.sortOrder, decoded.sortOrder),
-        and(eq(boardMessages.sortOrder, decoded.sortOrder), gt(boardMessages.id, decoded.id)),
+        gt(boardMessages.sortOrder, decoded.sortValue),
+        and(eq(boardMessages.sortOrder, decoded.sortValue), gt(boardMessages.id, decoded.id)),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);
@@ -209,7 +167,7 @@ export async function listBoardMessages(
     const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toBoardMessageResult);
     const lastItem = items[items.length - 1];
     const nextCursor =
-      hasMore && lastItem ? toBoardMessageCursor(lastItem.sortOrder, lastItem.id) : null;
+      hasMore && lastItem ? toCompositeCursor(lastItem.sortOrder, lastItem.id) : null;
 
     return { items, nextCursor, hasMore, totalCount: null };
   });

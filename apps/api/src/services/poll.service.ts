@@ -1,21 +1,13 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
-import {
-  CursorInvalidError,
-  ID_PREFIXES,
-  PAGINATION,
-  createId,
-  now,
-  toUnixMillis,
-  toUnixMillisOrNull,
-} from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreatePollBodySchema, UpdatePollBodySchema } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
-import { fromCursor, toCursor } from "../lib/pagination.js";
+import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -30,8 +22,10 @@ import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
   PaginatedResult,
-  PaginationCursor,
+  MemberId,
   PollId,
+  PollKind,
+  PollStatus,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -42,9 +36,9 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export interface PollResult {
   readonly id: PollId;
   readonly systemId: SystemId;
-  readonly createdByMemberId: string | null;
-  readonly kind: string;
-  readonly status: string;
+  readonly createdByMemberId: MemberId | null;
+  readonly kind: PollKind;
+  readonly status: PollStatus;
   readonly closedAt: UnixMillis | null;
   readonly endsAt: UnixMillis | null;
   readonly allowMultipleVotes: boolean;
@@ -63,7 +57,7 @@ interface ListPollOpts {
   readonly cursor?: string;
   readonly limit?: number;
   readonly includeArchived?: boolean;
-  readonly status?: "open" | "closed";
+  readonly status?: PollStatus;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -72,7 +66,7 @@ function toPollResult(row: typeof polls.$inferSelect): PollResult {
   return {
     id: row.id as PollId,
     systemId: row.systemId as SystemId,
-    createdByMemberId: row.createdByMemberId,
+    createdByMemberId: row.createdByMemberId as MemberId | null,
     kind: row.kind,
     status: row.status,
     closedAt: toUnixMillisOrNull(row.closedAt),
@@ -88,47 +82,6 @@ function toPollResult(row: typeof polls.$inferSelect): PollResult {
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };
-}
-
-// ── Cursor helpers (composite createdAt+id, descending) ─────────────
-
-function toPollCursor(createdAt: number, id: string): PaginationCursor {
-  return toCursor(JSON.stringify({ t: createdAt, i: id }));
-}
-
-interface DecodedPollCursor {
-  readonly createdAt: number;
-  readonly id: string;
-}
-
-function fromPollCursor(cursor: string): DecodedPollCursor {
-  let raw: string;
-  try {
-    raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-  } catch (error) {
-    if (error instanceof CursorInvalidError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
-    }
-    throw error;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed poll cursor");
-  }
-
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    typeof (parsed as { t?: unknown }).t !== "number" ||
-    typeof (parsed as { i?: unknown }).i !== "string"
-  ) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed poll cursor");
-  }
-  const { t, i } = parsed as { t: number; i: string };
-  return { createdAt: t, id: i };
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────
@@ -236,10 +189,10 @@ export async function listPolls(
     }
 
     if (opts.cursor) {
-      const decoded = fromPollCursor(opts.cursor);
+      const decoded = fromCompositeCursor(opts.cursor, "poll");
       const cursorCondition = or(
-        lt(polls.createdAt, decoded.createdAt),
-        and(eq(polls.createdAt, decoded.createdAt), lt(polls.id, decoded.id)),
+        lt(polls.createdAt, decoded.sortValue),
+        and(eq(polls.createdAt, decoded.sortValue), lt(polls.id, decoded.id)),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);
@@ -256,7 +209,8 @@ export async function listPolls(
     const hasMore = rows.length > effectiveLimit;
     const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toPollResult);
     const lastItem = items[items.length - 1];
-    const nextCursor = hasMore && lastItem ? toPollCursor(lastItem.createdAt, lastItem.id) : null;
+    const nextCursor =
+      hasMore && lastItem ? toCompositeCursor(lastItem.createdAt, lastItem.id) : null;
 
     return { items, nextCursor, hasMore, totalCount: null };
   });
@@ -303,20 +257,20 @@ export async function updatePoll(
 
     const row = updated[0];
     if (!row) {
-      // Custom fallback: distinguish POLL_CLOSED from version mismatch from NOT_FOUND
+      // Custom fallback: distinguish archived / POLL_CLOSED / version mismatch / NOT_FOUND
       const [existing] = await tx
-        .select({ id: polls.id, status: polls.status })
+        .select({ id: polls.id, status: polls.status, archived: polls.archived })
         .from(polls)
         .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
         .limit(1);
 
-      if (existing?.status === "closed") {
+      if (!existing || existing.archived) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+      }
+      if (existing.status === "closed") {
         throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
       }
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+      throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
     }
 
     await audit(tx, {
@@ -365,12 +319,15 @@ export async function closePoll(
     const row = updated[0];
     if (!row) {
       const [existing] = await tx
-        .select({ id: polls.id, status: polls.status })
+        .select({ id: polls.id, status: polls.status, archived: polls.archived })
         .from(polls)
         .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
         .limit(1);
 
-      if (existing?.status === "closed") {
+      if (!existing || existing.archived) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+      }
+      if (existing.status === "closed") {
         throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
       }
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");

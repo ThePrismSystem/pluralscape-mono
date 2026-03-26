@@ -1,4 +1,4 @@
-import { POLL_KINDS } from "@pluralscape/types";
+import { POLL_KINDS, POLL_STATUSES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import { optionalBrandedId } from "./branded-id.js";
@@ -21,6 +21,10 @@ export const CreatePollBodySchema = z
     allowVeto: z.boolean(),
     endsAt: z.number().int().positive().optional(),
   })
+  .refine((data) => data.allowMultipleVotes || data.maxVotesPerMember === 1, {
+    message: "maxVotesPerMember must be 1 when allowMultipleVotes is false",
+    path: ["maxVotesPerMember"],
+  })
   .readonly();
 
 // ── Update ──────────────────────────────────────────────────────
@@ -36,7 +40,7 @@ export const UpdatePollBodySchema = z
 
 export const CastVoteBodySchema = z
   .object({
-    optionId: z.string().min(1).nullable().optional(),
+    optionId: z.string().min(1).nullable(),
     voter: z.object({
       entityType: z.enum(POLL_VOTER_ENTITY_TYPES),
       entityId: z.string().min(1),
@@ -50,7 +54,7 @@ export const CastVoteBodySchema = z
 
 export const PollQuerySchema = z.object({
   includeArchived: booleanQueryParam,
-  status: z.enum(["open", "closed"]).optional(),
+  status: z.enum(POLL_STATUSES).optional(),
 });
 
 export const PollVoteQuerySchema = z.object({

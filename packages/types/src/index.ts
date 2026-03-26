@@ -437,6 +437,7 @@ export type {
   ArchivedNote,
   PollOption,
   PollKind,
+  PollStatus,
   Poll,
   ArchivedPoll,
   PollVote,
@@ -444,7 +445,7 @@ export type {
   AcknowledgementRequest,
   ArchivedAcknowledgementRequest,
 } from "./communication.js";
-export { NOTE_AUTHOR_ENTITY_TYPES, POLL_KINDS } from "./communication.js";
+export { NOTE_AUTHOR_ENTITY_TYPES, POLL_KINDS, POLL_STATUSES } from "./communication.js";
 
 // ── Lifecycle ─────────────────────────────────────────────────────
 export type {

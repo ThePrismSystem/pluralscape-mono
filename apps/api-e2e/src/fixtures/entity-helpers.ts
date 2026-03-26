@@ -210,6 +210,7 @@ export async function createPoll(
     maxVotesPerMember?: number;
     allowAbstain?: boolean;
     allowVeto?: boolean;
+    endsAt?: number;
   } = {},
 ): Promise<{ id: string; version: number }> {
   const {
@@ -219,17 +220,20 @@ export async function createPoll(
     maxVotesPerMember = 1,
     allowAbstain = false,
     allowVeto = false,
+    endsAt,
   } = opts;
+  const data: Record<string, unknown> = {
+    encryptedData: encryptForApi({ title, description: null, options: [] }),
+    kind,
+    allowMultipleVotes,
+    maxVotesPerMember,
+    allowAbstain,
+    allowVeto,
+  };
+  if (endsAt !== undefined) data.endsAt = endsAt;
   const res = await request.post(`/v1/systems/${systemId}/polls`, {
     headers,
-    data: {
-      encryptedData: encryptForApi({ title, description: null, options: [] }),
-      kind,
-      allowMultipleVotes,
-      maxVotesPerMember,
-      allowAbstain,
-      allowVeto,
-    },
+    data,
   });
   expect(res.status()).toBe(HTTP_CREATED);
   const body = (await res.json()) as { id: string; version: number };

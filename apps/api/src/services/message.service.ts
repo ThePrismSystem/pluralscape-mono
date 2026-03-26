@@ -1,22 +1,14 @@
 import { channels, messages } from "@pluralscape/db/pg";
-import {
-  CursorInvalidError,
-  ID_PREFIXES,
-  PAGINATION,
-  createId,
-  now,
-  toUnixMillis,
-  toUnixMillisOrNull,
-} from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateMessageBodySchema, UpdateMessageBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, lt, or, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
-import { fromCursor, toCursor } from "../lib/pagination.js";
+import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -32,7 +24,6 @@ import type {
   ChannelId,
   MessageId,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -65,39 +56,6 @@ interface ListMessageOpts {
 
 interface TimestampHint {
   readonly timestamp?: UnixMillis;
-}
-
-// ── Cursor helpers (composite timestamp+id) ─────────────────────────
-
-function toMessageCursor(timestamp: number, id: string): PaginationCursor {
-  return toCursor(JSON.stringify({ t: timestamp, i: id }));
-}
-
-interface DecodedMessageCursor {
-  readonly timestamp: number;
-  readonly id: string;
-}
-
-function fromMessageCursor(cursor: string): DecodedMessageCursor {
-  try {
-    const raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-    const parsed = JSON.parse(raw) as unknown;
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      typeof (parsed as { t?: unknown }).t !== "number" ||
-      typeof (parsed as { i?: unknown }).i !== "string"
-    ) {
-      throw new Error("shape");
-    }
-    const { t, i } = parsed as { t: number; i: string };
-    return { timestamp: t, id: i };
-  } catch (error) {
-    if (error instanceof CursorInvalidError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
-    }
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed message cursor");
-  }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -227,10 +185,10 @@ export async function listMessages(
 
     // Composite cursor: (timestamp, id) descending
     if (opts.cursor) {
-      const decoded = fromMessageCursor(opts.cursor);
+      const decoded = fromCompositeCursor(opts.cursor, "message");
       const cursorCondition = or(
-        lt(messages.timestamp, decoded.timestamp),
-        and(eq(messages.timestamp, decoded.timestamp), lt(messages.id, decoded.id)),
+        lt(messages.timestamp, decoded.sortValue),
+        and(eq(messages.timestamp, decoded.sortValue), lt(messages.id, decoded.id)),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);
@@ -248,7 +206,7 @@ export async function listMessages(
     const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMessageResult);
     const lastItem = items[items.length - 1];
     const nextCursor =
-      hasMore && lastItem ? toMessageCursor(lastItem.timestamp, lastItem.id) : null;
+      hasMore && lastItem ? toCompositeCursor(lastItem.timestamp, lastItem.id) : null;
 
     return { items, nextCursor, hasMore, totalCount: null };
   });

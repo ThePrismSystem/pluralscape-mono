@@ -112,6 +112,36 @@ describe("CreatePollBodySchema", () => {
     expect(CreatePollBodySchema.safeParse({ ...valid, endsAt: 0 }).success).toBe(false);
   });
 
+  it("rejects allowMultipleVotes=false with maxVotesPerMember > 1", () => {
+    expect(
+      CreatePollBodySchema.safeParse({
+        ...valid,
+        allowMultipleVotes: false,
+        maxVotesPerMember: 3,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts allowMultipleVotes=false with maxVotesPerMember=1", () => {
+    expect(
+      CreatePollBodySchema.safeParse({
+        ...valid,
+        allowMultipleVotes: false,
+        maxVotesPerMember: 1,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts allowMultipleVotes=true with maxVotesPerMember > 1", () => {
+    expect(
+      CreatePollBodySchema.safeParse({
+        ...valid,
+        allowMultipleVotes: true,
+        maxVotesPerMember: 3,
+      }).success,
+    ).toBe(true);
+  });
+
   it("strips extra properties", () => {
     const result = CreatePollBodySchema.safeParse({ ...valid, extra: "field" });
     expect(result.success).toBe(true);
@@ -190,12 +220,9 @@ describe("CastVoteBodySchema", () => {
     }
   });
 
-  it("accepts abstain vote with omitted optionId", () => {
+  it("rejects omitted optionId", () => {
     const result = CastVoteBodySchema.safeParse(omit(valid, "optionId"));
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.optionId).toBeUndefined();
-    }
+    expect(result.success).toBe(false);
   });
 
   it("accepts veto vote", () => {

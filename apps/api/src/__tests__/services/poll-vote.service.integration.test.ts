@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { castVote, listVotes } from "../../services/poll-vote.service.js";
-import { createPoll } from "../../services/poll.service.js";
+import { archivePoll, createPoll } from "../../services/poll.service.js";
 import {
   assertApiError,
   asDb,
@@ -289,7 +289,7 @@ describe("poll-vote.service (PGlite integration)", () => {
     });
 
     it("allows multiple votes when maxVotesPerMember > 1", async () => {
-      const poll = await createTestPoll({ maxVotesPerMember: 3 });
+      const poll = await createTestPoll({ allowMultipleVotes: true, maxVotesPerMember: 3 });
       const voter = { entityType: "member", entityId: memberId };
 
       for (let i = 0; i < 3; i++) {
@@ -317,6 +317,52 @@ describe("poll-vote.service (PGlite integration)", () => {
         409,
       );
     });
+
+    it("enforces allowMultipleVotes=false — rejects second vote", async () => {
+      const poll = await createTestPoll({ allowMultipleVotes: false, maxVotesPerMember: 1 });
+      const voter = { entityType: "member", entityId: `mem_${crypto.randomUUID()}` };
+
+      await castVote(
+        asDb(db),
+        systemId,
+        poll.id,
+        makeVoteParams({ voter, optionId: `po_${crypto.randomUUID()}` }),
+        auth,
+        noopAudit,
+      );
+
+      await assertApiError(
+        castVote(
+          asDb(db),
+          systemId,
+          poll.id,
+          makeVoteParams({ voter, optionId: `po_${crypto.randomUUID()}` }),
+          auth,
+          noopAudit,
+        ),
+        "TOO_MANY_VOTES",
+        409,
+      );
+    });
+
+    it("rejects vote on expired poll (endsAt in the past)", async () => {
+      const poll = await createTestPoll({ endsAt: Date.now() - 60_000 });
+
+      await assertApiError(
+        castVote(asDb(db), systemId, poll.id, makeVoteParams(), auth, noopAudit),
+        "POLL_CLOSED",
+        409,
+      );
+    });
+
+    it("accepts vote on poll with future endsAt", async () => {
+      const poll = await createTestPoll({ endsAt: Date.now() + 86_400_000 });
+
+      const result = await castVote(asDb(db), systemId, poll.id, makeVoteParams(), auth, noopAudit);
+
+      expect(result.id).toMatch(/^pv_/);
+      expect(result.pollId).toBe(poll.id);
+    });
   });
 
   // ── LIST VOTES ─────────────────────────────────────────────────
@@ -334,7 +380,7 @@ describe("poll-vote.service (PGlite integration)", () => {
     });
 
     it("supports cursor pagination", async () => {
-      const poll = await createTestPoll({ maxVotesPerMember: 5 });
+      const poll = await createTestPoll({ allowMultipleVotes: true, maxVotesPerMember: 5 });
       const voter = { entityType: "member", entityId: memberId };
 
       for (let i = 0; i < 3; i++) {
@@ -381,6 +427,39 @@ describe("poll-vote.service (PGlite integration)", () => {
       });
       expect(withArchived.items).toHaveLength(1);
       expect(withArchived.items[0]?.archived).toBe(true);
+    });
+
+    it("returns NOT_FOUND for nonexistent poll", async () => {
+      await assertApiError(listVotes(asDb(db), systemId, genPollId(), auth), "NOT_FOUND", 404);
+    });
+
+    it("returns NOT_FOUND for archived poll when includeArchived=false", async () => {
+      const poll = await createTestPoll();
+      await archivePoll(asDb(db), systemId, poll.id, auth, noopAudit);
+
+      await assertApiError(listVotes(asDb(db), systemId, poll.id, auth), "NOT_FOUND", 404);
+    });
+
+    it("lists votes for archived poll when includeArchived=true", async () => {
+      const poll = await createTestPoll();
+      await castVote(asDb(db), systemId, poll.id, makeVoteParams(), auth, noopAudit);
+      await archivePoll(asDb(db), systemId, poll.id, auth, noopAudit);
+
+      const result = await listVotes(asDb(db), systemId, poll.id, auth, {
+        includeArchived: true,
+      });
+
+      expect(result.items).toHaveLength(1);
+    });
+
+    it("returns INVALID_CURSOR for garbage cursor string", async () => {
+      const poll = await createTestPoll();
+
+      await assertApiError(
+        listVotes(asDb(db), systemId, poll.id, auth, { cursor: "not-a-valid-cursor" }),
+        "INVALID_CURSOR",
+        400,
+      );
     });
   });
 });
