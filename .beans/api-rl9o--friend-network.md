@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-26T23:24:58Z
+updated_at: 2026-03-26T23:53:24Z
 parent: ps-6itw
 blocked_by:
   - api-e3hk
@@ -18,8 +18,8 @@ Friend codes, connection management, bucket assignment. Account-level operations
 - [x] 2.1 Type registrations for friend domain events
 - [x] 2.2 Friend validation schemas
 - [x] 2.3 Account ownership helper
-- [ ] 2.4 Friend code service
-- [ ] 2.5 Friend connection service
+- [x] 2.4 Friend code service
+- [x] 2.5 Friend connection service
 - [ ] 2.6 Bucket assignment service
 - [ ] 2.7 Friend routes
 - [ ] 2.8 Friend network CRDT sync
