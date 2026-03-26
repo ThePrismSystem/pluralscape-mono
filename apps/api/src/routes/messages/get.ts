@@ -1,4 +1,4 @@
-import { ID_PREFIXES, type UnixMillis } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { MessageTimestampQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
@@ -23,7 +23,7 @@ getRoute.get("/:messageId", async (c) => {
 
   const db = await getDb();
   const result = await getMessage(db, systemId, messageId, auth, {
-    timestamp: query.timestamp as UnixMillis | undefined,
+    timestamp: query.timestamp,
   });
   return c.json(result);
 });

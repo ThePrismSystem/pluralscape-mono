@@ -330,7 +330,7 @@ export async function deleteAcknowledgement(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const ACK_LIFECYCLE: ArchivableEntityConfig = {
+const ACK_LIFECYCLE: ArchivableEntityConfig<AcknowledgementId> = {
   table: acknowledgements,
   columns: acknowledgements,
   entityName: "Acknowledgement",
@@ -338,11 +338,11 @@ const ACK_LIFECYCLE: ArchivableEntityConfig = {
   restoreEvent: "acknowledgement.restored" as const,
   onArchive: (tx, sId, eid) =>
     dispatchWebhookEvent(tx, sId, "acknowledgement.archived", {
-      acknowledgementId: eid as AcknowledgementId,
+      acknowledgementId: eid,
     }),
   onRestore: (tx, sId, eid) =>
     dispatchWebhookEvent(tx, sId, "acknowledgement.restored", {
-      acknowledgementId: eid as AcknowledgementId,
+      acknowledgementId: eid,
     }),
 };
 

@@ -5,7 +5,7 @@ import {
   ReorderBoardMessagesBodySchema,
   UpdateBoardMessageBodySchema,
 } from "@pluralscape/validation";
-import { and, eq, gt, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -26,6 +26,7 @@ import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
   ApiErrorCode,
   AuditEventType,
@@ -230,23 +231,17 @@ export async function updateBoardMessage(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    const setValues: Record<string, unknown> = {
+    const setValues = {
       encryptedData: blob,
       updatedAt: timestamp,
       version: sql`${boardMessages.version} + 1`,
+      ...(parsed.sortOrder !== undefined && { sortOrder: parsed.sortOrder }),
+      ...(parsed.pinned !== undefined && { pinned: parsed.pinned }),
     };
-
-    if (parsed.sortOrder !== undefined) {
-      setValues.sortOrder = parsed.sortOrder;
-    }
-
-    if (parsed.pinned !== undefined) {
-      setValues.pinned = parsed.pinned;
-    }
 
     const updated = await tx
       .update(boardMessages)
-      .set(setValues)
+      .set(setValues as Record<string, unknown>)
       .where(
         and(
           eq(boardMessages.id, boardMessageId),
@@ -425,45 +420,27 @@ export async function reorderBoardMessages(
       );
     }
 
-    // Pre-flight: verify all target board messages exist and are active
-    const existing = await tx
-      .select({ id: boardMessages.id })
-      .from(boardMessages)
-      .where(and(eq(boardMessages.systemId, systemId), eq(boardMessages.archived, false)));
-    const existingIds = new Set(existing.map((bm) => bm.id));
-    for (const bmId of targetIds) {
-      if (!existingIds.has(bmId)) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `Board message ${bmId} not found`);
-      }
-    }
-
-    const results = await Promise.all(
-      parsed.data.operations.map((op) =>
-        tx
-          .update(boardMessages)
-          .set({ sortOrder: op.sortOrder })
-          .where(
-            and(
-              eq(boardMessages.id, op.boardMessageId),
-              eq(boardMessages.systemId, systemId),
-              eq(boardMessages.archived, false),
-            ),
-          )
-          .returning({ id: boardMessages.id }),
-      ),
+    // Batch UPDATE with CASE/WHEN — single round-trip instead of N
+    const cases = parsed.data.operations.map(
+      (op) => sql`WHEN ${boardMessages.id} = ${op.boardMessageId} THEN ${op.sortOrder}`,
     );
 
-    const ops = parsed.data.operations;
-    for (let i = 0; i < results.length; i++) {
-      const result = results[i];
-      const op = ops[i];
-      if ((!result || result.length === 0) && op) {
-        throw new ApiHttpError(
-          HTTP_NOT_FOUND,
-          "NOT_FOUND",
-          `Board message ${op.boardMessageId} not found`,
-        );
-      }
+    const updatedRows = await tx
+      .update(boardMessages)
+      .set({
+        sortOrder: sql<number>`CASE ${sql.join(cases, sql` `)} END::integer`,
+      })
+      .where(
+        and(
+          inArray(boardMessages.id, targetIds),
+          eq(boardMessages.systemId, systemId),
+          eq(boardMessages.archived, false),
+        ),
+      )
+      .returning({ id: boardMessages.id });
+
+    if (updatedRows.length !== parsed.data.operations.length) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "One or more board messages not found");
     }
 
     await audit(tx, {
@@ -472,13 +449,11 @@ export async function reorderBoardMessages(
       detail: `Reordered ${String(parsed.data.operations.length)} board message(s)`,
       systemId,
     });
-    await Promise.all(
-      parsed.data.operations.map((op) =>
-        dispatchWebhookEvent(tx, systemId, "board-message.reordered", {
-          boardMessageId: op.boardMessageId as BoardMessageId,
-        }),
-      ),
-    );
+    for (const op of parsed.data.operations) {
+      await dispatchWebhookEvent(tx, systemId, "board-message.reordered", {
+        boardMessageId: op.boardMessageId as BoardMessageId,
+      });
+    }
   });
 }
 
@@ -528,19 +503,19 @@ export async function deleteBoardMessage(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const BOARD_MESSAGE_LIFECYCLE = {
+const BOARD_MESSAGE_LIFECYCLE: ArchivableEntityConfig<BoardMessageId> = {
   table: boardMessages,
   columns: boardMessages,
   entityName: "Board message",
   archiveEvent: "board-message.archived" as const,
   restoreEvent: "board-message.restored" as const,
-  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+  onArchive: (tx, sId, eid) =>
     dispatchWebhookEvent(tx, sId, "board-message.archived", {
-      boardMessageId: eid as BoardMessageId,
+      boardMessageId: eid,
     }),
-  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+  onRestore: (tx, sId, eid) =>
     dispatchWebhookEvent(tx, sId, "board-message.restored", {
-      boardMessageId: eid as BoardMessageId,
+      boardMessageId: eid,
     }),
 };
 

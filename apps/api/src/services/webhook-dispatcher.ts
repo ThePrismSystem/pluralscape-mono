@@ -22,51 +22,49 @@ export async function dispatchWebhookEvent<K extends WebhookEventType>(
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
 ): Promise<readonly string[]> {
-  return db.transaction(async (tx) => {
-    // Find all enabled, non-archived configs for this system that subscribe to this event
-    const configs = await tx
-      .select({
-        id: webhookConfigs.id,
-        eventTypes: webhookConfigs.eventTypes,
-      })
-      .from(webhookConfigs)
-      .where(
-        and(
-          eq(webhookConfigs.systemId, systemId),
-          eq(webhookConfigs.enabled, true),
-          eq(webhookConfigs.archived, false),
-        ),
-      );
+  // Find all enabled, non-archived configs for this system that subscribe to this event
+  const configs = await db
+    .select({
+      id: webhookConfigs.id,
+      eventTypes: webhookConfigs.eventTypes,
+    })
+    .from(webhookConfigs)
+    .where(
+      and(
+        eq(webhookConfigs.systemId, systemId),
+        eq(webhookConfigs.enabled, true),
+        eq(webhookConfigs.archived, false),
+      ),
+    );
 
-    // Filter configs that subscribe to this specific event type
-    // (JSONB containment would be ideal, but filtering in-app is fine for the
-    // expected cardinality of webhook configs per system)
-    const matchingConfigs = configs.filter((config) => config.eventTypes.includes(eventType));
+  // Filter configs that subscribe to this specific event type
+  // (JSONB containment would be ideal, but filtering in-app is fine for the
+  // expected cardinality of webhook configs per system)
+  const matchingConfigs = configs.filter((config) => config.eventTypes.includes(eventType));
 
-    if (matchingConfigs.length === 0) {
-      return [];
-    }
+  if (matchingConfigs.length === 0) {
+    return [];
+  }
 
-    const timestamp = now();
-    const deliveryIds: string[] = [];
+  const timestamp = now();
+  const deliveryIds: string[] = [];
 
-    const values = matchingConfigs.map((config) => {
-      const deliveryId = createId(ID_PREFIXES.webhookDelivery);
-      deliveryIds.push(deliveryId);
-      return {
-        id: deliveryId,
-        webhookId: config.id,
-        systemId,
-        eventType,
-        status: "pending" as const,
-        attemptCount: 0,
-        payloadData: { ...payload, systemId },
-        createdAt: timestamp,
-      };
-    });
-
-    await tx.insert(webhookDeliveries).values(values);
-
-    return deliveryIds;
+  const values = matchingConfigs.map((config) => {
+    const deliveryId = createId(ID_PREFIXES.webhookDelivery);
+    deliveryIds.push(deliveryId);
+    return {
+      id: deliveryId,
+      webhookId: config.id,
+      systemId,
+      eventType,
+      status: "pending" as const,
+      attemptCount: 0,
+      payloadData: { ...payload, systemId },
+      createdAt: timestamp,
+    };
   });
+
+  await db.insert(webhookDeliveries).values(values);
+
+  return deliveryIds;
 }

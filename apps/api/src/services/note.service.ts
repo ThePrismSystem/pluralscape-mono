@@ -328,16 +328,14 @@ export async function deleteNote(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const NOTE_LIFECYCLE: ArchivableEntityConfig = {
+const NOTE_LIFECYCLE: ArchivableEntityConfig<NoteId> = {
   table: notes,
   columns: notes,
   entityName: "Note",
   archiveEvent: "note.archived" as const,
   restoreEvent: "note.restored" as const,
-  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
-    dispatchWebhookEvent(tx, sId, "note.archived", { noteId: eid as NoteId }),
-  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
-    dispatchWebhookEvent(tx, sId, "note.restored", { noteId: eid as NoteId }),
+  onArchive: (tx, sId, eid) => dispatchWebhookEvent(tx, sId, "note.archived", { noteId: eid }),
+  onRestore: (tx, sId, eid) => dispatchWebhookEvent(tx, sId, "note.restored", { noteId: eid }),
 };
 
 export async function archiveNote(

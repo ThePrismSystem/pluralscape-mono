@@ -22,6 +22,7 @@ import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
   ChannelId,
   MessageId,
@@ -355,13 +356,13 @@ export async function deleteMessage(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const MESSAGE_LIFECYCLE = {
+const MESSAGE_LIFECYCLE: ArchivableEntityConfig<MessageId> = {
   table: messages,
   columns: messages,
   entityName: "Message",
   archiveEvent: "message.archived" as const,
   restoreEvent: "message.restored" as const,
-  onArchive: async (tx: PostgresJsDatabase, sId: SystemId, eid: string) => {
+  onArchive: async (tx, sId, eid) => {
     const [msg] = await tx
       .select({ channelId: messages.channelId })
       .from(messages)
@@ -369,12 +370,12 @@ const MESSAGE_LIFECYCLE = {
       .limit(1);
     if (msg) {
       await dispatchWebhookEvent(tx, sId, "message.archived", {
-        messageId: eid as MessageId,
+        messageId: eid,
         channelId: msg.channelId as ChannelId,
       });
     }
   },
-  onRestore: async (tx: PostgresJsDatabase, sId: SystemId, eid: string) => {
+  onRestore: async (tx, sId, eid) => {
     const [msg] = await tx
       .select({ channelId: messages.channelId })
       .from(messages)
@@ -382,7 +383,7 @@ const MESSAGE_LIFECYCLE = {
       .limit(1);
     if (msg) {
       await dispatchWebhookEvent(tx, sId, "message.restored", {
-        messageId: eid as MessageId,
+        messageId: eid,
         channelId: msg.channelId as ChannelId,
       });
     }

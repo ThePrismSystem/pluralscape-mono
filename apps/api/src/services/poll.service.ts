@@ -413,16 +413,14 @@ export async function deletePoll(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const POLL_LIFECYCLE: ArchivableEntityConfig = {
+const POLL_LIFECYCLE: ArchivableEntityConfig<PollId> = {
   table: polls,
   columns: polls,
   entityName: "Poll",
   archiveEvent: "poll.archived" as const,
   restoreEvent: "poll.restored" as const,
-  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
-    dispatchWebhookEvent(tx, sId, "poll.archived", { pollId: eid as PollId }),
-  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
-    dispatchWebhookEvent(tx, sId, "poll.restored", { pollId: eid as PollId }),
+  onArchive: (tx, sId, eid) => dispatchWebhookEvent(tx, sId, "poll.archived", { pollId: eid }),
+  onRestore: (tx, sId, eid) => dispatchWebhookEvent(tx, sId, "poll.restored", { pollId: eid }),
 };
 
 export async function archivePoll(

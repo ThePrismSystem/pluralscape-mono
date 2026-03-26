@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import { optionalBrandedId } from "./branded-id.js";
@@ -27,12 +28,27 @@ export const UpdateMessageBodySchema = z
 
 /** Query parameters for the message list endpoint. */
 export const MessageQuerySchema = z.object({
-  before: z.string().transform(Number).pipe(z.number().int().min(0)).optional(),
-  after: z.string().transform(Number).pipe(z.number().int().min(0)).optional(),
+  before: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().int().min(0))
+    .transform(toUnixMillis)
+    .optional(),
+  after: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().int().min(0))
+    .transform(toUnixMillis)
+    .optional(),
   includeArchived: booleanQueryParam,
 });
 
 /** Optional timestamp query param for partition-efficient single-entity ops. */
 export const MessageTimestampQuerySchema = z.object({
-  timestamp: z.string().transform(Number).pipe(z.number().int().min(0)).optional(),
+  timestamp: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().int().min(0))
+    .transform(toUnixMillis)
+    .optional(),
 });

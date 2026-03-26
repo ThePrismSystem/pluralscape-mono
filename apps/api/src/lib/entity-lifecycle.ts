@@ -27,7 +27,7 @@ export interface ArchivableColumns {
 }
 
 /** Configuration for a generic archivable entity. */
-export interface ArchivableEntityConfig {
+export interface ArchivableEntityConfig<TId extends string = string> {
   readonly table: PgTable;
   readonly columns: ArchivableColumns;
   readonly entityName: string;
@@ -37,13 +37,13 @@ export interface ArchivableEntityConfig {
   readonly onArchive?: (
     tx: PostgresJsDatabase,
     systemId: SystemId,
-    entityId: string,
+    entityId: TId,
   ) => Promise<unknown>;
   /** Optional hook called inside the transaction after a successful restore + audit. */
   readonly onRestore?: (
     tx: PostgresJsDatabase,
     systemId: SystemId,
-    entityId: string,
+    entityId: TId,
   ) => Promise<unknown>;
 }
 
@@ -54,13 +54,13 @@ export interface ArchivableEntityConfig {
  * generic table types. The expected column names at runtime are:
  * `archived`, `archivedAt`, `updatedAt`, `version`.
  */
-export async function archiveEntity(
+export async function archiveEntity<TId extends string>(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityId: string,
+  entityId: TId,
   auth: AuthContext,
   audit: AuditWriter,
-  cfg: ArchivableEntityConfig,
+  cfg: ArchivableEntityConfig<TId>,
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
@@ -121,13 +121,13 @@ export async function archiveEntity(
  * generic table types. The expected column names at runtime are:
  * `archived`, `archivedAt`, `updatedAt`, `version`.
  */
-export async function restoreEntity<TResult>(
+export async function restoreEntity<TId extends string, TResult>(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  entityId: string,
+  entityId: TId,
   auth: AuthContext,
   audit: AuditWriter,
-  cfg: ArchivableEntityConfig,
+  cfg: ArchivableEntityConfig<TId>,
   toResult: (row: Record<string, unknown>) => TResult,
 ): Promise<TResult> {
   assertSystemOwnership(systemId, auth);

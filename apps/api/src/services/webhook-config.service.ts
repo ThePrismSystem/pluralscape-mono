@@ -421,10 +421,9 @@ export async function restoreWebhookConfig(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<WebhookConfigResult> {
-  return restoreEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE, (row) => {
-    const r = row as typeof webhookConfigs.$inferSelect;
-    return toWebhookConfigResult(r);
-  });
+  return restoreEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE, (row) =>
+    toWebhookConfigResult(row as typeof webhookConfigs.$inferSelect),
+  );
 }
 
 // ── PARSE QUERY PARAMS ──────────────────────────────────────────────
