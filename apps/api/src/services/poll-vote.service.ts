@@ -1,9 +1,9 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-import { CastVoteBodySchema } from "@pluralscape/validation";
+import { CastVoteBodySchema, PollVoteQuerySchema } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 
-import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
@@ -14,6 +14,7 @@ import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
   MAX_PAGE_LIMIT,
+  POLL_STATUS_CLOSED,
 } from "../service.constants.js";
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
@@ -101,7 +102,7 @@ export async function castVote(
     }
 
     // 2. Check poll is open
-    if (poll.status === "closed") {
+    if (poll.status === POLL_STATUS_CLOSED) {
       throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
     }
 
@@ -182,14 +183,15 @@ export async function castVote(
       detail: parsed.isVeto ? "Poll vote vetoed" : "Poll vote cast",
       systemId,
     });
+    const result = toVoteResult(row);
     await dispatchWebhookEvent(
       tx,
       systemId,
       parsed.isVeto ? "poll-vote.vetoed" : "poll-vote.cast",
-      { pollId: pollId, voteId: row.id as PollVoteId },
+      { pollId: pollId, voteId: result.id },
     );
 
-    return toVoteResult(row);
+    return result;
   });
 }
 
@@ -244,4 +246,16 @@ export async function listVotes(
 
     return buildCompositePaginatedResult(rows, effectiveLimit, toVoteResult, (i) => i.createdAt);
   });
+}
+
+// ── PARSE QUERY PARAMS ──────────────────────────────────────────────
+
+export function parsePollVoteQuery(query: Record<string, string | undefined>): {
+  includeArchived: boolean;
+} {
+  const result = PollVoteQuerySchema.safeParse(query);
+  if (!result.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
+  }
+  return result.data;
 }

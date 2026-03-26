@@ -86,7 +86,6 @@ export const messages = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.id, t.timestamp] }),
-    unique("messages_id_unique").on(t.id, t.timestamp),
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_archived_idx").on(t.systemId, t.archived),
     index("messages_reply_to_id_idx").on(t.replyToId),
@@ -217,6 +216,7 @@ export const pollVotes = pgTable(
       columns: [t.pollId, t.systemId],
       foreignColumns: [polls.id, polls.systemId],
     }).onDelete("restrict"),
+    check("poll_votes_voter_not_null", sql`${t.voter} IS NOT NULL`),
     archivableConsistencyCheckFor("poll_votes", t.archived, t.archivedAt),
   ],
 );

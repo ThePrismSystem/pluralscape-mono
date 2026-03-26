@@ -14,6 +14,15 @@ export const booleanQueryParam = z
   .optional()
   .transform((v) => v === "true");
 
+/**
+ * Like {@link booleanQueryParam}, but preserves `undefined` when the parameter
+ * is omitted. Use when the caller needs to distinguish "not provided" from "false".
+ */
+export const optionalBooleanQueryParam = z
+  .enum(["true", "false"])
+  .optional()
+  .transform((v) => (v === undefined ? undefined : v === "true"));
+
 // ── Lifecycle event query schema ────────────────────────────────
 
 /**

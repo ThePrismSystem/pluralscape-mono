@@ -157,11 +157,12 @@ export async function createChannel(
       detail: `Channel created (type: ${parsed.type})`,
       systemId,
     });
+    const result = toChannelResult(row);
     await dispatchWebhookEvent(tx, systemId, "channel.created", {
-      channelId: row.id as ChannelId,
+      channelId: result.id,
     });
 
-    return toChannelResult(row);
+    return result;
   });
 }
 
@@ -304,11 +305,12 @@ export async function updateChannel(
       detail: "Channel updated",
       systemId,
     });
+    const result = toChannelResult(row);
     await dispatchWebhookEvent(tx, systemId, "channel.updated", {
-      channelId: row.id as ChannelId,
+      channelId: result.id,
     });
 
-    return toChannelResult(row);
+    return result;
   });
 }
 

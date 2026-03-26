@@ -18,6 +18,7 @@ export function asDb(
 export interface MockChain {
   select: ReturnType<typeof vi.fn>;
   from: ReturnType<typeof vi.fn>;
+  leftJoin: ReturnType<typeof vi.fn>;
   where: ReturnType<typeof vi.fn>;
   orderBy: ReturnType<typeof vi.fn>;
   limit: ReturnType<typeof vi.fn>;
@@ -41,6 +42,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
   const chain: MockChain = {
     select: vi.fn(),
     from: vi.fn(),
+    leftJoin: vi.fn(),
     where: vi.fn(),
     orderBy: vi.fn(),
     limit: vi.fn(),
@@ -60,6 +62,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
   // Wire up fluent chaining: each method returns the chain
   chain.select.mockReturnValue(chain);
   chain.from.mockReturnValue(chain);
+  chain.leftJoin.mockReturnValue(chain);
   chain.where.mockReturnValue(chain);
   chain.orderBy.mockReturnValue(chain);
   chain.limit.mockResolvedValue([]);

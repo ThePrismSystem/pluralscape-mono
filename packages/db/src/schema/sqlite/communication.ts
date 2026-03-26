@@ -209,6 +209,7 @@ export const pollVotes = sqliteTable(
       columns: [t.pollId, t.systemId],
       foreignColumns: [polls.id, polls.systemId],
     }).onDelete("restrict"),
+    check("poll_votes_voter_not_null", sql`${t.voter} IS NOT NULL`),
     archivableConsistencyCheckFor("poll_votes", t.archived, t.archivedAt),
   ],
 );

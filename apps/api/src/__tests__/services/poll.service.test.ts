@@ -4,7 +4,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
+import type { ArchivableEntityConfig, DeletableEntityConfig } from "../../lib/entity-lifecycle.js";
 import type { PollId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
@@ -30,6 +30,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 vi.mock("../../lib/entity-lifecycle.js", () => ({
   archiveEntity: vi.fn().mockResolvedValue(undefined),
+  deleteEntity: vi.fn().mockResolvedValue(undefined),
   restoreEntity: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -90,7 +91,8 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
+const { archiveEntity, deleteEntity, restoreEntity } =
+  await import("../../lib/entity-lifecycle.js");
 
 const {
   createPoll,
@@ -368,46 +370,22 @@ describe("poll service", () => {
   // ── deletePoll ─────────────────────────────────────────────────
 
   describe("deletePoll", () => {
-    it("deletes poll with no votes", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: POLL_ID }]);
-
-      let whereCount = 0;
-      chain.where.mockImplementation((): unknown => {
-        whereCount++;
-        if (whereCount === 2) return Promise.resolve([{ count: 0 }]); // vote count
-        return chain;
-      });
+    it("delegates to deleteEntity with correct config", async () => {
+      const { db } = mockDb();
+      vi.mocked(deleteEntity).mockResolvedValueOnce(undefined);
 
       await deletePoll(db, SYSTEM_ID, POLL_ID, AUTH, mockAudit);
 
-      expect(mockAudit).toHaveBeenCalledWith(
-        chain,
-        expect.objectContaining({ eventType: "poll.deleted" }),
-      );
-    });
-
-    it("throws 404 when poll not found", async () => {
-      const { db } = mockDb();
-
-      await expect(deletePoll(db, SYSTEM_ID, POLL_ID, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-      );
-    });
-
-    it("throws HAS_DEPENDENTS when votes exist", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: POLL_ID }]);
-
-      let whereCount = 0;
-      chain.where.mockImplementation((): unknown => {
-        whereCount++;
-        if (whereCount === 2) return Promise.resolve([{ count: 3 }]); // has votes
-        return chain;
-      });
-
-      await expect(deletePoll(db, SYSTEM_ID, POLL_ID, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }),
+      expect(deleteEntity).toHaveBeenCalledWith(
+        db,
+        SYSTEM_ID,
+        POLL_ID,
+        AUTH,
+        mockAudit,
+        expect.objectContaining<Partial<DeletableEntityConfig<string>>>({
+          entityName: "Poll",
+          deleteEvent: "poll.deleted",
+        }),
       );
     });
   });

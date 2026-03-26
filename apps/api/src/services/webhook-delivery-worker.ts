@@ -7,7 +7,13 @@ import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { logger } from "../lib/logger.js";
 import {
+  HTTP_SUCCESS_MAX,
+  HTTP_SUCCESS_MIN,
+  MS_PER_SECOND,
   WEBHOOK_BASE_BACKOFF_MS,
+  WEBHOOK_DEFAULT_JITTER_FRACTION,
+  WEBHOOK_DELIVERY_TIMEOUT_MS,
+  WEBHOOK_HMAC_ALGORITHM,
   WEBHOOK_MAX_RETRY_ATTEMPTS,
   WEBHOOK_SIGNATURE_HEADER,
   WEBHOOK_TIMESTAMP_HEADER,
@@ -15,22 +21,6 @@ import {
 
 import type { WebhookDeliveryId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-/** HMAC algorithm used for signing webhook payloads. */
-const HMAC_ALGORITHM = "sha256";
-
-/** HTTP status code threshold: 2xx is success. */
-const HTTP_SUCCESS_MIN = 200;
-const HTTP_SUCCESS_MAX = 299;
-
-/** Default request timeout for webhook delivery (10 seconds). */
-const DELIVERY_TIMEOUT_MS = 10_000;
-
-/** Default jitter fraction for backoff (25%). */
-const DEFAULT_JITTER_FRACTION = 0.25;
-
-/** Milliseconds per second, used to convert Date.now() to Unix seconds. */
-const MS_PER_SECOND = 1_000;
 
 /**
  * Compute HMAC-SHA256 signature for a webhook payload using the config's secret.
@@ -40,7 +30,7 @@ export function computeWebhookSignature(
   timestamp: number,
   payload: string,
 ): string {
-  return createHmac(HMAC_ALGORITHM, secret)
+  return createHmac(WEBHOOK_HMAC_ALGORITHM, secret)
     .update(`${String(timestamp)}.${payload}`)
     .digest("hex");
 }
@@ -52,7 +42,7 @@ export function computeWebhookSignature(
 export function calculateBackoffMs(
   attemptCount: number,
   baseMs: number,
-  jitterFraction = DEFAULT_JITTER_FRACTION,
+  jitterFraction = WEBHOOK_DEFAULT_JITTER_FRACTION,
 ): number {
   const delay = Math.pow(2, attemptCount) * baseMs;
   const jitter = delay * jitterFraction * (2 * Math.random() - 1);
@@ -74,44 +64,37 @@ export async function processWebhookDelivery(
   payload: Readonly<Record<string, unknown>>,
   fetchFn: typeof fetch = fetch,
 ): Promise<void> {
-  // Load delivery and associated config
-  const [delivery] = await db
+  // Load delivery and associated config in a single query
+  const [row] = await db
     .select({
       id: webhookDeliveries.id,
       webhookId: webhookDeliveries.webhookId,
       systemId: webhookDeliveries.systemId,
       eventType: webhookDeliveries.eventType,
       attemptCount: webhookDeliveries.attemptCount,
+      configUrl: webhookConfigs.url,
+      configSecret: webhookConfigs.secret,
+      configEnabled: webhookConfigs.enabled,
     })
     .from(webhookDeliveries)
+    .leftJoin(webhookConfigs, eq(webhookDeliveries.webhookId, webhookConfigs.id))
     .where(eq(webhookDeliveries.id, deliveryId))
     .limit(1);
 
-  if (!delivery) {
+  if (!row) {
     logger.warn(`[webhook-worker] delivery not found: ${deliveryId}`);
     return;
   }
 
-  const [config] = await db
-    .select({
-      id: webhookConfigs.id,
-      url: webhookConfigs.url,
-      secret: webhookConfigs.secret,
-      enabled: webhookConfigs.enabled,
-    })
-    .from(webhookConfigs)
-    .where(eq(webhookConfigs.id, delivery.webhookId))
-    .limit(1);
-
   // If config is missing or disabled, mark delivery as failed
-  if (!config?.enabled) {
-    if (!config) {
+  if (!row.configUrl || !row.configEnabled) {
+    if (!row.configUrl) {
       logger.warn(
-        `[webhook-worker] config not found for delivery ${deliveryId}, webhook ${delivery.webhookId}`,
+        `[webhook-worker] config not found for delivery ${deliveryId}, webhook ${row.webhookId}`,
       );
     } else {
       logger.warn(
-        `[webhook-worker] config disabled for delivery ${deliveryId}, webhook ${delivery.webhookId}`,
+        `[webhook-worker] config disabled for delivery ${deliveryId}, webhook ${row.webhookId}`,
       );
     }
     await db
@@ -124,13 +107,20 @@ export async function processWebhookDelivery(
     return;
   }
 
-  // Pre-flight SSRF check: re-resolve hostname to prevent DNS changes since config creation.
+  // Narrow the config fields — guaranteed non-null after the enabled check above.
+  const configUrl = row.configUrl;
+  const configSecret = row.configSecret;
+  if (!configSecret) {
+    throw new Error("Unreachable: config secret null after enabled check");
+  }
+
+  // Pre-flight SSRF check. DNS rebinding TOCTOU is an accepted risk — see ip-validation.ts.
   try {
-    await resolveAndValidateUrl(config.url);
+    await resolveAndValidateUrl(configUrl);
   } catch (error: unknown) {
     logger.warn("[webhook-worker] SSRF validation failed for delivery", {
       deliveryId,
-      url: config.url,
+      url: configUrl,
       reason: error instanceof Error ? error.message : String(error),
     });
     await db
@@ -144,7 +134,7 @@ export async function processWebhookDelivery(
   const timestamp = now();
   const deliveryTimestamp = Math.floor(Date.now() / MS_PER_SECOND);
   const signature = computeWebhookSignature(
-    Buffer.from(config.secret),
+    Buffer.from(configSecret),
     deliveryTimestamp,
     payloadJson,
   );
@@ -155,10 +145,10 @@ export async function processWebhookDelivery(
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-    }, DELIVERY_TIMEOUT_MS);
+    }, WEBHOOK_DELIVERY_TIMEOUT_MS);
 
     try {
-      const response = await fetchFn(config.url, {
+      const response = await fetchFn(configUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -202,7 +192,7 @@ export async function processWebhookDelivery(
   }
 
   // Failure path — use atomic increment for consistency
-  if (delivery.attemptCount + 1 >= WEBHOOK_MAX_RETRY_ATTEMPTS) {
+  if (row.attemptCount + 1 >= WEBHOOK_MAX_RETRY_ATTEMPTS) {
     await db
       .update(webhookDeliveries)
       .set({
@@ -215,7 +205,7 @@ export async function processWebhookDelivery(
     return;
   }
 
-  const backoffMs = calculateBackoffMs(delivery.attemptCount + 1, WEBHOOK_BASE_BACKOFF_MS);
+  const backoffMs = calculateBackoffMs(row.attemptCount + 1, WEBHOOK_BASE_BACKOFF_MS);
   const nextRetryAt = timestamp + backoffMs;
 
   await db

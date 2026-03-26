@@ -20,6 +20,7 @@ import {
   listAcknowledgements,
   restoreAcknowledgement,
 } from "../../services/acknowledgement.service.js";
+import { expectSingleAuditEvent } from "../helpers/audit-assertions.js";
 import {
   assertApiError,
   asDb,
@@ -112,8 +113,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
       const audit = spyAudit();
       await createAcknowledgement(asDb(db), systemId, makeCreateParams(), auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("acknowledgement.created");
+      expectSingleAuditEvent(audit, "acknowledgement.created");
     });
   });
 
@@ -198,8 +198,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
       const audit = spyAudit();
       await confirmAcknowledgement(asDb(db), systemId, created.id, {}, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("acknowledgement.confirmed");
+      expectSingleAuditEvent(audit, "acknowledgement.confirmed");
     });
 
     it("returns NOT_FOUND when ack does not exist", async () => {
@@ -401,8 +400,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
       expect(restored.archivedAt).toBeNull();
       expect(restored.id).toBe(created.id);
       expect(restored.version).toBe(3);
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("acknowledgement.restored");
+      expectSingleAuditEvent(audit, "acknowledgement.restored");
     });
 
     it("returns NOT_ARCHIVED when ack is not archived", async () => {

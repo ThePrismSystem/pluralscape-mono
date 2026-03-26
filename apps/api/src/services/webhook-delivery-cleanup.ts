@@ -1,6 +1,6 @@
 import { webhookDeliveries } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { and, inArray, lt } from "drizzle-orm";
+import { and, inArray, lt, sql } from "drizzle-orm";
 
 import { WEBHOOK_DELIVERY_RETENTION_DAYS } from "../service.constants.js";
 
@@ -29,7 +29,7 @@ export async function cleanupWebhookDeliveries(
         lt(webhookDeliveries.createdAt, cutoff),
       ),
     )
-    .returning({ id: webhookDeliveries.id });
+    .returning({ _: sql<number>`1` });
 
   return deleted.length;
 }

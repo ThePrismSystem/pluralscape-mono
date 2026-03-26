@@ -47,3 +47,34 @@ export const WEBHOOK_TIMESTAMP_HEADER = "X-Pluralscape-Timestamp";
 
 /** Maximum age in days for terminal (success/failed) webhook deliveries before cleanup. */
 export const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
+
+// ── Webhook delivery worker ─────────────────────────────────────
+
+/** HMAC algorithm used for signing webhook payloads. */
+export const WEBHOOK_HMAC_ALGORITHM = "sha256";
+
+/** HTTP status code threshold: 2xx is success (lower bound, inclusive). */
+export const HTTP_SUCCESS_MIN = 200;
+
+/** HTTP status code threshold: 2xx is success (upper bound, inclusive). */
+export const HTTP_SUCCESS_MAX = 299;
+
+/** Default request timeout for webhook delivery (10 seconds). */
+export const WEBHOOK_DELIVERY_TIMEOUT_MS = 10_000;
+
+/** Default jitter fraction for backoff (25%). */
+export const WEBHOOK_DEFAULT_JITTER_FRACTION = 0.25;
+
+/** Milliseconds per second, used to convert Date.now() to Unix seconds. */
+export const MS_PER_SECOND = 1_000;
+
+/** Required URL protocol for webhook endpoints in production. */
+export const WEBHOOK_REQUIRED_PROTOCOL = "https://";
+
+// ── Poll status literals ────────────────────────────────────────
+
+/** Poll status: accepting votes. */
+export const POLL_STATUS_OPEN = "open" as const;
+
+/** Poll status: voting ended. */
+export const POLL_STATUS_CLOSED = "closed" as const;

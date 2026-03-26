@@ -17,6 +17,7 @@ import {
   restoreNote,
   updateNote,
 } from "../../services/note.service.js";
+import { expectSingleAuditEvent } from "../helpers/audit-assertions.js";
 import {
   assertApiError,
   asDb,
@@ -81,8 +82,7 @@ describe("note.service (PGlite integration)", () => {
       expect(result.encryptedData).toEqual(expect.any(String));
       expect(result.createdAt).toEqual(expect.any(Number));
       expect(result.updatedAt).toEqual(expect.any(Number));
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("note.created");
+      expectSingleAuditEvent(audit, "note.created");
     });
 
     it("creates a member-bound note (authorEntityType=member)", async () => {
@@ -127,8 +127,7 @@ describe("note.service (PGlite integration)", () => {
         audit,
       );
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("note.created");
+      expectSingleAuditEvent(audit, "note.created");
     });
   });
 
@@ -442,8 +441,7 @@ describe("note.service (PGlite integration)", () => {
         audit,
       );
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("note.updated");
+      expectSingleAuditEvent(audit, "note.updated");
     });
   });
 
@@ -485,8 +483,7 @@ describe("note.service (PGlite integration)", () => {
       const audit = spyAudit();
       await deleteNote(asDb(db), systemId, created.id, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("note.deleted");
+      expectSingleAuditEvent(audit, "note.deleted");
     });
   });
 
@@ -585,8 +582,7 @@ describe("note.service (PGlite integration)", () => {
       const audit = spyAudit();
       await archiveNote(asDb(db), systemId, created.id, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("note.archived");
+      expectSingleAuditEvent(audit, "note.archived");
     });
   });
 
@@ -608,8 +604,7 @@ describe("note.service (PGlite integration)", () => {
       expect(restored.archivedAt).toBeNull();
       expect(restored.id).toBe(created.id);
       expect(restored.version).toBe(3);
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("note.restored");
+      expectSingleAuditEvent(audit, "note.restored");
     });
 
     it("returns NOT_ARCHIVED for active note", async () => {
@@ -649,8 +644,7 @@ describe("note.service (PGlite integration)", () => {
       const audit = spyAudit();
       await restoreNote(asDb(db), systemId, created.id, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("note.restored");
+      expectSingleAuditEvent(audit, "note.restored");
     });
   });
 });

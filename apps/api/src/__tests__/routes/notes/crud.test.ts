@@ -13,15 +13,19 @@ import type { NoteResult } from "../../../services/note.service.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/note.service.js", () => ({
-  createNote: vi.fn(),
-  getNote: vi.fn(),
-  listNotes: vi.fn(),
-  updateNote: vi.fn(),
-  deleteNote: vi.fn(),
-  archiveNote: vi.fn(),
-  restoreNote: vi.fn(),
-}));
+vi.mock("../../../services/note.service.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../services/note.service.js")>();
+  return {
+    createNote: vi.fn(),
+    getNote: vi.fn(),
+    listNotes: vi.fn(),
+    updateNote: vi.fn(),
+    deleteNote: vi.fn(),
+    archiveNote: vi.fn(),
+    restoreNote: vi.fn(),
+    parseNoteQuery: original.parseNoteQuery,
+  };
+});
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());

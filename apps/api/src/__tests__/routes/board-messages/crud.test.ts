@@ -13,18 +13,23 @@ import type { BoardMessageResult } from "../../../services/board-message.service
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/board-message.service.js", () => ({
-  createBoardMessage: vi.fn(),
-  getBoardMessage: vi.fn(),
-  listBoardMessages: vi.fn(),
-  updateBoardMessage: vi.fn(),
-  deleteBoardMessage: vi.fn(),
-  archiveBoardMessage: vi.fn(),
-  restoreBoardMessage: vi.fn(),
-  reorderBoardMessages: vi.fn(),
-  pinBoardMessage: vi.fn(),
-  unpinBoardMessage: vi.fn(),
-}));
+vi.mock("../../../services/board-message.service.js", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../../../services/board-message.service.js")>();
+  return {
+    createBoardMessage: vi.fn(),
+    getBoardMessage: vi.fn(),
+    listBoardMessages: vi.fn(),
+    updateBoardMessage: vi.fn(),
+    deleteBoardMessage: vi.fn(),
+    archiveBoardMessage: vi.fn(),
+    restoreBoardMessage: vi.fn(),
+    reorderBoardMessages: vi.fn(),
+    pinBoardMessage: vi.fn(),
+    unpinBoardMessage: vi.fn(),
+    parseBoardMessageQuery: original.parseBoardMessageQuery,
+  };
+});
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());

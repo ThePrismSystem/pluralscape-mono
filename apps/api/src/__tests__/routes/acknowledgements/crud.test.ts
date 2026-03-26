@@ -13,15 +13,20 @@ import type { AcknowledgementResult } from "../../../services/acknowledgement.se
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/acknowledgement.service.js", () => ({
-  createAcknowledgement: vi.fn(),
-  getAcknowledgement: vi.fn(),
-  listAcknowledgements: vi.fn(),
-  deleteAcknowledgement: vi.fn(),
-  confirmAcknowledgement: vi.fn(),
-  archiveAcknowledgement: vi.fn(),
-  restoreAcknowledgement: vi.fn(),
-}));
+vi.mock("../../../services/acknowledgement.service.js", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../../../services/acknowledgement.service.js")>();
+  return {
+    createAcknowledgement: vi.fn(),
+    getAcknowledgement: vi.fn(),
+    listAcknowledgements: vi.fn(),
+    deleteAcknowledgement: vi.fn(),
+    confirmAcknowledgement: vi.fn(),
+    archiveAcknowledgement: vi.fn(),
+    restoreAcknowledgement: vi.fn(),
+    parseAcknowledgementQuery: original.parseAcknowledgementQuery,
+  };
+});
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());

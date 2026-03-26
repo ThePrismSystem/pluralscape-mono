@@ -1,5 +1,4 @@
 import { ID_PREFIXES } from "@pluralscape/types";
-import { PollQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
@@ -7,7 +6,7 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
-import { listPolls } from "../../services/poll.service.js";
+import { listPolls, parsePollQuery } from "../../services/poll.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
@@ -19,7 +18,7 @@ listRoute.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const query = PollQuerySchema.parse({
+  const query = parsePollQuery({
     includeArchived: c.req.query("includeArchived"),
     status: c.req.query("status"),
   });
