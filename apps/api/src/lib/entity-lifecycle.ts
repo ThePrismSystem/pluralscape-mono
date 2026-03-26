@@ -33,6 +33,18 @@ export interface ArchivableEntityConfig {
   readonly entityName: string;
   readonly archiveEvent: AuditEventType;
   readonly restoreEvent: AuditEventType;
+  /** Optional hook called inside the transaction after a successful archive + audit. */
+  readonly onArchive?: (
+    tx: PostgresJsDatabase,
+    systemId: SystemId,
+    entityId: string,
+  ) => Promise<unknown>;
+  /** Optional hook called inside the transaction after a successful restore + audit. */
+  readonly onRestore?: (
+    tx: PostgresJsDatabase,
+    systemId: SystemId,
+    entityId: string,
+  ) => Promise<unknown>;
 }
 
 /**
@@ -91,6 +103,10 @@ export async function archiveEntity(
       detail: `${entityName} archived`,
       systemId,
     });
+
+    if (cfg.onArchive) {
+      await cfg.onArchive(tx, systemId, entityId);
+    }
   });
 }
 
@@ -156,6 +172,10 @@ export async function restoreEntity<TResult>(
       detail: `${entityName} restored`,
       systemId,
     });
+
+    if (cfg.onRestore) {
+      await cfg.onRestore(tx, systemId, entityId);
+    }
 
     return toResult(row);
   });

@@ -119,7 +119,6 @@ export async function createNote(
     });
     await dispatchWebhookEvent(tx, systemId, "note.created", {
       noteId: row.id as NoteId,
-      systemId,
     });
 
     return toNoteResult(row);
@@ -285,7 +284,6 @@ export async function updateNote(
     });
     await dispatchWebhookEvent(tx, systemId, "note.updated", {
       noteId: row.id as NoteId,
-      systemId,
     });
 
     return toNoteResult(row);
@@ -322,7 +320,6 @@ export async function deleteNote(
     });
     await dispatchWebhookEvent(tx, systemId, "note.deleted", {
       noteId: noteId,
-      systemId,
     });
 
     await tx.delete(notes).where(and(eq(notes.id, noteId), eq(notes.systemId, systemId)));
@@ -337,6 +334,10 @@ const NOTE_LIFECYCLE: ArchivableEntityConfig = {
   entityName: "Note",
   archiveEvent: "note.archived" as const,
   restoreEvent: "note.restored" as const,
+  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "note.archived", { noteId: eid as NoteId }),
+  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "note.restored", { noteId: eid as NoteId }),
 };
 
 export async function archiveNote(

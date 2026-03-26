@@ -155,7 +155,6 @@ export async function createMessage(
     await dispatchWebhookEvent(tx, systemId, "message.created", {
       messageId: row.id as MessageId,
       channelId: channelId,
-      systemId,
     });
 
     return toMessageResult(row);
@@ -308,7 +307,6 @@ export async function updateMessage(
     await dispatchWebhookEvent(tx, systemId, "message.updated", {
       messageId: row.id as MessageId,
       channelId: row.channelId as ChannelId,
-      systemId,
     });
 
     return toMessageResult(row);
@@ -347,7 +345,6 @@ export async function deleteMessage(
     await dispatchWebhookEvent(tx, systemId, "message.deleted", {
       messageId: existing.id as MessageId,
       channelId: existing.channelId as ChannelId,
-      systemId,
     });
 
     await tx
@@ -364,6 +361,32 @@ const MESSAGE_LIFECYCLE = {
   entityName: "Message",
   archiveEvent: "message.archived" as const,
   restoreEvent: "message.restored" as const,
+  onArchive: async (tx: PostgresJsDatabase, sId: SystemId, eid: string) => {
+    const [msg] = await tx
+      .select({ channelId: messages.channelId })
+      .from(messages)
+      .where(eq(messages.id, eid))
+      .limit(1);
+    if (msg) {
+      await dispatchWebhookEvent(tx, sId, "message.archived", {
+        messageId: eid as MessageId,
+        channelId: msg.channelId as ChannelId,
+      });
+    }
+  },
+  onRestore: async (tx: PostgresJsDatabase, sId: SystemId, eid: string) => {
+    const [msg] = await tx
+      .select({ channelId: messages.channelId })
+      .from(messages)
+      .where(eq(messages.id, eid))
+      .limit(1);
+    if (msg) {
+      await dispatchWebhookEvent(tx, sId, "message.restored", {
+        messageId: eid as MessageId,
+        channelId: msg.channelId as ChannelId,
+      });
+    }
+  },
 };
 
 export async function archiveMessage(

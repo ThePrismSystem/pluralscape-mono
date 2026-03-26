@@ -158,7 +158,6 @@ export async function createChannel(
     });
     await dispatchWebhookEvent(tx, systemId, "channel.created", {
       channelId: row.id as ChannelId,
-      systemId,
     });
 
     return toChannelResult(row);
@@ -306,7 +305,6 @@ export async function updateChannel(
     });
     await dispatchWebhookEvent(tx, systemId, "channel.updated", {
       channelId: row.id as ChannelId,
-      systemId,
     });
 
     return toChannelResult(row);
@@ -396,7 +394,6 @@ export async function deleteChannel(
     });
     await dispatchWebhookEvent(tx, systemId, "channel.deleted", {
       channelId: channelId,
-      systemId,
     });
 
     await tx
@@ -413,6 +410,10 @@ const CHANNEL_LIFECYCLE = {
   entityName: "Channel",
   archiveEvent: "channel.archived" as const,
   restoreEvent: "channel.restored" as const,
+  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "channel.archived", { channelId: eid as ChannelId }),
+  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "channel.restored", { channelId: eid as ChannelId }),
 };
 
 export async function archiveChannel(

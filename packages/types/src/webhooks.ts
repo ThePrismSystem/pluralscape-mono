@@ -4,9 +4,15 @@ import type {
   ApiKeyId,
   BoardMessageId,
   ChannelId,
+  CustomFrontId,
+  FrontingSessionId,
+  GroupId,
+  LifecycleEventId,
+  MemberId,
   MessageId,
   NoteId,
   PollId,
+  PollVoteId,
   SystemId,
   WebhookDeliveryId,
   WebhookId,
@@ -74,55 +80,65 @@ export type WebhookEventType =
   | "acknowledgement.deleted";
 
 // ── T3 payload types (IDs + metadata only, never encrypted content) ──
+// Note: systemId is auto-injected by the dispatcher — not included in payload interfaces.
+
+interface MemberEventPayload {
+  readonly memberId: MemberId;
+}
+
+interface FrontingEventPayload {
+  readonly sessionId: FrontingSessionId;
+}
+
+interface GroupEventPayload {
+  readonly groupId: GroupId;
+}
 
 interface ChannelEventPayload {
   readonly channelId: ChannelId;
-  readonly systemId: SystemId;
 }
 
 interface MessageEventPayload {
   readonly messageId: MessageId;
   readonly channelId: ChannelId;
-  readonly systemId: SystemId;
 }
 
 interface BoardMessageEventPayload {
   readonly boardMessageId: BoardMessageId;
-  readonly systemId: SystemId;
 }
 
 interface NoteEventPayload {
   readonly noteId: NoteId;
-  readonly systemId: SystemId;
 }
 
 interface PollEventPayload {
   readonly pollId: PollId;
-  readonly systemId: SystemId;
 }
 
 interface PollVoteEventPayload {
   readonly pollId: PollId;
-  readonly systemId: SystemId;
+  readonly voteId: PollVoteId;
 }
 
 interface AcknowledgementEventPayload {
   readonly acknowledgementId: AcknowledgementId;
-  readonly systemId: SystemId;
 }
 
-/** Maps each webhook event type to its T3 payload shape. */
+/**
+ * Maps each webhook event type to its T3 payload shape.
+ * The dispatcher auto-injects `systemId` into stored payloads.
+ */
 export interface WebhookEventPayloadMap {
   // ── Identity ──
-  "member.created": { readonly memberId: string; readonly systemId: SystemId };
-  "member.updated": { readonly memberId: string; readonly systemId: SystemId };
-  "member.archived": { readonly memberId: string; readonly systemId: SystemId };
-  "fronting.started": { readonly sessionId: string; readonly systemId: SystemId };
-  "fronting.ended": { readonly sessionId: string; readonly systemId: SystemId };
-  "group.created": { readonly groupId: string; readonly systemId: SystemId };
-  "group.updated": { readonly groupId: string; readonly systemId: SystemId };
-  "lifecycle.event-recorded": { readonly eventId: string; readonly systemId: SystemId };
-  "custom-front.changed": { readonly customFrontId: string; readonly systemId: SystemId };
+  "member.created": MemberEventPayload;
+  "member.updated": MemberEventPayload;
+  "member.archived": MemberEventPayload;
+  "fronting.started": FrontingEventPayload;
+  "fronting.ended": FrontingEventPayload;
+  "group.created": GroupEventPayload;
+  "group.updated": GroupEventPayload;
+  "lifecycle.event-recorded": { readonly eventId: LifecycleEventId };
+  "custom-front.changed": { readonly customFrontId: CustomFrontId };
   // ── Communication: channels ──
   "channel.created": ChannelEventPayload;
   "channel.updated": ChannelEventPayload;

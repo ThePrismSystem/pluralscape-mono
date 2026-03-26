@@ -139,7 +139,6 @@ export async function createPoll(
     });
     await dispatchWebhookEvent(tx, systemId, "poll.created", {
       pollId: row.id as PollId,
-      systemId,
     });
 
     return toPollResult(row);
@@ -287,7 +286,6 @@ export async function updatePoll(
     });
     await dispatchWebhookEvent(tx, systemId, "poll.updated", {
       pollId: row.id as PollId,
-      systemId,
     });
 
     return toPollResult(row);
@@ -351,7 +349,6 @@ export async function closePoll(
     });
     await dispatchWebhookEvent(tx, systemId, "poll.closed", {
       pollId: row.id as PollId,
-      systemId,
     });
 
     return toPollResult(row);
@@ -408,7 +405,6 @@ export async function deletePoll(
     });
     await dispatchWebhookEvent(tx, systemId, "poll.deleted", {
       pollId: pollId,
-      systemId,
     });
 
     await tx.delete(polls).where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)));
@@ -423,6 +419,10 @@ const POLL_LIFECYCLE: ArchivableEntityConfig = {
   entityName: "Poll",
   archiveEvent: "poll.archived" as const,
   restoreEvent: "poll.restored" as const,
+  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "poll.archived", { pollId: eid as PollId }),
+  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "poll.restored", { pollId: eid as PollId }),
 };
 
 export async function archivePoll(

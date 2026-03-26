@@ -123,7 +123,6 @@ export async function createAcknowledgement(
     });
     await dispatchWebhookEvent(tx, systemId, "acknowledgement.created", {
       acknowledgementId: row.id as AcknowledgementId,
-      systemId,
     });
 
     return toAcknowledgementResult(row);
@@ -162,7 +161,8 @@ export async function confirmAcknowledgement(
           eq(acknowledgements.archived, false),
         ),
       )
-      .limit(1);
+      .limit(1)
+      .for("update");
 
     if (!existing) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Acknowledgement not found");
@@ -196,7 +196,6 @@ export async function confirmAcknowledgement(
     });
     await dispatchWebhookEvent(tx, systemId, "acknowledgement.confirmed", {
       acknowledgementId: ackId,
-      systemId,
     });
 
     return toAcknowledgementResult(updated);
@@ -300,7 +299,13 @@ export async function deleteAcknowledgement(
     const [existing] = await tx
       .select({ id: acknowledgements.id })
       .from(acknowledgements)
-      .where(and(eq(acknowledgements.id, ackId), eq(acknowledgements.systemId, systemId)))
+      .where(
+        and(
+          eq(acknowledgements.id, ackId),
+          eq(acknowledgements.systemId, systemId),
+          eq(acknowledgements.archived, false),
+        ),
+      )
       .limit(1);
 
     if (!existing) {
@@ -315,7 +320,6 @@ export async function deleteAcknowledgement(
     });
     await dispatchWebhookEvent(tx, systemId, "acknowledgement.deleted", {
       acknowledgementId: ackId,
-      systemId,
     });
 
     await tx
@@ -332,6 +336,14 @@ const ACK_LIFECYCLE: ArchivableEntityConfig = {
   entityName: "Acknowledgement",
   archiveEvent: "acknowledgement.archived" as const,
   restoreEvent: "acknowledgement.restored" as const,
+  onArchive: (tx, sId, eid) =>
+    dispatchWebhookEvent(tx, sId, "acknowledgement.archived", {
+      acknowledgementId: eid as AcknowledgementId,
+    }),
+  onRestore: (tx, sId, eid) =>
+    dispatchWebhookEvent(tx, sId, "acknowledgement.restored", {
+      acknowledgementId: eid as AcknowledgementId,
+    }),
 };
 
 export async function archiveAcknowledgement(

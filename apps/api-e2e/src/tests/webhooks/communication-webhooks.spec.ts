@@ -2,6 +2,43 @@ import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { getSystemId } from "../../fixtures/entity-helpers.js";
 
+import type { APIRequestContext } from "@playwright/test";
+
+/**
+ * Clean up webhook deliveries, entities, and the webhook config after a test.
+ * Asserts response codes on every delete to avoid silently swallowed failures.
+ */
+async function cleanupWebhookTest(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  webhookId: string,
+  entityCleanups: Array<{ path: string; expectedStatus?: number }>,
+): Promise<void> {
+  const deliveriesRes = await request.get(
+    `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
+    { headers },
+  );
+  expect(deliveriesRes.status()).toBe(200);
+  const deliveries = (await deliveriesRes.json()).items as Array<{ id: string }>;
+  for (const d of deliveries) {
+    const delRes = await request.delete(`/v1/systems/${systemId}/webhook-deliveries/${d.id}`, {
+      headers,
+    });
+    expect(delRes.ok()).toBe(true);
+  }
+
+  for (const cleanup of entityCleanups) {
+    const res = await request.delete(cleanup.path, { headers });
+    expect(res.status()).toBe(cleanup.expectedStatus ?? 204);
+  }
+
+  const whRes = await request.delete(`/v1/systems/${systemId}/webhook-configs/${webhookId}`, {
+    headers,
+  });
+  expect(whRes.ok()).toBe(true);
+}
+
 test.describe("Communication Webhook Delivery", () => {
   test.beforeAll(async () => {
     await ensureCryptoReady();
@@ -10,7 +47,6 @@ test.describe("Communication Webhook Delivery", () => {
   test("channel.created event triggers webhook delivery", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
 
-    // Step 1: Create a webhook config subscribing to "channel.created"
     let webhookId: string;
     await test.step("create webhook config for channel.created", async () => {
       const res = await request.post(`/v1/systems/${systemId}/webhook-configs`, {
@@ -25,7 +61,6 @@ test.describe("Communication Webhook Delivery", () => {
       webhookId = body.id as string;
     });
 
-    // Step 2: Trigger the event by creating a channel
     let channelId: string;
     await test.step("create channel to trigger event", async () => {
       const res = await request.post(`/v1/systems/${systemId}/channels`, {
@@ -41,7 +76,6 @@ test.describe("Communication Webhook Delivery", () => {
       channelId = body.id as string;
     });
 
-    // Step 3: Query deliveries for this webhook and verify one was created
     await test.step("verify delivery record created", async () => {
       const res = await request.get(
         `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
@@ -61,27 +95,10 @@ test.describe("Communication Webhook Delivery", () => {
       if (channelDelivery) expect(channelDelivery.status).toBe("pending");
     });
 
-    // Cleanup: delete webhook config (need to delete deliveries first)
     await test.step("cleanup", async () => {
-      // Delete all deliveries for this webhook
-      const deliveriesRes = await request.get(
-        `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
-        { headers: authHeaders },
-      );
-      const deliveries = (await deliveriesRes.json()).items as Array<{ id: string }>;
-      for (const d of deliveries) {
-        await request.delete(`/v1/systems/${systemId}/webhook-deliveries/${d.id}`, {
-          headers: authHeaders,
-        });
-      }
-      // Delete channel
-      await request.delete(`/v1/systems/${systemId}/channels/${channelId}`, {
-        headers: authHeaders,
-      });
-      // Delete webhook config
-      await request.delete(`/v1/systems/${systemId}/webhook-configs/${webhookId}`, {
-        headers: authHeaders,
-      });
+      await cleanupWebhookTest(request, authHeaders, systemId, webhookId, [
+        { path: `/v1/systems/${systemId}/channels/${channelId}` },
+      ]);
     });
   });
 
@@ -140,22 +157,10 @@ test.describe("Communication Webhook Delivery", () => {
       if (pollDelivery) expect(pollDelivery.status).toBe("pending");
     });
 
-    // Cleanup
     await test.step("cleanup", async () => {
-      const deliveriesRes = await request.get(
-        `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
-        { headers: authHeaders },
-      );
-      const deliveries = (await deliveriesRes.json()).items as Array<{ id: string }>;
-      for (const d of deliveries) {
-        await request.delete(`/v1/systems/${systemId}/webhook-deliveries/${d.id}`, {
-          headers: authHeaders,
-        });
-      }
-      await request.delete(`/v1/systems/${systemId}/polls/${pollId}`, { headers: authHeaders });
-      await request.delete(`/v1/systems/${systemId}/webhook-configs/${webhookId}`, {
-        headers: authHeaders,
-      });
+      await cleanupWebhookTest(request, authHeaders, systemId, webhookId, [
+        { path: `/v1/systems/${systemId}/polls/${pollId}` },
+      ]);
     });
   });
 
@@ -211,24 +216,10 @@ test.describe("Communication Webhook Delivery", () => {
       if (ackDelivery) expect(ackDelivery.status).toBe("pending");
     });
 
-    // Cleanup
     await test.step("cleanup", async () => {
-      const deliveriesRes = await request.get(
-        `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
-        { headers: authHeaders },
-      );
-      const deliveries = (await deliveriesRes.json()).items as Array<{ id: string }>;
-      for (const d of deliveries) {
-        await request.delete(`/v1/systems/${systemId}/webhook-deliveries/${d.id}`, {
-          headers: authHeaders,
-        });
-      }
-      await request.delete(`/v1/systems/${systemId}/acknowledgements/${ackId}`, {
-        headers: authHeaders,
-      });
-      await request.delete(`/v1/systems/${systemId}/webhook-configs/${webhookId}`, {
-        headers: authHeaders,
-      });
+      await cleanupWebhookTest(request, authHeaders, systemId, webhookId, [
+        { path: `/v1/systems/${systemId}/acknowledgements/${ackId}` },
+      ]);
     });
   });
 
@@ -248,6 +239,7 @@ test.describe("Communication Webhook Delivery", () => {
       webhookId = (await res.json()).id as string;
     });
 
+    let pollId: string;
     await test.step("create poll (unsubscribed event)", async () => {
       const res = await request.post(`/v1/systems/${systemId}/polls`, {
         headers: authHeaders,
@@ -265,6 +257,7 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
+      pollId = (await res.json()).id as string;
     });
 
     await test.step("verify no delivery for unsubscribed event", async () => {
@@ -283,11 +276,10 @@ test.describe("Communication Webhook Delivery", () => {
       expect(pollDelivery).toBeUndefined();
     });
 
-    // Cleanup
     await test.step("cleanup", async () => {
-      await request.delete(`/v1/systems/${systemId}/webhook-configs/${webhookId}`, {
-        headers: authHeaders,
-      });
+      await cleanupWebhookTest(request, authHeaders, systemId, webhookId, [
+        { path: `/v1/systems/${systemId}/polls/${pollId}` },
+      ]);
     });
   });
 });

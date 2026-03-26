@@ -1,10 +1,12 @@
 import { PGlite } from "@electric-sql/pglite";
+import { serializeEncryptedBlob } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import {
   createPgCommunicationTables,
   pgInsertAccount,
   pgInsertMember,
   pgInsertSystem,
+  testBlob,
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -149,7 +151,8 @@ describe("acknowledgement.service (PGlite integration)", () => {
         auth,
         noopAudit,
       );
-      const newData = testEncryptedDataBase64();
+      const distinctBlob = testBlob(new Uint8Array([7, 8, 9]));
+      const newData = Buffer.from(serializeEncryptedBlob(distinctBlob)).toString("base64");
 
       const result = await confirmAcknowledgement(
         asDb(db),
@@ -161,7 +164,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
       );
 
       expect(result.confirmed).toBe(true);
-      expect(result.encryptedData).toEqual(expect.any(String));
+      expect(result.encryptedData).not.toBe(created.encryptedData);
     });
 
     it("is idempotent — re-confirm returns same state with no duplicate audit", async () => {

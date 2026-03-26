@@ -186,7 +186,7 @@ export async function castVote(
       tx,
       systemId,
       parsed.isVeto ? "poll-vote.vetoed" : "poll-vote.cast",
-      { pollId: pollId, systemId },
+      { pollId: pollId, voteId: row.id as PollVoteId },
     );
 
     return toVoteResult(row);
