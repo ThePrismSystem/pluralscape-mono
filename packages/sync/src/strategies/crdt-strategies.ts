@@ -333,6 +333,13 @@ export const ENTITY_CRDT_STRATEGIES = {
     mutationSemantics:
       "Append via map key assignment; revokedAt is the only LWW-mutable field (concurrent revocations are idempotent — safe outcome)",
   },
+  "field-bucket-visibility": {
+    storageType: "junction-map",
+    document: "privacy-config",
+    fieldName: "fieldBucketVisibility",
+    mutationSemantics:
+      "Add-wins — compound key {fieldDefinitionId}_{bucketId} mapped to true; concurrent add+remove preserves the visibility assignment",
+  },
 } as const satisfies Record<string, CrdtStrategy>;
 
 /** All entity type keys in the strategy registry. */
