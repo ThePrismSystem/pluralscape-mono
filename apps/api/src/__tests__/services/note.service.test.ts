@@ -4,7 +4,7 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
-import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
+import type { ArchivableEntityConfig, DeletableEntityConfig } from "../../lib/entity-lifecycle.js";
 import type { NoteId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
@@ -30,6 +30,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 vi.mock("../../lib/entity-lifecycle.js", () => ({
   archiveEntity: vi.fn().mockResolvedValue(undefined),
+  deleteEntity: vi.fn().mockResolvedValue(undefined),
   restoreEntity: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -78,7 +79,8 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { archiveEntity, restoreEntity } = await import("../../lib/entity-lifecycle.js");
+const { archiveEntity, deleteEntity, restoreEntity } =
+  await import("../../lib/entity-lifecycle.js");
 
 const { createNote, getNote, listNotes, updateNote, deleteNote, archiveNote, restoreNote } =
   await import("../../services/note.service.js");
@@ -303,32 +305,22 @@ describe("note service", () => {
   // ── deleteNote ─────────────────────────────────────────────────
 
   describe("deleteNote", () => {
-    it("deletes note and writes audit", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: NOTE_ID }]);
+    it("delegates to deleteEntity with correct config", async () => {
+      const { db } = mockDb();
+      vi.mocked(deleteEntity).mockResolvedValueOnce(undefined);
 
       await deleteNote(db, SYSTEM_ID, NOTE_ID, AUTH, mockAudit);
 
-      expect(mockAudit).toHaveBeenCalledWith(
-        chain,
-        expect.objectContaining({ eventType: "note.deleted" }),
-      );
-    });
-
-    it("throws 404 when note not found", async () => {
-      const { db } = mockDb();
-
-      await expect(deleteNote(db, SYSTEM_ID, NOTE_ID, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-      );
-    });
-
-    it("throws 404 on ownership failure", async () => {
-      const { db } = mockDb();
-      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
-
-      await expect(deleteNote(db, SYSTEM_ID, NOTE_ID, AUTH, mockAudit)).rejects.toThrow(
-        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      expect(deleteEntity).toHaveBeenCalledWith(
+        db,
+        SYSTEM_ID,
+        NOTE_ID,
+        AUTH,
+        mockAudit,
+        expect.objectContaining<Partial<DeletableEntityConfig<string>>>({
+          entityName: "Note",
+          deleteEvent: "note.deleted",
+        }),
       );
     });
   });

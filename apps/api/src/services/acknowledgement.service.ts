@@ -1,20 +1,22 @@
 import { acknowledgements } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
+  AcknowledgementQuerySchema,
   ConfirmAcknowledgementBodySchema,
   CreateAcknowledgementBodySchema,
 } from "@pluralscape/validation";
 import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import {
   encryptedBlobToBase64,
   parseAndValidateBlob,
   validateEncryptedBlob,
 } from "../lib/encrypted-blob.js";
-import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
+import { archiveEntity, deleteEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -28,7 +30,7 @@ import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
+import type { ArchivableEntityConfig, DeletableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
   AcknowledgementId,
   MemberId,
@@ -121,11 +123,12 @@ export async function createAcknowledgement(
       detail: "Acknowledgement created",
       systemId,
     });
+    const result = toAcknowledgementResult(row);
     await dispatchWebhookEvent(tx, systemId, "acknowledgement.created", {
-      acknowledgementId: row.id as AcknowledgementId,
+      acknowledgementId: result.id,
     });
 
-    return toAcknowledgementResult(row);
+    return result;
   });
 }
 
@@ -141,7 +144,11 @@ export async function confirmAcknowledgement(
 ): Promise<AcknowledgementResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = ConfirmAcknowledgementBodySchema.parse(params);
+  const result = ConfirmAcknowledgementBodySchema.safeParse(params);
+  if (!result.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid confirmation payload");
+  }
+  const parsed = result.data;
 
   const newBlob =
     parsed.encryptedData !== undefined
@@ -285,6 +292,15 @@ export async function listAcknowledgements(
 
 // ── DELETE ───────────────────────────────────────────────────────────
 
+const ACK_DELETE: DeletableEntityConfig<AcknowledgementId> = {
+  table: acknowledgements,
+  columns: acknowledgements,
+  entityName: "Acknowledgement",
+  deleteEvent: "acknowledgement.deleted",
+  onDelete: (tx, sId, eid) =>
+    dispatchWebhookEvent(tx, sId, "acknowledgement.deleted", { acknowledgementId: eid }),
+};
+
 export async function deleteAcknowledgement(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -292,39 +308,7 @@ export async function deleteAcknowledgement(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(systemId, auth);
-
-  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    const [existing] = await tx
-      .select({ id: acknowledgements.id })
-      .from(acknowledgements)
-      .where(
-        and(
-          eq(acknowledgements.id, ackId),
-          eq(acknowledgements.systemId, systemId),
-          eq(acknowledgements.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Acknowledgement not found");
-    }
-
-    await audit(tx, {
-      eventType: "acknowledgement.deleted",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Acknowledgement deleted",
-      systemId,
-    });
-    await dispatchWebhookEvent(tx, systemId, "acknowledgement.deleted", {
-      acknowledgementId: ackId,
-    });
-
-    await tx
-      .delete(acknowledgements)
-      .where(and(eq(acknowledgements.id, ackId), eq(acknowledgements.systemId, systemId)));
-  });
+  await deleteEntity(db, systemId, ackId, auth, audit, ACK_DELETE);
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
@@ -367,4 +351,13 @@ export async function restoreAcknowledgement(
   return restoreEntity(db, systemId, ackId, auth, audit, ACK_LIFECYCLE, (row) =>
     toAcknowledgementResult(row as typeof acknowledgements.$inferSelect),
   );
+}
+
+// ── PARSE QUERY PARAMS ──────────────────────────────────────────────
+
+export function parseAcknowledgementQuery(query: Record<string, string | undefined>): {
+  confirmed?: boolean;
+  includeArchived: boolean;
+} {
+  return parseQuery(AcknowledgementQuerySchema, query);
 }

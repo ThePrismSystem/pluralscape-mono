@@ -14,21 +14,29 @@ import type { PollResult } from "../../../services/poll.service.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/poll.service.js", () => ({
-  createPoll: vi.fn(),
-  getPoll: vi.fn(),
-  listPolls: vi.fn(),
-  updatePoll: vi.fn(),
-  deletePoll: vi.fn(),
-  closePoll: vi.fn(),
-  archivePoll: vi.fn(),
-  restorePoll: vi.fn(),
-}));
+vi.mock("../../../services/poll.service.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../services/poll.service.js")>();
+  return {
+    createPoll: vi.fn(),
+    getPoll: vi.fn(),
+    listPolls: vi.fn(),
+    updatePoll: vi.fn(),
+    deletePoll: vi.fn(),
+    closePoll: vi.fn(),
+    archivePoll: vi.fn(),
+    restorePoll: vi.fn(),
+    parsePollQuery: original.parsePollQuery,
+  };
+});
 
-vi.mock("../../../services/poll-vote.service.js", () => ({
-  castVote: vi.fn(),
-  listVotes: vi.fn(),
-}));
+vi.mock("../../../services/poll-vote.service.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../services/poll-vote.service.js")>();
+  return {
+    castVote: vi.fn(),
+    listVotes: vi.fn(),
+    parsePollVoteQuery: original.parsePollVoteQuery,
+  };
+});
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());

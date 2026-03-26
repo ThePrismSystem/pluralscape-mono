@@ -15,13 +15,7 @@ import { getSystemId } from "../../fixtures/entity-helpers.js";
  *   - 400 for invalid request body
  *   - 404 for wrong system access
  *
- * TODO: Once bucket CRUD routes are added, implement the full lifecycle test:
- *   1. Create a privacy bucket
- *   2. Tag content (e.g. a member) to the bucket
- *   3. Initiate rotation with wrappedNewKey + newKeyVersion
- *   4. Claim a chunk of items
- *   5. Complete the chunk with re-encrypted data
- *   6. Verify progress shows completed state
+ * Full lifecycle tests tracked in bean api-7spq (blocked on bucket CRUD routes).
  */
 
 test.describe("Bucket Key Rotation", () => {

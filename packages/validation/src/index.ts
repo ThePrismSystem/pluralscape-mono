@@ -88,6 +88,7 @@ export {
 } from "./fronting-comment.js";
 export {
   booleanQueryParam,
+  optionalBooleanQueryParam,
   IncludeArchivedQuerySchema,
   InnerWorldEntityQuerySchema,
   LifecycleEventQuerySchema,

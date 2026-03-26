@@ -26,6 +26,10 @@ test.describe("Poll Voting", () => {
 
   test("vote lifecycle: cast, list, reject duplicate", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    const voter1 = `mem_${crypto.randomUUID()}`;
+    const voter2 = `mem_${crypto.randomUUID()}`;
+    const option1 = `po_${crypto.randomUUID()}`;
+    const option2 = `po_${crypto.randomUUID()}`;
     let pollId: string;
     let voteId: string;
 
@@ -40,8 +44,8 @@ test.describe("Poll Voting", () => {
       const res = await request.post(`/v1/systems/${systemId}/polls/${pollId}/votes`, {
         headers: authHeaders,
         data: {
-          voter: { entityType: "member", entityId: "mem_voter-1" },
-          optionId: "po_option-1",
+          voter: { entityType: "member", entityId: voter1 },
+          optionId: option1,
           isVeto: false,
           encryptedData: encryptForApi({ comment: null }),
         },
@@ -51,7 +55,7 @@ test.describe("Poll Voting", () => {
       expect(body.id).toMatch(/^pv_/);
       expect(body.pollId).toBe(pollId);
       expect(body.voter.entityType).toBe("member");
-      expect(body.voter.entityId).toBe("mem_voter-1");
+      expect(body.voter.entityId).toBe(voter1);
       voteId = body.id;
     });
 
@@ -69,8 +73,8 @@ test.describe("Poll Voting", () => {
       const res = await request.post(`/v1/systems/${systemId}/polls/${pollId}/votes`, {
         headers: authHeaders,
         data: {
-          voter: { entityType: "member", entityId: "mem_voter-1" },
-          optionId: "po_option-2",
+          voter: { entityType: "member", entityId: voter1 },
+          optionId: option2,
           isVeto: false,
           encryptedData: encryptForApi({ comment: null }),
         },
@@ -84,8 +88,8 @@ test.describe("Poll Voting", () => {
       const res = await request.post(`/v1/systems/${systemId}/polls/${pollId}/votes`, {
         headers: authHeaders,
         data: {
-          voter: { entityType: "member", entityId: "mem_voter-2" },
-          optionId: "po_option-1",
+          voter: { entityType: "member", entityId: voter2 },
+          optionId: option1,
           isVeto: false,
           encryptedData: encryptForApi({ comment: null }),
         },
@@ -96,6 +100,8 @@ test.describe("Poll Voting", () => {
 
   test("multi-vote enforcement", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    const multiVoter = `mem_${crypto.randomUUID()}`;
+    const optionIds = Array.from({ length: 4 }, () => `po_${crypto.randomUUID()}`);
     const poll = await createPoll(request, authHeaders, systemId, {
       allowMultipleVotes: true,
       maxVotesPerMember: 3,
@@ -103,12 +109,12 @@ test.describe("Poll Voting", () => {
     const votesUrl = `/v1/systems/${systemId}/polls/${poll.id}/votes`;
 
     // Cast 3 votes with same voter, different optionIds — all succeed
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 0; i < 3; i++) {
       const res = await request.post(votesUrl, {
         headers: authHeaders,
         data: {
-          voter: { entityType: "member", entityId: "mem_multi-voter" },
-          optionId: `po_option-${String(i)}`,
+          voter: { entityType: "member", entityId: multiVoter },
+          optionId: optionIds[i],
           isVeto: false,
           encryptedData: encryptForApi({ comment: null }),
         },
@@ -120,8 +126,8 @@ test.describe("Poll Voting", () => {
     const res = await request.post(votesUrl, {
       headers: authHeaders,
       data: {
-        voter: { entityType: "member", entityId: "mem_multi-voter" },
-        optionId: "po_option-4",
+        voter: { entityType: "member", entityId: multiVoter },
+        optionId: optionIds[3],
         isVeto: false,
         encryptedData: encryptForApi({ comment: null }),
       },
@@ -133,6 +139,8 @@ test.describe("Poll Voting", () => {
 
   test("abstain enforcement", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    const abstainVoter1 = `mem_${crypto.randomUUID()}`;
+    const abstainVoter2 = `mem_${crypto.randomUUID()}`;
 
     // Poll with allowAbstain=true — abstain vote succeeds
     const allowedPoll = await createPoll(request, authHeaders, systemId, {
@@ -141,7 +149,7 @@ test.describe("Poll Voting", () => {
     const allowedRes = await request.post(`/v1/systems/${systemId}/polls/${allowedPoll.id}/votes`, {
       headers: authHeaders,
       data: {
-        voter: { entityType: "member", entityId: "mem_abstain-1" },
+        voter: { entityType: "member", entityId: abstainVoter1 },
         optionId: null,
         isVeto: false,
         encryptedData: encryptForApi({ comment: null }),
@@ -158,7 +166,7 @@ test.describe("Poll Voting", () => {
       {
         headers: authHeaders,
         data: {
-          voter: { entityType: "member", entityId: "mem_abstain-2" },
+          voter: { entityType: "member", entityId: abstainVoter2 },
           optionId: null,
           isVeto: false,
           encryptedData: encryptForApi({ comment: null }),
@@ -172,6 +180,10 @@ test.describe("Poll Voting", () => {
 
   test("veto enforcement", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    const vetoVoter1 = `mem_${crypto.randomUUID()}`;
+    const vetoVoter2 = `mem_${crypto.randomUUID()}`;
+    const vetoOption1 = `po_${crypto.randomUUID()}`;
+    const vetoOption2 = `po_${crypto.randomUUID()}`;
 
     // Poll with allowVeto=true — veto vote succeeds
     const allowedPoll = await createPoll(request, authHeaders, systemId, {
@@ -180,8 +192,8 @@ test.describe("Poll Voting", () => {
     const allowedRes = await request.post(`/v1/systems/${systemId}/polls/${allowedPoll.id}/votes`, {
       headers: authHeaders,
       data: {
-        voter: { entityType: "member", entityId: "mem_veto-1" },
-        optionId: "po_option-1",
+        voter: { entityType: "member", entityId: vetoVoter1 },
+        optionId: vetoOption1,
         isVeto: true,
         encryptedData: encryptForApi({ comment: null }),
       },
@@ -197,8 +209,8 @@ test.describe("Poll Voting", () => {
       {
         headers: authHeaders,
         data: {
-          voter: { entityType: "member", entityId: "mem_veto-2" },
-          optionId: "po_option-1",
+          voter: { entityType: "member", entityId: vetoVoter2 },
+          optionId: vetoOption2,
           isVeto: true,
           encryptedData: encryptForApi({ comment: null }),
         },
@@ -211,6 +223,8 @@ test.describe("Poll Voting", () => {
 
   test("vote on closed poll returns 409", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    const lateVoter = `mem_${crypto.randomUUID()}`;
+    const lateOption = `po_${crypto.randomUUID()}`;
     const poll = await createPoll(request, authHeaders, systemId);
 
     // Close the poll
@@ -223,8 +237,8 @@ test.describe("Poll Voting", () => {
     const res = await request.post(`/v1/systems/${systemId}/polls/${poll.id}/votes`, {
       headers: authHeaders,
       data: {
-        voter: { entityType: "member", entityId: "mem_late-voter" },
-        optionId: "po_option-1",
+        voter: { entityType: "member", entityId: lateVoter },
+        optionId: lateOption,
         isVeto: false,
         encryptedData: encryptForApi({ comment: null }),
       },
@@ -236,6 +250,8 @@ test.describe("Poll Voting", () => {
 
   test("vote on expired poll returns 409 POLL_CLOSED", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    const expiredVoter = `mem_${crypto.randomUUID()}`;
+    const expiredOption = `po_${crypto.randomUUID()}`;
     const poll = await createPoll(request, authHeaders, systemId, {
       endsAt: Date.now() - 60_000,
     });
@@ -243,8 +259,8 @@ test.describe("Poll Voting", () => {
     const res = await request.post(`/v1/systems/${systemId}/polls/${poll.id}/votes`, {
       headers: authHeaders,
       data: {
-        voter: { entityType: "member", entityId: "mem_expired-voter" },
-        optionId: "po_option-1",
+        voter: { entityType: "member", entityId: expiredVoter },
+        optionId: expiredOption,
         isVeto: false,
         encryptedData: encryptForApi({ comment: null }),
       },
@@ -256,14 +272,16 @@ test.describe("Poll Voting", () => {
 
   test("delete poll with votes returns 409", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    const keeperVoter = `mem_${crypto.randomUUID()}`;
+    const keeperOption = `po_${crypto.randomUUID()}`;
     const poll = await createPoll(request, authHeaders, systemId);
 
     // Cast a vote
     const voteRes = await request.post(`/v1/systems/${systemId}/polls/${poll.id}/votes`, {
       headers: authHeaders,
       data: {
-        voter: { entityType: "member", entityId: "mem_keeper" },
-        optionId: "po_option-1",
+        voter: { entityType: "member", entityId: keeperVoter },
+        optionId: keeperOption,
         isVeto: false,
         encryptedData: encryptForApi({ comment: null }),
       },

@@ -19,7 +19,12 @@ import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
-import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../service.constants.js";
+import {
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+  WEBHOOK_REQUIRED_PROTOCOL,
+  WEBHOOK_SECRET_BYTES,
+} from "../service.constants.js";
 
 import { invalidateWebhookConfigCache } from "./webhook-dispatcher.js";
 
@@ -115,7 +120,7 @@ function toWebhookConfigResult(row: {
  * - Resolves the hostname and checks all resolved IPs against private/reserved ranges.
  */
 async function validateWebhookUrl(url: string): Promise<void> {
-  if (env.NODE_ENV === "production" && !url.startsWith("https://")) {
+  if (env.NODE_ENV === "production" && !url.startsWith(WEBHOOK_REQUIRED_PROTOCOL)) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
@@ -155,9 +160,10 @@ export async function createWebhookConfig(
 
   const whId = createId(ID_PREFIXES.webhook);
   const timestamp = now();
-  const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
 
   const created = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
+
     const [row] = await tx
       .insert(webhookConfigs)
       .values({

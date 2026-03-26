@@ -20,6 +20,7 @@ import {
   restorePoll,
   updatePoll,
 } from "../../services/poll.service.js";
+import { expectSingleAuditEvent } from "../helpers/audit-assertions.js";
 import {
   assertApiError,
   asDb,
@@ -133,8 +134,7 @@ describe("poll.service (PGlite integration)", () => {
       const audit = spyAudit();
       await createPoll(asDb(db), systemId, makeCreateParams(), auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("poll.created");
+      expectSingleAuditEvent(audit, "poll.created");
     });
 
     it("rejects creation with allowMultipleVotes=false and maxVotesPerMember > 1", async () => {
@@ -361,8 +361,7 @@ describe("poll.service (PGlite integration)", () => {
         audit,
       );
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("poll.updated");
+      expectSingleAuditEvent(audit, "poll.updated");
     });
   });
 
@@ -430,8 +429,7 @@ describe("poll.service (PGlite integration)", () => {
       const audit = spyAudit();
       await closePoll(asDb(db), systemId, created.id, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("poll.closed");
+      expectSingleAuditEvent(audit, "poll.closed");
     });
   });
 
@@ -455,6 +453,7 @@ describe("poll.service (PGlite integration)", () => {
         id: genPollVoteId(),
         pollId: created.id,
         systemId,
+        voter: { entityType: "member", entityId: "mem_test-voter" },
         votedAt: Date.now(),
         encryptedData: testBlob(),
         createdAt: Date.now(),
@@ -496,8 +495,7 @@ describe("poll.service (PGlite integration)", () => {
       const audit = spyAudit();
       await deletePoll(asDb(db), systemId, created.id, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("poll.deleted");
+      expectSingleAuditEvent(audit, "poll.deleted");
     });
   });
 
@@ -566,8 +564,7 @@ describe("poll.service (PGlite integration)", () => {
       const audit = spyAudit();
       await archivePoll(asDb(db), systemId, created.id, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("poll.archived");
+      expectSingleAuditEvent(audit, "poll.archived");
     });
   });
 
@@ -583,8 +580,7 @@ describe("poll.service (PGlite integration)", () => {
       expect(restored.archivedAt).toBeNull();
       expect(restored.id).toBe(created.id);
       expect(restored.version).toBe(3);
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("poll.restored");
+      expectSingleAuditEvent(audit, "poll.restored");
     });
 
     it("returns NOT_ARCHIVED for active poll", async () => {
@@ -612,8 +608,7 @@ describe("poll.service (PGlite integration)", () => {
       const audit = spyAudit();
       await restorePoll(asDb(db), systemId, created.id, auth, audit);
 
-      expect(audit.calls).toHaveLength(1);
-      expect(audit.calls[0]?.eventType).toBe("poll.restored");
+      expectSingleAuditEvent(audit, "poll.restored");
     });
   });
 });

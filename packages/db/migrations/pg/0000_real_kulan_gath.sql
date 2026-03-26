@@ -34,8 +34,11 @@ CREATE TABLE "acknowledgements" (
 	"confirmed" boolean DEFAULT false NOT NULL,
 	"encrypted_data" "bytea" NOT NULL,
 	"created_at" timestamptz NOT NULL,
+	"updated_at" timestamptz NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
+	CONSTRAINT "acknowledgements_version_check" CHECK ("acknowledgements"."version" >= 1),
 	CONSTRAINT "acknowledgements_archived_consistency_check" CHECK (("acknowledgements"."archived" = true) = ("acknowledgements"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -69,7 +72,7 @@ CREATE TABLE "audit_log" (
 	"detail" text,
 	CONSTRAINT "audit_log_id_timestamp_pk" PRIMARY KEY("id","timestamp"),
 	CONSTRAINT "audit_log_id_unique" UNIQUE("id","timestamp"),
-	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-definition.deleted', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'lifecycle-event.archived', 'lifecycle-event.restored', 'lifecycle-event.deleted', 'timer-config.created', 'timer-config.updated', 'timer-config.archived', 'timer-config.restored', 'timer-config.deleted', 'check-in-record.created', 'check-in-record.responded', 'check-in-record.dismissed', 'check-in-record.archived', 'check-in-record.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived', 'fronting-report.created', 'fronting-report.deleted', 'fronting-session.created', 'fronting-session.updated', 'fronting-session.ended', 'fronting-session.archived', 'fronting-session.restored', 'fronting-session.deleted', 'fronting-comment.created', 'fronting-comment.updated', 'fronting-comment.archived', 'fronting-comment.restored', 'fronting-comment.deleted', 'webhook-config.created', 'webhook-config.updated', 'webhook-config.archived', 'webhook-config.restored', 'webhook-config.deleted', 'webhook-delivery.deleted', 'channel.created', 'channel.updated', 'channel.archived', 'channel.restored', 'channel.deleted', 'message.created', 'message.updated', 'message.archived', 'message.restored', 'message.deleted', 'board-message.created', 'board-message.updated', 'board-message.pinned', 'board-message.unpinned', 'board-message.reordered', 'board-message.archived', 'board-message.restored', 'board-message.deleted', 'note.created', 'note.updated', 'note.archived', 'note.restored', 'note.deleted')),
+	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-definition.deleted', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'structure-entity-type.created', 'structure-entity-type.updated', 'structure-entity-type.archived', 'structure-entity-type.restored', 'structure-entity-type.deleted', 'structure-entity.created', 'structure-entity.updated', 'structure-entity.archived', 'structure-entity.restored', 'structure-entity.deleted', 'structure-entity-link.created', 'structure-entity-link.deleted', 'structure-entity-member-link.added', 'structure-entity-member-link.removed', 'structure-entity-association.created', 'structure-entity-association.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'lifecycle-event.archived', 'lifecycle-event.restored', 'lifecycle-event.deleted', 'timer-config.created', 'timer-config.updated', 'timer-config.archived', 'timer-config.restored', 'timer-config.deleted', 'check-in-record.created', 'check-in-record.responded', 'check-in-record.dismissed', 'check-in-record.archived', 'check-in-record.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived', 'fronting-report.created', 'fronting-report.deleted', 'fronting-session.created', 'fronting-session.updated', 'fronting-session.ended', 'fronting-session.archived', 'fronting-session.restored', 'fronting-session.deleted', 'fronting-comment.created', 'fronting-comment.updated', 'fronting-comment.archived', 'fronting-comment.restored', 'fronting-comment.deleted', 'webhook-config.created', 'webhook-config.updated', 'webhook-config.archived', 'webhook-config.restored', 'webhook-config.deleted', 'webhook-delivery.deleted', 'channel.created', 'channel.updated', 'channel.archived', 'channel.restored', 'channel.deleted', 'message.created', 'message.updated', 'message.archived', 'message.restored', 'message.deleted', 'board-message.created', 'board-message.updated', 'board-message.pinned', 'board-message.unpinned', 'board-message.reordered', 'board-message.archived', 'board-message.restored', 'board-message.deleted', 'note.created', 'note.updated', 'note.archived', 'note.restored', 'note.deleted', 'poll.created', 'poll.updated', 'poll.closed', 'poll.archived', 'poll.restored', 'poll.deleted', 'poll-vote.cast', 'poll-vote.vetoed', 'acknowledgement.created', 'acknowledgement.confirmed', 'acknowledgement.archived', 'acknowledgement.restored', 'acknowledgement.deleted')),
 	CONSTRAINT "audit_log_detail_length_check" CHECK ("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint
@@ -605,7 +608,6 @@ CREATE TABLE "messages" (
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
 	CONSTRAINT "messages_id_timestamp_pk" PRIMARY KEY("id","timestamp"),
-	CONSTRAINT "messages_id_unique" UNIQUE("id","timestamp"),
 	CONSTRAINT "messages_id_system_id_timestamp_unique" UNIQUE("id","system_id","timestamp"),
 	CONSTRAINT "messages_version_check" CHECK ("messages"."version" >= 1),
 	CONSTRAINT "messages_archived_consistency_check" CHECK (("messages"."archived" = true) = ("messages"."archived_at" IS NOT NULL))
@@ -674,11 +676,12 @@ CREATE TABLE "poll_votes" (
 	"option_id" varchar(50),
 	"voter" jsonb,
 	"is_veto" boolean DEFAULT false NOT NULL,
-	"voted_at" timestamptz,
+	"voted_at" timestamptz NOT NULL,
 	"encrypted_data" "bytea" NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
+	CONSTRAINT "poll_votes_voter_not_null" CHECK ("poll_votes"."voter" IS NOT NULL),
 	CONSTRAINT "poll_votes_archived_consistency_check" CHECK (("poll_votes"."archived" = true) = ("poll_votes"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -965,7 +968,7 @@ CREATE TABLE "webhook_deliveries" (
 	"created_at" timestamptz NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
-	CONSTRAINT "webhook_deliveries_event_type_check" CHECK ("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+	CONSTRAINT "webhook_deliveries_event_type_check" CHECK ("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'lifecycle.event-recorded', 'custom-front.changed', 'channel.created', 'channel.updated', 'channel.archived', 'channel.restored', 'channel.deleted', 'message.created', 'message.updated', 'message.archived', 'message.restored', 'message.deleted', 'board-message.created', 'board-message.updated', 'board-message.pinned', 'board-message.unpinned', 'board-message.reordered', 'board-message.archived', 'board-message.restored', 'board-message.deleted', 'note.created', 'note.updated', 'note.archived', 'note.restored', 'note.deleted', 'poll.created', 'poll.updated', 'poll.closed', 'poll.archived', 'poll.restored', 'poll.deleted', 'poll-vote.cast', 'poll-vote.vetoed', 'acknowledgement.created', 'acknowledgement.confirmed', 'acknowledgement.archived', 'acknowledgement.restored', 'acknowledgement.deleted')),
 	CONSTRAINT "webhook_deliveries_status_check" CHECK ("webhook_deliveries"."status" IS NULL OR "webhook_deliveries"."status" IN ('pending', 'success', 'failed')),
 	CONSTRAINT "webhook_deliveries_attempt_count_check" CHECK ("webhook_deliveries"."attempt_count" >= 0),
 	CONSTRAINT "webhook_deliveries_http_status_check" CHECK ("webhook_deliveries"."http_status" IS NULL OR ("webhook_deliveries"."http_status" >= 100 AND "webhook_deliveries"."http_status" <= 599)),
@@ -1117,6 +1120,7 @@ CREATE UNIQUE INDEX "account_purge_requests_active_unique_idx" ON "account_purge
 CREATE UNIQUE INDEX "accounts_email_hash_idx" ON "accounts" USING btree ("email_hash");--> statement-breakpoint
 CREATE INDEX "acknowledgements_system_id_confirmed_idx" ON "acknowledgements" USING btree ("system_id","confirmed");--> statement-breakpoint
 CREATE INDEX "acknowledgements_system_archived_idx" ON "acknowledgements" USING btree ("system_id","archived");--> statement-breakpoint
+CREATE INDEX "acknowledgements_system_archived_created_idx" ON "acknowledgements" USING btree ("system_id","archived","created_at","id");--> statement-breakpoint
 CREATE INDEX "api_keys_account_id_idx" ON "api_keys" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "api_keys_system_id_idx" ON "api_keys" USING btree ("system_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "api_keys_token_hash_idx" ON "api_keys" USING btree ("token_hash");--> statement-breakpoint
@@ -1134,6 +1138,7 @@ CREATE INDEX "blob_metadata_system_id_purpose_idx" ON "blob_metadata" USING btre
 CREATE INDEX "blob_metadata_system_archived_idx" ON "blob_metadata" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE UNIQUE INDEX "blob_metadata_storage_key_idx" ON "blob_metadata" USING btree ("storage_key");--> statement-breakpoint
 CREATE INDEX "board_messages_system_archived_idx" ON "board_messages" USING btree ("system_id","archived");--> statement-breakpoint
+CREATE INDEX "board_messages_system_archived_sort_idx" ON "board_messages" USING btree ("system_id","archived","sort_order","id");--> statement-breakpoint
 CREATE INDEX "bucket_content_tags_bucket_id_idx" ON "bucket_content_tags" USING btree ("bucket_id");--> statement-breakpoint
 CREATE INDEX "bucket_content_tags_system_id_idx" ON "bucket_content_tags" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "bucket_key_rotations_bucket_state_idx" ON "bucket_key_rotations" USING btree ("bucket_id","state");--> statement-breakpoint
@@ -1143,6 +1148,7 @@ CREATE INDEX "bucket_rotation_items_status_claimed_by_idx" ON "bucket_rotation_i
 CREATE INDEX "bucket_rotation_items_system_id_idx" ON "bucket_rotation_items" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "buckets_system_archived_idx" ON "buckets" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "channels_system_archived_idx" ON "channels" USING btree ("system_id","archived");--> statement-breakpoint
+CREATE INDEX "channels_parent_id_idx" ON "channels" USING btree ("parent_id");--> statement-breakpoint
 CREATE INDEX "check_in_records_system_id_idx" ON "check_in_records" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "check_in_records_timer_config_id_idx" ON "check_in_records" USING btree ("timer_config_id");--> statement-breakpoint
 CREATE INDEX "check_in_records_scheduled_at_idx" ON "check_in_records" USING btree ("scheduled_at");--> statement-breakpoint
@@ -1215,13 +1221,17 @@ CREATE INDEX "messages_channel_id_timestamp_idx" ON "messages" USING btree ("cha
 CREATE INDEX "messages_system_archived_idx" ON "messages" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "messages_reply_to_id_idx" ON "messages" USING btree ("reply_to_id");--> statement-breakpoint
 CREATE INDEX "notes_system_archived_idx" ON "notes" USING btree ("system_id","archived");--> statement-breakpoint
+CREATE INDEX "notes_system_archived_created_idx" ON "notes" USING btree ("system_id","archived","created_at","id");--> statement-breakpoint
 CREATE INDEX "notes_system_author_type_archived_idx" ON "notes" USING btree ("system_id","author_entity_type","archived");--> statement-breakpoint
 CREATE INDEX "notes_author_entity_id_idx" ON "notes" USING btree ("author_entity_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "notification_configs_system_id_event_type_idx" ON "notification_configs" USING btree ("system_id","event_type") WHERE "notification_configs"."archived" = false;--> statement-breakpoint
 CREATE UNIQUE INDEX "pk_bridge_configs_system_id_idx" ON "pk_bridge_configs" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "poll_votes_poll_id_idx" ON "poll_votes" USING btree ("poll_id");--> statement-breakpoint
+CREATE INDEX "poll_votes_poll_created_idx" ON "poll_votes" USING btree ("poll_id","created_at","id");--> statement-breakpoint
+CREATE INDEX "poll_votes_voter_gin_idx" ON "poll_votes" USING gin ("voter");--> statement-breakpoint
 CREATE INDEX "poll_votes_system_archived_idx" ON "poll_votes" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "polls_system_archived_idx" ON "polls" USING btree ("system_id","archived");--> statement-breakpoint
+CREATE INDEX "polls_system_archived_created_idx" ON "polls" USING btree ("system_id","archived","created_at","id");--> statement-breakpoint
 CREATE INDEX "recovery_keys_account_id_idx" ON "recovery_keys" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "recovery_keys_revoked_at_idx" ON "recovery_keys" USING btree ("revoked_at") WHERE "recovery_keys"."revoked_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "relationships_system_archived_idx" ON "relationships" USING btree ("system_id","archived");--> statement-breakpoint

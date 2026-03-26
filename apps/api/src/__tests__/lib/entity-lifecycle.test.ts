@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { archiveEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
+import { archiveEntity, deleteEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { ArchivableEntityConfig } from "../../lib/entity-lifecycle.js";
+import type { ArchivableEntityConfig, DeletableEntityConfig } from "../../lib/entity-lifecycle.js";
 import type { SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
@@ -173,5 +173,102 @@ describe("restoreEntity", () => {
     await expect(
       restoreEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, TEST_CONFIG, (r) => r),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "NOT_ARCHIVED" }));
+  });
+});
+
+// ── deleteEntity ─────────────────────────────────────────────────
+
+function asDeletableColumn(mock: unknown): DeletableEntityConfig<string>["columns"]["id"] {
+  return mock as DeletableEntityConfig<string>["columns"]["id"];
+}
+
+const DELETE_CONFIG: DeletableEntityConfig<string> = {
+  table: {} as DeletableEntityConfig<string>["table"],
+  columns: {
+    id: asDeletableColumn("id"),
+    systemId: asDeletableColumn("system_id"),
+    archived: asDeletableColumn("archived"),
+  },
+  entityName: "Test entity",
+  deleteEvent: "custom-front.archived",
+};
+
+describe("deleteEntity", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("deletes an existing non-archived entity and writes audit", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await deleteEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, DELETE_CONFIG);
+
+    expect(chain.delete).toHaveBeenCalled();
+    expect(audit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "custom-front.archived" }),
+    );
+  });
+
+  it("calls onDelete hook after audit when provided", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    const configWithHook = { ...DELETE_CONFIG, onDelete };
+
+    await deleteEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, configWithHook);
+
+    expect(onDelete).toHaveBeenCalledWith(chain, SYSTEM_ID, ENTITY_ID);
+  });
+
+  it("calls checkDependents when provided", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const checkDependents = vi.fn().mockResolvedValue(undefined);
+    const configWithCheck = { ...DELETE_CONFIG, checkDependents };
+
+    await deleteEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, configWithCheck);
+
+    expect(checkDependents).toHaveBeenCalledWith(chain, SYSTEM_ID, ENTITY_ID);
+    expect(chain.delete).toHaveBeenCalled();
+  });
+
+  it("does not error when optional hooks are not provided", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      deleteEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, DELETE_CONFIG),
+    ).resolves.toBeUndefined();
+  });
+
+  it("throws NOT_FOUND when entity does not exist", async () => {
+    const { db } = mockDb();
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      deleteEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, DELETE_CONFIG),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("propagates error when checkDependents throws", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const checkDependents = vi
+      .fn()
+      .mockRejectedValue(
+        Object.assign(new Error("HAS_DEPENDENTS"), { status: 409, code: "HAS_DEPENDENTS" }),
+      );
+    const configWithCheck = { ...DELETE_CONFIG, checkDependents };
+
+    await expect(
+      deleteEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, configWithCheck),
+    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }));
   });
 });

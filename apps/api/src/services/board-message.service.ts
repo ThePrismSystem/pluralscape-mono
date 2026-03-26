@@ -1,6 +1,7 @@
 import { boardMessages } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
+  BoardMessageQuerySchema,
   CreateBoardMessageBodySchema,
   ReorderBoardMessagesBodySchema,
   UpdateBoardMessageBodySchema,
@@ -10,9 +11,10 @@ import { and, eq, gt, inArray, or, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
+import { archiveEntity, deleteEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -26,7 +28,7 @@ import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
+import type { ArchivableEntityConfig, DeletableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
   ApiErrorCode,
   AuditEventType,
@@ -120,11 +122,12 @@ export async function createBoardMessage(
       detail: "Board message created",
       systemId,
     });
+    const result = toBoardMessageResult(row);
     await dispatchWebhookEvent(tx, systemId, "board-message.created", {
-      boardMessageId: row.id as BoardMessageId,
+      boardMessageId: result.id,
     });
 
-    return toBoardMessageResult(row);
+    return result;
   });
 }
 
@@ -270,11 +273,12 @@ export async function updateBoardMessage(
       detail: "Board message updated",
       systemId,
     });
+    const result = toBoardMessageResult(row);
     await dispatchWebhookEvent(tx, systemId, "board-message.updated", {
-      boardMessageId: row.id as BoardMessageId,
+      boardMessageId: result.id,
     });
 
-    return toBoardMessageResult(row);
+    return result;
   });
 }
 
@@ -368,7 +372,11 @@ async function togglePinned(
       boardMessageId: boardMessageId,
     });
 
-    return toBoardMessageResult(updated[0] as typeof boardMessages.$inferSelect);
+    const row = updated[0];
+    if (!row) {
+      throw new Error("togglePinned: UPDATE returned no rows after length check");
+    }
+    return toBoardMessageResult(row);
   });
 }
 
@@ -466,6 +474,15 @@ export async function reorderBoardMessages(
 
 // ── DELETE ───────────────────────────────────────────────────────────
 
+const BOARD_MESSAGE_DELETE: DeletableEntityConfig<BoardMessageId> = {
+  table: boardMessages,
+  columns: boardMessages,
+  entityName: "Board message",
+  deleteEvent: "board-message.deleted",
+  onDelete: (tx, sId, eid) =>
+    dispatchWebhookEvent(tx, sId, "board-message.deleted", { boardMessageId: eid }),
+};
+
 export async function deleteBoardMessage(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -473,39 +490,7 @@ export async function deleteBoardMessage(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(systemId, auth);
-
-  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    const [existing] = await tx
-      .select({ id: boardMessages.id })
-      .from(boardMessages)
-      .where(
-        and(
-          eq(boardMessages.id, boardMessageId),
-          eq(boardMessages.systemId, systemId),
-          eq(boardMessages.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Board message not found");
-    }
-
-    await audit(tx, {
-      eventType: "board-message.deleted",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Board message deleted",
-      systemId,
-    });
-    await dispatchWebhookEvent(tx, systemId, "board-message.deleted", {
-      boardMessageId: boardMessageId,
-    });
-
-    await tx
-      .delete(boardMessages)
-      .where(and(eq(boardMessages.id, boardMessageId), eq(boardMessages.systemId, systemId)));
-  });
+  await deleteEntity(db, systemId, boardMessageId, auth, audit, BOARD_MESSAGE_DELETE);
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
@@ -548,4 +533,13 @@ export async function restoreBoardMessage(
   return restoreEntity(db, systemId, boardMessageId, auth, audit, BOARD_MESSAGE_LIFECYCLE, (row) =>
     toBoardMessageResult(row as typeof boardMessages.$inferSelect),
   );
+}
+
+// ── PARSE QUERY PARAMS ──────────────────────────────────────────────
+
+export function parseBoardMessageQuery(query: Record<string, string | undefined>): {
+  includeArchived: boolean;
+  pinned?: boolean;
+} {
+  return parseQuery(BoardMessageQuerySchema, query);
 }

@@ -96,9 +96,8 @@ export async function ensureValkey(): Promise<ValkeyTestContext> {
     return {
       available: true,
       redis,
-      cleanup: () => {
-        redis.disconnect();
-        return Promise.resolve();
+      cleanup: async () => {
+        await redis.quit().catch(() => {});
       },
     };
   } catch {
@@ -141,9 +140,8 @@ export async function ensureValkey(): Promise<ValkeyTestContext> {
   return {
     available: true,
     redis: redis2,
-    cleanup: () => {
-      redis2.disconnect();
-      return Promise.resolve();
+    cleanup: async () => {
+      await redis2.quit().catch(() => {});
     },
   };
 }

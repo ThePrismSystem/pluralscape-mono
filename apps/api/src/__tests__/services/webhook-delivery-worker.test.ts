@@ -128,19 +128,16 @@ describe("webhook header constants", () => {
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
-const DELIVERY_ROW = {
+/** Joined delivery + config row returned by the single LEFT JOIN query. */
+const JOINED_ROW = {
   id: "wd_test-delivery",
   webhookId: "wh_test-config",
   systemId: "sys_test-system",
   eventType: "fronting.started",
   attemptCount: 0,
-};
-
-const CONFIG_ROW = {
-  id: "wh_test-config",
-  url: "https://example.com/webhook",
-  secret: "dGVzdC1zZWNyZXQta2V5",
-  enabled: true,
+  configUrl: "https://example.com/webhook",
+  configSecret: "dGVzdC1zZWNyZXQta2V5",
+  configEnabled: true,
 };
 
 // ── processWebhookDelivery ────────────────────────────────────────
@@ -157,7 +154,9 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("marks as failed when config not found", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ ...DELIVERY_ROW }]).mockResolvedValueOnce([]);
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, configUrl: null, configSecret: null, configEnabled: null },
+    ]);
 
     await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
 
@@ -166,9 +165,16 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("marks as failed when config is disabled", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW, enabled: false }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configEnabled: false }]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("marks as failed when config secret is missing", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configSecret: null }]);
 
     await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
 
@@ -177,9 +183,7 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("calls fetch with correct URL and payload on success", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
@@ -202,9 +206,7 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("sends correct headers (Content-Type, Signature, Timestamp)", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
@@ -225,9 +227,7 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("marks as success on 2xx response", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
@@ -238,9 +238,7 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("schedules retry on non-2xx when under max attempts", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW, attemptCount: 0 }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, attemptCount: 0 }]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
@@ -255,9 +253,9 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("marks as failed when max retries exceeded", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW, attemptCount: WEBHOOK_MAX_RETRY_ATTEMPTS - 1 }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, attemptCount: WEBHOOK_MAX_RETRY_ATTEMPTS - 1 },
+    ]);
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
@@ -268,9 +266,7 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("handles TypeError (network error) without rethrowing", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
@@ -283,9 +279,7 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("handles AbortError (timeout) without rethrowing", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const abortErr = new DOMException("The operation was aborted", "AbortError");
     const mockFetch = vi.fn().mockRejectedValue(abortErr);
@@ -299,9 +293,7 @@ describe("processWebhookDelivery (unit)", () => {
 
   it("rethrows unexpected errors", async () => {
     const { db, chain } = mockDb();
-    chain.limit
-      .mockResolvedValueOnce([{ ...DELIVERY_ROW }])
-      .mockResolvedValueOnce([{ ...CONFIG_ROW }]);
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);
 
     const mockFetch = vi.fn().mockRejectedValue(new Error("unexpected"));
 

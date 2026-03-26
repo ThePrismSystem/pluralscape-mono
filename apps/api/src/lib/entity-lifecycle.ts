@@ -180,3 +180,84 @@ export async function restoreEntity<TId extends string, TResult>(
     return toResult(row);
   });
 }
+
+// ── DELETE ───────────────────────────────────────────────────────────
+
+/** Column references needed for delete operations. */
+export interface DeletableColumns {
+  readonly id: AnyPgColumn;
+  readonly systemId: AnyPgColumn;
+  readonly archived: AnyPgColumn;
+}
+
+/** Configuration for a generic deletable entity. */
+export interface DeletableEntityConfig<TId extends string> {
+  readonly table: PgTable;
+  readonly columns: DeletableColumns;
+  readonly entityName: string;
+  readonly deleteEvent: AuditEventType;
+  /** Optional hook called inside the transaction after audit (e.g., webhook dispatch). */
+  readonly onDelete?: (
+    tx: PostgresJsDatabase,
+    systemId: SystemId,
+    entityId: TId,
+  ) => Promise<unknown>;
+  /** Optional: check for dependents before deleting (throws on conflict). */
+  readonly checkDependents?: (
+    tx: PostgresJsDatabase,
+    systemId: SystemId,
+    entityId: TId,
+  ) => Promise<void>;
+}
+
+/**
+ * Delete a non-archived entity within a transaction.
+ *
+ * 1. Checks the entity exists and is not archived.
+ * 2. Optionally checks for dependents (e.g., poll with votes).
+ * 3. Writes an audit event and calls the optional onDelete hook.
+ * 4. Hard-deletes the row.
+ */
+export async function deleteEntity<TId extends string>(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  entityId: TId,
+  auth: AuthContext,
+  audit: AuditWriter,
+  cfg: DeletableEntityConfig<TId>,
+): Promise<void> {
+  assertSystemOwnership(systemId, auth);
+
+  const { table, columns, entityName, deleteEvent } = cfg;
+
+  await withTenantTransaction(db, { systemId, accountId: auth.accountId }, async (tx) => {
+    const [existing] = await tx
+      .select({ id: columns.id })
+      .from(table)
+      .where(
+        and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, false)),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
+    }
+
+    if (cfg.checkDependents) {
+      await cfg.checkDependents(tx, systemId, entityId);
+    }
+
+    await audit(tx, {
+      eventType: deleteEvent,
+      actor: { kind: "account", id: auth.accountId },
+      detail: `${entityName} deleted`,
+      systemId,
+    });
+
+    if (cfg.onDelete) {
+      await cfg.onDelete(tx, systemId, entityId);
+    }
+
+    await tx.delete(table).where(and(eq(columns.id, entityId), eq(columns.systemId, systemId)));
+  });
+}

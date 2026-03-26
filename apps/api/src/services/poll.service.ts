@@ -1,13 +1,18 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-import { CreatePollBodySchema, UpdatePollBodySchema } from "@pluralscape/validation";
+import {
+  CreatePollBodySchema,
+  PollQuerySchema,
+  UpdatePollBodySchema,
+} from "@pluralscape/validation";
 import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
+import { archiveEntity, deleteEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -15,13 +20,15 @@ import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
   MAX_PAGE_LIMIT,
+  POLL_STATUS_CLOSED,
+  POLL_STATUS_OPEN,
 } from "../service.constants.js";
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
+import type { ArchivableEntityConfig, DeletableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
   PaginatedResult,
   MemberId,
@@ -54,7 +61,7 @@ async function throwPollUpdateError(
   if (!existing || existing.archived) {
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
   }
-  if (existing.status === "closed") {
+  if (existing.status === POLL_STATUS_CLOSED) {
     throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
   }
   throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
@@ -141,7 +148,7 @@ export async function createPoll(
         systemId,
         createdByMemberId: parsed.createdByMemberId ?? null,
         kind: parsed.kind,
-        status: "open",
+        status: POLL_STATUS_OPEN,
         closedAt: null,
         endsAt: parsed.endsAt ?? null,
         allowMultipleVotes: parsed.allowMultipleVotes,
@@ -164,11 +171,12 @@ export async function createPoll(
       detail: "Poll created",
       systemId,
     });
+    const result = toPollResult(row);
     await dispatchWebhookEvent(tx, systemId, "poll.created", {
-      pollId: row.id as PollId,
+      pollId: result.id,
     });
 
-    return toPollResult(row);
+    return result;
   });
 }
 
@@ -276,7 +284,7 @@ export async function updatePoll(
           eq(polls.systemId, systemId),
           eq(polls.version, version),
           eq(polls.archived, false),
-          eq(polls.status, "open"),
+          eq(polls.status, POLL_STATUS_OPEN),
         ),
       )
       .returning();
@@ -292,11 +300,12 @@ export async function updatePoll(
       detail: "Poll updated",
       systemId,
     });
+    const result = toPollResult(row);
     await dispatchWebhookEvent(tx, systemId, "poll.updated", {
-      pollId: row.id as PollId,
+      pollId: result.id,
     });
 
-    return toPollResult(row);
+    return result;
   });
 }
 
@@ -317,7 +326,7 @@ export async function closePoll(
     const updated = await tx
       .update(polls)
       .set({
-        status: "closed",
+        status: POLL_STATUS_CLOSED,
         closedAt: timestamp,
         updatedAt: timestamp,
         version: sql`${polls.version} + 1`,
@@ -326,7 +335,7 @@ export async function closePoll(
         and(
           eq(polls.id, pollId),
           eq(polls.systemId, systemId),
-          eq(polls.status, "open"),
+          eq(polls.status, POLL_STATUS_OPEN),
           eq(polls.archived, false),
         ),
       )
@@ -343,17 +352,51 @@ export async function closePoll(
       detail: "Poll closed",
       systemId,
     });
+    const result = toPollResult(row);
     await dispatchWebhookEvent(tx, systemId, "poll.closed", {
-      pollId: row.id as PollId,
+      pollId: result.id,
     });
 
-    return toPollResult(row);
+    return result;
   });
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────
 
 type PollDependentType = "pollVotes";
+
+async function checkPollDependents(
+  tx: PostgresJsDatabase,
+  systemId: SystemId,
+  pollId: PollId,
+): Promise<void> {
+  const [voteResult] = await tx
+    .select({ count: count() })
+    .from(pollVotes)
+    .where(and(eq(pollVotes.pollId, pollId), eq(pollVotes.systemId, systemId)));
+
+  const voteCount = voteResult?.count ?? 0;
+  if (voteCount > 0) {
+    const dependents: { type: PollDependentType; count: number }[] = [
+      { type: "pollVotes", count: voteCount },
+    ];
+    throw new ApiHttpError(
+      HTTP_CONFLICT,
+      "HAS_DEPENDENTS",
+      "Poll has dependents. Remove all dependents before deleting.",
+      { dependents },
+    );
+  }
+}
+
+const POLL_DELETE: DeletableEntityConfig<PollId> = {
+  table: polls,
+  columns: polls,
+  entityName: "Poll",
+  deleteEvent: "poll.deleted",
+  onDelete: (tx, sId, eid) => dispatchWebhookEvent(tx, sId, "poll.deleted", { pollId: eid }),
+  checkDependents: checkPollDependents,
+};
 
 export async function deletePoll(
   db: PostgresJsDatabase,
@@ -362,49 +405,7 @@ export async function deletePoll(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(systemId, auth);
-
-  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    const [existing] = await tx
-      .select({ id: polls.id })
-      .from(polls)
-      .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId), eq(polls.archived, false)))
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
-    }
-
-    const [voteResult] = await tx
-      .select({ count: count() })
-      .from(pollVotes)
-      .where(and(eq(pollVotes.pollId, pollId), eq(pollVotes.systemId, systemId)));
-
-    const voteCount = voteResult?.count ?? 0;
-    if (voteCount > 0) {
-      const dependents: { type: PollDependentType; count: number }[] = [
-        { type: "pollVotes", count: voteCount },
-      ];
-      throw new ApiHttpError(
-        HTTP_CONFLICT,
-        "HAS_DEPENDENTS",
-        "Poll has dependents. Remove all dependents before deleting.",
-        { dependents },
-      );
-    }
-
-    await audit(tx, {
-      eventType: "poll.deleted",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Poll deleted",
-      systemId,
-    });
-    await dispatchWebhookEvent(tx, systemId, "poll.deleted", {
-      pollId: pollId,
-    });
-
-    await tx.delete(polls).where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)));
-  });
+  await deleteEntity(db, systemId, pollId, auth, audit, POLL_DELETE);
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
@@ -441,4 +442,13 @@ export async function restorePoll(
   return restoreEntity(db, systemId, pollId, auth, audit, POLL_LIFECYCLE, (row) =>
     toPollResult(row as typeof polls.$inferSelect),
   );
+}
+
+// ── PARSE QUERY PARAMS ──────────────────────────────────────────────
+
+export function parsePollQuery(query: Record<string, string | undefined>): {
+  includeArchived: boolean;
+  status?: PollStatus;
+} {
+  return parseQuery(PollQuerySchema, query);
 }

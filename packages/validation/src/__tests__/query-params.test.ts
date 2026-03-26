@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   booleanQueryParam,
+  optionalBooleanQueryParam,
   IncludeArchivedQuerySchema,
   InnerWorldEntityQuerySchema,
   LifecycleEventQuerySchema,
@@ -70,6 +71,69 @@ describe("booleanQueryParam", () => {
 
   it("rejects null", () => {
     const result = booleanQueryParam.safeParse(null);
+    expect(result.success).toBe(false);
+  });
+});
+
+// ── optionalBooleanQueryParam ─────────────────────────────────────
+
+describe("optionalBooleanQueryParam", () => {
+  it("coerces 'true' to true", () => {
+    const result = optionalBooleanQueryParam.safeParse("true");
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBe(true);
+    }
+  });
+
+  it("coerces 'false' to false", () => {
+    const result = optionalBooleanQueryParam.safeParse("false");
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBe(false);
+    }
+  });
+
+  it("preserves undefined when omitted", () => {
+    const result = optionalBooleanQueryParam.safeParse(undefined);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toBeUndefined();
+    }
+  });
+
+  it("rejects 'yes'", () => {
+    const result = optionalBooleanQueryParam.safeParse("yes");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects '1'", () => {
+    const result = optionalBooleanQueryParam.safeParse("1");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty string", () => {
+    const result = optionalBooleanQueryParam.safeParse("");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects number", () => {
+    const result = optionalBooleanQueryParam.safeParse(1);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects 'True' (case-sensitive)", () => {
+    const result = optionalBooleanQueryParam.safeParse("True");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects 'FALSE' (case-sensitive)", () => {
+    const result = optionalBooleanQueryParam.safeParse("FALSE");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects null", () => {
+    const result = optionalBooleanQueryParam.safeParse(null);
     expect(result.success).toBe(false);
   });
 });
