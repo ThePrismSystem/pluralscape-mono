@@ -59,7 +59,9 @@
       "ioredis": "5.10.1",
       "esbuild": ">=0.25.0",
       "fast-xml-parser": ">=5.5.7",
-      "flatted": ">=3.4.2"
+      "flatted": ">=3.4.2",
+      "picomatch": ">=4.0.4",
+      "yaml": ">=2.8.3"
     },
     "onlyBuiltDependencies": [
       "better-sqlite3-multiple-ciphers",

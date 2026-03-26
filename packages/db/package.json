@@ -18,7 +18,7 @@
     "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.4.0",
+    "@electric-sql/pglite": "^0.4.2",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
