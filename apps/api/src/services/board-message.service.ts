@@ -235,13 +235,13 @@ export async function updateBoardMessage(
       encryptedData: blob,
       updatedAt: timestamp,
       version: sql`${boardMessages.version} + 1`,
-      ...(parsed.sortOrder !== undefined && { sortOrder: parsed.sortOrder }),
-      ...(parsed.pinned !== undefined && { pinned: parsed.pinned }),
+      ...(parsed.sortOrder !== undefined ? { sortOrder: parsed.sortOrder } : {}),
+      ...(parsed.pinned !== undefined ? { pinned: parsed.pinned } : {}),
     };
 
     const updated = await tx
       .update(boardMessages)
-      .set(setValues as Record<string, unknown>)
+      .set(setValues)
       .where(
         and(
           eq(boardMessages.id, boardMessageId),
@@ -428,7 +428,7 @@ export async function reorderBoardMessages(
     const updatedRows = await tx
       .update(boardMessages)
       .set({
-        sortOrder: sql<number>`CASE ${sql.join(cases, sql` `)} END::integer`,
+        sortOrder: sql<number>`CASE ${sql.join(cases, sql` `)} ELSE ${boardMessages.sortOrder} END::integer`,
       })
       .where(
         and(
@@ -440,7 +440,13 @@ export async function reorderBoardMessages(
       .returning({ id: boardMessages.id });
 
     if (updatedRows.length !== parsed.data.operations.length) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "One or more board messages not found");
+      const updatedIds = new Set(updatedRows.map((r) => r.id));
+      const missing = targetIds.filter((id) => !updatedIds.has(id));
+      throw new ApiHttpError(
+        HTTP_NOT_FOUND,
+        "NOT_FOUND",
+        `Board message(s) not found: ${missing.join(", ")}`,
+      );
     }
 
     await audit(tx, {
@@ -449,11 +455,13 @@ export async function reorderBoardMessages(
       detail: `Reordered ${String(parsed.data.operations.length)} board message(s)`,
       systemId,
     });
-    for (const op of parsed.data.operations) {
-      await dispatchWebhookEvent(tx, systemId, "board-message.reordered", {
-        boardMessageId: op.boardMessageId as BoardMessageId,
-      });
-    }
+    await Promise.all(
+      parsed.data.operations.map((op) =>
+        dispatchWebhookEvent(tx, systemId, "board-message.reordered", {
+          boardMessageId: op.boardMessageId,
+        }),
+      ),
+    );
   });
 }
 

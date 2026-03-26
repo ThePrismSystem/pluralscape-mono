@@ -291,7 +291,7 @@ export async function deleteLifecycleEvent(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const LIFECYCLE_EVENT_LIFECYCLE: ArchivableEntityConfig = {
+const LIFECYCLE_EVENT_LIFECYCLE: ArchivableEntityConfig<LifecycleEventId> = {
   table: lifecycleEvents,
   columns: lifecycleEvents,
   entityName: "Lifecycle event",

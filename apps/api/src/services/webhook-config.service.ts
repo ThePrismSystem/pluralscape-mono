@@ -22,6 +22,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../ser
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type { PaginatedResult, SystemId, WebhookEventType, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -394,7 +395,7 @@ export async function deleteWebhookConfig(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const WEBHOOK_CONFIG_LIFECYCLE = {
+const WEBHOOK_CONFIG_LIFECYCLE: ArchivableEntityConfig<WebhookId> = {
   table: webhookConfigs,
   columns: webhookConfigs,
   entityName: "Webhook config",

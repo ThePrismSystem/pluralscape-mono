@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   CreateMessageBodySchema,
@@ -7,6 +7,9 @@ import {
   MessageTimestampQuerySchema,
 } from "../message.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "../validation.constants.js";
+
+import type { UnixMillis } from "@pluralscape/types";
+import type { z } from "zod/v4";
 
 const VALID_MESSAGE_ID = "msg_12345678-1234-1234-1234-123456789abc";
 
@@ -199,6 +202,12 @@ describe("MessageQuerySchema", () => {
     const result = MessageQuerySchema.safeParse({ before: "-1" });
     expect(result.success).toBe(false);
   });
+
+  it("outputs branded UnixMillis for before and after fields", () => {
+    type Output = z.infer<typeof MessageQuerySchema>;
+    expectTypeOf<NonNullable<Output["before"]>>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<NonNullable<Output["after"]>>().toEqualTypeOf<UnixMillis>();
+  });
 });
 
 describe("MessageTimestampQuerySchema", () => {
@@ -228,5 +237,10 @@ describe("MessageTimestampQuerySchema", () => {
   it("rejects negative timestamp", () => {
     const result = MessageTimestampQuerySchema.safeParse({ timestamp: "-1" });
     expect(result.success).toBe(false);
+  });
+
+  it("outputs branded UnixMillis for timestamp field", () => {
+    type Output = z.infer<typeof MessageTimestampQuerySchema>;
+    expectTypeOf<NonNullable<Output["timestamp"]>>().toEqualTypeOf<UnixMillis>();
   });
 });

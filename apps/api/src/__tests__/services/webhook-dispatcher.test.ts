@@ -8,6 +8,8 @@ const mockInsertValues = vi.fn();
 const mockWhere = vi.fn();
 
 const mockDb = {
+  // rollback signals to isTransaction() that this is a transaction handle
+  rollback: vi.fn(),
   select: vi.fn().mockReturnValue({
     from: vi.fn().mockReturnValue({
       where: mockWhere,

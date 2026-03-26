@@ -27,7 +27,7 @@ export interface ArchivableColumns {
 }
 
 /** Configuration for a generic archivable entity. */
-export interface ArchivableEntityConfig<TId extends string = string> {
+export interface ArchivableEntityConfig<TId extends string> {
   readonly table: PgTable;
   readonly columns: ArchivableColumns;
   readonly entityName: string;
