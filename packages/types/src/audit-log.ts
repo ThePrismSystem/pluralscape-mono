@@ -174,7 +174,12 @@ export type AuditEventType =
   | "poll.restored"
   | "poll.deleted"
   | "poll-vote.cast"
-  | "poll-vote.vetoed";
+  | "poll-vote.vetoed"
+  | "acknowledgement.created"
+  | "acknowledgement.confirmed"
+  | "acknowledgement.archived"
+  | "acknowledgement.restored"
+  | "acknowledgement.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

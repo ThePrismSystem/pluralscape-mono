@@ -17,6 +17,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
@@ -134,6 +136,9 @@ export async function createPoll(
       actor: { kind: "account", id: auth.accountId },
       detail: "Poll created",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "poll.created", {
+      pollId: row.id as PollId,
     });
 
     return toPollResult(row);
@@ -279,6 +284,9 @@ export async function updatePoll(
       detail: "Poll updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "poll.updated", {
+      pollId: row.id as PollId,
+    });
 
     return toPollResult(row);
   });
@@ -339,6 +347,9 @@ export async function closePoll(
       detail: "Poll closed",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "poll.closed", {
+      pollId: row.id as PollId,
+    });
 
     return toPollResult(row);
   });
@@ -392,6 +403,9 @@ export async function deletePoll(
       detail: "Poll deleted",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "poll.deleted", {
+      pollId: pollId,
+    });
 
     await tx.delete(polls).where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)));
   });
@@ -405,6 +419,10 @@ const POLL_LIFECYCLE: ArchivableEntityConfig = {
   entityName: "Poll",
   archiveEvent: "poll.archived" as const,
   restoreEvent: "poll.restored" as const,
+  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "poll.archived", { pollId: eid as PollId }),
+  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "poll.restored", { pollId: eid as PollId }),
 };
 
 export async function archivePoll(

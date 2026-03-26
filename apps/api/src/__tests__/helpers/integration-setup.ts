@@ -12,6 +12,7 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type * as schema from "@pluralscape/db/pg";
 import type {
   AccountId,
+  AcknowledgementId,
   ApiErrorCode,
   BlobId,
   BoardMessageId,
@@ -187,4 +188,8 @@ export function genPollId(): PollId {
 
 export function genPollVoteId(): PollVoteId {
   return `pv_${crypto.randomUUID()}` as PollVoteId;
+}
+
+export function genAcknowledgementId(): AcknowledgementId {
+  return `ack_${crypto.randomUUID()}` as AcknowledgementId;
 }

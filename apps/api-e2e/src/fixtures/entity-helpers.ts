@@ -241,6 +241,36 @@ export async function createPoll(
 }
 
 /**
+ * Create an acknowledgement in the given system and return its ID and version.
+ */
+export async function createAcknowledgement(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  opts: {
+    message?: string;
+    targetMemberId?: string;
+    createdByMemberId?: string;
+  } = {},
+): Promise<{ id: string; version: number }> {
+  const {
+    message = "E2E Test Acknowledgement",
+    targetMemberId = "mem_00000000-0000-0000-0000-000000000001",
+  } = opts;
+  const data: Record<string, unknown> = {
+    encryptedData: encryptForApi({ message, targetMemberId }),
+  };
+  if (opts.createdByMemberId !== undefined) data.createdByMemberId = opts.createdByMemberId;
+  const res = await request.post(`/v1/systems/${systemId}/acknowledgements`, {
+    headers,
+    data,
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { id: string; version: number };
+  return { id: body.id, version: body.version };
+}
+
+/**
  * Create an innerworld region in the given system and return its ID and version.
  */
 export async function createInnerworldRegion(

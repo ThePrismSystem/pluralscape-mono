@@ -116,7 +116,7 @@ describe("enum arrays", () => {
   });
 
   it("AUDIT_EVENT_TYPES matches AuditEventType union", () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(166);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(171);
     expect(AUDIT_EVENT_TYPES).toContain("auth.login");
     expect(AUDIT_EVENT_TYPES).toContain("device.security.jailbreak_warning_shown");
     expect(AUDIT_EVENT_TYPES).toContain("auth.password-reset-via-recovery");
@@ -154,7 +154,7 @@ describe("enum arrays", () => {
   });
 
   it("WEBHOOK_EVENT_TYPES matches WebhookEventType union", () => {
-    expect(WEBHOOK_EVENT_TYPES).toHaveLength(15);
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(45);
     expect(WEBHOOK_EVENT_TYPES).toContain("member.created");
     expect(WEBHOOK_EVENT_TYPES).toContain("custom-front.changed");
   });
@@ -291,14 +291,14 @@ describe("enum arrays", () => {
     expect(SYNC_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(16);
-    expect(AUDIT_EVENT_TYPES).toHaveLength(166);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(171);
     expect(CHANNEL_TYPES).toHaveLength(2);
     expect(POLL_STATUSES).toHaveLength(2);
     expect(POLL_KINDS).toHaveLength(2);
     expect(PK_SYNC_DIRECTIONS).toHaveLength(3);
     expect(DEVICE_TOKEN_PLATFORMS).toHaveLength(3);
     expect(NOTIFICATION_EVENT_TYPES).toHaveLength(6);
-    expect(WEBHOOK_EVENT_TYPES).toHaveLength(15);
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(45);
     expect(WEBHOOK_DELIVERY_STATUSES).toHaveLength(3);
     expect(BLOB_PURPOSES).toHaveLength(6);
     expect(IMPORT_SOURCES).toHaveLength(3);

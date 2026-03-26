@@ -225,7 +225,8 @@ export const acknowledgements = pgTable(
     createdByMemberId: varchar("created_by_member_id", { length: ID_MAX_LENGTH }),
     confirmed: boolean("confirmed").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
-    createdAt: pgTimestamp("created_at").notNull(),
+    ...timestamps(),
+    ...versioned(),
     ...archivable(),
   },
   (t) => [
@@ -235,6 +236,7 @@ export const acknowledgements = pgTable(
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
+    versionCheckFor("acknowledgements", t.version),
     archivableConsistencyCheckFor("acknowledgements", t.archived, t.archivedAt),
   ],
 );

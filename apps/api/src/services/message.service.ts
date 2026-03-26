@@ -18,6 +18,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -149,6 +151,10 @@ export async function createMessage(
       actor: { kind: "account", id: auth.accountId },
       detail: "Message created",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "message.created", {
+      messageId: row.id as MessageId,
+      channelId: channelId,
     });
 
     return toMessageResult(row);
@@ -298,6 +304,10 @@ export async function updateMessage(
       detail: "Message updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "message.updated", {
+      messageId: row.id as MessageId,
+      channelId: row.channelId as ChannelId,
+    });
 
     return toMessageResult(row);
   });
@@ -317,7 +327,7 @@ export async function deleteMessage(
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
-      .select({ id: messages.id })
+      .select({ id: messages.id, channelId: messages.channelId })
       .from(messages)
       .where(and(...messageIdConditions(messageId, systemId, hint), eq(messages.archived, false)))
       .limit(1);
@@ -331,6 +341,10 @@ export async function deleteMessage(
       actor: { kind: "account", id: auth.accountId },
       detail: "Message deleted",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "message.deleted", {
+      messageId: existing.id as MessageId,
+      channelId: existing.channelId as ChannelId,
     });
 
     await tx
@@ -347,6 +361,32 @@ const MESSAGE_LIFECYCLE = {
   entityName: "Message",
   archiveEvent: "message.archived" as const,
   restoreEvent: "message.restored" as const,
+  onArchive: async (tx: PostgresJsDatabase, sId: SystemId, eid: string) => {
+    const [msg] = await tx
+      .select({ channelId: messages.channelId })
+      .from(messages)
+      .where(eq(messages.id, eid))
+      .limit(1);
+    if (msg) {
+      await dispatchWebhookEvent(tx, sId, "message.archived", {
+        messageId: eid as MessageId,
+        channelId: msg.channelId as ChannelId,
+      });
+    }
+  },
+  onRestore: async (tx: PostgresJsDatabase, sId: SystemId, eid: string) => {
+    const [msg] = await tx
+      .select({ channelId: messages.channelId })
+      .from(messages)
+      .where(eq(messages.id, eid))
+      .limit(1);
+    if (msg) {
+      await dispatchWebhookEvent(tx, sId, "message.restored", {
+        messageId: eid as MessageId,
+        channelId: msg.channelId as ChannelId,
+      });
+    }
+  },
 };
 
 export async function archiveMessage(

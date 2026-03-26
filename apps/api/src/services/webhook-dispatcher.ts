@@ -2,7 +2,7 @@ import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
-import type { SystemId, WebhookEventType } from "@pluralscape/types";
+import type { SystemId, WebhookEventPayloadMap, WebhookEventType } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
@@ -16,11 +16,11 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  * infrastructure is wired up. For now, deliveries are created with status
  * 'pending' and can be picked up by a polling worker or future job integration.
  */
-export async function dispatchWebhookEvent(
+export async function dispatchWebhookEvent<K extends WebhookEventType>(
   db: PostgresJsDatabase,
   systemId: SystemId,
-  eventType: WebhookEventType,
-  payload: Readonly<Record<string, unknown>>,
+  eventType: K,
+  payload: Readonly<WebhookEventPayloadMap[K]>,
 ): Promise<readonly string[]> {
   return db.transaction(async (tx) => {
     // Find all enabled, non-archived configs for this system that subscribe to this event
@@ -60,7 +60,7 @@ export async function dispatchWebhookEvent(
         eventType,
         status: "pending" as const,
         attemptCount: 0,
-        payloadData: payload,
+        payloadData: { ...payload, systemId },
         createdAt: timestamp,
       };
     });

@@ -62,6 +62,28 @@ describe("archiveEntity", () => {
     );
   });
 
+  it("calls onArchive callback after successful archive", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const onArchive = vi.fn().mockResolvedValue(undefined);
+    const configWithHook = { ...TEST_CONFIG, onArchive };
+
+    await archiveEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, configWithHook);
+
+    expect(onArchive).toHaveBeenCalledWith(chain, SYSTEM_ID, ENTITY_ID);
+  });
+
+  it("does not error when onArchive is not provided", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      archiveEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, TEST_CONFIG),
+    ).resolves.toBeUndefined();
+  });
+
   it("throws NOT_FOUND when entity does not exist", async () => {
     const { db, chain } = mockDb();
     chain.returning.mockResolvedValueOnce([]);
@@ -114,6 +136,19 @@ describe("restoreEntity", () => {
       chain,
       expect.objectContaining({ eventType: "custom-front.restored" }),
     );
+  });
+
+  it("calls onRestore callback after successful restore", async () => {
+    const rawRow = { id: ENTITY_ID, name: "Restored" };
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([rawRow]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const onRestore = vi.fn().mockResolvedValue(undefined);
+    const configWithHook = { ...TEST_CONFIG, onRestore };
+
+    await restoreEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, configWithHook, (r) => r);
+
+    expect(onRestore).toHaveBeenCalledWith(chain, SYSTEM_ID, ENTITY_ID);
   });
 
   it("throws NOT_FOUND when entity does not exist", async () => {

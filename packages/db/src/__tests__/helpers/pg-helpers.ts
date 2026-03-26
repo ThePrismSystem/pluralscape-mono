@@ -583,6 +583,13 @@ export async function createPgCommunicationTables(client: PGlite): Promise<void>
   await pgExec(client, PG_DDL.pollVotesIndexes);
   await pgExec(client, PG_DDL.acknowledgements);
   await pgExec(client, PG_DDL.acknowledgementsIndexes);
+  // Webhook tables needed for dispatchWebhookEvent calls in communication services
+  await pgExec(client, PG_DDL.apiKeys);
+  await pgExec(client, PG_DDL.apiKeysIndexes);
+  await pgExec(client, PG_DDL.webhookConfigs);
+  await pgExec(client, PG_DDL.webhookConfigsIndexes);
+  await pgExec(client, PG_DDL.webhookDeliveries);
+  await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
 }
 
 export async function createPgJournalTables(client: PGlite): Promise<void> {

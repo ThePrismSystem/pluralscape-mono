@@ -15,6 +15,27 @@
       "when": 1774487363953,
       "tag": "0001_parallel_hercules",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774499041273,
+      "tag": "0002_perfect_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774499900021,
+      "tag": "0003_lovely_bug",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1774500066472,
+      "tag": "0004_gorgeous_thunderbolt",
+      "breakpoints": true
     }
   ]
 }

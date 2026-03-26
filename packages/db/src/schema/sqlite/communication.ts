@@ -218,7 +218,8 @@ export const acknowledgements = sqliteTable(
     createdByMemberId: text("created_by_member_id"),
     confirmed: integer("confirmed", { mode: "boolean" }).notNull().default(false),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
-    createdAt: sqliteTimestamp("created_at").notNull(),
+    ...timestamps(),
+    ...versioned(),
     ...archivable(),
   },
   (t) => [
@@ -228,6 +229,7 @@ export const acknowledgements = sqliteTable(
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
+    versionCheckFor("acknowledgements", t.version),
     archivableConsistencyCheckFor("acknowledgements", t.archived, t.archivedAt),
   ],
 );

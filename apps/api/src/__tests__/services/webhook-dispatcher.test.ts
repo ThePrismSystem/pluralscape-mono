@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SystemId, WebhookEventType } from "@pluralscape/types";
+import type { MemberId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -56,8 +56,8 @@ const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher
 
 describe("dispatchWebhookEvent", () => {
   const systemId = "sys_test-system-id" as SystemId;
-  const eventType = "member.created" as WebhookEventType;
-  const payload = { memberId: "mem_test" };
+  const eventType = "member.created" as const;
+  const payload = { memberId: "mem_test" as MemberId };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -113,6 +113,6 @@ describe("dispatchWebhookEvent", () => {
     await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
-    expect(insertedValues[0]).toHaveProperty("payloadData", payload);
+    expect(insertedValues[0]).toHaveProperty("payloadData", { ...payload, systemId });
   });
 });

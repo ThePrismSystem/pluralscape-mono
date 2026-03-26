@@ -18,6 +18,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ChannelId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
@@ -153,6 +155,9 @@ export async function createChannel(
       actor: { kind: "account", id: auth.accountId },
       detail: `Channel created (type: ${parsed.type})`,
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "channel.created", {
+      channelId: row.id as ChannelId,
     });
 
     return toChannelResult(row);
@@ -298,6 +303,9 @@ export async function updateChannel(
       detail: "Channel updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "channel.updated", {
+      channelId: row.id as ChannelId,
+    });
 
     return toChannelResult(row);
   });
@@ -384,6 +392,9 @@ export async function deleteChannel(
       detail: "Channel deleted",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "channel.deleted", {
+      channelId: channelId,
+    });
 
     await tx
       .delete(channels)
@@ -399,6 +410,10 @@ const CHANNEL_LIFECYCLE = {
   entityName: "Channel",
   archiveEvent: "channel.archived" as const,
   restoreEvent: "channel.restored" as const,
+  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "channel.archived", { channelId: eid as ChannelId }),
+  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "channel.restored", { channelId: eid as ChannelId }),
 };
 
 export async function archiveChannel(

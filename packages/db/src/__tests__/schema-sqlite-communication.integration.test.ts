@@ -1259,6 +1259,7 @@ describe("SQLite communication schema", () => {
           systemId,
           encryptedData: testBlob(new Uint8Array([1, 2])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1280,6 +1281,7 @@ describe("SQLite communication schema", () => {
           confirmed: true,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1299,6 +1301,7 @@ describe("SQLite communication schema", () => {
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1321,6 +1324,7 @@ describe("SQLite communication schema", () => {
           createdByMemberId: memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1340,6 +1344,7 @@ describe("SQLite communication schema", () => {
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1361,6 +1366,7 @@ describe("SQLite communication schema", () => {
           createdByMemberId: memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1383,6 +1389,7 @@ describe("SQLite communication schema", () => {
             createdByMemberId: "nonexistent",
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -1400,6 +1407,7 @@ describe("SQLite communication schema", () => {
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1422,6 +1430,7 @@ describe("SQLite communication schema", () => {
           archivedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -1438,9 +1447,9 @@ describe("SQLite communication schema", () => {
       expect(() =>
         client
           .prepare(
-            "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, archived, archived_at) VALUES (?, ?, X'0102', ?, 1, NULL)",
+            "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, updated_at, archived, archived_at) VALUES (?, ?, X'0102', ?, ?, 1, NULL)",
           )
-          .run(crypto.randomUUID(), systemId, now),
+          .run(crypto.randomUUID(), systemId, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
 
@@ -1452,9 +1461,9 @@ describe("SQLite communication schema", () => {
       expect(() =>
         client
           .prepare(
-            "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, archived, archived_at) VALUES (?, ?, X'0102', ?, 0, ?)",
+            "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, updated_at, archived, archived_at) VALUES (?, ?, X'0102', ?, ?, 0, ?)",
           )
-          .run(crypto.randomUUID(), systemId, now, now),
+          .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
 
@@ -1470,6 +1479,7 @@ describe("SQLite communication schema", () => {
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 

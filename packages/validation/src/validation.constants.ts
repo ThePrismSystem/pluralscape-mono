@@ -57,7 +57,7 @@ export const MAX_ANALYTICS_CUSTOM_RANGE_MS = 366 * 86_400_000;
 export const MAX_WEBHOOK_URL_LENGTH = 2048;
 
 /** Maximum number of event types a single webhook config can subscribe to. */
-export const MAX_WEBHOOK_EVENT_TYPES = 15;
+export const MAX_WEBHOOK_EVENT_TYPES = 50;
 
 /** All valid webhook event type values, used for Zod enum validation. */
 export const WEBHOOK_EVENT_TYPE_VALUES = [
@@ -68,12 +68,42 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "fronting.ended",
   "group.created",
   "group.updated",
-  "note.created",
-  "note.updated",
-  "chat.message-sent",
-  "poll.created",
-  "poll.closed",
-  "acknowledgement.requested",
   "lifecycle.event-recorded",
   "custom-front.changed",
+  "channel.created",
+  "channel.updated",
+  "channel.archived",
+  "channel.restored",
+  "channel.deleted",
+  "message.created",
+  "message.updated",
+  "message.archived",
+  "message.restored",
+  "message.deleted",
+  "board-message.created",
+  "board-message.updated",
+  "board-message.pinned",
+  "board-message.unpinned",
+  "board-message.reordered",
+  "board-message.archived",
+  "board-message.restored",
+  "board-message.deleted",
+  "note.created",
+  "note.updated",
+  "note.archived",
+  "note.restored",
+  "note.deleted",
+  "poll.created",
+  "poll.updated",
+  "poll.closed",
+  "poll.archived",
+  "poll.restored",
+  "poll.deleted",
+  "poll-vote.cast",
+  "poll-vote.vetoed",
+  "acknowledgement.created",
+  "acknowledgement.confirmed",
+  "acknowledgement.archived",
+  "acknowledgement.restored",
+  "acknowledgement.deleted",
 ] as const;

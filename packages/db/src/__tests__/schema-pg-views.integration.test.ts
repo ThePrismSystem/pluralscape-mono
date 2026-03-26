@@ -362,6 +362,7 @@ describe("PG views / query helpers", () => {
         confirmed: false,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
       await db.insert(acknowledgements).values({
         id: crypto.randomUUID(),
@@ -369,6 +370,7 @@ describe("PG views / query helpers", () => {
         confirmed: true,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const unconfirmed = await getUnconfirmedAcknowledgements(db, systemId);

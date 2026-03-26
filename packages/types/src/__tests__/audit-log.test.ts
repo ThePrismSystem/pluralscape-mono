@@ -195,6 +195,11 @@ describe("AuditEventType", () => {
         case "poll.deleted":
         case "poll-vote.cast":
         case "poll-vote.vetoed":
+        case "acknowledgement.created":
+        case "acknowledgement.confirmed":
+        case "acknowledgement.archived":
+        case "acknowledgement.restored":
+        case "acknowledgement.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

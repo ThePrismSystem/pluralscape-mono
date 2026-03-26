@@ -18,6 +18,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
@@ -114,6 +116,9 @@ export async function createNote(
       actor: { kind: "account", id: auth.accountId },
       detail: "Note created",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "note.created", {
+      noteId: row.id as NoteId,
     });
 
     return toNoteResult(row);
@@ -277,6 +282,9 @@ export async function updateNote(
       detail: "Note updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "note.updated", {
+      noteId: row.id as NoteId,
+    });
 
     return toNoteResult(row);
   });
@@ -310,6 +318,9 @@ export async function deleteNote(
       detail: "Note deleted",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "note.deleted", {
+      noteId: noteId,
+    });
 
     await tx.delete(notes).where(and(eq(notes.id, noteId), eq(notes.systemId, systemId)));
   });
@@ -323,6 +334,10 @@ const NOTE_LIFECYCLE: ArchivableEntityConfig = {
   entityName: "Note",
   archiveEvent: "note.archived" as const,
   restoreEvent: "note.restored" as const,
+  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "note.archived", { noteId: eid as NoteId }),
+  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "note.restored", { noteId: eid as NoteId }),
 };
 
 export async function archiveNote(

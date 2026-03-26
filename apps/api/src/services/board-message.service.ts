@@ -22,6 +22,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -116,6 +118,9 @@ export async function createBoardMessage(
       actor: { kind: "account", id: auth.accountId },
       detail: "Board message created",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "board-message.created", {
+      boardMessageId: row.id as BoardMessageId,
     });
 
     return toBoardMessageResult(row);
@@ -271,6 +276,9 @@ export async function updateBoardMessage(
       detail: "Board message updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "board-message.updated", {
+      boardMessageId: row.id as BoardMessageId,
+    });
 
     return toBoardMessageResult(row);
   });
@@ -283,6 +291,7 @@ interface TogglePinConfig {
   readonly alreadyError: { readonly code: ApiErrorCode; readonly message: string };
   readonly auditEvent: AuditEventType;
   readonly auditDetail: string;
+  readonly webhookEvent: "board-message.pinned" | "board-message.unpinned";
 }
 
 const PIN_CONFIG: TogglePinConfig = {
@@ -290,6 +299,7 @@ const PIN_CONFIG: TogglePinConfig = {
   alreadyError: { code: "ALREADY_PINNED", message: "Board message is already pinned" },
   auditEvent: "board-message.pinned",
   auditDetail: "Board message pinned",
+  webhookEvent: "board-message.pinned",
 };
 
 const UNPIN_CONFIG: TogglePinConfig = {
@@ -297,6 +307,7 @@ const UNPIN_CONFIG: TogglePinConfig = {
   alreadyError: { code: "NOT_PINNED", message: "Board message is not pinned" },
   auditEvent: "board-message.unpinned",
   auditDetail: "Board message unpinned",
+  webhookEvent: "board-message.unpinned",
 };
 
 async function togglePinned(
@@ -358,6 +369,9 @@ async function togglePinned(
       actor: { kind: "account", id: auth.accountId },
       detail: cfg.auditDetail,
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, cfg.webhookEvent, {
+      boardMessageId: boardMessageId,
     });
 
     return toBoardMessageResult(updated[0] as typeof boardMessages.$inferSelect);
@@ -458,6 +472,13 @@ export async function reorderBoardMessages(
       detail: `Reordered ${String(parsed.data.operations.length)} board message(s)`,
       systemId,
     });
+    await Promise.all(
+      parsed.data.operations.map((op) =>
+        dispatchWebhookEvent(tx, systemId, "board-message.reordered", {
+          boardMessageId: op.boardMessageId as BoardMessageId,
+        }),
+      ),
+    );
   });
 }
 
@@ -495,6 +516,9 @@ export async function deleteBoardMessage(
       detail: "Board message deleted",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "board-message.deleted", {
+      boardMessageId: boardMessageId,
+    });
 
     await tx
       .delete(boardMessages)
@@ -510,6 +534,14 @@ const BOARD_MESSAGE_LIFECYCLE = {
   entityName: "Board message",
   archiveEvent: "board-message.archived" as const,
   restoreEvent: "board-message.restored" as const,
+  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "board-message.archived", {
+      boardMessageId: eid as BoardMessageId,
+    }),
+  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
+    dispatchWebhookEvent(tx, sId, "board-message.restored", {
+      boardMessageId: eid as BoardMessageId,
+    }),
 };
 
 export async function archiveBoardMessage(

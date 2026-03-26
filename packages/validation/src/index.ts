@@ -133,6 +133,11 @@ export {
   PollVoteQuerySchema,
 } from "./poll.js";
 export {
+  CreateAcknowledgementBodySchema,
+  ConfirmAcknowledgementBodySchema,
+  AcknowledgementQuerySchema,
+} from "./acknowledgement.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_ENCRYPTED_SYSTEM_DATA_SIZE,

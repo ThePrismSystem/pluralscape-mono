@@ -1326,6 +1326,7 @@ describe("PG communication schema", () => {
         systemId,
         encryptedData: testBlob(new Uint8Array([1, 2])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
@@ -1345,6 +1346,7 @@ describe("PG communication schema", () => {
         confirmed: true,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
@@ -1362,6 +1364,7 @@ describe("PG communication schema", () => {
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       await db.delete(systems).where(eq(systems.id, systemId));
@@ -1382,6 +1385,7 @@ describe("PG communication schema", () => {
         createdByMemberId: memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
@@ -1399,6 +1403,7 @@ describe("PG communication schema", () => {
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
@@ -1418,6 +1423,7 @@ describe("PG communication schema", () => {
         createdByMemberId: memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       await expect(db.delete(members).where(eq(members.id, memberId))).rejects.toThrow();
@@ -1435,6 +1441,7 @@ describe("PG communication schema", () => {
           createdByMemberId: "nonexistent",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         }),
       ).rejects.toThrow();
     });
@@ -1450,6 +1457,7 @@ describe("PG communication schema", () => {
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
@@ -1470,6 +1478,7 @@ describe("PG communication schema", () => {
         archivedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
@@ -1488,6 +1497,7 @@ describe("PG communication schema", () => {
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const archiveTime = Date.now();
@@ -1508,7 +1518,7 @@ describe("PG communication schema", () => {
 
       await expect(
         client.query(
-          "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, true, NULL)",
+          "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, updated_at, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $3, true, NULL)",
           [crypto.randomUUID(), systemId, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
@@ -1521,7 +1531,7 @@ describe("PG communication schema", () => {
 
       await expect(
         client.query(
-          "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, false, $4)",
+          "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, updated_at, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $3, false, $4)",
           [crypto.randomUUID(), systemId, now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { authMiddleware } from "../../middleware/auth.js";
+import { acknowledgementRoutes } from "../acknowledgements/index.js";
 import { analyticsRoutes } from "../analytics/index.js";
 import { blobRoutes } from "../blobs/index.js";
 import { boardMessageRoutes } from "../board-messages/index.js";
@@ -71,3 +72,4 @@ systemRoutes.route("/:systemId/board-messages", boardMessageRoutes);
 systemRoutes.route("/:systemId/channels", channelRoutes);
 systemRoutes.route("/:systemId/notes", noteRoutes);
 systemRoutes.route("/:systemId/polls", pollRoutes);
+systemRoutes.route("/:systemId/acknowledgements", acknowledgementRoutes);
