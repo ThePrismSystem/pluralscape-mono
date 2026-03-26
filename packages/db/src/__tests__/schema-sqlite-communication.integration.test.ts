@@ -1018,6 +1018,7 @@ describe("SQLite communication schema", () => {
           id,
           pollId,
           systemId,
+          votedAt: now,
           encryptedData: data,
           createdAt: now,
         })
@@ -1038,10 +1039,10 @@ describe("SQLite communication schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at)
-             VALUES (?, ?, ?, NULL, ?)`,
+            `INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, voted_at, created_at)
+             VALUES (?, ?, ?, NULL, ?, ?)`,
           )
-          .run(crypto.randomUUID(), pollId, systemId, now),
+          .run(crypto.randomUUID(), pollId, systemId, now, now),
       ).toThrow();
     });
 
@@ -1057,6 +1058,7 @@ describe("SQLite communication schema", () => {
           id: voteId,
           pollId,
           systemId,
+          votedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
@@ -1079,6 +1081,7 @@ describe("SQLite communication schema", () => {
           id: voteId,
           pollId,
           systemId,
+          votedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
@@ -1130,6 +1133,7 @@ describe("SQLite communication schema", () => {
           id,
           pollId,
           systemId,
+          votedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
@@ -1139,7 +1143,6 @@ describe("SQLite communication schema", () => {
       expect(rows[0]?.optionId).toBeNull();
       expect(rows[0]?.voter).toBeNull();
       expect(rows[0]?.isVeto).toBe(false);
-      expect(rows[0]?.votedAt).toBeNull();
     });
 
     it("defaults archived to false and archivedAt to null", () => {
@@ -1154,6 +1157,7 @@ describe("SQLite communication schema", () => {
           id,
           pollId,
           systemId,
+          votedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
@@ -1176,6 +1180,7 @@ describe("SQLite communication schema", () => {
           id,
           pollId,
           systemId,
+          votedAt: now,
           archived: true,
           archivedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -1197,9 +1202,9 @@ describe("SQLite communication schema", () => {
       expect(() =>
         client
           .prepare(
-            "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, 1, NULL)",
+            "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, voted_at, created_at, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, NULL)",
           )
-          .run(crypto.randomUUID(), pollId, systemId, now),
+          .run(crypto.randomUUID(), pollId, systemId, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
 
@@ -1212,9 +1217,9 @@ describe("SQLite communication schema", () => {
       expect(() =>
         client
           .prepare(
-            "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, 0, ?)",
+            "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, voted_at, created_at, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 0, ?)",
           )
-          .run(crypto.randomUUID(), pollId, systemId, now, now),
+          .run(crypto.randomUUID(), pollId, systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
 
@@ -1230,6 +1235,7 @@ describe("SQLite communication schema", () => {
           id,
           pollId,
           systemId,
+          votedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })

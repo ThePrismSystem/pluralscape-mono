@@ -39,7 +39,7 @@ export interface PollVoteResult {
   readonly optionId: PollOptionId | null;
   readonly voter: EntityReference<"member" | "structure-entity"> | null;
   readonly isVeto: boolean;
-  readonly votedAt: UnixMillis | null;
+  readonly votedAt: UnixMillis;
   readonly encryptedData: string;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -61,7 +61,7 @@ function toVoteResult(row: typeof pollVotes.$inferSelect): PollVoteResult {
     optionId: (row.optionId ?? null) as PollOptionId | null,
     voter: row.voter,
     isVeto: row.isVeto,
-    votedAt: toUnixMillisOrNull(row.votedAt),
+    votedAt: toUnixMillis(row.votedAt),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     archived: row.archived,
     archivedAt: toUnixMillisOrNull(row.archivedAt),

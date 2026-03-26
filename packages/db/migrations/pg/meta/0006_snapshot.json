@@ -1,6 +1,6 @@
 {
-  "id": "c6bb6ad3-e0b3-48f1-b503-93c825dcc0be",
-  "prevId": "ce8b0858-f047-4758-946a-dd3d526460bd",
+  "id": "ed620e3e-c041-49ad-aa92-8227b9ab8f93",
+  "prevId": "c6bb6ad3-e0b3-48f1-b503-93c825dcc0be",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6776,7 +6776,7 @@
           "name": "voted_at",
           "type": "timestamptz",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "encrypted_data": {
           "name": "encrypted_data",

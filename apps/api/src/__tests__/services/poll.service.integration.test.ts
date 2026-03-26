@@ -455,6 +455,7 @@ describe("poll.service (PGlite integration)", () => {
         id: genPollVoteId(),
         pollId: created.id,
         systemId,
+        votedAt: Date.now(),
         encryptedData: testBlob(),
         createdAt: Date.now(),
       });

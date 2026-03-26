@@ -196,7 +196,7 @@ export const pollVotes = sqliteTable(
     optionId: text("option_id"),
     voter: sqliteJson("voter").$type<ServerPollVote["voter"]>(),
     isVeto: integer("is_veto", { mode: "boolean" }).notNull().default(false),
-    votedAt: sqliteTimestamp("voted_at"),
+    votedAt: sqliteTimestamp("voted_at").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     ...archivable(),
