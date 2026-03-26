@@ -151,9 +151,37 @@ export function buildPaginatedResult<TRow, TResult extends { id: string }>(
   limit: number,
   mapper: (row: TRow) => TResult,
 ): PaginatedResult<TResult> {
+  if (limit <= 0) {
+    return { items: [], nextCursor: null, hasMore: false, totalCount: null };
+  }
   const hasMore = rows.length > limit;
   const items = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
   const lastItem = items[items.length - 1];
   const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
+  return { items, nextCursor, hasMore, totalCount: null };
+}
+
+/**
+ * Build a cursor-paginated result from rows fetched with limit+1,
+ * using a composite cursor (numeric sort value + entity ID).
+ *
+ * @param sortValueExtractor Extracts the numeric sort value (typically a UnixMillis
+ *   timestamp) from a mapped result item. All callers must use the same sort-value
+ *   semantics — do not mix timestamps with position integers across cursor usages.
+ */
+export function buildCompositePaginatedResult<TRow, TResult extends { id: string }>(
+  rows: readonly TRow[],
+  limit: number,
+  mapper: (row: TRow) => TResult,
+  sortValueExtractor: (item: TResult) => number,
+): PaginatedResult<TResult> {
+  if (limit <= 0) {
+    return { items: [], nextCursor: null, hasMore: false, totalCount: null };
+  }
+  const hasMore = rows.length > limit;
+  const items = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
+  const lastItem = items[items.length - 1];
+  const nextCursor =
+    hasMore && lastItem ? toCompositeCursor(sortValueExtractor(lastItem), lastItem.id) : null;
   return { items, nextCursor, hasMore, totalCount: null };
 }

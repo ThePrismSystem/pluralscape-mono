@@ -10,7 +10,10 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { createWebhookConfig } from "../../services/webhook-config.service.js";
-import { dispatchWebhookEvent } from "../../services/webhook-dispatcher.js";
+import {
+  clearWebhookConfigCache,
+  dispatchWebhookEvent,
+} from "../../services/webhook-dispatcher.js";
 import { asDb, makeAuth, noopAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
@@ -39,6 +42,7 @@ describe("webhook-dispatcher (PGlite integration)", () => {
   });
 
   afterEach(async () => {
+    clearWebhookConfigCache();
     await db.delete(webhookDeliveries);
     await db.delete(webhookConfigs);
   });

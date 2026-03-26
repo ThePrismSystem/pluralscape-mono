@@ -490,6 +490,45 @@ describe("note.service (PGlite integration)", () => {
     });
   });
 
+  // ── CROSS-SYSTEM ISOLATION ──────────────────────────────────────
+
+  describe("cross-system isolation", () => {
+    it("cannot access another system's note by ID", async () => {
+      const created = await createNote(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      await assertApiError(
+        getNote(asDb(db), otherSystemId, created.id, otherAuth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("list does not return another system's notes", async () => {
+      await createNote(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64() },
+        auth,
+        noopAudit,
+      );
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      const result = await listNotes(asDb(db), otherSystemId, otherAuth);
+      expect(result.items).toHaveLength(0);
+    });
+  });
+
   // ── ARCHIVE / RESTORE ──────────────────────────────────────────
 
   describe("archiveNote", () => {

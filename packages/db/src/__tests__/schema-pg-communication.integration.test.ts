@@ -1105,6 +1105,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        votedAt: now,
         encryptedData: data,
         createdAt: now,
       });
@@ -1123,9 +1124,9 @@ describe("PG communication schema", () => {
 
       await expect(
         client.query(
-          `INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at)
-           VALUES ($1, $2, $3, NULL, $4)`,
-          [crypto.randomUUID(), pollId, systemId, now],
+          `INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, voted_at, created_at)
+           VALUES ($1, $2, $3, NULL, $4, $5)`,
+          [crypto.randomUUID(), pollId, systemId, now, now],
         ),
       ).rejects.toThrow();
     });
@@ -1141,6 +1142,7 @@ describe("PG communication schema", () => {
         id: voteId,
         pollId,
         systemId,
+        votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
@@ -1159,6 +1161,7 @@ describe("PG communication schema", () => {
         id: voteId,
         pollId,
         systemId,
+        votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
@@ -1206,6 +1209,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
@@ -1214,7 +1218,6 @@ describe("PG communication schema", () => {
       expect(rows[0]?.optionId).toBeNull();
       expect(rows[0]?.voter).toBeNull();
       expect(rows[0]?.isVeto).toBe(false);
-      expect(rows[0]?.votedAt).toBeNull();
     });
 
     it("defaults archived to false and archivedAt to null", async () => {
@@ -1228,6 +1231,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
@@ -1248,6 +1252,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        votedAt: now,
         archived: true,
         archivedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -1270,6 +1275,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
@@ -1293,8 +1299,8 @@ describe("PG communication schema", () => {
 
       await expect(
         client.query(
-          "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, true, NULL)",
-          [crypto.randomUUID(), pollId, systemId, now],
+          "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, voted_at, created_at, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, true, NULL)",
+          [crypto.randomUUID(), pollId, systemId, now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
     });
@@ -1307,8 +1313,8 @@ describe("PG communication schema", () => {
 
       await expect(
         client.query(
-          "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, false, $5)",
-          [crypto.randomUUID(), pollId, systemId, now, now],
+          "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, voted_at, created_at, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, false, $6)",
+          [crypto.randomUUID(), pollId, systemId, now, now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
     });

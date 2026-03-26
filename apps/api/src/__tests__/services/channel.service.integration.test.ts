@@ -451,6 +451,45 @@ describe("channel.service (PGlite integration)", () => {
     });
   });
 
+  // ── CROSS-SYSTEM ISOLATION ──────────────────────────────────────
+
+  describe("cross-system isolation", () => {
+    it("cannot access another system's channel by ID", async () => {
+      const created = await createChannel(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      await assertApiError(
+        getChannel(asDb(db), otherSystemId, created.id, otherAuth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("list does not return another system's channels", async () => {
+      await createChannel(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), type: "channel", sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      const result = await listChannels(asDb(db), otherSystemId, otherAuth);
+      expect(result.items).toHaveLength(0);
+    });
+  });
+
   // ── DELETE ──────────────────────────────────────────────────────
 
   describe("deleteChannel", () => {

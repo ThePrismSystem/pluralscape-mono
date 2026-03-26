@@ -20,6 +20,19 @@ const mockDb = {
   }),
 };
 
+/** Mock db WITHOUT rollback — simulates a raw (non-transaction) handle for cache tests. */
+const mockRawDb = {
+  select: vi.fn().mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      where: mockWhere,
+    }),
+  }),
+  insert: vi.fn().mockReturnValue({
+    values: mockInsertValues,
+  }),
+  transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockDb)),
+};
+
 vi.mock("@pluralscape/db/pg", () => ({
   webhookConfigs: { systemId: "system_id", enabled: "enabled", archived: "archived" },
   webhookDeliveries: { status: "status", nextRetryAt: "next_retry_at" },
@@ -48,7 +61,8 @@ vi.mock("drizzle-orm", async () => {
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher.js");
+const { clearWebhookConfigCache, dispatchWebhookEvent, invalidateWebhookConfigCache } =
+  await import("../../services/webhook-dispatcher.js");
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -68,10 +82,20 @@ describe("dispatchWebhookEvent", () => {
     mockDb.insert.mockReturnValue({
       values: mockInsertValues,
     });
+    mockRawDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: mockWhere,
+      }),
+    });
+    mockRawDb.insert.mockReturnValue({
+      values: mockInsertValues,
+    });
+    mockRawDb.transaction.mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(mockDb));
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    clearWebhookConfigCache();
   });
 
   it("returns empty array when no configs match", async () => {
@@ -117,5 +141,83 @@ describe("dispatchWebhookEvent", () => {
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
     expect(insertedValues[0]).toHaveProperty("payloadData", { ...payload, systemId });
+  });
+
+  it("uses cached configs on second dispatch for same system", async () => {
+    mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+    mockInsertValues.mockResolvedValue(undefined);
+
+    // Use raw db (non-transaction) so cache is populated
+    await dispatchWebhookEvent(mockRawDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(mockRawDb as never, systemId, eventType, payload);
+
+    // DB select should only be called once (first call populates cache)
+    expect(mockDb.select).toHaveBeenCalledTimes(1);
+    // But insert should be called twice (one delivery per dispatch)
+    expect(mockDb.insert).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips cache population when called within a transaction", async () => {
+    mockWhere
+      .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }])
+      .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+    mockInsertValues.mockResolvedValue(undefined);
+
+    // Use transaction db — cache should NOT be populated
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+
+    // DB select called twice (no caching in transaction mode)
+    expect(mockDb.select).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-queries DB after cache invalidation", async () => {
+    mockWhere
+      .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }])
+      .mockResolvedValueOnce([]);
+    mockInsertValues.mockResolvedValue(undefined);
+
+    await dispatchWebhookEvent(mockRawDb as never, systemId, eventType, payload);
+    invalidateWebhookConfigCache(systemId);
+    await dispatchWebhookEvent(mockRawDb as never, systemId, eventType, payload);
+
+    // DB select called twice: first miss, then after invalidation
+    expect(mockDb.select).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not share cache between systems", async () => {
+    const otherSystemId = "sys_other" as SystemId;
+    mockWhere
+      .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }])
+      .mockResolvedValueOnce([]);
+    mockInsertValues.mockResolvedValue(undefined);
+
+    await dispatchWebhookEvent(mockRawDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(mockRawDb as never, otherSystemId, eventType, payload);
+
+    // Each system triggers its own DB query
+    expect(mockDb.select).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-queries DB after cache TTL expires", async () => {
+    vi.useFakeTimers();
+    try {
+      mockWhere
+        .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }])
+        .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+      mockInsertValues.mockResolvedValue(undefined);
+
+      await dispatchWebhookEvent(mockRawDb as never, systemId, eventType, payload);
+
+      // Advance past the 60s TTL
+      vi.advanceTimersByTime(60_001);
+
+      await dispatchWebhookEvent(mockRawDb as never, systemId, eventType, payload);
+
+      // DB select called twice: first miss, then after TTL expiry
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

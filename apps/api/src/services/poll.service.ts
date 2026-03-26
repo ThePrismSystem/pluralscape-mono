@@ -7,7 +7,7 @@ import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
-import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
+import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -32,6 +32,33 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Discriminate why a poll update/close affected zero rows.
+ * Queries the poll to distinguish NOT_FOUND, POLL_CLOSED, and version CONFLICT.
+ * Always throws — return type is `never`.
+ */
+async function throwPollUpdateError(
+  tx: PostgresJsDatabase,
+  pollId: PollId,
+  systemId: SystemId,
+): Promise<never> {
+  const [existing] = await tx
+    .select({ id: polls.id, status: polls.status, archived: polls.archived })
+    .from(polls)
+    .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
+    .limit(1);
+
+  if (!existing || existing.archived) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+  }
+  if (existing.status === "closed") {
+    throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
+  }
+  throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
+}
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -211,13 +238,7 @@ export async function listPolls(
       .orderBy(desc(polls.createdAt), desc(polls.id))
       .limit(effectiveLimit + 1);
 
-    const hasMore = rows.length > effectiveLimit;
-    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toPollResult);
-    const lastItem = items[items.length - 1];
-    const nextCursor =
-      hasMore && lastItem ? toCompositeCursor(lastItem.createdAt, lastItem.id) : null;
-
-    return { items, nextCursor, hasMore, totalCount: null };
+    return buildCompositePaginatedResult(rows, effectiveLimit, toPollResult, (i) => i.createdAt);
   });
 }
 
@@ -262,20 +283,7 @@ export async function updatePoll(
 
     const row = updated[0];
     if (!row) {
-      // Custom fallback: distinguish archived / POLL_CLOSED / version mismatch / NOT_FOUND
-      const [existing] = await tx
-        .select({ id: polls.id, status: polls.status, archived: polls.archived })
-        .from(polls)
-        .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
-        .limit(1);
-
-      if (!existing || existing.archived) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
-      }
-      if (existing.status === "closed") {
-        throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
-      }
-      throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
+      return throwPollUpdateError(tx, pollId, systemId);
     }
 
     await audit(tx, {
@@ -326,19 +334,7 @@ export async function closePoll(
 
     const row = updated[0];
     if (!row) {
-      const [existing] = await tx
-        .select({ id: polls.id, status: polls.status, archived: polls.archived })
-        .from(polls)
-        .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
-        .limit(1);
-
-      if (!existing || existing.archived) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
-      }
-      if (existing.status === "closed") {
-        throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+      return throwPollUpdateError(tx, pollId, systemId);
     }
 
     await audit(tx, {

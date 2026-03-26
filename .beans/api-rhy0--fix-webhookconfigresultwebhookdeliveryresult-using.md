@@ -1,11 +1,11 @@
 ---
 # api-rhy0
 title: Fix WebhookConfigResult/WebhookDeliveryResult using number instead of UnixMillis
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-03-26T07:43:54Z
-updated_at: 2026-03-26T07:43:54Z
+updated_at: 2026-03-26T10:19:54Z
 parent: ps-106o
 ---
 
@@ -24,3 +24,5 @@ Change to UnixMillis / UnixMillis | null to match all other result types.
 
 - [ ] Update WebhookConfigResult interface
 - [ ] Update WebhookDeliveryResult interface
+
+## Summary of Changes\n\nChanged WebhookConfigResult and WebhookDeliveryResult timestamp fields from raw number to UnixMillis branded type.

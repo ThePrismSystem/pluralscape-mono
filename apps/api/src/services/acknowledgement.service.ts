@@ -14,7 +14,7 @@ import {
   validateEncryptedBlob,
 } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
-import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
+import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -274,13 +274,12 @@ export async function listAcknowledgements(
       .orderBy(desc(acknowledgements.createdAt), desc(acknowledgements.id))
       .limit(effectiveLimit + 1);
 
-    const hasMore = rows.length > effectiveLimit;
-    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toAcknowledgementResult);
-    const lastItem = items[items.length - 1];
-    const nextCursor =
-      hasMore && lastItem ? toCompositeCursor(lastItem.createdAt, lastItem.id) : null;
-
-    return { items, nextCursor, hasMore, totalCount: null };
+    return buildCompositePaginatedResult(
+      rows,
+      effectiveLimit,
+      toAcknowledgementResult,
+      (i) => i.createdAt,
+    );
   });
 }
 

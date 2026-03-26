@@ -9,6 +9,7 @@ import {
 } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 
+import { env } from "../env.js";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
@@ -20,10 +21,18 @@ import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../service.constants.js";
 
+import { invalidateWebhookConfigCache } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
-import type { PaginatedResult, SystemId, WebhookEventType, WebhookId } from "@pluralscape/types";
+import type {
+  PaginatedResult,
+  SystemId,
+  UnixMillis,
+  WebhookEventType,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -37,9 +46,9 @@ export interface WebhookConfigResult {
   readonly cryptoKeyId: string | null;
   readonly version: number;
   readonly archived: boolean;
-  readonly archivedAt: number | null;
-  readonly createdAt: number;
-  readonly updatedAt: number;
+  readonly archivedAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
 }
 
 /** Returned from create only — includes the raw secret for the caller to store. */
@@ -106,7 +115,7 @@ function toWebhookConfigResult(row: {
  * - Resolves the hostname and checks all resolved IPs against private/reserved ranges.
  */
 async function validateWebhookUrl(url: string): Promise<void> {
-  if (process.env.NODE_ENV === "production" && !url.startsWith("https://")) {
+  if (env.NODE_ENV === "production" && !url.startsWith("https://")) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
@@ -148,7 +157,7 @@ export async function createWebhookConfig(
   const timestamp = now();
   const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
 
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  const created = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(webhookConfigs)
       .values({
@@ -180,6 +189,9 @@ export async function createWebhookConfig(
       secret: secretBytes.toString("base64"),
     };
   });
+
+  invalidateWebhookConfigCache(systemId);
+  return created;
 }
 
 // ── LIST ────────────────────────────────────────────────────────────
@@ -287,7 +299,7 @@ export async function updateWebhookConfig(
     setFields.enabled = enabled;
   }
 
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(webhookConfigs)
       .set(setFields)
@@ -329,6 +341,9 @@ export async function updateWebhookConfig(
 
     return toWebhookConfigResult(row);
   });
+
+  invalidateWebhookConfigCache(systemId);
+  return result;
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────
@@ -391,6 +406,8 @@ export async function deleteWebhookConfig(
       .delete(webhookConfigs)
       .where(and(eq(webhookConfigs.id, webhookId), eq(webhookConfigs.systemId, systemId)));
   });
+
+  invalidateWebhookConfigCache(systemId);
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
@@ -411,6 +428,7 @@ export async function archiveWebhookConfig(
   audit: AuditWriter,
 ): Promise<void> {
   await archiveEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE);
+  invalidateWebhookConfigCache(systemId);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -422,9 +440,17 @@ export async function restoreWebhookConfig(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<WebhookConfigResult> {
-  return restoreEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE, (row) =>
-    toWebhookConfigResult(row as typeof webhookConfigs.$inferSelect),
+  const result = await restoreEntity(
+    db,
+    systemId,
+    webhookId,
+    auth,
+    audit,
+    WEBHOOK_CONFIG_LIFECYCLE,
+    (row) => toWebhookConfigResult(row as typeof webhookConfigs.$inferSelect),
   );
+  invalidateWebhookConfigCache(systemId);
+  return result;
 }
 
 // ── PARSE QUERY PARAMS ──────────────────────────────────────────────

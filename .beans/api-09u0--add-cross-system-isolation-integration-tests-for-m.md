@@ -1,11 +1,11 @@
 ---
 # api-09u0
 title: Add cross-system isolation integration tests for M5
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-26T07:43:55Z
-updated_at: 2026-03-26T07:43:55Z
+updated_at: 2026-03-26T10:30:33Z
 parent: ps-106o
 ---
 
@@ -24,3 +24,5 @@ Add at least one cross-system isolation test per M5 service integration file.
 - [ ] poll.service.integration.test.ts
 - [ ] poll-vote.service.integration.test.ts
 - [ ] acknowledgement.service.integration.test.ts
+
+## Summary of Changes\n\nAdded cross-system isolation describe blocks with 2 tests each to all 7 M5 integration test files, verifying get returns NOT_FOUND and list returns empty for a second system.

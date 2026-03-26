@@ -2,8 +2,39 @@ import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
-import type { SystemId, WebhookEventPayloadMap, WebhookEventType } from "@pluralscape/types";
+import { WEBHOOK_CONFIGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
+import { QueryCache } from "../lib/query-cache.js";
+
+import type {
+  SystemId,
+  WebhookEventPayloadMap,
+  WebhookEventType,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+// ── Cache ───────────────────────────────────────────────────────────
+
+interface CachedWebhookConfig {
+  readonly id: WebhookId;
+  readonly eventTypes: readonly WebhookEventType[];
+}
+
+const webhookConfigCache = new QueryCache<readonly CachedWebhookConfig[]>(
+  WEBHOOK_CONFIGS_CACHE_TTL_MS,
+);
+
+/** Invalidate cached webhook configs for a system (call on any config mutation). */
+export function invalidateWebhookConfigCache(systemId: SystemId): void {
+  webhookConfigCache.invalidate(systemId);
+}
+
+/** Clear all cached webhook configs (for test teardown). */
+export function clearWebhookConfigCache(): void {
+  webhookConfigCache.clear();
+}
+
+// ── Dispatch ────────────────────────────────────────────────────────
 
 /** Runtime check: PgTransaction has rollback(), raw PgDatabase does not. */
 function isTransaction(db: PostgresJsDatabase): boolean {
@@ -16,21 +47,34 @@ async function executeDispatch<K extends WebhookEventType>(
   systemId: SystemId,
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
+  inTransaction: boolean,
 ): Promise<readonly string[]> {
-  // Find all enabled, non-archived configs for this system that subscribe to this event
-  const configs = await db
-    .select({
-      id: webhookConfigs.id,
-      eventTypes: webhookConfigs.eventTypes,
-    })
-    .from(webhookConfigs)
-    .where(
-      and(
-        eq(webhookConfigs.systemId, systemId),
-        eq(webhookConfigs.enabled, true),
-        eq(webhookConfigs.archived, false),
-      ),
-    );
+  // Check cache first; fall back to DB query on miss
+  const cached = webhookConfigCache.get(systemId);
+  let configs: readonly CachedWebhookConfig[];
+  if (cached !== undefined) {
+    configs = cached;
+  } else {
+    const rows = await db
+      .select({
+        id: webhookConfigs.id,
+        eventTypes: webhookConfigs.eventTypes,
+      })
+      .from(webhookConfigs)
+      .where(
+        and(
+          eq(webhookConfigs.systemId, systemId),
+          eq(webhookConfigs.enabled, true),
+          eq(webhookConfigs.archived, false),
+        ),
+      );
+    configs = rows.map((row) => ({ id: row.id as WebhookId, eventTypes: row.eventTypes }));
+    // Only populate cache from committed data — transaction-scoped reads
+    // may see uncommitted state that would become stale on rollback.
+    if (!inTransaction) {
+      webhookConfigCache.set(systemId, configs);
+    }
+  }
 
   // Filter configs that subscribe to this specific event type
   // (JSONB containment would be ideal, but filtering in-app is fine for the
@@ -86,7 +130,7 @@ export async function dispatchWebhookEvent<K extends WebhookEventType>(
   payload: Readonly<WebhookEventPayloadMap[K]>,
 ): Promise<readonly string[]> {
   if (isTransaction(db)) {
-    return executeDispatch(db, systemId, eventType, payload);
+    return executeDispatch(db, systemId, eventType, payload, true);
   }
-  return db.transaction((tx) => executeDispatch(tx, systemId, eventType, payload));
+  return db.transaction((tx) => executeDispatch(tx, systemId, eventType, payload, false));
 }

@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -42,8 +43,8 @@ const MOCK_CONFIG: WebhookConfigResult = {
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000,
-  updatedAt: 1000,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

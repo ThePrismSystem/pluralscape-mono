@@ -203,7 +203,7 @@ export const pollVotes = pgTable(
     optionId: varchar("option_id", { length: ID_MAX_LENGTH }),
     voter: jsonb("voter").$type<ServerPollVote["voter"]>(),
     isVeto: boolean("is_veto").notNull().default(false),
-    votedAt: pgTimestamp("voted_at"),
+    votedAt: pgTimestamp("voted_at").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
     ...archivable(),

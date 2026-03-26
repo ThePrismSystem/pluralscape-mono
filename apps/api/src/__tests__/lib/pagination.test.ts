@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
 import {
+  buildCompositePaginatedResult,
   buildPaginatedResult,
   fromCompositeCursor,
   fromCursor,
@@ -338,5 +339,62 @@ describe("parseCursor", () => {
     const cursor = toCursor("sys_abc");
     vi.advanceTimersByTime(86_400_001);
     expect(() => parseCursor(cursor)).toThrow(ApiHttpError);
+  });
+});
+
+// ── buildCompositePaginatedResult ──────────────────────────────────
+
+describe("buildCompositePaginatedResult", () => {
+  interface TestRow {
+    id: string;
+    score: number;
+  }
+  const mapper = (row: TestRow): TestRow => row;
+  const extractor = (item: TestRow): number => item.score;
+
+  it("returns empty result for no rows", () => {
+    const result = buildCompositePaginatedResult([], 10, mapper, extractor);
+    expect(result.items).toHaveLength(0);
+    expect(result.nextCursor).toBeNull();
+    expect(result.hasMore).toBe(false);
+    expect(result.totalCount).toBeNull();
+  });
+
+  it("returns all rows when fewer than limit", () => {
+    const rows: TestRow[] = [
+      { id: "a", score: 100 },
+      { id: "b", score: 200 },
+    ];
+    const result = buildCompositePaginatedResult(rows, 5, mapper, extractor);
+    expect(result.items).toHaveLength(2);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("slices and provides cursor when rows exceed limit", () => {
+    const rows: TestRow[] = [
+      { id: "a", score: 300 },
+      { id: "b", score: 200 },
+      { id: "c", score: 100 },
+    ];
+    const result = buildCompositePaginatedResult(rows, 2, mapper, extractor);
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]?.id).toBe("a");
+    expect(result.items[1]?.id).toBe("b");
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).not.toBeNull();
+
+    // Verify the cursor round-trips through fromCompositeCursor
+    if (!result.nextCursor) throw new Error("Expected cursor");
+    const decoded = fromCompositeCursor(result.nextCursor, "test");
+    expect(decoded.sortValue).toBe(200);
+    expect(decoded.id).toBe("b");
+  });
+
+  it("applies mapper to rows", () => {
+    const rows = [{ id: "raw", score: 50 }];
+    const customMapper = (row: TestRow): TestRow => ({ ...row, id: `mapped_${row.id}` });
+    const result = buildCompositePaginatedResult(rows, 10, customMapper, extractor);
+    expect(result.items[0]?.id).toBe("mapped_raw");
   });
 });
