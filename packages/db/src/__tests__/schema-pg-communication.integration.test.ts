@@ -1105,6 +1105,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        voter: { entityType: "member", entityId: "m-test" },
         votedAt: now,
         encryptedData: data,
         createdAt: now,
@@ -1124,8 +1125,8 @@ describe("PG communication schema", () => {
 
       await expect(
         client.query(
-          `INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, voted_at, created_at)
-           VALUES ($1, $2, $3, NULL, $4, $5)`,
+          `INSERT INTO poll_votes (id, poll_id, system_id, voter, encrypted_data, voted_at, created_at)
+           VALUES ($1, $2, $3, '{"entityType":"member","entityId":"m-1"}'::jsonb, NULL, $4, $5)`,
           [crypto.randomUUID(), pollId, systemId, now, now],
         ),
       ).rejects.toThrow();
@@ -1142,6 +1143,7 @@ describe("PG communication schema", () => {
         id: voteId,
         pollId,
         systemId,
+        voter: { entityType: "member", entityId: "m-test" },
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -1161,6 +1163,7 @@ describe("PG communication schema", () => {
         id: voteId,
         pollId,
         systemId,
+        voter: { entityType: "member", entityId: "m-test" },
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -1198,7 +1201,7 @@ describe("PG communication schema", () => {
       expect(rows[0]?.votedAt).toBe(votedAt);
     });
 
-    it("defaults T3 metadata to null", async () => {
+    it("defaults optional T3 metadata to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
@@ -1209,6 +1212,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        voter: { entityType: "member", entityId: "m-test" },
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -1216,7 +1220,6 @@ describe("PG communication schema", () => {
 
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
       expect(rows[0]?.optionId).toBeNull();
-      expect(rows[0]?.voter).toBeNull();
       expect(rows[0]?.isVeto).toBe(false);
     });
 
@@ -1231,6 +1234,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        voter: { entityType: "member", entityId: "m-test" },
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -1252,6 +1256,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        voter: { entityType: "member", entityId: "m-test" },
         votedAt: now,
         archived: true,
         archivedAt: now,
@@ -1275,6 +1280,7 @@ describe("PG communication schema", () => {
         id,
         pollId,
         systemId,
+        voter: { entityType: "member", entityId: "m-test" },
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,

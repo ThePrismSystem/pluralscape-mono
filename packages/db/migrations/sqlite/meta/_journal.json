@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1774469602092,
-      "tag": "0000_premium_fat_cobra",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1774488346197,
-      "tag": "0001_curvy_phalanx",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1774501653288,
-      "tag": "0002_broad_may_parker",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1774515150269,
-      "tag": "0003_huge_moonstone",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1774522364945,
-      "tag": "0004_red_squadron_supreme",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1774530777151,
-      "tag": "0005_unknown_bloodstrike",
+      "when": 1774533173712,
+      "tag": "0000_light_darkstar",
       "breakpoints": true
     }
   ]

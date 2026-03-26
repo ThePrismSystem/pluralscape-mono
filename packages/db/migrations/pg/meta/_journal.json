@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774469597870,
-      "tag": "0000_lethal_crusher_hogan",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774487363953,
-      "tag": "0001_parallel_hercules",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774499041273,
-      "tag": "0002_perfect_wendell_vaughn",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1774499900021,
-      "tag": "0003_lovely_bug",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1774500066472,
-      "tag": "0004_gorgeous_thunderbolt",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1774513290249,
-      "tag": "0006_little_guardsmen",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1774519945491,
-      "tag": "0006_overconfident_dexter_bennett",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1774528103463,
-      "tag": "0007_lyrical_giant_man",
+      "when": 1774533172798,
+      "tag": "0000_real_kulan_gath",
       "breakpoints": true
     }
   ]
