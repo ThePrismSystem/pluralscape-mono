@@ -1,11 +1,11 @@
 ---
 # api-ddhe
 title: Add route-level unit tests for 5 M5 features
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-26T07:43:55Z
-updated_at: 2026-03-26T07:43:55Z
+updated_at: 2026-03-26T10:46:12Z
 parent: ps-106o
 ---
 
@@ -22,3 +22,5 @@ Create route unit tests following the board-messages pattern (testing HTTP statu
 - [ ] notes route unit tests
 - [ ] polls route unit tests
 - [ ] acknowledgements route unit tests
+
+## Summary of Changes\n\nCreated 5 route-level unit test files for channels, messages, notes, polls, and acknowledgements following the board-messages/crud.test.ts pattern. Total 113 new route tests.
