@@ -26,6 +26,8 @@ import type {
   MemberId,
   MessageId,
   NoteId,
+  PollId,
+  PollVoteId,
   SessionId,
   SystemId,
   SystemStructureEntityId,
@@ -177,4 +179,12 @@ export function genBoardMessageId(): BoardMessageId {
 
 export function genNoteId(): NoteId {
   return `note_${crypto.randomUUID()}` as NoteId;
+}
+
+export function genPollId(): PollId {
+  return `poll_${crypto.randomUUID()}` as PollId;
+}
+
+export function genPollVoteId(): PollVoteId {
+  return `pv_${crypto.randomUUID()}` as PollVoteId;
 }

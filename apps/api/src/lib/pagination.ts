@@ -97,6 +97,54 @@ export function parseCursor(cursorParam: string | undefined): string | undefined
   }
 }
 
+// ── Composite cursor helpers (numeric sort value + string ID) ────────
+
+/** Decoded composite cursor containing a numeric sort value and a string ID. */
+export interface DecodedCompositeCursor {
+  readonly sortValue: number;
+  readonly id: string;
+}
+
+/** Encode a composite cursor from a numeric sort value and entity ID. */
+export function toCompositeCursor(sortValue: number, id: string): PaginationCursor {
+  return toCursor(JSON.stringify({ t: sortValue, i: id }));
+}
+
+/**
+ * Decode a composite cursor back to sort value + entity ID.
+ * Throws ApiHttpError 400 INVALID_CURSOR for invalid/expired/malformed cursors.
+ * @param entityLabel — label for error messages (e.g. "poll", "vote", "message")
+ */
+export function fromCompositeCursor(cursor: string, entityLabel: string): DecodedCompositeCursor {
+  let raw: string;
+  try {
+    raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
+  } catch (error) {
+    if (error instanceof CursorInvalidError) {
+      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
+    }
+    throw error;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", `Malformed ${entityLabel} cursor`);
+  }
+
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as { t?: unknown }).t !== "number" ||
+    typeof (parsed as { i?: unknown }).i !== "string"
+  ) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", `Malformed ${entityLabel} cursor`);
+  }
+  const { t, i } = parsed as { t: number; i: string };
+  return { sortValue: t, id: i };
+}
+
 /** Build a cursor-paginated result from rows fetched with limit+1. */
 export function buildPaginatedResult<TRow, TResult extends { id: string }>(
   rows: readonly TRow[],

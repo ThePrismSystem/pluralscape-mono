@@ -197,6 +197,50 @@ export async function createMessage(
 }
 
 /**
+ * Create a poll in the given system and return its ID and version.
+ */
+export async function createPoll(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  opts: {
+    title?: string;
+    kind?: "standard" | "custom";
+    allowMultipleVotes?: boolean;
+    maxVotesPerMember?: number;
+    allowAbstain?: boolean;
+    allowVeto?: boolean;
+    endsAt?: number;
+  } = {},
+): Promise<{ id: string; version: number }> {
+  const {
+    title = "E2E Test Poll",
+    kind = "standard",
+    allowMultipleVotes = false,
+    maxVotesPerMember = 1,
+    allowAbstain = false,
+    allowVeto = false,
+    endsAt,
+  } = opts;
+  const data: Record<string, unknown> = {
+    encryptedData: encryptForApi({ title, description: null, options: [] }),
+    kind,
+    allowMultipleVotes,
+    maxVotesPerMember,
+    allowAbstain,
+    allowVeto,
+  };
+  if (endsAt !== undefined) data.endsAt = endsAt;
+  const res = await request.post(`/v1/systems/${systemId}/polls`, {
+    headers,
+    data,
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { id: string; version: number };
+  return { id: body.id, version: body.version };
+}
+
+/**
  * Create an innerworld region in the given system and return its ID and version.
  */
 export async function createInnerworldRegion(

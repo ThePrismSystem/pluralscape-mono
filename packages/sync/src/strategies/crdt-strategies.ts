@@ -266,7 +266,7 @@ export const ENTITY_CRDT_STRATEGIES = {
   "poll-vote": {
     storageType: "append-only",
     document: "chat",
-    fieldName: "pollVotes",
+    fieldName: "votes",
     mutationSemantics: "Immutable once appended — votes are permanent records",
   },
   acknowledgement: {

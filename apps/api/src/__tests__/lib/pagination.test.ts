@@ -4,10 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiHttpError } from "../../lib/api-error.js";
 import {
   buildPaginatedResult,
+  fromCompositeCursor,
   fromCursor,
   parseCursor,
   parsePaginationLimit,
   toCursor,
+  toCompositeCursor,
 } from "../../lib/pagination.js";
 
 import type { PaginationCursor } from "@pluralscape/types";
@@ -207,6 +209,95 @@ describe("toCursor / fromCursor", () => {
     } catch (error: unknown) {
       expect(error).toBeInstanceOf(CursorInvalidError);
       expect((error as CursorInvalidError).reason).toBe("malformed");
+    }
+  });
+});
+
+describe("toCompositeCursor / fromCompositeCursor", () => {
+  const ENTITY_LABEL = "test entity";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("round-trips sortValue and id", () => {
+    const cursor = toCompositeCursor(42, "poll_abc123");
+    const decoded = fromCompositeCursor(cursor, ENTITY_LABEL);
+    expect(decoded.sortValue).toBe(42);
+    expect(decoded.id).toBe("poll_abc123");
+  });
+
+  it("throws ApiHttpError INVALID_CURSOR for expired cursor", () => {
+    const cursor = toCompositeCursor(100, "poll_xyz");
+    vi.advanceTimersByTime(86_400_001);
+    expect(() => fromCompositeCursor(cursor, ENTITY_LABEL)).toThrow(ApiHttpError);
+    try {
+      fromCompositeCursor(cursor, ENTITY_LABEL);
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).code).toBe("INVALID_CURSOR");
+    }
+  });
+
+  it("throws ApiHttpError INVALID_CURSOR for garbage string", () => {
+    expect(() => fromCompositeCursor("!!!garbage!!!", ENTITY_LABEL)).toThrow(ApiHttpError);
+    try {
+      fromCompositeCursor("!!!garbage!!!", ENTITY_LABEL);
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).code).toBe("INVALID_CURSOR");
+    }
+  });
+
+  it("throws ApiHttpError with entityLabel for non-JSON inner payload", () => {
+    const cursor = toCursor("not json");
+    expect(() => fromCompositeCursor(cursor, ENTITY_LABEL)).toThrow(ApiHttpError);
+    try {
+      fromCompositeCursor(cursor, ENTITY_LABEL);
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).message).toContain(ENTITY_LABEL);
+    }
+  });
+
+  it("throws ApiHttpError with entityLabel for missing t field", () => {
+    const cursor = toCursor(JSON.stringify({ i: "abc" }));
+    expect(() => fromCompositeCursor(cursor, ENTITY_LABEL)).toThrow(ApiHttpError);
+    try {
+      fromCompositeCursor(cursor, ENTITY_LABEL);
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).message).toContain(ENTITY_LABEL);
+    }
+  });
+
+  it("throws ApiHttpError with entityLabel for missing i field", () => {
+    const cursor = toCursor(JSON.stringify({ t: 123 }));
+    expect(() => fromCompositeCursor(cursor, ENTITY_LABEL)).toThrow(ApiHttpError);
+    try {
+      fromCompositeCursor(cursor, ENTITY_LABEL);
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).message).toContain(ENTITY_LABEL);
+    }
+  });
+
+  it("throws ApiHttpError for wrong field types", () => {
+    const cursor = toCursor(JSON.stringify({ t: "string", i: 42 }));
+    expect(() => fromCompositeCursor(cursor, "poll")).toThrow(ApiHttpError);
+    try {
+      fromCompositeCursor(cursor, "poll");
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).code).toBe("INVALID_CURSOR");
+    }
+  });
+
+  it("includes entityLabel in error message", () => {
+    const cursor = toCursor(JSON.stringify({ t: "string", i: 42 }));
+    try {
+      fromCompositeCursor(cursor, "poll");
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).message).toContain("poll");
     }
   });
 });

@@ -36,7 +36,6 @@ import type {
   RotationState,
   SearchableEntityType,
   ServerChannel,
-  ServerPoll,
   SnapshotTrigger,
   SyncDocumentType,
   DocumentKeyType,
@@ -305,12 +304,20 @@ export const AUDIT_EVENT_TYPES = [
   "note.archived",
   "note.restored",
   "note.deleted",
+  "poll.created",
+  "poll.updated",
+  "poll.closed",
+  "poll.archived",
+  "poll.restored",
+  "poll.deleted",
+  "poll-vote.cast",
+  "poll-vote.vetoed",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
   "channel",
 ] as const satisfies readonly ServerChannel["type"][];
-export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly ServerPoll["status"][];
+export { POLL_STATUSES } from "@pluralscape/types";
 export const POLL_KINDS = ["standard", "custom"] as const satisfies readonly PollKind[];
 export const PK_SYNC_DIRECTIONS = [
   "ps-to-pk",

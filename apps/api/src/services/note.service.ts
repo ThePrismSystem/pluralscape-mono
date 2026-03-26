@@ -1,13 +1,5 @@
 import { notes } from "@pluralscape/db/pg";
-import {
-  CursorInvalidError,
-  ID_PREFIXES,
-  PAGINATION,
-  createId,
-  now,
-  toUnixMillis,
-  toUnixMillisOrNull,
-} from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateNoteBodySchema, UpdateNoteBodySchema } from "@pluralscape/validation";
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 
@@ -16,7 +8,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
-import { fromCursor, toCursor } from "../lib/pagination.js";
+import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -33,7 +25,6 @@ import type {
   NoteAuthorEntityType,
   NoteId,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -78,47 +69,6 @@ function toNoteResult(row: typeof notes.$inferSelect): NoteResult {
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
   };
-}
-
-// ── Cursor helpers (composite createdAt+id, descending) ─────────────
-
-function toNoteCursor(createdAt: number, id: string): PaginationCursor {
-  return toCursor(JSON.stringify({ t: createdAt, i: id }));
-}
-
-interface DecodedNoteCursor {
-  readonly createdAt: number;
-  readonly id: string;
-}
-
-function fromNoteCursor(cursor: string): DecodedNoteCursor {
-  let raw: string;
-  try {
-    raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-  } catch (error) {
-    if (error instanceof CursorInvalidError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
-    }
-    throw error;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed note cursor");
-  }
-
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    typeof (parsed as { t?: unknown }).t !== "number" ||
-    typeof (parsed as { i?: unknown }).i !== "string"
-  ) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", "Malformed note cursor");
-  }
-  const { t, i } = parsed as { t: number; i: string };
-  return { createdAt: t, id: i };
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────
@@ -238,11 +188,11 @@ export async function listNotes(
     }
 
     if (opts.cursor) {
-      const decoded = fromNoteCursor(opts.cursor);
+      const decoded = fromCompositeCursor(opts.cursor, "note");
       // or() returns SQL | undefined in drizzle types; always defined with concrete args
       const cursorCondition = or(
-        lt(notes.createdAt, decoded.createdAt),
-        and(eq(notes.createdAt, decoded.createdAt), lt(notes.id, decoded.id)),
+        lt(notes.createdAt, decoded.sortValue),
+        and(eq(notes.createdAt, decoded.sortValue), lt(notes.id, decoded.id)),
       );
       if (cursorCondition) {
         conditions.push(cursorCondition);
@@ -259,7 +209,8 @@ export async function listNotes(
     const hasMore = rows.length > effectiveLimit;
     const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toNoteResult);
     const lastItem = items[items.length - 1];
-    const nextCursor = hasMore && lastItem ? toNoteCursor(lastItem.createdAt, lastItem.id) : null;
+    const nextCursor =
+      hasMore && lastItem ? toCompositeCursor(lastItem.createdAt, lastItem.id) : null;
 
     return { items, nextCursor, hasMore, totalCount: null };
   });

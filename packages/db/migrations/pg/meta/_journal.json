@@ -8,6 +8,13 @@
       "when": 1774469597870,
       "tag": "0000_lethal_crusher_hogan",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774487363953,
+      "tag": "0001_parallel_hercules",
+      "breakpoints": true
     }
   ]
 }

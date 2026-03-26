@@ -7,6 +7,7 @@ import type {
   NoteAuthorEntityType,
   Poll,
   PollKind,
+  PollStatus,
   PollVote,
   AcknowledgementRequest,
 } from "./communication.js";
@@ -509,7 +510,7 @@ export interface ServerPoll extends AuditMetadata {
   readonly systemId: SystemId;
   readonly createdByMemberId: MemberId;
   readonly kind: PollKind;
-  readonly status: "open" | "closed";
+  readonly status: PollStatus;
   readonly closedAt: UnixMillis | null;
   readonly endsAt: UnixMillis | null;
   readonly allowMultipleVotes: boolean;

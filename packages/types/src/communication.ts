@@ -97,6 +97,15 @@ export interface PollOption {
 /** The kind of poll — standard yes/no-style or custom option set. */
 export type PollKind = "standard" | "custom";
 
+/** Poll kind values as a tuple for runtime validation. */
+export const POLL_KINDS = ["standard", "custom"] as const satisfies readonly PollKind[];
+
+/** The lifecycle status of a poll. */
+export type PollStatus = "open" | "closed";
+
+/** Poll status values as a tuple for runtime validation. */
+export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly PollStatus[];
+
 /** A poll for system-internal decision making. */
 export interface Poll extends AuditMetadata {
   readonly id: PollId;
@@ -106,7 +115,7 @@ export interface Poll extends AuditMetadata {
   readonly description: string | null;
   readonly kind: PollKind;
   readonly options: readonly PollOption[];
-  readonly status: "open" | "closed";
+  readonly status: PollStatus;
   readonly closedAt: UnixMillis | null;
   readonly endsAt: UnixMillis | null;
   /** Whether members can vote for multiple options. When false, maxVotesPerMember should be 1. */
