@@ -21,6 +21,7 @@ import {
   unpinBoardMessage,
   updateBoardMessage,
 } from "../../services/board-message.service.js";
+import { clearWebhookConfigCache } from "../../services/webhook-dispatcher.js";
 import {
   assertApiError,
   asDb,
@@ -59,6 +60,7 @@ describe("board-message.service (PGlite integration)", () => {
   });
 
   afterEach(async () => {
+    clearWebhookConfigCache();
     await db.delete(webhookDeliveries);
     await db.delete(webhookConfigs);
     await db.delete(boardMessages);
