@@ -11,4 +11,6 @@ parent: ps-i3xl
 
 Mitigated by TLS, document the tradeoff
 
-## Summary of Changes\n\nAdded inline comment to auth-handler.ts explaining that the session token is sent in the WS message body because browser WebSocket API does not support custom headers, mitigated by requiring wss:// in production.
+## Summary of Changes
+
+Added inline comment to auth-handler.ts explaining that the session token is sent in the WS message body because browser WebSocket API does not support custom headers, mitigated by requiring wss:// in production.

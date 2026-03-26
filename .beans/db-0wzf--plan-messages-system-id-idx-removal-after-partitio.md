@@ -9,4 +9,6 @@ updated_at: 2026-03-13T11:40:25Z
 parent: db-hcgk
 ---
 
-## Summary of Changes\n\nDocumented the planned index removal via TODO comments in both PG and SQLite schema files (referencing db-0wzf). The index remains in place until partitioning is confirmed stable.
+## Summary of Changes
+
+Documented the planned index removal via TODO comments in both PG and SQLite schema files (referencing db-0wzf). The index remains in place until partitioning is confirmed stable.

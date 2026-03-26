@@ -12,4 +12,6 @@ blocked_by:
 
 Internal messaging, boards, notes, polls
 
-## Summary of Changes\n\nAll M5 communication features delivered: chat system, board messages, private notes, polls, mandatory acknowledgement routing, communication webhooks, SQLite schema, and full audit remediation.
+## Summary of Changes
+
+All M5 communication features delivered: chat system, board messages, private notes, polls, mandatory acknowledgement routing, communication webhooks, SQLite schema, and full audit remediation.

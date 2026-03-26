@@ -10,4 +10,4 @@ blocked_by:
   - api-fc7h
 ---
 
-GET /v1/systems/:systemId/buckets/:bucketId/export — owner-authenticated. Returns all entities tagged in bucket, organized by type, paginated. Reuses query helpers from 4.2. Files: apps/api/src/routes/buckets/export.ts (new), apps/api/src/services/bucket-export.service.ts (new), modify routes/buckets/index.ts. Tests: integration; correct entities, pagination, empty bucket, non-owner 404.
+GET /v1/systems/:systemId/buckets/:bucketId/export — owner-authenticated. Returns all entities tagged in bucket, organized by type, paginated. Reuses query helpers from db-xvkp. Files: apps/api/src/routes/buckets/export.ts (new), apps/api/src/services/bucket-export.service.ts (new), modify routes/buckets/index.ts. Tests: integration; correct entities, pagination, empty bucket, non-owner 404.

@@ -10,4 +10,4 @@ blocked_by:
   - api-76qf
 ---
 
-E2E tests for bucket export endpoint. OpenAPI spec additions. Files: apps/api-e2e/src/tests/buckets/export.spec.ts (new).
+E2E tests for owner-authenticated bucket export endpoint. Test scenarios: export bucket with mixed entity types (members, custom fronts, groups, field values), pagination traversal with correct entity counts, empty bucket returns empty result, non-owner receives 404 (not 403), archived bucket export rejected, verify exported entities match tagged content exactly. OpenAPI spec additions. Files: apps/api-e2e/src/tests/buckets/export.spec.ts (new).

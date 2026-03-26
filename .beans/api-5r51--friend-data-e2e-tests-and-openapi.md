@@ -10,4 +10,4 @@ blocked_by:
   - api-uyp6
 ---
 
-E2E tests for paginated friend data export. OpenAPI spec additions. Files: apps/api-e2e/src/tests/friends/data.spec.ts (new).
+E2E tests for paginated friend data export. Test scenarios: full pagination traversal across multiple pages, entity type filtering (members only, custom fronts only, mixed), visibility settings respected (untagged entities invisible), permission changes between pages (bucket unassigned mid-pagination), empty result set for no shared buckets, invalid/expired cursor returns 400, rate limiting enforced, key grants included on every page. OpenAPI spec additions. Files: apps/api-e2e/src/tests/friends/data.spec.ts (new).
