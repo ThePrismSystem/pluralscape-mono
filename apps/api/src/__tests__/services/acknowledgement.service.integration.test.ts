@@ -430,6 +430,39 @@ describe("acknowledgement.service (PGlite integration)", () => {
     });
   });
 
+  // ── CROSS-SYSTEM ISOLATION ──────────────────────────────────────
+
+  describe("cross-system isolation", () => {
+    it("cannot access another system's acknowledgement by ID", async () => {
+      const created = await createAcknowledgement(
+        asDb(db),
+        systemId,
+        makeCreateParams(),
+        auth,
+        noopAudit,
+      );
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      await assertApiError(
+        getAcknowledgement(asDb(db), otherSystemId, created.id, otherAuth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("list does not return another system's acknowledgements", async () => {
+      await createAcknowledgement(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      const result = await listAcknowledgements(asDb(db), otherSystemId, otherAuth);
+      expect(result.items).toHaveLength(0);
+    });
+  });
+
   // ── DELETE ──────────────────────────────────────────────────────
 
   describe("deleteAcknowledgement", () => {

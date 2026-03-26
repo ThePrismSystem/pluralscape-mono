@@ -811,6 +811,45 @@ describe("board-message.service (PGlite integration)", () => {
     });
   });
 
+  // ── CROSS-SYSTEM ISOLATION ──────────────────────────────────────
+
+  describe("cross-system isolation", () => {
+    it("cannot access another system's board message by ID", async () => {
+      const created = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      await assertApiError(
+        getBoardMessage(asDb(db), otherSystemId, created.id, otherAuth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("list does not return another system's board messages", async () => {
+      await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      const result = await listBoardMessages(asDb(db), otherSystemId, otherAuth);
+      expect(result.items).toHaveLength(0);
+    });
+  });
+
   // ── DELETE ──────────────────────────────────────────────────────
 
   describe("deleteBoardMessage", () => {

@@ -365,6 +365,42 @@ describe("poll-vote.service (PGlite integration)", () => {
     });
   });
 
+  // ── CROSS-SYSTEM ISOLATION ──────────────────────────────────────
+
+  describe("cross-system isolation", () => {
+    it("cannot access another system's poll votes by poll ID", async () => {
+      const poll = await createTestPoll();
+      await castVote(asDb(db), systemId, poll.id, makeVoteParams(), auth, noopAudit);
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      await assertApiError(
+        listVotes(asDb(db), otherSystemId, poll.id, otherAuth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("list does not return another system's votes", async () => {
+      const pollA = await createTestPoll();
+      await castVote(asDb(db), systemId, pollA.id, makeVoteParams(), auth, noopAudit);
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+      const pollB = await createPoll(
+        asDb(db),
+        otherSystemId,
+        makePollParams(),
+        otherAuth,
+        noopAudit,
+      );
+
+      const result = await listVotes(asDb(db), otherSystemId, pollB.id, otherAuth);
+      expect(result.items).toHaveLength(0);
+    });
+  });
+
   // ── LIST VOTES ─────────────────────────────────────────────────
 
   describe("listVotes", () => {

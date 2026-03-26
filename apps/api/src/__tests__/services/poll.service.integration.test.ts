@@ -501,6 +501,33 @@ describe("poll.service (PGlite integration)", () => {
     });
   });
 
+  // ── CROSS-SYSTEM ISOLATION ──────────────────────────────────────
+
+  describe("cross-system isolation", () => {
+    it("cannot access another system's poll by ID", async () => {
+      const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      await assertApiError(
+        getPoll(asDb(db), otherSystemId, created.id, otherAuth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("list does not return another system's polls", async () => {
+      await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
+
+      const otherSystemId = (await pgInsertSystem(db, accountId)) as SystemId;
+      const otherAuth = makeAuth(accountId, otherSystemId);
+
+      const result = await listPolls(asDb(db), otherSystemId, otherAuth);
+      expect(result.items).toHaveLength(0);
+    });
+  });
+
   // ── ARCHIVE / RESTORE ──────────────────────────────────────────
 
   describe("archivePoll", () => {
