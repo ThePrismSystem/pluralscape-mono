@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,6 +9,7 @@ import {
   mockWebhookConfigServiceFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
+
 
 import type { WebhookConfigResult } from "../../../services/webhook-config.service.js";
 
@@ -42,8 +44,8 @@ const MOCK_CONFIG: WebhookConfigResult = {
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: 1000,
-  updatedAt: 1000,
+  createdAt: toUnixMillis(1000),
+  updatedAt: toUnixMillis(1000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────
