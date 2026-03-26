@@ -1,11 +1,11 @@
 ---
 # api-ok0g
 title: Extract shared poll OCC fallback logic
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-26T07:43:55Z
-updated_at: 2026-03-26T07:43:55Z
+updated_at: 2026-03-26T10:23:13Z
 parent: ps-106o
 ---
 
@@ -23,3 +23,5 @@ Extract a shared assertPollUpdated helper within the file.
 
 - [ ] Extract assertPollUpdated helper
 - [ ] Refactor updatePoll and closePoll to use it
+
+## Summary of Changes\n\nExtracted assertPollUpdated helper within poll.service.ts. Both updatePoll and closePoll now use it. Fixed bug where closePoll threw NOT_FOUND instead of CONFLICT for version mismatch.

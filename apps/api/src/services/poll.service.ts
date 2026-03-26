@@ -33,6 +33,33 @@ import type {
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
+// ── Helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Discriminate why a poll update/close affected zero rows.
+ * Queries the poll to distinguish NOT_FOUND, POLL_CLOSED, and version CONFLICT.
+ * Always throws — return type is `never`.
+ */
+async function assertPollUpdated(
+  tx: PostgresJsDatabase,
+  pollId: PollId,
+  systemId: SystemId,
+): Promise<never> {
+  const [existing] = await tx
+    .select({ id: polls.id, status: polls.status, archived: polls.archived })
+    .from(polls)
+    .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
+    .limit(1);
+
+  if (!existing || existing.archived) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+  }
+  if (existing.status === "closed") {
+    throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
+  }
+  throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
+}
+
 // ── Types ───────────────────────────────────────────────────────────
 
 export interface PollResult {
@@ -256,20 +283,7 @@ export async function updatePoll(
 
     const row = updated[0];
     if (!row) {
-      // Custom fallback: distinguish archived / POLL_CLOSED / version mismatch / NOT_FOUND
-      const [existing] = await tx
-        .select({ id: polls.id, status: polls.status, archived: polls.archived })
-        .from(polls)
-        .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
-        .limit(1);
-
-      if (!existing || existing.archived) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
-      }
-      if (existing.status === "closed") {
-        throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
-      }
-      throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
+      return assertPollUpdated(tx, pollId, systemId);
     }
 
     await audit(tx, {
@@ -320,19 +334,7 @@ export async function closePoll(
 
     const row = updated[0];
     if (!row) {
-      const [existing] = await tx
-        .select({ id: polls.id, status: polls.status, archived: polls.archived })
-        .from(polls)
-        .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
-        .limit(1);
-
-      if (!existing || existing.archived) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
-      }
-      if (existing.status === "closed") {
-        throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+      return assertPollUpdated(tx, pollId, systemId);
     }
 
     await audit(tx, {
