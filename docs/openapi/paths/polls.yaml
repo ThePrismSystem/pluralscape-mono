@@ -1,0 +1,388 @@
+/systems/{systemId}/polls:
+  get:
+    operationId: listPolls
+    tags: [Polls]
+    summary: List polls
+    description: |
+      Returns a paginated list of polls for the specified system, ordered by
+      creation time descending. Polls facilitate cooperative internal
+      decision-making with optional abstain and veto support.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Include archived polls (default false)
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [open, closed]
+        description: Filter by poll status
+    responses:
+      "200":
+        description: Paginated poll list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/polls.yaml#/PollResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createPoll
+    tags: [Polls]
+    summary: Create a poll
+    description: |
+      Creates a new poll. Poll options and question text are encrypted
+      within `encryptedData`. Configuration fields (voting rules, schedule)
+      are stored in plaintext for server-side enforcement.
+
+      When `allowMultipleVotes` is false, `maxVotesPerMember` must be 1.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/polls.yaml#/CreatePollRequest"
+    responses:
+      "201":
+        description: Poll created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/polls/{pollId}:
+  get:
+    operationId: getPoll
+    tags: [Polls]
+    summary: Get a poll
+    description: |
+      Returns a single poll by ID, including its configuration and status.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    responses:
+      "200":
+        description: Poll details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updatePoll
+    tags: [Polls]
+    summary: Update a poll
+    description: |
+      Updates the encrypted content of a poll (question text, option labels, etc.).
+      Configuration fields (voting rules) are immutable after creation.
+      Returns 409 if the provided version conflicts.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/polls.yaml#/UpdatePollRequest"
+    responses:
+      "200":
+        description: Poll updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deletePoll
+    tags: [Polls]
+    summary: Delete a poll
+    description: |
+      Permanently deletes a poll. Returns 409 if the poll has dependents
+      (votes). This action is irreversible.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/polls/{pollId}/close:
+  post:
+    operationId: closePoll
+    tags: [Polls]
+    summary: Close a poll
+    description: |
+      Closes a poll, preventing further votes. Sets `closedAt` and changes
+      `status` to `closed`. This action is idempotent.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    responses:
+      "200":
+        description: Poll closed
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/polls/{pollId}/votes:
+  get:
+    operationId: listPollVotes
+    tags: [Polls]
+    summary: List votes for a poll
+    description: |
+      Returns a paginated list of votes cast on the specified poll.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Include archived votes (default false)
+    responses:
+      "200":
+        description: Paginated vote list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/polls.yaml#/PollVoteResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: castVote
+    tags: [Polls]
+    summary: Cast a vote on a poll
+    description: |
+      Casts a vote on an open poll. The voter is a polymorphic entity reference
+      (member or structure entity). Set `optionId` to null for abstain (if allowed).
+      Set `isVeto` to true to veto (if allowed). Voting on a closed poll returns 409.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/polls.yaml#/CastVoteRequest"
+    responses:
+      "201":
+        description: Vote cast
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollVoteResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/polls/{pollId}/archive:
+  post:
+    operationId: archivePoll
+    tags: [Polls]
+    summary: Archive a poll
+    description: |
+      Marks a poll as archived.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/polls/{pollId}/restore:
+  post:
+    operationId: restorePoll
+    tags: [Polls]
+    summary: Restore an archived poll
+    description: |
+      Removes the archived flag from a poll.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    responses:
+      "200":
+        description: Poll restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

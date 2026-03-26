@@ -1,0 +1,261 @@
+/systems/{systemId}/channels:
+  get:
+    operationId: listChannels
+    tags: [Channels]
+    summary: List channels
+    description: |
+      Returns a paginated list of channels and categories for the specified system.
+      Channels hold messages; categories group channels hierarchically.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: type
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [category, channel]
+        description: Filter by channel type
+      - name: parentId
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: ^ch_
+        description: Filter by parent category ID
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Include archived channels (default false)
+    responses:
+      "200":
+        description: Paginated channel list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/channels.yaml#/ChannelResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createChannel
+    tags: [Channels]
+    summary: Create a channel or category
+    description: |
+      Creates a new channel or category within the specified system.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/channels.yaml#/CreateChannelRequest"
+    responses:
+      "201":
+        description: Channel created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/channels.yaml#/ChannelResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/channels/{channelId}:
+  get:
+    operationId: getChannel
+    tags: [Channels]
+    summary: Get a channel
+    description: |
+      Returns a single channel or category by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: channelId
+        in: path
+        required: true
+        description: Channel ID
+        schema:
+          type: string
+          pattern: ^ch_
+    responses:
+      "200":
+        description: Channel details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/channels.yaml#/ChannelResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateChannel
+    tags: [Channels]
+    summary: Update a channel
+    description: |
+      Updates the encrypted payload and/or sort order for an existing channel.
+      Returns 409 if the provided version conflicts with the server's current version.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: channelId
+        in: path
+        required: true
+        description: Channel ID
+        schema:
+          type: string
+          pattern: ^ch_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/channels.yaml#/UpdateChannelRequest"
+    responses:
+      "200":
+        description: Channel updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/channels.yaml#/ChannelResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteChannel
+    tags: [Channels]
+    summary: Delete a channel
+    description: |
+      Permanently deletes a channel. Returns 409 if the channel has dependents
+      (messages). This action is irreversible.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: channelId
+        in: path
+        required: true
+        description: Channel ID
+        schema:
+          type: string
+          pattern: ^ch_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/channels/{channelId}/archive:
+  post:
+    operationId: archiveChannel
+    tags: [Channels]
+    summary: Archive a channel
+    description: |
+      Marks a channel as archived. Archived channels are hidden from default
+      list responses but remain accessible.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: channelId
+        in: path
+        required: true
+        description: Channel ID
+        schema:
+          type: string
+          pattern: ^ch_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/channels/{channelId}/restore:
+  post:
+    operationId: restoreChannel
+    tags: [Channels]
+    summary: Restore an archived channel
+    description: |
+      Removes the archived flag from a channel, making it visible in default
+      list responses again.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: channelId
+        in: path
+        required: true
+        description: Channel ID
+        schema:
+          type: string
+          pattern: ^ch_
+    responses:
+      "200":
+        description: Channel restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/channels.yaml#/ChannelResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

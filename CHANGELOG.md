@@ -6,6 +6,24 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 
 ## [Unreleased]
 
+### Added
+
+- Chat system — proxy-based messaging with channels, categories, and messages; polymorphic sender support (member, custom front, structure entity)
+- Board messages — persistent noticeboard with drag-and-drop reorder, pin/unpin, polymorphic authorship
+- Private notes — member-bound or system-wide notes with polymorphic authorship
+- Polls — multiple-choice polls with cooperative voting, abstain/veto support, consensus analytics, polymorphic voters (member or structure entity)
+- Mandatory acknowledgement routing — targeted alerts that persist until a specific member confirms, with resolution tracking
+- Communication webhook events — webhook payloads for all communication entity lifecycle events
+- CRDT sync strategies for channels, messages, board messages, notes, polls, votes, and acknowledgements
+- Lifecycle events for all communication entities
+- ADR 028: Opt-in IP address and user-agent audit logging
+- E2E tests expanded — 126 tests across 32 spec files (was 79 across 24)
+
+### Fixed
+
+- M5 audit remediation — performance, type safety, correctness, code pattern, and simplification fixes across communication services
+- Consolidated dependency updates and audit vulnerability fixes
+
 ### Changed
 
 - IP address and user-agent audit logging is now opt-in per account (default off, ADR 028)

@@ -1,0 +1,62 @@
+MessageResponse:
+  description: |
+    A chat message within a channel. Extends EncryptedEntity with message-specific
+    server-visible fields. Messages are partitioned by timestamp for efficient
+    range queries.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [channelId, timestamp]
+      properties:
+        channelId:
+          type: string
+          pattern: ^ch_
+          description: Channel this message belongs to
+        replyToId:
+          type: string
+          nullable: true
+          pattern: ^msg_
+          description: ID of the message being replied to (null if not a reply)
+        timestamp:
+          type: integer
+          format: int64
+          description: Message send time in Unix milliseconds (used for partition pruning)
+        editedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when last edited (null until first edit)
+
+CreateMessageRequest:
+  type: object
+  required: [encryptedData, timestamp]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted message content (text, sender proxy identity, etc.)"
+    timestamp:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Message send time in Unix milliseconds
+    replyToId:
+      type: string
+      pattern: ^msg_
+      description: ID of the message being replied to
+
+UpdateMessageRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted message content"
+    version:
+      type: integer
+      minimum: 1

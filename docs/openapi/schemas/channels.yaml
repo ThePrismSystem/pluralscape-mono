@@ -1,0 +1,61 @@
+ChannelResponse:
+  description: |
+    A chat channel or category. Discriminated on `type`: categories group
+    channels hierarchically; channels hold messages. Extends EncryptedEntity
+    with channel-specific server-visible fields.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [type, sortOrder]
+      properties:
+        type:
+          type: string
+          enum: [category, channel]
+          description: "Discriminator: `category` groups channels; `channel` holds messages"
+        parentId:
+          type: string
+          nullable: true
+          pattern: ^ch_
+          description: Parent category ID (null for top-level channels/categories)
+        sortOrder:
+          type: integer
+          minimum: 0
+          description: Display order within parent scope
+
+CreateChannelRequest:
+  type: object
+  required: [encryptedData, type, sortOrder]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted channel data (name, description, etc.)"
+    type:
+      type: string
+      enum: [category, channel]
+    parentId:
+      type: string
+      pattern: ^ch_
+      description: Parent category ID (omit for top-level)
+    sortOrder:
+      type: integer
+      minimum: 0
+
+UpdateChannelRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted channel data"
+    version:
+      type: integer
+      minimum: 1
+    sortOrder:
+      type: integer
+      minimum: 0

@@ -98,12 +98,13 @@ Goal: Internal messaging, boards, notes, polls
 
 Epics:
 
-- Chat system (features.md section 3)
-- Board messages (features.md section 3)
-- Private notes (features.md section 3)
-- Polls (features.md section 3)
-- Mandatory acknowledgement routing (features.md section 3)
-- Communication webhooks
+- ~~Chat system~~ [COMPLETED] — proxy-based messaging with channels/categories, polymorphic sender support (member, custom front, structure entity), CRDT sync, lifecycle events, E2E tests
+- ~~Board messages~~ [COMPLETED] — persistent noticeboard with drag-and-drop reorder, pin/unpin, polymorphic authorship, CRDT sync, lifecycle events, E2E tests
+- ~~Private notes~~ [COMPLETED] — member-bound or system-wide notes with polymorphic authorship, CRDT sync, lifecycle events, E2E tests
+- ~~Polls~~ [COMPLETED] — multiple-choice polls with cooperative voting, abstain/veto support, consensus analytics, polymorphic voters (member or structure entity), CRDT sync, lifecycle events, E2E tests
+- ~~Mandatory acknowledgement routing~~ [COMPLETED] — targeted alerts with member confirmation, resolution tracking, CRDT sync, lifecycle events, E2E tests
+- ~~Communication webhooks~~ [COMPLETED] — webhook payloads for all communication entity lifecycle events, integration tests, E2E tests
+- M5 audit remediation [IN PROGRESS] — performance, type safety, correctness, code pattern, and simplification fixes across communication services
 
 ## Milestone 6: Privacy and Social
 
@@ -202,7 +203,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 ## Architecture Decision Records
 
-27 accepted ADRs cover the full stack:
+28 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -225,6 +226,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - [ADR 025: Webhook Secret Storage](../adr/025-webhook-secret-storage.md) — T3 plaintext storage for webhook signing secrets
 - [ADR 026: Lifecycle Event Type-Specific Validation](../adr/026-lifecycle-event-type-validation.md) — type-discriminated validation for lifecycle event subtypes
 - [ADR 027: Webhook Secret Rotation](../adr/027-webhook-secret-rotation.md) — procedure for rotating webhook HMAC signing secrets
+- [ADR 028: Opt-in IP Audit Logging](../adr/028-opt-in-ip-audit-logging.md) — IP address and user-agent audit logging is opt-in per account (default off)
 
 ## Development Sequence Rationale
 

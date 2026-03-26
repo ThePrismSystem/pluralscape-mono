@@ -1,0 +1,341 @@
+/systems/{systemId}/board-messages:
+  get:
+    operationId: listBoardMessages
+    tags: [Board Messages]
+    summary: List board messages
+    description: |
+      Returns a paginated list of board messages for the specified system,
+      ordered by sort order ascending. Board messages are persistent
+      noticeboard entries immune to chat scroll.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Include archived board messages (default false)
+      - name: pinned
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Filter by pinned status
+    responses:
+      "200":
+        description: Paginated board message list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/board-messages.yaml#/BoardMessageResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createBoardMessage
+    tags: [Board Messages]
+    summary: Create a board message
+    description: |
+      Creates a new board message on the system's noticeboard.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/board-messages.yaml#/CreateBoardMessageRequest"
+    responses:
+      "201":
+        description: Board message created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/board-messages.yaml#/BoardMessageResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/board-messages/reorder:
+  post:
+    operationId: reorderBoardMessages
+    tags: [Board Messages]
+    summary: Reorder board messages
+    description: |
+      Batch-updates sort order for multiple board messages in a single
+      atomic operation. Maximum 100 operations per request.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/board-messages.yaml#/ReorderBoardMessagesRequest"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/board-messages/{boardMessageId}:
+  get:
+    operationId: getBoardMessage
+    tags: [Board Messages]
+    summary: Get a board message
+    description: |
+      Returns a single board message by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: boardMessageId
+        in: path
+        required: true
+        description: Board message ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Board message details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/board-messages.yaml#/BoardMessageResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateBoardMessage
+    tags: [Board Messages]
+    summary: Update a board message
+    description: |
+      Updates the encrypted content, sort order, or pinned status of a board
+      message. Returns 409 if the provided version conflicts.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: boardMessageId
+        in: path
+        required: true
+        description: Board message ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/board-messages.yaml#/UpdateBoardMessageRequest"
+    responses:
+      "200":
+        description: Board message updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/board-messages.yaml#/BoardMessageResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteBoardMessage
+    tags: [Board Messages]
+    summary: Delete a board message
+    description: |
+      Permanently deletes a board message. This action is irreversible.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: boardMessageId
+        in: path
+        required: true
+        description: Board message ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/board-messages/{boardMessageId}/pin:
+  post:
+    operationId: pinBoardMessage
+    tags: [Board Messages]
+    summary: Pin a board message
+    description: |
+      Pins a board message to the top of the noticeboard.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: boardMessageId
+        in: path
+        required: true
+        description: Board message ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Board message pinned
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/board-messages.yaml#/BoardMessageResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/board-messages/{boardMessageId}/unpin:
+  post:
+    operationId: unpinBoardMessage
+    tags: [Board Messages]
+    summary: Unpin a board message
+    description: |
+      Unpins a board message from the top of the noticeboard.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: boardMessageId
+        in: path
+        required: true
+        description: Board message ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Board message unpinned
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/board-messages.yaml#/BoardMessageResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/board-messages/{boardMessageId}/archive:
+  post:
+    operationId: archiveBoardMessage
+    tags: [Board Messages]
+    summary: Archive a board message
+    description: |
+      Marks a board message as archived.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: boardMessageId
+        in: path
+        required: true
+        description: Board message ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/board-messages/{boardMessageId}/restore:
+  post:
+    operationId: restoreBoardMessage
+    tags: [Board Messages]
+    summary: Restore an archived board message
+    description: |
+      Removes the archived flag from a board message.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: boardMessageId
+        in: path
+        required: true
+        description: Board message ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Board message restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/board-messages.yaml#/BoardMessageResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

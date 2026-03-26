@@ -1,0 +1,43 @@
+AcknowledgementResponse:
+  description: |
+    A mandatory acknowledgement — a targeted alert that persists until a
+    specific member confirms it. Extends EncryptedEntity with confirmation
+    tracking fields.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [confirmed]
+      properties:
+        createdByMemberId:
+          type: string
+          nullable: true
+          pattern: ^mem_
+          description: Member who created the acknowledgement (null if not attributed)
+        confirmed:
+          type: boolean
+          description: Whether the target member has confirmed this acknowledgement
+
+CreateAcknowledgementRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted acknowledgement data (message, target member, etc.)"
+    createdByMemberId:
+      type: string
+      pattern: ^mem_
+      description: Member creating the acknowledgement
+
+ConfirmAcknowledgementRequest:
+  type: object
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "Optional T1-encrypted confirmation data (replaces existing encryptedData)"
