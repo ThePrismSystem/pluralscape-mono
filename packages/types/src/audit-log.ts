@@ -189,7 +189,19 @@ export type AuditEventType =
   | "bucket-content-tag.tagged"
   | "bucket-content-tag.untagged"
   | "field-bucket-visibility.set"
-  | "field-bucket-visibility.removed";
+  | "field-bucket-visibility.removed"
+  // ── Privacy: friends ──
+  | "friend-code.generated"
+  | "friend-code.redeemed"
+  | "friend-code.archived"
+  | "friend-connection.created"
+  | "friend-connection.blocked"
+  | "friend-connection.removed"
+  | "friend-connection.archived"
+  | "friend-connection.restored"
+  | "friend-visibility.updated"
+  | "friend-bucket-assignment.assigned"
+  | "friend-bucket-assignment.unassigned";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

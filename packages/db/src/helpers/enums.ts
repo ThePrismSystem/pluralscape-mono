@@ -330,6 +330,18 @@ export const AUDIT_EVENT_TYPES = [
   "bucket-content-tag.untagged",
   "field-bucket-visibility.set",
   "field-bucket-visibility.removed",
+  // ── Privacy: friends ──
+  "friend-code.generated",
+  "friend-code.redeemed",
+  "friend-code.archived",
+  "friend-connection.created",
+  "friend-connection.blocked",
+  "friend-connection.removed",
+  "friend-connection.archived",
+  "friend-connection.restored",
+  "friend-visibility.updated",
+  "friend-bucket-assignment.assigned",
+  "friend-bucket-assignment.unassigned",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
@@ -412,6 +424,11 @@ export const WEBHOOK_EVENT_TYPES = [
   "bucket-content-tag.untagged",
   "field-bucket-visibility.set",
   "field-bucket-visibility.removed",
+  // ── Privacy: friends ──
+  "friend.connected",
+  "friend.removed",
+  "friend.bucket-assigned",
+  "friend.bucket-unassigned",
 ] as const satisfies readonly WebhookEventType[];
 export const WEBHOOK_DELIVERY_STATUSES = [
   "pending",

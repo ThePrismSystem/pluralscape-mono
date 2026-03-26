@@ -1,11 +1,11 @@
 ---
 # api-rl9o
 title: Friend network
-status: todo
+status: in-progress
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-26T16:06:37Z
+updated_at: 2026-03-26T23:24:58Z
 parent: ps-6itw
 blocked_by:
   - api-e3hk
@@ -15,9 +15,9 @@ Friend codes, connection management, bucket assignment. Account-level operations
 
 ### Scope (9 features)
 
-- [ ] 2.1 Type registrations for friend domain events
-- [ ] 2.2 Friend validation schemas
-- [ ] 2.3 Account ownership helper
+- [x] 2.1 Type registrations for friend domain events
+- [x] 2.2 Friend validation schemas
+- [x] 2.3 Account ownership helper
 - [ ] 2.4 Friend code service
 - [ ] 2.5 Friend connection service
 - [ ] 2.6 Bucket assignment service

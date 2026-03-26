@@ -135,6 +135,13 @@ export {
   SetFieldBucketVisibilityBodySchema,
 } from "./privacy.js";
 export {
+  RedeemFriendCodeBodySchema,
+  UpdateFriendVisibilityBodySchema,
+  AssignBucketBodySchema,
+  FriendConnectionQuerySchema,
+  FriendCodeQuerySchema,
+} from "./friend.js";
+export {
   CreatePollBodySchema,
   UpdatePollBodySchema,
   CastVoteBodySchema,

@@ -56,6 +56,12 @@ export const MAX_ANALYTICS_CUSTOM_RANGE_MS = 366 * 86_400_000;
 /** Maximum character length for webhook target URLs. Matches DB URL_MAX_LENGTH. */
 export const MAX_WEBHOOK_URL_LENGTH = 2048;
 
+/** Maximum number of friend connections returned per page. */
+export const FRIEND_CONNECTION_MAX_LIMIT = 100;
+
+/** Default number of friend connections returned per page when not specified. */
+export const FRIEND_CONNECTION_DEFAULT_LIMIT = 50;
+
 /** Maximum number of event types a single webhook config can subscribe to. */
 export const MAX_WEBHOOK_EVENT_TYPES = 50;
 
@@ -115,4 +121,9 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "bucket-content-tag.untagged",
   "field-bucket-visibility.set",
   "field-bucket-visibility.removed",
+  // ── Privacy: friends ──
+  "friend.connected",
+  "friend.removed",
+  "friend.bucket-assigned",
+  "friend.bucket-unassigned",
 ] as const;

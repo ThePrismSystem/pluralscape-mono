@@ -1,5 +1,6 @@
 import type { EncryptedString } from "./encryption.js";
 import type {
+  AccountId,
   AcknowledgementId,
   ApiKeyId,
   BoardMessageId,
@@ -7,6 +8,7 @@ import type {
   ChannelId,
   CustomFrontId,
   FieldDefinitionId,
+  FriendConnectionId,
   FrontingSessionId,
   GroupId,
   LifecycleEventId,
@@ -91,7 +93,12 @@ export type WebhookEventType =
   | "bucket-content-tag.untagged"
   // ── Privacy: field-bucket-visibility ──
   | "field-bucket-visibility.set"
-  | "field-bucket-visibility.removed";
+  | "field-bucket-visibility.removed"
+  // ── Privacy: friends ──
+  | "friend.connected"
+  | "friend.removed"
+  | "friend.bucket-assigned"
+  | "friend.bucket-unassigned";
 
 // ── T3 payload types (IDs + metadata only, never encrypted content) ──
 // Note: systemId is auto-injected by the dispatcher — not included in payload interfaces.
@@ -150,6 +157,16 @@ interface BucketContentTagEventPayload {
 
 interface FieldBucketVisibilityEventPayload {
   readonly fieldDefinitionId: FieldDefinitionId;
+  readonly bucketId: BucketId;
+}
+
+interface FriendConnectionEventPayload {
+  readonly connectionId: FriendConnectionId;
+  readonly friendAccountId: AccountId;
+}
+
+interface FriendBucketAssignmentEventPayload {
+  readonly connectionId: FriendConnectionId;
   readonly bucketId: BucketId;
 }
 
@@ -222,6 +239,11 @@ export interface WebhookEventPayloadMap {
   // ── Privacy: field-bucket-visibility ──
   "field-bucket-visibility.set": FieldBucketVisibilityEventPayload;
   "field-bucket-visibility.removed": FieldBucketVisibilityEventPayload;
+  // ── Privacy: friends ──
+  "friend.connected": FriendConnectionEventPayload;
+  "friend.removed": FriendConnectionEventPayload;
+  "friend.bucket-assigned": FriendBucketAssignmentEventPayload;
+  "friend.bucket-unassigned": FriendBucketAssignmentEventPayload;
 }
 
 /** Configuration for a webhook endpoint. */

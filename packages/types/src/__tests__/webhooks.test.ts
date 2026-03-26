@@ -92,6 +92,10 @@ describe("WebhookEventType", () => {
         case "bucket-content-tag.untagged":
         case "field-bucket-visibility.set":
         case "field-bucket-visibility.removed":
+        case "friend.connected":
+        case "friend.removed":
+        case "friend.bucket-assigned":
+        case "friend.bucket-unassigned":
           return type;
         default: {
           const _exhaustive: never = type;
