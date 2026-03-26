@@ -10,4 +10,25 @@ updated_at: 2026-03-21T04:57:12Z
 
 Address all 13 review findings (6 important + 7 suggestions) from PR #220 E2E test review
 
-## Summary of Changes\n\nAddressed all 13 review findings from PR #220:\n\n### Important fixes\n- Aligned ciphertext byte length (64→32) across all test fixtures\n- Fixed WS connection leak in createAuthenticatedWsClient on auth failure\n- Changed fragile Last-Event-ID from 999999 to Number.MAX_SAFE_INTEGER\n- Fixed unsubscribe race condition with subscribe barrier pattern\n- Fixed readSseUntil to throw on stream EOF instead of silent return\n- Fixed SyncWsClient.close() to reject pending waiters instead of orphaning\n\n### Suggestions implemented\n- Extracted withSseStream helper to eliminate AbortController boilerplate\n- Renamed HEARTBEAT_WAIT_MS to SSE_HEARTBEAT_TIMEOUT_MS\n- Added assertMessageType helper for proper TypeScript narrowing\n- Renamed AuthenticatedWsClient.client to .ws\n- Consolidated duplicate base64urlOfLength across 4 files\n- Extracted WireChangePayload named interface\n- Removed double blank line in imports
+## Summary of Changes
+
+Addressed all 13 review findings from PR #220:
+
+### Important fixes
+
+- Aligned ciphertext byte length (64→32) across all test fixtures
+- Fixed WS connection leak in createAuthenticatedWsClient on auth failure
+- Changed fragile Last-Event-ID from 999999 to Number.MAX_SAFE_INTEGER
+- Fixed unsubscribe race condition with subscribe barrier pattern
+- Fixed readSseUntil to throw on stream EOF instead of silent return
+- Fixed SyncWsClient.close() to reject pending waiters instead of orphaning
+
+### Suggestions implemented
+
+- Extracted withSseStream helper to eliminate AbortController boilerplate
+- Renamed HEARTBEAT_WAIT_MS to SSE_HEARTBEAT_TIMEOUT_MS
+- Added assertMessageType helper for proper TypeScript narrowing
+- Renamed AuthenticatedWsClient.client to .ws
+- Consolidated duplicate base64urlOfLength across 4 files
+- Extracted WireChangePayload named interface
+- Removed double blank line in imports

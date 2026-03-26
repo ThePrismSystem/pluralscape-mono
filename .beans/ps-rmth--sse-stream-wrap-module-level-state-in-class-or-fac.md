@@ -11,4 +11,6 @@ parent: ps-i3xl
 
 routes/notifications/stream.ts:41-42
 
-## Summary of Changes\n\nExtracted accountStates Map and noPubSubWarningLogged into an SseStateManager class with getOrCreate(), get(), delete(), reset(), and warningLogged accessors. Updated route handler and test helpers to delegate to the class.
+## Summary of Changes
+
+Extracted accountStates Map and noPubSubWarningLogged into an SseStateManager class with getOrCreate(), get(), delete(), reset(), and warningLogged accessors. Updated route handler and test helpers to delegate to the class.
