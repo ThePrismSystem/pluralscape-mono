@@ -9,6 +9,7 @@ import {
 } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 
+import { env } from "../env.js";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
@@ -23,7 +24,13 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../ser
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
-import type { PaginatedResult, SystemId, WebhookEventType, WebhookId } from "@pluralscape/types";
+import type {
+  PaginatedResult,
+  SystemId,
+  UnixMillis,
+  WebhookEventType,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -37,9 +44,9 @@ export interface WebhookConfigResult {
   readonly cryptoKeyId: string | null;
   readonly version: number;
   readonly archived: boolean;
-  readonly archivedAt: number | null;
-  readonly createdAt: number;
-  readonly updatedAt: number;
+  readonly archivedAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
 }
 
 /** Returned from create only — includes the raw secret for the caller to store. */
@@ -106,7 +113,7 @@ function toWebhookConfigResult(row: {
  * - Resolves the hostname and checks all resolved IPs against private/reserved ranges.
  */
 async function validateWebhookUrl(url: string): Promise<void> {
-  if (process.env.NODE_ENV === "production" && !url.startsWith("https://")) {
+  if (env.NODE_ENV === "production" && !url.startsWith("https://")) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
