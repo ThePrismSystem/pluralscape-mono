@@ -4,44 +4,47 @@
  * Used in both PG and SQLite table definitions.
  */
 
-import type {
-  AccountPurgeStatus,
-  AccountType,
-  ApiKey,
-  ApiKeyScope,
-  AuditEventType,
-  AuthKeyType,
-  BlobPurpose,
-  BucketContentEntityType,
-  DeviceTokenPlatform,
-  DeviceTransferStatus,
-  DiscoveryStatus,
-  EntityType,
-  ExportFormat,
-  ExportRequestStatus,
-  FieldDefinitionScopeType,
-  FriendConnectionStatus,
-  ImportJobStatus,
-  ImportSource,
-  JobStatus,
-  JobType,
-  KnownSaturationLevel,
-  LifecycleEventType,
-  NotificationEventType,
-  PKSyncDirection,
-  PollKind,
-  RelationshipType,
-  ReportFormat,
-  RotationItemStatus,
-  RotationState,
-  SearchableEntityType,
-  ServerChannel,
-  SnapshotTrigger,
-  SyncDocumentType,
-  DocumentKeyType,
-  WebhookDeliveryStatus,
-  WebhookEventType,
+import {
+  BUCKET_CONTENT_ENTITY_TYPES,
+  type AccountPurgeStatus,
+  type AccountType,
+  type ApiKey,
+  type ApiKeyScope,
+  type AuditEventType,
+  type AuthKeyType,
+  type BlobPurpose,
+  type BucketContentEntityType,
+  type DeviceTokenPlatform,
+  type DeviceTransferStatus,
+  type DiscoveryStatus,
+  type DocumentKeyType,
+  type EntityType,
+  type ExportFormat,
+  type ExportRequestStatus,
+  type FieldDefinitionScopeType,
+  type FriendConnectionStatus,
+  type ImportJobStatus,
+  type ImportSource,
+  type JobStatus,
+  type JobType,
+  type KnownSaturationLevel,
+  type LifecycleEventType,
+  type NotificationEventType,
+  type PKSyncDirection,
+  type PollKind,
+  type RelationshipType,
+  type ReportFormat,
+  type RotationItemStatus,
+  type RotationState,
+  type SearchableEntityType,
+  type ServerChannel,
+  type SnapshotTrigger,
+  type SyncDocumentType,
+  type WebhookDeliveryStatus,
+  type WebhookEventType,
 } from "@pluralscape/types";
+
+export { BUCKET_CONTENT_ENTITY_TYPES };
 
 export const ACCOUNT_TYPES = ["system", "viewer"] as const satisfies readonly AccountType[];
 export const KNOWN_SATURATION_LEVELS = [
@@ -547,36 +550,6 @@ export const SNAPSHOT_TRIGGERS = [
   "scheduled-daily",
   "scheduled-weekly",
 ] as const satisfies readonly SnapshotTrigger[];
-
-/**
- * Entity types that can be tagged in privacy buckets — user-owned content
- * subject to bucket-level privacy controls (shareable via friend connections).
- * Infrastructure types (accounts, sessions, jobs, sync documents, etc.) are
- * excluded because they are internal to the system and never shared.
- */
-export const BUCKET_CONTENT_ENTITY_TYPES = [
-  "member",
-  "group",
-  "channel",
-  "message",
-  "note",
-  "poll",
-  "relationship",
-  "structure-entity-type",
-  "structure-entity",
-  "journal-entry",
-  "wiki-page",
-  "custom-front",
-  "fronting-session",
-  "board-message",
-  "acknowledgement",
-  "innerworld-entity",
-  "innerworld-region",
-  "field-definition",
-  "field-value",
-  "member-photo",
-  "fronting-comment",
-] as const satisfies readonly BucketContentEntityType[];
 
 export const FIELD_DEFINITION_SCOPE_TYPES = [
   "system",

@@ -200,6 +200,15 @@ describe("AuditEventType", () => {
         case "acknowledgement.archived":
         case "acknowledgement.restored":
         case "acknowledgement.deleted":
+        case "bucket.created":
+        case "bucket.updated":
+        case "bucket.archived":
+        case "bucket.restored":
+        case "bucket.deleted":
+        case "bucket-content-tag.tagged":
+        case "bucket-content-tag.untagged":
+        case "field-bucket-visibility.set":
+        case "field-bucket-visibility.removed":
           return type;
         default: {
           const _exhaustive: never = type;

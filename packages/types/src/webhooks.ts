@@ -3,6 +3,7 @@ import type {
   AcknowledgementId,
   ApiKeyId,
   BoardMessageId,
+  BucketId,
   ChannelId,
   CustomFrontId,
   FrontingSessionId,
@@ -77,7 +78,15 @@ export type WebhookEventType =
   | "acknowledgement.confirmed"
   | "acknowledgement.archived"
   | "acknowledgement.restored"
-  | "acknowledgement.deleted";
+  | "acknowledgement.deleted"
+  // ── Privacy: buckets ──
+  | "bucket.created"
+  | "bucket.updated"
+  | "bucket.archived"
+  | "bucket.restored"
+  | "bucket.deleted"
+  | "bucket-content-tag.tagged"
+  | "bucket-content-tag.untagged";
 
 // ── T3 payload types (IDs + metadata only, never encrypted content) ──
 // Note: systemId is auto-injected by the dispatcher — not included in payload interfaces.
@@ -122,6 +131,16 @@ interface PollVoteEventPayload {
 
 interface AcknowledgementEventPayload {
   readonly acknowledgementId: AcknowledgementId;
+}
+
+interface BucketEventPayload {
+  readonly bucketId: BucketId;
+}
+
+interface BucketContentTagEventPayload {
+  readonly bucketId: BucketId;
+  readonly entityType: string;
+  readonly entityId: string;
 }
 
 /**
@@ -182,6 +201,14 @@ export interface WebhookEventPayloadMap {
   "acknowledgement.archived": AcknowledgementEventPayload;
   "acknowledgement.restored": AcknowledgementEventPayload;
   "acknowledgement.deleted": AcknowledgementEventPayload;
+  // ── Privacy: buckets ──
+  "bucket.created": BucketEventPayload;
+  "bucket.updated": BucketEventPayload;
+  "bucket.archived": BucketEventPayload;
+  "bucket.restored": BucketEventPayload;
+  "bucket.deleted": BucketEventPayload;
+  "bucket-content-tag.tagged": BucketContentTagEventPayload;
+  "bucket-content-tag.untagged": BucketContentTagEventPayload;
 }
 
 /** Configuration for a webhook endpoint. */
