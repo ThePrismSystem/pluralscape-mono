@@ -3,10 +3,11 @@ import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@p
 import { CastVoteBodySchema, PollVoteQuerySchema } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -253,9 +254,5 @@ export async function listVotes(
 export function parsePollVoteQuery(query: Record<string, string | undefined>): {
   includeArchived: boolean;
 } {
-  const result = PollVoteQuerySchema.safeParse(query);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
-  }
-  return result.data;
+  return parseQuery(PollVoteQuerySchema, query);
 }

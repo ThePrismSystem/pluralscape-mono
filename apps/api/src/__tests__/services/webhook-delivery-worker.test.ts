@@ -172,6 +172,15 @@ describe("processWebhookDelivery (unit)", () => {
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
 
+  it("marks as failed when config secret is missing", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configSecret: null }]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
   it("calls fetch with correct URL and payload on success", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW }]);

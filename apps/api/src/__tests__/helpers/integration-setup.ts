@@ -7,7 +7,7 @@ import { expect } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
 
-import type { AuditWriteParams, AuditWriter } from "../../lib/audit-writer.js";
+import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type * as schema from "@pluralscape/db/pg";
 import type {
@@ -71,15 +71,8 @@ export function makeAuth(accountId: AccountId, systemId: SystemId): AuthContext 
 /** No-op audit writer for tests that don't need to verify audit entries. */
 export const noopAudit: AuditWriter = async () => {};
 
-/** Spy audit writer that records every call for assertion. */
-export function spyAudit(): AuditWriter & { calls: AuditWriteParams[] } {
-  const calls: AuditWriteParams[] = [];
-  const writer: AuditWriter = (_db, params) => {
-    calls.push(params);
-    return Promise.resolve();
-  };
-  return Object.assign(writer, { calls });
-}
+// Re-export spyAudit from its canonical location alongside SpyAudit type.
+export { spyAudit } from "./audit-assertions.js";
 
 /**
  * Assert that a promise rejects with an ApiHttpError carrying the expected

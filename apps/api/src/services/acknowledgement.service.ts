@@ -16,6 +16,7 @@ import {
 } from "../lib/encrypted-blob.js";
 import { archiveEntity, deleteEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -295,7 +296,7 @@ const ACK_DELETE: DeletableEntityConfig<AcknowledgementId> = {
   table: acknowledgements,
   columns: acknowledgements,
   entityName: "Acknowledgement",
-  deleteEvent: "acknowledgement.deleted" as const,
+  deleteEvent: "acknowledgement.deleted",
   onDelete: (tx, sId, eid) =>
     dispatchWebhookEvent(tx, sId, "acknowledgement.deleted", { acknowledgementId: eid }),
 };
@@ -358,9 +359,5 @@ export function parseAcknowledgementQuery(query: Record<string, string | undefin
   confirmed?: boolean;
   includeArchived: boolean;
 } {
-  const result = AcknowledgementQuerySchema.safeParse(query);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
-  }
-  return result.data;
+  return parseQuery(AcknowledgementQuerySchema, query);
 }

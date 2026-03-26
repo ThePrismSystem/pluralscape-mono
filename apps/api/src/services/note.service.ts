@@ -13,6 +13,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, deleteEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -296,7 +297,7 @@ const NOTE_DELETE: DeletableEntityConfig<NoteId> = {
   table: notes,
   columns: notes,
   entityName: "Note",
-  deleteEvent: "note.deleted" as const,
+  deleteEvent: "note.deleted",
   onDelete: (tx, sId, eid) => dispatchWebhookEvent(tx, sId, "note.deleted", { noteId: eid }),
 };
 
@@ -354,9 +355,5 @@ export function parseNoteQuery(query: Record<string, string | undefined>): {
   authorEntityId?: string;
   systemWide: boolean;
 } {
-  const result = NoteQuerySchema.safeParse(query);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
-  }
-  return result.data;
+  return parseQuery(NoteQuerySchema, query);
 }

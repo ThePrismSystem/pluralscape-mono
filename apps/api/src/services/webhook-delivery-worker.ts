@@ -111,7 +111,12 @@ export async function processWebhookDelivery(
   const configUrl = row.configUrl;
   const configSecret = row.configSecret;
   if (!configSecret) {
-    throw new Error("Unreachable: config secret null after enabled check");
+    logger.warn("[webhook-worker] config secret missing for delivery", { deliveryId });
+    await db
+      .update(webhookDeliveries)
+      .set({ status: "failed", lastAttemptAt: now() })
+      .where(eq(webhookDeliveries.id, deliveryId));
+    return;
   }
 
   // Pre-flight SSRF check. DNS rebinding TOCTOU is an accepted risk — see ip-validation.ts.

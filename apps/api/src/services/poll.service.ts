@@ -7,11 +7,12 @@ import {
 } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, deleteEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -392,7 +393,7 @@ const POLL_DELETE: DeletableEntityConfig<PollId> = {
   table: polls,
   columns: polls,
   entityName: "Poll",
-  deleteEvent: "poll.deleted" as const,
+  deleteEvent: "poll.deleted",
   onDelete: (tx, sId, eid) => dispatchWebhookEvent(tx, sId, "poll.deleted", { pollId: eid }),
   checkDependents: checkPollDependents,
 };
@@ -449,9 +450,5 @@ export function parsePollQuery(query: Record<string, string | undefined>): {
   includeArchived: boolean;
   status?: PollStatus;
 } {
-  const result = PollQuerySchema.safeParse(query);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
-  }
-  return result.data;
+  return parseQuery(PollQuerySchema, query);
 }

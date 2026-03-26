@@ -14,6 +14,7 @@ import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-bl
 import { archiveEntity, deleteEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -477,7 +478,7 @@ const BOARD_MESSAGE_DELETE: DeletableEntityConfig<BoardMessageId> = {
   table: boardMessages,
   columns: boardMessages,
   entityName: "Board message",
-  deleteEvent: "board-message.deleted" as const,
+  deleteEvent: "board-message.deleted",
   onDelete: (tx, sId, eid) =>
     dispatchWebhookEvent(tx, sId, "board-message.deleted", { boardMessageId: eid }),
 };
@@ -540,9 +541,5 @@ export function parseBoardMessageQuery(query: Record<string, string | undefined>
   includeArchived: boolean;
   pinned?: boolean;
 } {
-  const result = BoardMessageQuerySchema.safeParse(query);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
-  }
-  return result.data;
+  return parseQuery(BoardMessageQuerySchema, query);
 }
