@@ -179,7 +179,17 @@ export type AuditEventType =
   | "acknowledgement.confirmed"
   | "acknowledgement.archived"
   | "acknowledgement.restored"
-  | "acknowledgement.deleted";
+  | "acknowledgement.deleted"
+  // ── Privacy: buckets ──
+  | "bucket.created"
+  | "bucket.updated"
+  | "bucket.archived"
+  | "bucket.restored"
+  | "bucket.deleted"
+  | "bucket-content-tag.tagged"
+  | "bucket-content-tag.untagged"
+  | "field-bucket-visibility.set"
+  | "field-bucket-visibility.removed";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

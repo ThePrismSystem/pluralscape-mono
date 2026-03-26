@@ -107,4 +107,10 @@ export interface PrivacyConfigDocument {
   friendCodes: Record<string, CrdtFriendCode>;
   /** Append-lww map keyed by KeyGrantId; revokedAt is the only mutable field. */
   keyGrants: Record<string, CrdtKeyGrant>;
+  /**
+   * Junction map keyed by "{fieldDefinitionId}_{bucketId}" → true.
+   * Controls which custom field definitions are visible in each bucket.
+   * Missing on documents created before this field was added — treat as empty.
+   */
+  fieldBucketVisibility?: Record<string, true>;
 }

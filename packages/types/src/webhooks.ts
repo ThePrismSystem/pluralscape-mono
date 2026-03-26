@@ -3,8 +3,10 @@ import type {
   AcknowledgementId,
   ApiKeyId,
   BoardMessageId,
+  BucketId,
   ChannelId,
   CustomFrontId,
+  FieldDefinitionId,
   FrontingSessionId,
   GroupId,
   LifecycleEventId,
@@ -17,6 +19,7 @@ import type {
   WebhookDeliveryId,
   WebhookId,
 } from "./ids.js";
+import type { BucketContentEntityType } from "./privacy.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Archived, AuditMetadata } from "./utility.js";
 
@@ -77,7 +80,18 @@ export type WebhookEventType =
   | "acknowledgement.confirmed"
   | "acknowledgement.archived"
   | "acknowledgement.restored"
-  | "acknowledgement.deleted";
+  | "acknowledgement.deleted"
+  // ── Privacy: buckets ──
+  | "bucket.created"
+  | "bucket.updated"
+  | "bucket.archived"
+  | "bucket.restored"
+  | "bucket.deleted"
+  | "bucket-content-tag.tagged"
+  | "bucket-content-tag.untagged"
+  // ── Privacy: field-bucket-visibility ──
+  | "field-bucket-visibility.set"
+  | "field-bucket-visibility.removed";
 
 // ── T3 payload types (IDs + metadata only, never encrypted content) ──
 // Note: systemId is auto-injected by the dispatcher — not included in payload interfaces.
@@ -122,6 +136,21 @@ interface PollVoteEventPayload {
 
 interface AcknowledgementEventPayload {
   readonly acknowledgementId: AcknowledgementId;
+}
+
+interface BucketEventPayload {
+  readonly bucketId: BucketId;
+}
+
+interface BucketContentTagEventPayload {
+  readonly bucketId: BucketId;
+  readonly entityType: BucketContentEntityType;
+  readonly entityId: string;
+}
+
+interface FieldBucketVisibilityEventPayload {
+  readonly fieldDefinitionId: FieldDefinitionId;
+  readonly bucketId: BucketId;
 }
 
 /**
@@ -182,6 +211,17 @@ export interface WebhookEventPayloadMap {
   "acknowledgement.archived": AcknowledgementEventPayload;
   "acknowledgement.restored": AcknowledgementEventPayload;
   "acknowledgement.deleted": AcknowledgementEventPayload;
+  // ── Privacy: buckets ──
+  "bucket.created": BucketEventPayload;
+  "bucket.updated": BucketEventPayload;
+  "bucket.archived": BucketEventPayload;
+  "bucket.restored": BucketEventPayload;
+  "bucket.deleted": BucketEventPayload;
+  "bucket-content-tag.tagged": BucketContentTagEventPayload;
+  "bucket-content-tag.untagged": BucketContentTagEventPayload;
+  // ── Privacy: field-bucket-visibility ──
+  "field-bucket-visibility.set": FieldBucketVisibilityEventPayload;
+  "field-bucket-visibility.removed": FieldBucketVisibilityEventPayload;
 }
 
 /** Configuration for a webhook endpoint. */

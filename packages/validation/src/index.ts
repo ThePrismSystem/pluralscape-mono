@@ -127,6 +127,14 @@ export {
 } from "./board-message.js";
 export { CreateNoteBodySchema, UpdateNoteBodySchema, NoteQuerySchema } from "./note.js";
 export {
+  CreateBucketBodySchema,
+  UpdateBucketBodySchema,
+  BucketQuerySchema,
+  TagContentBodySchema,
+  BucketContentTagQuerySchema,
+  SetFieldBucketVisibilityBodySchema,
+} from "./privacy.js";
+export {
   CreatePollBodySchema,
   UpdatePollBodySchema,
   CastVoteBodySchema,

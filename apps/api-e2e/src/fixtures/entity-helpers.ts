@@ -286,3 +286,21 @@ export async function createInnerworldRegion(
   const body = (await res.json()) as { id: string; version: number };
   return { id: body.id, version: body.version };
 }
+
+/**
+ * Create a privacy bucket in the given system and return its ID and version.
+ */
+export async function createBucket(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  name = "E2E Test Bucket",
+): Promise<{ id: string; version: number }> {
+  const res = await request.post(`/v1/systems/${systemId}/buckets`, {
+    headers,
+    data: { encryptedData: encryptForApi({ name }) },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { id: string; version: number };
+  return { id: body.id, version: body.version };
+}

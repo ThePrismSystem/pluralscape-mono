@@ -52,6 +52,39 @@ export type BucketContentEntityType =
   | "fronting-comment";
 
 /**
+ * Runtime array of all BucketContentEntityType values.
+ * Used for Zod enum validation and DB CHECK constraints.
+ */
+export const BUCKET_CONTENT_ENTITY_TYPES = [
+  "member",
+  "group",
+  "channel",
+  "message",
+  "note",
+  "poll",
+  "relationship",
+  "structure-entity-type",
+  "structure-entity",
+  "journal-entry",
+  "wiki-page",
+  "custom-front",
+  "fronting-session",
+  "board-message",
+  "acknowledgement",
+  "innerworld-entity",
+  "innerworld-region",
+  "field-definition",
+  "field-value",
+  "member-photo",
+  "fronting-comment",
+] as const satisfies readonly BucketContentEntityType[];
+
+/** Type guard for BucketContentEntityType — validates unknown strings at trust boundaries. */
+export function isBucketContentEntityType(value: string): value is BucketContentEntityType {
+  return (BUCKET_CONTENT_ENTITY_TYPES as readonly string[]).includes(value);
+}
+
+/**
  * Tags an entity as belonging to a privacy bucket.
  *
  * Access is fail-closed: if an entity has no bucket tags, or if
@@ -146,5 +179,4 @@ export interface FriendBucketAssignment {
 export interface BucketAccessCheck {
   readonly friendBucketIds: readonly BucketId[];
   readonly contentBucketIds: readonly BucketId[];
-  readonly scope: BucketVisibilityScope;
 }
