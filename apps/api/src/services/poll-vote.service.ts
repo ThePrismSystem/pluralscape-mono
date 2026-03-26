@@ -6,7 +6,7 @@ import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
+import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -242,12 +242,6 @@ export async function listVotes(
       .orderBy(desc(pollVotes.createdAt), desc(pollVotes.id))
       .limit(effectiveLimit + 1);
 
-    const hasMore = rows.length > effectiveLimit;
-    const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toVoteResult);
-    const lastItem = items[items.length - 1];
-    const nextCursor =
-      hasMore && lastItem ? toCompositeCursor(lastItem.createdAt, lastItem.id) : null;
-
-    return { items, nextCursor, hasMore, totalCount: null };
+    return buildCompositePaginatedResult(rows, effectiveLimit, toVoteResult, (i) => i.createdAt);
   });
 }

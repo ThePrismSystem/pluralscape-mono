@@ -157,3 +157,21 @@ export function buildPaginatedResult<TRow, TResult extends { id: string }>(
   const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
   return { items, nextCursor, hasMore, totalCount: null };
 }
+
+/**
+ * Build a cursor-paginated result from rows fetched with limit+1,
+ * using a composite cursor (numeric sort value + entity ID).
+ */
+export function buildCompositePaginatedResult<TRow, TResult extends { id: string }>(
+  rows: readonly TRow[],
+  limit: number,
+  mapper: (row: TRow) => TResult,
+  sortValueExtractor: (item: TResult) => number,
+): PaginatedResult<TResult> {
+  const hasMore = rows.length > limit;
+  const items = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
+  const lastItem = items[items.length - 1];
+  const nextCursor =
+    hasMore && lastItem ? toCompositeCursor(sortValueExtractor(lastItem), lastItem.id) : null;
+  return { items, nextCursor, hasMore, totalCount: null };
+}
