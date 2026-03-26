@@ -129,6 +129,7 @@
         description: Board message ID
         schema:
           type: string
+          pattern: ^bm_
     responses:
       "200":
         description: Board message details
@@ -161,6 +162,7 @@
         description: Board message ID
         schema:
           type: string
+          pattern: ^bm_
     requestBody:
       required: true
       content:
@@ -202,6 +204,7 @@
         description: Board message ID
         schema:
           type: string
+          pattern: ^bm_
     responses:
       "204":
         $ref: "../openapi.yaml#/components/responses/NoContent"
@@ -231,6 +234,7 @@
         description: Board message ID
         schema:
           type: string
+          pattern: ^bm_
     responses:
       "200":
         description: Board message pinned
@@ -264,6 +268,7 @@
         description: Board message ID
         schema:
           type: string
+          pattern: ^bm_
     responses:
       "200":
         description: Board message unpinned
@@ -297,6 +302,7 @@
         description: Board message ID
         schema:
           type: string
+          pattern: ^bm_
     responses:
       "204":
         $ref: "../openapi.yaml#/components/responses/NoContent"
@@ -326,6 +332,7 @@
         description: Board message ID
         schema:
           type: string
+          pattern: ^bm_
     responses:
       "200":
         description: Board message restored

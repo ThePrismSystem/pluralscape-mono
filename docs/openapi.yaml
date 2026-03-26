@@ -6791,6 +6791,7 @@ paths:
           description: Board message ID
           schema:
             type: string
+            pattern: ^bm_
       responses:
         "200":
           description: Board message details
@@ -6824,6 +6825,7 @@ paths:
           description: Board message ID
           schema:
             type: string
+            pattern: ^bm_
       requestBody:
         required: true
         content:
@@ -6866,6 +6868,7 @@ paths:
           description: Board message ID
           schema:
             type: string
+            pattern: ^bm_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -6895,6 +6898,7 @@ paths:
           description: Board message ID
           schema:
             type: string
+            pattern: ^bm_
       responses:
         "200":
           description: Board message pinned
@@ -6928,6 +6932,7 @@ paths:
           description: Board message ID
           schema:
             type: string
+            pattern: ^bm_
       responses:
         "200":
           description: Board message unpinned
@@ -6961,6 +6966,7 @@ paths:
           description: Board message ID
           schema:
             type: string
+            pattern: ^bm_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -6990,6 +6996,7 @@ paths:
           description: Board message ID
           schema:
             type: string
+            pattern: ^bm_
       responses:
         "200":
           description: Board message restored
@@ -7129,6 +7136,7 @@ paths:
           description: Note ID
           schema:
             type: string
+            pattern: ^note_
       responses:
         "200":
           description: Note details
@@ -7162,6 +7170,7 @@ paths:
           description: Note ID
           schema:
             type: string
+            pattern: ^note_
       requestBody:
         required: true
         content:
@@ -7204,6 +7213,7 @@ paths:
           description: Note ID
           schema:
             type: string
+            pattern: ^note_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -7233,6 +7243,7 @@ paths:
           description: Note ID
           schema:
             type: string
+            pattern: ^note_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -7262,6 +7273,7 @@ paths:
           description: Note ID
           schema:
             type: string
+            pattern: ^note_
       responses:
         "200":
           description: Note restored
@@ -7785,6 +7797,7 @@ paths:
           description: Acknowledgement ID
           schema:
             type: string
+            pattern: ^ack_
       responses:
         "200":
           description: Acknowledgement details
@@ -7817,6 +7830,7 @@ paths:
           description: Acknowledgement ID
           schema:
             type: string
+            pattern: ^ack_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -7849,6 +7863,7 @@ paths:
           description: Acknowledgement ID
           schema:
             type: string
+            pattern: ^ack_
       requestBody:
         required: false
         content:
@@ -7890,6 +7905,7 @@ paths:
           description: Acknowledgement ID
           schema:
             type: string
+            pattern: ^ack_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -7919,6 +7935,7 @@ paths:
           description: Acknowledgement ID
           schema:
             type: string
+            pattern: ^ack_
       responses:
         "200":
           description: Acknowledgement restored
@@ -11306,6 +11323,7 @@ components:
             properties:
               boardMessageId:
                 type: string
+                pattern: ^bm_
                 description: Board message ID to reorder
               sortOrder:
                 type: integer

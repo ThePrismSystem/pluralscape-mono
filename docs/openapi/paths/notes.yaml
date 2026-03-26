@@ -115,6 +115,7 @@
         description: Note ID
         schema:
           type: string
+          pattern: ^note_
     responses:
       "200":
         description: Note details
@@ -147,6 +148,7 @@
         description: Note ID
         schema:
           type: string
+          pattern: ^note_
     requestBody:
       required: true
       content:
@@ -188,6 +190,7 @@
         description: Note ID
         schema:
           type: string
+          pattern: ^note_
     responses:
       "204":
         $ref: "../openapi.yaml#/components/responses/NoContent"
@@ -217,6 +220,7 @@
         description: Note ID
         schema:
           type: string
+          pattern: ^note_
     responses:
       "204":
         $ref: "../openapi.yaml#/components/responses/NoContent"
@@ -246,6 +250,7 @@
         description: Note ID
         schema:
           type: string
+          pattern: ^note_
     responses:
       "200":
         description: Note restored

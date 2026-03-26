@@ -65,6 +65,7 @@ ReorderBoardMessagesRequest:
         properties:
           boardMessageId:
             type: string
+            pattern: ^bm_
             description: Board message ID to reorder
           sortOrder:
             type: integer
