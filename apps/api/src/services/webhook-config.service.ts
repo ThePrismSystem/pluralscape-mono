@@ -21,6 +21,8 @@ import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../service.constants.js";
 
+import { invalidateWebhookConfigCache } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
@@ -182,6 +184,8 @@ export async function createWebhookConfig(
       systemId,
     });
 
+    invalidateWebhookConfigCache(systemId);
+
     return {
       ...toWebhookConfigResult(row),
       secret: secretBytes.toString("base64"),
@@ -334,6 +338,8 @@ export async function updateWebhookConfig(
       systemId,
     });
 
+    invalidateWebhookConfigCache(systemId);
+
     return toWebhookConfigResult(row);
   });
 }
@@ -397,6 +403,8 @@ export async function deleteWebhookConfig(
     await tx
       .delete(webhookConfigs)
       .where(and(eq(webhookConfigs.id, webhookId), eq(webhookConfigs.systemId, systemId)));
+
+    invalidateWebhookConfigCache(systemId);
   });
 }
 
@@ -418,6 +426,7 @@ export async function archiveWebhookConfig(
   audit: AuditWriter,
 ): Promise<void> {
   await archiveEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE);
+  invalidateWebhookConfigCache(systemId);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -429,9 +438,17 @@ export async function restoreWebhookConfig(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<WebhookConfigResult> {
-  return restoreEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE, (row) =>
-    toWebhookConfigResult(row as typeof webhookConfigs.$inferSelect),
+  const result = await restoreEntity(
+    db,
+    systemId,
+    webhookId,
+    auth,
+    audit,
+    WEBHOOK_CONFIG_LIFECYCLE,
+    (row) => toWebhookConfigResult(row as typeof webhookConfigs.$inferSelect),
   );
+  invalidateWebhookConfigCache(systemId);
+  return result;
 }
 
 // ── PARSE QUERY PARAMS ──────────────────────────────────────────────

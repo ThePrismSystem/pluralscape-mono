@@ -1,11 +1,11 @@
 ---
 # api-op67
 title: Add webhook config caching
-status: todo
+status: completed
 type: feature
 priority: normal
 created_at: 2026-03-26T07:43:55Z
-updated_at: 2026-03-26T07:43:55Z
+updated_at: 2026-03-26T10:25:37Z
 parent: ps-106o
 ---
 
@@ -20,3 +20,5 @@ Cache per-system webhook configs in Valkey with short TTL or in-memory with inva
 - [ ] Add Valkey cache for webhook configs per system
 - [ ] Invalidate cache on webhook config create/update/delete/archive/restore
 - [ ] Add integration test for cache invalidation
+
+## Summary of Changes\n\nAdded in-memory webhook config caching in the dispatcher using existing QueryCache with 60s TTL. Cache is keyed by systemId and invalidated on create, update, delete, archive, and restore operations.

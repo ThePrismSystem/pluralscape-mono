@@ -48,7 +48,8 @@ vi.mock("drizzle-orm", async () => {
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher.js");
+const { clearWebhookConfigCache, dispatchWebhookEvent, invalidateWebhookConfigCache } =
+  await import("../../services/webhook-dispatcher.js");
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ describe("dispatchWebhookEvent", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    clearWebhookConfigCache();
   });
 
   it("returns empty array when no configs match", async () => {
@@ -117,5 +119,46 @@ describe("dispatchWebhookEvent", () => {
 
     const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
     expect(insertedValues[0]).toHaveProperty("payloadData", { ...payload, systemId });
+  });
+
+  it("uses cached configs on second dispatch for same system", async () => {
+    mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+    mockInsertValues.mockResolvedValue(undefined);
+
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+
+    // DB select should only be called once (first call populates cache)
+    expect(mockDb.select).toHaveBeenCalledTimes(1);
+    // But insert should be called twice (one delivery per dispatch)
+    expect(mockDb.insert).toHaveBeenCalledTimes(2);
+  });
+
+  it("re-queries DB after cache invalidation", async () => {
+    mockWhere
+      .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }])
+      .mockResolvedValueOnce([]);
+    mockInsertValues.mockResolvedValue(undefined);
+
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    invalidateWebhookConfigCache(systemId);
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+
+    // DB select called twice: first miss, then after invalidation
+    expect(mockDb.select).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not share cache between systems", async () => {
+    const otherSystemId = "sys_other" as SystemId;
+    mockWhere
+      .mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }])
+      .mockResolvedValueOnce([]);
+    mockInsertValues.mockResolvedValue(undefined);
+
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+    await dispatchWebhookEvent(mockDb as never, otherSystemId, eventType, payload);
+
+    // Each system triggers its own DB query
+    expect(mockDb.select).toHaveBeenCalledTimes(2);
   });
 });
