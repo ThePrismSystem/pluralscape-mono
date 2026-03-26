@@ -22,6 +22,7 @@ import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type { ChannelId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -404,16 +405,16 @@ export async function deleteChannel(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const CHANNEL_LIFECYCLE = {
+const CHANNEL_LIFECYCLE: ArchivableEntityConfig<ChannelId> = {
   table: channels,
   columns: channels,
   entityName: "Channel",
   archiveEvent: "channel.archived" as const,
   restoreEvent: "channel.restored" as const,
-  onArchive: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
-    dispatchWebhookEvent(tx, sId, "channel.archived", { channelId: eid as ChannelId }),
-  onRestore: (tx: PostgresJsDatabase, sId: SystemId, eid: string) =>
-    dispatchWebhookEvent(tx, sId, "channel.restored", { channelId: eid as ChannelId }),
+  onArchive: (tx, sId, eid) =>
+    dispatchWebhookEvent(tx, sId, "channel.archived", { channelId: eid }),
+  onRestore: (tx, sId, eid) =>
+    dispatchWebhookEvent(tx, sId, "channel.restored", { channelId: eid }),
 };
 
 export async function archiveChannel(

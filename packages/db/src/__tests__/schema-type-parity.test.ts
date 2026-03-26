@@ -792,6 +792,8 @@ const KNOWN_PG_ONLY_INDEXES = new Set([
   "fronting_comments_session_start_idx",
   // PG serial column uses a simple seq index; SQLite integer uses system_id-prefixed index
   "sync_queue_seq_idx",
+  // GIN index for JSONB voter extraction queries — not available in SQLite
+  "poll_votes_voter_gin_idx",
 ]);
 
 const KNOWN_SQLITE_ONLY_INDEXES = new Set([

@@ -44,7 +44,7 @@ export function createHierarchyService<
     dependentChecks,
   } = cfg;
 
-  const lifecycleCfg: ArchivableEntityConfig = {
+  const lifecycleCfg: ArchivableEntityConfig<TId> = {
     table,
     columns: {
       id: columns.id,

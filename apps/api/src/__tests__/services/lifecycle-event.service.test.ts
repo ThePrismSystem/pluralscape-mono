@@ -314,7 +314,7 @@ describe("archiveLifecycleEvent", () => {
       EVENT_ID,
       AUTH,
       mockAudit,
-      expect.objectContaining<Partial<ArchivableEntityConfig>>({
+      expect.objectContaining<Partial<ArchivableEntityConfig<string>>>({
         entityName: "Lifecycle event",
         archiveEvent: "lifecycle-event.archived",
         restoreEvent: "lifecycle-event.restored",
@@ -341,7 +341,7 @@ describe("restoreLifecycleEvent", () => {
       EVENT_ID,
       AUTH,
       mockAudit,
-      expect.objectContaining<Partial<ArchivableEntityConfig>>({
+      expect.objectContaining<Partial<ArchivableEntityConfig<string>>>({
         entityName: "Lifecycle event",
         archiveEvent: "lifecycle-event.archived",
         restoreEvent: "lifecycle-event.restored",

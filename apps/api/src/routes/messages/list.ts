@@ -1,4 +1,4 @@
-import { ID_PREFIXES, type UnixMillis } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { MessageQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
@@ -30,8 +30,8 @@ listRoute.get("/", async (c) => {
   const result = await listMessages(db, systemId, channelId, auth, {
     cursor: c.req.query("cursor"),
     limit,
-    before: query.before as UnixMillis | undefined,
-    after: query.after as UnixMillis | undefined,
+    before: query.before,
+    after: query.after,
     includeArchived: query.includeArchived,
   });
   return c.json(result);

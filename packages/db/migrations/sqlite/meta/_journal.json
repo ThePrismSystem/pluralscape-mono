@@ -22,6 +22,13 @@
       "when": 1774501653288,
       "tag": "0002_broad_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1774515150269,
+      "tag": "0003_huge_moonstone",
+      "breakpoints": true
     }
   ]
 }

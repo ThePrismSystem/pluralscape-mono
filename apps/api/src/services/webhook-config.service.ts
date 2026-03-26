@@ -22,6 +22,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, WEBHOOK_SECRET_BYTES } from "../ser
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type { PaginatedResult, SystemId, WebhookEventType, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -394,7 +395,7 @@ export async function deleteWebhookConfig(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const WEBHOOK_CONFIG_LIFECYCLE = {
+const WEBHOOK_CONFIG_LIFECYCLE: ArchivableEntityConfig<WebhookId> = {
   table: webhookConfigs,
   columns: webhookConfigs,
   entityName: "Webhook config",
@@ -421,10 +422,9 @@ export async function restoreWebhookConfig(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<WebhookConfigResult> {
-  return restoreEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE, (row) => {
-    const r = row as typeof webhookConfigs.$inferSelect;
-    return toWebhookConfigResult(r);
-  });
+  return restoreEntity(db, systemId, webhookId, auth, audit, WEBHOOK_CONFIG_LIFECYCLE, (row) =>
+    toWebhookConfigResult(row as typeof webhookConfigs.$inferSelect),
+  );
 }
 
 // ── PARSE QUERY PARAMS ──────────────────────────────────────────────

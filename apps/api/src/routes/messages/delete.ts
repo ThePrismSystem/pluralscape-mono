@@ -1,4 +1,4 @@
-import { ID_PREFIXES, type UnixMillis } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { MessageTimestampQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
@@ -26,7 +26,7 @@ deleteRoute.delete("/:messageId", async (c) => {
 
   const db = await getDb();
   await deleteMessage(db, systemId, messageId, auth, audit, {
-    timestamp: query.timestamp as UnixMillis | undefined,
+    timestamp: query.timestamp,
   });
   return c.body(null, HTTP_NO_CONTENT);
 });

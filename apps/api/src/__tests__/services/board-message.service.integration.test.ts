@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -34,7 +35,7 @@ import type { AuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const { boardMessages } = schema;
+const { boardMessages, webhookConfigs, webhookDeliveries } = schema;
 
 describe("board-message.service (PGlite integration)", () => {
   let client: PGlite;
@@ -58,6 +59,8 @@ describe("board-message.service (PGlite integration)", () => {
   });
 
   afterEach(async () => {
+    await db.delete(webhookDeliveries);
+    await db.delete(webhookConfigs);
     await db.delete(boardMessages);
   });
 
@@ -642,6 +645,95 @@ describe("board-message.service (PGlite integration)", () => {
         "VALIDATION_ERROR",
         400,
       );
+    });
+
+    it("throws NOT_FOUND when reorder includes an archived message", async () => {
+      const bm1 = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+      const bm2 = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        auth,
+        noopAudit,
+      );
+      await archiveBoardMessage(asDb(db), systemId, bm2.id, auth, noopAudit);
+
+      await assertApiError(
+        reorderBoardMessages(
+          asDb(db),
+          systemId,
+          {
+            operations: [
+              { boardMessageId: bm1.id, sortOrder: 1 },
+              { boardMessageId: bm2.id, sortOrder: 0 },
+            ],
+          },
+          auth,
+          noopAudit,
+        ),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("creates webhook delivery records for each reordered message", async () => {
+      // Insert a webhook config subscribed to board-message.reordered
+      const webhookId = `wh_${crypto.randomUUID()}`;
+      const ts = Date.now();
+      await db.insert(webhookConfigs).values({
+        id: webhookId,
+        systemId,
+        url: "https://example.com/hook",
+        secret: Buffer.from("test-secret"),
+        eventTypes: ["board-message.reordered"],
+        enabled: true,
+        version: 1,
+        createdAt: ts,
+        updatedAt: ts,
+      });
+
+      const bm1 = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 0 },
+        auth,
+        noopAudit,
+      );
+      const bm2 = await createBoardMessage(
+        asDb(db),
+        systemId,
+        { encryptedData: testEncryptedDataBase64(), sortOrder: 1 },
+        auth,
+        noopAudit,
+      );
+
+      await reorderBoardMessages(
+        asDb(db),
+        systemId,
+        {
+          operations: [
+            { boardMessageId: bm1.id, sortOrder: 1 },
+            { boardMessageId: bm2.id, sortOrder: 0 },
+          ],
+        },
+        auth,
+        noopAudit,
+      );
+
+      // Verify webhook deliveries were created for the reorder event
+      const deliveries = await db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.eventType, "board-message.reordered"));
+      expect(deliveries).toHaveLength(2);
+      expect(deliveries.every((d) => d.webhookId === webhookId)).toBe(true);
+      expect(deliveries.every((d) => d.status === "pending")).toBe(true);
     });
   });
 

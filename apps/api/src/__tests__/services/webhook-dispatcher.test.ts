@@ -7,7 +7,9 @@ import type { MemberId, SystemId } from "@pluralscape/types";
 const mockInsertValues = vi.fn();
 const mockWhere = vi.fn();
 
-const mockTx = {
+const mockDb = {
+  // rollback signals to isTransaction() that this is a transaction handle
+  rollback: vi.fn(),
   select: vi.fn().mockReturnValue({
     from: vi.fn().mockReturnValue({
       where: mockWhere,
@@ -16,10 +18,6 @@ const mockTx = {
   insert: vi.fn().mockReturnValue({
     values: mockInsertValues,
   }),
-};
-
-const mockDb = {
-  transaction: vi.fn(async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
 };
 
 vi.mock("@pluralscape/db/pg", () => ({
@@ -61,10 +59,15 @@ describe("dispatchWebhookEvent", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Re-wire transaction mock after clearAllMocks
-    mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) =>
-      fn(mockTx),
-    );
+    // Re-wire chained mocks after clearAllMocks
+    mockDb.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: mockWhere,
+      }),
+    });
+    mockDb.insert.mockReturnValue({
+      values: mockInsertValues,
+    });
   });
 
   afterEach(() => {
@@ -77,7 +80,7 @@ describe("dispatchWebhookEvent", () => {
     const result = await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
 
     expect(result).toEqual([]);
-    expect(mockTx.insert).not.toHaveBeenCalled();
+    expect(mockDb.insert).not.toHaveBeenCalled();
   });
 
   it("creates deliveries for matching configs", async () => {
@@ -91,7 +94,7 @@ describe("dispatchWebhookEvent", () => {
 
     // Only config-1 matches member.created
     expect(result).toHaveLength(1);
-    expect(mockTx.insert).toHaveBeenCalledTimes(1);
+    expect(mockDb.insert).toHaveBeenCalledTimes(1);
   });
 
   it("creates multiple deliveries for multiple matching configs", async () => {

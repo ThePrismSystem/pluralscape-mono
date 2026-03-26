@@ -22,12 +22,12 @@ const ENTITY_ID = "ent_test-id";
 // ── Fake column / config ────────────────────────────────────────
 
 /** Cast a mock value to PgColumn. Same pattern as asDb() in mock-db.ts. */
-function asPgColumn(mock: unknown): ArchivableEntityConfig["columns"]["id"] {
-  return mock as ArchivableEntityConfig["columns"]["id"];
+function asPgColumn(mock: unknown): ArchivableEntityConfig<string>["columns"]["id"] {
+  return mock as ArchivableEntityConfig<string>["columns"]["id"];
 }
 
-const TEST_CONFIG: ArchivableEntityConfig = {
-  table: {} as ArchivableEntityConfig["table"],
+const TEST_CONFIG: ArchivableEntityConfig<string> = {
+  table: {} as ArchivableEntityConfig<string>["table"],
   columns: {
     id: asPgColumn("id"),
     systemId: asPgColumn("system_id"),
