@@ -45,14 +45,44 @@ describe("WebhookEventType", () => {
         case "fronting.ended":
         case "group.created":
         case "group.updated":
-        case "note.created":
-        case "note.updated":
-        case "chat.message-sent":
-        case "poll.created":
-        case "poll.closed":
-        case "acknowledgement.requested":
         case "lifecycle.event-recorded":
         case "custom-front.changed":
+        case "channel.created":
+        case "channel.updated":
+        case "channel.archived":
+        case "channel.restored":
+        case "channel.deleted":
+        case "message.created":
+        case "message.updated":
+        case "message.archived":
+        case "message.restored":
+        case "message.deleted":
+        case "board-message.created":
+        case "board-message.updated":
+        case "board-message.pinned":
+        case "board-message.unpinned":
+        case "board-message.reordered":
+        case "board-message.archived":
+        case "board-message.restored":
+        case "board-message.deleted":
+        case "note.created":
+        case "note.updated":
+        case "note.archived":
+        case "note.restored":
+        case "note.deleted":
+        case "poll.created":
+        case "poll.updated":
+        case "poll.closed":
+        case "poll.archived":
+        case "poll.restored":
+        case "poll.deleted":
+        case "poll-vote.cast":
+        case "poll-vote.vetoed":
+        case "acknowledgement.created":
+        case "acknowledgement.confirmed":
+        case "acknowledgement.archived":
+        case "acknowledgement.restored":
+        case "acknowledgement.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

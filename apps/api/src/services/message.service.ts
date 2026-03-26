@@ -18,6 +18,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -148,6 +150,11 @@ export async function createMessage(
       eventType: "message.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "Message created",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "message.created", {
+      messageId: row.id as MessageId,
+      channelId: channelId,
       systemId,
     });
 
@@ -298,6 +305,11 @@ export async function updateMessage(
       detail: "Message updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "message.updated", {
+      messageId: row.id as MessageId,
+      channelId: row.channelId as ChannelId,
+      systemId,
+    });
 
     return toMessageResult(row);
   });
@@ -317,7 +329,7 @@ export async function deleteMessage(
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [existing] = await tx
-      .select({ id: messages.id })
+      .select({ id: messages.id, channelId: messages.channelId })
       .from(messages)
       .where(and(...messageIdConditions(messageId, systemId, hint), eq(messages.archived, false)))
       .limit(1);
@@ -330,6 +342,11 @@ export async function deleteMessage(
       eventType: "message.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Message deleted",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "message.deleted", {
+      messageId: existing.id as MessageId,
+      channelId: existing.channelId as ChannelId,
       systemId,
     });
 

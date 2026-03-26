@@ -359,6 +359,7 @@ describe("SQLite views / query helpers", () => {
           confirmed: false,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
       db.insert(acknowledgements)
@@ -368,6 +369,7 @@ describe("SQLite views / query helpers", () => {
           confirmed: true,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 

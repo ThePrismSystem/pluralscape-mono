@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SystemId, WebhookEventType } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -56,8 +56,8 @@ const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher
 
 describe("dispatchWebhookEvent", () => {
   const systemId = "sys_test-system-id" as SystemId;
-  const eventType = "member.created" as WebhookEventType;
-  const payload = { memberId: "mem_test" };
+  const eventType = "member.created" as const;
+  const payload = { memberId: "mem_test", systemId };
 
   beforeEach(() => {
     vi.clearAllMocks();

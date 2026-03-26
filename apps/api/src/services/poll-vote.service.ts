@@ -16,6 +16,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -180,6 +182,12 @@ export async function castVote(
       detail: parsed.isVeto ? "Poll vote vetoed" : "Poll vote cast",
       systemId,
     });
+    await dispatchWebhookEvent(
+      tx,
+      systemId,
+      parsed.isVeto ? "poll-vote.vetoed" : "poll-vote.cast",
+      { pollId: pollId, systemId },
+    );
 
     return toVoteResult(row);
   });

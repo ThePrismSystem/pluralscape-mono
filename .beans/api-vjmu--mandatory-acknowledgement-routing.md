@@ -1,11 +1,11 @@
 ---
 # api-vjmu
 title: Mandatory acknowledgement routing
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-25T05:59:18Z
+updated_at: 2026-03-26T05:04:21Z
 parent: ps-53up
 ---
 
@@ -33,3 +33,5 @@ Note: acknowledgements are cooperative guardrails within a system, not cryptogra
 - `packages/db/src/schema/pg/communication.ts` — acknowledgements table
 - `packages/sync/src/schemas/chat.ts` — CrdtAcknowledgementRequest
 - `packages/types/src/encryption.ts` — ServerAcknowledgementRequest type
+
+## Summary of Changes\n\nFull acknowledgement routing implemented: validation schemas, CRUD service (create, confirm idempotent, get, list with confirmed/pending filter, archive, restore, delete), 8 API route files registered at /:systemId/acknowledgements, audit event types, CRDT sync verified, E2E tests. DB schema updated with timestamps()/versioned() for pattern consistency.

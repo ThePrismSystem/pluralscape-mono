@@ -22,6 +22,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -115,6 +117,10 @@ export async function createBoardMessage(
       eventType: "board-message.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "Board message created",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "board-message.created", {
+      boardMessageId: row.id as BoardMessageId,
       systemId,
     });
 
@@ -271,6 +277,10 @@ export async function updateBoardMessage(
       detail: "Board message updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "board-message.updated", {
+      boardMessageId: row.id as BoardMessageId,
+      systemId,
+    });
 
     return toBoardMessageResult(row);
   });
@@ -359,6 +369,12 @@ async function togglePinned(
       detail: cfg.auditDetail,
       systemId,
     });
+    await dispatchWebhookEvent(
+      tx,
+      systemId,
+      cfg.auditEvent as "board-message.pinned" | "board-message.unpinned",
+      { boardMessageId: boardMessageId, systemId },
+    );
 
     return toBoardMessageResult(updated[0] as typeof boardMessages.$inferSelect);
   });
@@ -458,6 +474,14 @@ export async function reorderBoardMessages(
       detail: `Reordered ${String(parsed.data.operations.length)} board message(s)`,
       systemId,
     });
+    await Promise.all(
+      parsed.data.operations.map((op) =>
+        dispatchWebhookEvent(tx, systemId, "board-message.reordered", {
+          boardMessageId: op.boardMessageId as BoardMessageId,
+          systemId,
+        }),
+      ),
+    );
   });
 }
 
@@ -493,6 +517,10 @@ export async function deleteBoardMessage(
       eventType: "board-message.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Board message deleted",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "board-message.deleted", {
+      boardMessageId: boardMessageId,
       systemId,
     });
 

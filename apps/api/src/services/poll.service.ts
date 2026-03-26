@@ -17,6 +17,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
@@ -133,6 +135,10 @@ export async function createPoll(
       eventType: "poll.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "Poll created",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "poll.created", {
+      pollId: row.id as PollId,
       systemId,
     });
 
@@ -279,6 +285,10 @@ export async function updatePoll(
       detail: "Poll updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "poll.updated", {
+      pollId: row.id as PollId,
+      systemId,
+    });
 
     return toPollResult(row);
   });
@@ -339,6 +349,10 @@ export async function closePoll(
       detail: "Poll closed",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "poll.closed", {
+      pollId: row.id as PollId,
+      systemId,
+    });
 
     return toPollResult(row);
   });
@@ -390,6 +404,10 @@ export async function deletePoll(
       eventType: "poll.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Poll deleted",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "poll.deleted", {
+      pollId: pollId,
       systemId,
     });
 

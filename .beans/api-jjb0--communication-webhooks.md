@@ -1,11 +1,11 @@
 ---
 # api-jjb0
 title: Communication webhooks
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-25T05:59:18Z
+updated_at: 2026-03-26T05:04:21Z
 parent: ps-53up
 ---
 
@@ -29,3 +29,5 @@ Register ~18 new webhook event types for all communication entity mutations. Wir
 - `apps/api/src/services/webhook-dispatcher.ts` — Existing dispatcher
 - `docs/adr/025-webhook-secret-storage.md` — Webhook architecture
 - `docs/adr/027-webhook-secret-rotation.md` — Secret rotation
+
+## Summary of Changes\n\nRegistered 32 new communication webhook event types (replacing 2 deprecated: chat.message-sent, acknowledgement.requested). Defined typed T3 payload schemas per event. Updated dispatcher to use generic typed signature. Wired dispatchWebhookEvent into all 7 communication services (22 dispatch calls). E2E tests verify webhook delivery records are created for subscribed events.

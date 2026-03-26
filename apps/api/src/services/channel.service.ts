@@ -18,6 +18,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ChannelId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
@@ -152,6 +154,10 @@ export async function createChannel(
       eventType: "channel.created",
       actor: { kind: "account", id: auth.accountId },
       detail: `Channel created (type: ${parsed.type})`,
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "channel.created", {
+      channelId: row.id as ChannelId,
       systemId,
     });
 
@@ -298,6 +304,10 @@ export async function updateChannel(
       detail: "Channel updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "channel.updated", {
+      channelId: row.id as ChannelId,
+      systemId,
+    });
 
     return toChannelResult(row);
   });
@@ -382,6 +392,10 @@ export async function deleteChannel(
       eventType: "channel.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Channel deleted",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "channel.deleted", {
+      channelId: channelId,
       systemId,
     });
 

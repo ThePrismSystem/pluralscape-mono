@@ -18,6 +18,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
@@ -113,6 +115,10 @@ export async function createNote(
       eventType: "note.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "Note created",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "note.created", {
+      noteId: row.id as NoteId,
       systemId,
     });
 
@@ -277,6 +283,10 @@ export async function updateNote(
       detail: "Note updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "note.updated", {
+      noteId: row.id as NoteId,
+      systemId,
+    });
 
     return toNoteResult(row);
   });
@@ -308,6 +318,10 @@ export async function deleteNote(
       eventType: "note.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Note deleted",
+      systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "note.deleted", {
+      noteId: noteId,
       systemId,
     });
 

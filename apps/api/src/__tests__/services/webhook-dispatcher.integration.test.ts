@@ -14,7 +14,7 @@ import { dispatchWebhookEvent } from "../../services/webhook-dispatcher.js";
 import { asDb, makeAuth, noopAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId, WebhookEventType } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { webhookConfigs, webhookDeliveries } = schema;
@@ -52,12 +52,10 @@ describe("webhook-dispatcher (PGlite integration)", () => {
       noopAudit,
     );
 
-    const ids = await dispatchWebhookEvent(
-      asDb(db),
+    const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
+      sessionId: "ses_test",
       systemId,
-      "fronting.started" as WebhookEventType,
-      { test: true },
-    );
+    });
     expect(ids.length).toBe(1);
 
     const [row] = await db
@@ -84,12 +82,10 @@ describe("webhook-dispatcher (PGlite integration)", () => {
       noopAudit,
     );
 
-    const ids = await dispatchWebhookEvent(
-      asDb(db),
+    const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
+      sessionId: "ses_test",
       systemId,
-      "fronting.started" as WebhookEventType,
-      { test: true },
-    );
+    });
     expect(ids.length).toBe(2);
 
     // Verify all deliveries exist in the DB
@@ -109,12 +105,10 @@ describe("webhook-dispatcher (PGlite integration)", () => {
       noopAudit,
     );
 
-    const ids = await dispatchWebhookEvent(
-      asDb(db),
+    const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
+      sessionId: "ses_test",
       systemId,
-      "fronting.started" as WebhookEventType,
-      { test: true },
-    );
+    });
     expect(ids.length).toBe(0);
   });
 
@@ -132,12 +126,10 @@ describe("webhook-dispatcher (PGlite integration)", () => {
       .set({ archived: true, archivedAt: Date.now() })
       .where(eq(webhookConfigs.id, wh.id));
 
-    const ids = await dispatchWebhookEvent(
-      asDb(db),
+    const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
+      sessionId: "ses_test",
       systemId,
-      "fronting.started" as WebhookEventType,
-      { test: true },
-    );
+    });
     expect(ids.length).toBe(0);
   });
 
@@ -150,12 +142,10 @@ describe("webhook-dispatcher (PGlite integration)", () => {
       noopAudit,
     );
 
-    const ids = await dispatchWebhookEvent(
-      asDb(db),
+    const ids = await dispatchWebhookEvent(asDb(db), systemId, "fronting.started", {
+      sessionId: "ses_test",
       systemId,
-      "fronting.started" as WebhookEventType,
-      { test: true },
-    );
+    });
     expect(ids.length).toBe(0);
   });
 });
