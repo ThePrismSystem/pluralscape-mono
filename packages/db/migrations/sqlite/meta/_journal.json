@@ -36,6 +36,13 @@
       "when": 1774522364945,
       "tag": "0004_red_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1774530777151,
+      "tag": "0005_unknown_bloodstrike",
+      "breakpoints": true
     }
   ]
 }
