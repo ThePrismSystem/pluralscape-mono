@@ -11,6 +11,8 @@ overrides:
   esbuild: '>=0.25.0'
   fast-xml-parser: '>=5.5.7'
   flatted: '>=3.4.2'
+  picomatch: '>=4.0.4'
+  yaml: '>=2.8.3'
 
 importers:
 
@@ -93,7 +95,7 @@ importers:
         version: 0.13.11(typescript@6.0.2)(zod@4.3.6)
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@electric-sql/pglite@0.4.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
+        version: 0.45.1(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
       hono:
         specifier: ^4.12.8
         version: 4.12.9
@@ -111,8 +113,8 @@ importers:
         version: 4.3.6
     devDependencies:
       '@electric-sql/pglite':
-        specifier: ^0.4.0
-        version: 0.4.1
+        specifier: ^0.4.2
+        version: 0.4.2
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config
@@ -154,7 +156,7 @@ importers:
         version: 24.12.0
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@electric-sql/pglite@0.4.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
+        version: 0.45.1(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
       postgres:
         specifier: ^3.4.5
         version: 3.4.8
@@ -300,14 +302,14 @@ importers:
         version: 12.8.0
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@electric-sql/pglite@0.4.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
+        version: 0.45.1(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
       postgres:
         specifier: ^3.4.5
         version: 3.4.8
     devDependencies:
       '@electric-sql/pglite':
-        specifier: ^0.4.0
-        version: 0.4.1
+        specifier: ^0.4.2
+        version: 0.4.2
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config
@@ -382,11 +384,11 @@ importers:
         specifier: workspace:*
         version: link:../types
       bullmq:
-        specifier: ^5.52.1
-        version: 5.71.0
+        specifier: ^5.71.1
+        version: 5.71.1
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@electric-sql/pglite@0.4.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
+        version: 0.45.1(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
       ioredis:
         specifier: 5.10.1
         version: 5.10.1
@@ -438,11 +440,11 @@ importers:
   packages/storage:
     dependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.750.0
-        version: 3.1016.0
+        specifier: ^3.1017.0
+        version: 3.1017.0
       '@aws-sdk/s3-request-presigner':
-        specifier: ^3.750.0
-        version: 3.1016.0
+        specifier: ^3.1017.0
+        version: 3.1017.0
       '@pluralscape/types':
         specifier: workspace:*
         version: link:../types
@@ -466,8 +468,8 @@ importers:
   packages/sync:
     dependencies:
       '@automerge/automerge':
-        specifier: ^3.2.4
-        version: 3.2.4
+        specifier: ^3.2.5
+        version: 3.2.5
       '@pluralscape/crypto':
         specifier: workspace:*
         version: link:../crypto
@@ -569,11 +571,11 @@ importers:
   tooling/test-utils:
     dependencies:
       '@electric-sql/pglite':
-        specifier: ^0.4.0
-        version: 0.4.1
+        specifier: ^0.4.2
+        version: 0.4.2
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@electric-sql/pglite@0.4.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
+        version: 0.45.1(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8)
       vitest:
         specifier: '>=4.0.0'
         version: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.0)(happy-dom@20.8.7)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
@@ -592,8 +594,8 @@ importers:
 
 packages:
 
-  '@automerge/automerge@3.2.4':
-    resolution: {integrity: sha512-/IAShHSxme5d4ZK0Vs4A0P+tGaR/bSz6KtIJSCIPfwilCxsIqfRHAoNjmsXip6TGouadmbuw3WfLop6cal8pPQ==}
+  '@automerge/automerge@3.2.5':
+    resolution: {integrity: sha512-tCdaGDTLaRzBJV+Q9zMyyEH/vUFkBNh21jpwlpcEYV7gs5r63xh9UFa1N3yNJ5ZzmiLBD42TIBeqK+g54sLp0w==}
 
   '@aws-crypto/crc32@5.2.0':
     resolution: {integrity: sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg==}
@@ -618,8 +620,8 @@ packages:
   '@aws-crypto/util@5.2.0':
     resolution: {integrity: sha512-4RkU9EsI6ZpBve5fseQlGNUWKMa1RLPQ1dnjnQoe07ldfIzcsGb5hC5W0Dm7u423KWzawlrpbjXBrXCEv9zazQ==}
 
-  '@aws-sdk/client-s3@3.1016.0':
-    resolution: {integrity: sha512-E9umet1PolP6I8TpjQQ2W88aIIguyiRQJE98ag6N6QeLgjSZsF+h9l3KclwCRvqUFU68x+HRwrgXxvbIBVFLbA==}
+  '@aws-sdk/client-s3@3.1017.0':
+    resolution: {integrity: sha512-WmmPn2NEfkxxzDA0D7rlf3f32gqmqpaTABhlz4EnZbg/RfNWaOu3ecaI5xY0ragrLhvPB+1aPN9GRDnivJukvg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/core@3.973.24':
@@ -690,8 +692,8 @@ packages:
     resolution: {integrity: sha512-BnnvYs2ZEpdlmZ2PNlV2ZyQ8j8AEkMTjN79y/YA475ER1ByFYrkVR85qmhni8oeTaJcDqbx364wDpitDAA/wCA==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/middleware-sdk-s3@3.972.24':
-    resolution: {integrity: sha512-4sXxVC/enYgMkZefNMOzU6C6KtAXEvwVJLgNcUx1dvROH6GvKB5Sm2RGnGzTp0/PwkibIyMw4kOzF8tbLfaBAQ==}
+  '@aws-sdk/middleware-sdk-s3@3.972.25':
+    resolution: {integrity: sha512-4xJL7O+XkhbSkT4yAYshkAww+mxJvtGQneNHH0MOpe+w8Vo2z87M9z06UO3G6zPM2c3Ef2yKczvZpTgdArMHfg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/middleware-ssec@3.972.8':
@@ -710,12 +712,12 @@ packages:
     resolution: {integrity: sha512-eQ+dFU05ZRC/lC2XpYlYSPlXtX3VT8sn5toxN2Fv7EXlMoA2p9V7vUBKqHunfD4TRLpxUq8Y8Ol/nCqiv327Ng==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/s3-request-presigner@3.1016.0':
-    resolution: {integrity: sha512-BROPno9Y8xYltQu5k1AupDPaWdFR9Ig8zfDSZzTE+MTvKpif6wyAHFJRW0C0xIwZckaHya2oFoTZbPHtyIlQkg==}
+  '@aws-sdk/s3-request-presigner@3.1017.0':
+    resolution: {integrity: sha512-PSR8VJEkCy53uhAeuvht6ub3kzfdqoTAmLliQJ63MkC/1FuMmrmqWRGoZuzZvAbpzTcZtuibSGvawDa47gsckA==}
     engines: {node: '>=20.0.0'}
 
-  '@aws-sdk/signature-v4-multi-region@3.996.12':
-    resolution: {integrity: sha512-abRObSqjVeKUUHIZfAp78PTYrEsxCgVKDs/YET357pzT5C02eDDEvmWyeEC2wglWcYC4UTbBFk22gd2YJUlCQg==}
+  '@aws-sdk/signature-v4-multi-region@3.996.13':
+    resolution: {integrity: sha512-7j8rOFHHq4e9McCSuWBmBSADriW5CjPUem4inckRh/cyQGaijBwDbkNbVTgDVDWqFo29SoVVUfI6HCOnck6HZw==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/token-providers@3.1015.0':
@@ -1340,8 +1342,8 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@electric-sql/pglite@0.4.1':
-    resolution: {integrity: sha512-mZ9NzzUSYPOCnxHH1oAHPRzoMFJHY472raDKwXl/+6oPbpdJ7g8LsCN4FSaIIfkiCKHhb3iF/Zqo3NYxaIhU7Q==}
+  '@electric-sql/pglite@0.4.2':
+    resolution: {integrity: sha512-1GUUl/MZpy5QWgWisD3Epho3GkJrZ1MzVgQpo2pifQWUs96F9rXKZxeVLPhkwFYck34CH/kQ8lis6wX9ifn3kg==}
 
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
@@ -3617,8 +3619,8 @@ packages:
     resolution: {integrity: sha512-bkXY9WsVpY7CvMhKSR6pZilZu9Ln5WDrKVBUXf2S443etkmEO4V58heTecXcUIsNsi4Rx8JUO4NfX1IcQl4deg==}
     engines: {node: '>=18.20'}
 
-  bullmq@5.71.0:
-    resolution: {integrity: sha512-aeNWh4drsafSKnAJeiNH/nZP/5O8ZdtdMbnOPZmpjXj7NZUP5YC901U3bIH41iZValm7d1i3c34ojv7q31m30w==}
+  bullmq@5.71.1:
+    resolution: {integrity: sha512-kOBfdcsHmO6wwmIjpersoVdYQ7jkjTgky4Yop0loc7QwSdgxliSzD69U9ijZuRrkyCJwz5p5eqxeGeQkJ0YGZQ==}
 
   bun-types@1.3.11:
     resolution: {integrity: sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg==}
@@ -4419,7 +4421,7 @@ packages:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
-      picomatch: ^3 || ^4
+      picomatch: '>=4.0.4'
     peerDependenciesMeta:
       picomatch:
         optional: true
@@ -5584,10 +5586,6 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
-  picomatch@2.3.2:
-    resolution: {integrity: sha512-V7+vQEJ06Z+c5tSye8S+nHUfI51xoXIXjHQ99cQtKUkQqqO1kO/KCJUfZXuB47h/YBlDhah2H3hdUGXn8ie0oA==}
-    engines: {node: '>=8.6'}
-
   picomatch@4.0.3:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
@@ -6540,7 +6538,7 @@ packages:
       sugarss: ^5.0.0
       terser: ^5.16.0
       tsx: ^4.8.1
-      yaml: ^2.4.2
+      yaml: '>=2.8.3'
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -6755,15 +6753,6 @@ packages:
   yaml-ast-parser@0.0.43:
     resolution: {integrity: sha512-2PTINUwsRqSd+s8XxKaJWQlUuEMHJQyEuh2edBbW8KNJz0SJPwUSD2zRWqezFEdN7IzAgeuYHFUCF7o8zRdZ0A==}
 
-  yaml@1.10.3:
-    resolution: {integrity: sha512-vIYeF1u3CjlhAFekPPAk2h/Kv4T3mAkMox5OymRiJQB0spDP10LHvt+K7G9Ny6NuuMAb25/6n1qyUjAcGNf/AA==}
-    engines: {node: '>= 6'}
-
-  yaml@2.8.2:
-    resolution: {integrity: sha512-mplynKqc1C2hTVYxd0PU2xQAc22TI1vShAYGksCCfxbn/dFwnHTNi1bvYsBTkhdUNtGIf5xNOg938rrSSYvS9A==}
-    engines: {node: '>= 14.6'}
-    hasBin: true
-
   yaml@2.8.3:
     resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
     engines: {node: '>= 14.6'}
@@ -6797,7 +6786,7 @@ packages:
 
 snapshots:
 
-  '@automerge/automerge@3.2.4': {}
+  '@automerge/automerge@3.2.5': {}
 
   '@aws-crypto/crc32@5.2.0':
     dependencies:
@@ -6846,7 +6835,7 @@ snapshots:
       '@smithy/util-utf8': 2.3.0
       tslib: 2.8.1
 
-  '@aws-sdk/client-s3@3.1016.0':
+  '@aws-sdk/client-s3@3.1017.0':
     dependencies:
       '@aws-crypto/sha1-browser': 5.2.0
       '@aws-crypto/sha256-browser': 5.2.0
@@ -6860,11 +6849,11 @@ snapshots:
       '@aws-sdk/middleware-location-constraint': 3.972.8
       '@aws-sdk/middleware-logger': 3.972.8
       '@aws-sdk/middleware-recursion-detection': 3.972.8
-      '@aws-sdk/middleware-sdk-s3': 3.972.24
+      '@aws-sdk/middleware-sdk-s3': 3.972.25
       '@aws-sdk/middleware-ssec': 3.972.8
       '@aws-sdk/middleware-user-agent': 3.972.25
       '@aws-sdk/region-config-resolver': 3.972.9
-      '@aws-sdk/signature-v4-multi-region': 3.996.12
+      '@aws-sdk/signature-v4-multi-region': 3.996.13
       '@aws-sdk/types': 3.973.6
       '@aws-sdk/util-endpoints': 3.996.5
       '@aws-sdk/util-user-agent-browser': 3.972.8
@@ -7092,7 +7081,7 @@ snapshots:
       '@smithy/types': 4.13.1
       tslib: 2.8.1
 
-  '@aws-sdk/middleware-sdk-s3@3.972.24':
+  '@aws-sdk/middleware-sdk-s3@3.972.25':
     dependencies:
       '@aws-sdk/core': 3.973.24
       '@aws-sdk/types': 3.973.6
@@ -7177,9 +7166,9 @@ snapshots:
       '@smithy/types': 4.13.1
       tslib: 2.8.1
 
-  '@aws-sdk/s3-request-presigner@3.1016.0':
+  '@aws-sdk/s3-request-presigner@3.1017.0':
     dependencies:
-      '@aws-sdk/signature-v4-multi-region': 3.996.12
+      '@aws-sdk/signature-v4-multi-region': 3.996.13
       '@aws-sdk/types': 3.973.6
       '@aws-sdk/util-format-url': 3.972.8
       '@smithy/middleware-endpoint': 4.4.27
@@ -7188,9 +7177,9 @@ snapshots:
       '@smithy/types': 4.13.1
       tslib: 2.8.1
 
-  '@aws-sdk/signature-v4-multi-region@3.996.12':
+  '@aws-sdk/signature-v4-multi-region@3.996.13':
     dependencies:
-      '@aws-sdk/middleware-sdk-s3': 3.972.24
+      '@aws-sdk/middleware-sdk-s3': 3.972.25
       '@aws-sdk/types': 3.973.6
       '@smithy/protocol-http': 5.3.12
       '@smithy/signature-v4': 5.3.12
@@ -7981,7 +7970,7 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@electric-sql/pglite@0.4.1': {}
+  '@electric-sql/pglite@0.4.2': {}
 
   '@emnapi/core@1.9.1':
     dependencies:
@@ -10269,7 +10258,7 @@ snapshots:
   anymatch@3.1.3:
     dependencies:
       normalize-path: 3.0.0
-      picomatch: 2.3.2
+      picomatch: 4.0.4
 
   arg@5.0.2: {}
 
@@ -10523,7 +10512,7 @@ snapshots:
 
   builtin-modules@5.0.0: {}
 
-  bullmq@5.71.0:
+  bullmq@5.71.1:
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.10.1
@@ -10839,9 +10828,9 @@ snapshots:
       esbuild: 0.27.4
       tsx: 4.21.0
 
-  drizzle-orm@0.45.1(@electric-sql/pglite@0.4.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8):
+  drizzle-orm@0.45.1(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(postgres@3.4.8):
     optionalDependencies:
-      '@electric-sql/pglite': 0.4.1
+      '@electric-sql/pglite': 0.4.2
       '@opentelemetry/api': 1.9.0
       '@types/better-sqlite3': 7.6.13
       better-sqlite3: better-sqlite3-multiple-ciphers@12.8.0
@@ -11704,7 +11693,7 @@ snapshots:
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
-      picomatch: 2.3.2
+      picomatch: 4.0.4
 
   jest-validate@29.7.0:
     dependencies:
@@ -11878,10 +11867,10 @@ snapshots:
     dependencies:
       commander: 14.0.3
       listr2: 9.0.5
-      picomatch: 4.0.3
+      picomatch: 4.0.4
       string-argv: 0.3.2
       tinyexec: 1.0.4
-      yaml: 2.8.2
+      yaml: 2.8.3
 
   listr2@9.0.5:
     dependencies:
@@ -12338,7 +12327,7 @@ snapshots:
   micromatch@4.0.8:
     dependencies:
       braces: 3.0.3
-      picomatch: 2.3.2
+      picomatch: 4.0.4
 
   mime-db@1.52.0: {}
 
@@ -12484,14 +12473,14 @@ snapshots:
     dependencies:
       '@exodus/schemasafe': 1.3.0
       should: 13.2.3
-      yaml: 1.10.3
+      yaml: 2.8.3
 
   oas-resolver@2.5.6:
     dependencies:
       node-fetch-h2: 2.3.0
       oas-kit-common: 1.0.8
       reftools: 1.1.9
-      yaml: 1.10.3
+      yaml: 2.8.3
       yargs: 17.7.2
 
   oas-schema-walker@1.1.5: {}
@@ -12505,7 +12494,7 @@ snapshots:
       oas-schema-walker: 1.1.5
       reftools: 1.1.9
       should: 13.2.3
-      yaml: 1.10.3
+      yaml: 2.8.3
 
   ob1@0.83.3:
     dependencies:
@@ -12685,8 +12674,6 @@ snapshots:
   perfect-scrollbar@1.5.6: {}
 
   picocolors@1.1.1: {}
-
-  picomatch@2.3.2: {}
 
   picomatch@4.0.3: {}
 
@@ -13448,7 +13435,7 @@ snapshots:
       oas-schema-walker: 1.1.5
       oas-validator: 5.0.8
       reftools: 1.1.9
-      yaml: 1.10.3
+      yaml: 2.8.3
       yargs: 17.7.2
     transitivePeerDependencies:
       - encoding
@@ -13838,10 +13825,6 @@ snapshots:
   yallist@3.1.1: {}
 
   yaml-ast-parser@0.0.43: {}
-
-  yaml@1.10.3: {}
-
-  yaml@2.8.2: {}
 
   yaml@2.8.3: {}
 
