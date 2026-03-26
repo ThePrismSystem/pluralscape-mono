@@ -1,11 +1,4 @@
-import {
-  bucketContentTags,
-  bucketKeyRotations,
-  buckets,
-  fieldBucketVisibility,
-  friendBucketAssignments,
-  keyGrants,
-} from "@pluralscape/db/pg";
+import { buckets, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   BucketQuerySchema,
@@ -73,70 +66,51 @@ function toBucketResult(row: typeof buckets.$inferSelect): BucketResult {
   };
 }
 
-type BucketDependentType =
-  | "bucketContentTags"
-  | "keyGrants"
-  | "friendBucketAssignments"
-  | "fieldBucketVisibility"
-  | "bucketKeyRotations";
+/** Assert a non-archived bucket exists for the given system. Throws NOT_FOUND if missing. */
+export async function assertBucketExists(
+  tx: PostgresJsDatabase,
+  systemId: SystemId,
+  bucketId: BucketId,
+): Promise<void> {
+  const [existing] = await tx
+    .select({ id: buckets.id })
+    .from(buckets)
+    .where(
+      and(eq(buckets.id, bucketId), eq(buckets.systemId, systemId), eq(buckets.archived, false)),
+    )
+    .limit(1);
+
+  if (!existing) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Bucket not found");
+  }
+}
 
 async function checkBucketDependents(
   tx: PostgresJsDatabase,
   systemId: SystemId,
   bucketId: BucketId,
 ): Promise<void> {
-  const [tagCount, grantCount, assignmentCount, visibilityCount, rotationCount] = await Promise.all(
-    [
-      tx
-        .select({ count: count() })
-        .from(bucketContentTags)
-        .where(
-          and(eq(bucketContentTags.bucketId, bucketId), eq(bucketContentTags.systemId, systemId)),
-        )
-        .then(([r]) => r?.count ?? 0),
-      tx
-        .select({ count: count() })
-        .from(keyGrants)
-        .where(and(eq(keyGrants.bucketId, bucketId), eq(keyGrants.systemId, systemId)))
-        .then(([r]) => r?.count ?? 0),
-      tx
-        .select({ count: count() })
-        .from(friendBucketAssignments)
-        .where(
-          and(
-            eq(friendBucketAssignments.bucketId, bucketId),
-            eq(friendBucketAssignments.systemId, systemId),
-          ),
-        )
-        .then(([r]) => r?.count ?? 0),
-      tx
-        .select({ count: count() })
-        .from(fieldBucketVisibility)
-        .where(
-          and(
-            eq(fieldBucketVisibility.bucketId, bucketId),
-            eq(fieldBucketVisibility.systemId, systemId),
-          ),
-        )
-        .then(([r]) => r?.count ?? 0),
-      tx
-        .select({ count: count() })
-        .from(bucketKeyRotations)
-        .where(
-          and(eq(bucketKeyRotations.bucketId, bucketId), eq(bucketKeyRotations.systemId, systemId)),
-        )
-        .then(([r]) => r?.count ?? 0),
-    ],
-  );
+  const result = await tx.execute<{ type: string; count: number }>(sql`
+    SELECT 'bucketContentTags' AS type, COUNT(*)::int AS count
+      FROM bucket_content_tags WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
+    UNION ALL
+    SELECT 'keyGrants', COUNT(*)::int
+      FROM key_grants WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
+    UNION ALL
+    SELECT 'friendBucketAssignments', COUNT(*)::int
+      FROM friend_bucket_assignments WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
+    UNION ALL
+    SELECT 'fieldBucketVisibility', COUNT(*)::int
+      FROM field_bucket_visibility WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
+    UNION ALL
+    SELECT 'bucketKeyRotations', COUNT(*)::int
+      FROM bucket_key_rotations WHERE bucket_id = ${bucketId} AND system_id = ${systemId}
+  `);
 
-  const dependents: { type: BucketDependentType; count: number }[] = [];
-  if (tagCount > 0) dependents.push({ type: "bucketContentTags", count: tagCount });
-  if (grantCount > 0) dependents.push({ type: "keyGrants", count: grantCount });
-  if (assignmentCount > 0)
-    dependents.push({ type: "friendBucketAssignments", count: assignmentCount });
-  if (visibilityCount > 0)
-    dependents.push({ type: "fieldBucketVisibility", count: visibilityCount });
-  if (rotationCount > 0) dependents.push({ type: "bucketKeyRotations", count: rotationCount });
+  const rows = Array.isArray(result)
+    ? result
+    : (result as { rows: { type: string; count: number }[] }).rows;
+  const dependents = rows.filter((r) => r.count > 0).map((r) => ({ type: r.type, count: r.count }));
 
   if (dependents.length > 0) {
     throw new ApiHttpError(
@@ -165,6 +139,9 @@ export async function createBucket(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Lock the system row to serialize concurrent bucket creation per system (prevents TOCTOU race)
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
     const [existing] = await tx
       .select({ count: count() })
       .from(buckets)

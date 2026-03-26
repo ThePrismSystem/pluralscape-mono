@@ -6,6 +6,7 @@ import type {
   BucketId,
   ChannelId,
   CustomFrontId,
+  FieldDefinitionId,
   FrontingSessionId,
   GroupId,
   LifecycleEventId,
@@ -18,6 +19,7 @@ import type {
   WebhookDeliveryId,
   WebhookId,
 } from "./ids.js";
+import type { BucketContentEntityType } from "./privacy.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Archived, AuditMetadata } from "./utility.js";
 
@@ -86,7 +88,10 @@ export type WebhookEventType =
   | "bucket.restored"
   | "bucket.deleted"
   | "bucket-content-tag.tagged"
-  | "bucket-content-tag.untagged";
+  | "bucket-content-tag.untagged"
+  // ── Privacy: field-bucket-visibility ──
+  | "field-bucket-visibility.set"
+  | "field-bucket-visibility.removed";
 
 // ── T3 payload types (IDs + metadata only, never encrypted content) ──
 // Note: systemId is auto-injected by the dispatcher — not included in payload interfaces.
@@ -139,8 +144,13 @@ interface BucketEventPayload {
 
 interface BucketContentTagEventPayload {
   readonly bucketId: BucketId;
-  readonly entityType: string;
+  readonly entityType: BucketContentEntityType;
   readonly entityId: string;
+}
+
+interface FieldBucketVisibilityEventPayload {
+  readonly fieldDefinitionId: FieldDefinitionId;
+  readonly bucketId: BucketId;
 }
 
 /**
@@ -209,6 +219,9 @@ export interface WebhookEventPayloadMap {
   "bucket.deleted": BucketEventPayload;
   "bucket-content-tag.tagged": BucketContentTagEventPayload;
   "bucket-content-tag.untagged": BucketContentTagEventPayload;
+  // ── Privacy: field-bucket-visibility ──
+  "field-bucket-visibility.set": FieldBucketVisibilityEventPayload;
+  "field-bucket-visibility.removed": FieldBucketVisibilityEventPayload;
 }
 
 /** Configuration for a webhook endpoint. */

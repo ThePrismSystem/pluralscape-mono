@@ -1,4 +1,4 @@
-import { buckets, fieldBucketVisibility, fieldDefinitions } from "@pluralscape/db/pg";
+import { fieldBucketVisibility, fieldDefinitions } from "@pluralscape/db/pg";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
@@ -6,6 +6,10 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
+
+import { assertBucketExists } from "./bucket.service.js";
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -59,29 +63,26 @@ export async function setFieldBucketVisibility(
     }
 
     // Validate bucket exists
-    const [bucket] = await tx
-      .select({ id: buckets.id })
-      .from(buckets)
-      .where(
-        and(eq(buckets.id, bucketId), eq(buckets.systemId, systemId), eq(buckets.archived, false)),
-      )
-      .limit(1);
+    await assertBucketExists(tx, systemId, bucketId);
 
-    if (!bucket) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Bucket not found");
-    }
-
-    await tx
+    const [inserted] = await tx
       .insert(fieldBucketVisibility)
       .values({ fieldDefinitionId, bucketId, systemId })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning();
 
-    await audit(tx, {
-      eventType: "field-bucket-visibility.set",
-      actor: { kind: "account", id: auth.accountId },
-      detail: `Field ${fieldDefinitionId} visibility set for bucket`,
-      systemId,
-    });
+    if (inserted) {
+      await audit(tx, {
+        eventType: "field-bucket-visibility.set",
+        actor: { kind: "account", id: auth.accountId },
+        detail: `Field ${fieldDefinitionId} visibility set for bucket`,
+        systemId,
+      });
+      await dispatchWebhookEvent(tx, systemId, "field-bucket-visibility.set", {
+        fieldDefinitionId,
+        bucketId,
+      });
+    }
 
     return { fieldDefinitionId, bucketId };
   });
@@ -121,6 +122,10 @@ export async function removeFieldBucketVisibility(
       detail: `Field ${fieldDefinitionId} visibility removed from bucket`,
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "field-bucket-visibility.removed", {
+      fieldDefinitionId,
+      bucketId,
+    });
   });
 }
 
@@ -131,8 +136,11 @@ export async function listFieldBucketVisibility(
   systemId: SystemId,
   fieldDefinitionId: FieldDefinitionId,
   auth: AuthContext,
+  opts: { limit?: number } = {},
 ): Promise<readonly FieldBucketVisibilityResult[]> {
   assertSystemOwnership(systemId, auth);
+
+  const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const rows = await tx
@@ -143,7 +151,8 @@ export async function listFieldBucketVisibility(
           eq(fieldBucketVisibility.fieldDefinitionId, fieldDefinitionId),
           eq(fieldBucketVisibility.systemId, systemId),
         ),
-      );
+      )
+      .limit(effectiveLimit);
 
     return rows.map(toResult);
   });

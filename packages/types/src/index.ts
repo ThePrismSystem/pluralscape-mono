@@ -163,7 +163,7 @@ export type {
   BucketAccessCheck,
   FriendBucketAssignment,
 } from "./privacy.js";
-export { BUCKET_CONTENT_ENTITY_TYPES } from "./privacy.js";
+export { BUCKET_CONTENT_ENTITY_TYPES, isBucketContentEntityType } from "./privacy.js";
 
 // ── Structure ──────────────────────────────────────────────────────
 export type {

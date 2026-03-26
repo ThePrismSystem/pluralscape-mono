@@ -11,7 +11,6 @@ describe("checkBucketAccess", () => {
     const check: BucketAccessCheck = {
       friendBucketIds: [],
       contentBucketIds: [bkt("bkt_a")],
-      scope: "members",
     };
     expect(checkBucketAccess(check)).toBe(false);
   });
@@ -20,7 +19,6 @@ describe("checkBucketAccess", () => {
     const check: BucketAccessCheck = {
       friendBucketIds: [bkt("bkt_a")],
       contentBucketIds: [],
-      scope: "members",
     };
     expect(checkBucketAccess(check)).toBe(false);
   });
@@ -29,7 +27,6 @@ describe("checkBucketAccess", () => {
     const check: BucketAccessCheck = {
       friendBucketIds: [],
       contentBucketIds: [],
-      scope: "members",
     };
     expect(checkBucketAccess(check)).toBe(false);
   });
@@ -38,7 +35,6 @@ describe("checkBucketAccess", () => {
     const check: BucketAccessCheck = {
       friendBucketIds: [bkt("bkt_a"), bkt("bkt_b")],
       contentBucketIds: [bkt("bkt_c"), bkt("bkt_d")],
-      scope: "members",
     };
     expect(checkBucketAccess(check)).toBe(false);
   });
@@ -47,7 +43,6 @@ describe("checkBucketAccess", () => {
     const check: BucketAccessCheck = {
       friendBucketIds: [bkt("bkt_a"), bkt("bkt_b")],
       contentBucketIds: [bkt("bkt_b"), bkt("bkt_c")],
-      scope: "members",
     };
     expect(checkBucketAccess(check)).toBe(true);
   });
@@ -56,7 +51,6 @@ describe("checkBucketAccess", () => {
     const check: BucketAccessCheck = {
       friendBucketIds: [bkt("bkt_a"), bkt("bkt_b"), bkt("bkt_c")],
       contentBucketIds: [bkt("bkt_b"), bkt("bkt_c")],
-      scope: "members",
     };
     expect(checkBucketAccess(check)).toBe(true);
   });
@@ -65,30 +59,16 @@ describe("checkBucketAccess", () => {
     const check: BucketAccessCheck = {
       friendBucketIds: [bkt("bkt_a")],
       contentBucketIds: [bkt("bkt_a")],
-      scope: "notes",
     };
     expect(checkBucketAccess(check)).toBe(true);
   });
 
-  it("works with different scopes", () => {
-    const base = {
-      friendBucketIds: [bkt("bkt_a")],
-      contentBucketIds: [bkt("bkt_a")],
+  it("returns true with identical multi-element sets", () => {
+    const check: BucketAccessCheck = {
+      friendBucketIds: [bkt("bkt_a"), bkt("bkt_b")],
+      contentBucketIds: [bkt("bkt_a"), bkt("bkt_b")],
     };
-    const scopes = [
-      "members",
-      "custom-fields",
-      "fronting-status",
-      "custom-fronts",
-      "notes",
-      "chat",
-      "journal-entries",
-      "member-photos",
-      "groups",
-    ] as const;
-    for (const scope of scopes) {
-      expect(checkBucketAccess({ ...base, scope })).toBe(true);
-    }
+    expect(checkBucketAccess(check)).toBe(true);
   });
 });
 

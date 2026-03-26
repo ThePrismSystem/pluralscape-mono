@@ -320,6 +320,16 @@ export const AUDIT_EVENT_TYPES = [
   "acknowledgement.archived",
   "acknowledgement.restored",
   "acknowledgement.deleted",
+  // ── Privacy: buckets ──
+  "bucket.created",
+  "bucket.updated",
+  "bucket.archived",
+  "bucket.restored",
+  "bucket.deleted",
+  "bucket-content-tag.tagged",
+  "bucket-content-tag.untagged",
+  "field-bucket-visibility.set",
+  "field-bucket-visibility.removed",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
@@ -392,6 +402,16 @@ export const WEBHOOK_EVENT_TYPES = [
   "acknowledgement.archived",
   "acknowledgement.restored",
   "acknowledgement.deleted",
+  // ── Privacy: buckets ──
+  "bucket.created",
+  "bucket.updated",
+  "bucket.archived",
+  "bucket.restored",
+  "bucket.deleted",
+  "bucket-content-tag.tagged",
+  "bucket-content-tag.untagged",
+  "field-bucket-visibility.set",
+  "field-bucket-visibility.removed",
 ] as const satisfies readonly WebhookEventType[];
 export const WEBHOOK_DELIVERY_STATUSES = [
   "pending",

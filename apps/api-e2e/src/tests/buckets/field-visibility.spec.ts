@@ -97,6 +97,31 @@ test.describe("Field Bucket Visibility", () => {
     expect(res2.status()).toBe(201);
   });
 
+  test("set visibility with non-existent field returns 404", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const bucket = await createBucket(request, authHeaders, systemId, "Vis Field 404 Test");
+
+    const res = await request.post(
+      `/v1/systems/${systemId}/fields/fld_00000000-0000-0000-0000-000000000001/bucket-visibility`,
+      {
+        headers: authHeaders,
+        data: { bucketId: bucket.id },
+      },
+    );
+    expect(res.status()).toBe(404);
+  });
+
+  test("set visibility with non-existent bucket returns 404", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const field = await createFieldDefinition(request, authHeaders, systemId);
+
+    const res = await request.post(`/v1/systems/${systemId}/fields/${field.id}/bucket-visibility`, {
+      headers: authHeaders,
+      data: { bucketId: "bkt_00000000-0000-0000-0000-000000000001" },
+    });
+    expect(res.status()).toBe(404);
+  });
+
   test("remove non-existent visibility returns 404", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
     const field = await createFieldDefinition(request, authHeaders, systemId);

@@ -90,6 +90,8 @@ describe("WebhookEventType", () => {
         case "bucket.deleted":
         case "bucket-content-tag.tagged":
         case "bucket-content-tag.untagged":
+        case "field-bucket-visibility.set":
+        case "field-bucket-visibility.removed":
           return type;
         default: {
           const _exhaustive: never = type;

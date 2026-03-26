@@ -197,21 +197,6 @@ describe("BucketContentTagQuerySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts entityType with entityId", () => {
-    const result = BucketContentTagQuerySchema.safeParse({
-      entityType: "member",
-      entityId: "mem_abc",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects entityId without entityType", () => {
-    const result = BucketContentTagQuerySchema.safeParse({
-      entityId: "mem_abc",
-    });
-    expect(result.success).toBe(false);
-  });
-
   it("rejects invalid entityType", () => {
     const result = BucketContentTagQuerySchema.safeParse({
       entityType: "invalid",
@@ -221,9 +206,9 @@ describe("BucketContentTagQuerySchema", () => {
 });
 
 describe("SetFieldBucketVisibilityBodySchema", () => {
-  it("accepts valid body", () => {
+  it("accepts valid body with branded bucket ID", () => {
     const result = SetFieldBucketVisibilityBodySchema.safeParse({
-      bucketId: "bkt_abc123",
+      bucketId: "bkt_12345678-1234-1234-1234-123456789abc",
     });
     expect(result.success).toBe(true);
   });
@@ -236,6 +221,20 @@ describe("SetFieldBucketVisibilityBodySchema", () => {
   it("rejects empty bucketId", () => {
     const result = SetFieldBucketVisibilityBodySchema.safeParse({
       bucketId: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects bucketId without bkt_ prefix", () => {
+    const result = SetFieldBucketVisibilityBodySchema.safeParse({
+      bucketId: "sys_12345678-1234-1234-1234-123456789abc",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects bucketId with invalid UUID", () => {
+    const result = SetFieldBucketVisibilityBodySchema.safeParse({
+      bucketId: "bkt_notauuid",
     });
     expect(result.success).toBe(false);
   });

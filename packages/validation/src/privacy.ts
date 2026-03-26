@@ -1,6 +1,7 @@
 import { BUCKET_CONTENT_ENTITY_TYPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
+import { brandedIdQueryParam } from "./branded-id.js";
 import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
@@ -32,19 +33,14 @@ export const TagContentBodySchema = z
   })
   .readonly();
 
-export const BucketContentTagQuerySchema = z
-  .object({
-    entityType: z.enum(BUCKET_CONTENT_ENTITY_TYPES).optional(),
-    entityId: z.string().optional(),
-  })
-  .refine((v) => v.entityId === undefined || v.entityType !== undefined, {
-    message: "entityId requires entityType",
-  });
+export const BucketContentTagQuerySchema = z.object({
+  entityType: z.enum(BUCKET_CONTENT_ENTITY_TYPES).optional(),
+});
 
 // ── Field bucket visibility ──────────────────────────────────────
 
 export const SetFieldBucketVisibilityBodySchema = z
   .object({
-    bucketId: z.string().min(1),
+    bucketId: brandedIdQueryParam("bkt_"),
   })
   .readonly();

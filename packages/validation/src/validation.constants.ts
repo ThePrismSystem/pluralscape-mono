@@ -113,4 +113,6 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "bucket.deleted",
   "bucket-content-tag.tagged",
   "bucket-content-tag.untagged",
+  "field-bucket-visibility.set",
+  "field-bucket-visibility.removed",
 ] as const;

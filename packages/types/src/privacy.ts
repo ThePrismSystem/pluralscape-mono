@@ -79,6 +79,11 @@ export const BUCKET_CONTENT_ENTITY_TYPES = [
   "fronting-comment",
 ] as const satisfies readonly BucketContentEntityType[];
 
+/** Type guard for BucketContentEntityType — validates unknown strings at trust boundaries. */
+export function isBucketContentEntityType(value: string): value is BucketContentEntityType {
+  return (BUCKET_CONTENT_ENTITY_TYPES as readonly string[]).includes(value);
+}
+
 /**
  * Tags an entity as belonging to a privacy bucket.
  *
@@ -174,5 +179,4 @@ export interface FriendBucketAssignment {
 export interface BucketAccessCheck {
   readonly friendBucketIds: readonly BucketId[];
   readonly contentBucketIds: readonly BucketId[];
-  readonly scope: BucketVisibilityScope;
 }

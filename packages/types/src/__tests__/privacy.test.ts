@@ -218,7 +218,6 @@ describe("BucketAccessCheck", () => {
   it("has correct field types", () => {
     expectTypeOf<BucketAccessCheck["friendBucketIds"]>().toEqualTypeOf<readonly BucketId[]>();
     expectTypeOf<BucketAccessCheck["contentBucketIds"]>().toEqualTypeOf<readonly BucketId[]>();
-    expectTypeOf<BucketAccessCheck["scope"]>().toEqualTypeOf<BucketVisibilityScope>();
   });
 });
 

@@ -97,6 +97,24 @@ test.describe("Bucket Content Tags", () => {
     expect(res.status()).toBe(400);
   });
 
+  test("tag content on archived bucket returns 404", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const bucket = await createBucket(request, authHeaders, systemId, "Archived Tag Test");
+
+    // Archive the bucket
+    const archiveRes = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/archive`, {
+      headers: authHeaders,
+    });
+    expect(archiveRes.status()).toBe(204);
+
+    // Attempt to tag content on the archived bucket
+    const res = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/tags`, {
+      headers: authHeaders,
+      data: { entityType: "member", entityId: "mem_00000000-0000-0000-0000-000000000001" },
+    });
+    expect(res.status()).toBe(404);
+  });
+
   test("untag non-existent tag returns 404", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
     const bucket = await createBucket(request, authHeaders, systemId);

@@ -1,4 +1,4 @@
-import { BUCKET_CONTENT_ENTITY_TYPES, ID_PREFIXES } from "@pluralscape/types";
+import { ID_PREFIXES, isBucketContentEntityType } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_NO_CONTENT } from "../../../http.constants.js";
@@ -10,7 +10,6 @@ import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { untagContent } from "../../../services/bucket-content-tag.service.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
-import type { BucketContentEntityType } from "@pluralscape/types";
 
 export const untagRoute = new Hono<AuthEnv>();
 
@@ -24,20 +23,11 @@ untagRoute.delete("/:entityType/:entityId", async (c) => {
   const entityId = c.req.param("entityId");
   const audit = createAuditWriter(c, auth);
 
-  const types: readonly string[] = BUCKET_CONTENT_ENTITY_TYPES;
-  if (!types.includes(entityType)) {
+  if (!isBucketContentEntityType(entityType)) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid entityType");
   }
 
   const db = await getDb();
-  await untagContent(
-    db,
-    systemId,
-    bucketId,
-    entityType as BucketContentEntityType,
-    entityId,
-    auth,
-    audit,
-  );
+  await untagContent(db, systemId, bucketId, entityType, entityId, auth, audit);
   return c.body(null, HTTP_NO_CONTENT);
 });

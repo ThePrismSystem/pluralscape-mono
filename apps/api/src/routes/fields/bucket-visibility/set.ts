@@ -2,17 +2,16 @@ import { ID_PREFIXES } from "@pluralscape/types";
 import { SetFieldBucketVisibilityBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_CREATED } from "../../../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../../http.constants.js";
+import { ApiHttpError } from "../../../lib/api-error.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
-import { parseQuery } from "../../../lib/query-parse.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { setFieldBucketVisibility } from "../../../services/field-bucket-visibility.service.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
-import type { BucketId } from "@pluralscape/types";
 
 export const setVisibilityRoute = new Hono<AuthEnv>();
 
@@ -28,17 +27,17 @@ setVisibilityRoute.post("/", async (c) => {
   );
   const audit = createAuditWriter(c, auth);
   const body = await parseJsonBody(c);
-  const parsed = parseQuery(
-    SetFieldBucketVisibilityBodySchema,
-    body as Record<string, string | undefined>,
-  );
+  const parsed = SetFieldBucketVisibilityBodySchema.safeParse(body);
+  if (!parsed.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid set visibility payload");
+  }
 
   const db = await getDb();
   const result = await setFieldBucketVisibility(
     db,
     systemId,
     fieldDefinitionId,
-    parsed.bucketId as BucketId,
+    parsed.data.bucketId,
     auth,
     audit,
   );

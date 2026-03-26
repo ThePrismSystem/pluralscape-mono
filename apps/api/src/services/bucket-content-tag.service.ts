@@ -1,14 +1,16 @@
-import { bucketContentTags, buckets } from "@pluralscape/db/pg";
+import { bucketContentTags } from "@pluralscape/db/pg";
 import { BucketContentTagQuerySchema, TagContentBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
+import { assertBucketExists } from "./bucket.service.js";
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -26,6 +28,7 @@ export interface BucketContentTagResult {
 
 interface ListTagOpts {
   readonly entityType?: BucketContentEntityType;
+  readonly limit?: number;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -36,24 +39,6 @@ function toTagResult(row: typeof bucketContentTags.$inferSelect): BucketContentT
     entityId: row.entityId,
     bucketId: row.bucketId as BucketId,
   };
-}
-
-async function assertBucketExists(
-  tx: PostgresJsDatabase,
-  systemId: SystemId,
-  bucketId: BucketId,
-): Promise<void> {
-  const [existing] = await tx
-    .select({ id: buckets.id })
-    .from(buckets)
-    .where(
-      and(eq(buckets.id, bucketId), eq(buckets.systemId, systemId), eq(buckets.archived, false)),
-    )
-    .limit(1);
-
-  if (!existing) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Bucket not found");
-  }
 }
 
 // ── TAG ─────────────────────────────────────────────────────────────
@@ -68,36 +53,42 @@ export async function tagContent(
 ): Promise<BucketContentTagResult> {
   assertSystemOwnership(systemId, auth);
 
-  const parsed = parseQuery(TagContentBodySchema, params as Record<string, string | undefined>);
+  const parsed = TagContentBodySchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid tag content payload");
+  }
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     await assertBucketExists(tx, systemId, bucketId);
 
-    await tx
+    const [inserted] = await tx
       .insert(bucketContentTags)
       .values({
-        entityType: parsed.entityType,
-        entityId: parsed.entityId,
+        entityType: parsed.data.entityType,
+        entityId: parsed.data.entityId,
         bucketId,
         systemId,
       })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning();
 
-    await audit(tx, {
-      eventType: "bucket-content-tag.tagged",
-      actor: { kind: "account", id: auth.accountId },
-      detail: `Tagged ${parsed.entityType} ${parsed.entityId} in bucket`,
-      systemId,
-    });
-    await dispatchWebhookEvent(tx, systemId, "bucket-content-tag.tagged", {
-      bucketId,
-      entityType: parsed.entityType,
-      entityId: parsed.entityId,
-    });
+    if (inserted) {
+      await audit(tx, {
+        eventType: "bucket-content-tag.tagged",
+        actor: { kind: "account", id: auth.accountId },
+        detail: `Tagged ${parsed.data.entityType} ${parsed.data.entityId} in bucket`,
+        systemId,
+      });
+      await dispatchWebhookEvent(tx, systemId, "bucket-content-tag.tagged", {
+        bucketId,
+        entityType: parsed.data.entityType,
+        entityId: parsed.data.entityId,
+      });
+    }
 
     return {
-      entityType: parsed.entityType,
-      entityId: parsed.entityId,
+      entityType: parsed.data.entityType,
+      entityId: parsed.data.entityId,
       bucketId,
     };
   });
@@ -158,6 +149,8 @@ export async function listTagsByBucket(
 ): Promise<readonly BucketContentTagResult[]> {
   assertSystemOwnership(systemId, auth);
 
+  const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [
       eq(bucketContentTags.bucketId, bucketId),
@@ -171,36 +164,10 @@ export async function listTagsByBucket(
     const rows = await tx
       .select()
       .from(bucketContentTags)
-      .where(and(...conditions));
+      .where(and(...conditions))
+      .limit(effectiveLimit);
 
     return rows.map(toTagResult);
-  });
-}
-
-// ── LIST BUCKETS BY ENTITY ──────────────────────────────────────────
-
-export async function listBucketsByEntity(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  entityType: BucketContentEntityType,
-  entityId: string,
-  auth: AuthContext,
-): Promise<readonly BucketId[]> {
-  assertSystemOwnership(systemId, auth);
-
-  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
-    const rows = await tx
-      .select({ bucketId: bucketContentTags.bucketId })
-      .from(bucketContentTags)
-      .where(
-        and(
-          eq(bucketContentTags.entityType, entityType),
-          eq(bucketContentTags.entityId, entityId),
-          eq(bucketContentTags.systemId, systemId),
-        ),
-      );
-
-    return rows.map((r) => r.bucketId as BucketId);
   });
 }
 
