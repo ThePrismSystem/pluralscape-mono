@@ -5,13 +5,18 @@ import { and, eq } from "drizzle-orm";
 import { WEBHOOK_CONFIGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { QueryCache } from "../lib/query-cache.js";
 
-import type { SystemId, WebhookEventPayloadMap, WebhookEventType } from "@pluralscape/types";
+import type {
+  SystemId,
+  WebhookEventPayloadMap,
+  WebhookEventType,
+  WebhookId,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Cache ───────────────────────────────────────────────────────────
 
 interface CachedWebhookConfig {
-  readonly id: string;
+  readonly id: WebhookId;
   readonly eventTypes: readonly WebhookEventType[];
 }
 
@@ -42,11 +47,15 @@ async function executeDispatch<K extends WebhookEventType>(
   systemId: SystemId,
   eventType: K,
   payload: Readonly<WebhookEventPayloadMap[K]>,
+  inTransaction: boolean,
 ): Promise<readonly string[]> {
   // Check cache first; fall back to DB query on miss
-  let configs: readonly CachedWebhookConfig[] | undefined = webhookConfigCache.get(systemId);
-  if (!configs) {
-    configs = await db
+  const cached = webhookConfigCache.get(systemId);
+  let configs: readonly CachedWebhookConfig[];
+  if (cached !== undefined) {
+    configs = cached;
+  } else {
+    const rows = await db
       .select({
         id: webhookConfigs.id,
         eventTypes: webhookConfigs.eventTypes,
@@ -59,7 +68,12 @@ async function executeDispatch<K extends WebhookEventType>(
           eq(webhookConfigs.archived, false),
         ),
       );
-    webhookConfigCache.set(systemId, configs);
+    configs = rows.map((row) => ({ id: row.id as WebhookId, eventTypes: row.eventTypes }));
+    // Only populate cache from committed data — transaction-scoped reads
+    // may see uncommitted state that would become stale on rollback.
+    if (!inTransaction) {
+      webhookConfigCache.set(systemId, configs);
+    }
   }
 
   // Filter configs that subscribe to this specific event type
@@ -116,7 +130,7 @@ export async function dispatchWebhookEvent<K extends WebhookEventType>(
   payload: Readonly<WebhookEventPayloadMap[K]>,
 ): Promise<readonly string[]> {
   if (isTransaction(db)) {
-    return executeDispatch(db, systemId, eventType, payload);
+    return executeDispatch(db, systemId, eventType, payload, true);
   }
-  return db.transaction((tx) => executeDispatch(tx, systemId, eventType, payload));
+  return db.transaction((tx) => executeDispatch(tx, systemId, eventType, payload, false));
 }

@@ -157,7 +157,7 @@ export async function createWebhookConfig(
   const timestamp = now();
   const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
 
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  const created = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .insert(webhookConfigs)
       .values({
@@ -184,13 +184,14 @@ export async function createWebhookConfig(
       systemId,
     });
 
-    invalidateWebhookConfigCache(systemId);
-
     return {
       ...toWebhookConfigResult(row),
       secret: secretBytes.toString("base64"),
     };
   });
+
+  invalidateWebhookConfigCache(systemId);
+  return created;
 }
 
 // ── LIST ────────────────────────────────────────────────────────────
@@ -298,7 +299,7 @@ export async function updateWebhookConfig(
     setFields.enabled = enabled;
   }
 
-  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(webhookConfigs)
       .set(setFields)
@@ -338,10 +339,11 @@ export async function updateWebhookConfig(
       systemId,
     });
 
-    invalidateWebhookConfigCache(systemId);
-
     return toWebhookConfigResult(row);
   });
+
+  invalidateWebhookConfigCache(systemId);
+  return result;
 }
 
 // ── DELETE ───────────────────────────────────────────────────────────
@@ -403,9 +405,9 @@ export async function deleteWebhookConfig(
     await tx
       .delete(webhookConfigs)
       .where(and(eq(webhookConfigs.id, webhookId), eq(webhookConfigs.systemId, systemId)));
-
-    invalidateWebhookConfigCache(systemId);
   });
+
+  invalidateWebhookConfigCache(systemId);
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────

@@ -353,6 +353,16 @@ describe("poll service", () => {
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
       );
     });
+
+    it("throws NOT_FOUND when poll is archived", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([]);
+      chain.limit.mockResolvedValueOnce([{ id: POLL_ID, status: "open", archived: true }]);
+
+      await expect(closePoll(db, SYSTEM_ID, POLL_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
+    });
   });
 
   // ── deletePoll ─────────────────────────────────────────────────

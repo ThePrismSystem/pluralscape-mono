@@ -40,7 +40,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  * Queries the poll to distinguish NOT_FOUND, POLL_CLOSED, and version CONFLICT.
  * Always throws — return type is `never`.
  */
-async function assertPollUpdated(
+async function throwPollUpdateError(
   tx: PostgresJsDatabase,
   pollId: PollId,
   systemId: SystemId,
@@ -283,7 +283,7 @@ export async function updatePoll(
 
     const row = updated[0];
     if (!row) {
-      return assertPollUpdated(tx, pollId, systemId);
+      return throwPollUpdateError(tx, pollId, systemId);
     }
 
     await audit(tx, {
@@ -334,7 +334,7 @@ export async function closePoll(
 
     const row = updated[0];
     if (!row) {
-      return assertPollUpdated(tx, pollId, systemId);
+      return throwPollUpdateError(tx, pollId, systemId);
     }
 
     await audit(tx, {
