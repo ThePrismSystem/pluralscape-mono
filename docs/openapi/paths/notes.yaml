@@ -1,0 +1,266 @@
+/systems/{systemId}/notes:
+  get:
+    operationId: listNotes
+    tags: [Notes]
+    summary: List notes
+    description: |
+      Returns a paginated list of private notes for the specified system,
+      ordered by creation time descending. Notes can be filtered by author
+      entity or limited to system-wide notes.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Include archived notes (default false)
+      - name: authorEntityType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [member, structure-entity]
+        description: Filter by author entity type
+      - name: authorEntityId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter by author entity ID (requires authorEntityType)
+      - name: systemWide
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Filter to system-wide notes only (cannot combine with author filters)
+    responses:
+      "200":
+        description: Paginated note list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/notes.yaml#/NoteResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createNote
+    tags: [Notes]
+    summary: Create a note
+    description: |
+      Creates a new private note. Provide an `author` object to bind the note
+      to a specific member or structure entity, or omit it for a system-wide note.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/notes.yaml#/CreateNoteRequest"
+    responses:
+      "201":
+        description: Note created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/notes.yaml#/NoteResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/notes/{noteId}:
+  get:
+    operationId: getNote
+    tags: [Notes]
+    summary: Get a note
+    description: |
+      Returns a single note by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: noteId
+        in: path
+        required: true
+        description: Note ID
+        schema:
+          type: string
+          pattern: ^note_
+    responses:
+      "200":
+        description: Note details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/notes.yaml#/NoteResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateNote
+    tags: [Notes]
+    summary: Update a note
+    description: |
+      Updates the encrypted content of a note. Returns 409 if the provided
+      version conflicts with the server's current version.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: noteId
+        in: path
+        required: true
+        description: Note ID
+        schema:
+          type: string
+          pattern: ^note_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/notes.yaml#/UpdateNoteRequest"
+    responses:
+      "200":
+        description: Note updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/notes.yaml#/NoteResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteNote
+    tags: [Notes]
+    summary: Delete a note
+    description: |
+      Permanently deletes a note. This action is irreversible.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: noteId
+        in: path
+        required: true
+        description: Note ID
+        schema:
+          type: string
+          pattern: ^note_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/notes/{noteId}/archive:
+  post:
+    operationId: archiveNote
+    tags: [Notes]
+    summary: Archive a note
+    description: |
+      Marks a note as archived.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: noteId
+        in: path
+        required: true
+        description: Note ID
+        schema:
+          type: string
+          pattern: ^note_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/notes/{noteId}/restore:
+  post:
+    operationId: restoreNote
+    tags: [Notes]
+    summary: Restore an archived note
+    description: |
+      Removes the archived flag from a note.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: noteId
+        in: path
+        required: true
+        description: Note ID
+        schema:
+          type: string
+          pattern: ^note_
+    responses:
+      "200":
+        description: Note restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/notes.yaml#/NoteResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

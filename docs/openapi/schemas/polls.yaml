@@ -1,0 +1,171 @@
+PollResponse:
+  description: |
+    A poll with cooperative voting. Extends EncryptedEntity with poll-specific
+    configuration and status fields. Poll options, question text, and
+    descriptions are encrypted client-side within `encryptedData`.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [kind, status, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto]
+      properties:
+        createdByMemberId:
+          type: string
+          nullable: true
+          pattern: ^mem_
+          description: Member who created the poll (null if not attributed)
+        kind:
+          type: string
+          enum: [standard, custom]
+          description: Poll kind
+        status:
+          type: string
+          enum: [open, closed]
+          description: Whether the poll is accepting votes
+        closedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when the poll was closed (null while open)
+        endsAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Optional scheduled end time in Unix milliseconds
+        allowMultipleVotes:
+          type: boolean
+          description: Whether voters can cast more than one vote
+        maxVotesPerMember:
+          type: integer
+          minimum: 1
+          description: Maximum votes per voter (must be 1 when allowMultipleVotes is false)
+        allowAbstain:
+          type: boolean
+          description: Whether voters can abstain (null optionId)
+        allowVeto:
+          type: boolean
+          description: Whether voters can veto
+
+PollVoteResponse:
+  description: |
+    A vote cast on a poll. Voters are polymorphic entity references
+    (member or structure entity).
+  type: object
+  required: [id, pollId, isVeto, votedAt, encryptedData, archived, createdAt]
+  properties:
+    id:
+      type: string
+      description: Vote ID
+    pollId:
+      type: string
+      pattern: ^poll_
+      description: Poll this vote belongs to
+    optionId:
+      type: string
+      nullable: true
+      description: Selected option ID (null for abstain)
+    voter:
+      type: object
+      nullable: true
+      description: Voter entity reference
+      required: [entityType, entityId]
+      properties:
+        entityType:
+          type: string
+          enum: [member, structure-entity]
+        entityId:
+          type: string
+    isVeto:
+      type: boolean
+      description: Whether this vote is a veto
+    votedAt:
+      type: integer
+      format: int64
+      description: Unix milliseconds when the vote was cast
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      description: T1-encrypted vote data (optional comment, etc.)
+    archived:
+      type: boolean
+    archivedAt:
+      type: integer
+      format: int64
+      nullable: true
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix milliseconds
+
+CreatePollRequest:
+  type: object
+  required: [encryptedData, kind, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted poll data (question, options, description, etc.)"
+    kind:
+      type: string
+      enum: [standard, custom]
+    createdByMemberId:
+      type: string
+      pattern: ^mem_
+      description: Member creating the poll
+    allowMultipleVotes:
+      type: boolean
+    maxVotesPerMember:
+      type: integer
+      minimum: 1
+      description: Must be 1 when allowMultipleVotes is false
+    allowAbstain:
+      type: boolean
+    allowVeto:
+      type: boolean
+    endsAt:
+      type: integer
+      format: int64
+      description: Optional scheduled end time in Unix milliseconds
+
+UpdatePollRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted poll data"
+    version:
+      type: integer
+      minimum: 1
+
+CastVoteRequest:
+  type: object
+  required: [optionId, voter, encryptedData]
+  properties:
+    optionId:
+      type: string
+      nullable: true
+      description: Selected option ID (null for abstain)
+    voter:
+      type: object
+      required: [entityType, entityId]
+      properties:
+        entityType:
+          type: string
+          enum: [member, structure-entity]
+        entityId:
+          type: string
+          minLength: 1
+    isVeto:
+      type: boolean
+      default: false
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted vote data (optional comment, etc.)"

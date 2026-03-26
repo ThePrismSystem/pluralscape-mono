@@ -7,12 +7,6 @@
 - ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Second-pass zero-knowledge hardening for member-identifying columns ([db-jpjm](.beans/db-jpjm--second-pass-zero-knowledge-hardening-for-member-id.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Re-evaluate audit_log.detail encryption tier (T1 vs T3) ([db-kcmt](.beans/db-kcmt--re-evaluate-audit-logdetail-encryption-tier-t1-vs.md))
 
-## Milestone: Milestone 8: Client App ([ps-7j8n](.beans/ps-7j8n--milestone-8-client-app.md))
-
-> Full-featured cross-platform UI (web, iOS, Android via Expo)
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
-
 ## Milestone: Milestone 7: Data Portability ([ps-n8uk](.beans/ps-n8uk--milestone-7-data-portability.md))
 
 > Import from SP/PK, export, API surface
@@ -28,6 +22,13 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Recovery key regeneration email confirmation ([api-nk7m](.beans/api-nk7m--recovery-key-regeneration-email-confirmation.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SQLite schema codegen from PG (Phase B) ([db-k19k](.beans/db-k19k--sqlite-schema-codegen-from-pg-phase-b.md))
+
+## Milestone: Milestone 8: Client App ([ps-7j8n](.beans/ps-7j8n--milestone-8-client-app.md))
+
+> Full-featured cross-platform UI (web, iOS, Android via Expo)
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Pass timestamp query param on message single-entity API calls ([client-ensq](.beans/client-ensq--pass-timestamp-query-param-on-message-single-entit.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
 
 ## Milestone: Milestone 10: Polish and Launch ([ps-9u4w](.beans/ps-9u4w--milestone-10-polish-and-launch.md))
 
@@ -71,7 +72,10 @@
 
 ### Miscellaneous
 
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Update docs for M4 completion ([ps-6kvn](.beans/ps-6kvn--update-docs-for-m4-completion.md))
+- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Account settings UI: audit log IP tracking opt-in ([mobile-zxe4](.beans/mobile-zxe4--account-settings-ui-audit-log-ip-tracking-opt-in.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) M4 comprehensive audit ([ps-6u44](.beans/ps-6u44--m4-comprehensive-audit.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Update docs for M4 completion ([ps-9ljf](.beans/ps-9ljf--update-docs-for-m4-completion.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add structure entity service with HAS_DEPENDENTS checking ([api-l9ar](.beans/api-l9ar--add-structure-entity-service-with-has-dependents-c.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Structure-entity deletion must check note dependencies ([api-m3up](.beans/api-m3up--structure-entity-deletion-must-check-note-dependen.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Bucket rotation full lifecycle E2E tests ([api-7spq](.beans/api-7spq--bucket-rotation-full-lifecycle-e2e-tests.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Use branded ID keys in CRDT sync schema Record types ([sync-sqfo](.beans/sync-sqfo--use-branded-id-keys-in-crdt-sync-schema-record-typ.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Shared brandId<T> utility for Drizzle inferSelect to branded ID casts ([types-jmk7](.beans/types-jmk7--shared-brandidt-utility-for-drizzle-inferselect-to.md))

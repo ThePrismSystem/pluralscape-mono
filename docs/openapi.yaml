@@ -6036,6 +6036,1919 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/channels:
+    get:
+      operationId: listChannels
+      tags:
+        - Channels
+      summary: List channels
+      description: |
+        Returns a paginated list of channels and categories for the specified system.
+        Channels hold messages; categories group channels hierarchically.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - category
+              - channel
+          description: Filter by channel type
+        - name: parentId
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: ^ch_
+          description: Filter by parent category ID
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Include archived channels (default false)
+      responses:
+        "200":
+          description: Paginated channel list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ChannelResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createChannel
+      tags:
+        - Channels
+      summary: Create a channel or category
+      description: |
+        Creates a new channel or category within the specified system.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChannelRequest"
+      responses:
+        "201":
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/channels/{channelId}:
+    get:
+      operationId: getChannel
+      tags:
+        - Channels
+      summary: Get a channel
+      description: |
+        Returns a single channel or category by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+      responses:
+        "200":
+          description: Channel details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateChannel
+      tags:
+        - Channels
+      summary: Update a channel
+      description: |
+        Updates the encrypted payload and/or sort order for an existing channel.
+        Returns 409 if the provided version conflicts with the server's current version.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChannelRequest"
+      responses:
+        "200":
+          description: Channel updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteChannel
+      tags:
+        - Channels
+      summary: Delete a channel
+      description: |
+        Permanently deletes a channel. Returns 409 if the channel has dependents
+        (messages). This action is irreversible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/channels/{channelId}/archive:
+    post:
+      operationId: archiveChannel
+      tags:
+        - Channels
+      summary: Archive a channel
+      description: |
+        Marks a channel as archived. Archived channels are hidden from default
+        list responses but remain accessible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/channels/{channelId}/restore:
+    post:
+      operationId: restoreChannel
+      tags:
+        - Channels
+      summary: Restore an archived channel
+      description: |
+        Removes the archived flag from a channel, making it visible in default
+        list responses again.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+      responses:
+        "200":
+          description: Channel restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/channels/{channelId}/messages:
+    get:
+      operationId: listMessages
+      tags:
+        - Messages
+      summary: List messages in a channel
+      description: |
+        Returns a paginated list of messages in the specified channel, ordered
+        by timestamp descending. Supports time-range filtering via `before`
+        and `after` query parameters.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: before
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Return messages with timestamp before this value (Unix milliseconds)
+        - name: after
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Return messages with timestamp after this value (Unix milliseconds)
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Include archived messages (default false)
+      responses:
+        "200":
+          description: Paginated message list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/MessageResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createMessage
+      tags:
+        - Messages
+      summary: Create a message
+      description: |
+        Creates a new message in the specified channel. The sender identity is
+        encrypted within `encryptedData` (proxy-based messaging).
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMessageRequest"
+      responses:
+        "201":
+          description: Message created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/channels/{channelId}/messages/{messageId}:
+    get:
+      operationId: getMessage
+      tags:
+        - Messages
+      summary: Get a message
+      description: |
+        Returns a single message by ID. An optional `timestamp` query parameter
+        can be provided as a partition hint for more efficient lookups.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+        - name: messageId
+          in: path
+          required: true
+          description: Message ID
+          schema:
+            type: string
+            pattern: ^msg_
+        - name: timestamp
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Partition hint (Unix milliseconds) for efficient lookup
+      responses:
+        "200":
+          description: Message details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateMessage
+      tags:
+        - Messages
+      summary: Update a message
+      description: |
+        Updates the encrypted content of a message. Sets `editedAt` on first edit.
+        Returns 409 if the provided version conflicts with the server's current version.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+        - name: messageId
+          in: path
+          required: true
+          description: Message ID
+          schema:
+            type: string
+            pattern: ^msg_
+        - name: timestamp
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Partition hint (Unix milliseconds) for efficient lookup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMessageRequest"
+      responses:
+        "200":
+          description: Message updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteMessage
+      tags:
+        - Messages
+      summary: Delete a message
+      description: |
+        Permanently deletes a message. This action is irreversible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+        - name: messageId
+          in: path
+          required: true
+          description: Message ID
+          schema:
+            type: string
+            pattern: ^msg_
+        - name: timestamp
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Partition hint (Unix milliseconds) for efficient lookup
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/channels/{channelId}/messages/{messageId}/archive:
+    post:
+      operationId: archiveMessage
+      tags:
+        - Messages
+      summary: Archive a message
+      description: |
+        Marks a message as archived. Archived messages are hidden from default
+        list responses but remain accessible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+        - name: messageId
+          in: path
+          required: true
+          description: Message ID
+          schema:
+            type: string
+            pattern: ^msg_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/channels/{channelId}/messages/{messageId}/restore:
+    post:
+      operationId: restoreMessage
+      tags:
+        - Messages
+      summary: Restore an archived message
+      description: |
+        Removes the archived flag from a message, making it visible in default
+        list responses again.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: channelId
+          in: path
+          required: true
+          description: Channel ID
+          schema:
+            type: string
+            pattern: ^ch_
+        - name: messageId
+          in: path
+          required: true
+          description: Message ID
+          schema:
+            type: string
+            pattern: ^msg_
+      responses:
+        "200":
+          description: Message restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/board-messages:
+    get:
+      operationId: listBoardMessages
+      tags:
+        - Board Messages
+      summary: List board messages
+      description: |
+        Returns a paginated list of board messages for the specified system,
+        ordered by sort order ascending. Board messages are persistent
+        noticeboard entries immune to chat scroll.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Include archived board messages (default false)
+        - name: pinned
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Filter by pinned status
+      responses:
+        "200":
+          description: Paginated board message list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BoardMessageResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createBoardMessage
+      tags:
+        - Board Messages
+      summary: Create a board message
+      description: |
+        Creates a new board message on the system's noticeboard.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBoardMessageRequest"
+      responses:
+        "201":
+          description: Board message created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardMessageResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/board-messages/reorder:
+    post:
+      operationId: reorderBoardMessages
+      tags:
+        - Board Messages
+      summary: Reorder board messages
+      description: |
+        Batch-updates sort order for multiple board messages in a single
+        atomic operation. Maximum 100 operations per request.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderBoardMessagesRequest"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/board-messages/{boardMessageId}:
+    get:
+      operationId: getBoardMessage
+      tags:
+        - Board Messages
+      summary: Get a board message
+      description: |
+        Returns a single board message by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: boardMessageId
+          in: path
+          required: true
+          description: Board message ID
+          schema:
+            type: string
+            pattern: ^bm_
+      responses:
+        "200":
+          description: Board message details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateBoardMessage
+      tags:
+        - Board Messages
+      summary: Update a board message
+      description: |
+        Updates the encrypted content, sort order, or pinned status of a board
+        message. Returns 409 if the provided version conflicts.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: boardMessageId
+          in: path
+          required: true
+          description: Board message ID
+          schema:
+            type: string
+            pattern: ^bm_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBoardMessageRequest"
+      responses:
+        "200":
+          description: Board message updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardMessageResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteBoardMessage
+      tags:
+        - Board Messages
+      summary: Delete a board message
+      description: |
+        Permanently deletes a board message. This action is irreversible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: boardMessageId
+          in: path
+          required: true
+          description: Board message ID
+          schema:
+            type: string
+            pattern: ^bm_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/board-messages/{boardMessageId}/pin:
+    post:
+      operationId: pinBoardMessage
+      tags:
+        - Board Messages
+      summary: Pin a board message
+      description: |
+        Pins a board message to the top of the noticeboard.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: boardMessageId
+          in: path
+          required: true
+          description: Board message ID
+          schema:
+            type: string
+            pattern: ^bm_
+      responses:
+        "200":
+          description: Board message pinned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/board-messages/{boardMessageId}/unpin:
+    post:
+      operationId: unpinBoardMessage
+      tags:
+        - Board Messages
+      summary: Unpin a board message
+      description: |
+        Unpins a board message from the top of the noticeboard.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: boardMessageId
+          in: path
+          required: true
+          description: Board message ID
+          schema:
+            type: string
+            pattern: ^bm_
+      responses:
+        "200":
+          description: Board message unpinned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/board-messages/{boardMessageId}/archive:
+    post:
+      operationId: archiveBoardMessage
+      tags:
+        - Board Messages
+      summary: Archive a board message
+      description: |
+        Marks a board message as archived.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: boardMessageId
+          in: path
+          required: true
+          description: Board message ID
+          schema:
+            type: string
+            pattern: ^bm_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/board-messages/{boardMessageId}/restore:
+    post:
+      operationId: restoreBoardMessage
+      tags:
+        - Board Messages
+      summary: Restore an archived board message
+      description: |
+        Removes the archived flag from a board message.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: boardMessageId
+          in: path
+          required: true
+          description: Board message ID
+          schema:
+            type: string
+            pattern: ^bm_
+      responses:
+        "200":
+          description: Board message restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/notes:
+    get:
+      operationId: listNotes
+      tags:
+        - Notes
+      summary: List notes
+      description: |
+        Returns a paginated list of private notes for the specified system,
+        ordered by creation time descending. Notes can be filtered by author
+        entity or limited to system-wide notes.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Include archived notes (default false)
+        - name: authorEntityType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - member
+              - structure-entity
+          description: Filter by author entity type
+        - name: authorEntityId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by author entity ID (requires authorEntityType)
+        - name: systemWide
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Filter to system-wide notes only (cannot combine with author filters)
+      responses:
+        "200":
+          description: Paginated note list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/NoteResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createNote
+      tags:
+        - Notes
+      summary: Create a note
+      description: |
+        Creates a new private note. Provide an `author` object to bind the note
+        to a specific member or structure entity, or omit it for a system-wide note.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+      responses:
+        "201":
+          description: Note created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/notes/{noteId}:
+    get:
+      operationId: getNote
+      tags:
+        - Notes
+      summary: Get a note
+      description: |
+        Returns a single note by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: noteId
+          in: path
+          required: true
+          description: Note ID
+          schema:
+            type: string
+            pattern: ^note_
+      responses:
+        "200":
+          description: Note details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateNote
+      tags:
+        - Notes
+      summary: Update a note
+      description: |
+        Updates the encrypted content of a note. Returns 409 if the provided
+        version conflicts with the server's current version.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: noteId
+          in: path
+          required: true
+          description: Note ID
+          schema:
+            type: string
+            pattern: ^note_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteRequest"
+      responses:
+        "200":
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteNote
+      tags:
+        - Notes
+      summary: Delete a note
+      description: |
+        Permanently deletes a note. This action is irreversible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: noteId
+          in: path
+          required: true
+          description: Note ID
+          schema:
+            type: string
+            pattern: ^note_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/notes/{noteId}/archive:
+    post:
+      operationId: archiveNote
+      tags:
+        - Notes
+      summary: Archive a note
+      description: |
+        Marks a note as archived.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: noteId
+          in: path
+          required: true
+          description: Note ID
+          schema:
+            type: string
+            pattern: ^note_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/notes/{noteId}/restore:
+    post:
+      operationId: restoreNote
+      tags:
+        - Notes
+      summary: Restore an archived note
+      description: |
+        Removes the archived flag from a note.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: noteId
+          in: path
+          required: true
+          description: Note ID
+          schema:
+            type: string
+            pattern: ^note_
+      responses:
+        "200":
+          description: Note restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls:
+    get:
+      operationId: listPolls
+      tags:
+        - Polls
+      summary: List polls
+      description: |
+        Returns a paginated list of polls for the specified system, ordered by
+        creation time descending. Polls facilitate cooperative internal
+        decision-making with optional abstain and veto support.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Include archived polls (default false)
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - open
+              - closed
+          description: Filter by poll status
+      responses:
+        "200":
+          description: Paginated poll list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/PollResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createPoll
+      tags:
+        - Polls
+      summary: Create a poll
+      description: |
+        Creates a new poll. Poll options and question text are encrypted
+        within `encryptedData`. Configuration fields (voting rules, schedule)
+        are stored in plaintext for server-side enforcement.
+
+        When `allowMultipleVotes` is false, `maxVotesPerMember` must be 1.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePollRequest"
+      responses:
+        "201":
+          description: Poll created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls/{pollId}:
+    get:
+      operationId: getPoll
+      tags:
+        - Polls
+      summary: Get a poll
+      description: |
+        Returns a single poll by ID, including its configuration and status.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      responses:
+        "200":
+          description: Poll details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updatePoll
+      tags:
+        - Polls
+      summary: Update a poll
+      description: |
+        Updates the encrypted content of a poll (question text, option labels, etc.).
+        Configuration fields (voting rules) are immutable after creation.
+        Returns 409 if the provided version conflicts.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePollRequest"
+      responses:
+        "200":
+          description: Poll updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deletePoll
+      tags:
+        - Polls
+      summary: Delete a poll
+      description: |
+        Permanently deletes a poll. Returns 409 if the poll has dependents
+        (votes). This action is irreversible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls/{pollId}/close:
+    post:
+      operationId: closePoll
+      tags:
+        - Polls
+      summary: Close a poll
+      description: |
+        Closes a poll, preventing further votes. Sets `closedAt` and changes
+        `status` to `closed`. This action is idempotent.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      responses:
+        "200":
+          description: Poll closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls/{pollId}/votes:
+    get:
+      operationId: listPollVotes
+      tags:
+        - Polls
+      summary: List votes for a poll
+      description: |
+        Returns a paginated list of votes cast on the specified poll.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Include archived votes (default false)
+      responses:
+        "200":
+          description: Paginated vote list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/PollVoteResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: castVote
+      tags:
+        - Polls
+      summary: Cast a vote on a poll
+      description: |
+        Casts a vote on an open poll. The voter is a polymorphic entity reference
+        (member or structure entity). Set `optionId` to null for abstain (if allowed).
+        Set `isVeto` to true to veto (if allowed). Voting on a closed poll returns 409.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CastVoteRequest"
+      responses:
+        "201":
+          description: Vote cast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollVoteResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls/{pollId}/archive:
+    post:
+      operationId: archivePoll
+      tags:
+        - Polls
+      summary: Archive a poll
+      description: |
+        Marks a poll as archived.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls/{pollId}/restore:
+    post:
+      operationId: restorePoll
+      tags:
+        - Polls
+      summary: Restore an archived poll
+      description: |
+        Removes the archived flag from a poll.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      responses:
+        "200":
+          description: Poll restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/acknowledgements:
+    get:
+      operationId: listAcknowledgements
+      tags:
+        - Acknowledgements
+      summary: List acknowledgements
+      description: |
+        Returns a paginated list of acknowledgements for the specified system,
+        ordered by creation time descending. Acknowledgements are mandatory
+        alerts that persist until a specific member confirms them.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Include archived acknowledgements (default false)
+        - name: confirmed
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: Filter by confirmation status (omit for all)
+      responses:
+        "200":
+          description: Paginated acknowledgement list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AcknowledgementResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createAcknowledgement
+      tags:
+        - Acknowledgements
+      summary: Create an acknowledgement
+      description: |
+        Creates a new mandatory acknowledgement. The target member, message,
+        and urgency are encrypted within `encryptedData`.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAcknowledgementRequest"
+      responses:
+        "201":
+          description: Acknowledgement created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcknowledgementResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}:
+    get:
+      operationId: getAcknowledgement
+      tags:
+        - Acknowledgements
+      summary: Get an acknowledgement
+      description: |
+        Returns a single acknowledgement by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: acknowledgementId
+          in: path
+          required: true
+          description: Acknowledgement ID
+          schema:
+            type: string
+            pattern: ^ack_
+      responses:
+        "200":
+          description: Acknowledgement details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcknowledgementResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteAcknowledgement
+      tags:
+        - Acknowledgements
+      summary: Delete an acknowledgement
+      description: |
+        Permanently deletes an acknowledgement. This action is irreversible.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: acknowledgementId
+          in: path
+          required: true
+          description: Acknowledgement ID
+          schema:
+            type: string
+            pattern: ^ack_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}/confirm:
+    post:
+      operationId: confirmAcknowledgement
+      tags:
+        - Acknowledgements
+      summary: Confirm an acknowledgement
+      description: |
+        Marks an acknowledgement as confirmed by the target member. This action
+        is idempotent — re-confirming an already-confirmed acknowledgement returns
+        the current state without modification. Optionally accepts new
+        `encryptedData` to replace the existing payload at confirmation time.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: acknowledgementId
+          in: path
+          required: true
+          description: Acknowledgement ID
+          schema:
+            type: string
+            pattern: ^ack_
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmAcknowledgementRequest"
+      responses:
+        "200":
+          description: Acknowledgement confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcknowledgementResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}/archive:
+    post:
+      operationId: archiveAcknowledgement
+      tags:
+        - Acknowledgements
+      summary: Archive an acknowledgement
+      description: |
+        Marks an acknowledgement as archived.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: acknowledgementId
+          in: path
+          required: true
+          description: Acknowledgement ID
+          schema:
+            type: string
+            pattern: ^ack_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}/restore:
+    post:
+      operationId: restoreAcknowledgement
+      tags:
+        - Acknowledgements
+      summary: Restore an archived acknowledgement
+      description: |
+        Removes the archived flag from an acknowledgement.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: acknowledgementId
+          in: path
+          required: true
+          description: Acknowledgement ID
+          schema:
+            type: string
+            pattern: ^ack_
+      responses:
+        "200":
+          description: Acknowledgement restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcknowledgementResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
 components:
   securitySchemes:
     bearerAuth:
@@ -9039,14 +10952,44 @@ components:
         - fronting.ended
         - group.created
         - group.updated
-        - note.created
-        - note.updated
-        - chat.message-sent
-        - poll.created
-        - poll.closed
-        - acknowledgement.requested
         - lifecycle.event-recorded
         - custom-front.changed
+        - channel.created
+        - channel.updated
+        - channel.archived
+        - channel.restored
+        - channel.deleted
+        - message.created
+        - message.updated
+        - message.archived
+        - message.restored
+        - message.deleted
+        - board-message.created
+        - board-message.updated
+        - board-message.pinned
+        - board-message.unpinned
+        - board-message.reordered
+        - board-message.archived
+        - board-message.restored
+        - board-message.deleted
+        - note.created
+        - note.updated
+        - note.archived
+        - note.restored
+        - note.deleted
+        - poll.created
+        - poll.updated
+        - poll.closed
+        - poll.archived
+        - poll.restored
+        - poll.deleted
+        - poll-vote.cast
+        - poll-vote.vetoed
+        - acknowledgement.created
+        - acknowledgement.confirmed
+        - acknowledgement.archived
+        - acknowledgement.restored
+        - acknowledgement.deleted
     WebhookConfigResponse:
       description: |
         A webhook configuration. The `secret` field is only included in the
@@ -9107,7 +11050,7 @@ components:
           items:
             $ref: "#/components/schemas/WebhookEventType"
           minItems: 1
-          maxItems: 15
+          maxItems: 50
           description: Event types to subscribe to
         enabled:
           type: boolean
@@ -9143,7 +11086,7 @@ components:
           items:
             $ref: "#/components/schemas/WebhookEventType"
           minItems: 1
-          maxItems: 15
+          maxItems: 50
           description: Updated event type subscriptions
         enabled:
           type: boolean
@@ -9191,6 +11134,529 @@ components:
         createdAt:
           type: integer
           format: int64
+    ChannelResponse:
+      description: |
+        A chat channel or category. Discriminated on `type`: categories group
+        channels hierarchically; channels hold messages. Extends EncryptedEntity
+        with channel-specific server-visible fields.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          required:
+            - type
+            - sortOrder
+          properties:
+            type:
+              type: string
+              enum:
+                - category
+                - channel
+              description: "Discriminator: `category` groups channels; `channel` holds messages"
+            parentId:
+              type: string
+              nullable: true
+              pattern: ^ch_
+              description: Parent category ID (null for top-level channels/categories)
+            sortOrder:
+              type: integer
+              minimum: 0
+              description: Display order within parent scope
+    CreateChannelRequest:
+      type: object
+      required:
+        - encryptedData
+        - type
+        - sortOrder
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted channel data (name, description, etc.)
+        type:
+          type: string
+          enum:
+            - category
+            - channel
+        parentId:
+          type: string
+          pattern: ^ch_
+          description: Parent category ID (omit for top-level)
+        sortOrder:
+          type: integer
+          minimum: 0
+    UpdateChannelRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted channel data
+        version:
+          type: integer
+          minimum: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+    MessageResponse:
+      description: |
+        A chat message within a channel. Extends EncryptedEntity with message-specific
+        server-visible fields. Messages are partitioned by timestamp for efficient
+        range queries.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          required:
+            - channelId
+            - timestamp
+          properties:
+            channelId:
+              type: string
+              pattern: ^ch_
+              description: Channel this message belongs to
+            replyToId:
+              type: string
+              nullable: true
+              pattern: ^msg_
+              description: ID of the message being replied to (null if not a reply)
+            timestamp:
+              type: integer
+              format: int64
+              description: Message send time in Unix milliseconds (used for partition pruning)
+            editedAt:
+              type: integer
+              format: int64
+              nullable: true
+              description: Unix milliseconds when last edited (null until first edit)
+    CreateMessageRequest:
+      type: object
+      required:
+        - encryptedData
+        - timestamp
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted message content (text, sender proxy identity, etc.)
+        timestamp:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Message send time in Unix milliseconds
+        replyToId:
+          type: string
+          pattern: ^msg_
+          description: ID of the message being replied to
+    UpdateMessageRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted message content
+        version:
+          type: integer
+          minimum: 1
+    BoardMessageResponse:
+      description: |
+        A persistent board message (noticeboard entry). Extends EncryptedEntity
+        with board-specific server-visible fields for pinning and ordering.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          required:
+            - pinned
+            - sortOrder
+          properties:
+            pinned:
+              type: boolean
+              description: Whether this board message is pinned to the top
+            sortOrder:
+              type: integer
+              minimum: 0
+              description: Display order (ascending)
+    CreateBoardMessageRequest:
+      type: object
+      required:
+        - encryptedData
+        - sortOrder
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted board message content (text, author proxy identity, etc.)
+        sortOrder:
+          type: integer
+          minimum: 0
+        pinned:
+          type: boolean
+          default: false
+    ReorderBoardMessagesRequest:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required:
+              - boardMessageId
+              - sortOrder
+            properties:
+              boardMessageId:
+                type: string
+                pattern: ^bm_
+                description: Board message ID to reorder
+              sortOrder:
+                type: integer
+                minimum: 0
+    UpdateBoardMessageRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted board message content
+        version:
+          type: integer
+          minimum: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        pinned:
+          type: boolean
+    NoteResponse:
+      description: |
+        A private note, either bound to a specific author entity (member or
+        structure entity) or system-wide. Extends EncryptedEntity with
+        polymorphic authorship fields.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          properties:
+            authorEntityType:
+              type: string
+              nullable: true
+              enum:
+                - member
+                - structure-entity
+              description: Author entity type (null for system-wide notes)
+            authorEntityId:
+              type: string
+              nullable: true
+              description: Author entity ID (null for system-wide notes)
+    CreateNoteRequest:
+      type: object
+      required:
+        - encryptedData
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted note content (rich text, background color, etc.)
+        author:
+          type: object
+          description: Author entity reference (omit for system-wide note)
+          required:
+            - entityType
+            - entityId
+          properties:
+            entityType:
+              type: string
+              enum:
+                - member
+                - structure-entity
+            entityId:
+              type: string
+              minLength: 1
+    UpdateNoteRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted note content
+        version:
+          type: integer
+          minimum: 1
+    PollResponse:
+      description: |
+        A poll with cooperative voting. Extends EncryptedEntity with poll-specific
+        configuration and status fields. Poll options, question text, and
+        descriptions are encrypted client-side within `encryptedData`.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          required:
+            - kind
+            - status
+            - allowMultipleVotes
+            - maxVotesPerMember
+            - allowAbstain
+            - allowVeto
+          properties:
+            createdByMemberId:
+              type: string
+              nullable: true
+              pattern: ^mem_
+              description: Member who created the poll (null if not attributed)
+            kind:
+              type: string
+              enum:
+                - standard
+                - custom
+              description: Poll kind
+            status:
+              type: string
+              enum:
+                - open
+                - closed
+              description: Whether the poll is accepting votes
+            closedAt:
+              type: integer
+              format: int64
+              nullable: true
+              description: Unix milliseconds when the poll was closed (null while open)
+            endsAt:
+              type: integer
+              format: int64
+              nullable: true
+              description: Optional scheduled end time in Unix milliseconds
+            allowMultipleVotes:
+              type: boolean
+              description: Whether voters can cast more than one vote
+            maxVotesPerMember:
+              type: integer
+              minimum: 1
+              description: Maximum votes per voter (must be 1 when allowMultipleVotes is false)
+            allowAbstain:
+              type: boolean
+              description: Whether voters can abstain (null optionId)
+            allowVeto:
+              type: boolean
+              description: Whether voters can veto
+    CreatePollRequest:
+      type: object
+      required:
+        - encryptedData
+        - kind
+        - allowMultipleVotes
+        - maxVotesPerMember
+        - allowAbstain
+        - allowVeto
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted poll data (question, options, description, etc.)
+        kind:
+          type: string
+          enum:
+            - standard
+            - custom
+        createdByMemberId:
+          type: string
+          pattern: ^mem_
+          description: Member creating the poll
+        allowMultipleVotes:
+          type: boolean
+        maxVotesPerMember:
+          type: integer
+          minimum: 1
+          description: Must be 1 when allowMultipleVotes is false
+        allowAbstain:
+          type: boolean
+        allowVeto:
+          type: boolean
+        endsAt:
+          type: integer
+          format: int64
+          description: Optional scheduled end time in Unix milliseconds
+    UpdatePollRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted poll data
+        version:
+          type: integer
+          minimum: 1
+    PollVoteResponse:
+      description: |
+        A vote cast on a poll. Voters are polymorphic entity references
+        (member or structure entity).
+      type: object
+      required:
+        - id
+        - pollId
+        - isVeto
+        - votedAt
+        - encryptedData
+        - archived
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Vote ID
+        pollId:
+          type: string
+          pattern: ^poll_
+          description: Poll this vote belongs to
+        optionId:
+          type: string
+          nullable: true
+          description: Selected option ID (null for abstain)
+        voter:
+          type: object
+          nullable: true
+          description: Voter entity reference
+          required:
+            - entityType
+            - entityId
+          properties:
+            entityType:
+              type: string
+              enum:
+                - member
+                - structure-entity
+            entityId:
+              type: string
+        isVeto:
+          type: boolean
+          description: Whether this vote is a veto
+        votedAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the vote was cast
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          description: T1-encrypted vote data (optional comment, etc.)
+        archived:
+          type: boolean
+        archivedAt:
+          type: integer
+          format: int64
+          nullable: true
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds
+    CastVoteRequest:
+      type: object
+      required:
+        - optionId
+        - voter
+        - encryptedData
+      properties:
+        optionId:
+          type: string
+          nullable: true
+          description: Selected option ID (null for abstain)
+        voter:
+          type: object
+          required:
+            - entityType
+            - entityId
+          properties:
+            entityType:
+              type: string
+              enum:
+                - member
+                - structure-entity
+            entityId:
+              type: string
+              minLength: 1
+        isVeto:
+          type: boolean
+          default: false
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted vote data (optional comment, etc.)
+    AcknowledgementResponse:
+      description: |
+        A mandatory acknowledgement — a targeted alert that persists until a
+        specific member confirms it. Extends EncryptedEntity with confirmation
+        tracking fields.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          required:
+            - confirmed
+          properties:
+            createdByMemberId:
+              type: string
+              nullable: true
+              pattern: ^mem_
+              description: Member who created the acknowledgement (null if not attributed)
+            confirmed:
+              type: boolean
+              description: Whether the target member has confirmed this acknowledgement
+    CreateAcknowledgementRequest:
+      type: object
+      required:
+        - encryptedData
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted acknowledgement data (message, target member, etc.)
+        createdByMemberId:
+          type: string
+          pattern: ^mem_
+          description: Member creating the acknowledgement
+    ConfirmAcknowledgementRequest:
+      type: object
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: Optional T1-encrypted confirmation data (replaces existing encryptedData)
   responses:
     NoContent:
       description: Success with no response body

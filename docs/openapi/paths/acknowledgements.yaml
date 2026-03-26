@@ -1,0 +1,253 @@
+/systems/{systemId}/acknowledgements:
+  get:
+    operationId: listAcknowledgements
+    tags: [Acknowledgements]
+    summary: List acknowledgements
+    description: |
+      Returns a paginated list of acknowledgements for the specified system,
+      ordered by creation time descending. Acknowledgements are mandatory
+      alerts that persist until a specific member confirms them.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Include archived acknowledgements (default false)
+      - name: confirmed
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Filter by confirmation status (omit for all)
+    responses:
+      "200":
+        description: Paginated acknowledgement list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/acknowledgements.yaml#/AcknowledgementResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createAcknowledgement
+    tags: [Acknowledgements]
+    summary: Create an acknowledgement
+    description: |
+      Creates a new mandatory acknowledgement. The target member, message,
+      and urgency are encrypted within `encryptedData`.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/acknowledgements.yaml#/CreateAcknowledgementRequest"
+    responses:
+      "201":
+        description: Acknowledgement created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/acknowledgements.yaml#/AcknowledgementResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/acknowledgements/{acknowledgementId}:
+  get:
+    operationId: getAcknowledgement
+    tags: [Acknowledgements]
+    summary: Get an acknowledgement
+    description: |
+      Returns a single acknowledgement by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: acknowledgementId
+        in: path
+        required: true
+        description: Acknowledgement ID
+        schema:
+          type: string
+          pattern: ^ack_
+    responses:
+      "200":
+        description: Acknowledgement details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/acknowledgements.yaml#/AcknowledgementResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteAcknowledgement
+    tags: [Acknowledgements]
+    summary: Delete an acknowledgement
+    description: |
+      Permanently deletes an acknowledgement. This action is irreversible.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: acknowledgementId
+        in: path
+        required: true
+        description: Acknowledgement ID
+        schema:
+          type: string
+          pattern: ^ack_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/acknowledgements/{acknowledgementId}/confirm:
+  post:
+    operationId: confirmAcknowledgement
+    tags: [Acknowledgements]
+    summary: Confirm an acknowledgement
+    description: |
+      Marks an acknowledgement as confirmed by the target member. This action
+      is idempotent — re-confirming an already-confirmed acknowledgement returns
+      the current state without modification. Optionally accepts new
+      `encryptedData` to replace the existing payload at confirmation time.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: acknowledgementId
+        in: path
+        required: true
+        description: Acknowledgement ID
+        schema:
+          type: string
+          pattern: ^ack_
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/acknowledgements.yaml#/ConfirmAcknowledgementRequest"
+    responses:
+      "200":
+        description: Acknowledgement confirmed
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/acknowledgements.yaml#/AcknowledgementResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/acknowledgements/{acknowledgementId}/archive:
+  post:
+    operationId: archiveAcknowledgement
+    tags: [Acknowledgements]
+    summary: Archive an acknowledgement
+    description: |
+      Marks an acknowledgement as archived.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: acknowledgementId
+        in: path
+        required: true
+        description: Acknowledgement ID
+        schema:
+          type: string
+          pattern: ^ack_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/acknowledgements/{acknowledgementId}/restore:
+  post:
+    operationId: restoreAcknowledgement
+    tags: [Acknowledgements]
+    summary: Restore an archived acknowledgement
+    description: |
+      Removes the archived flag from an acknowledgement.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: acknowledgementId
+        in: path
+        required: true
+        description: Acknowledgement ID
+        schema:
+          type: string
+          pattern: ^ack_
+    responses:
+      "200":
+        description: Acknowledgement restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/acknowledgements.yaml#/AcknowledgementResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

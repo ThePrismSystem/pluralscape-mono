@@ -1,0 +1,54 @@
+NoteResponse:
+  description: |
+    A private note, either bound to a specific author entity (member or
+    structure entity) or system-wide. Extends EncryptedEntity with
+    polymorphic authorship fields.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        authorEntityType:
+          type: string
+          nullable: true
+          enum: [member, structure-entity]
+          description: Author entity type (null for system-wide notes)
+        authorEntityId:
+          type: string
+          nullable: true
+          description: Author entity ID (null for system-wide notes)
+
+CreateNoteRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted note content (rich text, background color, etc.)"
+    author:
+      type: object
+      description: Author entity reference (omit for system-wide note)
+      required: [entityType, entityId]
+      properties:
+        entityType:
+          type: string
+          enum: [member, structure-entity]
+        entityId:
+          type: string
+          minLength: 1
+
+UpdateNoteRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted note content"
+    version:
+      type: integer
+      minimum: 1

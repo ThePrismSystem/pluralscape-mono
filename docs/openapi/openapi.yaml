@@ -808,3 +808,69 @@ paths:
     $ref: "./paths/webhook-deliveries.yaml#/~1systems~1%7BsystemId%7D~1webhook-deliveries"
   /systems/{systemId}/webhook-deliveries/{deliveryId}:
     $ref: "./paths/webhook-deliveries.yaml#/~1systems~1%7BsystemId%7D~1webhook-deliveries~1%7BdeliveryId%7D"
+  # Channels
+  /systems/{systemId}/channels:
+    $ref: "./paths/channels.yaml#/~1systems~1%7BsystemId%7D~1channels"
+  /systems/{systemId}/channels/{channelId}:
+    $ref: "./paths/channels.yaml#/~1systems~1%7BsystemId%7D~1channels~1%7BchannelId%7D"
+  /systems/{systemId}/channels/{channelId}/archive:
+    $ref: "./paths/channels.yaml#/~1systems~1%7BsystemId%7D~1channels~1%7BchannelId%7D~1archive"
+  /systems/{systemId}/channels/{channelId}/restore:
+    $ref: "./paths/channels.yaml#/~1systems~1%7BsystemId%7D~1channels~1%7BchannelId%7D~1restore"
+  # Messages
+  /systems/{systemId}/channels/{channelId}/messages:
+    $ref: "./paths/messages.yaml#/~1systems~1%7BsystemId%7D~1channels~1%7BchannelId%7D~1messages"
+  /systems/{systemId}/channels/{channelId}/messages/{messageId}:
+    $ref: "./paths/messages.yaml#/~1systems~1%7BsystemId%7D~1channels~1%7BchannelId%7D~1messages~1%7BmessageId%7D"
+  /systems/{systemId}/channels/{channelId}/messages/{messageId}/archive:
+    $ref: "./paths/messages.yaml#/~1systems~1%7BsystemId%7D~1channels~1%7BchannelId%7D~1messages~1%7BmessageId%7D~1archive"
+  /systems/{systemId}/channels/{channelId}/messages/{messageId}/restore:
+    $ref: "./paths/messages.yaml#/~1systems~1%7BsystemId%7D~1channels~1%7BchannelId%7D~1messages~1%7BmessageId%7D~1restore"
+  # Board Messages
+  /systems/{systemId}/board-messages:
+    $ref: "./paths/board-messages.yaml#/~1systems~1%7BsystemId%7D~1board-messages"
+  /systems/{systemId}/board-messages/reorder:
+    $ref: "./paths/board-messages.yaml#/~1systems~1%7BsystemId%7D~1board-messages~1reorder"
+  /systems/{systemId}/board-messages/{boardMessageId}:
+    $ref: "./paths/board-messages.yaml#/~1systems~1%7BsystemId%7D~1board-messages~1%7BboardMessageId%7D"
+  /systems/{systemId}/board-messages/{boardMessageId}/pin:
+    $ref: "./paths/board-messages.yaml#/~1systems~1%7BsystemId%7D~1board-messages~1%7BboardMessageId%7D~1pin"
+  /systems/{systemId}/board-messages/{boardMessageId}/unpin:
+    $ref: "./paths/board-messages.yaml#/~1systems~1%7BsystemId%7D~1board-messages~1%7BboardMessageId%7D~1unpin"
+  /systems/{systemId}/board-messages/{boardMessageId}/archive:
+    $ref: "./paths/board-messages.yaml#/~1systems~1%7BsystemId%7D~1board-messages~1%7BboardMessageId%7D~1archive"
+  /systems/{systemId}/board-messages/{boardMessageId}/restore:
+    $ref: "./paths/board-messages.yaml#/~1systems~1%7BsystemId%7D~1board-messages~1%7BboardMessageId%7D~1restore"
+  # Notes
+  /systems/{systemId}/notes:
+    $ref: "./paths/notes.yaml#/~1systems~1%7BsystemId%7D~1notes"
+  /systems/{systemId}/notes/{noteId}:
+    $ref: "./paths/notes.yaml#/~1systems~1%7BsystemId%7D~1notes~1%7BnoteId%7D"
+  /systems/{systemId}/notes/{noteId}/archive:
+    $ref: "./paths/notes.yaml#/~1systems~1%7BsystemId%7D~1notes~1%7BnoteId%7D~1archive"
+  /systems/{systemId}/notes/{noteId}/restore:
+    $ref: "./paths/notes.yaml#/~1systems~1%7BsystemId%7D~1notes~1%7BnoteId%7D~1restore"
+  # Polls
+  /systems/{systemId}/polls:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls"
+  /systems/{systemId}/polls/{pollId}:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D"
+  /systems/{systemId}/polls/{pollId}/close:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1close"
+  /systems/{systemId}/polls/{pollId}/votes:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1votes"
+  /systems/{systemId}/polls/{pollId}/archive:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1archive"
+  /systems/{systemId}/polls/{pollId}/restore:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1restore"
+  # Acknowledgements
+  /systems/{systemId}/acknowledgements:
+    $ref: "./paths/acknowledgements.yaml#/~1systems~1%7BsystemId%7D~1acknowledgements"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}:
+    $ref: "./paths/acknowledgements.yaml#/~1systems~1%7BsystemId%7D~1acknowledgements~1%7BacknowledgementId%7D"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}/confirm:
+    $ref: "./paths/acknowledgements.yaml#/~1systems~1%7BsystemId%7D~1acknowledgements~1%7BacknowledgementId%7D~1confirm"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}/archive:
+    $ref: "./paths/acknowledgements.yaml#/~1systems~1%7BsystemId%7D~1acknowledgements~1%7BacknowledgementId%7D~1archive"
+  /systems/{systemId}/acknowledgements/{acknowledgementId}/restore:
+    $ref: "./paths/acknowledgements.yaml#/~1systems~1%7BsystemId%7D~1acknowledgements~1%7BacknowledgementId%7D~1restore"
