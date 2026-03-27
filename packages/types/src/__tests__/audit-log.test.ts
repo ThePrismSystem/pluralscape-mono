@@ -209,6 +209,17 @@ describe("AuditEventType", () => {
         case "bucket-content-tag.untagged":
         case "field-bucket-visibility.set":
         case "field-bucket-visibility.removed":
+        case "friend-code.generated":
+        case "friend-code.redeemed":
+        case "friend-code.archived":
+        case "friend-connection.created":
+        case "friend-connection.blocked":
+        case "friend-connection.removed":
+        case "friend-connection.archived":
+        case "friend-connection.restored":
+        case "friend-visibility.updated":
+        case "friend-bucket-assignment.assigned":
+        case "friend-bucket-assignment.unassigned":
           return type;
         default: {
           const _exhaustive: never = type;

@@ -62,7 +62,9 @@
       "flatted": ">=3.4.2",
       "brace-expansion": ">=5.0.5",
       "picomatch": ">=4.0.4",
-      "yaml": ">=2.8.3"
+      "yaml": ">=2.8.3",
+      "node-forge": ">=1.4.0",
+      "handlebars": ">=4.7.9"
     },
     "onlyBuiltDependencies": [
       "better-sqlite3-multiple-ciphers",
