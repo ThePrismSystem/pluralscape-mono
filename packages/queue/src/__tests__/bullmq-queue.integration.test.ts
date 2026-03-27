@@ -13,6 +13,20 @@ import type { ValkeyTestContext } from "./valkey-container.js";
 import type { Logger, UnixMillis } from "@pluralscape/types";
 import type IORedis from "ioredis";
 
+// Safety net: BullMQ's Worker creates a private blockingConnection whose
+// teardown can produce unhandled "Connection is closed" rejections from ioredis
+// when close() races with connection initialization. This handler catches only
+// that specific ioredis error and is scoped to this test file's process.
+const ioredisRejectionHandler = (reason: unknown): void => {
+  if (reason instanceof Error && reason.message === "Connection is closed.") {
+    return;
+  }
+  // Re-throw anything else so Vitest still catches real errors.
+  // Node.js will treat this as a fresh unhandled rejection.
+  throw reason;
+};
+process.on("unhandledRejection", ioredisRejectionHandler);
+
 const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 // Resolve Valkey availability before any tests run
@@ -36,6 +50,7 @@ function createQueue(options?: { clock?: () => UnixMillis; logger?: Logger }): B
 
 afterAll(async () => {
   await ctx.cleanup();
+  process.removeListener("unhandledRejection", ioredisRejectionHandler);
 }, 10_000);
 
 // ── Contract tests ─────────────────────────────────────────────────
@@ -57,9 +72,13 @@ afterEach(async () => {
   for (const q of activeQueues) {
     try {
       await q.obliterate();
+    } catch {
+      // Queue data may already be removed
+    }
+    try {
       await q.close();
-    } catch (err) {
-      console.error("Queue cleanup failed:", err);
+    } catch {
+      // Connection may already be closed
     }
   }
   activeQueues.length = 0;
@@ -100,8 +119,16 @@ describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
 
   afterEach(async () => {
     if (queue !== undefined) {
-      await queue.obliterate();
-      await queue.close();
+      try {
+        await queue.obliterate();
+      } catch {
+        // Queue data may already be removed
+      }
+      try {
+        await queue.close();
+      } catch {
+        // Connection may already be closed
+      }
       queue = undefined;
     }
   });

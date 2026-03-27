@@ -62,10 +62,20 @@ export class BullMQJobWorker extends BaseJobWorker {
       connection: connOpts,
       autorun: false,
     });
+    // Prevent unhandled EventEmitter errors from BullMQ's internal connections
+    // (main + blocking) during teardown.
+    this.worker.on("error", (err: Error) => {
+      this.logger.warn("worker.bullmq-connection-error", {
+        error: extractErrorMessage(err),
+      });
+    });
   }
 
   protected override async onStop(): Promise<void> {
     if (this.worker !== null) {
+      // Wait for connections to finish initializing before closing to avoid
+      // unhandled rejections from interrupted init commands.
+      await Promise.allSettled([this.worker.waitUntilReady()]);
       await this.worker.close();
       this.worker = null;
     }
