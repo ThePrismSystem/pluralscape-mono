@@ -6,8 +6,10 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { getQueue } from "../../lib/queue.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { createFrontingSession } from "../../services/fronting-session.service.js";
+import { dispatchSwitchAlertForSession } from "../../services/switch-alert-dispatcher.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
@@ -23,5 +25,20 @@ createRoute.post("/", async (c) => {
 
   const db = await getDb();
   const result = await createFrontingSession(db, systemId, body, auth, audit);
+
+  // Fire-and-forget: dispatch switch alert notifications to eligible friends.
+  // dispatchSwitchAlertForSession handles its own errors internally.
+  const queue = getQueue();
+  if (queue) {
+    void dispatchSwitchAlertForSession(
+      db,
+      systemId,
+      result.id,
+      result.memberId ?? null,
+      result.customFrontId ?? null,
+      queue,
+    );
+  }
+
   return c.json(result, HTTP_CREATED);
 });

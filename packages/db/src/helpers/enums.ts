@@ -194,6 +194,7 @@ export const AUDIT_EVENT_TYPES = [
   "custom-front.deleted",
   "auth.biometric-enrolled",
   "auth.biometric-verified",
+  "auth.biometric-failed",
   "settings.pin-set",
   "settings.pin-removed",
   "settings.pin-verified",
@@ -206,6 +207,7 @@ export const AUDIT_EVENT_TYPES = [
   "member-photo.created",
   "member-photo.archived",
   "member-photo.restored",
+  "member-photo.deleted",
   "member-photo.reordered",
   "field-definition.created",
   "field-definition.updated",
@@ -342,6 +344,11 @@ export const AUDIT_EVENT_TYPES = [
   "friend-visibility.updated",
   "friend-bucket-assignment.assigned",
   "friend-bucket-assignment.unassigned",
+  // ── Notifications ──
+  "device-token.registered",
+  "device-token.revoked",
+  "notification-config.updated",
+  "friend-notification-preference.updated",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
@@ -508,6 +515,9 @@ export const JOB_TYPES = [
   "audit-log-cleanup",
   "partition-maintenance",
   "device-transfer-cleanup",
+  "sync-queue-cleanup",
+  "sync-compaction",
+  "check-in-generate",
 ] as const satisfies readonly JobType[];
 export const JOB_STATUSES = [
   "pending",

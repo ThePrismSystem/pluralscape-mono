@@ -18,10 +18,11 @@ export type DeviceTokenPlatform = "ios" | "android" | "web";
  */
 export interface DeviceToken extends AuditMetadata {
   readonly id: DeviceTokenId;
+  readonly accountId: AccountId;
   readonly systemId: SystemId;
   readonly platform: DeviceTokenPlatform;
   readonly token: string;
-  readonly lastActiveAt: UnixMillis;
+  readonly lastActiveAt: UnixMillis | null;
 }
 
 /** Events that can trigger a notification. */

@@ -1,7 +1,8 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { JobId, SystemId } from "../ids.js";
+import type { DeviceTokenId, JobId, SystemId } from "../ids.js";
 import type { JobDefinition, JobPayloadMap, JobResult, JobStatus, JobType } from "../jobs.js";
+import type { DeviceTokenPlatform } from "../notifications.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("JobId", () => {
@@ -101,6 +102,18 @@ describe("JobPayloadMap", () => {
   it("each entry extends Record<string, unknown>", () => {
     expectTypeOf<JobPayloadMap["sync-push"]>().toExtend<Record<string, unknown>>();
     expectTypeOf<JobPayloadMap["webhook-deliver"]>().toExtend<Record<string, unknown>>();
+  });
+
+  it("notification-send payload has typed fields", () => {
+    type Payload = JobPayloadMap["notification-send"];
+    expectTypeOf<Payload["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<Payload["deviceTokenId"]>().toEqualTypeOf<DeviceTokenId>();
+    expectTypeOf<Payload["platform"]>().toEqualTypeOf<DeviceTokenPlatform>();
+    expectTypeOf<Payload["payload"]["title"]>().toBeString();
+    expectTypeOf<Payload["payload"]["body"]>().toBeString();
+    expectTypeOf<Payload["payload"]["data"]>().toEqualTypeOf<Readonly<
+      Record<string, string>
+    > | null>();
   });
 });
 
