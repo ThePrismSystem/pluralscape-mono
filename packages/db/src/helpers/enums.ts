@@ -342,6 +342,11 @@ export const AUDIT_EVENT_TYPES = [
   "friend-visibility.updated",
   "friend-bucket-assignment.assigned",
   "friend-bucket-assignment.unassigned",
+  // ── Notifications ──
+  "device-token.registered",
+  "device-token.revoked",
+  "notification-config.updated",
+  "friend-notification-preference.updated",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",

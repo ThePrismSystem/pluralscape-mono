@@ -1,4 +1,5 @@
-import type { JobId, SyncDocumentId, SystemId, WebhookDeliveryId } from "./ids.js";
+import type { DeviceTokenId, JobId, SyncDocumentId, SystemId, WebhookDeliveryId } from "./ids.js";
+import type { DeviceTokenPlatform } from "./notifications.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** The kind of background job. */
@@ -52,7 +53,16 @@ export interface JobPayloadMap {
     readonly deliveryId: WebhookDeliveryId;
     readonly payload: Readonly<Record<string, unknown>>;
   };
-  "notification-send": Record<string, unknown>;
+  "notification-send": {
+    readonly systemId: SystemId;
+    readonly deviceTokenId: DeviceTokenId;
+    readonly platform: DeviceTokenPlatform;
+    readonly payload: {
+      readonly title: string;
+      readonly body: string;
+      readonly data: Readonly<Record<string, string>> | null;
+    };
+  };
   "analytics-compute": Record<string, unknown>;
   "account-purge": Record<string, unknown>;
   "bucket-key-rotation": Record<string, unknown>;

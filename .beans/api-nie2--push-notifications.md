@@ -1,11 +1,11 @@
 ---
 # api-nie2
 title: Push notifications
-status: todo
+status: in-progress
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-26T16:06:37Z
+updated_at: 2026-03-27T07:14:35Z
 parent: ps-6itw
 blocked_by:
   - api-rl9o
@@ -15,7 +15,7 @@ Switch alerts to friends via tier 3 metadata triggers, configurable. Stub push p
 
 ### Scope (8 features)
 
-- [ ] 3.1 Type registrations for notification events
+- [x] 3.1 Type registrations for notification events
 - [ ] 3.2 Notification validation schemas
 - [ ] 3.3 Device token service
 - [ ] 3.4 Notification config service

@@ -17,6 +17,10 @@ describe("AuditEventType", () => {
     assertType<AuditEventType>("bucket.key_rotation.completed");
     assertType<AuditEventType>("bucket.key_rotation.failed");
     assertType<AuditEventType>("device.security.jailbreak_warning_shown");
+    assertType<AuditEventType>("device-token.registered");
+    assertType<AuditEventType>("device-token.revoked");
+    assertType<AuditEventType>("notification-config.updated");
+    assertType<AuditEventType>("friend-notification-preference.updated");
   });
 
   it("rejects invalid event types", () => {
@@ -220,6 +224,10 @@ describe("AuditEventType", () => {
         case "friend-visibility.updated":
         case "friend-bucket-assignment.assigned":
         case "friend-bucket-assignment.unassigned":
+        case "device-token.registered":
+        case "device-token.revoked":
+        case "notification-config.updated":
+        case "friend-notification-preference.updated":
           return type;
         default: {
           const _exhaustive: never = type;

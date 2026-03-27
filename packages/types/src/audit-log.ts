@@ -201,7 +201,12 @@ export type AuditEventType =
   | "friend-connection.restored"
   | "friend-visibility.updated"
   | "friend-bucket-assignment.assigned"
-  | "friend-bucket-assignment.unassigned";
+  | "friend-bucket-assignment.unassigned"
+  // ── Notifications ──
+  | "device-token.registered"
+  | "device-token.revoked"
+  | "notification-config.updated"
+  | "friend-notification-preference.updated";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =
