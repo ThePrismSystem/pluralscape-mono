@@ -1,11 +1,11 @@
 ---
 # api-rl9o
 title: Friend network
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-27T00:29:36Z
+updated_at: 2026-03-27T00:38:54Z
 parent: ps-6itw
 blocked_by:
   - api-e3hk
@@ -23,4 +23,6 @@ Friend codes, connection management, bucket assignment. Account-level operations
 - [x] 2.6 Bucket assignment service
 - [x] 2.7 Friend routes
 - [x] 2.8 Friend network CRDT sync
-- [ ] 2.9 Friend network E2E tests + OpenAPI
+- [x] 2.9 Friend network E2E tests + OpenAPI
+
+## Summary of Changes\n\nAll 9 features implemented: domain event type registrations, validation schemas, account ownership helper, friend code service, friend connection service, bucket assignment service, friend routes (3 route groups), CRDT sync projections, and E2E tests. Comprehensive TDD coverage across unit, integration, and E2E test layers.
