@@ -2,6 +2,7 @@ import { friendNotificationPreferences } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
+import { PG_FK_VIOLATION } from "../db.constants.js";
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -116,7 +117,7 @@ export async function getOrCreateFriendNotificationPreference(
 
       return toPreferenceResult(created);
     } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes("foreign key")) {
+      if (isFkViolation(err)) {
         logger.warn("[friend-notification-preference] FK constraint on insert", {
           accountId,
           connectionId,
@@ -201,4 +202,25 @@ export async function listFriendNotificationPreferences(
 
     return rows.map(toPreferenceResult);
   });
+}
+
+// ── Helpers (private) ──────────────────────────────────────────────────
+
+/** Maximum depth to walk error cause chains (prevents infinite loops). */
+const MAX_CAUSE_DEPTH = 10;
+
+/**
+ * Returns true when `error` is a PostgreSQL foreign-key constraint violation.
+ * Walks the `.cause` chain since Drizzle may wrap driver errors.
+ */
+function isFkViolation(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  let current: unknown = error;
+  let depth = 0;
+  while (current instanceof Error && depth < MAX_CAUSE_DEPTH) {
+    if ("code" in current && current.code === PG_FK_VIOLATION) return true;
+    current = current.cause;
+    depth++;
+  }
+  return false;
 }
