@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1774533172798,
-      "tag": "0000_real_kulan_gath",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1774561392725,
-      "tag": "0001_fancy_gabe_jones",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774567869311,
-      "tag": "0002_overjoyed_green_goblin",
+      "when": 1774605945153,
+      "tag": "0000_graceful_unus",
       "breakpoints": true
     }
   ]
