@@ -1,0 +1,31 @@
+import { ID_PREFIXES } from "@pluralscape/types";
+import { Hono } from "hono";
+
+import { getDb } from "../../../../lib/db.js";
+import { requireIdParam } from "../../../../lib/id-param.js";
+import { createCategoryRateLimiter } from "../../../../middleware/rate-limit.js";
+import { getOrCreateFriendNotificationPreference } from "../../../../services/friend-notification-preference.service.js";
+
+import type { AuthEnv } from "../../../../lib/auth-context.js";
+
+export const getRoute = new Hono<AuthEnv>();
+
+getRoute.use("*", createCategoryRateLimiter("readDefault"));
+
+getRoute.get("/", async (c) => {
+  const auth = c.get("auth");
+  const connectionId = requireIdParam(
+    c.req.param("connectionId"),
+    "connectionId",
+    ID_PREFIXES.friendConnection,
+  );
+
+  const db = await getDb();
+  const result = await getOrCreateFriendNotificationPreference(
+    db,
+    auth.accountId,
+    connectionId,
+    auth,
+  );
+  return c.json(result);
+});
