@@ -196,7 +196,10 @@ export async function listFriendCodes(
         and(
           eq(friendCodes.accountId, accountId),
           eq(friendCodes.archived, false),
-          or(sql`${friendCodes.expiresAt} IS NULL`, sql`${friendCodes.expiresAt} > ${Date.now()}`),
+          or(
+            sql`${friendCodes.expiresAt} IS NULL`,
+            sql`${friendCodes.expiresAt} > ${new Date(Date.now()).toISOString()}::timestamptz`,
+          ),
         ),
       )
       .orderBy(sql`${friendCodes.createdAt} DESC`);

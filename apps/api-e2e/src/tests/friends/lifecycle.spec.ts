@@ -1,4 +1,4 @@
-import { encryptForApi } from "../../fixtures/crypto.fixture.js";
+import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createBucket, getSystemId } from "../../fixtures/entity-helpers.js";
 import { expect, test } from "../../fixtures/friend.fixture.js";
 
@@ -51,6 +51,10 @@ interface BucketAssignmentListResponse {
 // ── Tests ────────────────────────────────────────────────────────────
 
 test.describe("Friend lifecycle", () => {
+  test.beforeAll(async () => {
+    await ensureCryptoReady();
+  });
+
   test("list connections after establishing friendship", async ({
     request,
     friendAccounts: { accountA, accountB, connectionIdA, connectionIdB },
