@@ -113,8 +113,6 @@ test.describe("Friend notification preferences", () => {
       "/v1/account/friends/fc_00000000-0000-0000-0000-000000000000/notifications",
       { headers: authHeaders },
     );
-    // getOrCreate tries to insert with composite FK — should fail with 404 or 500
-    // depending on FK constraint handling
-    expect([HTTP_NOT_FOUND, 500]).toContain(res.status());
+    expect(res.status()).toBe(HTTP_NOT_FOUND);
   });
 });

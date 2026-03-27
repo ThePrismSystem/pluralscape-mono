@@ -132,19 +132,36 @@ describe("notification-config.service (PGlite integration)", () => {
     expect(audit.calls[0]?.eventType).toBe("notification-config.updated");
   });
 
-  it("returns 404 for non-existent config (no auto-create on update)", async () => {
-    await assertApiError(
-      updateNotificationConfig(
-        asDb(db),
-        systemId,
-        "message-received",
-        { enabled: false },
-        auth,
-        noopAudit,
-      ),
-      "NOT_FOUND",
-      404,
+  it("auto-creates config when updating non-existent event type", async () => {
+    const result = await updateNotificationConfig(
+      asDb(db),
+      systemId,
+      "message-received",
+      { enabled: false },
+      auth,
+      noopAudit,
     );
+
+    expect(result.id).toMatch(/^nc_/);
+    expect(result.eventType).toBe("message-received");
+    expect(result.enabled).toBe(false);
+    expect(result.pushEnabled).toBe(true);
+  });
+
+  it("updates both enabled and pushEnabled simultaneously", async () => {
+    await getOrCreateNotificationConfig(asDb(db), systemId, "friend-switch-alert", auth);
+
+    const updated = await updateNotificationConfig(
+      asDb(db),
+      systemId,
+      "friend-switch-alert",
+      { enabled: false, pushEnabled: false },
+      auth,
+      noopAudit,
+    );
+
+    expect(updated.enabled).toBe(false);
+    expect(updated.pushEnabled).toBe(false);
   });
 
   // ── listNotificationConfigs ──────────────────────────────────────────

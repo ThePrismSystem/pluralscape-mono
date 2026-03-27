@@ -27,6 +27,12 @@ const AUDIT_TOKEN_REGISTERED: AuditEventType = "device-token.registered";
 /** Audit event: a device token was revoked. */
 const AUDIT_TOKEN_REVOKED: AuditEventType = "device-token.revoked";
 
+/** Maximum number of device tokens returned per list request. */
+const MAX_DEVICE_TOKENS_PER_LIST = 100;
+
+/** Number of trailing characters to show in masked token strings. */
+const TOKEN_MASK_VISIBLE_CHARS = 8;
+
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface DeviceTokenResult {
@@ -90,7 +96,12 @@ export async function registerDeviceToken(
       })
       .onConflictDoUpdate({
         target: [deviceTokens.token, deviceTokens.platform],
-        set: { lastActiveAt: timestamp },
+        set: {
+          accountId: auth.accountId,
+          systemId,
+          lastActiveAt: timestamp,
+          revokedAt: null,
+        },
       })
       .returning();
 
@@ -162,20 +173,18 @@ export async function listDeviceTokens(
       .select()
       .from(deviceTokens)
       .where(and(eq(deviceTokens.systemId, systemId), isNull(deviceTokens.revokedAt)))
-      .orderBy(desc(deviceTokens.createdAt));
+      .orderBy(desc(deviceTokens.createdAt))
+      .limit(MAX_DEVICE_TOKENS_PER_LIST);
 
-    return rows.map(toDeviceTokenResult);
+    return rows.map((row) => {
+      const result = toDeviceTokenResult(row);
+      return {
+        ...result,
+        token:
+          result.token.length > TOKEN_MASK_VISIBLE_CHARS
+            ? `***${result.token.slice(-TOKEN_MASK_VISIBLE_CHARS)}`
+            : result.token,
+      };
+    });
   });
-}
-
-/**
- * Update the lastActiveAt timestamp on a device token.
- * Called from the push notification worker after successful delivery.
- * No-ops gracefully if the token has been deleted/revoked.
- */
-export async function updateLastActive(
-  db: PostgresJsDatabase,
-  tokenId: DeviceTokenId,
-): Promise<void> {
-  await db.update(deviceTokens).set({ lastActiveAt: now() }).where(eq(deviceTokens.id, tokenId));
 }

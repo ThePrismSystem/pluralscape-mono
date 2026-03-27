@@ -13,7 +13,6 @@ import {
   listDeviceTokens,
   registerDeviceToken,
   revokeDeviceToken,
-  updateLastActive,
 } from "../../services/device-token.service.js";
 import {
   assertApiError,
@@ -232,25 +231,81 @@ describe("device-token.service (PGlite integration)", () => {
     expect(ids[1]).toBe(t1.id);
   });
 
-  // ── updateLastActive ─────────────────────────────────────────────────
+  // ── upsert ownership reassignment ───────────────────────────────────
 
-  it("updates lastActiveAt timestamp", async () => {
-    const registered = await registerDeviceToken(
+  it("reassigns token ownership on re-registration by different account", async () => {
+    // Account A registers a token
+    await registerDeviceToken(
       asDb(db),
       systemId,
-      { platform: "ios", token: "last-active-test" },
+      { platform: "ios", token: "reassign-test-token" },
       auth,
       noopAudit,
     );
 
-    await updateLastActive(asDb(db), registered.id);
+    // Account B registers the same token+platform
+    const otherAccountId = (await pgInsertAccount(db)) as AccountId;
+    const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
+    const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
+    const result = await registerDeviceToken(
+      asDb(db),
+      otherSystemId,
+      { platform: "ios", token: "reassign-test-token" },
+      otherAuth,
+      noopAudit,
+    );
+
+    // Token should now belong to account B
+    expect(result.systemId).toBe(otherSystemId);
+
+    // Verify in DB that accountId was updated
     const [row] = await db
-      .select({ lastActiveAt: deviceTokens.lastActiveAt })
+      .select({ accountId: deviceTokens.accountId })
       .from(deviceTokens)
-      .where(eq(deviceTokens.id, registered.id));
+      .where(eq(deviceTokens.id, result.id));
+    expect(row?.accountId).toBe(otherAccountId);
+  });
 
-    expect(row?.lastActiveAt).not.toBeNull();
+  it("clears revokedAt on re-registration of revoked token", async () => {
+    const registered = await registerDeviceToken(
+      asDb(db),
+      systemId,
+      { platform: "ios", token: "revoke-reregister" },
+      auth,
+      noopAudit,
+    );
+
+    await revokeDeviceToken(asDb(db), systemId, registered.id, auth, noopAudit);
+
+    // Re-register same token
+    const reregistered = await registerDeviceToken(
+      asDb(db),
+      systemId,
+      { platform: "ios", token: "revoke-reregister" },
+      auth,
+      noopAudit,
+    );
+
+    // Should appear in list (revokedAt cleared)
+    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
+    expect(tokens.map((t) => t.id)).toContain(reregistered.id);
+  });
+
+  // ── list masks tokens ─────────────────────────────────────────────
+
+  it("masks token values in list response", async () => {
+    await registerDeviceToken(
+      asDb(db),
+      systemId,
+      { platform: "ios", token: "a-very-long-token-string-for-testing" },
+      auth,
+      noopAudit,
+    );
+
+    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
+    expect(tokens[0]?.token).toBe("***-testing");
+    expect(tokens[0]?.token).not.toBe("a-very-long-token-string-for-testing");
   });
 
   // ── Authorization ────────────────────────────────────────────────────

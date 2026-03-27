@@ -28,10 +28,11 @@ describe("DeviceToken", () => {
 
   it("has correct field types", () => {
     expectTypeOf<DeviceToken["id"]>().toEqualTypeOf<DeviceTokenId>();
+    expectTypeOf<DeviceToken["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<DeviceToken["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<DeviceToken["platform"]>().toEqualTypeOf<"ios" | "android" | "web">();
     expectTypeOf<DeviceToken["token"]>().toEqualTypeOf<string>();
-    expectTypeOf<DeviceToken["lastActiveAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<DeviceToken["lastActiveAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 });
 

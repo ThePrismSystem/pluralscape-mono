@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { logger } from "../lib/logger.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -94,25 +95,36 @@ export async function getOrCreateFriendNotificationPreference(
     const timestamp = now();
     const id = createId(ID_PREFIXES.friendNotificationPreference) as FriendNotificationPreferenceId;
 
-    const [created] = await tx
-      .insert(friendNotificationPreferences)
-      .values({
-        id,
-        accountId,
-        friendConnectionId: connectionId,
-        enabledEventTypes: DEFAULT_ENABLED_EVENT_TYPES,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        archived: false,
-        archivedAt: null,
-      })
-      .returning();
+    try {
+      const [created] = await tx
+        .insert(friendNotificationPreferences)
+        .values({
+          id,
+          accountId,
+          friendConnectionId: connectionId,
+          enabledEventTypes: DEFAULT_ENABLED_EVENT_TYPES,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          archived: false,
+          archivedAt: null,
+        })
+        .returning();
 
-    if (!created) {
-      throw new Error("Friend notification preference insert returned no rows");
+      if (!created) {
+        throw new Error("Friend notification preference insert returned no rows");
+      }
+
+      return toPreferenceResult(created);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message.includes("foreign key")) {
+        logger.warn("[friend-notification-preference] FK constraint on insert", {
+          accountId,
+          connectionId,
+        });
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
+      }
+      throw err;
     }
-
-    return toPreferenceResult(created);
   });
 }
 

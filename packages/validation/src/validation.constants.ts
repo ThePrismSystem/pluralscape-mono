@@ -3,6 +3,8 @@
  * Domain: schema validation rules shared across packages.
  */
 
+import type { DeviceTokenPlatform, FriendNotificationEventType } from "@pluralscape/types";
+
 /** Minimum password length enforced at the validation layer (mirrors crypto MIN_PASSWORD_LENGTH). */
 export const AUTH_MIN_PASSWORD_LENGTH = 8;
 
@@ -132,7 +134,13 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
 export const MAX_DEVICE_TOKEN_LENGTH = 512;
 
 /** All valid device token platform values, used for Zod enum validation. */
-export const DEVICE_TOKEN_PLATFORM_VALUES = ["ios", "android", "web"] as const;
+export const DEVICE_TOKEN_PLATFORM_VALUES = [
+  "ios",
+  "android",
+  "web",
+] as const satisfies readonly DeviceTokenPlatform[];
 
 /** All valid friend notification event type values, used for Zod enum validation. */
-export const FRIEND_NOTIFICATION_EVENT_TYPE_VALUES = ["friend-switch-alert"] as const;
+export const FRIEND_NOTIFICATION_EVENT_TYPE_VALUES = [
+  "friend-switch-alert",
+] as const satisfies readonly FriendNotificationEventType[];

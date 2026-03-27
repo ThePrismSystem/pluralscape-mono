@@ -116,13 +116,15 @@ describe("enum arrays", () => {
   });
 
   it("AUDIT_EVENT_TYPES matches AuditEventType union", () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(195);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(197);
     expect(AUDIT_EVENT_TYPES).toContain("auth.login");
     expect(AUDIT_EVENT_TYPES).toContain("device.security.jailbreak_warning_shown");
     expect(AUDIT_EVENT_TYPES).toContain("auth.password-reset-via-recovery");
     expect(AUDIT_EVENT_TYPES).toContain("auth.recovery-key-regenerated");
     expect(AUDIT_EVENT_TYPES).toContain("auth.device-transfer-initiated");
     expect(AUDIT_EVENT_TYPES).toContain("auth.device-transfer-completed");
+    expect(AUDIT_EVENT_TYPES).toContain("auth.biometric-failed");
+    expect(AUDIT_EVENT_TYPES).toContain("member-photo.deleted");
     expect(AUDIT_EVENT_TYPES).toContain("webhook-config.created");
     expect(AUDIT_EVENT_TYPES).toContain("webhook-delivery.deleted");
     expect(AUDIT_EVENT_TYPES).toContain("bucket.created");
@@ -212,10 +214,13 @@ describe("enum arrays", () => {
   });
 
   it("JOB_TYPES matches JobType union", () => {
-    expect(JOB_TYPES).toHaveLength(15);
+    expect(JOB_TYPES).toHaveLength(18);
     expect(JOB_TYPES).toContain("sync-push");
     expect(JOB_TYPES).toContain("report-generate");
     expect(JOB_TYPES).toContain("partition-maintenance");
+    expect(JOB_TYPES).toContain("sync-queue-cleanup");
+    expect(JOB_TYPES).toContain("sync-compaction");
+    expect(JOB_TYPES).toContain("check-in-generate");
   });
 
   it("JOB_STATUSES matches JobStatus union", () => {
@@ -295,7 +300,7 @@ describe("enum arrays", () => {
     expect(SYNC_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(16);
-    expect(AUDIT_EVENT_TYPES).toHaveLength(195);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(197);
     expect(CHANNEL_TYPES).toHaveLength(2);
     expect(POLL_STATUSES).toHaveLength(2);
     expect(POLL_KINDS).toHaveLength(2);
@@ -311,7 +316,7 @@ describe("enum arrays", () => {
     expect(EXPORT_REQUEST_STATUSES).toHaveLength(4);
     expect(ACCOUNT_PURGE_STATUSES).toHaveLength(5);
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
-    expect(JOB_TYPES).toHaveLength(15);
+    expect(JOB_TYPES).toHaveLength(18);
     expect(JOB_STATUSES).toHaveLength(5);
     expect(ENTITY_TYPES).toHaveLength(63);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);

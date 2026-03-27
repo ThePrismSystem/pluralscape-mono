@@ -7,15 +7,10 @@ import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { requireIdParam } from "../../lib/id-param.js";
-import { requireParam } from "../../lib/id-param.js";
+import { requireIdParam, requireParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import {
-  getOrCreateNotificationConfig,
-  updateNotificationConfig,
-} from "../../services/notification-config.service.js";
-
+import { updateNotificationConfig } from "../../services/notification-config.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 import type { NotificationEventType } from "@pluralscape/types";
@@ -52,8 +47,6 @@ updateRoute.patch("/:eventType", async (c) => {
 
   const db = await getDb();
 
-  // Ensure the config exists before updating
-  await getOrCreateNotificationConfig(db, systemId, eventType, auth);
   const result = await updateNotificationConfig(db, systemId, eventType, parsed.data, auth, audit);
   return c.json(result);
 });

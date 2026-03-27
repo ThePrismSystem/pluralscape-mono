@@ -7,14 +7,13 @@ import { logger } from "../lib/logger.js";
 import type { DeviceTokenPlatform, JobPayloadMap } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
+/** Number of trailing characters to show in masked token log output. */
+const TOKEN_LOG_VISIBLE_CHARS = 8;
+
 // ── Push provider interface ──────────────────────────────────────────
 
-/** Payload shape for push notification delivery. */
-export interface PushPayload {
-  readonly title: string;
-  readonly body: string;
-  readonly data: Readonly<Record<string, string>> | null;
-}
+/** Payload shape for push notification delivery — derived from the job payload type. */
+export type PushPayload = JobPayloadMap["notification-send"]["payload"];
 
 /**
  * Interface for platform-specific push providers.
@@ -27,7 +26,14 @@ export interface PushProvider {
 /** M6 stub provider — logs the notification without delivering. */
 export class StubPushProvider implements PushProvider {
   send(token: string, platform: DeviceTokenPlatform, payload: PushPayload): Promise<void> {
-    logger.info("[push-worker] stub delivery", { platform, title: payload.title, token });
+    logger.info("[push-worker] stub delivery", {
+      platform,
+      title: payload.title,
+      token:
+        token.length > TOKEN_LOG_VISIBLE_CHARS
+          ? `***${token.slice(-TOKEN_LOG_VISIBLE_CHARS)}`
+          : token,
+    });
     return Promise.resolve();
   }
 }
@@ -53,7 +59,9 @@ export async function processPushNotification(
 ): Promise<void> {
   const { deviceTokenId, platform, payload } = jobPayload;
 
-  // Load the device token
+  // N.B. Uses raw `db` without RLS — intentional for background worker context
+  // where there is no tenant auth session. The worker processes cross-tenant
+  // notification jobs and needs unrestricted read access to device tokens.
   const [token] = await db
     .select({
       token: deviceTokens.token,

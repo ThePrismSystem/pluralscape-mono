@@ -5,6 +5,7 @@ import {
   friendConnections,
   friendNotificationPreferences,
   notificationConfigs,
+  systems,
 } from "@pluralscape/db/pg";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
@@ -12,6 +13,7 @@ import { logger } from "../lib/logger.js";
 
 import type { JobQueue } from "@pluralscape/queue";
 import type {
+  AccountId,
   CustomFrontId,
   DeviceTokenId,
   FriendNotificationEventType,
@@ -39,121 +41,168 @@ export async function dispatchSwitchAlertForSession(
   customFrontId: CustomFrontId | null,
   queue: JobQueue,
 ): Promise<void> {
-  // 1. Check system-level config: is friend-switch-alert enabled?
-  const [config] = await db
-    .select({
-      enabled: notificationConfigs.enabled,
-      pushEnabled: notificationConfigs.pushEnabled,
-    })
-    .from(notificationConfigs)
-    .where(
-      and(
-        eq(notificationConfigs.systemId, systemId),
-        eq(notificationConfigs.eventType, SWITCH_ALERT_EVENT),
-        eq(notificationConfigs.archived, false),
-      ),
-    )
-    .limit(1);
+  try {
+    // 1. Check system-level config: is friend-switch-alert enabled?
+    // Missing config row = treat as enabled by default (new systems have no rows yet)
+    const [config] = await db
+      .select({
+        enabled: notificationConfigs.enabled,
+        pushEnabled: notificationConfigs.pushEnabled,
+      })
+      .from(notificationConfigs)
+      .where(
+        and(
+          eq(notificationConfigs.systemId, systemId),
+          eq(notificationConfigs.eventType, SWITCH_ALERT_EVENT),
+          eq(notificationConfigs.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!config?.enabled || !config.pushEnabled) {
-    return;
-  }
+    if (config && (!config.enabled || !config.pushEnabled)) {
+      return;
+    }
 
-  // 2. Find all accepted, non-archived friend connections for this system's account
-  //    that have friend-switch-alert in their enabledEventTypes
-  const accountId = await getSystemAccountId(db, systemId);
-  if (!accountId) return;
+    // 2. Determine which entity is fronting (member or custom-front)
+    const entityId = memberId ?? customFrontId;
+    const entityType = memberId ? "member" : customFrontId ? "custom-front" : null;
+    if (!entityId || !entityType) return;
 
-  const eligibleFriends = await db
-    .select({
-      connectionId: friendConnections.id,
-      friendAccountId: friendConnections.friendAccountId,
-    })
-    .from(friendConnections)
-    .innerJoin(
-      friendNotificationPreferences,
-      and(
-        eq(friendNotificationPreferences.friendConnectionId, friendConnections.id),
-        eq(friendNotificationPreferences.accountId, friendConnections.accountId),
-        eq(friendNotificationPreferences.archived, false),
-      ),
-    )
-    .where(
-      and(
-        eq(friendConnections.accountId, accountId),
-        eq(friendConnections.status, "accepted"),
-        eq(friendConnections.archived, false),
-      ),
-    );
+    // 3. Find the system owner's account
+    const accountId = await getSystemAccountId(db, systemId);
+    if (!accountId) return;
 
-  // For each friend, check:
-  // a) Their preference includes friend-switch-alert (we need to query it separately due to JSONB)
-  // b) The member/customFront is visible in their assigned buckets
-  // c) They have active device tokens
-  for (const friend of eligibleFriends) {
-    try {
-      // Check preference has friend-switch-alert enabled
-      const [pref] = await db
-        .select({ enabledEventTypes: friendNotificationPreferences.enabledEventTypes })
-        .from(friendNotificationPreferences)
-        .where(
-          and(
-            eq(friendNotificationPreferences.friendConnectionId, friend.connectionId),
-            eq(friendNotificationPreferences.accountId, accountId),
-            eq(friendNotificationPreferences.archived, false),
-          ),
-        )
-        .limit(1);
+    // 4. Find all accepted, non-archived friend connections for this system's account
+    const friendConnectionRows = await db
+      .select({
+        connectionId: friendConnections.id,
+        friendAccountId: friendConnections.friendAccountId,
+      })
+      .from(friendConnections)
+      .where(
+        and(
+          eq(friendConnections.accountId, accountId),
+          eq(friendConnections.status, "accepted"),
+          eq(friendConnections.archived, false),
+        ),
+      );
 
-      if (!pref) continue;
-      const enabledTypes = pref.enabledEventTypes as readonly string[];
-      if (!enabledTypes.includes(SWITCH_ALERT_EVENT)) continue;
+    if (friendConnectionRows.length === 0) return;
 
-      // Check bucket visibility: is the fronting entity in a bucket assigned to this friend?
-      const entityId = memberId ?? customFrontId;
-      const entityType = memberId ? "member" : customFrontId ? "custom-front" : null;
-      if (!entityId || !entityType) continue;
+    // 5. Find reverse connections (friend -> system owner) with LEFT JOIN on preferences.
+    //    Preferences are owned by the friend's account on the friend's connection row.
+    //    LEFT JOIN: null enabledEventTypes = no preference row = use defaults (enabled).
+    const friendAccountIds = friendConnectionRows.map((r) => r.friendAccountId);
 
-      const friendBucketIds = await db
-        .select({ bucketId: friendBucketAssignments.bucketId })
-        .from(friendBucketAssignments)
-        .where(
-          and(
-            eq(friendBucketAssignments.friendConnectionId, friend.connectionId),
-            eq(friendBucketAssignments.systemId, systemId),
-          ),
-        );
+    const reverseConnectionsWithPrefs = await db
+      .select({
+        friendAccountId: friendConnections.accountId,
+        enabledEventTypes: friendNotificationPreferences.enabledEventTypes,
+      })
+      .from(friendConnections)
+      .leftJoin(
+        friendNotificationPreferences,
+        and(
+          eq(friendNotificationPreferences.friendConnectionId, friendConnections.id),
+          eq(friendNotificationPreferences.accountId, friendConnections.accountId),
+          eq(friendNotificationPreferences.archived, false),
+        ),
+      )
+      .where(
+        and(
+          inArray(friendConnections.accountId, friendAccountIds),
+          eq(friendConnections.friendAccountId, accountId),
+          eq(friendConnections.status, "accepted"),
+          eq(friendConnections.archived, false),
+        ),
+      );
 
-      if (friendBucketIds.length === 0) continue;
+    // Build set of eligible friend account IDs based on preference check
+    const eligibleFriendAccountIds = new Set<string>();
+    for (const row of reverseConnectionsWithPrefs) {
+      const types = row.enabledEventTypes as readonly string[] | null;
+      // null = no preference row = defaults (enabled)
+      if (types === null || types.includes(SWITCH_ALERT_EVENT)) {
+        eligibleFriendAccountIds.add(row.friendAccountId);
+      }
+    }
 
-      const bucketIds = friendBucketIds.map((r) => r.bucketId);
-      const [visibleTag] = await db
-        .select({ bucketId: bucketContentTags.bucketId })
-        .from(bucketContentTags)
-        .where(
-          and(
-            eq(bucketContentTags.entityType, entityType),
-            eq(bucketContentTags.entityId, entityId),
-            inArray(bucketContentTags.bucketId, bucketIds),
-          ),
-        )
-        .limit(1);
+    if (eligibleFriendAccountIds.size === 0) return;
 
-      if (!visibleTag) continue;
+    // 6. Build map from friendAccountId -> A's connectionId (for bucket assignments)
+    const friendToConnectionId = new Map<string, string>();
+    for (const row of friendConnectionRows) {
+      if (eligibleFriendAccountIds.has(row.friendAccountId)) {
+        friendToConnectionId.set(row.friendAccountId, row.connectionId);
+      }
+    }
 
-      // Find active device tokens for the friend's account
-      const tokens = await db
-        .select({
-          id: deviceTokens.id,
-          platform: deviceTokens.platform,
-        })
-        .from(deviceTokens)
-        .where(
-          and(eq(deviceTokens.accountId, friend.friendAccountId), isNull(deviceTokens.revokedAt)),
-        );
+    const connectionIds = [...friendToConnectionId.values()];
 
-      // Enqueue one job per device token
-      for (const token of tokens) {
+    // 7. Batch: get all bucket assignments for eligible connections
+    const allBucketAssignments = await db
+      .select({
+        friendConnectionId: friendBucketAssignments.friendConnectionId,
+        bucketId: friendBucketAssignments.bucketId,
+      })
+      .from(friendBucketAssignments)
+      .where(
+        and(
+          inArray(friendBucketAssignments.friendConnectionId, connectionIds),
+          eq(friendBucketAssignments.systemId, systemId),
+        ),
+      );
+
+    if (allBucketAssignments.length === 0) return;
+
+    // Build connectionId -> bucketId[] map
+    const connectionBuckets = new Map<string, string[]>();
+    for (const row of allBucketAssignments) {
+      const existing = connectionBuckets.get(row.friendConnectionId) ?? [];
+      existing.push(row.bucketId);
+      connectionBuckets.set(row.friendConnectionId, existing);
+    }
+
+    // 8. Batch: check entity visibility across all buckets at once
+    const allBucketIds = [...new Set(allBucketAssignments.map((r) => r.bucketId))];
+
+    const visibleBuckets = await db
+      .select({ bucketId: bucketContentTags.bucketId })
+      .from(bucketContentTags)
+      .where(
+        and(
+          eq(bucketContentTags.entityType, entityType),
+          eq(bucketContentTags.entityId, entityId),
+          inArray(bucketContentTags.bucketId, allBucketIds),
+        ),
+      );
+
+    const visibleBucketSet = new Set(visibleBuckets.map((r) => r.bucketId));
+
+    // Filter to friends whose buckets include the entity
+    const friendsWithVisibility = [...friendToConnectionId.entries()]
+      .filter(([, connId]) => {
+        const bucketIds = connectionBuckets.get(connId) ?? [];
+        return bucketIds.some((b) => visibleBucketSet.has(b));
+      })
+      .map(([friendAcctId]) => friendAcctId);
+
+    if (friendsWithVisibility.length === 0) return;
+
+    // 9. Batch: get all active device tokens for eligible friends
+    const allTokens = await db
+      .select({
+        id: deviceTokens.id,
+        platform: deviceTokens.platform,
+      })
+      .from(deviceTokens)
+      .where(
+        and(inArray(deviceTokens.accountId, friendsWithVisibility), isNull(deviceTokens.revokedAt)),
+      );
+
+    // 10. Enqueue one job per device token
+    for (const token of allTokens) {
+      try {
         await queue.enqueue({
           type: "notification-send",
           systemId,
@@ -169,14 +218,19 @@ export async function dispatchSwitchAlertForSession(
           },
           idempotencyKey: `switch-alert:${sessionId}:${token.id}`,
         });
+      } catch (err: unknown) {
+        logger.warn("[switch-alert] error enqueuing for token, skipping", {
+          deviceTokenId: token.id,
+          err: err instanceof Error ? err : new Error(String(err)),
+        });
       }
-    } catch (err: unknown) {
-      // Fail-closed: log and skip this friend, don't abort the whole fan-out
-      logger.warn("[switch-alert] error processing friend, skipping", {
-        connectionId: friend.connectionId,
-        err: err instanceof Error ? err.message : String(err),
-      });
     }
+  } catch (err: unknown) {
+    logger.error("[switch-alert] top-level error, aborting dispatch", {
+      systemId,
+      sessionId,
+      err: err instanceof Error ? err : new Error(String(err)),
+    });
   }
 }
 
@@ -184,12 +238,11 @@ export async function dispatchSwitchAlertForSession(
 async function getSystemAccountId(
   db: PostgresJsDatabase,
   systemId: SystemId,
-): Promise<string | null> {
-  const { systems } = await import("@pluralscape/db/pg");
+): Promise<AccountId | null> {
   const [row] = await db
     .select({ accountId: systems.accountId })
     .from(systems)
     .where(eq(systems.id, systemId))
     .limit(1);
-  return row?.accountId ?? null;
+  return (row?.accountId ?? null) as AccountId | null;
 }

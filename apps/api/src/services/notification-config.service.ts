@@ -2,8 +2,6 @@ import { notificationConfigs } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
-import { ApiHttpError } from "../lib/api-error.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -135,9 +133,9 @@ export async function updateNotificationConfig(
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const timestamp = now();
 
-    const setClause: Record<string, unknown> = { updatedAt: timestamp };
-    if (params.enabled !== undefined) setClause["enabled"] = params.enabled;
-    if (params.pushEnabled !== undefined) setClause["pushEnabled"] = params.pushEnabled;
+    const setClause: Partial<typeof notificationConfigs.$inferInsert> = { updatedAt: timestamp };
+    if (params.enabled !== undefined) setClause.enabled = params.enabled;
+    if (params.pushEnabled !== undefined) setClause.pushEnabled = params.pushEnabled;
 
     const [updated] = await tx
       .update(notificationConfigs)
@@ -152,7 +150,36 @@ export async function updateNotificationConfig(
       .returning();
 
     if (!updated) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Notification config not found");
+      // Auto-create with defaults merged with the provided params
+      const id = createId(ID_PREFIXES.notificationConfig) as NotificationConfigId;
+      const [created] = await tx
+        .insert(notificationConfigs)
+        .values({
+          id,
+          systemId,
+          eventType,
+          enabled: params.enabled ?? true,
+          pushEnabled: params.pushEnabled ?? true,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          archived: false,
+          archivedAt: null,
+        })
+        .returning();
+
+      if (!created) {
+        throw new Error("Notification config insert returned no rows");
+      }
+
+      await audit(tx, {
+        eventType: AUDIT_CONFIG_UPDATED,
+        actor: { kind: "account", id: auth.accountId },
+        detail: `Notification config for ${eventType} created and updated`,
+        accountId: auth.accountId,
+        systemId,
+      });
+
+      return toNotificationConfigResult(created);
     }
 
     await audit(tx, {
