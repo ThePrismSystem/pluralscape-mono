@@ -6,6 +6,8 @@ import { auditLogRoute } from "./audit-log.js";
 import { changeEmailRoute } from "./change-email.js";
 import { changePasswordRoute } from "./change-password.js";
 import { deviceTransferRoute } from "./device-transfer.js";
+import { friendCodeRoutes } from "./friend-codes/index.js";
+import { friendRoutes } from "./friends/index.js";
 import { getRoute } from "./get.js";
 import { updateSettingsRoute } from "./update-settings.js";
 
@@ -22,3 +24,5 @@ accountRoutes.route("/password", changePasswordRoute);
 accountRoutes.route("/audit-log", auditLogRoute);
 accountRoutes.route("/device-transfer", deviceTransferRoute);
 accountRoutes.route("/settings", updateSettingsRoute);
+accountRoutes.route("/friends", friendRoutes);
+accountRoutes.route("/friend-codes", friendCodeRoutes);
