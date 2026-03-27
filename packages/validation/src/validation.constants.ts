@@ -127,3 +127,12 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "friend.bucket-assigned",
   "friend.bucket-unassigned",
 ] as const;
+
+/** Maximum character length for device push tokens (APNs/FCM/web-push). */
+export const MAX_DEVICE_TOKEN_LENGTH = 512;
+
+/** All valid device token platform values, used for Zod enum validation. */
+export const DEVICE_TOKEN_PLATFORM_VALUES = ["ios", "android", "web"] as const;
+
+/** All valid friend notification event type values, used for Zod enum validation. */
+export const FRIEND_NOTIFICATION_EVENT_TYPE_VALUES = ["friend-switch-alert"] as const;

@@ -154,6 +154,11 @@ export {
   AcknowledgementQuerySchema,
 } from "./acknowledgement.js";
 export {
+  RegisterDeviceTokenBodySchema,
+  UpdateNotificationConfigBodySchema,
+  UpdateFriendNotificationPreferenceBodySchema,
+} from "./notification.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_ENCRYPTED_SYSTEM_DATA_SIZE,
@@ -164,4 +169,7 @@ export {
   MAX_ENCRYPTED_FIELD_VALUE_SIZE,
   WEBHOOK_EVENT_TYPE_VALUES,
   MAX_ANALYTICS_CUSTOM_RANGE_MS,
+  MAX_DEVICE_TOKEN_LENGTH,
+  DEVICE_TOKEN_PLATFORM_VALUES,
+  FRIEND_NOTIFICATION_EVENT_TYPE_VALUES,
 } from "./validation.constants.js";
