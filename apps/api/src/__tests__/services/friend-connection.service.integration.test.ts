@@ -159,6 +159,54 @@ describe("friend-connection.service (PGlite integration)", () => {
 
       expect(result.items).toHaveLength(0);
     });
+
+    it("excludes archived connections by default", async () => {
+      const archivedId = await insertConnection(db, {
+        accountId,
+        friendAccountId,
+        archived: true,
+        archivedAt: now(),
+      });
+      const friend2 = (await pgInsertAccount(db)) as AccountId;
+      const activeId = await insertConnection(db, {
+        accountId,
+        friendAccountId: friend2,
+      });
+
+      const result = await listFriendConnections(asDb(db), accountId, auth);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.id).toBe(activeId);
+      expect(result.items.find((c) => c.id === archivedId)).toBeUndefined();
+    });
+
+    it("includes archived connections when includeArchived is true", async () => {
+      await insertConnection(db, {
+        accountId,
+        friendAccountId,
+        archived: true,
+        archivedAt: now(),
+      });
+      const friend2 = (await pgInsertAccount(db)) as AccountId;
+      await insertConnection(db, {
+        accountId,
+        friendAccountId: friend2,
+      });
+
+      const result = await listFriendConnections(asDb(db), accountId, auth, {
+        includeArchived: true,
+      });
+
+      expect(result.items).toHaveLength(2);
+    });
+
+    it("throws INVALID_CURSOR for malformed cursor string", async () => {
+      await assertApiError(
+        listFriendConnections(asDb(db), accountId, auth, { cursor: "not-a-valid-cursor" }),
+        "INVALID_CURSOR" as Parameters<typeof assertApiError>[1],
+        400,
+      );
+    });
   });
 
   // ── getFriendConnection ────────────────────────────────────────────
@@ -247,7 +295,7 @@ describe("friend-connection.service (PGlite integration)", () => {
       );
     });
 
-    it("blocking A->B does NOT affect B->A", async () => {
+    it("blocking A->B also blocks B->A (bilateral)", async () => {
       // Create bidirectional connections
       const abId = (await insertConnection(db, {
         accountId,
@@ -256,18 +304,19 @@ describe("friend-connection.service (PGlite integration)", () => {
       })) as FriendConnectionId;
 
       const friendAuth = makeAuth(friendAccountId, systemId);
-      const baId = (await insertConnection(db, {
+      await insertConnection(db, {
         accountId: friendAccountId,
         friendAccountId: accountId,
         status: "accepted",
-      })) as FriendConnectionId;
+      });
 
-      // Block A->B
+      // Block A->B — should also block B->A
       await blockFriendConnection(asDb(db), accountId, abId, auth, noopAudit);
 
-      // B->A should still be accepted
-      const baConnection = await getFriendConnection(asDb(db), friendAccountId, baId, friendAuth);
-      expect(baConnection.status).toBe("accepted");
+      // B->A should also be blocked (bilateral behavior)
+      const listB = await listFriendConnections(asDb(db), friendAccountId, friendAuth);
+      expect(listB.items).toHaveLength(1);
+      expect(listB.items[0]?.status).toBe("blocked");
     });
 
     it("writes audit event", async () => {

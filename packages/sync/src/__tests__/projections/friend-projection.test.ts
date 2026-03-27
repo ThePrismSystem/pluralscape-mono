@@ -22,6 +22,14 @@ import type {
   KeyGrantInput,
 } from "../../projections/friend-projection.js";
 import type { PrivacyConfigDocument } from "../../schemas/privacy-config.js";
+import type {
+  AccountId,
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  FriendConnectionStatus,
+  KeyGrantId,
+} from "@pluralscape/types";
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -37,8 +45,8 @@ function makePrivacyConfigDoc(): Automerge.Doc<PrivacyConfigDocument> {
 
 function makeFriendCodeInput(overrides?: Partial<FriendCodeInput>): FriendCodeInput {
   return {
-    id: "fcode_1",
-    accountId: "acc_1",
+    id: "fcode_1" as FriendCodeId,
+    accountId: "acc_1" as AccountId,
     code: "ABCD-EFGH-1234",
     createdAt: 1000,
     expiresAt: 2000,
@@ -50,26 +58,28 @@ function makeFriendConnectionInput(
   overrides?: Partial<FriendConnectionInput>,
 ): FriendConnectionInput {
   return {
-    id: "fc_1",
-    accountId: "acc_1",
-    friendAccountId: "acc_2",
-    status: "pending",
+    id: "fc_1" as FriendConnectionId,
+    accountId: "acc_1" as AccountId,
+    friendAccountId: "acc_2" as AccountId,
+    status: "pending" as FriendConnectionStatus,
     visibility: JSON.stringify({
       showMembers: true,
       showGroups: false,
       showStructure: false,
       allowFrontingNotifications: true,
     }),
-    assignedBucketIds: ["bkt_1", "bkt_2"],
+    assignedBucketIds: ["bkt_1" as BucketId, "bkt_2" as BucketId],
+    createdAt: 1000,
+    updatedAt: 1000,
     ...overrides,
   };
 }
 
 function makeKeyGrantInput(overrides?: Partial<KeyGrantInput>): KeyGrantInput {
   return {
-    id: "kg_1",
-    bucketId: "bkt_1",
-    friendAccountId: "acc_2",
+    id: "kg_1" as KeyGrantId,
+    bucketId: "bkt_1" as BucketId,
+    friendAccountId: "acc_2" as AccountId,
     encryptedBucketKey: "base64encodedkey==",
     keyVersion: 1,
     createdAt: 1000,
@@ -130,13 +140,12 @@ describe("projectFriendConnection", () => {
     expect(result.assignedBuckets).toEqual({});
   });
 
-  it("includes createdAt and updatedAt audit fields", () => {
-    const input = makeFriendConnectionInput();
+  it("includes createdAt and updatedAt from input", () => {
+    const input = makeFriendConnectionInput({ createdAt: 1000, updatedAt: 1000 });
     const result = projectFriendConnection(input);
 
-    expect(result.createdAt).toBeTypeOf("number");
-    expect(result.updatedAt).toBeTypeOf("number");
-    expect(result.createdAt).toBe(result.updatedAt);
+    expect(result.createdAt).toBe(1000);
+    expect(result.updatedAt).toBe(1000);
   });
 });
 
@@ -269,7 +278,7 @@ describe("updateFriendConnectionStatusProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionStatusProjection(d, "fc_1", "accepted");
+      updateFriendConnectionStatusProjection(d, "fc_1", "accepted", 2000);
     });
 
     expect(doc.friendConnections["fc_1"]?.status.val).toBe("accepted");
@@ -279,7 +288,7 @@ describe("updateFriendConnectionStatusProjection", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionStatusProjection(d, "nonexistent_fc", "accepted");
+      updateFriendConnectionStatusProjection(d, "nonexistent_fc", "accepted", 2000);
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
@@ -303,7 +312,7 @@ describe("updateFriendConnectionVisibilityProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionVisibilityProjection(d, "fc_1", newVisibility);
+      updateFriendConnectionVisibilityProjection(d, "fc_1", newVisibility, 2000);
     });
 
     expect(doc.friendConnections["fc_1"]?.visibility.val).toBe(newVisibility);
@@ -313,7 +322,7 @@ describe("updateFriendConnectionVisibilityProjection", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionVisibilityProjection(d, "nonexistent_fc", "{}");
+      updateFriendConnectionVisibilityProjection(d, "nonexistent_fc", "{}", 2000);
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
@@ -331,21 +340,21 @@ describe("addBucketAssignmentProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      addBucketAssignmentProjection(d, "fc_1", "bkt_new");
+      addBucketAssignmentProjection(d, "fc_1", "bkt_new" as BucketId, 2000);
     });
 
     expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_new"]).toBe(true);
   });
 
   it("is idempotent when adding existing bucket", () => {
-    const input = makeFriendConnectionInput({ assignedBucketIds: ["bkt_1"] });
+    const input = makeFriendConnectionInput({ assignedBucketIds: ["bkt_1" as BucketId] });
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      addBucketAssignmentProjection(d, "fc_1", "bkt_1");
+      addBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 2000);
     });
 
     expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBe(true);
@@ -356,7 +365,7 @@ describe("addBucketAssignmentProjection", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      addBucketAssignmentProjection(d, "nonexistent_fc", "bkt_1");
+      addBucketAssignmentProjection(d, "nonexistent_fc", "bkt_1" as BucketId, 2000);
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);

@@ -2,14 +2,22 @@ import { randomBytes } from "node:crypto";
 
 import { friendCodes, friendConnections } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-import { and, count, eq, or, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
+import {
+  withAccountRead,
+  withAccountTransaction,
+  withCrossAccountTransaction,
+} from "../lib/rls-context.js";
 
-import { FRIEND_CODE_BYTES, MAX_FRIEND_CODES_PER_ACCOUNT } from "./friend-code.constants.js";
+import {
+  FRIEND_CODE_BYTES,
+  MAX_CODE_GENERATION_RETRIES,
+  MAX_FRIEND_CODES_PER_ACCOUNT,
+} from "./friend-code.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -22,22 +30,17 @@ import type {
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-// ── Audit event types (pending addition to AuditEventType union) ────
-// These are account-level friend network events that will be added to
-// the AuditEventType union in @pluralscape/types when the friend network
-// types PR is finalized. Using typed constants to keep the cast in one place.
-
 /** Audit event: a friend code was generated. */
-const AUDIT_FRIEND_CODE_GENERATED = "friend-code.generated" as AuditEventType;
+const AUDIT_FRIEND_CODE_GENERATED: AuditEventType = "friend-code.generated";
 
 /** Audit event: a friend code was redeemed. */
-const AUDIT_FRIEND_CODE_REDEEMED = "friend-code.redeemed" as AuditEventType;
+const AUDIT_FRIEND_CODE_REDEEMED: AuditEventType = "friend-code.redeemed";
 
 /** Audit event: a friend code was archived. */
-const AUDIT_FRIEND_CODE_ARCHIVED = "friend-code.archived" as AuditEventType;
+const AUDIT_FRIEND_CODE_ARCHIVED: AuditEventType = "friend-code.archived";
 
 /** Audit event: a friend connection was created. */
-const AUDIT_FRIEND_CONNECTION_CREATED = "friend-connection.created" as AuditEventType;
+const AUDIT_FRIEND_CONNECTION_CREATED: AuditEventType = "friend-connection.created";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -63,20 +66,23 @@ interface GenerateFriendCodeOpts {
 /** Number of characters in each half of the XXXX-XXXX code. */
 const CODE_HALF_LENGTH = 4;
 
-/** Base for converting random bytes to alphanumeric characters. */
+/** Total characters in the code (excluding hyphen). */
+const CODE_LENGTH = CODE_HALF_LENGTH * 2;
+
+/** Base for alphanumeric encoding. */
 const BASE_36 = 36;
 
 /**
  * Generate a random XXXX-XXXX code from cryptographic random bytes.
- * Converts bytes to uppercase base36 and inserts a hyphen in the middle.
+ * Interprets bytes as a BigInt, converts to base36, pads to 8 chars.
+ * With 8 bytes (~41 bits usable after base36 encoding) this provides
+ * adequate collision resistance for the XXXX-XXXX format.
  */
 function generateCodeString(): string {
   const bytes = randomBytes(FRIEND_CODE_BYTES);
-  const raw = Array.from(bytes)
-    .map((b) => b.toString(BASE_36).toUpperCase())
-    .join("");
-  const padded = raw.padEnd(CODE_HALF_LENGTH * 2, "0").slice(0, CODE_HALF_LENGTH * 2);
-  return `${padded.slice(0, CODE_HALF_LENGTH)}-${padded.slice(CODE_HALF_LENGTH)}`;
+  const num = BigInt(`0x${Buffer.from(bytes).toString("hex")}`);
+  const raw = num.toString(BASE_36).toUpperCase().padStart(CODE_LENGTH, "0").slice(0, CODE_LENGTH);
+  return `${raw.slice(0, CODE_HALF_LENGTH)}-${raw.slice(CODE_HALF_LENGTH)}`;
 }
 
 function toFriendCodeResult(row: typeof friendCodes.$inferSelect): FriendCodeResult {
@@ -109,19 +115,16 @@ export async function generateFriendCode(
   audit: AuditWriter,
   opts?: GenerateFriendCodeOpts,
 ): Promise<FriendCodeResult> {
-  const codeId = createId(ID_PREFIXES.friendCode) as FriendCodeId;
-  const timestamp = now();
-  const code = generateCodeString();
-
   return withAccountTransaction(db, accountId, async (tx) => {
-    // Quota check with row lock to prevent TOCTOU race
-    const [existing] = await tx
-      .select({ count: count() })
+    // Quota check — SELECT FOR UPDATE locks matching rows to prevent concurrent quota bypass.
+    // Lock the rows first, then count via application code (FOR UPDATE on aggregates is not valid).
+    const lockedRows = await tx
+      .select({ id: friendCodes.id })
       .from(friendCodes)
       .where(and(eq(friendCodes.accountId, accountId), eq(friendCodes.archived, false)))
-      .limit(1);
+      .for("update");
 
-    if ((existing?.count ?? 0) >= MAX_FRIEND_CODES_PER_ACCOUNT) {
+    if (lockedRows.length >= MAX_FRIEND_CODES_PER_ACCOUNT) {
       throw new ApiHttpError(
         HTTP_BAD_REQUEST,
         "QUOTA_EXCEEDED",
@@ -129,16 +132,33 @@ export async function generateFriendCode(
       );
     }
 
-    const [row] = await tx
-      .insert(friendCodes)
-      .values({
-        id: codeId,
-        accountId,
-        code,
-        createdAt: timestamp,
-        expiresAt: opts?.expiresAt ?? null,
-      })
-      .returning();
+    // Retry loop for unique constraint collisions on the code value
+    let row: typeof friendCodes.$inferSelect | undefined;
+    for (let attempt = 0; attempt <= MAX_CODE_GENERATION_RETRIES; attempt++) {
+      const codeId = createId(ID_PREFIXES.friendCode) as FriendCodeId;
+      const timestamp = now();
+      const code = generateCodeString();
+
+      try {
+        [row] = await tx
+          .insert(friendCodes)
+          .values({
+            id: codeId,
+            accountId,
+            code,
+            createdAt: timestamp,
+            expiresAt: opts?.expiresAt ?? null,
+          })
+          .returning();
+        break;
+      } catch (err: unknown) {
+        const isUniqueViolation =
+          err instanceof Error && "code" in err && (err as { code: string }).code === "23505";
+        if (!isUniqueViolation || attempt === MAX_CODE_GENERATION_RETRIES) {
+          throw err;
+        }
+      }
+    }
 
     if (!row) {
       throw new Error("Failed to create friend code — INSERT returned no rows");
@@ -248,7 +268,10 @@ export async function redeemFriendCode(
   const redeemerId = auth.accountId;
   const timestamp = now();
 
-  return withAccountTransaction(db, redeemerId, async (tx) => {
+  // Cross-account transaction: reads code owner's friend_codes, inserts connections
+  // for both accounts, and archives the code. Application-level validation (code secret,
+  // auth check, self-redeem prevention) replaces RLS for this operation.
+  return withCrossAccountTransaction(db, async (tx) => {
     // SELECT FOR UPDATE to prevent concurrent double-redemption
     const [codeRow] = await tx
       .select()

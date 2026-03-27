@@ -11,6 +11,12 @@ import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-t
 
 vi.mock("../../../../services/friend-connection.service.js", () => ({
   listFriendConnections: vi.fn(),
+  getFriendConnection: vi.fn(),
+  blockFriendConnection: vi.fn(),
+  removeFriendConnection: vi.fn(),
+  updateFriendVisibility: vi.fn(),
+  archiveFriendConnection: vi.fn(),
+  restoreFriendConnection: vi.fn(),
 }));
 
 vi.mock("../../../../lib/db.js", () => mockDbFactory());

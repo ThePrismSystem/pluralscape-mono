@@ -147,7 +147,7 @@ describe("UpdateFriendVisibilityBodySchema", () => {
 
 describe("AssignBucketBodySchema", () => {
   const validBody = {
-    bucketId: "bkt_12345678-1234-1234-1234-123456789abc",
+    connectionId: "fc_12345678-1234-1234-1234-123456789abc",
     encryptedBucketKey: "dGVzdA==",
     keyVersion: 1,
   };
@@ -157,7 +157,7 @@ describe("AssignBucketBodySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects missing bucketId", () => {
+  it("rejects missing connectionId", () => {
     const result = AssignBucketBodySchema.safeParse({
       encryptedBucketKey: validBody.encryptedBucketKey,
       keyVersion: validBody.keyVersion,
@@ -165,25 +165,17 @@ describe("AssignBucketBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects bucketId without bkt_ prefix", () => {
+  it("rejects empty connectionId", () => {
     const result = AssignBucketBodySchema.safeParse({
       ...validBody,
-      bucketId: "sys_12345678-1234-1234-1234-123456789abc",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects bucketId with invalid UUID", () => {
-    const result = AssignBucketBodySchema.safeParse({
-      ...validBody,
-      bucketId: "bkt_notauuid",
+      connectionId: "",
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects missing encryptedBucketKey", () => {
     const result = AssignBucketBodySchema.safeParse({
-      bucketId: validBody.bucketId,
+      connectionId: validBody.connectionId,
       keyVersion: validBody.keyVersion,
     });
     expect(result.success).toBe(false);
@@ -199,7 +191,7 @@ describe("AssignBucketBodySchema", () => {
 
   it("rejects missing keyVersion", () => {
     const result = AssignBucketBodySchema.safeParse({
-      bucketId: validBody.bucketId,
+      connectionId: validBody.connectionId,
       encryptedBucketKey: validBody.encryptedBucketKey,
     });
     expect(result.success).toBe(false);

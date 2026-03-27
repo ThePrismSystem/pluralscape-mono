@@ -32,7 +32,8 @@ vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { blockFriendConnection } = await import("../../../../services/friend-connection.service.js");
+const { removeFriendConnection } =
+  await import("../../../../services/friend-connection.service.js");
 const { createAuditWriter } = await import("../../../../lib/audit-writer.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
@@ -46,7 +47,7 @@ const MOCK_CONNECTION = {
   id: CONNECTION_ID as never,
   accountId: "acct_test" as never,
   friendAccountId: "acct_friend" as never,
-  status: "blocked" as never,
+  status: "removed" as never,
   encryptedData: null,
   version: 2,
   createdAt: 1000 as never,
@@ -56,35 +57,36 @@ const MOCK_CONNECTION = {
 
 // ── Tests ────────────────────────────────────────────────────────
 
-describe("POST /account/friends/:connectionId/block", () => {
+describe("POST /account/friends/:connectionId/remove", () => {
   beforeEach(() => {
-    vi.mocked(blockFriendConnection).mockReset();
+    vi.mocked(removeFriendConnection).mockReset();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with blocked connection", async () => {
-    vi.mocked(blockFriendConnection).mockResolvedValueOnce(MOCK_CONNECTION);
+  it("returns 200 with removed connection", async () => {
+    vi.mocked(removeFriendConnection).mockResolvedValueOnce(MOCK_CONNECTION);
 
-    const res = await createApp().request(`/account/friends/${CONNECTION_ID}/block`, {
+    const res = await createApp().request(`/account/friends/${CONNECTION_ID}/remove`, {
       method: "POST",
     });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof MOCK_CONNECTION;
     expect(body.id).toBe(CONNECTION_ID);
-    expect(body.status).toBe("blocked");
+    expect(body.status).toBe("removed");
+    expect(body.pendingRotations).toEqual([]);
   });
 
   it("passes correct args to service", async () => {
-    vi.mocked(blockFriendConnection).mockResolvedValueOnce(MOCK_CONNECTION);
+    vi.mocked(removeFriendConnection).mockResolvedValueOnce(MOCK_CONNECTION);
 
-    await createApp().request(`/account/friends/${CONNECTION_ID}/block`, { method: "POST" });
+    await createApp().request(`/account/friends/${CONNECTION_ID}/remove`, { method: "POST" });
 
     expect(createAuditWriter).toHaveBeenCalled();
-    expect(vi.mocked(blockFriendConnection)).toHaveBeenCalledWith(
+    expect(vi.mocked(removeFriendConnection)).toHaveBeenCalledWith(
       {},
       "acct_test",
       CONNECTION_ID,
@@ -94,7 +96,7 @@ describe("POST /account/friends/:connectionId/block", () => {
   });
 
   it("returns 400 for invalid connectionId format", async () => {
-    const res = await createApp().request("/account/friends/not-valid/block", {
+    const res = await createApp().request("/account/friends/not-valid/remove", {
       method: "POST",
     });
 

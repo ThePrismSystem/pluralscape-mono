@@ -204,6 +204,15 @@ describe("friend-connection service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "accepted" })]);
       chain.returning.mockResolvedValueOnce([makeConnectionRow({ status: "blocked" })]);
+      // Wire bilateral operations: transition SELECT where, UPDATE where,
+      // updateReverse where, cleanupBucketAssignments caller SELECT (terminal),
+      // reverse conn SELECT where
+      chain.where
+        .mockReturnValueOnce(chain) // #1 transitionConnectionStatus SELECT
+        .mockReturnValueOnce(chain) // #2 transitionConnectionStatus UPDATE
+        .mockReturnValueOnce(chain) // #3 updateReverseConnection UPDATE
+        .mockResolvedValueOnce([]) // #4 cleanupBucketAssignments caller SELECT
+        .mockReturnValueOnce(chain); // #5 reverse conn SELECT (for .limit)
 
       const result = await blockFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit);
 
@@ -232,6 +241,32 @@ describe("friend-connection service", () => {
       ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
     });
 
+    it("blocks a pending connection", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([makeConnectionRow({ status: "blocked" })]);
+      chain.where
+        .mockReturnValueOnce(chain) // #1 transitionConnectionStatus SELECT
+        .mockReturnValueOnce(chain) // #2 transitionConnectionStatus UPDATE
+        .mockReturnValueOnce(chain) // #3 updateReverseConnection UPDATE
+        .mockResolvedValueOnce([]) // #4 cleanupBucketAssignments caller SELECT
+        .mockReturnValueOnce(chain); // #5 reverse conn SELECT (for .limit)
+
+      const result = await blockFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit);
+
+      expect(result.status).toBe("blocked");
+    });
+
+    it("throws when update returns no rows after existence check", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "accepted" })]);
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        blockFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to blocked friend connection");
+    });
+
     it("throws 404 when connection not found", async () => {
       const { db } = mockDb();
 
@@ -246,19 +281,17 @@ describe("friend-connection service", () => {
   describe("removeFriendConnection", () => {
     it("removes an accepted connection", async () => {
       const { db, chain } = mockDb();
-      // 1. select().from().where().limit() -> existing row
       chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "accepted" })]);
-      // 2. update().set().where().returning() -> updated row
       chain.returning.mockResolvedValueOnce([makeConnectionRow({ status: "removed" })]);
-      // 3. select({bucketId}).from().where() -> bucket assignments (empty)
-      // The third where call (after update returning) needs to resolve to an array.
-      // First where (select existing): returns chain -> .limit()
-      // Second where (update): returns chain -> .returning()
-      // Third where (select assignments): terminal, needs to return []
+      // Wire bilateral operations: transition SELECT where, UPDATE where,
+      // updateReverse where, cleanupBucketAssignments caller SELECT (terminal),
+      // reverse conn SELECT where
       chain.where
-        .mockReturnValueOnce(chain) // 1st: select existing -> chain (for .limit)
-        .mockReturnValueOnce(chain) // 2nd: update -> chain (for .returning)
-        .mockResolvedValueOnce([]); // 3rd: select assignments -> []
+        .mockReturnValueOnce(chain) // #1 transitionConnectionStatus SELECT
+        .mockReturnValueOnce(chain) // #2 transitionConnectionStatus UPDATE
+        .mockReturnValueOnce(chain) // #3 updateReverseConnection UPDATE
+        .mockResolvedValueOnce([]) // #4 cleanupBucketAssignments caller SELECT
+        .mockReturnValueOnce(chain); // #5 reverse conn SELECT (for .limit)
 
       const result = await removeFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit);
 
@@ -274,9 +307,11 @@ describe("friend-connection service", () => {
       chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "blocked" })]);
       chain.returning.mockResolvedValueOnce([makeConnectionRow({ status: "removed" })]);
       chain.where
-        .mockReturnValueOnce(chain) // select existing -> chain (for .limit)
-        .mockReturnValueOnce(chain) // update -> chain (for .returning)
-        .mockResolvedValueOnce([]); // select assignments -> []
+        .mockReturnValueOnce(chain) // #1 transitionConnectionStatus SELECT
+        .mockReturnValueOnce(chain) // #2 transitionConnectionStatus UPDATE
+        .mockReturnValueOnce(chain) // #3 updateReverseConnection UPDATE
+        .mockResolvedValueOnce([]) // #4 cleanupBucketAssignments caller SELECT
+        .mockReturnValueOnce(chain); // #5 reverse conn SELECT (for .limit)
 
       const result = await removeFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit);
 
@@ -290,6 +325,32 @@ describe("friend-connection service", () => {
       await expect(
         removeFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+    });
+
+    it("removes a pending connection", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([makeConnectionRow({ status: "removed" })]);
+      chain.where
+        .mockReturnValueOnce(chain) // #1 transitionConnectionStatus SELECT
+        .mockReturnValueOnce(chain) // #2 transitionConnectionStatus UPDATE
+        .mockReturnValueOnce(chain) // #3 updateReverseConnection UPDATE
+        .mockResolvedValueOnce([]) // #4 cleanupBucketAssignments caller SELECT
+        .mockReturnValueOnce(chain); // #5 reverse conn SELECT (for .limit)
+
+      const result = await removeFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit);
+
+      expect(result.status).toBe("removed");
+    });
+
+    it("throws when update returns no rows after existence check", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "accepted" })]);
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        removeFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to removed friend connection");
     });
 
     it("throws 404 when connection not found", async () => {

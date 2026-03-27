@@ -59,6 +59,24 @@ export async function withAccountTransaction<T>(
   });
 }
 
+// ── Cross-Account Helpers (no RLS context) ───────────────────────
+
+/**
+ * Execute a write operation in a transaction without RLS context.
+ *
+ * Use ONLY for cross-account operations where application-level validation
+ * replaces row-level security (e.g., friend code redemption creates rows for
+ * both accounts, bilateral connection updates modify the reverse direction).
+ *
+ * Callers MUST validate all inputs before using this helper — no RLS safety net.
+ */
+export async function withCrossAccountTransaction<T>(
+  db: PostgresJsDatabase,
+  fn: TxCallback<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => fn(tx));
+}
+
 // ── Read Helpers (SELECT-only operations) ────────────────────────
 
 /**

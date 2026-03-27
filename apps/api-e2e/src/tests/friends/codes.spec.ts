@@ -133,6 +133,60 @@ test.describe("Friend codes", () => {
     expect(res.status()).toBe(404);
   });
 
+  test("redeem returns 409 when already friends", async ({ request }) => {
+    // Register two accounts
+    const uuidA = crypto.randomUUID();
+    const uuidB = crypto.randomUUID();
+
+    const regA = await request.post("/v1/auth/register", {
+      data: {
+        email: `e2e-dup-${uuidA}@test.pluralscape.local`,
+        password: `E2E-Pass-${uuidA}`,
+        recoveryKeyBackupConfirmed: true,
+      },
+    });
+    expect(regA.ok()).toBe(true);
+    const accountA = (await regA.json()) as { sessionToken: string; accountId: string };
+    const headersA = { Authorization: `Bearer ${accountA.sessionToken}` };
+
+    const regB = await request.post("/v1/auth/register", {
+      data: {
+        email: `e2e-dup-${uuidB}@test.pluralscape.local`,
+        password: `E2E-Pass-${uuidB}`,
+        recoveryKeyBackupConfirmed: true,
+      },
+    });
+    expect(regB.ok()).toBe(true);
+    const accountB = (await regB.json()) as { sessionToken: string; accountId: string };
+    const headersB = { Authorization: `Bearer ${accountB.sessionToken}` };
+
+    // Account A generates a code, Account B redeems it (they become friends)
+    const codeResA = await request.post("/v1/account/friend-codes", {
+      headers: headersA,
+    });
+    expect(codeResA.status()).toBe(HTTP_CREATED);
+    const friendCodeA = (await codeResA.json()) as FriendCodeResponse;
+
+    const redeemRes = await request.post("/v1/account/friend-codes/redeem", {
+      headers: headersB,
+      data: { code: friendCodeA.code },
+    });
+    expect(redeemRes.status()).toBe(HTTP_CREATED);
+
+    // Account B generates a NEW code, Account A tries to redeem it
+    const codeResB = await request.post("/v1/account/friend-codes", {
+      headers: headersB,
+    });
+    expect(codeResB.status()).toBe(HTTP_CREATED);
+    const friendCodeB = (await codeResB.json()) as FriendCodeResponse;
+
+    const duplicateRedeem = await request.post("/v1/account/friend-codes/redeem", {
+      headers: headersA,
+      data: { code: friendCodeB.code },
+    });
+    expect(duplicateRedeem.status()).toBe(HTTP_CONFLICT);
+  });
+
   test("redeem between two accounts creates bidirectional connection", async ({ request }) => {
     // Register two accounts
     const uuidA = crypto.randomUUID();

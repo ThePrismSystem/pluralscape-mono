@@ -12,14 +12,7 @@ import { assertBucketExists } from "./bucket.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type {
-  AccountId,
-  ApiErrorCode,
-  AuditEventType,
-  BucketId,
-  FriendConnectionId,
-  SystemId,
-} from "@pluralscape/types";
+import type { AccountId, BucketId, FriendConnectionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -73,7 +66,7 @@ async function assertAcceptedConnection(
   if (connection.status !== "accepted") {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
-      "CONNECTION_NOT_ACCEPTED" as ApiErrorCode,
+      "CONNECTION_NOT_ACCEPTED",
       "Friend connection must be accepted before assigning buckets",
     );
   }
@@ -130,7 +123,7 @@ export async function assignBucketToFriend(
       });
 
       await audit(tx, {
-        eventType: "friend-bucket-assignment.assigned" as AuditEventType,
+        eventType: "friend-bucket-assignment.assigned",
         actor: { kind: "account", id: auth.accountId },
         detail: `Assigned bucket to friend connection ${params.connectionId}`,
         systemId,
@@ -147,6 +140,10 @@ export async function assignBucketToFriend(
 
 // ── UNASSIGN ────────────────────────────────────────────────────────
 
+export interface UnassignBucketResult {
+  readonly pendingRotation: { readonly systemId: SystemId; readonly bucketId: BucketId };
+}
+
 export async function unassignBucketFromFriend(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -154,10 +151,10 @@ export async function unassignBucketFromFriend(
   connectionId: FriendConnectionId,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<void> {
+): Promise<UnassignBucketResult> {
   assertSystemOwnership(systemId, auth);
 
-  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Look up the connection to get friendAccountId for key grant revocation
     const { friendAccountId } = await assertAcceptedConnection(tx, auth.accountId, connectionId);
 
@@ -190,11 +187,13 @@ export async function unassignBucketFromFriend(
       );
 
     await audit(tx, {
-      eventType: "friend-bucket-assignment.unassigned" as AuditEventType,
+      eventType: "friend-bucket-assignment.unassigned",
       actor: { kind: "account", id: auth.accountId },
       detail: `Unassigned bucket from friend connection ${connectionId}`,
       systemId,
     });
+
+    return { pendingRotation: { systemId, bucketId } };
   });
 }
 

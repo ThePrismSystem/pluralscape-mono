@@ -1,6 +1,5 @@
 import { z } from "zod/v4";
 
-import { brandedIdQueryParam } from "./branded-id.js";
 import { booleanQueryParam } from "./query-params.js";
 import {
   FRIEND_CONNECTION_DEFAULT_LIMIT,
@@ -48,7 +47,7 @@ export const FriendCodeQuerySchema = z.object({
 
 export const AssignBucketBodySchema = z
   .object({
-    bucketId: brandedIdQueryParam("bkt_"),
+    connectionId: z.string().min(1),
     encryptedBucketKey: z.string().min(1),
     keyVersion: z.int().min(1),
   })

@@ -12,14 +12,11 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../../services/friend-connection.service.js", () => ({
-  listFriendConnections: vi.fn(),
-  getFriendConnection: vi.fn(),
-  blockFriendConnection: vi.fn(),
-  removeFriendConnection: vi.fn(),
-  updateFriendVisibility: vi.fn(),
-  archiveFriendConnection: vi.fn(),
-  restoreFriendConnection: vi.fn(),
+vi.mock("../../../../services/friend-code.service.js", () => ({
+  generateFriendCode: vi.fn(),
+  listFriendCodes: vi.fn(),
+  archiveFriendCode: vi.fn(),
+  redeemFriendCode: vi.fn(),
 }));
 
 vi.mock("../../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -32,7 +29,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { blockFriendConnection } = await import("../../../../services/friend-connection.service.js");
+const { archiveFriendCode } = await import("../../../../services/friend-code.service.js");
 const { createAuditWriter } = await import("../../../../lib/audit-writer.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
@@ -40,61 +37,46 @@ const { accountRoutes } = await import("../../../../routes/account/index.js");
 
 const createApp = () => createRouteApp("/account", accountRoutes);
 
-const CONNECTION_ID = "fc_550e8400-e29b-41d4-a716-446655440000";
-
-const MOCK_CONNECTION = {
-  id: CONNECTION_ID as never,
-  accountId: "acct_test" as never,
-  friendAccountId: "acct_friend" as never,
-  status: "blocked" as never,
-  encryptedData: null,
-  version: 2,
-  createdAt: 1000 as never,
-  updatedAt: 2000 as never,
-  pendingRotations: [],
-};
+const CODE_ID = "frc_550e8400-e29b-41d4-a716-446655440000";
 
 // ── Tests ────────────────────────────────────────────────────────
 
-describe("POST /account/friends/:connectionId/block", () => {
+describe("POST /account/friend-codes/:codeId/archive", () => {
   beforeEach(() => {
-    vi.mocked(blockFriendConnection).mockReset();
+    vi.mocked(archiveFriendCode).mockReset();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with blocked connection", async () => {
-    vi.mocked(blockFriendConnection).mockResolvedValueOnce(MOCK_CONNECTION);
+  it("returns 204 on success", async () => {
+    vi.mocked(archiveFriendCode).mockResolvedValueOnce(undefined);
 
-    const res = await createApp().request(`/account/friends/${CONNECTION_ID}/block`, {
+    const res = await createApp().request(`/account/friend-codes/${CODE_ID}/archive`, {
       method: "POST",
     });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_CONNECTION;
-    expect(body.id).toBe(CONNECTION_ID);
-    expect(body.status).toBe("blocked");
+    expect(res.status).toBe(204);
   });
 
   it("passes correct args to service", async () => {
-    vi.mocked(blockFriendConnection).mockResolvedValueOnce(MOCK_CONNECTION);
+    vi.mocked(archiveFriendCode).mockResolvedValueOnce(undefined);
 
-    await createApp().request(`/account/friends/${CONNECTION_ID}/block`, { method: "POST" });
+    await createApp().request(`/account/friend-codes/${CODE_ID}/archive`, { method: "POST" });
 
     expect(createAuditWriter).toHaveBeenCalled();
-    expect(vi.mocked(blockFriendConnection)).toHaveBeenCalledWith(
+    expect(vi.mocked(archiveFriendCode)).toHaveBeenCalledWith(
       {},
       "acct_test",
-      CONNECTION_ID,
+      CODE_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),
     );
   });
 
-  it("returns 400 for invalid connectionId format", async () => {
-    const res = await createApp().request("/account/friends/not-valid/block", {
+  it("returns 400 for invalid codeId format", async () => {
+    const res = await createApp().request("/account/friend-codes/not-valid/archive", {
       method: "POST",
     });
 

@@ -6,13 +6,22 @@ import type {
   CrdtKeyGrant,
 } from "../schemas/privacy-config.js";
 import type { PrivacyConfigDocument } from "../schemas/privacy-config.js";
+import type {
+  AccountId,
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  FriendConnectionStatus,
+  KeyGrantId,
+  Logger,
+} from "@pluralscape/types";
 
 // ── input types ──────────────────────────────────────────────────────
 
 /** Service-layer input for projecting a friend code into CRDT format. */
 export interface FriendCodeInput {
-  readonly id: string;
-  readonly accountId: string;
+  readonly id: FriendCodeId;
+  readonly accountId: AccountId;
   readonly code: string;
   readonly createdAt: number;
   readonly expiresAt: number | null;
@@ -20,20 +29,22 @@ export interface FriendCodeInput {
 
 /** Service-layer input for projecting a friend connection into CRDT format. */
 export interface FriendConnectionInput {
-  readonly id: string;
-  readonly accountId: string;
-  readonly friendAccountId: string;
-  readonly status: string;
+  readonly id: FriendConnectionId;
+  readonly accountId: AccountId;
+  readonly friendAccountId: AccountId;
+  readonly status: FriendConnectionStatus;
   /** JSON-serialized FriendVisibilitySettings. */
   readonly visibility: string;
-  readonly assignedBucketIds: readonly string[];
+  readonly assignedBucketIds: readonly BucketId[];
+  readonly createdAt: number;
+  readonly updatedAt: number;
 }
 
 /** Service-layer input for projecting a key grant into CRDT format. */
 export interface KeyGrantInput {
-  readonly id: string;
-  readonly bucketId: string;
-  readonly friendAccountId: string;
+  readonly id: KeyGrantId;
+  readonly bucketId: BucketId;
+  readonly friendAccountId: AccountId;
   /** Base64-encoded encrypted bucket key. */
   readonly encryptedBucketKey: string;
   readonly keyVersion: number;
@@ -51,12 +62,8 @@ function immStr(val: string): ImmutableString {
  * Convert an array of bucket IDs into the CRDT add-wins map format.
  * Each bucket ID becomes a key mapped to `true`.
  */
-function bucketArrayToMap(bucketIds: readonly string[]): Record<string, true> {
-  const map: Record<string, true> = {};
-  for (const id of bucketIds) {
-    map[id] = true;
-  }
-  return map;
+function bucketArrayToMap(bucketIds: readonly BucketId[]): Record<string, true> {
+  return Object.fromEntries(bucketIds.map((id) => [id, true])) as Record<string, true>;
 }
 
 // ── pure projection functions ────────────────────────────────────────
@@ -75,7 +82,6 @@ export function projectFriendCode(code: FriendCodeInput): CrdtFriendCode {
 
 /** Project a friend connection into the CRDT document format. */
 export function projectFriendConnection(connection: FriendConnectionInput): CrdtFriendConnection {
-  const now = Date.now();
   return {
     id: immStr(connection.id),
     accountId: immStr(connection.accountId),
@@ -84,8 +90,8 @@ export function projectFriendConnection(connection: FriendConnectionInput): Crdt
     assignedBuckets: bucketArrayToMap(connection.assignedBucketIds),
     visibility: immStr(connection.visibility),
     archived: false,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: connection.createdAt,
+    updatedAt: connection.updatedAt,
   };
 }
 
@@ -123,10 +129,16 @@ export function applyKeyGrantProjection(doc: PrivacyConfigDocument, grant: KeyGr
 }
 
 /** Mark a friend code as archived in the CRDT document. */
-export function archiveFriendCodeProjection(doc: PrivacyConfigDocument, codeId: string): void {
+export function archiveFriendCodeProjection(
+  doc: PrivacyConfigDocument,
+  codeId: string,
+  logger?: Pick<Logger, "warn">,
+): void {
   const code = doc.friendCodes[codeId];
   if (code) {
     code.archived = true;
+  } else {
+    logger?.warn("archiveFriendCodeProjection: code not found", { codeId });
   }
 }
 
@@ -134,12 +146,16 @@ export function archiveFriendCodeProjection(doc: PrivacyConfigDocument, codeId: 
 export function updateFriendConnectionStatusProjection(
   doc: PrivacyConfigDocument,
   connectionId: string,
-  status: string,
+  status: FriendConnectionStatus,
+  updatedAt: number,
+  logger?: Pick<Logger, "warn">,
 ): void {
   const connection = doc.friendConnections[connectionId];
   if (connection) {
     connection.status = immStr(status);
-    connection.updatedAt = Date.now();
+    connection.updatedAt = updatedAt;
+  } else {
+    logger?.warn("updateFriendConnectionStatusProjection: connection not found", { connectionId });
   }
 }
 
@@ -148,11 +164,17 @@ export function updateFriendConnectionVisibilityProjection(
   doc: PrivacyConfigDocument,
   connectionId: string,
   visibility: string,
+  updatedAt: number,
+  logger?: Pick<Logger, "warn">,
 ): void {
   const connection = doc.friendConnections[connectionId];
   if (connection) {
     connection.visibility = immStr(visibility);
-    connection.updatedAt = Date.now();
+    connection.updatedAt = updatedAt;
+  } else {
+    logger?.warn("updateFriendConnectionVisibilityProjection: connection not found", {
+      connectionId,
+    });
   }
 }
 
@@ -161,11 +183,15 @@ export function addBucketAssignmentProjection(
   doc: PrivacyConfigDocument,
   connectionId: string,
   bucketId: string,
+  updatedAt: number,
+  logger?: Pick<Logger, "warn">,
 ): void {
   const connection = doc.friendConnections[connectionId];
   if (connection) {
     connection.assignedBuckets[bucketId] = true;
-    connection.updatedAt = Date.now();
+    connection.updatedAt = updatedAt;
+  } else {
+    logger?.warn("addBucketAssignmentProjection: connection not found", { connectionId });
   }
 }
 
@@ -174,9 +200,12 @@ export function revokeKeyGrantProjection(
   doc: PrivacyConfigDocument,
   grantId: string,
   revokedAt: number,
+  logger?: Pick<Logger, "warn">,
 ): void {
   const grant = doc.keyGrants[grantId];
   if (grant) {
     grant.revokedAt = revokedAt;
+  } else {
+    logger?.warn("revokeKeyGrantProjection: grant not found", { grantId });
   }
 }

@@ -134,7 +134,12 @@ test.describe("Friend lifecycle", () => {
         `/v1/systems/${systemId}/buckets/${bucketId}/friends/${connectionIdA}`,
         { headers: accountA.headers },
       );
-      expect(res.status()).toBe(HTTP_NO_CONTENT);
+      expect(res.status()).toBe(HTTP_OK);
+      const body = (await res.json()) as {
+        pendingRotation: { systemId: string; bucketId: string };
+      };
+      expect(body.pendingRotation.systemId).toBe(systemId);
+      expect(body.pendingRotation.bucketId).toBe(bucketId);
     });
 
     await test.step("list is empty after unassign", async () => {

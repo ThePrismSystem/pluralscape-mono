@@ -1,7 +1,6 @@
 import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
-import { HTTP_NO_CONTENT } from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
@@ -26,6 +25,6 @@ unassignRoute.delete("/:connectionId", async (c) => {
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
-  await unassignBucketFromFriend(db, systemId, bucketId, connectionId, auth, audit);
-  return c.body(null, HTTP_NO_CONTENT);
+  const result = await unassignBucketFromFriend(db, systemId, bucketId, connectionId, auth, audit);
+  return c.json(result);
 });

@@ -1,7 +1,9 @@
 import { ID_PREFIXES } from "@pluralscape/types";
+import { AssignBucketBodySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
-import { HTTP_CREATED } from "../../../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../../http.constants.js";
+import { ApiHttpError } from "../../../lib/api-error.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
@@ -20,10 +22,19 @@ assignRoute.post("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const bucketId = requireIdParam(c.req.param("bucketId"), "bucketId", ID_PREFIXES.bucket);
   const audit = createAuditWriter(c, auth);
-  const body = (await parseJsonBody(c)) as Record<string, unknown>;
+  const raw = await parseJsonBody(c);
+
+  const parsed = AssignBucketBodySchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      parsed.error.issues.map((i) => i.message).join("; "),
+    );
+  }
 
   const connectionId = requireIdParam(
-    body.connectionId as string | undefined,
+    parsed.data.connectionId,
     "connectionId",
     ID_PREFIXES.friendConnection,
   );
@@ -35,8 +46,8 @@ assignRoute.post("/", async (c) => {
     bucketId,
     {
       connectionId,
-      encryptedBucketKey: body.encryptedBucketKey as string,
-      keyVersion: body.keyVersion as number,
+      encryptedBucketKey: parsed.data.encryptedBucketKey,
+      keyVersion: parsed.data.keyVersion,
     },
     auth,
     audit,

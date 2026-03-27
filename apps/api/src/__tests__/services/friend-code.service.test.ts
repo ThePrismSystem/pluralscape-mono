@@ -53,8 +53,8 @@ describe("generateFriendCode", () => {
 
   it("generates a friend code with frc_ prefix and XXXX-XXXX format", async () => {
     const { db, chain } = mockDb();
-    // Quota check: count returns under limit
-    chain.limit.mockResolvedValueOnce([{ count: 0 }]);
+    // Quota check: select().from().where().for("update") is terminal
+    chain.for.mockResolvedValueOnce([{ count: 0 }]);
     // Insert returning
     chain.returning.mockResolvedValueOnce([makeFriendCodeRow()]);
 
@@ -67,17 +67,32 @@ describe("generateFriendCode", () => {
 
   it("throws QUOTA_EXCEEDED when account has max codes", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ count: 10 }]);
+    // Quota check: .for("update") returns locked rows; code checks .length
+    chain.for.mockResolvedValueOnce(
+      Array.from({ length: 10 }, (_, i) => ({ id: `frc_${String(i)}` })),
+    );
 
     await expect(generateFriendCode(db, ACCOUNT_ID, AUTH, mockAudit)).rejects.toThrow(
       "Maximum of 10 friend codes per account",
     );
   });
 
+  it("throws when insert returns no rows", async () => {
+    const { db, chain } = mockDb();
+    // Quota check: .for("update") returns locked rows (empty = under quota)
+    chain.for.mockResolvedValueOnce([]);
+    chain.returning.mockResolvedValueOnce([]);
+
+    await expect(generateFriendCode(db, ACCOUNT_ID, AUTH, mockAudit)).rejects.toThrow(
+      "Failed to create friend code — INSERT returned no rows",
+    );
+  });
+
   it("accepts optional expiresAt", async () => {
     const { db, chain } = mockDb();
     const expiresAt = Date.now() + 86_400_000;
-    chain.limit.mockResolvedValueOnce([{ count: 0 }]);
+    // Quota check: .for("update") returns locked rows (empty = under quota)
+    chain.for.mockResolvedValueOnce([]);
     chain.returning.mockResolvedValueOnce([makeFriendCodeRow({ expiresAt })]);
 
     const result = await generateFriendCode(db, ACCOUNT_ID, AUTH, mockAudit, {

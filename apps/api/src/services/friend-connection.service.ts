@@ -8,7 +8,11 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64OrNull, validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
-import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
+import {
+  withAccountRead,
+  withAccountTransaction,
+  withCrossAccountTransaction,
+} from "../lib/rls-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -20,9 +24,11 @@ import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AccountId,
   AuditEventType,
+  BucketId,
   FriendConnectionId,
   FriendConnectionStatus,
   PaginatedResult,
+  SystemId,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -38,6 +44,13 @@ export interface FriendConnectionResult {
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
+}
+
+export interface FriendConnectionWithRotations extends FriendConnectionResult {
+  readonly pendingRotations: ReadonlyArray<{
+    readonly systemId: SystemId;
+    readonly bucketId: BucketId;
+  }>;
 }
 
 interface ListFriendConnectionOpts {
@@ -59,13 +72,11 @@ const BLOCKABLE_STATUSES: readonly FriendConnectionStatus[] = ["accepted", "pend
 /** Status values that allow transition to removed. */
 const REMOVABLE_STATUSES: readonly FriendConnectionStatus[] = ["accepted", "pending", "blocked"];
 
-// Audit event types for friend connections.
-// These will be added to AuditEventType in packages/types when the friend network types PR lands.
-const AUDIT_FRIEND_BLOCKED = "friend-connection.blocked" as AuditEventType;
-const AUDIT_FRIEND_REMOVED = "friend-connection.removed" as AuditEventType;
-const AUDIT_VISIBILITY_UPDATED = "friend-visibility.updated" as AuditEventType;
-const AUDIT_FRIEND_ARCHIVED = "friend-connection.archived" as AuditEventType;
-const AUDIT_FRIEND_RESTORED = "friend-connection.restored" as AuditEventType;
+const AUDIT_FRIEND_BLOCKED: AuditEventType = "friend-connection.blocked";
+const AUDIT_FRIEND_REMOVED: AuditEventType = "friend-connection.removed";
+const AUDIT_VISIBILITY_UPDATED: AuditEventType = "friend-visibility.updated";
+const AUDIT_FRIEND_ARCHIVED: AuditEventType = "friend-connection.archived";
+const AUDIT_FRIEND_RESTORED: AuditEventType = "friend-connection.restored";
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -164,6 +175,136 @@ export async function getFriendConnection(
   });
 }
 
+// ── Private helpers ─────────────────────────────────────────────────
+
+interface StatusTransitionConfig {
+  readonly targetStatus: FriendConnectionStatus;
+  readonly allowedStatuses: readonly FriendConnectionStatus[];
+  readonly auditEventType: AuditEventType;
+  readonly auditDetail: string;
+}
+
+async function transitionConnectionStatus(
+  tx: PostgresJsDatabase,
+  accountId: AccountId,
+  connectionId: FriendConnectionId,
+  timestamp: UnixMillis,
+  auth: AuthContext,
+  audit: AuditWriter,
+  config: StatusTransitionConfig,
+): Promise<{ result: FriendConnectionResult; existing: typeof friendConnections.$inferSelect }> {
+  const [existing] = await tx
+    .select()
+    .from(friendConnections)
+    .where(
+      and(
+        eq(friendConnections.id, connectionId),
+        eq(friendConnections.accountId, accountId),
+        eq(friendConnections.archived, false),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
+  }
+
+  if (!config.allowedStatuses.includes(existing.status)) {
+    throw new ApiHttpError(
+      HTTP_CONFLICT,
+      "CONFLICT",
+      `Cannot ${config.targetStatus} connection with status '${existing.status}'`,
+    );
+  }
+
+  const [row] = await tx
+    .update(friendConnections)
+    .set({
+      status: config.targetStatus,
+      updatedAt: timestamp,
+      version: sql`${friendConnections.version} + 1`,
+    })
+    .where(and(eq(friendConnections.id, connectionId), eq(friendConnections.accountId, accountId)))
+    .returning();
+
+  if (!row) {
+    throw new Error(`Failed to ${config.targetStatus} friend connection — UPDATE returned no rows`);
+  }
+
+  await audit(tx, {
+    eventType: config.auditEventType,
+    actor: { kind: "account", id: auth.accountId },
+    detail: config.auditDetail,
+    accountId,
+  });
+
+  return { result: toFriendConnectionResult(row), existing };
+}
+
+async function updateReverseConnection(
+  tx: PostgresJsDatabase,
+  accountId: AccountId,
+  friendAccountId: string,
+  targetStatus: FriendConnectionStatus,
+  timestamp: UnixMillis,
+): Promise<void> {
+  await tx
+    .update(friendConnections)
+    .set({
+      status: targetStatus,
+      updatedAt: timestamp,
+      version: sql`${friendConnections.version} + 1`,
+    })
+    .where(
+      and(
+        eq(friendConnections.accountId, friendAccountId),
+        eq(friendConnections.friendAccountId, accountId),
+        eq(friendConnections.archived, false),
+      ),
+    );
+}
+
+async function cleanupBucketAssignments(
+  tx: PostgresJsDatabase,
+  connectionId: FriendConnectionId,
+  friendAccountId: string,
+  timestamp: UnixMillis,
+): Promise<ReadonlyArray<{ readonly systemId: SystemId; readonly bucketId: BucketId }>> {
+  const assignments = await tx
+    .select({
+      bucketId: friendBucketAssignments.bucketId,
+      systemId: friendBucketAssignments.systemId,
+    })
+    .from(friendBucketAssignments)
+    .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
+
+  if (assignments.length === 0) {
+    return [];
+  }
+
+  const bucketIds = assignments.map((a) => a.bucketId);
+
+  await tx
+    .delete(friendBucketAssignments)
+    .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
+
+  await tx
+    .update(keyGrants)
+    .set({ revokedAt: timestamp })
+    .where(
+      and(
+        eq(keyGrants.friendAccountId, friendAccountId),
+        inArray(keyGrants.bucketId, bucketIds),
+        isNull(keyGrants.revokedAt),
+      ),
+    );
+
+  return assignments.map((a) => ({
+    systemId: a.systemId as SystemId,
+    bucketId: a.bucketId as BucketId,
+  }));
+}
+
 // ── BLOCK ───────────────────────────────────────────────────────────
 
 export async function blockFriendConnection(
@@ -172,61 +313,66 @@ export async function blockFriendConnection(
   connectionId: FriendConnectionId,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<FriendConnectionResult> {
+): Promise<FriendConnectionWithRotations> {
   assertAccountOwnership(accountId, auth);
 
   const timestamp = now();
 
-  return withAccountTransaction(db, accountId, async (tx) => {
-    // Fetch current state
-    const [existing] = await tx
-      .select()
+  return withCrossAccountTransaction(db, async (tx) => {
+    const { result, existing } = await transitionConnectionStatus(
+      tx,
+      accountId,
+      connectionId,
+      timestamp,
+      auth,
+      audit,
+      {
+        targetStatus: "blocked",
+        allowedStatuses: BLOCKABLE_STATUSES,
+        auditEventType: AUDIT_FRIEND_BLOCKED,
+        auditDetail: "Friend connection blocked",
+      },
+    );
+
+    // Update reverse direction
+    await updateReverseConnection(tx, accountId, existing.friendAccountId, "blocked", timestamp);
+
+    // Clean up bucket assignments in both directions
+    const callerRotations = await cleanupBucketAssignments(
+      tx,
+      connectionId,
+      existing.friendAccountId,
+      timestamp,
+    );
+
+    const [reverseConn] = await tx
+      .select({ id: friendConnections.id })
       .from(friendConnections)
       .where(
         and(
-          eq(friendConnections.id, connectionId),
-          eq(friendConnections.accountId, accountId),
-          eq(friendConnections.archived, false),
+          eq(friendConnections.accountId, existing.friendAccountId),
+          eq(friendConnections.friendAccountId, accountId),
         ),
       )
       .limit(1);
 
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
-    }
-
-    if (!BLOCKABLE_STATUSES.includes(existing.status)) {
-      throw new ApiHttpError(
-        HTTP_CONFLICT,
-        "CONFLICT",
-        `Cannot block connection with status '${existing.status}'`,
+    let reverseRotations: ReadonlyArray<{
+      readonly systemId: SystemId;
+      readonly bucketId: BucketId;
+    }> = [];
+    if (reverseConn) {
+      reverseRotations = await cleanupBucketAssignments(
+        tx,
+        reverseConn.id as FriendConnectionId,
+        accountId,
+        timestamp,
       );
     }
 
-    const [row] = await tx
-      .update(friendConnections)
-      .set({
-        status: "blocked" as FriendConnectionStatus,
-        updatedAt: timestamp,
-        version: sql`${friendConnections.version} + 1`,
-      })
-      .where(
-        and(eq(friendConnections.id, connectionId), eq(friendConnections.accountId, accountId)),
-      )
-      .returning();
-
-    if (!row) {
-      throw new Error("Failed to block friend connection — UPDATE returned no rows");
-    }
-
-    await audit(tx, {
-      eventType: AUDIT_FRIEND_BLOCKED,
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Friend connection blocked",
-      accountId,
-    });
-
-    return toFriendConnectionResult(row);
+    return {
+      ...result,
+      pendingRotations: [...callerRotations, ...reverseRotations],
+    };
   });
 }
 
@@ -238,89 +384,66 @@ export async function removeFriendConnection(
   connectionId: FriendConnectionId,
   auth: AuthContext,
   audit: AuditWriter,
-): Promise<FriendConnectionResult> {
+): Promise<FriendConnectionWithRotations> {
   assertAccountOwnership(accountId, auth);
 
   const timestamp = now();
 
-  return withAccountTransaction(db, accountId, async (tx) => {
-    // Fetch current state
-    const [existing] = await tx
-      .select()
+  return withCrossAccountTransaction(db, async (tx) => {
+    const { result, existing } = await transitionConnectionStatus(
+      tx,
+      accountId,
+      connectionId,
+      timestamp,
+      auth,
+      audit,
+      {
+        targetStatus: "removed",
+        allowedStatuses: REMOVABLE_STATUSES,
+        auditEventType: AUDIT_FRIEND_REMOVED,
+        auditDetail: "Friend connection removed",
+      },
+    );
+
+    // Update reverse direction
+    await updateReverseConnection(tx, accountId, existing.friendAccountId, "removed", timestamp);
+
+    // Clean up bucket assignments in both directions
+    const callerRotations = await cleanupBucketAssignments(
+      tx,
+      connectionId,
+      existing.friendAccountId,
+      timestamp,
+    );
+
+    const [reverseConn] = await tx
+      .select({ id: friendConnections.id })
       .from(friendConnections)
       .where(
         and(
-          eq(friendConnections.id, connectionId),
-          eq(friendConnections.accountId, accountId),
-          eq(friendConnections.archived, false),
+          eq(friendConnections.accountId, existing.friendAccountId),
+          eq(friendConnections.friendAccountId, accountId),
         ),
       )
       .limit(1);
 
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
-    }
-
-    if (!REMOVABLE_STATUSES.includes(existing.status)) {
-      throw new ApiHttpError(
-        HTTP_CONFLICT,
-        "CONFLICT",
-        `Cannot remove connection with status '${existing.status}'`,
+    let reverseRotations: ReadonlyArray<{
+      readonly systemId: SystemId;
+      readonly bucketId: BucketId;
+    }> = [];
+    if (reverseConn) {
+      reverseRotations = await cleanupBucketAssignments(
+        tx,
+        reverseConn.id as FriendConnectionId,
+        accountId,
+        timestamp,
       );
     }
 
-    // Update status to removed
-    const [row] = await tx
-      .update(friendConnections)
-      .set({
-        status: "removed" as FriendConnectionStatus,
-        updatedAt: timestamp,
-        version: sql`${friendConnections.version} + 1`,
-      })
-      .where(
-        and(eq(friendConnections.id, connectionId), eq(friendConnections.accountId, accountId)),
-      )
-      .returning();
-
-    if (!row) {
-      throw new Error("Failed to remove friend connection — UPDATE returned no rows");
-    }
-
-    // Cleanup: find bucket assignments for this connection
-    const assignments = await tx
-      .select({ bucketId: friendBucketAssignments.bucketId })
-      .from(friendBucketAssignments)
-      .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
-
-    const bucketIds = assignments.map((a) => a.bucketId);
-
-    // Delete all bucket assignments for this connection
-    await tx
-      .delete(friendBucketAssignments)
-      .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
-
-    // Revoke key grants for this friend account on those buckets
-    if (bucketIds.length > 0) {
-      await tx
-        .update(keyGrants)
-        .set({ revokedAt: timestamp })
-        .where(
-          and(
-            eq(keyGrants.friendAccountId, existing.friendAccountId),
-            inArray(keyGrants.bucketId, bucketIds),
-            isNull(keyGrants.revokedAt),
-          ),
-        );
-    }
-
-    await audit(tx, {
-      eventType: AUDIT_FRIEND_REMOVED,
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Friend connection removed",
-      accountId,
-    });
-
-    return toFriendConnectionResult(row);
+    return {
+      ...result,
+      pendingRotations: [...callerRotations, ...reverseRotations],
+    };
   });
 }
 
