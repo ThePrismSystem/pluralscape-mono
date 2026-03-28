@@ -2,7 +2,6 @@ import { deviceTokens } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
-
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -119,7 +118,7 @@ export async function registerDeviceToken(
         token: maskToken(params.token),
         lastActiveAt: timestamp as UnixMillis | null,
         createdAt: timestamp,
-      } as DeviceTokenResult;
+      } satisfies DeviceTokenResult;
     }
 
     await audit(tx, {
