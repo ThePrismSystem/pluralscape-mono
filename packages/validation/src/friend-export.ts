@@ -1,5 +1,5 @@
 import { FRIEND_EXPORT_ENTITY_TYPES } from "@pluralscape/types";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 /** Default page size for friend data export. */
 const FRIEND_EXPORT_DEFAULT_LIMIT = 50;
