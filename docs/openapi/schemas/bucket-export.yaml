@@ -1,0 +1,76 @@
+BucketExportManifestEntry:
+  type: object
+  required: [entityType, count, lastUpdatedAt]
+  properties:
+    entityType:
+      type: string
+      description: The entity type (e.g. "member", "group", "custom-front")
+    count:
+      type: integer
+      minimum: 0
+      description: Number of entities of this type tagged with the bucket
+    lastUpdatedAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: Unix timestamp (ms) of the most recently updated entity, or null if count is 0
+
+BucketExportManifestResponse:
+  type: object
+  required: [systemId, bucketId, entries, etag]
+  properties:
+    systemId:
+      type: string
+      pattern: "^sys_"
+    bucketId:
+      type: string
+      pattern: "^bkt_"
+    entries:
+      type: array
+      items:
+        $ref: "#/BucketExportManifestEntry"
+      description: Per-entity-type counts and freshness timestamps
+    etag:
+      type: string
+      description: Weak ETag for conditional requests
+
+BucketExportEntity:
+  type: object
+  required: [id, entityType, encryptedData, updatedAt]
+  properties:
+    id:
+      type: string
+      description: The entity ID (prefixed by type, e.g. "mem_", "grp_")
+    entityType:
+      type: string
+      description: The entity type
+    encryptedData:
+      type: string
+      description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+    updatedAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+
+BucketExportPageResponse:
+  type: object
+  required: [items, nextCursor, hasMore, totalCount, etag]
+  properties:
+    items:
+      type: array
+      items:
+        $ref: "#/BucketExportEntity"
+    nextCursor:
+      type: string
+      nullable: true
+      description: Cursor for the next page, or null if no more pages
+    hasMore:
+      type: boolean
+      description: Whether more pages are available
+    totalCount:
+      type: integer
+      nullable: true
+      description: Total count (always null for export endpoints)
+    etag:
+      type: string
+      description: Weak ETag for conditional requests

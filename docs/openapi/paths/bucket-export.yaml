@@ -1,0 +1,123 @@
+/systems/{systemId}/buckets/{bucketId}/export/manifest:
+  get:
+    operationId: getBucketExportManifest
+    tags: [Bucket Export]
+    summary: Get bucket export manifest
+    description: |
+      Returns per-entity-type counts and freshness timestamps for all entities
+      tagged with the specified privacy bucket. The client uses this to decide
+      which entity types need refreshing before starting paginated downloads.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: systemId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^sys_"
+        description: The system ID (must be owned by the authenticated account)
+      - name: bucketId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^bkt_"
+        description: The privacy bucket ID
+    responses:
+      "200":
+        description: Manifest with per-entity-type counts
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Weak ETag for conditional requests
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/bucket-export.yaml#/BucketExportManifestResponse"
+      "304":
+        description: Not Modified (ETag match)
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/export:
+  get:
+    operationId: getBucketExportPage
+    tags: [Bucket Export]
+    summary: Get paginated bucket export
+    description: |
+      Returns a paginated page of encrypted entities tagged with the specified
+      privacy bucket. Entities are ordered by updatedAt ASC, id ASC for
+      deterministic cursor-based pagination.
+
+      The server returns encrypted blobs — all decryption and rendering
+      happens client-side (zero-knowledge).
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: systemId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^sys_"
+        description: The system ID (must be owned by the authenticated account)
+      - name: bucketId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^bkt_"
+        description: The privacy bucket ID
+      - name: entityType
+        in: query
+        required: true
+        schema:
+          type: string
+        description: The entity type to export (e.g. "member", "group")
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+        description: Maximum number of entities per page
+      - name: cursor
+        in: query
+        schema:
+          type: string
+        description: Pagination cursor from a previous response
+    responses:
+      "200":
+        description: Page of encrypted entities
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Weak ETag for conditional requests
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/bucket-export.yaml#/BucketExportPageResponse"
+      "304":
+        description: Not Modified (ETag match)
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

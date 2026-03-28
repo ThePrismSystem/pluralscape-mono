@@ -1,0 +1,146 @@
+/**
+ * Bucket data export service.
+ *
+ * Provides paginated export of all entities tagged with a specific privacy
+ * bucket. Unlike friend-export (which post-filters across multiple buckets),
+ * bucket export uses a direct JOIN on bucket_content_tags — entities are
+ * either tagged or not, so no overfetch loop is needed.
+ */
+import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
+import { computeDataEtag } from "../lib/etag.js";
+import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
+import { withTenantRead } from "../lib/rls-context.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { tenantCtx } from "../lib/tenant-context.js";
+
+import { BUCKET_EXPORT_TABLE_REGISTRY } from "./bucket-export.constants.js";
+import { assertBucketExists } from "./bucket.service.js";
+
+import type { BucketExportRow } from "./bucket-export.constants.js";
+import type { AuthContext } from "../lib/auth-context.js";
+import type {
+  BucketContentEntityType,
+  BucketExportEntity,
+  BucketExportManifestEntry,
+  BucketExportManifestResponse,
+  BucketExportPageResponse,
+  BucketId,
+  ExportEntityId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+// ── Manifest ───────────────────────────────────────────────────────
+
+/**
+ * Get the export manifest for a bucket — per-entity-type counts and freshness timestamps.
+ *
+ * The client calls this to decide which entity types need refreshing
+ * before starting paginated downloads.
+ */
+export async function getBucketExportManifest(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  bucketId: BucketId,
+  auth: AuthContext,
+): Promise<BucketExportManifestResponse> {
+  assertSystemOwnership(systemId, auth);
+
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    await assertBucketExists(tx, systemId, bucketId);
+
+    const entries = await buildManifestEntries(tx, systemId, bucketId);
+
+    // Compute overall ETag from all per-type max timestamps
+    const globalMaxUpdatedAt = entries.reduce<UnixMillis | null>((acc, e) => {
+      if (e.lastUpdatedAt === null) return acc;
+      if (acc === null) return e.lastUpdatedAt;
+      return e.lastUpdatedAt > acc ? e.lastUpdatedAt : acc;
+    }, null);
+    const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
+    const etag = computeDataEtag(globalMaxUpdatedAt, totalCount);
+
+    return {
+      systemId,
+      bucketId,
+      entries,
+      etag,
+    };
+  });
+}
+
+/** Build manifest entries for all entity types in parallel. */
+async function buildManifestEntries(
+  tx: PostgresJsDatabase,
+  systemId: SystemId,
+  bucketId: BucketId,
+): Promise<readonly BucketExportManifestEntry[]> {
+  const entityTypes = Object.keys(BUCKET_EXPORT_TABLE_REGISTRY) as BucketContentEntityType[];
+
+  return Promise.all(
+    entityTypes.map(async (entityType) => {
+      const { count, maxUpdatedAt } = await BUCKET_EXPORT_TABLE_REGISTRY[
+        entityType
+      ].queryManifestCount(tx, systemId, bucketId);
+      return { entityType, count, lastUpdatedAt: maxUpdatedAt };
+    }),
+  );
+}
+
+// ── Paginated export ───────────────────────────────────────────────
+
+/**
+ * Get a paginated page of encrypted entities tagged with a specific bucket.
+ *
+ * Entities are ordered by updatedAt ASC, id ASC for deterministic cursor-based
+ * pagination and natural incremental sync ordering.
+ *
+ * Unlike friend-export, no overfetch loop is needed — the INNER JOIN on
+ * bucket_content_tags directly returns only tagged entities.
+ */
+export async function getBucketExportPage(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  bucketId: BucketId,
+  auth: AuthContext,
+  entityType: BucketContentEntityType,
+  limit: number,
+  cursor?: string,
+): Promise<BucketExportPageResponse> {
+  assertSystemOwnership(systemId, auth);
+
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    await assertBucketExists(tx, systemId, bucketId);
+
+    const queryFns = BUCKET_EXPORT_TABLE_REGISTRY[entityType];
+    const decodedCursor = cursor ? fromCompositeCursor(cursor, "bucket-export") : undefined;
+
+    const rows = await queryFns.queryBucketExportRows(tx, systemId, bucketId, limit, decodedCursor);
+
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+
+    const items: BucketExportEntity[] = pageRows.map((r: BucketExportRow) => ({
+      id: r.id as ExportEntityId,
+      entityType,
+      encryptedData: encryptedBlobToBase64(r.encryptedData),
+      updatedAt: r.updatedAt,
+    }));
+
+    const lastItem = items[items.length - 1];
+    const nextCursor =
+      hasMore && lastItem ? toCompositeCursor(lastItem.updatedAt, lastItem.id) : null;
+
+    // ETag: items are ordered ASC, so the last item has the max updatedAt
+    const maxUpdatedAt: UnixMillis | null = lastItem?.updatedAt ?? null;
+
+    return {
+      items,
+      nextCursor,
+      hasMore,
+      totalCount: null,
+      etag: computeDataEtag(maxUpdatedAt, items.length),
+    };
+  });
+}

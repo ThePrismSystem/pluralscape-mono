@@ -160,6 +160,13 @@ export {
   UpdateFriendNotificationPreferenceBodySchema,
 } from "./notification.js";
 export {
+  GenerateReportBodySchema,
+  BucketExportQuerySchema,
+  MAX_REPORT_TITLE_LENGTH,
+  BUCKET_EXPORT_DEFAULT_LIMIT,
+  BUCKET_EXPORT_MAX_LIMIT,
+} from "./report.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_ENCRYPTED_SYSTEM_DATA_SIZE,

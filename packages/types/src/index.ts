@@ -186,6 +186,24 @@ export type {
 } from "./friend-export.js";
 export { FRIEND_EXPORT_ENTITY_TYPES, isFriendExportEntityType } from "./friend-export.js";
 
+// ── Reports ────────────────────────────────────────────────────────
+export type {
+  ReportType,
+  ExportEntityId,
+  MemberByBucketReportConfig,
+  MeetOurSystemReportConfig,
+  ReportConfig,
+  ReportEntitySet,
+  MemberByBucketReportData,
+  MeetOurSystemReportData,
+  ReportData,
+  BucketExportManifestEntry,
+  BucketExportManifestResponse,
+  BucketExportEntity,
+  BucketExportPageResponse,
+} from "./reports.js";
+export { REPORT_TYPES, isReportType } from "./reports.js";
+
 // ── Structure ──────────────────────────────────────────────────────
 export type {
   RelationshipType,
