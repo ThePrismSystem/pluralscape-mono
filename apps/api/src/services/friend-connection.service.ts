@@ -6,6 +6,7 @@ import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64OrNull, validateEncryptedBlob } from "../lib/encrypted-blob.js";
+import { archiveAccountEntity, restoreAccountEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
 import {
@@ -21,6 +22,7 @@ import {
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { AccountArchivableEntityConfig } from "../lib/entity-lifecycle.js";
 import type {
   AccountId,
   AuditEventType,
@@ -305,14 +307,24 @@ async function cleanupBucketAssignments(
   }));
 }
 
-// ── BLOCK ───────────────────────────────────────────────────────────
+// ── TERMINATE (block / remove) ─────────────────────────────────────
 
-export async function blockFriendConnection(
+/**
+ * Shared implementation for both block and remove operations.
+ *
+ * Both follow an identical flow:
+ * 1. Transition caller's connection status
+ * 2. Mirror the status on the reverse connection
+ * 3. Clean up bucket assignments in both directions
+ * 4. Return result with pending key rotations
+ */
+async function terminateConnection(
   db: PostgresJsDatabase,
   accountId: AccountId,
   connectionId: FriendConnectionId,
   auth: AuthContext,
   audit: AuditWriter,
+  config: StatusTransitionConfig,
 ): Promise<FriendConnectionWithRotations> {
   assertAccountOwnership(accountId, auth);
 
@@ -326,16 +338,17 @@ export async function blockFriendConnection(
       timestamp,
       auth,
       audit,
-      {
-        targetStatus: "blocked",
-        allowedStatuses: BLOCKABLE_STATUSES,
-        auditEventType: AUDIT_FRIEND_BLOCKED,
-        auditDetail: "Friend connection blocked",
-      },
+      config,
     );
 
     // Update reverse direction
-    await updateReverseConnection(tx, accountId, existing.friendAccountId, "blocked", timestamp);
+    await updateReverseConnection(
+      tx,
+      accountId,
+      existing.friendAccountId,
+      config.targetStatus,
+      timestamp,
+    );
 
     // Clean up bucket assignments in both directions
     const callerRotations = await cleanupBucketAssignments(
@@ -376,74 +389,37 @@ export async function blockFriendConnection(
   });
 }
 
-// ── REMOVE ──────────────────────────────────────────────────────────
+// ── BLOCK ───────────────────────────────────────────────────────────
 
-export async function removeFriendConnection(
+export function blockFriendConnection(
   db: PostgresJsDatabase,
   accountId: AccountId,
   connectionId: FriendConnectionId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FriendConnectionWithRotations> {
-  assertAccountOwnership(accountId, auth);
+  return terminateConnection(db, accountId, connectionId, auth, audit, {
+    targetStatus: "blocked",
+    allowedStatuses: BLOCKABLE_STATUSES,
+    auditEventType: AUDIT_FRIEND_BLOCKED,
+    auditDetail: "Friend connection blocked",
+  });
+}
 
-  const timestamp = now();
+// ── REMOVE ──────────────────────────────────────────────────────────
 
-  return withCrossAccountTransaction(db, async (tx) => {
-    const { result, existing } = await transitionConnectionStatus(
-      tx,
-      accountId,
-      connectionId,
-      timestamp,
-      auth,
-      audit,
-      {
-        targetStatus: "removed",
-        allowedStatuses: REMOVABLE_STATUSES,
-        auditEventType: AUDIT_FRIEND_REMOVED,
-        auditDetail: "Friend connection removed",
-      },
-    );
-
-    // Update reverse direction
-    await updateReverseConnection(tx, accountId, existing.friendAccountId, "removed", timestamp);
-
-    // Clean up bucket assignments in both directions
-    const callerRotations = await cleanupBucketAssignments(
-      tx,
-      connectionId,
-      existing.friendAccountId,
-      timestamp,
-    );
-
-    const [reverseConn] = await tx
-      .select({ id: friendConnections.id })
-      .from(friendConnections)
-      .where(
-        and(
-          eq(friendConnections.accountId, existing.friendAccountId),
-          eq(friendConnections.friendAccountId, accountId),
-        ),
-      )
-      .limit(1);
-
-    let reverseRotations: ReadonlyArray<{
-      readonly systemId: SystemId;
-      readonly bucketId: BucketId;
-    }> = [];
-    if (reverseConn) {
-      reverseRotations = await cleanupBucketAssignments(
-        tx,
-        reverseConn.id as FriendConnectionId,
-        accountId,
-        timestamp,
-      );
-    }
-
-    return {
-      ...result,
-      pendingRotations: [...callerRotations, ...reverseRotations],
-    };
+export function removeFriendConnection(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  connectionId: FriendConnectionId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<FriendConnectionWithRotations> {
+  return terminateConnection(db, accountId, connectionId, auth, audit, {
+    targetStatus: "removed",
+    allowedStatuses: REMOVABLE_STATUSES,
+    auditEventType: AUDIT_FRIEND_REMOVED,
+    auditDetail: "Friend connection removed",
   });
 }
 
@@ -507,6 +483,23 @@ export async function updateFriendVisibility(
   });
 }
 
+// ── Entity lifecycle config (account-scoped) ──────────────────────
+
+const FRIEND_CONNECTION_LIFECYCLE: AccountArchivableEntityConfig<FriendConnectionId> = {
+  table: friendConnections,
+  columns: {
+    id: friendConnections.id,
+    accountId: friendConnections.accountId,
+    archived: friendConnections.archived,
+    archivedAt: friendConnections.archivedAt,
+    updatedAt: friendConnections.updatedAt,
+    version: friendConnections.version,
+  },
+  entityName: "Friend connection",
+  archiveEvent: AUDIT_FRIEND_ARCHIVED,
+  restoreEvent: AUDIT_FRIEND_RESTORED,
+};
+
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
 export async function archiveFriendConnection(
@@ -516,53 +509,7 @@ export async function archiveFriendConnection(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertAccountOwnership(accountId, auth);
-
-  const timestamp = now();
-
-  await withAccountTransaction(db, accountId, async (tx) => {
-    const updated = await tx
-      .update(friendConnections)
-      .set({
-        archived: true,
-        archivedAt: timestamp,
-        updatedAt: timestamp,
-        version: sql`${friendConnections.version} + 1`,
-      })
-      .where(
-        and(
-          eq(friendConnections.id, connectionId),
-          eq(friendConnections.accountId, accountId),
-          eq(friendConnections.archived, false),
-        ),
-      )
-      .returning({ id: friendConnections.id });
-
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: friendConnections.id })
-        .from(friendConnections)
-        .where(
-          and(eq(friendConnections.id, connectionId), eq(friendConnections.accountId, accountId)),
-        );
-
-      if (existing) {
-        throw new ApiHttpError(
-          HTTP_CONFLICT,
-          "ALREADY_ARCHIVED",
-          "Friend connection is already archived",
-        );
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
-    }
-
-    await audit(tx, {
-      eventType: AUDIT_FRIEND_ARCHIVED,
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Friend connection archived",
-      accountId,
-    });
-  });
+  await archiveAccountEntity(db, accountId, connectionId, auth, audit, FRIEND_CONNECTION_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -574,50 +521,13 @@ export async function restoreFriendConnection(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FriendConnectionResult> {
-  assertAccountOwnership(accountId, auth);
-
-  const timestamp = now();
-
-  return withAccountTransaction(db, accountId, async (tx) => {
-    const updated = await tx
-      .update(friendConnections)
-      .set({
-        archived: false,
-        archivedAt: null,
-        updatedAt: timestamp,
-        version: sql`${friendConnections.version} + 1`,
-      })
-      .where(
-        and(
-          eq(friendConnections.id, connectionId),
-          eq(friendConnections.accountId, accountId),
-          eq(friendConnections.archived, true),
-        ),
-      )
-      .returning();
-
-    const row = updated[0];
-    if (!row) {
-      const [existing] = await tx
-        .select({ id: friendConnections.id })
-        .from(friendConnections)
-        .where(
-          and(eq(friendConnections.id, connectionId), eq(friendConnections.accountId, accountId)),
-        );
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "NOT_ARCHIVED", "Friend connection is not archived");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived friend connection not found");
-    }
-
-    await audit(tx, {
-      eventType: AUDIT_FRIEND_RESTORED,
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Friend connection restored",
-      accountId,
-    });
-
-    return toFriendConnectionResult(row);
-  });
+  return restoreAccountEntity(
+    db,
+    accountId,
+    connectionId,
+    auth,
+    audit,
+    FRIEND_CONNECTION_LIFECYCLE,
+    (row) => toFriendConnectionResult(row as typeof friendConnections.$inferSelect),
+  );
 }

@@ -1,11 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { archiveEntity, deleteEntity, restoreEntity } from "../../lib/entity-lifecycle.js";
+import {
+  archiveAccountEntity,
+  archiveEntity,
+  deleteEntity,
+  restoreAccountEntity,
+  restoreEntity,
+} from "../../lib/entity-lifecycle.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { ArchivableEntityConfig, DeletableEntityConfig } from "../../lib/entity-lifecycle.js";
+import type {
+  AccountArchivableEntityConfig,
+  ArchivableEntityConfig,
+  DeletableEntityConfig,
+} from "../../lib/entity-lifecycle.js";
 import type { SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
@@ -14,9 +24,14 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
 }));
 
+vi.mock("../../lib/account-ownership.js", () => ({
+  assertAccountOwnership: vi.fn(),
+}));
+
 const MOCK_AUTH = makeTestAuth();
 
 const SYSTEM_ID = "sys_test" as SystemId;
+const ACCOUNT_ID = MOCK_AUTH.accountId;
 const ENTITY_ID = "ent_test-id";
 
 // ── Fake column / config ────────────────────────────────────────
@@ -270,5 +285,163 @@ describe("deleteEntity", () => {
     await expect(
       deleteEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, configWithCheck),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }));
+  });
+});
+
+// ── Account-scoped archive / restore ────────────────────────────
+
+function asAccountPgColumn(mock: unknown): AccountArchivableEntityConfig<string>["columns"]["id"] {
+  return mock as AccountArchivableEntityConfig<string>["columns"]["id"];
+}
+
+const ACCOUNT_CONFIG: AccountArchivableEntityConfig<string> = {
+  table: {} as AccountArchivableEntityConfig<string>["table"],
+  columns: {
+    id: asAccountPgColumn("id"),
+    accountId: asAccountPgColumn("account_id"),
+    archived: asAccountPgColumn("archived"),
+    archivedAt: asAccountPgColumn("archived_at"),
+    updatedAt: asAccountPgColumn("updated_at"),
+    version: asAccountPgColumn("version"),
+  },
+  entityName: "Test account entity",
+  archiveEvent: "custom-front.archived",
+  restoreEvent: "custom-front.restored",
+};
+
+describe("archiveAccountEntity", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("archives an existing non-archived account-scoped entity", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await archiveAccountEntity(db, ACCOUNT_ID, ENTITY_ID, MOCK_AUTH, audit, ACCOUNT_CONFIG);
+
+    expect(chain.update).toHaveBeenCalled();
+    expect(audit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "custom-front.archived" }),
+    );
+  });
+
+  it("calls onArchive callback after successful archive", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const onArchive = vi.fn().mockResolvedValue(undefined);
+    const configWithHook = { ...ACCOUNT_CONFIG, onArchive };
+
+    await archiveAccountEntity(db, ACCOUNT_ID, ENTITY_ID, MOCK_AUTH, audit, configWithHook);
+
+    expect(onArchive).toHaveBeenCalledWith(chain, ACCOUNT_ID, ENTITY_ID);
+  });
+
+  it("does not error when onArchive is not provided", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      archiveAccountEntity(db, ACCOUNT_ID, ENTITY_ID, MOCK_AUTH, audit, ACCOUNT_CONFIG),
+    ).resolves.toBeUndefined();
+  });
+
+  it("throws NOT_FOUND when entity does not exist", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      archiveAccountEntity(db, ACCOUNT_ID, ENTITY_ID, MOCK_AUTH, audit, ACCOUNT_CONFIG),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws ALREADY_ARCHIVED when entity is already archived", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      archiveAccountEntity(db, ACCOUNT_ID, ENTITY_ID, MOCK_AUTH, audit, ACCOUNT_CONFIG),
+    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "ALREADY_ARCHIVED" }));
+  });
+});
+
+describe("restoreAccountEntity", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("restores an archived account-scoped entity and returns mapped result", async () => {
+    const rawRow = { id: ENTITY_ID, name: "Restored" };
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([rawRow]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const mapper = (row: Record<string, unknown>) => ({ mapped: String(row["name"]) });
+
+    const result = await restoreAccountEntity(
+      db,
+      ACCOUNT_ID,
+      ENTITY_ID,
+      MOCK_AUTH,
+      audit,
+      ACCOUNT_CONFIG,
+      mapper,
+    );
+
+    expect(result).toEqual({ mapped: "Restored" });
+    expect(audit).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({ eventType: "custom-front.restored" }),
+    );
+  });
+
+  it("calls onRestore callback after successful restore", async () => {
+    const rawRow = { id: ENTITY_ID, name: "Restored" };
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([rawRow]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+    const onRestore = vi.fn().mockResolvedValue(undefined);
+    const configWithHook = { ...ACCOUNT_CONFIG, onRestore };
+
+    await restoreAccountEntity(
+      db,
+      ACCOUNT_ID,
+      ENTITY_ID,
+      MOCK_AUTH,
+      audit,
+      configWithHook,
+      (r) => r,
+    );
+
+    expect(onRestore).toHaveBeenCalledWith(chain, ACCOUNT_ID, ENTITY_ID);
+  });
+
+  it("throws NOT_FOUND when entity does not exist", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      restoreAccountEntity(db, ACCOUNT_ID, ENTITY_ID, MOCK_AUTH, audit, ACCOUNT_CONFIG, (r) => r),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws NOT_ARCHIVED when entity is not archived", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
+
+    await expect(
+      restoreAccountEntity(db, ACCOUNT_ID, ENTITY_ID, MOCK_AUTH, audit, ACCOUNT_CONFIG, (r) => r),
+    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "NOT_ARCHIVED" }));
   });
 });
