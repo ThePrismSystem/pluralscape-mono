@@ -50,27 +50,16 @@ interface DashboardTableRef {
   readonly archived: PgColumn;
 }
 
-/** Short-lived per-request cache key for loadBucketTags results. */
+/** Per-request cache key for loadBucketTags results. */
 type BucketTagCacheKey = `${string}:${string}`;
 
-/** Duration in milliseconds for bucket tag cache entries. */
-const BUCKET_TAG_CACHE_TTL_MS = 10_000;
-
-// ── Bucket tag cache ───────────────────────────────────────────
-
 /**
- * Short-lived in-memory cache for loadBucketTags results.
+ * Request-scoped cache for loadBucketTags results.
  *
- * Keyed by `systemId:entityType`, stores results with a TTL to avoid
- * redundant DB queries within a single dashboard request. Invalidated
- * by TTL expiry (no mutation-based invalidation needed for this scope).
+ * Created fresh per `getFriendDashboard` call to avoid cross-tenant
+ * cache poisoning. Keyed by `systemId:entityType`.
  */
-interface CachedBucketTags {
-  readonly data: ReadonlyMap<string, readonly BucketId[]>;
-  readonly expiresAt: number;
-}
-
-const bucketTagCache = new Map<BucketTagCacheKey, CachedBucketTags>();
+export type BucketTagCache = Map<BucketTagCacheKey, ReadonlyMap<string, readonly BucketId[]>>;
 
 function bucketTagCacheKey(
   systemId: SystemId,
@@ -79,50 +68,39 @@ function bucketTagCacheKey(
   return `${systemId}:${entityType}`;
 }
 
-/** Load bucket tags with short-lived caching per (systemId, entityType). */
+/** Load bucket tags with per-request caching per (systemId, entityType). */
 export async function cachedLoadBucketTags(
   tx: PostgresJsDatabase,
   systemId: SystemId,
   entityType: BucketContentEntityType,
   entityIds: readonly string[],
+  cache: BucketTagCache,
 ): Promise<ReadonlyMap<string, readonly BucketId[]>> {
   if (entityIds.length === 0) {
     return new Map();
   }
 
   const key = bucketTagCacheKey(systemId, entityType);
-  const cached = bucketTagCache.get(key);
+  const cached = cache.get(key);
 
-  if (cached && cached.expiresAt > Date.now()) {
-    // Check if all requested IDs are in the cache
-    const allPresent = entityIds.every((id) => cached.data.has(id));
+  if (cached) {
+    const allPresent = entityIds.every((id) => cached.has(id));
     if (allPresent) {
-      return cached.data;
+      return cached;
     }
   }
 
   const result = await loadBucketTags(tx, systemId, entityType, entityIds);
 
-  // Merge with existing cache or create new entry
-  const existing =
-    cached && cached.expiresAt > Date.now()
-      ? new Map(cached.data)
-      : new Map<string, readonly BucketId[]>();
+  // Merge with existing cached entries for this key
+  const merged = cached ? new Map(cached) : new Map<string, readonly BucketId[]>();
   for (const [entityId, bucketIds] of result) {
-    existing.set(entityId, bucketIds);
+    merged.set(entityId, bucketIds);
   }
 
-  bucketTagCache.set(key, {
-    data: existing,
-    expiresAt: Date.now() + BUCKET_TAG_CACHE_TTL_MS,
-  });
+  cache.set(key, merged);
 
   return result;
-}
-
-/** Clear expired entries from the bucket tag cache. Exported for testing. */
-export function clearBucketTagCache(): void {
-  bucketTagCache.clear();
 }
 
 // ── Generic visible entities helper (M11 + M3) ────────────────
@@ -214,6 +192,7 @@ export async function queryVisibleActiveFronting(
   tx: PostgresJsDatabase,
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
+  cache: BucketTagCache,
 ): Promise<{
   sessions: FriendDashboardResponse["activeFronting"]["sessions"];
   isCofronting: boolean;
@@ -259,13 +238,13 @@ export async function queryVisibleActiveFronting(
   // Load bucket tags for each subject entity type in parallel (with caching)
   const [memberBucketMap, cfBucketMap, steBucketMap] = await Promise.all([
     memberIds.size > 0
-      ? cachedLoadBucketTags(tx, systemId, "member", [...memberIds])
+      ? cachedLoadBucketTags(tx, systemId, "member", [...memberIds], cache)
       : new Map<string, BucketId[]>(),
     customFrontIds.size > 0
-      ? cachedLoadBucketTags(tx, systemId, "custom-front", [...customFrontIds])
+      ? cachedLoadBucketTags(tx, systemId, "custom-front", [...customFrontIds], cache)
       : new Map<string, BucketId[]>(),
     structureEntityIds.size > 0
-      ? cachedLoadBucketTags(tx, systemId, "structure-entity", [...structureEntityIds])
+      ? cachedLoadBucketTags(tx, systemId, "structure-entity", [...structureEntityIds], cache)
       : new Map<string, BucketId[]>(),
   ]);
 
@@ -443,6 +422,7 @@ export async function getFriendDashboard(
 ): Promise<FriendDashboardResponse> {
   return withCrossAccountRead(db, async (tx) => {
     const access = await assertFriendAccess(tx, connectionId, auth);
+    const requestCache: BucketTagCache = new Map();
 
     const [
       activeFronting,
@@ -452,7 +432,7 @@ export async function getFriendDashboard(
       memberCount,
       activeKeyGrants,
     ] = await Promise.all([
-      queryVisibleActiveFronting(tx, access.targetSystemId, access.assignedBucketIds),
+      queryVisibleActiveFronting(tx, access.targetSystemId, access.assignedBucketIds, requestCache),
       queryVisibleMembers(tx, access.targetSystemId, access.assignedBucketIds),
       queryVisibleCustomFronts(tx, access.targetSystemId, access.assignedBucketIds),
       queryVisibleStructureEntities(tx, access.targetSystemId, access.assignedBucketIds),

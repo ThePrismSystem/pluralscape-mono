@@ -72,7 +72,6 @@ const {
   queryVisibleStructureEntities,
   queryMemberCount,
   queryActiveKeyGrants,
-  clearBucketTagCache,
   cachedLoadBucketTags,
 } = await import("../../services/friend-dashboard.service.js");
 const { loadBucketTags } = await import("../../lib/bucket-access.js");
@@ -80,6 +79,7 @@ const { loadBucketTags } = await import("../../lib/bucket-access.js");
 import { asDb } from "../helpers/mock-db.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { BucketTagCache } from "../../services/friend-dashboard.service.js";
 import type {
   AccountId,
   BucketId,
@@ -158,7 +158,6 @@ function makeDashboardDb(
 describe("getFriendDashboard", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    clearBucketTagCache();
   });
 
   it("returns a complete dashboard response on happy path", async () => {
@@ -229,13 +228,17 @@ describe("getFriendDashboard", () => {
 describe("queryVisibleActiveFronting", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
     const db = makeDashboardDb();
 
-    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [] as readonly BucketId[]);
+    const result = await queryVisibleActiveFronting(
+      db,
+      SYSTEM_ID,
+      [] as readonly BucketId[],
+      new Map(),
+    );
 
     expect(result).toEqual({ sessions: [], isCofronting: false });
   });
@@ -243,7 +246,7 @@ describe("queryVisibleActiveFronting", () => {
   it("returns empty when no active sessions", async () => {
     const db = makeDashboardDb([]);
 
-    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A]);
+    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A], new Map());
 
     expect(result).toEqual({ sessions: [], isCofronting: false });
   });
@@ -267,7 +270,7 @@ describe("queryVisibleActiveFronting", () => {
     // filterVisibleEntities should return the session row when called for sessions
     vi.mocked(filterVisibleEntities).mockReturnValueOnce([sessionRow]);
 
-    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A]);
+    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A], new Map());
 
     expect(result.sessions).toHaveLength(1);
     expect(result.sessions[0]?.id).toBe(sessionId);
@@ -303,7 +306,7 @@ describe("queryVisibleActiveFronting", () => {
 
     vi.mocked(filterVisibleEntities).mockReturnValueOnce([sessionA, sessionB]);
 
-    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A]);
+    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A], new Map());
 
     expect(result.isCofronting).toBe(true);
     expect(result.sessions).toHaveLength(2);
@@ -337,7 +340,7 @@ describe("queryVisibleActiveFronting", () => {
 
     vi.mocked(filterVisibleEntities).mockReturnValueOnce([memberSession, cfOnlySession]);
 
-    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A]);
+    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A], new Map());
 
     expect(result.isCofronting).toBe(false);
     expect(result.sessions).toHaveLength(2);
@@ -371,7 +374,7 @@ describe("queryVisibleActiveFronting", () => {
 
     vi.mocked(filterVisibleEntities).mockReturnValueOnce([cfSessionA, cfSessionB]);
 
-    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A]);
+    const result = await queryVisibleActiveFronting(db, SYSTEM_ID, [BUCKET_A], new Map());
 
     expect(result.isCofronting).toBe(false);
     expect(result.sessions).toHaveLength(2);
@@ -383,7 +386,6 @@ describe("queryVisibleActiveFronting", () => {
 describe("queryVisibleMembers", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
@@ -425,7 +427,6 @@ describe("queryVisibleMembers", () => {
 describe("queryVisibleCustomFronts", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
@@ -442,7 +443,6 @@ describe("queryVisibleCustomFronts", () => {
 describe("queryVisibleStructureEntities", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
@@ -459,7 +459,6 @@ describe("queryVisibleStructureEntities", () => {
 describe("queryMemberCount", () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    clearBucketTagCache();
   });
 
   it("returns zero when friendBucketIds is empty", async () => {
@@ -539,30 +538,30 @@ describe("cachedLoadBucketTags", () => {
   beforeEach(() => {
     // Clear accumulated call counts from prior describe blocks
     vi.mocked(loadBucketTags).mockClear();
-    clearBucketTagCache();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    clearBucketTagCache();
   });
 
   it("returns empty map for empty entityIds", async () => {
     const db = makeDashboardDb();
+    const cache: BucketTagCache = new Map();
 
-    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", []);
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [], cache);
 
     expect(result.size).toBe(0);
   });
 
   it("delegates to loadBucketTags on first call", async () => {
     const db = makeDashboardDb();
+    const cache: BucketTagCache = new Map();
     const entityId = `mem_${crypto.randomUUID()}`;
     const expectedMap = new Map([[entityId, [BUCKET_A]]]);
 
     vi.mocked(loadBucketTags).mockResolvedValueOnce(expectedMap);
 
-    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId], cache);
 
     expect(loadBucketTags).toHaveBeenCalledWith(db, SYSTEM_ID, "member", [entityId]);
     expect(result.get(entityId)).toEqual([BUCKET_A]);
@@ -570,15 +569,16 @@ describe("cachedLoadBucketTags", () => {
 
   it("returns cached data on subsequent call with same IDs", async () => {
     const db = makeDashboardDb();
+    const cache: BucketTagCache = new Map();
     const entityId = `mem_${crypto.randomUUID()}`;
     const expectedMap = new Map([[entityId, [BUCKET_A]]]);
 
     vi.mocked(loadBucketTags).mockResolvedValueOnce(expectedMap);
 
     // First call populates cache
-    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId], cache);
     // Second call should use cache
-    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId], cache);
 
     expect(loadBucketTags).toHaveBeenCalledTimes(1);
     expect(result.get(entityId)).toEqual([BUCKET_A]);
@@ -586,6 +586,7 @@ describe("cachedLoadBucketTags", () => {
 
   it("re-fetches when cache contains different IDs", async () => {
     const db = makeDashboardDb();
+    const cache: BucketTagCache = new Map();
     const entityIdA = `mem_${crypto.randomUUID()}`;
     const entityIdB = `mem_${crypto.randomUUID()}`;
 
@@ -593,26 +594,29 @@ describe("cachedLoadBucketTags", () => {
       .mockResolvedValueOnce(new Map([[entityIdA, [BUCKET_A]]]))
       .mockResolvedValueOnce(new Map([[entityIdB, [BUCKET_B]]]));
 
-    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityIdA]);
-    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityIdB]);
+    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityIdA], cache);
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityIdB], cache);
 
     expect(loadBucketTags).toHaveBeenCalledTimes(2);
     expect(result.get(entityIdB)).toEqual([BUCKET_B]);
   });
 
-  it("clears cache via clearBucketTagCache", async () => {
+  it("isolates caches between separate request-scoped maps", async () => {
     const db = makeDashboardDb();
+    const cacheA: BucketTagCache = new Map();
+    const cacheB: BucketTagCache = new Map();
     const entityId = `mem_${crypto.randomUUID()}`;
 
     vi.mocked(loadBucketTags)
       .mockResolvedValueOnce(new Map([[entityId, [BUCKET_A]]]))
       .mockResolvedValueOnce(new Map([[entityId, [BUCKET_B]]]));
 
-    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
-    clearBucketTagCache();
-    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+    const resultA = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId], cacheA);
+    const resultB = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId], cacheB);
 
+    // Each cache triggers its own DB call
     expect(loadBucketTags).toHaveBeenCalledTimes(2);
-    expect(result.get(entityId)).toEqual([BUCKET_B]);
+    expect(resultA.get(entityId)).toEqual([BUCKET_A]);
+    expect(resultB.get(entityId)).toEqual([BUCKET_B]);
   });
 });
