@@ -42,6 +42,7 @@ function makePrivacyConfigDoc(): Automerge.Doc<PrivacyConfigDocument> {
     friendConnections: {},
     friendCodes: {},
     keyGrants: {},
+    fieldBucketVisibility: {},
   });
 }
 
@@ -418,6 +419,23 @@ describe("removeBucketAssignmentProjection", () => {
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
+  });
+
+  it("does not log when connection exists", () => {
+    const input = makeFriendConnectionInput({
+      assignedBucketIds: ["bkt_1" as BucketId],
+    });
+    let doc = makePrivacyConfigDoc();
+    const logger = { warn: vi.fn() };
+
+    doc = Automerge.change(doc, (d) => {
+      applyFriendConnectionProjection(d, input);
+    });
+    Automerge.change(doc, (d) => {
+      removeBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 3000, logger);
+    });
+
+    expect(logger.warn).not.toHaveBeenCalled();
   });
 
   it("logs a warning when connection is not found", () => {
