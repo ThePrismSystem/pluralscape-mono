@@ -69,7 +69,7 @@ describe("device-token.service (PGlite integration)", () => {
     expect(result.id).toMatch(/^dt_/);
     expect(result.systemId).toBe(systemId);
     expect(result.platform).toBe("ios");
-    expect(result.token).toBe("apns-token-abc");
+    expect(result.token).toBe("***oken-abc");
     expect(result.createdAt).toBeTypeOf("number");
   });
 
@@ -92,7 +92,7 @@ describe("device-token.service (PGlite integration)", () => {
 
     // Should return same record (upsert, not duplicate)
     expect(second.id).toBe(first.id);
-    expect(second.token).toBe("fcm-token-xyz");
+    expect(second.token).toBe("***token-xyz");
   });
 
   it("creates separate record for same token on different platform", async () => {
@@ -231,11 +231,11 @@ describe("device-token.service (PGlite integration)", () => {
     expect(ids[1]).toBe(t1.id);
   });
 
-  // ── upsert ownership reassignment ───────────────────────────────────
+  // ── upsert ownership protection ─────────────────────────────────────
 
-  it("reassigns token ownership on re-registration by different account", async () => {
+  it("does not reassign token ownership when different account registers same token", async () => {
     // Account A registers a token
-    await registerDeviceToken(
+    const original = await registerDeviceToken(
       asDb(db),
       systemId,
       { platform: "ios", token: "reassign-test-token" },
@@ -243,28 +243,38 @@ describe("device-token.service (PGlite integration)", () => {
       noopAudit,
     );
 
-    // Account B registers the same token+platform
+    // Account B tries to register the same token+platform
     const otherAccountId = (await pgInsertAccount(db)) as AccountId;
     const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
     const otherAuth = makeAuth(otherAccountId, otherSystemId);
 
+    const audit = spyAudit();
     const result = await registerDeviceToken(
       asDb(db),
       otherSystemId,
       { platform: "ios", token: "reassign-test-token" },
       otherAuth,
-      noopAudit,
+      audit,
     );
 
-    // Token should now belong to account B
+    // Should return a result (no error) but not modify the DB row
     expect(result.systemId).toBe(otherSystemId);
+    expect(result.token).toBe("***est-token");
 
-    // Verify in DB that accountId was updated
+    // No audit event should be written for the no-op
+    expect(audit.calls).toHaveLength(0);
+
+    // Verify in DB that accountId was NOT reassigned — still belongs to account A
     const [row] = await db
-      .select({ accountId: deviceTokens.accountId })
+      .select({ accountId: deviceTokens.accountId, systemId: deviceTokens.systemId })
       .from(deviceTokens)
-      .where(eq(deviceTokens.id, result.id));
-    expect(row?.accountId).toBe(otherAccountId);
+      .where(eq(deviceTokens.token, "reassign-test-token"));
+    expect(row?.accountId).toBe(accountId);
+    expect(row?.systemId).toBe(systemId);
+
+    // Original account can still see the token in their list
+    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
+    expect(tokens.some((t) => t.id === original.id)).toBe(true);
   });
 
   it("clears revokedAt on re-registration of revoked token", async () => {
@@ -290,6 +300,33 @@ describe("device-token.service (PGlite integration)", () => {
     // Should appear in list (revokedAt cleared)
     const tokens = await listDeviceTokens(asDb(db), systemId, auth);
     expect(tokens.map((t) => t.id)).toContain(reregistered.id);
+  });
+
+  // ── registration masks tokens ──────────────────────────────────────
+
+  it("masks token in registration response", async () => {
+    const result = await registerDeviceToken(
+      asDb(db),
+      systemId,
+      { platform: "ios", token: "a-very-long-registration-token" },
+      auth,
+      noopAudit,
+    );
+
+    expect(result.token).toBe("***on-token");
+    expect(result.token).not.toContain("a-very-long");
+  });
+
+  it("returns short tokens unmasked in registration response", async () => {
+    const result = await registerDeviceToken(
+      asDb(db),
+      systemId,
+      { platform: "ios", token: "short" },
+      auth,
+      noopAudit,
+    );
+
+    expect(result.token).toBe("short");
   });
 
   // ── list masks tokens ─────────────────────────────────────────────
