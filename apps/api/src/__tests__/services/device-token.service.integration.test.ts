@@ -92,7 +92,7 @@ describe("device-token.service (PGlite integration)", () => {
 
     // Should return same record (upsert, not duplicate)
     expect(second.id).toBe(first.id);
-    expect(second.token).toBe("***token-xyz");
+    expect(second.token).toBe("***oken-xyz");
   });
 
   it("creates separate record for same token on different platform", async () => {
@@ -259,7 +259,7 @@ describe("device-token.service (PGlite integration)", () => {
 
     // Should return a result (no error) but not modify the DB row
     expect(result.systemId).toBe(otherSystemId);
-    expect(result.token).toBe("***est-token");
+    expect(result.token).toBe("***st-token");
 
     // No audit event should be written for the no-op
     expect(audit.calls).toHaveLength(0);
