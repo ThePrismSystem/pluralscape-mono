@@ -1,5 +1,5 @@
 import { KEY_ROTATION } from "@pluralscape/types";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export const InitiateRotationBodySchema = z.object({
   wrappedNewKey: z.string().min(1),

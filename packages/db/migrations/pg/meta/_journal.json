@@ -8,6 +8,13 @@
       "when": 1774642661515,
       "tag": "0000_nosy_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774734632060,
+      "tag": "0001_tidy_gamma_corps",
+      "breakpoints": true
     }
   ]
 }
