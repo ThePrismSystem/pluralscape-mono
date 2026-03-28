@@ -383,6 +383,43 @@ test.describe("Bucket export", () => {
       expect(res.status()).toBe(HTTP_BAD_REQUEST);
     });
 
+    test("returns ETag header on paginated export", async ({ request, authHeaders }) => {
+      const systemId = await getSystemId(request, authHeaders);
+      const bucket = await createBucket(request, authHeaders, systemId, "Page ETag");
+      const member = await createMember(request, authHeaders, systemId, "Page ETag M1");
+      await tagEntityWithBucket(request, authHeaders, systemId, bucket.id, "member", member.id);
+
+      const res = await request.get(
+        `/v1/systems/${systemId}/buckets/${bucket.id}/export?entityType=member`,
+        { headers: authHeaders },
+      );
+      expect(res.status()).toBe(HTTP_OK);
+      expect(res.headers()["etag"]).toBeTruthy();
+    });
+
+    test("returns 304 when If-None-Match matches on paginated export", async ({
+      request,
+      authHeaders,
+    }) => {
+      const systemId = await getSystemId(request, authHeaders);
+      const bucket = await createBucket(request, authHeaders, systemId, "Page 304");
+      const member = await createMember(request, authHeaders, systemId, "Page 304 M1");
+      await tagEntityWithBucket(request, authHeaders, systemId, bucket.id, "member", member.id);
+
+      const firstRes = await request.get(
+        `/v1/systems/${systemId}/buckets/${bucket.id}/export?entityType=member`,
+        { headers: authHeaders },
+      );
+      expect(firstRes.status()).toBe(HTTP_OK);
+      const etag = firstRes.headers()["etag"] ?? "";
+
+      const secondRes = await request.get(
+        `/v1/systems/${systemId}/buckets/${bucket.id}/export?entityType=member`,
+        { headers: { ...authHeaders, "If-None-Match": etag } },
+      );
+      expect(secondRes.status()).toBe(HTTP_NOT_MODIFIED);
+    });
+
     test("full pagination traversal collects all entities", async ({ request, authHeaders }) => {
       const systemId = await getSystemId(request, authHeaders);
       const bucket = await createBucket(request, authHeaders, systemId, "Full Page Bucket");

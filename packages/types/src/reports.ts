@@ -1,7 +1,10 @@
-import type { BucketId, SystemId } from "./ids.js";
+import type { Brand, BucketId, SystemId } from "./ids.js";
 import type { PaginatedResult } from "./pagination.js";
 import type { BucketContentEntityType } from "./privacy.js";
 import type { UnixMillis } from "./timestamps.js";
+
+/** Branded string identifying an entity within a bucket export page. */
+export type ExportEntityId = Brand<string, "ExportEntityId">;
 
 // ── Report type discriminant ──────────────────────────────────────
 
@@ -42,8 +45,8 @@ export type ReportConfig = MemberByBucketReportConfig | MeetOurSystemReportConfi
 // ── Report data types (client-side plaintext after decryption) ────
 
 /** Per-entity-type arrays of decrypted entity records. */
-export type ReportEntitySet = {
-  readonly [K in BucketContentEntityType]: readonly Record<string, unknown>[];
+export type ReportEntitySet<TRecord extends Record<string, unknown> = Record<string, unknown>> = {
+  readonly [K in BucketContentEntityType]: readonly TRecord[];
 };
 
 /** Client-side report data for a member-by-bucket report. */
@@ -87,7 +90,7 @@ export interface BucketExportManifestResponse {
 
 /** A single entity in a bucket export page. */
 export interface BucketExportEntity {
-  readonly id: string;
+  readonly id: ExportEntityId;
   readonly entityType: BucketContentEntityType;
   readonly encryptedData: string;
   readonly updatedAt: UnixMillis;

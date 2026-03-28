@@ -11,6 +11,7 @@ import type {
   BucketExportManifestResponse,
   BucketExportPageResponse,
   BucketId,
+  ExportEntityId,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -56,7 +57,7 @@ const MOCK_MANIFEST: BucketExportManifestResponse = {
 const MOCK_PAGE: BucketExportPageResponse = {
   items: [
     {
-      id: "mem_550e8400-e29b-41d4-a716-446655440000",
+      id: "mem_550e8400-e29b-41d4-a716-446655440000" as ExportEntityId,
       entityType: "member",
       encryptedData: "dGVzdA==",
       updatedAt: 1000 as UnixMillis,
@@ -113,6 +114,17 @@ describe("GET /systems/:systemId/buckets/:bucketId/export/manifest", () => {
     const res = await createApp().request(badUrl);
 
     expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when service throws NOT_FOUND", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(getBucketExportManifest).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
+    );
+
+    const res = await createApp().request(MANIFEST_URL);
+
+    expect(res.status).toBe(404);
   });
 });
 
@@ -182,5 +194,16 @@ describe("GET /systems/:systemId/buckets/:bucketId/export", () => {
       25,
       "abc",
     );
+  });
+
+  it("returns 404 when service throws NOT_FOUND", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(getBucketExportPage).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
+    );
+
+    const res = await createApp().request(`${EXPORT_URL}?entityType=member`);
+
+    expect(res.status).toBe(404);
   });
 });

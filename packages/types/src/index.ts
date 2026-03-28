@@ -189,6 +189,7 @@ export { FRIEND_EXPORT_ENTITY_TYPES, isFriendExportEntityType } from "./friend-e
 // ── Reports ────────────────────────────────────────────────────────
 export type {
   ReportType,
+  ExportEntityId,
   MemberByBucketReportConfig,
   MeetOurSystemReportConfig,
   ReportConfig,

@@ -88,10 +88,12 @@ export interface BucketExportQueryFns {
  * Produces: (sortCol > cursor.sortValue) OR (sortCol = cursor.sortValue AND idCol > cursor.id)
  */
 function keysetAfter(sortCol: PgColumn, idCol: PgColumn, cursor: DecodedCompositeCursor): SQL {
-  return or(
+  const result = or(
     gt(sortCol, cursor.sortValue),
     and(eq(sortCol, cursor.sortValue), gt(idCol, cursor.id)),
-  ) as SQL;
+  );
+  if (!result) throw new Error("keysetAfter: or() returned undefined");
+  return result;
 }
 
 // ── Table reference ─────────────────────────────────────────────────

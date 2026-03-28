@@ -25,6 +25,7 @@ import type {
   BucketExportManifestResponse,
   BucketExportPageResponse,
   BucketId,
+  ExportEntityId,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -78,20 +79,13 @@ async function buildManifestEntries(
   const entityTypes = Object.keys(BUCKET_EXPORT_TABLE_REGISTRY) as BucketContentEntityType[];
 
   return Promise.all(
-    entityTypes.map((entityType) => buildManifestEntry(tx, systemId, bucketId, entityType)),
+    entityTypes.map(async (entityType) => {
+      const { count, maxUpdatedAt } = await BUCKET_EXPORT_TABLE_REGISTRY[
+        entityType
+      ].queryManifestCount(tx, systemId, bucketId);
+      return { entityType, count, lastUpdatedAt: maxUpdatedAt };
+    }),
   );
-}
-
-/** Build a single manifest entry using an efficient JOIN-based count query. */
-async function buildManifestEntry(
-  tx: PostgresJsDatabase,
-  systemId: SystemId,
-  bucketId: BucketId,
-  entityType: BucketContentEntityType,
-): Promise<BucketExportManifestEntry> {
-  const queryFns = BUCKET_EXPORT_TABLE_REGISTRY[entityType];
-  const { count, maxUpdatedAt } = await queryFns.queryManifestCount(tx, systemId, bucketId);
-  return { entityType, count, lastUpdatedAt: maxUpdatedAt };
 }
 
 // ── Paginated export ───────────────────────────────────────────────
@@ -128,7 +122,7 @@ export async function getBucketExportPage(
     const pageRows = hasMore ? rows.slice(0, limit) : rows;
 
     const items: BucketExportEntity[] = pageRows.map((r: BucketExportRow) => ({
-      id: r.id,
+      id: r.id as ExportEntityId,
       entityType,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
       updatedAt: r.updatedAt,
@@ -136,15 +130,10 @@ export async function getBucketExportPage(
 
     const lastItem = items[items.length - 1];
     const nextCursor =
-      hasMore && lastItem ? toCompositeCursor(lastItem.updatedAt as number, lastItem.id) : null;
+      hasMore && lastItem ? toCompositeCursor(lastItem.updatedAt, lastItem.id) : null;
 
-    // ETag from items on this page
-    let maxUpdatedAt: UnixMillis | null = null;
-    for (const item of items) {
-      if (maxUpdatedAt === null || item.updatedAt > maxUpdatedAt) {
-        maxUpdatedAt = item.updatedAt;
-      }
-    }
+    // ETag: items are ordered ASC, so the last item has the max updatedAt
+    const maxUpdatedAt: UnixMillis | null = lastItem?.updatedAt ?? null;
 
     return {
       items,

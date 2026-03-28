@@ -10,6 +10,7 @@ import type {
   BucketExportManifestEntry,
   BucketExportManifestResponse,
   BucketExportPageResponse,
+  ExportEntityId,
   MeetOurSystemReportConfig,
   MeetOurSystemReportData,
   MemberByBucketReportConfig,
@@ -143,6 +144,14 @@ describe("ReportEntitySet", () => {
   it("uses BucketContentEntityType as keys", () => {
     expectTypeOf<keyof ReportEntitySet>().toEqualTypeOf<BucketContentEntityType>();
   });
+
+  it("accepts a generic type parameter for record shape", () => {
+    interface MyRecord extends Record<string, unknown> {
+      readonly name: string;
+    }
+    type Typed = ReportEntitySet<MyRecord>;
+    expectTypeOf<Typed["member"]>().toEqualTypeOf<readonly MyRecord[]>();
+  });
 });
 
 describe("MemberByBucketReportData", () => {
@@ -227,7 +236,7 @@ describe("BucketExportManifestResponse", () => {
 
 describe("BucketExportEntity", () => {
   it("has correct field types", () => {
-    expectTypeOf<BucketExportEntity["id"]>().toBeString();
+    expectTypeOf<BucketExportEntity["id"]>().toEqualTypeOf<ExportEntityId>();
     expectTypeOf<BucketExportEntity["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
     expectTypeOf<BucketExportEntity["encryptedData"]>().toBeString();
     expectTypeOf<BucketExportEntity["updatedAt"]>().toEqualTypeOf<UnixMillis>();

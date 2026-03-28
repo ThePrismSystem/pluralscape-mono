@@ -24,12 +24,14 @@ import type {
   AccountId,
   BucketContentEntityType,
   BucketId,
+  CustomFrontId,
+  GroupId,
   MemberId,
   SystemId,
 } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const { buckets, bucketContentTags, members } = schema;
+const { buckets, bucketContentTags, members, groups, customFronts } = schema;
 
 /** Number of entity types in the bucket export registry. */
 const EXPECTED_ENTITY_TYPE_COUNT = 21;
@@ -107,6 +109,8 @@ describe("bucket-export.service (PGlite integration)", () => {
   afterEach(async () => {
     await db.delete(bucketContentTags);
     await db.delete(members);
+    await db.delete(groups);
+    await db.delete(customFronts);
     await db.delete(buckets);
   });
 
@@ -138,6 +142,33 @@ describe("bucket-export.service (PGlite integration)", () => {
       updatedAt: ts,
     });
     return id as MemberId;
+  }
+
+  async function insertGroup(updatedAt?: number): Promise<GroupId> {
+    const id = createId(ID_PREFIXES.group);
+    const ts = updatedAt ?? now();
+    await db.insert(groups).values({
+      id,
+      systemId,
+      sortOrder: 0,
+      encryptedData: testBlob(),
+      createdAt: ts,
+      updatedAt: ts,
+    });
+    return id as GroupId;
+  }
+
+  async function insertCustomFront(updatedAt?: number): Promise<CustomFrontId> {
+    const id = createId(ID_PREFIXES.customFront);
+    const ts = updatedAt ?? now();
+    await db.insert(customFronts).values({
+      id,
+      systemId,
+      encryptedData: testBlob(),
+      createdAt: ts,
+      updatedAt: ts,
+    });
+    return id as CustomFrontId;
   }
 
   async function insertBucketTag(
@@ -422,5 +453,77 @@ describe("bucket-export.service (PGlite integration)", () => {
       "NOT_FOUND",
       404,
     );
+  });
+
+  // ── Entity type coverage ──────────────────────────────────────────
+
+  it("returns correct manifest count for groups", async () => {
+    const bucketId = await insertBucket();
+    const g1 = await insertGroup();
+    await insertBucketTag("group", g1, bucketId);
+
+    const manifest = await getBucketExportManifest(asDb(db), systemId, bucketId, ownerAuth);
+
+    const groupEntry = manifest.entries.find((e) => e.entityType === "group");
+    expect(groupEntry?.count).toBe(1);
+  });
+
+  it("returns correct manifest count for custom-fronts", async () => {
+    const bucketId = await insertBucket();
+    const cf1 = await insertCustomFront();
+    await insertBucketTag("custom-front", cf1, bucketId);
+
+    const manifest = await getBucketExportManifest(asDb(db), systemId, bucketId, ownerAuth);
+
+    const cfEntry = manifest.entries.find((e) => e.entityType === "custom-front");
+    expect(cfEntry?.count).toBe(1);
+  });
+
+  it("exports group entities tagged with the bucket", async () => {
+    const bucketId = await insertBucket();
+    const g1 = await insertGroup();
+    await insertBucketTag("group", g1, bucketId);
+
+    const page = await getBucketExportPage(asDb(db), systemId, bucketId, ownerAuth, "group", 10);
+
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]?.id).toBe(g1);
+    expect(page.items[0]?.entityType).toBe("group");
+  });
+
+  it("exports custom-front entities tagged with the bucket", async () => {
+    const bucketId = await insertBucket();
+    const cf1 = await insertCustomFront();
+    await insertBucketTag("custom-front", cf1, bucketId);
+
+    const page = await getBucketExportPage(
+      asDb(db),
+      systemId,
+      bucketId,
+      ownerAuth,
+      "custom-front",
+      10,
+    );
+
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]?.id).toBe(cf1);
+    expect(page.items[0]?.entityType).toBe("custom-front");
+  });
+
+  // ── ETag invalidation ─────────────────────────────────────────────
+
+  it("manifest ETag changes when a new entity is tagged", async () => {
+    const bucketId = await insertBucket();
+    const m1 = await insertMember();
+    await insertBucketTag("member", m1, bucketId);
+
+    const manifest1 = await getBucketExportManifest(asDb(db), systemId, bucketId, ownerAuth);
+
+    const m2 = await insertMember(now() + 5000);
+    await insertBucketTag("member", m2, bucketId);
+
+    const manifest2 = await getBucketExportManifest(asDb(db), systemId, bucketId, ownerAuth);
+
+    expect(manifest1.etag).not.toBe(manifest2.etag);
   });
 });
