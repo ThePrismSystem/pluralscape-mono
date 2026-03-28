@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { MAX_PAGE_LIMIT } from "../service.constants.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -206,7 +207,8 @@ export async function listNotificationConfigs(
       .from(notificationConfigs)
       .where(
         and(eq(notificationConfigs.systemId, systemId), eq(notificationConfigs.archived, false)),
-      );
+      )
+      .limit(MAX_PAGE_LIMIT);
 
     return rows.map(toNotificationConfigResult);
   });
