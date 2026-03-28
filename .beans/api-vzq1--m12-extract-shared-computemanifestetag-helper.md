@@ -1,6 +1,6 @@
 ---
 # api-vzq1
-title: 'M12: Extract shared computeManifestEtag helper'
+title: "M12: Extract shared computeManifestEtag helper"
 status: completed
 type: task
 priority: normal

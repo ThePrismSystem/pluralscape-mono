@@ -1,6 +1,6 @@
 ---
 # api-k4su
-title: 'M4: Batch manifest COUNT queries in export services'
+title: "M4: Batch manifest COUNT queries in export services"
 status: completed
 type: task
 priority: normal
