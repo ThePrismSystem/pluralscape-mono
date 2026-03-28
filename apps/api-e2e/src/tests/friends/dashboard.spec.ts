@@ -100,8 +100,8 @@ test.describe("Friend dashboard", () => {
       // System ID present
       expect(body.systemId).toBe(systemId);
 
-      // memberCount is unfiltered (both members counted)
-      expect(body.memberCount).toBe(2);
+      // memberCount is now bucket-filtered (only the tagged member counted)
+      expect(body.memberCount).toBe(1);
 
       // Only the tagged member is visible
       expect(body.visibleMembers).toHaveLength(1);
@@ -129,8 +129,8 @@ test.describe("Friend dashboard", () => {
     expect(res.status()).toBe(HTTP_OK);
     const body = (await res.json()) as DashboardResponse;
 
-    // memberCount still populated (unfiltered)
-    expect(body.memberCount).toBe(1);
+    // memberCount is bucket-filtered (no visible members with no buckets assigned)
+    expect(body.memberCount).toBe(0);
 
     // All filtered arrays are empty
     expect(body.visibleMembers).toEqual([]);
