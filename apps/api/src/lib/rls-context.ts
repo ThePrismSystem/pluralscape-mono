@@ -77,6 +77,28 @@ export async function withCrossAccountTransaction<T>(
   return db.transaction(async (tx) => fn(tx));
 }
 
+// ── Cross-Account Read Helper ────────────────────────────────────
+
+/**
+ * Execute a read-only query without RLS context.
+ *
+ * Use for cross-account reads where application-level validation
+ * replaces row-level security (e.g., friend dashboard reads data
+ * from a target system after verifying friend access).
+ *
+ * Callers MUST validate all inputs before using this helper — no RLS safety net.
+ * Enforces `SET TRANSACTION READ ONLY` to prevent accidental writes.
+ */
+export async function withCrossAccountRead<T>(
+  db: PostgresJsDatabase,
+  fn: TxCallback<T>,
+): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SET TRANSACTION READ ONLY`);
+    return fn(tx);
+  });
+}
+
 // ── Read Helpers (SELECT-only operations) ────────────────────────
 
 /**
