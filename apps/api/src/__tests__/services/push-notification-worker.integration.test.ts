@@ -66,8 +66,12 @@ describe("push-notification-worker (PGlite integration)", () => {
     return { id, token };
   }
 
-  function makePayload(tokenId: DeviceTokenId): JobPayloadMap["notification-send"] {
+  function makePayload(
+    tokenId: DeviceTokenId,
+    overrides?: { accountId?: AccountId },
+  ): JobPayloadMap["notification-send"] {
     return {
+      accountId: overrides?.accountId ?? accountId,
       systemId,
       deviceTokenId: tokenId,
       platform: "ios",
@@ -100,6 +104,21 @@ describe("push-notification-worker (PGlite integration)", () => {
       .from(deviceTokens)
       .where(eq(deviceTokens.id, tokenId));
     expect(row?.lastActiveAt).not.toBeNull();
+  });
+
+  it("returns early without calling send when accountId does not match token owner", async () => {
+    const { id: tokenId } = await insertToken();
+    const sendSpy = vi.fn();
+    const provider: PushProvider = { send: sendSpy };
+    const wrongAccountId = `acct_${crypto.randomUUID()}` as AccountId;
+
+    await processPushNotification(
+      asDb(db),
+      makePayload(tokenId, { accountId: wrongAccountId }),
+      provider,
+    );
+
+    expect(sendSpy).not.toHaveBeenCalled();
   });
 
   it("returns early without calling send when token is revoked", async () => {

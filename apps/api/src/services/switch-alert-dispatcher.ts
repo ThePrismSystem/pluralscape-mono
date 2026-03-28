@@ -26,6 +26,9 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 /** The event type we check for switch alerts. */
 const SWITCH_ALERT_EVENT: FriendNotificationEventType = "friend-switch-alert";
 
+/** Maximum number of enqueue operations executed concurrently per dispatch. */
+export const ENQUEUE_CONCURRENCY = 10;
+
 /**
  * Dispatch switch alert notifications to all eligible friends after a fronting
  * session is created. Enqueues one `notification-send` job per active device
@@ -193,6 +196,7 @@ export async function dispatchSwitchAlertForSession(
     const allTokens = await db
       .select({
         id: deviceTokens.id,
+        accountId: deviceTokens.accountId,
         platform: deviceTokens.platform,
       })
       .from(deviceTokens)
@@ -200,29 +204,38 @@ export async function dispatchSwitchAlertForSession(
         and(inArray(deviceTokens.accountId, friendsWithVisibility), isNull(deviceTokens.revokedAt)),
       );
 
-    // 10. Enqueue one job per device token
-    for (const token of allTokens) {
-      try {
-        await queue.enqueue({
-          type: "notification-send",
-          systemId,
-          payload: {
+    // 10. Enqueue one job per device token with bounded concurrency
+    for (let i = 0; i < allTokens.length; i += ENQUEUE_CONCURRENCY) {
+      const batch = allTokens.slice(i, i + ENQUEUE_CONCURRENCY);
+      const results = await Promise.allSettled(
+        batch.map((token) =>
+          queue.enqueue({
+            type: "notification-send",
             systemId,
-            deviceTokenId: token.id as DeviceTokenId,
-            platform: token.platform,
             payload: {
-              title: "Switch Alert",
-              body: "A friend has switched fronters",
-              data: null,
+              accountId: token.accountId as AccountId,
+              systemId,
+              deviceTokenId: token.id as DeviceTokenId,
+              platform: token.platform,
+              payload: {
+                title: "Switch Alert",
+                body: "A friend has switched fronters",
+                data: null,
+              },
             },
-          },
-          idempotencyKey: `switch-alert:${sessionId}:${token.id}`,
-        });
-      } catch (err: unknown) {
-        logger.warn("[switch-alert] error enqueuing for token, skipping", {
-          deviceTokenId: token.id,
-          err: err instanceof Error ? err : new Error(String(err)),
-        });
+            idempotencyKey: `switch-alert:${sessionId}:${token.id}`,
+          }),
+        ),
+      );
+
+      for (const [idx, result] of results.entries()) {
+        if (result.status === "rejected") {
+          const token = batch[idx];
+          logger.warn("[switch-alert] error enqueuing for token, skipping", {
+            deviceTokenId: token?.id,
+            err: result.reason instanceof Error ? result.reason : new Error(String(result.reason)),
+          });
+        }
       }
     }
   } catch (err: unknown) {
