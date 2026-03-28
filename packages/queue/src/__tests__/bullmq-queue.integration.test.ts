@@ -13,6 +13,20 @@ import type { ValkeyTestContext } from "./valkey-container.js";
 import type { Logger, UnixMillis } from "@pluralscape/types";
 import type IORedis from "ioredis";
 
+// Safety net: BullMQ's Worker creates a private blockingConnection whose
+// teardown can produce unhandled "Connection is closed" rejections from ioredis
+// when close() races with connection initialization. This handler catches only
+// that specific ioredis error and is scoped to this test file's process.
+const ioredisRejectionHandler = (reason: unknown): void => {
+  if (reason instanceof Error && reason.message === "Connection is closed.") {
+    return;
+  }
+  // Throwing inside an unhandledRejection handler re-raises as an uncaught
+  // exception, which Vitest will still catch as a test failure.
+  throw reason;
+};
+process.on("unhandledRejection", ioredisRejectionHandler);
+
 const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 // Resolve Valkey availability before any tests run
@@ -36,6 +50,7 @@ function createQueue(options?: { clock?: () => UnixMillis; logger?: Logger }): B
 
 afterAll(async () => {
   await ctx.cleanup();
+  process.removeListener("unhandledRejection", ioredisRejectionHandler);
 }, 10_000);
 
 // ── Contract tests ─────────────────────────────────────────────────
@@ -48,8 +63,8 @@ afterEach(async () => {
   for (const w of activeWorkers) {
     try {
       if (w.isRunning()) await w.stop();
-    } catch {
-      // Worker may already be stopped
+    } catch (err) {
+      mockLogger.warn("teardown", { error: String(err) });
     }
   }
   activeWorkers.length = 0;
@@ -57,9 +72,13 @@ afterEach(async () => {
   for (const q of activeQueues) {
     try {
       await q.obliterate();
+    } catch (err) {
+      mockLogger.warn("teardown", { error: String(err) });
+    }
+    try {
       await q.close();
     } catch (err) {
-      console.error("Queue cleanup failed:", err);
+      mockLogger.warn("teardown", { error: String(err) });
     }
   }
   activeQueues.length = 0;
@@ -98,16 +117,13 @@ describe.skipIf(!ctx.available)("BullMQJobWorker", () => {
 describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
   let queue: BullMQJobQueue | undefined;
 
-  afterEach(async () => {
-    if (queue !== undefined) {
-      await queue.obliterate();
-      await queue.close();
-      queue = undefined;
-    }
+  afterEach(() => {
+    queue = undefined;
   });
 
   it("connects to Valkey and performs basic enqueue/dequeue", async () => {
     queue = createQueue();
+    activeQueues.push(queue);
     const job = await queue.enqueue(makeJobParams({ type: "sync-push" }));
     expect(job.status).toBe("pending");
 
@@ -120,6 +136,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
   it("detects stalled jobs with injectable clock", async () => {
     let currentTime = toUnixMillis(1000);
     queue = createQueue({ clock: () => currentTime });
+    activeQueues.push(queue);
 
     await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
     await queue.dequeue();
@@ -132,6 +149,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
 
   it("handles idempotency key re-use after completion", async () => {
     queue = createQueue();
+    activeQueues.push(queue);
     const key = "reuse-key";
     await queue.enqueue(makeJobParams({ idempotencyKey: key }));
     const first = await dequeueOrFail(queue);

@@ -35,6 +35,7 @@ import type {
 } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
+import type { RedisOptions } from "ioredis";
 
 /**
  * BullMQ-backed implementation of JobQueue.
@@ -49,11 +50,12 @@ export class BullMQJobQueue implements JobQueue {
   private readonly clock: () => UnixMillis;
   private readonly logger: Logger;
   private readonly queue: Queue;
-  private readonly fetchWorker: Worker;
+  private fetchWorker: Worker | null = null;
   private readonly redis: IORedis;
   private readonly prefix: string;
   private readonly token: string;
-  readonly name: string = "";
+  private readonly connOpts: RedisOptions;
+  readonly name: string;
 
   constructor(
     queueName: string,
@@ -68,13 +70,11 @@ export class BullMQJobQueue implements JobQueue {
     this.token = `token-${createId("tk_")}`;
 
     // Pass connection config (not the instance) to BullMQ so it creates and
-    // fully owns its internal connections. This prevents "Connection is closed"
-    // unhandled rejections during teardown — BullMQ's close() cleanly shuts
-    // down connections it created, but races with duplicated instances.
-    // Forwards auth, TLS, db, and sentinel options alongside host/port.
+    // fully owns its internal connections. Forwards auth, TLS, db, and
+    // sentinel options alongside host/port.
     const { host, port, password, username, db, tls, keyPrefix, sentinels, natMap } =
       connection.options;
-    const connOpts = {
+    this.connOpts = {
       host,
       port,
       ...(password !== undefined && { password }),
@@ -87,7 +87,7 @@ export class BullMQJobQueue implements JobQueue {
     };
 
     this.queue = new Queue(queueName, {
-      connection: connOpts,
+      connection: this.connOpts,
       defaultJobOptions: {
         removeOnComplete: false,
         removeOnFail: false,
@@ -95,20 +95,47 @@ export class BullMQJobQueue implements JobQueue {
       },
     });
 
-    // Worker without processor — used only for getNextJob() in dequeue()
-    this.fetchWorker = new Worker(queueName, undefined, {
-      connection: connOpts,
-      autorun: false,
+    // Prevent unhandled EventEmitter errors from BullMQ's internal connections
+    this.queue.on("error", (err: Error) => {
+      this.logger.warn("queue.connection-error", { error: extractErrorMessage(err) });
     });
+  }
+
+  /**
+   * Lazily creates the fetch worker on first dequeue() call.
+   *
+   * The fetch worker is a BullMQ Worker with autorun:false, used solely for
+   * getNextJob(). Creating it lazily avoids opening ioredis connections that
+   * may never be used — which prevents "Connection is closed" unhandled
+   * rejections when close() is called before the connections finish initializing.
+   */
+  private ensureFetchWorker(): Worker {
+    if (this.fetchWorker === null) {
+      this.fetchWorker = new Worker(this.name, undefined, {
+        connection: this.connOpts,
+        autorun: false,
+      });
+      this.fetchWorker.on("error", (err: Error) => {
+        this.logger.warn("queue.fetch-worker-error", { error: extractErrorMessage(err) });
+      });
+    }
+    return this.fetchWorker;
   }
 
   /** Closes BullMQ queue and worker connections. Call during cleanup. */
   async close(): Promise<void> {
-    try {
-      await this.fetchWorker.close();
-    } catch (err) {
-      this.logger.warn("queue.close-worker-error", { error: extractErrorMessage(err) });
+    if (this.fetchWorker !== null) {
+      // Wait for connections to finish initializing before closing. If closed
+      // while still initializing, BullMQ may use ioredis.disconnect() which
+      // rejects pending init commands as unhandled promise rejections.
+      await this.fetchWorker.waitUntilReady().catch(() => undefined);
+      try {
+        await this.fetchWorker.close();
+      } catch (err) {
+        this.logger.warn("queue.close-worker-error", { error: extractErrorMessage(err) });
+      }
     }
+    await this.queue.waitUntilReady().catch(() => undefined);
     try {
       await this.queue.close();
     } catch (err) {
@@ -246,10 +273,11 @@ export class BullMQJobQueue implements JobQueue {
     const putBack: BullMQJob[] = [];
     let result: JobDefinition | null = null;
 
+    const fetchWorker = this.ensureFetchWorker();
     try {
       for (let i = 0; i < MAX_DEQUEUE_BATCH; i++) {
         // getNextJob may return undefined when no jobs available
-        const job = (await this.fetchWorker.getNextJob(this.token)) as BullMQJob | undefined;
+        const job = (await fetchWorker.getNextJob(this.token)) as BullMQJob | undefined;
         if (job === undefined) break;
 
         const def = job.data as StoredJobData;
