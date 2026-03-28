@@ -1,7 +1,7 @@
 import { friendBucketAssignments, friendConnections, systems } from "@pluralscape/db/pg";
 import { and, eq } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_INTERNAL_SERVER_ERROR, HTTP_NOT_FOUND } from "../http.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 
@@ -53,6 +53,26 @@ export async function assertFriendAccess(
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
   }
 
+  // Find the inverse connection to load bucket assignments.
+  // The target system owner (A) assigned buckets to their connection record (A -> B).
+  // The caller (B) provided their connection record (B -> A).
+  const [inverseConnection] = await tx
+    .select({ id: friendConnections.id })
+    .from(friendConnections)
+    .where(
+      and(
+        eq(friendConnections.accountId, connection.friendAccountId),
+        eq(friendConnections.friendAccountId, connection.accountId),
+        eq(friendConnections.status, "accepted"),
+        eq(friendConnections.archived, false),
+      ),
+    )
+    .limit(1);
+
+  if (!inverseConnection) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend connection not found");
+  }
+
   // 4. Load bucket assignments (includes systemId)
   const assignments = await tx
     .select({
@@ -60,7 +80,7 @@ export async function assertFriendAccess(
       systemId: friendBucketAssignments.systemId,
     })
     .from(friendBucketAssignments)
-    .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
+    .where(eq(friendBucketAssignments.friendConnectionId, inverseConnection.id));
 
   const assignedBucketIds = assignments.map((a) => a.bucketId as BucketId);
 
@@ -70,6 +90,16 @@ export async function assertFriendAccess(
   const firstAssignment = assignments[0];
   if (firstAssignment) {
     targetSystemId = firstAssignment.systemId as SystemId;
+
+    // Validate all assignments reference the same system (data integrity check)
+    const mixedSystems = assignments.some((a) => a.systemId !== firstAssignment.systemId);
+    if (mixedSystems) {
+      throw new ApiHttpError(
+        HTTP_INTERNAL_SERVER_ERROR,
+        "INTERNAL_ERROR",
+        "Bucket assignments reference multiple systems",
+      );
+    }
   } else {
     const [system] = await tx
       .select({ id: systems.id })

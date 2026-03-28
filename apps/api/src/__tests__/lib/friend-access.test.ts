@@ -17,7 +17,9 @@ import type {
 const ACCOUNT_ID = "acc_owner" as AccountId;
 const FRIEND_ACCOUNT_ID = "acc_friend" as AccountId;
 const CONNECTION_ID = "fc_conn1" as FriendConnectionId;
+const INVERSE_CONNECTION_ID = "fc_inverse" as FriendConnectionId;
 const SYSTEM_ID = "sys_target" as SystemId;
+const SYSTEM_ID_B = "sys_other" as SystemId;
 const BUCKET_A = "bkt_aaa" as BucketId;
 const BUCKET_B = "bkt_bbb" as BucketId;
 
@@ -113,13 +115,28 @@ describe("assertFriendAccess", () => {
     );
   });
 
+  it("throws 404 when inverse connection not found", async () => {
+    const { db, chain } = mockDb();
+    // Connection found
+    chain.where.mockResolvedValueOnce([makeConnection()]);
+    // Inverse connection query: .where() chains to .limit() which returns empty
+    chain.limit.mockResolvedValueOnce([]);
+
+    await expect(assertFriendAccess(db, CONNECTION_ID, makeAuth())).rejects.toThrow(
+      "Friend connection not found",
+    );
+  });
+
   it("throws 404 when no bucket assignments and no systems for friend account", async () => {
     const { db, chain } = mockDb();
-    // First query: connection found
+    // First query (connection): .where() terminal
     chain.where.mockResolvedValueOnce([makeConnection()]);
-    // Second query: no bucket assignments
+    // Second query (inverse connection): .where() chains, .limit() terminal
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: INVERSE_CONNECTION_ID }]);
+    // Third query (bucket assignments): .where() terminal
     chain.where.mockResolvedValueOnce([]);
-    // Third query (via limit): no systems
+    // Fourth query (system fallback): .where() chains (default), .limit() terminal
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(assertFriendAccess(db, CONNECTION_ID, makeAuth())).rejects.toThrow(
@@ -129,11 +146,14 @@ describe("assertFriendAccess", () => {
 
   it("returns context with empty bucketIds when no assignments but system exists", async () => {
     const { db, chain } = mockDb();
-    // Connection found
+    // First query (connection): .where() terminal
     chain.where.mockResolvedValueOnce([makeConnection()]);
-    // No bucket assignments
+    // Second query (inverse connection): .where() chains, .limit() terminal
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: INVERSE_CONNECTION_ID }]);
+    // Third query (bucket assignments): .where() terminal
     chain.where.mockResolvedValueOnce([]);
-    // System fallback found
+    // Fourth query (system fallback): .where() chains (default), .limit() terminal
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
 
     const result = await assertFriendAccess(db, CONNECTION_ID, makeAuth());
@@ -148,9 +168,12 @@ describe("assertFriendAccess", () => {
 
   it("returns context with bucketIds and systemId from assignments", async () => {
     const { db, chain } = mockDb();
-    // Connection found
+    // First query (connection): .where() terminal
     chain.where.mockResolvedValueOnce([makeConnection()]);
-    // Bucket assignments found
+    // Second query (inverse connection): .where() chains, .limit() terminal
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: INVERSE_CONNECTION_ID }]);
+    // Third query (bucket assignments): .where() terminal
     chain.where.mockResolvedValueOnce([
       { bucketId: BUCKET_A, systemId: SYSTEM_ID },
       { bucketId: BUCKET_B, systemId: SYSTEM_ID },
@@ -164,5 +187,23 @@ describe("assertFriendAccess", () => {
       connectionId: CONNECTION_ID,
       assignedBucketIds: [BUCKET_A, BUCKET_B],
     });
+  });
+
+  it("throws 500 when bucket assignments reference multiple systems", async () => {
+    const { db, chain } = mockDb();
+    // First query (connection): .where() terminal
+    chain.where.mockResolvedValueOnce([makeConnection()]);
+    // Second query (inverse connection): .where() chains, .limit() terminal
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: INVERSE_CONNECTION_ID }]);
+    // Third query (bucket assignments): .where() terminal
+    chain.where.mockResolvedValueOnce([
+      { bucketId: BUCKET_A, systemId: SYSTEM_ID },
+      { bucketId: BUCKET_B, systemId: SYSTEM_ID_B },
+    ]);
+
+    await expect(assertFriendAccess(db, CONNECTION_ID, makeAuth())).rejects.toThrow(
+      "multiple systems",
+    );
   });
 });

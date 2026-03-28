@@ -1,5 +1,11 @@
 import { ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
-import { createBucket, createMember, getSystemId } from "../../fixtures/entity-helpers.js";
+import {
+  createBucket,
+  createCustomFront,
+  createFrontingSession,
+  createMember,
+  getSystemId,
+} from "../../fixtures/entity-helpers.js";
 import { expect, test } from "../../fixtures/friend.fixture.js";
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -21,15 +27,20 @@ const INITIAL_KEY_VERSION = 1;
 
 // ── Types ────────────────────────────────────────────────────────────
 
+interface FrontingSessionEntry {
+  readonly id: string;
+  readonly memberId: string;
+}
+
 interface DashboardResponse {
   readonly systemId: string;
   readonly memberCount: number;
   readonly activeFronting: {
-    readonly sessions: readonly unknown[];
+    readonly sessions: readonly FrontingSessionEntry[];
     readonly isCofronting: boolean;
   };
   readonly visibleMembers: readonly { readonly id: string; readonly encryptedData: string }[];
-  readonly visibleCustomFronts: readonly unknown[];
+  readonly visibleCustomFronts: readonly { readonly id: string }[];
   readonly visibleStructureEntities: readonly unknown[];
   readonly keyGrants: readonly {
     readonly id: string;
@@ -95,7 +106,8 @@ test.describe("Friend dashboard", () => {
       // Only the tagged member is visible
       expect(body.visibleMembers).toHaveLength(1);
       expect(body.visibleMembers[0]?.id).toBe(member1.id);
-      expect(body.visibleMembers[0]?.encryptedData).toBeTruthy();
+      expect(typeof body.visibleMembers[0]?.encryptedData).toBe("string");
+      expect(body.visibleMembers[0]?.encryptedData.length).toBeGreaterThan(0);
 
       // Key grants present
       expect(body.keyGrants).toHaveLength(1);
@@ -118,7 +130,7 @@ test.describe("Friend dashboard", () => {
     const body = (await res.json()) as DashboardResponse;
 
     // memberCount still populated (unfiltered)
-    expect(body.memberCount).toBeGreaterThanOrEqual(1);
+    expect(body.memberCount).toBe(1);
 
     // All filtered arrays are empty
     expect(body.visibleMembers).toEqual([]);
@@ -165,5 +177,146 @@ test.describe("Friend dashboard", () => {
       headers: accountB.headers,
     });
     expect(dashRes.status()).toBe(HTTP_NOT_FOUND);
+  });
+
+  test("returns active fronting sessions visible via member bucket tags", async ({
+    request,
+    friendAccounts: { accountA, accountB, connectionIdA, connectionIdB },
+  }) => {
+    const systemId = await getSystemId(request, accountA.headers);
+    const member = await createMember(request, accountA.headers, systemId, "Fronting Member");
+    const bucket = await createBucket(request, accountA.headers, systemId, "Session Bucket");
+
+    // Tag member with bucket
+    await test.step("tag member with bucket", async () => {
+      const res = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/tags`, {
+        headers: accountA.headers,
+        data: { entityType: "member", entityId: member.id },
+      });
+      expect(res.status()).toBe(HTTP_CREATED);
+    });
+
+    // Assign bucket to friend
+    await test.step("assign bucket to friend", async () => {
+      const res = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/friends`, {
+        headers: accountA.headers,
+        data: {
+          connectionId: connectionIdA,
+          encryptedBucketKey: DUMMY_ENCRYPTED_BUCKET_KEY,
+          keyVersion: INITIAL_KEY_VERSION,
+        },
+      });
+      expect(res.status()).toBe(HTTP_CREATED);
+    });
+
+    // Start fronting session
+    await createFrontingSession(request, accountA.headers, systemId, member.id);
+
+    // Dashboard should show the session
+    await test.step("dashboard returns active fronting session", async () => {
+      const res = await request.get(`/v1/account/friends/${connectionIdB}/dashboard`, {
+        headers: accountB.headers,
+      });
+      expect(res.status()).toBe(HTTP_OK);
+      const body = (await res.json()) as DashboardResponse;
+
+      expect(body.activeFronting.sessions).toHaveLength(1);
+      expect(body.activeFronting.sessions[0]?.memberId).toBe(member.id);
+      expect(body.activeFronting.isCofronting).toBe(false);
+    });
+  });
+
+  test("returns custom fronts visible via bucket tags", async ({
+    request,
+    friendAccounts: { accountA, accountB, connectionIdA, connectionIdB },
+  }) => {
+    const systemId = await getSystemId(request, accountA.headers);
+    const customFront = await createCustomFront(request, accountA.headers, systemId, "Test Front");
+    const bucket = await createBucket(request, accountA.headers, systemId, "CF Bucket");
+
+    await test.step("tag custom front with bucket", async () => {
+      const res = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/tags`, {
+        headers: accountA.headers,
+        data: { entityType: "custom-front", entityId: customFront.id },
+      });
+      expect(res.status()).toBe(HTTP_CREATED);
+    });
+
+    await test.step("assign bucket to friend", async () => {
+      const res = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/friends`, {
+        headers: accountA.headers,
+        data: {
+          connectionId: connectionIdA,
+          encryptedBucketKey: DUMMY_ENCRYPTED_BUCKET_KEY,
+          keyVersion: INITIAL_KEY_VERSION,
+        },
+      });
+      expect(res.status()).toBe(HTTP_CREATED);
+    });
+
+    await test.step("dashboard returns visible custom front", async () => {
+      const res = await request.get(`/v1/account/friends/${connectionIdB}/dashboard`, {
+        headers: accountB.headers,
+      });
+      expect(res.status()).toBe(HTTP_OK);
+      const body = (await res.json()) as DashboardResponse;
+
+      expect(body.visibleCustomFronts).toHaveLength(1);
+      expect(body.visibleCustomFronts[0]?.id).toBe(customFront.id);
+    });
+  });
+
+  test("detects co-fronting with multiple active sessions", async ({
+    request,
+    friendAccounts: { accountA, accountB, connectionIdA, connectionIdB },
+  }) => {
+    const systemId = await getSystemId(request, accountA.headers);
+    const memberA = await createMember(request, accountA.headers, systemId, "Co-Front Member A");
+    const memberB = await createMember(request, accountA.headers, systemId, "Co-Front Member B");
+    const bucket = await createBucket(request, accountA.headers, systemId, "Co-Front Bucket");
+
+    // Tag both members with the bucket
+    await test.step("tag members with bucket", async () => {
+      const resA = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/tags`, {
+        headers: accountA.headers,
+        data: { entityType: "member", entityId: memberA.id },
+      });
+      expect(resA.status()).toBe(HTTP_CREATED);
+
+      const resB = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/tags`, {
+        headers: accountA.headers,
+        data: { entityType: "member", entityId: memberB.id },
+      });
+      expect(resB.status()).toBe(HTTP_CREATED);
+    });
+
+    // Assign bucket to friend
+    await test.step("assign bucket to friend", async () => {
+      const res = await request.post(`/v1/systems/${systemId}/buckets/${bucket.id}/friends`, {
+        headers: accountA.headers,
+        data: {
+          connectionId: connectionIdA,
+          encryptedBucketKey: DUMMY_ENCRYPTED_BUCKET_KEY,
+          keyVersion: INITIAL_KEY_VERSION,
+        },
+      });
+      expect(res.status()).toBe(HTTP_CREATED);
+    });
+
+    // Start two fronting sessions (co-fronting)
+    await createFrontingSession(request, accountA.headers, systemId, memberA.id);
+    await createFrontingSession(request, accountA.headers, systemId, memberB.id);
+
+    // Dashboard should detect co-fronting
+    await test.step("dashboard returns co-fronting state", async () => {
+      const res = await request.get(`/v1/account/friends/${connectionIdB}/dashboard`, {
+        headers: accountB.headers,
+      });
+      expect(res.status()).toBe(HTTP_OK);
+      const body = (await res.json()) as DashboardResponse;
+
+      expect(body.activeFronting.sessions).toHaveLength(2);
+      expect(body.activeFronting.isCofronting).toBe(true);
+    });
   });
 });
