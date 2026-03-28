@@ -38,8 +38,7 @@ describe("computeDataEtag", () => {
   it("produces different ETags for null vs zero timestamp", () => {
     const a = computeDataEtag(null, 1);
     const b = computeDataEtag(ts(0), 1);
-    // null and 0 both map to "0" in the payload, so they are the same
-    expect(a).toBe(b);
+    expect(a).not.toBe(b);
   });
 });
 
@@ -62,5 +61,13 @@ describe("checkConditionalRequest", () => {
 
   it("returns false for empty string", () => {
     expect(checkConditionalRequest("", 'W/"abc"')).toBe(false);
+  });
+
+  it("returns true when ETag appears in comma-separated list", () => {
+    expect(checkConditionalRequest('W/"aaa", W/"abc", W/"def"', 'W/"abc"')).toBe(true);
+  });
+
+  it("returns false when no ETag in comma-separated list matches", () => {
+    expect(checkConditionalRequest('W/"aaa", W/"bbb"', 'W/"abc"')).toBe(false);
   });
 });

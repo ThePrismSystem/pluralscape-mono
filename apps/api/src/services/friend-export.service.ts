@@ -15,7 +15,9 @@ import { withCrossAccountRead } from "../lib/rls-context.js";
 import { queryActiveKeyGrants } from "./friend-dashboard.service.js";
 import { EXPORT_TABLE_REGISTRY } from "./friend-export.constants.js";
 
+import type { ExportRow } from "./friend-export.constants.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { DecodedCompositeCursor } from "../lib/pagination.js";
 import type {
   BucketId,
   FriendConnectionId,
@@ -28,6 +30,12 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+/** Over-fetch multiplier per batch to compensate for post-query bucket filtering. */
+const EXPORT_OVERFETCH_MULTIPLIER = 3;
+
+/** Maximum fetch iterations before returning a partial page. */
+const EXPORT_MAX_FETCH_ITERATIONS = 5;
 
 // ── Manifest ───────────────────────────────────────────────────────
 
@@ -51,10 +59,10 @@ export async function getFriendExportManifest(
     ]);
 
     // Compute overall ETag from all per-type max timestamps
-    const globalMaxUpdatedAt = entries.reduce<UnixMillis | null>((max, e) => {
-      if (e.lastUpdatedAt === null) return max;
-      if (max === null) return e.lastUpdatedAt;
-      return e.lastUpdatedAt > max ? e.lastUpdatedAt : max;
+    const globalMaxUpdatedAt = entries.reduce<UnixMillis | null>((acc, e) => {
+      if (e.lastUpdatedAt === null) return acc;
+      if (acc === null) return e.lastUpdatedAt;
+      return e.lastUpdatedAt > acc ? e.lastUpdatedAt : acc;
     }, null);
     const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
     const etag = computeDataEtag(globalMaxUpdatedAt, totalCount);
@@ -81,33 +89,16 @@ async function buildManifestEntries(
   );
 }
 
-/** Build a single manifest entry for one entity type. */
+/** Build a single manifest entry using an efficient JOIN-based count query. */
 async function buildManifestEntry(
   tx: PostgresJsDatabase,
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
   entityType: FriendExportEntityType,
 ): Promise<FriendExportManifestEntry> {
-  if (friendBucketIds.length === 0) {
-    return { entityType, count: 0, lastUpdatedAt: null };
-  }
-
   const queryFns = EXPORT_TABLE_REGISTRY[entityType];
-  const rows = await queryFns.queryManifestRows(tx, systemId);
-
-  const entityIds = rows.map((r) => r.id);
-  const bucketMap = await loadBucketTags(tx, systemId, entityType, entityIds);
-  const visible = filterVisibleEntities(rows, friendBucketIds, bucketMap, (r) => r.id);
-
-  let lastUpdatedAt: UnixMillis | null = null;
-  for (const r of visible) {
-    const ts = r.updatedAt as UnixMillis;
-    if (lastUpdatedAt === null || ts > lastUpdatedAt) {
-      lastUpdatedAt = ts;
-    }
-  }
-
-  return { entityType, count: visible.length, lastUpdatedAt };
+  const { count, maxUpdatedAt } = await queryFns.queryManifestCount(tx, systemId, friendBucketIds);
+  return { entityType, count, lastUpdatedAt: maxUpdatedAt };
 }
 
 // ── Paginated export ───────────────────────────────────────────────
@@ -140,7 +131,14 @@ export async function getFriendExportPage(
   });
 }
 
-/** Query, filter, and paginate entities for a single entity type. */
+/**
+ * Query, filter, and paginate entities for a single entity type.
+ *
+ * Uses a batched fetch loop to compensate for post-query bucket filtering:
+ * fetches up to EXPORT_OVERFETCH_MULTIPLIER * limit rows per iteration,
+ * accumulating visible items until the page is full or data is exhausted.
+ * This prevents empty-page loops when most entities are invisible to the friend.
+ */
 async function queryExportPage(
   tx: PostgresJsDatabase,
   systemId: SystemId,
@@ -154,33 +152,60 @@ async function queryExportPage(
   }
 
   const queryFns = EXPORT_TABLE_REGISTRY[entityType];
+  const batchSize = limit * EXPORT_OVERFETCH_MULTIPLIER;
 
-  // Decode cursor if provided
-  const cursorValues = cursor ? fromCompositeCursor(cursor, "export") : undefined;
+  const visible: FriendExportEntity[] = [];
+  let currentCursor: DecodedCompositeCursor | undefined = cursor
+    ? fromCompositeCursor(cursor, "export")
+    : undefined;
+  let dbExhausted = false;
+  let lastRawRow: ExportRow | undefined;
 
-  // Fetch limit+1 to detect hasMore
-  const rows = await queryFns.queryExportRows(tx, systemId, limit + 1, cursorValues);
+  for (let iter = 0; iter < EXPORT_MAX_FETCH_ITERATIONS && visible.length < limit; iter++) {
+    const rows = await queryFns.queryExportRows(tx, systemId, batchSize, currentCursor);
 
-  // Filter by bucket visibility
-  const entityIds = rows.map((r) => r.id);
-  const bucketMap = await loadBucketTags(tx, systemId, entityType, entityIds);
-  const visibleRows = filterVisibleEntities(rows, friendBucketIds, bucketMap, (r) => r.id);
+    if (rows.length === 0) {
+      dbExhausted = true;
+      break;
+    }
+    if (rows.length < batchSize) {
+      dbExhausted = true;
+    }
 
-  // Build paginated result
-  const hasMore = rows.length > limit;
-  const pageRows = visibleRows.slice(0, limit);
+    // Filter by bucket visibility
+    const entityIds = rows.map((r) => r.id);
+    const bucketMap = await loadBucketTags(tx, systemId, entityType, entityIds);
+    const visibleBatch = filterVisibleEntities(rows, friendBucketIds, bucketMap, (r) => r.id);
 
-  const items: FriendExportEntity[] = pageRows.map((r) => ({
-    id: r.id,
-    entityType,
-    encryptedData: encryptedBlobToBase64(r.encryptedData),
-    updatedAt: r.updatedAt as UnixMillis,
-  }));
+    for (const r of visibleBatch) {
+      visible.push({
+        id: r.id,
+        entityType,
+        encryptedData: encryptedBlobToBase64(r.encryptedData),
+        updatedAt: r.updatedAt,
+      });
+    }
 
-  // Cursor points to the last RAW row fetched (not filtered) so the next page
-  // starts after it, ensuring we don't skip or re-visit rows.
-  const lastRaw = rows.length > limit ? rows[limit - 1] : rows[rows.length - 1];
-  const nextCursor = hasMore && lastRaw ? toCompositeCursor(lastRaw.updatedAt, lastRaw.id) : null;
+    // Advance cursor past last raw row consumed (rows.length > 0 guaranteed by the early break above)
+    const lastRow = rows[rows.length - 1];
+    if (lastRow) {
+      lastRawRow = lastRow;
+      currentCursor = { sortValue: lastRawRow.updatedAt as number, id: lastRawRow.id };
+    }
+
+    if (dbExhausted) break;
+  }
+
+  // hasMore: true if we found excess visible items OR the DB still has rows
+  const hasMore = visible.length > limit || !dbExhausted;
+  const items = visible.slice(0, limit);
+
+  // Cursor points to the last visible item returned (not the last raw row).
+  // This ensures the next page starts right after the last item the client received,
+  // re-fetching any invisible rows between visible items as expected.
+  const lastItem = items[items.length - 1];
+  const nextCursor =
+    hasMore && lastItem ? toCompositeCursor(lastItem.updatedAt as number, lastItem.id) : null;
 
   // ETag from visible items on this page
   let maxUpdatedAt: UnixMillis | null = null;
@@ -189,14 +214,13 @@ async function queryExportPage(
       maxUpdatedAt = item.updatedAt;
     }
   }
-  const etag = computeDataEtag(maxUpdatedAt, items.length);
 
   return {
     items,
     nextCursor,
     hasMore,
     totalCount: null,
-    etag,
+    etag: computeDataEtag(maxUpdatedAt, items.length),
   };
 }
 

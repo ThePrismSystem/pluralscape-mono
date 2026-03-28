@@ -1,19 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  checkBucketAccess,
-  filterVisibleEntities,
-  loadBucketTags,
-} from "../../lib/bucket-access.js";
+import { checkBucketAccess, filterVisibleEntities } from "../../lib/bucket-access.js";
 
 import type { BucketAccessCheck, BucketId } from "@pluralscape/types";
-
-// Verify loadBucketTags is exported (actual DB behavior tested in integration tests)
-describe("loadBucketTags", () => {
-  it("is exported as a function", () => {
-    expect(typeof loadBucketTags).toBe("function");
-  });
-});
 
 const bkt = (id: string): BucketId => id as BucketId;
 

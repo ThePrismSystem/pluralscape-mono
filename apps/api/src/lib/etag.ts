@@ -12,7 +12,7 @@ const ETAG_HASH_LENGTH = 16;
  * entities are added, removed, or modified.
  */
 export function computeDataEtag(maxUpdatedAt: UnixMillis | null, entityCount: number): string {
-  const payload = `${String(maxUpdatedAt ?? 0)}:${String(entityCount)}`;
+  const payload = `${maxUpdatedAt === null ? "null" : String(maxUpdatedAt)}:${String(entityCount)}`;
   const hash = createHash("sha256").update(payload).digest("hex").slice(0, ETAG_HASH_LENGTH);
   return `W/"${hash}"`;
 }
@@ -28,5 +28,5 @@ export function checkConditionalRequest(
 ): boolean {
   if (!requestEtag) return false;
   if (requestEtag === "*") return true;
-  return requestEtag === currentEtag;
+  return requestEtag.split(",").some((tag) => tag.trim() === currentEtag);
 }

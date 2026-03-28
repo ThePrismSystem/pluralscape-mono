@@ -10,9 +10,9 @@ describe("EXPORT_TABLE_REGISTRY", () => {
     }
   });
 
-  it("each entry has queryManifestRows and queryExportRows functions", () => {
+  it("each entry has queryManifestCount and queryExportRows functions", () => {
     for (const [entityType, entry] of Object.entries(EXPORT_TABLE_REGISTRY)) {
-      expect(typeof entry.queryManifestRows, `${entityType}: queryManifestRows`).toBe("function");
+      expect(typeof entry.queryManifestCount, `${entityType}: queryManifestCount`).toBe("function");
       expect(typeof entry.queryExportRows, `${entityType}: queryExportRows`).toBe("function");
     }
   });
