@@ -12,6 +12,7 @@ import {
   withAccountTransaction,
   withCrossAccountTransaction,
 } from "../lib/rls-context.js";
+import { isUniqueViolation } from "../lib/unique-violation.js";
 
 import {
   FRIEND_CODE_BYTES,
@@ -152,9 +153,7 @@ export async function generateFriendCode(
           .returning();
         break;
       } catch (err: unknown) {
-        const isUniqueViolation =
-          err instanceof Error && "code" in err && (err as { code: string }).code === "23505";
-        if (!isUniqueViolation || attempt === MAX_CODE_GENERATION_RETRIES) {
+        if (!isUniqueViolation(err) || attempt === MAX_CODE_GENERATION_RETRIES) {
           throw err;
         }
       }
