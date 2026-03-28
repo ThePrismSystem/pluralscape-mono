@@ -13,7 +13,7 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 
 export const redeemRoute = new Hono<AuthEnv>();
 
-redeemRoute.use("*", createCategoryRateLimiter("write"));
+redeemRoute.use("*", createCategoryRateLimiter("friendCodeRedeem"));
 
 redeemRoute.post("/redeem", async (c) => {
   const auth = c.get("auth");
