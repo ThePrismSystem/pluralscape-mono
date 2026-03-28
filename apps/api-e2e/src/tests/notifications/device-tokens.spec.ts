@@ -33,7 +33,7 @@ test.describe("Device tokens", () => {
       const body = (await res.json()) as DeviceTokenResponse;
       expect(body.id).toMatch(/^dt_/);
       expect(body.platform).toBe("ios");
-      expect(body.token).toBe("e2e-apns-token-abc");
+      expect(body.token).toBe("***oken-abc");
       expect(body.systemId).toBe(systemId);
       tokenId = body.id;
     });
