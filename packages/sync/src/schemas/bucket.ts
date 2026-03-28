@@ -48,4 +48,23 @@ export interface BucketProjectionDocument {
   channels: Record<string, CrdtChannel>;
   /** scope: "chat" — projected chat messages (append-only). */
   messages: CrdtChatMessage[];
+  /** Friend dashboard snapshot for offline client cache. */
+  dashboardSnapshot: CrdtDashboardSnapshot | null;
+}
+
+/**
+ * CRDT representation of a friend dashboard snapshot.
+ *
+ * Stored in bucket documents so friend clients (who sync bucket docs
+ * but not privacy-config docs) can cache dashboard state for offline access.
+ */
+export interface CrdtDashboardSnapshot {
+  /** Total non-archived member count (unfiltered). */
+  memberCount: number;
+  /** Whether the system is currently co-fronting. */
+  isCofronting: boolean;
+  /** Number of active fronting sessions visible to this friend. */
+  activeSessionCount: number;
+  /** Unix timestamp of when this snapshot was last updated. */
+  lastUpdatedAt: number;
 }

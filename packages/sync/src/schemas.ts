@@ -48,4 +48,4 @@ export type {
   CrdtKeyGrant,
   PrivacyConfigDocument,
 } from "./schemas/privacy-config.js";
-export type { BucketProjectionDocument } from "./schemas/bucket.js";
+export type { BucketProjectionDocument, CrdtDashboardSnapshot } from "./schemas/bucket.js";

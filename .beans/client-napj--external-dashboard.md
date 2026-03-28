@@ -5,7 +5,7 @@ status: in-progress
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-28T02:32:40Z
+updated_at: 2026-03-28T02:37:12Z
 parent: ps-6itw
 blocked_by:
   - api-e3hk
@@ -20,5 +20,5 @@ Friend-facing data access: active fronters with custom fronts/status, member cou
 - [x] 4.2 Bucket-scoped data query helpers
 - [x] 4.3 Friend dashboard response types
 - [x] 4.4 Friend dashboard endpoint
-- [ ] 4.5 Friend dashboard CRDT sync
+- [x] 4.5 Friend dashboard CRDT sync
 - [ ] 4.6 Dashboard E2E tests + OpenAPI
