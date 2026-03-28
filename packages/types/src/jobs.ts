@@ -1,4 +1,11 @@
-import type { DeviceTokenId, JobId, SyncDocumentId, SystemId, WebhookDeliveryId } from "./ids.js";
+import type {
+  AccountId,
+  DeviceTokenId,
+  JobId,
+  SyncDocumentId,
+  SystemId,
+  WebhookDeliveryId,
+} from "./ids.js";
 import type { DeviceTokenPlatform } from "./notifications.js";
 import type { UnixMillis } from "./timestamps.js";
 
@@ -54,6 +61,7 @@ export interface JobPayloadMap {
     readonly payload: Readonly<Record<string, unknown>>;
   };
   "notification-send": {
+    readonly accountId: AccountId;
     readonly systemId: SystemId;
     readonly deviceTokenId: DeviceTokenId;
     readonly platform: DeviceTokenPlatform;
