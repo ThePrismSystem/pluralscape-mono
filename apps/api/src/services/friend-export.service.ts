@@ -5,10 +5,10 @@
  * client-side search indexing. The server returns encrypted blobs — all
  * search happens client-side (zero-knowledge).
  */
+import { batchedManifestQueries } from "../lib/batch.js";
 import { filterVisibleEntities, loadBucketTags } from "../lib/bucket-access.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { computeDataEtag, computeManifestEtag } from "../lib/etag.js";
-import { batchedManifestQueries } from "../lib/export-table-ref.js";
 import { assertFriendAccess } from "../lib/friend-access.js";
 import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withCrossAccountRead } from "../lib/rls-context.js";

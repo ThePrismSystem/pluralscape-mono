@@ -1,6 +1,8 @@
+import { members } from "@pluralscape/db/pg";
 import { describe, expect, it } from "vitest";
 
-import { batchedManifestQueries, exportRef, keysetAfter } from "../../lib/export-table-ref.js";
+import { batchedManifestQueries, MANIFEST_BATCH_SIZE } from "../../lib/batch.js";
+import { exportRef, keysetAfter } from "../../lib/export-table-ref.js";
 
 import type { DecodedCompositeCursor } from "../../lib/pagination.js";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
@@ -61,10 +63,6 @@ describe("keysetAfter", () => {
     // which requires real PgColumn instances to produce SQL. We test that it
     // doesn't throw and returns a truthy value — deeper SQL correctness is
     // covered by integration tests.
-    //
-    // Import a real table to get actual PgColumn instances:
-    // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-    const { members } = require("@pluralscape/db/pg") as typeof import("@pluralscape/db/pg");
     const cursor: DecodedCompositeCursor = { sortValue: 1000, id: "test-id" };
 
     const result = keysetAfter(members.updatedAt, members.id, cursor);
@@ -82,7 +80,11 @@ describe("batchedManifestQueries", () => {
   });
 
   it("executes all tasks and returns results in order", async () => {
-    const tasks = [() => Promise.resolve("a"), () => Promise.resolve("b"), () => Promise.resolve("c")];
+    const tasks = [
+      () => Promise.resolve("a"),
+      () => Promise.resolve("b"),
+      () => Promise.resolve("c"),
+    ];
 
     const result = await batchedManifestQueries(tasks);
 
@@ -104,13 +106,12 @@ describe("batchedManifestQueries", () => {
       return value;
     };
 
-    // Create 12 tasks — should run in batches of 5 (5 + 5 + 2)
+    // Create 12 tasks — should run in batches of MANIFEST_BATCH_SIZE
     const tasks = Array.from({ length: 12 }, (_, i) => makeTask(i));
     const result = await batchedManifestQueries(tasks);
 
     expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    // MANIFEST_BATCH_SIZE is 5, so max concurrent should be at most 5
-    expect(maxConcurrent).toBeLessThanOrEqual(5);
+    expect(maxConcurrent).toBeLessThanOrEqual(MANIFEST_BATCH_SIZE);
   });
 
   it("runs batches sequentially — later batches start after earlier ones finish", async () => {
@@ -156,9 +157,9 @@ describe("batchedManifestQueries", () => {
   });
 
   it("handles exactly one batch worth of tasks", async () => {
-    const tasks = Array.from({ length: 5 }, (_, i) => () => Promise.resolve(i));
+    const tasks = Array.from({ length: MANIFEST_BATCH_SIZE }, (_, i) => () => Promise.resolve(i));
     const result = await batchedManifestQueries(tasks);
-    expect(result).toEqual([0, 1, 2, 3, 4]);
+    expect(result).toEqual(Array.from({ length: MANIFEST_BATCH_SIZE }, (_, i) => i));
   });
 
   it("handles single task", async () => {

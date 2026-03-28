@@ -6,9 +6,9 @@
  * bucket export uses a direct JOIN on bucket_content_tags — entities are
  * either tagged or not, so no overfetch loop is needed.
  */
+import { batchedManifestQueries } from "../lib/batch.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { computeDataEtag, computeManifestEtag } from "../lib/etag.js";
-import { batchedManifestQueries } from "../lib/export-table-ref.js";
 import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -73,14 +73,12 @@ async function buildManifestEntries(
   const entityTypes = Object.keys(BUCKET_EXPORT_TABLE_REGISTRY) as BucketContentEntityType[];
 
   return batchedManifestQueries(
-    entityTypes.map(
-      (entityType) => async () => {
-        const { count, maxUpdatedAt } = await BUCKET_EXPORT_TABLE_REGISTRY[
-          entityType
-        ].queryManifestCount(tx, systemId, bucketId);
-        return { entityType, count, lastUpdatedAt: maxUpdatedAt };
-      },
-    ),
+    entityTypes.map((entityType) => async () => {
+      const { count, maxUpdatedAt } = await BUCKET_EXPORT_TABLE_REGISTRY[
+        entityType
+      ].queryManifestCount(tx, systemId, bucketId);
+      return { entityType, count, lastUpdatedAt: maxUpdatedAt };
+    }),
   );
 }
 

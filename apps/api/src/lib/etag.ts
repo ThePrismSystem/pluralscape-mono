@@ -30,11 +30,9 @@ interface ManifestEtagEntry {
  * then delegates to computeDataEtag for the hash.
  */
 export function computeManifestEtag(entries: readonly ManifestEtagEntry[]): string {
-  const globalMaxUpdatedAt = entries.reduce<UnixMillis | null>((acc, e) => {
-    if (e.lastUpdatedAt === null) return acc;
-    if (acc === null) return e.lastUpdatedAt;
-    return e.lastUpdatedAt > acc ? e.lastUpdatedAt : acc;
-  }, null);
+  const timestamps = entries.map((e) => e.lastUpdatedAt).filter((t): t is UnixMillis => t !== null);
+  const globalMaxUpdatedAt: UnixMillis | null =
+    timestamps.length > 0 ? (Math.max(...timestamps) as UnixMillis) : null;
   const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
   return computeDataEtag(globalMaxUpdatedAt, totalCount);
 }
