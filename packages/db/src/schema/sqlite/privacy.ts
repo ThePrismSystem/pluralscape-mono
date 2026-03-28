@@ -63,6 +63,7 @@ export const bucketContentTags = sqliteTable(
     primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
     index("bucket_content_tags_bucket_id_idx").on(t.bucketId),
     index("bucket_content_tags_system_id_idx").on(t.systemId),
+    index("bucket_content_tags_system_entity_type_idx").on(t.systemId, t.entityType),
     check(
       "bucket_content_tags_entity_type_check",
       enumCheck(t.entityType, BUCKET_CONTENT_ENTITY_TYPES),
