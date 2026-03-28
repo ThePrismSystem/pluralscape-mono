@@ -171,6 +171,7 @@ export function createPrivacyConfigDocument(): Automerge.Doc<PrivacyConfigDocume
     friendConnections: {},
     friendCodes: {},
     keyGrants: {},
+    fieldBucketVisibility: {},
   });
 }
 

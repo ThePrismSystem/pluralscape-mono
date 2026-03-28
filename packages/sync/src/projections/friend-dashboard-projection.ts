@@ -11,12 +11,13 @@ import type { FriendDashboardResponse } from "@pluralscape/types";
  */
 export function projectDashboardSnapshot(
   dashboard: FriendDashboardResponse,
+  nowMs?: number,
 ): CrdtDashboardSnapshot {
   return {
     memberCount: dashboard.memberCount,
     isCofronting: dashboard.activeFronting.isCofronting,
     activeSessionCount: dashboard.activeFronting.sessions.length,
-    lastUpdatedAt: Date.now(),
+    lastUpdatedAt: nowMs ?? Date.now(),
   };
 }
 
@@ -28,6 +29,7 @@ export function projectDashboardSnapshot(
 export function applyDashboardSnapshotProjection(
   doc: BucketProjectionDocument,
   dashboard: FriendDashboardResponse,
+  nowMs?: number,
 ): void {
-  doc.dashboardSnapshot = projectDashboardSnapshot(dashboard);
+  doc.dashboardSnapshot = projectDashboardSnapshot(dashboard, nowMs);
 }

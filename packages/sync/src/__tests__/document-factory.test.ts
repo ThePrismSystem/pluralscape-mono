@@ -185,6 +185,21 @@ describe("Document factories", () => {
       expect(doc.keyGrants).toBeDefined();
     });
 
+    it("initializes fieldBucketVisibility as an empty object", () => {
+      const doc = createPrivacyConfigDocument();
+      expect(doc.fieldBucketVisibility).toEqual({});
+    });
+
+    it("allows writing to fieldBucketVisibility after creation", () => {
+      const doc = createPrivacyConfigDocument();
+      const updated = Automerge.change(doc, (d) => {
+        const fbv = d.fieldBucketVisibility;
+        if (fbv) fbv["fieldDef1_bucket1"] = true;
+      });
+      const fbv = updated.fieldBucketVisibility;
+      expect(fbv?.["fieldDef1_bucket1"]).toBe(true);
+    });
+
     it("all maps are initially empty", () => {
       const doc = createPrivacyConfigDocument();
       for (const key of [
@@ -193,8 +208,10 @@ describe("Document factories", () => {
         "friendConnections",
         "friendCodes",
         "keyGrants",
+        "fieldBucketVisibility",
       ] as const) {
-        expect(Object.keys(doc[key])).toHaveLength(0);
+        const val = doc[key];
+        expect(Object.keys(val ?? {})).toHaveLength(0);
       }
     });
 

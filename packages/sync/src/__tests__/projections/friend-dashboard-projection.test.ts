@@ -86,6 +86,22 @@ describe("projectDashboardSnapshot", () => {
     const result = projectDashboardSnapshot(makeDashboard({ memberCount: 0 }));
     expect(result.memberCount).toBe(0);
   });
+
+  it("uses provided nowMs when given", () => {
+    const fixedTime = 1600000000000;
+    const result = projectDashboardSnapshot(makeDashboard(), fixedTime);
+    expect(result.lastUpdatedAt).toBe(fixedTime);
+  });
+
+  it("falls back to Date.now() when nowMs is omitted", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1700000000000);
+
+    const result = projectDashboardSnapshot(makeDashboard());
+    expect(result.lastUpdatedAt).toBe(1700000000000);
+
+    vi.useRealTimers();
+  });
 });
 
 describe("applyDashboardSnapshotProjection", () => {
@@ -115,5 +131,16 @@ describe("applyDashboardSnapshotProjection", () => {
     });
 
     expect(doc.dashboardSnapshot?.memberCount).toBe(10);
+  });
+
+  it("passes nowMs through to projectDashboardSnapshot", () => {
+    const fixedTime = 1600000000000;
+    let doc = createBucketDocument();
+
+    doc = Automerge.change(doc, (d) => {
+      applyDashboardSnapshotProjection(d, makeDashboard(), fixedTime);
+    });
+
+    expect(doc.dashboardSnapshot?.lastUpdatedAt).toBe(fixedTime);
   });
 });

@@ -1,5 +1,5 @@
 import * as Automerge from "@automerge/automerge";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { fromDoc } from "../../factories/document-factory.js";
 import {
@@ -8,9 +8,11 @@ import {
   applyFriendConnectionProjection,
   applyKeyGrantProjection,
   archiveFriendCodeProjection,
+  archiveFriendConnectionProjection,
   projectFriendCode,
   projectFriendConnection,
   projectKeyGrant,
+  removeBucketAssignmentProjection,
   revokeKeyGrantProjection,
   updateFriendConnectionStatusProjection,
   updateFriendConnectionVisibilityProjection,
@@ -369,6 +371,126 @@ describe("addBucketAssignmentProjection", () => {
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
+  });
+});
+
+// ── removeBucketAssignmentProjection ────────────────────────────────
+
+describe("removeBucketAssignmentProjection", () => {
+  it("removes bucketId from assignedBuckets map", () => {
+    const input = makeFriendConnectionInput({
+      assignedBucketIds: ["bkt_1" as BucketId, "bkt_2" as BucketId],
+    });
+    let doc = makePrivacyConfigDoc();
+
+    doc = Automerge.change(doc, (d) => {
+      applyFriendConnectionProjection(d, input);
+    });
+    doc = Automerge.change(doc, (d) => {
+      removeBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 3000);
+    });
+
+    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBeUndefined();
+    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_2"]).toBe(true);
+    expect(doc.friendConnections["fc_1"]?.updatedAt).toBe(3000);
+  });
+
+  it("is a no-op when removing a bucket that is not assigned", () => {
+    const input = makeFriendConnectionInput({ assignedBucketIds: ["bkt_1" as BucketId] });
+    let doc = makePrivacyConfigDoc();
+
+    doc = Automerge.change(doc, (d) => {
+      applyFriendConnectionProjection(d, input);
+    });
+    doc = Automerge.change(doc, (d) => {
+      removeBucketAssignmentProjection(d, "fc_1", "bkt_nonexistent" as BucketId, 3000);
+    });
+
+    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBe(true);
+    expect(doc.friendConnections["fc_1"]?.updatedAt).toBe(3000);
+  });
+
+  it("is a no-op if connection does not exist", () => {
+    let doc = makePrivacyConfigDoc();
+
+    doc = Automerge.change(doc, (d) => {
+      removeBucketAssignmentProjection(d, "nonexistent_fc", "bkt_1" as BucketId, 3000);
+    });
+
+    expect(Object.keys(doc.friendConnections)).toHaveLength(0);
+  });
+
+  it("logs a warning when connection is not found", () => {
+    const doc = makePrivacyConfigDoc();
+    const logger = { warn: vi.fn() };
+
+    Automerge.change(doc, (d) => {
+      removeBucketAssignmentProjection(d, "nonexistent_fc", "bkt_1" as BucketId, 3000, logger);
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "removeBucketAssignmentProjection: connection not found",
+      { connectionId: "nonexistent_fc" },
+    );
+  });
+});
+
+// ── archiveFriendConnectionProjection ──────────────────────────────
+
+describe("archiveFriendConnectionProjection", () => {
+  it("sets archived=true on existing connection", () => {
+    const input = makeFriendConnectionInput();
+    let doc = makePrivacyConfigDoc();
+
+    doc = Automerge.change(doc, (d) => {
+      applyFriendConnectionProjection(d, input);
+    });
+    doc = Automerge.change(doc, (d) => {
+      archiveFriendConnectionProjection(d, "fc_1");
+    });
+
+    expect(doc.friendConnections["fc_1"]?.archived).toBe(true);
+  });
+
+  it("is a no-op if connection does not exist", () => {
+    let doc = makePrivacyConfigDoc();
+
+    doc = Automerge.change(doc, (d) => {
+      archiveFriendConnectionProjection(d, "nonexistent_fc");
+    });
+
+    expect(Object.keys(doc.friendConnections)).toHaveLength(0);
+  });
+
+  it("logs a warning when connection is not found", () => {
+    const doc = makePrivacyConfigDoc();
+    const logger = { warn: vi.fn() };
+
+    Automerge.change(doc, (d) => {
+      archiveFriendConnectionProjection(d, "nonexistent_fc", logger);
+    });
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "archiveFriendConnectionProjection: connection not found",
+      { connectionId: "nonexistent_fc" },
+    );
+  });
+
+  it("does not affect other fields on the connection", () => {
+    const input = makeFriendConnectionInput();
+    let doc = makePrivacyConfigDoc();
+
+    doc = Automerge.change(doc, (d) => {
+      applyFriendConnectionProjection(d, input);
+    });
+    doc = Automerge.change(doc, (d) => {
+      archiveFriendConnectionProjection(d, "fc_1");
+    });
+
+    const fc = doc.friendConnections["fc_1"];
+    expect(fc?.archived).toBe(true);
+    expect(fc?.status.val).toBe("pending");
+    expect(fc?.id.val).toBe("fc_1");
   });
 });
 
