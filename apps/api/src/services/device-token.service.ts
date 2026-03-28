@@ -8,6 +8,8 @@ import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
+import { MAX_DEVICE_TOKENS_PER_LIST, TOKEN_MASK_VISIBLE_CHARS } from "./device-token.constants.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -27,12 +29,6 @@ const AUDIT_TOKEN_REGISTERED: AuditEventType = "device-token.registered";
 /** Audit event: a device token was revoked. */
 const AUDIT_TOKEN_REVOKED: AuditEventType = "device-token.revoked";
 
-/** Maximum number of device tokens returned per list request. */
-const MAX_DEVICE_TOKENS_PER_LIST = 100;
-
-/** Number of trailing characters to show in masked token strings. */
-const TOKEN_MASK_VISIBLE_CHARS = 8;
-
 // ── Types ────────────────────────────────────────────────────────────
 
 export interface DeviceTokenResult {
@@ -45,6 +41,13 @@ export interface DeviceTokenResult {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
+
+/** Mask a token string, showing only the last `TOKEN_MASK_VISIBLE_CHARS` characters. */
+function maskToken(token: string): string {
+  return token.length > TOKEN_MASK_VISIBLE_CHARS
+    ? `***${token.slice(-TOKEN_MASK_VISIBLE_CHARS)}`
+    : token;
+}
 
 function toDeviceTokenResult(row: {
   id: string;
@@ -97,16 +100,25 @@ export async function registerDeviceToken(
       .onConflictDoUpdate({
         target: [deviceTokens.token, deviceTokens.platform],
         set: {
-          accountId: auth.accountId,
-          systemId,
           lastActiveAt: timestamp,
           revokedAt: null,
+          systemId,
         },
+        setWhere: eq(deviceTokens.accountId, auth.accountId),
       })
       .returning();
 
     if (!row) {
-      throw new Error("Device token insert returned no rows");
+      // Conflict existed but accountId didn't match — token belongs to
+      // another account. Silently no-op to avoid information leakage.
+      return {
+        id,
+        systemId,
+        platform: params.platform,
+        token: maskToken(params.token),
+        lastActiveAt: timestamp as UnixMillis | null,
+        createdAt: timestamp,
+      } satisfies DeviceTokenResult;
     }
 
     await audit(tx, {
@@ -117,7 +129,7 @@ export async function registerDeviceToken(
       systemId,
     });
 
-    return toDeviceTokenResult(row);
+    return toDeviceTokenResult({ ...row, token: maskToken(row.token) });
   });
 }
 
@@ -178,13 +190,7 @@ export async function listDeviceTokens(
 
     return rows.map((row) => {
       const result = toDeviceTokenResult(row);
-      return {
-        ...result,
-        token:
-          result.token.length > TOKEN_MASK_VISIBLE_CHARS
-            ? `***${result.token.slice(-TOKEN_MASK_VISIBLE_CHARS)}`
-            : result.token,
-      };
+      return { ...result, token: maskToken(result.token) };
     });
   });
 }
