@@ -236,7 +236,8 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     const result = await getFriendDashboard(asDb(db), friendConnectionId, friendAuth);
 
     expect(result.systemId).toBe(systemId);
-    expect(result.memberCount).toBeGreaterThanOrEqual(1);
+    // memberCount is now bucket-filtered (H2 fix) — should match visible members
+    expect(result.memberCount).toBe(1);
     expect(result.visibleMembers).toHaveLength(1);
     expect(result.visibleMembers[0]?.id).toBe(memberId);
     expect(result.visibleMembers[0]?.encryptedData).toEqual(expect.any(String));
@@ -249,14 +250,14 @@ describe("friend-dashboard.service (PGlite integration)", () => {
   it("returns empty filtered arrays when no bucket assignments", async () => {
     const { friendConnectionId } = await insertBilateralConnections();
 
-    // Insert a member so memberCount is nonzero, but with no bucket assignments
-    // the filtered arrays should be empty
+    // Insert a member but with no bucket assignments — both memberCount and
+    // visibleMembers should be 0 (H2 fix: memberCount is bucket-filtered)
     await insertMember();
 
     const result = await getFriendDashboard(asDb(db), friendConnectionId, friendAuth);
 
     expect(result.systemId).toBe(systemId);
-    expect(result.memberCount).toBeGreaterThanOrEqual(1);
+    expect(result.memberCount).toBe(0);
     expect(result.visibleMembers).toHaveLength(0);
     expect(result.visibleCustomFronts).toHaveLength(0);
     expect(result.visibleStructureEntities).toHaveLength(0);
@@ -311,6 +312,25 @@ describe("friend-dashboard.service (PGlite integration)", () => {
     expect(result.visibleCustomFronts).toHaveLength(1);
     expect(result.visibleCustomFronts[0]?.id).toBe(customFrontId);
     expect(result.visibleCustomFronts[0]?.encryptedData).toEqual(expect.any(String));
+  });
+
+  it("memberCount only counts bucket-visible members (H2 privacy fix)", async () => {
+    const { ownerConnectionId, friendConnectionId } = await insertBilateralConnections();
+    const bucketId = await insertBucket();
+    await insertBucketAssignment(ownerConnectionId, bucketId);
+
+    // Create 3 members but only tag 1 with the friend's bucket
+    const visibleMemberId = await insertMember();
+    await insertMember(); // invisible member 1
+    await insertMember(); // invisible member 2
+    await insertBucketTag("member", visibleMemberId, bucketId);
+
+    const result = await getFriendDashboard(asDb(db), friendConnectionId, friendAuth);
+
+    // Friend should see memberCount=1, NOT 3 (total system size)
+    expect(result.memberCount).toBe(1);
+    expect(result.visibleMembers).toHaveLength(1);
+    expect(result.visibleMembers[0]?.id).toBe(visibleMemberId);
   });
 
   it("returns 404 for non-existent connection", async () => {

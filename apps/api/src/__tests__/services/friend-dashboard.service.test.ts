@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock dependencies before imports
 vi.mock("../../lib/friend-access.js", () => ({
@@ -72,7 +72,10 @@ const {
   queryVisibleStructureEntities,
   queryMemberCount,
   queryActiveKeyGrants,
+  clearBucketTagCache,
+  cachedLoadBucketTags,
 } = await import("../../services/friend-dashboard.service.js");
+const { loadBucketTags } = await import("../../lib/bucket-access.js");
 
 import { asDb } from "../helpers/mock-db.js";
 
@@ -96,7 +99,7 @@ const TARGET_ACCOUNT_ID = "acc_target" as AccountId;
 const BUCKET_A = "bkt_aaa" as BucketId;
 const BUCKET_B = "bkt_bbb" as BucketId;
 
-/** Placeholder encrypted data — the mock encryptedBlobToBase64 calls String() on it. */
+/** Placeholder encrypted data -- the mock encryptedBlobToBase64 calls String() on it. */
 const STUB_ENCRYPTED_DATA = "enc_stub";
 
 function makeAuth(): AuthContext {
@@ -124,6 +127,9 @@ function makeAccessContext(overrides?: Partial<FriendAccessContext>): FriendAcce
  * Build a mock DB that returns empty arrays for all chain-terminal calls.
  * The service makes many sequential queries; `.where()` must be both
  * chainable (for `.limit()`) and thenable (when used as terminal).
+ *
+ * Now supports `.innerJoin()` and `.selectDistinctOn()` for JOIN-based
+ * bucket filtering queries.
  */
 function makeDashboardDb(
   resolvedRows?: unknown[],
@@ -133,10 +139,12 @@ function makeDashboardDb(
   const makeThenable = (): Record<string, unknown> => {
     const obj: Record<string, unknown> = {};
     obj.select = vi.fn().mockReturnValue(obj);
+    obj.selectDistinctOn = vi.fn().mockReturnValue(obj);
     obj.from = vi.fn().mockReturnValue(obj);
+    obj.innerJoin = vi.fn().mockReturnValue(obj);
     obj.where = vi.fn().mockReturnValue(obj);
     obj.limit = vi.fn().mockResolvedValue(rows);
-    // Make the chain itself thenable — awaiting it resolves to rows
+    // Make the chain itself thenable -- awaiting it resolves to rows
     obj.then = (resolve: (v: unknown[]) => void) => Promise.resolve(rows).then(resolve);
     return obj;
   };
@@ -150,6 +158,7 @@ function makeDashboardDb(
 describe("getFriendDashboard", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearBucketTagCache();
   });
 
   it("returns a complete dashboard response on happy path", async () => {
@@ -220,6 +229,7 @@ describe("getFriendDashboard", () => {
 describe("queryVisibleActiveFronting", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
@@ -368,11 +378,12 @@ describe("queryVisibleActiveFronting", () => {
   });
 });
 
-// ── queryVisibleMembers ─────────────────────────────────────────
+// ── queryVisibleMembers (now uses JOIN-based filtering) ────────
 
 describe("queryVisibleMembers", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
@@ -383,18 +394,13 @@ describe("queryVisibleMembers", () => {
     expect(result).toEqual([]);
   });
 
-  it("returns filtered members via bucket intersection", async () => {
+  it("returns members from JOIN-filtered query result", async () => {
     const memberIdA = `mem_${crypto.randomUUID()}`;
-    const memberIdB = `mem_${crypto.randomUUID()}`;
 
     const rowA = { id: memberIdA, encryptedData: STUB_ENCRYPTED_DATA };
-    const rowB = { id: memberIdB, encryptedData: STUB_ENCRYPTED_DATA };
 
-    const db = makeDashboardDb([rowA, rowB]);
-
-    // filterVisibleEntities is called once by filterAndMapEntities.
-    // Mock it to return only rowA as visible.
-    vi.mocked(filterVisibleEntities).mockReturnValueOnce([rowA]);
+    // The mock DB returns rows that already passed JOIN filtering
+    const db = makeDashboardDb([rowA]);
 
     const result = await queryVisibleMembers(db, SYSTEM_ID, [BUCKET_A, BUCKET_B]);
 
@@ -402,13 +408,24 @@ describe("queryVisibleMembers", () => {
     expect(result[0]?.id).toBe(memberIdA);
     expect(result[0]?.encryptedData).toBe(`base64_${STUB_ENCRYPTED_DATA}`);
   });
+
+  it("uses selectDistinctOn for JOIN-based query", async () => {
+    const db = makeDashboardDb([]);
+
+    await queryVisibleMembers(db, SYSTEM_ID, [BUCKET_A]);
+
+    // Verify the chain uses selectDistinctOn (not select) and innerJoin
+    expect(db._chain.selectDistinctOn).toHaveBeenCalled();
+    expect(db._chain.innerJoin).toHaveBeenCalled();
+  });
 });
 
-// ── queryVisibleCustomFronts ────────────────────────────────────
+// ── queryVisibleCustomFronts (now uses JOIN-based filtering) ───
 
 describe("queryVisibleCustomFronts", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
@@ -420,11 +437,12 @@ describe("queryVisibleCustomFronts", () => {
   });
 });
 
-// ── queryVisibleStructureEntities ───────────────────────────────
+// ── queryVisibleStructureEntities (now uses JOIN-based filtering)
 
 describe("queryVisibleStructureEntities", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearBucketTagCache();
   });
 
   it("returns empty when friendBucketIds is empty", async () => {
@@ -436,25 +454,26 @@ describe("queryVisibleStructureEntities", () => {
   });
 });
 
-// ── queryMemberCount ────────────────────────────────────────────
+// ── queryMemberCount (now bucket-filtered) ─────────────────────
 
 describe("queryMemberCount", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    clearBucketTagCache();
   });
 
-  it("returns zero when no members", async () => {
-    const db = makeDashboardDb([{ value: 0 }]);
+  it("returns zero when friendBucketIds is empty", async () => {
+    const db = makeDashboardDb();
 
-    const result = await queryMemberCount(db, SYSTEM_ID);
+    const result = await queryMemberCount(db, SYSTEM_ID, []);
 
     expect(result).toBe(0);
   });
 
-  it("returns count value", async () => {
+  it("returns count value from JOIN-filtered query", async () => {
     const db = makeDashboardDb([{ value: 5 }]);
 
-    const result = await queryMemberCount(db, SYSTEM_ID);
+    const result = await queryMemberCount(db, SYSTEM_ID, [BUCKET_A]);
 
     expect(result).toBe(5);
   });
@@ -462,9 +481,17 @@ describe("queryMemberCount", () => {
   it("returns zero when result is undefined", async () => {
     const db = makeDashboardDb([]);
 
-    const result = await queryMemberCount(db, SYSTEM_ID);
+    const result = await queryMemberCount(db, SYSTEM_ID, [BUCKET_A]);
 
     expect(result).toBe(0);
+  });
+
+  it("uses innerJoin for bucket-filtered counting", async () => {
+    const db = makeDashboardDb([{ value: 3 }]);
+
+    await queryMemberCount(db, SYSTEM_ID, [BUCKET_A]);
+
+    expect(db._chain.innerJoin).toHaveBeenCalled();
   });
 });
 
@@ -503,5 +530,89 @@ describe("queryActiveKeyGrants", () => {
     expect(result[0]?.bucketId).toBe(bucketId);
     expect(result[0]?.encryptedKey).toBe(Buffer.from(new Uint8Array([1, 2, 3])).toString("base64"));
     expect(result[0]?.keyVersion).toBe(1);
+  });
+});
+
+// ── cachedLoadBucketTags ────────────────────────────────────────
+
+describe("cachedLoadBucketTags", () => {
+  beforeEach(() => {
+    // Clear accumulated call counts from prior describe blocks
+    vi.mocked(loadBucketTags).mockClear();
+    clearBucketTagCache();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    clearBucketTagCache();
+  });
+
+  it("returns empty map for empty entityIds", async () => {
+    const db = makeDashboardDb();
+
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", []);
+
+    expect(result.size).toBe(0);
+  });
+
+  it("delegates to loadBucketTags on first call", async () => {
+    const db = makeDashboardDb();
+    const entityId = `mem_${crypto.randomUUID()}`;
+    const expectedMap = new Map([[entityId, [BUCKET_A]]]);
+
+    vi.mocked(loadBucketTags).mockResolvedValueOnce(expectedMap);
+
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+
+    expect(loadBucketTags).toHaveBeenCalledWith(db, SYSTEM_ID, "member", [entityId]);
+    expect(result.get(entityId)).toEqual([BUCKET_A]);
+  });
+
+  it("returns cached data on subsequent call with same IDs", async () => {
+    const db = makeDashboardDb();
+    const entityId = `mem_${crypto.randomUUID()}`;
+    const expectedMap = new Map([[entityId, [BUCKET_A]]]);
+
+    vi.mocked(loadBucketTags).mockResolvedValueOnce(expectedMap);
+
+    // First call populates cache
+    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+    // Second call should use cache
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+
+    expect(loadBucketTags).toHaveBeenCalledTimes(1);
+    expect(result.get(entityId)).toEqual([BUCKET_A]);
+  });
+
+  it("re-fetches when cache contains different IDs", async () => {
+    const db = makeDashboardDb();
+    const entityIdA = `mem_${crypto.randomUUID()}`;
+    const entityIdB = `mem_${crypto.randomUUID()}`;
+
+    vi.mocked(loadBucketTags)
+      .mockResolvedValueOnce(new Map([[entityIdA, [BUCKET_A]]]))
+      .mockResolvedValueOnce(new Map([[entityIdB, [BUCKET_B]]]));
+
+    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityIdA]);
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityIdB]);
+
+    expect(loadBucketTags).toHaveBeenCalledTimes(2);
+    expect(result.get(entityIdB)).toEqual([BUCKET_B]);
+  });
+
+  it("clears cache via clearBucketTagCache", async () => {
+    const db = makeDashboardDb();
+    const entityId = `mem_${crypto.randomUUID()}`;
+
+    vi.mocked(loadBucketTags)
+      .mockResolvedValueOnce(new Map([[entityId, [BUCKET_A]]]))
+      .mockResolvedValueOnce(new Map([[entityId, [BUCKET_B]]]));
+
+    await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+    clearBucketTagCache();
+    const result = await cachedLoadBucketTags(db, SYSTEM_ID, "member", [entityId]);
+
+    expect(loadBucketTags).toHaveBeenCalledTimes(2);
+    expect(result.get(entityId)).toEqual([BUCKET_B]);
   });
 });
