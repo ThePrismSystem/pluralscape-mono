@@ -1,6 +1,6 @@
 import { deviceTokens } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { logger } from "../lib/logger.js";
 
@@ -57,18 +57,20 @@ export async function processPushNotification(
   jobPayload: JobPayloadMap["notification-send"],
   provider: PushProvider = defaultProvider,
 ): Promise<void> {
-  const { deviceTokenId, platform, payload } = jobPayload;
+  const { accountId, deviceTokenId, platform, payload } = jobPayload;
 
   // N.B. Uses raw `db` without RLS — intentional for background worker context
   // where there is no tenant auth session. The worker processes cross-tenant
   // notification jobs and needs unrestricted read access to device tokens.
+  // The accountId WHERE clause ensures a corrupted payload cannot read
+  // arbitrary device tokens — the token must belong to the expected account.
   const [token] = await db
     .select({
       token: deviceTokens.token,
       revokedAt: deviceTokens.revokedAt,
     })
     .from(deviceTokens)
-    .where(eq(deviceTokens.id, deviceTokenId))
+    .where(and(eq(deviceTokens.id, deviceTokenId), eq(deviceTokens.accountId, accountId)))
     .limit(1);
 
   if (!token) {

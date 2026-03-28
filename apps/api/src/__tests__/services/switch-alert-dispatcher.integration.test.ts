@@ -251,6 +251,10 @@ describe("switch-alert-dispatcher (PGlite integration)", () => {
     expect(enqueuedJobs).toHaveLength(1);
     expect(enqueuedJobs[0]?.type).toBe("notification-send");
     expect(enqueuedJobs[0]?.idempotencyKey).toContain(`switch-alert:${sessionId}:`);
+
+    // L2: verify accountId is included in the payload for ownership validation
+    const jobPayload = enqueuedJobs[0]?.payload as Record<string, unknown>;
+    expect(jobPayload).toHaveProperty("accountId", accountIdB);
   });
 
   it("does not enqueue when notification config is disabled", async () => {
