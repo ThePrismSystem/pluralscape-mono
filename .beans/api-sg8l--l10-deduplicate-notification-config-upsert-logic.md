@@ -1,11 +1,11 @@
 ---
 # api-sg8l
 title: "L10: Deduplicate notification config upsert logic"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-28T21:28:00Z
-updated_at: 2026-03-28T21:28:00Z
+updated_at: 2026-03-28T22:03:44Z
 parent: ps-tkuz
 ---
 
@@ -15,3 +15,7 @@ parent: ps-tkuz
 `getOrCreateNotificationConfig` and `updateNotificationConfig` both contain identical "create with defaults" insert blocks.
 
 **Fix:** Extract single `upsertNotificationConfig` internal helper.
+
+## Summary of Changes
+
+Extracted `insertNotificationConfig` private helper in `notification-config.service.ts` that both `getOrCreateNotificationConfig` and `updateNotificationConfig` delegate to, eliminating the duplicated insert block.

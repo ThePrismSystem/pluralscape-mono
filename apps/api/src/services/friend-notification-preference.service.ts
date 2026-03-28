@@ -2,12 +2,13 @@ import { friendNotificationPreferences } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
-import { PG_FK_VIOLATION } from "../db.constants.js";
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { logger } from "../lib/logger.js";
+import { isFkViolation } from "../lib/pg-error.js";
 import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
+import { MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -198,29 +199,9 @@ export async function listFriendNotificationPreferences(
           eq(friendNotificationPreferences.accountId, accountId),
           eq(friendNotificationPreferences.archived, false),
         ),
-      );
+      )
+      .limit(MAX_PAGE_LIMIT);
 
     return rows.map(toPreferenceResult);
   });
-}
-
-// ── Helpers (private) ──────────────────────────────────────────────────
-
-/** Maximum depth to walk error cause chains (prevents infinite loops). */
-const MAX_CAUSE_DEPTH = 10;
-
-/**
- * Returns true when `error` is a PostgreSQL foreign-key constraint violation.
- * Walks the `.cause` chain since Drizzle may wrap driver errors.
- */
-function isFkViolation(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  let current: unknown = error;
-  let depth = 0;
-  while (current instanceof Error && depth < MAX_CAUSE_DEPTH) {
-    if ("code" in current && current.code === PG_FK_VIOLATION) return true;
-    current = current.cause;
-    depth++;
-  }
-  return false;
 }

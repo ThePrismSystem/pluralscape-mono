@@ -56,6 +56,46 @@ function toNotificationConfigResult(row: {
   };
 }
 
+// ── Internal helpers ─────────────────────────────────────────────────
+
+/**
+ * Insert a new notification config row with the given overrides merged
+ * over defaults (enabled: true, pushEnabled: true).
+ *
+ * Shared by {@link getOrCreateNotificationConfig} and
+ * {@link updateNotificationConfig} to avoid duplicating the insert block.
+ */
+async function insertNotificationConfig(
+  tx: PostgresJsDatabase,
+  systemId: SystemId,
+  eventType: NotificationEventType,
+  overrides: { readonly enabled?: boolean; readonly pushEnabled?: boolean } = {},
+): Promise<NotificationConfigResult> {
+  const timestamp = now();
+  const id = createId(ID_PREFIXES.notificationConfig) as NotificationConfigId;
+
+  const [created] = await tx
+    .insert(notificationConfigs)
+    .values({
+      id,
+      systemId,
+      eventType,
+      enabled: overrides.enabled ?? true,
+      pushEnabled: overrides.pushEnabled ?? true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      archived: false,
+      archivedAt: null,
+    })
+    .returning();
+
+  if (!created) {
+    throw new Error("Notification config insert returned no rows");
+  }
+
+  return toNotificationConfigResult(created);
+}
+
 // ── Service functions ────────────────────────────────────────────────
 
 /**
@@ -88,37 +128,14 @@ export async function getOrCreateNotificationConfig(
       return toNotificationConfigResult(existing);
     }
 
-    // Create with defaults
-    const timestamp = now();
-    const id = createId(ID_PREFIXES.notificationConfig) as NotificationConfigId;
-
-    const [created] = await tx
-      .insert(notificationConfigs)
-      .values({
-        id,
-        systemId,
-        eventType,
-        enabled: true,
-        pushEnabled: true,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        archived: false,
-        archivedAt: null,
-      })
-      .returning();
-
-    if (!created) {
-      throw new Error("Notification config insert returned no rows");
-    }
-
-    return toNotificationConfigResult(created);
+    return insertNotificationConfig(tx, systemId, eventType);
   });
 }
 
 /**
  * Update an existing notification config's enabled/pushEnabled flags.
- * Returns 404 if no config exists for the given event type (caller should
- * use getOrCreate first).
+ * Auto-creates with defaults merged with the provided params if no
+ * config exists for the given event type.
  */
 export async function updateNotificationConfig(
   db: PostgresJsDatabase,
@@ -150,26 +167,7 @@ export async function updateNotificationConfig(
       .returning();
 
     if (!updated) {
-      // Auto-create with defaults merged with the provided params
-      const id = createId(ID_PREFIXES.notificationConfig) as NotificationConfigId;
-      const [created] = await tx
-        .insert(notificationConfigs)
-        .values({
-          id,
-          systemId,
-          eventType,
-          enabled: params.enabled ?? true,
-          pushEnabled: params.pushEnabled ?? true,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-          archived: false,
-          archivedAt: null,
-        })
-        .returning();
-
-      if (!created) {
-        throw new Error("Notification config insert returned no rows");
-      }
+      const result = await insertNotificationConfig(tx, systemId, eventType, params);
 
       await audit(tx, {
         eventType: AUDIT_CONFIG_UPDATED,
@@ -179,7 +177,7 @@ export async function updateNotificationConfig(
         systemId,
       });
 
-      return toNotificationConfigResult(created);
+      return result;
     }
 
     await audit(tx, {

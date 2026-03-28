@@ -1,11 +1,11 @@
 ---
 # api-lp2u
 title: "L5: Add safety limit to listFriendNotificationPreferences"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-28T21:27:45Z
-updated_at: 2026-03-28T21:27:45Z
+updated_at: 2026-03-28T22:03:44Z
 parent: ps-tkuz
 ---
 
@@ -15,3 +15,7 @@ parent: ps-tkuz
 Returns all non-archived preferences without a limit. Bounded by friend count in practice but no explicit safety cap.
 
 **Fix:** Add `.limit(MAX_PAGE_LIMIT)` as a safety cap.
+
+## Summary of Changes
+
+Added `.limit(MAX_PAGE_LIMIT)` (100) to the `listFriendNotificationPreferences` query to prevent unbounded result sets.
