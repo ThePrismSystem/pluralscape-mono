@@ -75,9 +75,14 @@ export class BullMQJobWorker extends BaseJobWorker {
     if (this.worker !== null) {
       // Wait for connections to finish initializing before closing to avoid
       // unhandled rejections from interrupted init commands.
-      await Promise.allSettled([this.worker.waitUntilReady()]);
-      await this.worker.close();
-      this.worker = null;
+      await this.worker.waitUntilReady().catch(() => undefined);
+      try {
+        await this.worker.close();
+      } catch (err) {
+        this.logger.warn("worker.close-error", { error: extractErrorMessage(err) });
+      } finally {
+        this.worker = null;
+      }
     }
   }
 

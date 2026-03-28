@@ -21,8 +21,8 @@ const ioredisRejectionHandler = (reason: unknown): void => {
   if (reason instanceof Error && reason.message === "Connection is closed.") {
     return;
   }
-  // Re-throw anything else so Vitest still catches real errors.
-  // Node.js will treat this as a fresh unhandled rejection.
+  // Throwing inside an unhandledRejection handler re-raises as an uncaught
+  // exception, which Vitest will still catch as a test failure.
   throw reason;
 };
 process.on("unhandledRejection", ioredisRejectionHandler);
@@ -63,8 +63,8 @@ afterEach(async () => {
   for (const w of activeWorkers) {
     try {
       if (w.isRunning()) await w.stop();
-    } catch {
-      // Worker may already be stopped
+    } catch (err) {
+      mockLogger.warn("teardown", { error: String(err) });
     }
   }
   activeWorkers.length = 0;
@@ -72,13 +72,13 @@ afterEach(async () => {
   for (const q of activeQueues) {
     try {
       await q.obliterate();
-    } catch {
-      // Queue data may already be removed
+    } catch (err) {
+      mockLogger.warn("teardown", { error: String(err) });
     }
     try {
       await q.close();
-    } catch {
-      // Connection may already be closed
+    } catch (err) {
+      mockLogger.warn("teardown", { error: String(err) });
     }
   }
   activeQueues.length = 0;
@@ -117,24 +117,13 @@ describe.skipIf(!ctx.available)("BullMQJobWorker", () => {
 describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
   let queue: BullMQJobQueue | undefined;
 
-  afterEach(async () => {
-    if (queue !== undefined) {
-      try {
-        await queue.obliterate();
-      } catch {
-        // Queue data may already be removed
-      }
-      try {
-        await queue.close();
-      } catch {
-        // Connection may already be closed
-      }
-      queue = undefined;
-    }
+  afterEach(() => {
+    queue = undefined;
   });
 
   it("connects to Valkey and performs basic enqueue/dequeue", async () => {
     queue = createQueue();
+    activeQueues.push(queue);
     const job = await queue.enqueue(makeJobParams({ type: "sync-push" }));
     expect(job.status).toBe("pending");
 
@@ -147,6 +136,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
   it("detects stalled jobs with injectable clock", async () => {
     let currentTime = toUnixMillis(1000);
     queue = createQueue({ clock: () => currentTime });
+    activeQueues.push(queue);
 
     await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
     await queue.dequeue();
@@ -159,6 +149,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
 
   it("handles idempotency key re-use after completion", async () => {
     queue = createQueue();
+    activeQueues.push(queue);
     const key = "reuse-key";
     await queue.enqueue(makeJobParams({ idempotencyKey: key }));
     const first = await dequeueOrFail(queue);

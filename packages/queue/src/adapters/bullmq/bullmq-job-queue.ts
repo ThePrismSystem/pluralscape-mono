@@ -35,6 +35,7 @@ import type {
 } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
+import type { RedisOptions } from "ioredis";
 
 /**
  * BullMQ-backed implementation of JobQueue.
@@ -53,8 +54,8 @@ export class BullMQJobQueue implements JobQueue {
   private readonly redis: IORedis;
   private readonly prefix: string;
   private readonly token: string;
-  private readonly connOpts: Record<string, unknown>;
-  readonly name: string = "";
+  private readonly connOpts: RedisOptions;
+  readonly name: string;
 
   constructor(
     queueName: string,
@@ -127,14 +128,14 @@ export class BullMQJobQueue implements JobQueue {
       // Wait for connections to finish initializing before closing. If closed
       // while still initializing, BullMQ may use ioredis.disconnect() which
       // rejects pending init commands as unhandled promise rejections.
-      await Promise.allSettled([this.fetchWorker.waitUntilReady()]);
+      await this.fetchWorker.waitUntilReady().catch(() => undefined);
       try {
         await this.fetchWorker.close();
       } catch (err) {
         this.logger.warn("queue.close-worker-error", { error: extractErrorMessage(err) });
       }
     }
-    await Promise.allSettled([this.queue.waitUntilReady()]);
+    await this.queue.waitUntilReady().catch(() => undefined);
     try {
       await this.queue.close();
     } catch (err) {
