@@ -34,6 +34,7 @@ import { and, asc, countDistinct, eq, max } from "drizzle-orm";
 
 import { exportRef, keysetAfter } from "../lib/export-table-ref.js";
 
+import type { ExportTableRef } from "../lib/export-table-ref.js";
 import type { DecodedCompositeCursor } from "../lib/pagination.js";
 import type {
   BucketContentEntityType,
@@ -43,7 +44,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { SQL } from "drizzle-orm";
-import type { ExportTableRef } from "../lib/export-table-ref.js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Row shapes ──────────────────────────────────────────────────────
