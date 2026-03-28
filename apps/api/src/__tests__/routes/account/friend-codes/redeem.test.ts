@@ -31,6 +31,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 
 const { redeemFriendCode } = await import("../../../../services/friend-code.service.js");
 const { createAuditWriter } = await import("../../../../lib/audit-writer.js");
+const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { accountRoutes } = await import("../../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -53,6 +54,10 @@ describe("POST /account/friend-codes/redeem", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("uses friendCodeRedeem rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("friendCodeRedeem");
   });
 
   it("returns 201 with connection IDs", async () => {

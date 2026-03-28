@@ -88,6 +88,38 @@ describe("generateFriendCode", () => {
     );
   });
 
+  it("retries on unique-violation errors from the shared utility", async () => {
+    const { db, chain } = mockDb();
+    // Quota check: under quota
+    chain.for.mockResolvedValueOnce([]);
+    // First insert: unique violation (Postgres error code 23505)
+    const uniqueError = Object.assign(new Error("duplicate key"), { code: "23505" });
+    chain.returning.mockRejectedValueOnce(uniqueError);
+    // Second insert: success
+    chain.returning.mockResolvedValueOnce([makeFriendCodeRow()]);
+
+    const result = await generateFriendCode(db, ACCOUNT_ID, AUTH, mockAudit);
+
+    expect(result.id).toMatch(/^frc_/);
+    // values() called twice: one failed attempt + one successful
+    expect(chain.values).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws non-unique-violation errors without retry", async () => {
+    const { db, chain } = mockDb();
+    // Quota check: under quota
+    chain.for.mockResolvedValueOnce([]);
+    // Insert: non-unique error
+    const otherError = new Error("connection refused");
+    chain.returning.mockRejectedValueOnce(otherError);
+
+    await expect(generateFriendCode(db, ACCOUNT_ID, AUTH, mockAudit)).rejects.toThrow(
+      "connection refused",
+    );
+    // Only one attempt — no retry for non-unique errors
+    expect(chain.values).toHaveBeenCalledTimes(1);
+  });
+
   it("accepts optional expiresAt", async () => {
     const { db, chain } = mockDb();
     const expiresAt = Date.now() + 86_400_000;
