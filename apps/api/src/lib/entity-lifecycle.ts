@@ -3,20 +3,21 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 
+import { assertAccountOwnership } from "./account-ownership.js";
 import { ApiHttpError } from "./api-error.js";
-import { withTenantTransaction } from "./rls-context.js";
+import { withAccountTransaction, withTenantTransaction } from "./rls-context.js";
 import { assertSystemOwnership } from "./system-ownership.js";
 
 import type { AuditWriter } from "./audit-writer.js";
 import type { AuthContext } from "./auth-context.js";
-import type { AuditEventType, SystemId } from "@pluralscape/types";
+import type { AccountId, AuditEventType, SystemId } from "@pluralscape/types";
 import type { ColumnBaseConfig, ColumnDataType } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 type AnyPgColumn = PgColumn<ColumnBaseConfig<ColumnDataType, string>, object, object>;
 
-/** Column references needed for archive/restore operations. */
+/** Column references needed for archive/restore operations (system-scoped). */
 export interface ArchivableColumns {
   readonly id: AnyPgColumn;
   readonly systemId: AnyPgColumn;
@@ -26,7 +27,17 @@ export interface ArchivableColumns {
   readonly version: AnyPgColumn;
 }
 
-/** Configuration for a generic archivable entity. */
+/** Column references needed for archive/restore operations (account-scoped). */
+export interface AccountArchivableColumns {
+  readonly id: AnyPgColumn;
+  readonly accountId: AnyPgColumn;
+  readonly archived: AnyPgColumn;
+  readonly archivedAt: AnyPgColumn;
+  readonly updatedAt: AnyPgColumn;
+  readonly version: AnyPgColumn;
+}
+
+/** Configuration for a generic archivable entity (system-scoped). */
 export interface ArchivableEntityConfig<TId extends string> {
   readonly table: PgTable;
   readonly columns: ArchivableColumns;
@@ -43,6 +54,27 @@ export interface ArchivableEntityConfig<TId extends string> {
   readonly onRestore?: (
     tx: PostgresJsDatabase,
     systemId: SystemId,
+    entityId: TId,
+  ) => Promise<unknown>;
+}
+
+/** Configuration for an archivable entity scoped to an account (not a system). */
+export interface AccountArchivableEntityConfig<TId extends string> {
+  readonly table: PgTable;
+  readonly columns: AccountArchivableColumns;
+  readonly entityName: string;
+  readonly archiveEvent: AuditEventType;
+  readonly restoreEvent: AuditEventType;
+  /** Optional hook called inside the transaction after a successful archive + audit. */
+  readonly onArchive?: (
+    tx: PostgresJsDatabase,
+    accountId: AccountId,
+    entityId: TId,
+  ) => Promise<unknown>;
+  /** Optional hook called inside the transaction after a successful restore + audit. */
+  readonly onRestore?: (
+    tx: PostgresJsDatabase,
+    accountId: AccountId,
     entityId: TId,
   ) => Promise<unknown>;
 }
@@ -175,6 +207,140 @@ export async function restoreEntity<TId extends string, TResult>(
 
     if (cfg.onRestore) {
       await cfg.onRestore(tx, systemId, entityId);
+    }
+
+    return toResult(row);
+  });
+}
+
+// ── Account-scoped Archive / Restore ────────────────────────────
+
+/**
+ * Archive an account-scoped entity by setting archived=true within a transaction.
+ *
+ * Uses `withAccountTransaction` and `assertAccountOwnership` instead of the
+ * system-scoped equivalents. Scoping column is `accountId` rather than `systemId`.
+ */
+export async function archiveAccountEntity<TId extends string>(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  entityId: TId,
+  auth: AuthContext,
+  audit: AuditWriter,
+  cfg: AccountArchivableEntityConfig<TId>,
+): Promise<void> {
+  assertAccountOwnership(accountId, auth);
+
+  const timestamp = now();
+  const { table, columns, entityName, archiveEvent } = cfg;
+
+  await withAccountTransaction(db, accountId, async (tx) => {
+    const updated = await tx
+      .update(table)
+      .set({
+        archived: true,
+        archivedAt: timestamp,
+        updatedAt: timestamp,
+        version: sql`${columns.version} + 1`,
+      } as Record<string, unknown>)
+      .where(
+        and(
+          eq(columns.id, entityId),
+          eq(columns.accountId, accountId),
+          eq(columns.archived, false),
+        ),
+      )
+      .returning({ id: columns.id });
+
+    if (updated.length === 0) {
+      const existing = await tx
+        .select({ id: columns.id })
+        .from(table)
+        .where(and(eq(columns.id, entityId), eq(columns.accountId, accountId)));
+
+      if (existing.length > 0) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "ALREADY_ARCHIVED",
+          `${entityName} is already archived`,
+        );
+      }
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
+    }
+
+    await audit(tx, {
+      eventType: archiveEvent,
+      actor: { kind: "account", id: auth.accountId },
+      detail: `${entityName} archived`,
+      accountId,
+    });
+
+    if (cfg.onArchive) {
+      await cfg.onArchive(tx, accountId, entityId);
+    }
+  });
+}
+
+/**
+ * Restore an archived account-scoped entity within a transaction.
+ *
+ * Uses `withAccountTransaction` and `assertAccountOwnership` instead of the
+ * system-scoped equivalents. Scoping column is `accountId` rather than `systemId`.
+ */
+export async function restoreAccountEntity<TId extends string, TResult>(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  entityId: TId,
+  auth: AuthContext,
+  audit: AuditWriter,
+  cfg: AccountArchivableEntityConfig<TId>,
+  toResult: (row: Record<string, unknown>) => TResult,
+): Promise<TResult> {
+  assertAccountOwnership(accountId, auth);
+
+  const timestamp = now();
+  const { table, columns, entityName, restoreEvent } = cfg;
+
+  return withAccountTransaction(db, accountId, async (tx) => {
+    const updated = await tx
+      .update(table)
+      .set({
+        archived: false,
+        archivedAt: null,
+        updatedAt: timestamp,
+        version: sql`${columns.version} + 1`,
+      } as Record<string, unknown>)
+      .where(
+        and(eq(columns.id, entityId), eq(columns.accountId, accountId), eq(columns.archived, true)),
+      )
+      .returning();
+
+    const row = updated[0];
+    if (!row) {
+      const existing = await tx
+        .select({ id: columns.id })
+        .from(table)
+        .where(and(eq(columns.id, entityId), eq(columns.accountId, accountId)));
+
+      if (existing.length > 0) {
+        throw new ApiHttpError(HTTP_CONFLICT, "NOT_ARCHIVED", `${entityName} is not archived`);
+      }
+      throw new ApiHttpError(
+        HTTP_NOT_FOUND,
+        "NOT_FOUND",
+        `Archived ${entityName.toLowerCase()} not found`,
+      );
+    }
+
+    await audit(tx, {
+      eventType: restoreEvent,
+      actor: { kind: "account", id: auth.accountId },
+      detail: `${entityName} restored`,
+      accountId,
+    });
+
+    if (cfg.onRestore) {
+      await cfg.onRestore(tx, accountId, entityId);
     }
 
     return toResult(row);
