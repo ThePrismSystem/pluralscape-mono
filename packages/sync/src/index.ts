@@ -100,6 +100,33 @@ export {
   fromDoc,
 } from "./factories/document-factory.js";
 
+// ── Projections ─────────────────────────────────────────────────────
+export {
+  projectFriendCode,
+  projectFriendConnection,
+  projectKeyGrant,
+  applyFriendCodeProjection,
+  applyFriendConnectionProjection,
+  applyKeyGrantProjection,
+  archiveFriendCodeProjection,
+  archiveFriendConnectionProjection,
+  updateFriendConnectionStatusProjection,
+  updateFriendConnectionVisibilityProjection,
+  addBucketAssignmentProjection,
+  removeBucketAssignmentProjection,
+  revokeKeyGrantProjection,
+} from "./projections/friend-projection.js";
+export type {
+  FriendCodeInput,
+  FriendConnectionInput,
+  KeyGrantInput,
+} from "./projections/friend-projection.js";
+
+export {
+  projectDashboardSnapshot,
+  applyDashboardSnapshotProjection,
+} from "./projections/friend-dashboard-projection.js";
+
 // ── Post-merge validation ────────────────────────────────────────────
 export { runAllValidations } from "./post-merge-validator.js";
 export type { ConflictPersistenceAdapter, PersistedConflict } from "./conflict-persistence.js";

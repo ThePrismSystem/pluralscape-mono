@@ -195,6 +195,37 @@ export function addBucketAssignmentProjection(
   }
 }
 
+/** Remove bucket assignment from friend connection in the CRDT document. */
+export function removeBucketAssignmentProjection(
+  doc: PrivacyConfigDocument,
+  connectionId: string,
+  bucketId: string,
+  updatedAt: number,
+  logger?: Pick<Logger, "warn">,
+): void {
+  const connection = doc.friendConnections[connectionId];
+  if (connection) {
+    Reflect.deleteProperty(connection.assignedBuckets, bucketId);
+    connection.updatedAt = updatedAt;
+  } else {
+    logger?.warn("removeBucketAssignmentProjection: connection not found", { connectionId });
+  }
+}
+
+/** Mark a friend connection as archived in the CRDT document. */
+export function archiveFriendConnectionProjection(
+  doc: PrivacyConfigDocument,
+  connectionId: string,
+  logger?: Pick<Logger, "warn">,
+): void {
+  const connection = doc.friendConnections[connectionId];
+  if (connection) {
+    connection.archived = true;
+  } else {
+    logger?.warn("archiveFriendConnectionProjection: connection not found", { connectionId });
+  }
+}
+
 /** Revoke a key grant in the CRDT document. */
 export function revokeKeyGrantProjection(
   doc: PrivacyConfigDocument,
