@@ -1,0 +1,130 @@
+FriendDashboardFrontingSession:
+  type: object
+  required: [id, memberId, customFrontId, structureEntityId, startTime, encryptedData]
+  properties:
+    id:
+      type: string
+      pattern: "^fs_"
+    memberId:
+      type: string
+      nullable: true
+      pattern: "^mem_"
+    customFrontId:
+      type: string
+      nullable: true
+      pattern: "^cf_"
+    structureEntityId:
+      type: string
+      nullable: true
+      pattern: "^ste_"
+    startTime:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+    encryptedData:
+      type: string
+      description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+
+FriendDashboardMember:
+  type: object
+  required: [id, encryptedData]
+  properties:
+    id:
+      type: string
+      pattern: "^mem_"
+    encryptedData:
+      type: string
+      description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+
+FriendDashboardCustomFront:
+  type: object
+  required: [id, encryptedData]
+  properties:
+    id:
+      type: string
+      pattern: "^cf_"
+    encryptedData:
+      type: string
+      description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+
+FriendDashboardStructureEntity:
+  type: object
+  required: [id, encryptedData]
+  properties:
+    id:
+      type: string
+      pattern: "^ste_"
+    encryptedData:
+      type: string
+      description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+
+FriendDashboardKeyGrant:
+  type: object
+  required: [id, bucketId, encryptedKey, keyVersion]
+  properties:
+    id:
+      type: string
+      pattern: "^kg_"
+    bucketId:
+      type: string
+      pattern: "^bkt_"
+    encryptedKey:
+      type: string
+      description: Base64-encoded encrypted bucket symmetric key
+    keyVersion:
+      type: integer
+      minimum: 1
+
+FriendDashboardResponse:
+  type: object
+  required:
+    - systemId
+    - memberCount
+    - activeFronting
+    - visibleMembers
+    - visibleCustomFronts
+    - visibleStructureEntities
+    - keyGrants
+  properties:
+    systemId:
+      type: string
+      pattern: "^sys_"
+    memberCount:
+      type: integer
+      minimum: 0
+      description: |
+        Total non-archived member count (unfiltered). This reveals system
+        size even with zero bucket access. The system owner accepted this
+        friend connection, so revealing system size is an intentional
+        privacy decision.
+    activeFronting:
+      type: object
+      required: [sessions, isCofronting]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/FriendDashboardFrontingSession"
+        isCofronting:
+          type: boolean
+    visibleMembers:
+      type: array
+      items:
+        $ref: "#/FriendDashboardMember"
+    visibleCustomFronts:
+      type: array
+      items:
+        $ref: "#/FriendDashboardCustomFront"
+    visibleStructureEntities:
+      type: array
+      items:
+        $ref: "#/FriendDashboardStructureEntity"
+    keyGrants:
+      type: array
+      items:
+        $ref: "#/FriendDashboardKeyGrant"
+      description: |
+        Active (non-revoked) key grants for this friend. During key
+        rotation, old grants may be revoked before content migration
+        completes. The client should handle decryption failures
+        gracefully during rotation windows.

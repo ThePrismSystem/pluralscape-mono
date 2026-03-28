@@ -165,6 +165,17 @@ export type {
 } from "./privacy.js";
 export { BUCKET_CONTENT_ENTITY_TYPES, isBucketContentEntityType } from "./privacy.js";
 
+// ── Friend Dashboard ──────────────────────────────────────────────
+export type {
+  FriendDashboardFrontingSession,
+  FriendDashboardMember,
+  FriendDashboardCustomFront,
+  FriendDashboardStructureEntity,
+  FriendDashboardKeyGrant,
+  FriendDashboardResponse,
+  FriendAccessContext,
+} from "./friend-dashboard.js";
+
 // ── Structure ──────────────────────────────────────────────────────
 export type {
   RelationshipType,

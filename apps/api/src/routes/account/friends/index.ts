@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { archiveRoute } from "./archive.js";
 import { blockRoute } from "./block.js";
+import { dashboardRoute } from "./dashboard.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
 import { friendNotificationRoutes } from "./notifications/index.js";
@@ -15,6 +16,7 @@ export const friendRoutes = new Hono<AuthEnv>();
 
 friendRoutes.route("/", listRoute);
 friendRoutes.route("/", getRoute);
+friendRoutes.route("/", dashboardRoute);
 friendRoutes.route("/", blockRoute);
 friendRoutes.route("/", removeRoute);
 friendRoutes.route("/", visibilityRoute);

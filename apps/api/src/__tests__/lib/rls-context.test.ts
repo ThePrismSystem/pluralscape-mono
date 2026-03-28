@@ -13,6 +13,7 @@ vi.mock("@pluralscape/db", () => ({
 import {
   withAccountRead,
   withAccountTransaction,
+  withCrossAccountRead,
   withTenantRead,
   withTenantTransaction,
 } from "../../lib/rls-context.js";
@@ -192,4 +193,52 @@ describe.each(cases)("$name", ({ fn, setupFn, readOnly, callArgs }) => {
       expect(tx.execute).not.toHaveBeenCalled();
     });
   }
+});
+
+// ── withCrossAccountRead ────────────────────────────────────────────────────
+
+describe("withCrossAccountRead", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    vi.restoreAllMocks();
+  });
+
+  it("does not set any RLS context", async () => {
+    const { db: mockDb } = createMockDb();
+    const callback = vi.fn().mockResolvedValue("ok");
+
+    await withCrossAccountRead(mockDb, callback);
+
+    expect(mockSetTenantContext).not.toHaveBeenCalled();
+    expect(mockSetAccountId).not.toHaveBeenCalled();
+  });
+
+  it("executes SET TRANSACTION READ ONLY", async () => {
+    const { db: mockDb, tx } = createMockDb();
+    const callback = vi.fn().mockResolvedValue("ok");
+
+    await withCrossAccountRead(mockDb, callback);
+
+    expect(tx.execute).toHaveBeenCalledOnce();
+    const serialized = JSON.stringify(tx.execute.mock.calls[0]?.[0]);
+    expect(serialized).toContain("READ ONLY");
+  });
+
+  it("returns the value from the callback", async () => {
+    const { db: mockDb } = createMockDb();
+    const expected = { data: crypto.randomUUID() };
+    const callback = vi.fn().mockResolvedValue(expected);
+
+    const result = await withCrossAccountRead(mockDb, callback);
+
+    expect(result).toBe(expected);
+  });
+
+  it("propagates errors thrown by the callback", async () => {
+    const { db: mockDb } = createMockDb();
+    const error = new Error(`error-${crypto.randomUUID()}`);
+    const callback = vi.fn().mockRejectedValue(error);
+
+    await expect(withCrossAccountRead(mockDb, callback)).rejects.toThrow(error);
+  });
 });

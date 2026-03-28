@@ -30,6 +30,9 @@ export const MAX_ANCESTOR_DEPTH = 50;
 /** Maximum number of active fronting sessions returned by the active fronting query. */
 export const MAX_ACTIVE_SESSIONS = 200;
 
+/** Maximum number of IDs in a single SQL IN clause to avoid parameter limits. */
+export const MAX_IN_CLAUSE_SIZE = 500;
+
 /** Number of random bytes for webhook HMAC signing secrets (32 bytes = 256-bit). */
 export const WEBHOOK_SECRET_BYTES = 32;
 

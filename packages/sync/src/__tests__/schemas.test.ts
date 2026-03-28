@@ -139,6 +139,7 @@ function makeBucketDoc(): Automerge.Doc<BucketProjectionDocument> {
     journalEntries: {},
     channels: {},
     messages: [],
+    dashboardSnapshot: null,
   });
 }
 

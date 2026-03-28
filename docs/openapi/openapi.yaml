@@ -118,6 +118,8 @@ tags:
     description: Authentication, sessions, and account recovery
   - name: Account
     description: Account management and audit log
+  - name: Friends
+    description: Friend network and friend-facing dashboard
   - name: Systems
     description: Plural system profiles
   - name: System Settings
@@ -458,6 +460,19 @@ components:
       $ref: "./schemas/settings.yaml#/SetupStepRequest"
     SetupCompleteRequest:
       $ref: "./schemas/settings.yaml#/SetupCompleteRequest"
+    # Friend Dashboard
+    FriendDashboardResponse:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardResponse"
+    FriendDashboardFrontingSession:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardFrontingSession"
+    FriendDashboardMember:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardMember"
+    FriendDashboardCustomFront:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardCustomFront"
+    FriendDashboardStructureEntity:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardStructureEntity"
+    FriendDashboardKeyGrant:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardKeyGrant"
     # Plaintext (client-side encryption contracts)
     PlaintextImageSource:
       $ref: "./schemas/plaintext.yaml#/PlaintextImageSource"
@@ -585,6 +600,9 @@ paths:
     $ref: "./paths/account.yaml#/~1account~1audit-log"
   /account/settings:
     $ref: "./paths/account.yaml#/~1account~1settings"
+  # Friend Dashboard
+  /account/friends/{connectionId}/dashboard:
+    $ref: "./paths/friend-dashboard.yaml#/~1account~1friends~1%7BconnectionId%7D~1dashboard"
   # Systems
   /systems:
     $ref: "./paths/systems.yaml#/~1systems"
