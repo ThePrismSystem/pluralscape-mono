@@ -17,33 +17,36 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 type AnyPgColumn = PgColumn<ColumnBaseConfig<ColumnDataType, string>, object, object>;
 
-/** Column references needed for archive/restore operations (system-scoped). */
-export interface ArchivableColumns {
+/** Shared column references for all archive/restore operations. */
+interface BaseArchivableColumns {
   readonly id: AnyPgColumn;
-  readonly systemId: AnyPgColumn;
   readonly archived: AnyPgColumn;
   readonly archivedAt: AnyPgColumn;
   readonly updatedAt: AnyPgColumn;
   readonly version: AnyPgColumn;
+}
+
+/** Column references needed for archive/restore operations (system-scoped). */
+export interface ArchivableColumns extends BaseArchivableColumns {
+  readonly systemId: AnyPgColumn;
 }
 
 /** Column references needed for archive/restore operations (account-scoped). */
-export interface AccountArchivableColumns {
-  readonly id: AnyPgColumn;
+export interface AccountArchivableColumns extends BaseArchivableColumns {
   readonly accountId: AnyPgColumn;
-  readonly archived: AnyPgColumn;
-  readonly archivedAt: AnyPgColumn;
-  readonly updatedAt: AnyPgColumn;
-  readonly version: AnyPgColumn;
 }
 
-/** Configuration for a generic archivable entity (system-scoped). */
-export interface ArchivableEntityConfig<TId extends string> {
+/** Shared configuration for all archivable entities. */
+interface BaseArchivableEntityConfig {
   readonly table: PgTable;
-  readonly columns: ArchivableColumns;
   readonly entityName: string;
   readonly archiveEvent: AuditEventType;
   readonly restoreEvent: AuditEventType;
+}
+
+/** Configuration for a generic archivable entity (system-scoped). */
+export interface ArchivableEntityConfig<TId extends string> extends BaseArchivableEntityConfig {
+  readonly columns: ArchivableColumns;
   /** Optional hook called inside the transaction after a successful archive + audit. */
   readonly onArchive?: (
     tx: PostgresJsDatabase,
@@ -59,12 +62,10 @@ export interface ArchivableEntityConfig<TId extends string> {
 }
 
 /** Configuration for an archivable entity scoped to an account (not a system). */
-export interface AccountArchivableEntityConfig<TId extends string> {
-  readonly table: PgTable;
+export interface AccountArchivableEntityConfig<
+  TId extends string,
+> extends BaseArchivableEntityConfig {
   readonly columns: AccountArchivableColumns;
-  readonly entityName: string;
-  readonly archiveEvent: AuditEventType;
-  readonly restoreEvent: AuditEventType;
   /** Optional hook called inside the transaction after a successful archive + audit. */
   readonly onArchive?: (
     tx: PostgresJsDatabase,
@@ -286,6 +287,9 @@ export async function archiveAccountEntity<TId extends string>(
  *
  * Uses `withAccountTransaction` and `assertAccountOwnership` instead of the
  * system-scoped equivalents. Scoping column is `accountId` rather than `systemId`.
+ *
+ * The `toResult` mapper receives the raw Drizzle row from `.returning()`;
+ * callers should pass their existing typed mapper (e.g. `toFriendConnectionResult`).
  */
 export async function restoreAccountEntity<TId extends string, TResult>(
   db: PostgresJsDatabase,

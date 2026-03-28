@@ -305,8 +305,8 @@ const ACCOUNT_CONFIG: AccountArchivableEntityConfig<string> = {
     version: asAccountPgColumn("version"),
   },
   entityName: "Test account entity",
-  archiveEvent: "friend-connection.archived",
-  restoreEvent: "friend-connection.restored",
+  archiveEvent: "custom-front.archived",
+  restoreEvent: "custom-front.restored",
 };
 
 describe("archiveAccountEntity", () => {
@@ -324,7 +324,7 @@ describe("archiveAccountEntity", () => {
     expect(chain.update).toHaveBeenCalled();
     expect(audit).toHaveBeenCalledWith(
       chain,
-      expect.objectContaining({ eventType: "friend-connection.archived" }),
+      expect.objectContaining({ eventType: "custom-front.archived" }),
     );
   });
 
@@ -398,7 +398,7 @@ describe("restoreAccountEntity", () => {
     expect(result).toEqual({ mapped: "Restored" });
     expect(audit).toHaveBeenCalledWith(
       chain,
-      expect.objectContaining({ eventType: "friend-connection.restored" }),
+      expect.objectContaining({ eventType: "custom-front.restored" }),
     );
   });
 
