@@ -176,6 +176,16 @@ export type {
   FriendAccessContext,
 } from "./friend-dashboard.js";
 
+// ── Friend Export ────────────────────────────────────────────────────
+export type {
+  FriendExportEntityType,
+  FriendExportEntity,
+  FriendExportPageResponse,
+  FriendExportManifestEntry,
+  FriendExportManifestResponse,
+} from "./friend-export.js";
+export { FRIEND_EXPORT_ENTITY_TYPES, isFriendExportEntityType } from "./friend-export.js";
+
 // ── Structure ──────────────────────────────────────────────────────
 export type {
   RelationshipType,

@@ -1,23 +1,21 @@
 import {
-  bucketContentTags,
   customFronts,
   frontingSessions,
   keyGrants,
   members,
   systemStructureEntities,
 } from "@pluralscape/db/pg";
-import { and, count, eq, inArray, isNull } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 
-import { filterVisibleEntities } from "../lib/bucket-access.js";
+import { filterVisibleEntities, loadBucketTags } from "../lib/bucket-access.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertFriendAccess } from "../lib/friend-access.js";
 import { withCrossAccountRead } from "../lib/rls-context.js";
-import { MAX_ACTIVE_SESSIONS, MAX_IN_CLAUSE_SIZE, MAX_PAGE_LIMIT } from "../service.constants.js";
+import { MAX_ACTIVE_SESSIONS, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AccountId,
-  BucketContentEntityType,
   BucketId,
   CustomFrontId,
   EncryptedBlob,
@@ -328,56 +326,4 @@ export async function getFriendDashboard(
       keyGrants: activeKeyGrants,
     };
   });
-}
-
-// ── Internal helpers ────────────────────────────────────────────
-
-/**
- * Load bucket content tags for a set of entities and build a map
- * from entity ID to bucket IDs.
- *
- * Batches the IN clause when entityIds exceeds MAX_IN_CLAUSE_SIZE
- * to avoid hitting PostgreSQL parameter limits.
- */
-async function loadBucketTags(
-  tx: PostgresJsDatabase,
-  systemId: SystemId,
-  entityType: BucketContentEntityType,
-  entityIds: readonly string[],
-): Promise<ReadonlyMap<string, readonly BucketId[]>> {
-  if (entityIds.length === 0) {
-    return new Map();
-  }
-
-  const map = new Map<string, BucketId[]>();
-
-  // Batch the IN clause for large entity sets
-  for (let offset = 0; offset < entityIds.length; offset += MAX_IN_CLAUSE_SIZE) {
-    const batch = entityIds.slice(offset, offset + MAX_IN_CLAUSE_SIZE);
-
-    const tags = await tx
-      .select({
-        entityId: bucketContentTags.entityId,
-        bucketId: bucketContentTags.bucketId,
-      })
-      .from(bucketContentTags)
-      .where(
-        and(
-          eq(bucketContentTags.systemId, systemId),
-          eq(bucketContentTags.entityType, entityType),
-          inArray(bucketContentTags.entityId, batch),
-        ),
-      );
-
-    for (const tag of tags) {
-      const existing = map.get(tag.entityId);
-      if (existing) {
-        existing.push(tag.bucketId as BucketId);
-      } else {
-        map.set(tag.entityId, [tag.bucketId as BucketId]);
-      }
-    }
-  }
-
-  return map;
 }
