@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkConditionalRequest, computeDataEtag } from "../../lib/etag.js";
+import { checkConditionalRequest, computeDataEtag, computeManifestEtag } from "../../lib/etag.js";
 
 import type { UnixMillis } from "@pluralscape/types";
 
@@ -69,5 +69,60 @@ describe("checkConditionalRequest", () => {
 
   it("returns false when no ETag in comma-separated list matches", () => {
     expect(checkConditionalRequest('W/"aaa", W/"bbb"', 'W/"abc"')).toBe(false);
+  });
+});
+
+describe("computeManifestEtag", () => {
+  it("returns a weak ETag string", () => {
+    const etag = computeManifestEtag([{ count: 5, lastUpdatedAt: ts(1000) }]);
+    expect(etag).toMatch(/^W\/"[0-9a-f]{16}"$/);
+  });
+
+  it("is equivalent to computeDataEtag with derived values", () => {
+    const entries = [
+      { count: 3, lastUpdatedAt: ts(1000) },
+      { count: 7, lastUpdatedAt: ts(2000) },
+    ];
+    // globalMaxUpdatedAt = 2000, totalCount = 10
+    expect(computeManifestEtag(entries)).toBe(computeDataEtag(ts(2000), 10));
+  });
+
+  it("handles empty entries array", () => {
+    const etag = computeManifestEtag([]);
+    expect(etag).toBe(computeDataEtag(null, 0));
+  });
+
+  it("handles all-null lastUpdatedAt entries", () => {
+    const entries = [
+      { count: 2, lastUpdatedAt: null },
+      { count: 3, lastUpdatedAt: null },
+    ];
+    expect(computeManifestEtag(entries)).toBe(computeDataEtag(null, 5));
+  });
+
+  it("picks the max lastUpdatedAt across entries", () => {
+    const entries = [
+      { count: 1, lastUpdatedAt: ts(500) },
+      { count: 1, lastUpdatedAt: ts(3000) },
+      { count: 1, lastUpdatedAt: ts(1500) },
+    ];
+    expect(computeManifestEtag(entries)).toBe(computeDataEtag(ts(3000), 3));
+  });
+
+  it("skips null entries when computing max", () => {
+    const entries = [
+      { count: 1, lastUpdatedAt: null },
+      { count: 2, lastUpdatedAt: ts(1000) },
+      { count: 0, lastUpdatedAt: null },
+    ];
+    expect(computeManifestEtag(entries)).toBe(computeDataEtag(ts(1000), 3));
+  });
+
+  it("is deterministic", () => {
+    const entries = [
+      { count: 5, lastUpdatedAt: ts(1000) },
+      { count: 10, lastUpdatedAt: ts(2000) },
+    ];
+    expect(computeManifestEtag(entries)).toBe(computeManifestEtag(entries));
   });
 });

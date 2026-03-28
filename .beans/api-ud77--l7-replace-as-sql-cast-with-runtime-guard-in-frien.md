@@ -1,11 +1,11 @@
 ---
 # api-ud77
-title: "L7: Replace as SQL cast with runtime guard in friend-export"
-status: todo
+title: 'L7: Replace as SQL cast with runtime guard in friend-export'
+status: completed
 type: task
 priority: low
 created_at: 2026-03-28T21:27:51Z
-updated_at: 2026-03-28T21:27:51Z
+updated_at: 2026-03-28T22:01:45Z
 parent: ps-tkuz
 ---
 

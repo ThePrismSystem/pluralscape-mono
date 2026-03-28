@@ -7,7 +7,8 @@
  */
 import { filterVisibleEntities, loadBucketTags } from "../lib/bucket-access.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
-import { computeDataEtag } from "../lib/etag.js";
+import { computeDataEtag, computeManifestEtag } from "../lib/etag.js";
+import { batchedManifestQueries } from "../lib/export-table-ref.js";
 import { assertFriendAccess } from "../lib/friend-access.js";
 import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withCrossAccountRead } from "../lib/rls-context.js";
@@ -58,14 +59,7 @@ export async function getFriendExportManifest(
       queryActiveKeyGrants(tx, access.targetSystemId, auth.accountId),
     ]);
 
-    // Compute overall ETag from all per-type max timestamps
-    const globalMaxUpdatedAt = entries.reduce<UnixMillis | null>((acc, e) => {
-      if (e.lastUpdatedAt === null) return acc;
-      if (acc === null) return e.lastUpdatedAt;
-      return e.lastUpdatedAt > acc ? e.lastUpdatedAt : acc;
-    }, null);
-    const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
-    const etag = computeDataEtag(globalMaxUpdatedAt, totalCount);
+    const etag = computeManifestEtag(entries);
 
     return {
       systemId: access.targetSystemId,
@@ -76,7 +70,7 @@ export async function getFriendExportManifest(
   });
 }
 
-/** Build manifest entries for all entity types in parallel. */
+/** Build manifest entries for all entity types in batched parallel groups. */
 async function buildManifestEntries(
   tx: PostgresJsDatabase,
   systemId: SystemId,
@@ -84,8 +78,10 @@ async function buildManifestEntries(
 ): Promise<readonly FriendExportManifestEntry[]> {
   const entityTypes = Object.keys(EXPORT_TABLE_REGISTRY) as FriendExportEntityType[];
 
-  return Promise.all(
-    entityTypes.map((entityType) => buildManifestEntry(tx, systemId, friendBucketIds, entityType)),
+  return batchedManifestQueries(
+    entityTypes.map(
+      (entityType) => () => buildManifestEntry(tx, systemId, friendBucketIds, entityType),
+    ),
   );
 }
 

@@ -1,11 +1,11 @@
 ---
 # api-vzq1
-title: "M12: Extract shared computeManifestEtag helper"
-status: todo
+title: 'M12: Extract shared computeManifestEtag helper'
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-28T21:27:24Z
-updated_at: 2026-03-28T21:27:24Z
+updated_at: 2026-03-28T22:01:45Z
 parent: ps-tkuz
 ---
 

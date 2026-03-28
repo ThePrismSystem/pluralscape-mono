@@ -30,7 +30,9 @@ import {
   systemStructureEntityTypes,
   wikiPages,
 } from "@pluralscape/db/pg";
-import { and, asc, countDistinct, eq, gt, max, or } from "drizzle-orm";
+import { and, asc, countDistinct, eq, max } from "drizzle-orm";
+
+import { exportRef, keysetAfter } from "../lib/export-table-ref.js";
 
 import type { DecodedCompositeCursor } from "../lib/pagination.js";
 import type {
@@ -41,7 +43,7 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { SQL } from "drizzle-orm";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { ExportTableRef } from "../lib/export-table-ref.js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Row shapes ──────────────────────────────────────────────────────
@@ -80,53 +82,6 @@ export interface BucketExportQueryFns {
   ) => Promise<BucketExportRow[]>;
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────
-
-/**
- * Keyset "after" condition for cursor pagination.
- *
- * Produces: (sortCol > cursor.sortValue) OR (sortCol = cursor.sortValue AND idCol > cursor.id)
- */
-function keysetAfter(sortCol: PgColumn, idCol: PgColumn, cursor: DecodedCompositeCursor): SQL {
-  const result = or(
-    gt(sortCol, cursor.sortValue),
-    and(eq(sortCol, cursor.sortValue), gt(idCol, cursor.id)),
-  );
-  if (!result) throw new Error("keysetAfter: or() returned undefined");
-  return result;
-}
-
-// ── Table reference ─────────────────────────────────────────────────
-
-interface BucketExportTableRef {
-  readonly table: PgTable;
-  readonly id: PgColumn;
-  readonly systemId: PgColumn;
-  readonly encryptedData: PgColumn;
-  readonly updatedAt: PgColumn;
-  readonly archived?: PgColumn;
-}
-
-/** Extract a BucketExportTableRef from a drizzle table with the required columns. */
-function exportRef(
-  t: PgTable & {
-    id: PgColumn;
-    systemId: PgColumn;
-    encryptedData: PgColumn;
-    updatedAt: PgColumn;
-    archived?: PgColumn;
-  },
-): BucketExportTableRef {
-  return {
-    table: t,
-    id: t.id,
-    systemId: t.systemId,
-    encryptedData: t.encryptedData,
-    updatedAt: t.updatedAt,
-    archived: t.archived,
-  };
-}
-
 // ── Factory ─────────────────────────────────────────────────────────
 
 /**
@@ -137,7 +92,7 @@ function exportRef(
  * This targets a single bucket — no post-query filtering needed.
  */
 function makeBucketExportQueryFns(
-  ref: BucketExportTableRef,
+  ref: ExportTableRef,
   entityType: BucketContentEntityType,
 ): BucketExportQueryFns {
   const {

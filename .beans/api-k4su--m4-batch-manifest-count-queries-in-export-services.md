@@ -1,11 +1,11 @@
 ---
 # api-k4su
-title: "M4: Batch manifest COUNT queries in export services"
-status: todo
+title: 'M4: Batch manifest COUNT queries in export services'
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-28T21:27:01Z
-updated_at: 2026-03-28T21:27:01Z
+updated_at: 2026-03-28T22:01:46Z
 parent: ps-tkuz
 ---
 

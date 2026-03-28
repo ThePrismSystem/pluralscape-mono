@@ -29,7 +29,9 @@ import {
   systemStructureEntityTypes,
   wikiPages,
 } from "@pluralscape/db/pg";
-import { and, asc, countDistinct, eq, gt, inArray, max, or } from "drizzle-orm";
+import { and, asc, countDistinct, eq, inArray, max } from "drizzle-orm";
+
+import { exportRef, keysetAfter } from "../lib/export-table-ref.js";
 
 import type { DecodedCompositeCursor } from "../lib/pagination.js";
 import type {
@@ -40,7 +42,7 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { SQL } from "drizzle-orm";
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { ExportTableRef } from "../lib/export-table-ref.js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Row shapes ──────────────────────────────────────────────────────
@@ -76,60 +78,6 @@ export interface ExportQueryFns {
     limit: number,
     cursor?: DecodedCompositeCursor,
   ) => Promise<ExportRow[]>;
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────
-
-/**
- * Keyset "after" condition for cursor pagination.
- *
- * Produces: (sortCol > cursor.sortValue) OR (sortCol = cursor.sortValue AND idCol > cursor.id)
- * The `or()` call with two defined arguments always returns SQL, never undefined.
- */
-function keysetAfter(sortCol: PgColumn, idCol: PgColumn, cursor: DecodedCompositeCursor): SQL {
-  return or(
-    gt(sortCol, cursor.sortValue),
-    and(eq(sortCol, cursor.sortValue), gt(idCol, cursor.id)),
-  ) as SQL;
-}
-
-// ── Table reference ─────────────────────────────────────────────────
-
-/**
- * Decomposed table reference separating PgTable (for `.from()`) from
- * individual column references (for `.select()`, `.where()`, etc.).
- *
- * This separation is needed because drizzle's `.from()` requires a
- * concrete PgTable type, while column references need PgColumn types
- * for query builder methods.
- */
-interface ExportTableRef {
-  readonly table: PgTable;
-  readonly id: PgColumn;
-  readonly systemId: PgColumn;
-  readonly encryptedData: PgColumn;
-  readonly updatedAt: PgColumn;
-  readonly archived?: PgColumn;
-}
-
-/** Extract an ExportTableRef from a drizzle table with the required columns. */
-function exportRef(
-  t: PgTable & {
-    id: PgColumn;
-    systemId: PgColumn;
-    encryptedData: PgColumn;
-    updatedAt: PgColumn;
-    archived?: PgColumn;
-  },
-): ExportTableRef {
-  return {
-    table: t,
-    id: t.id,
-    systemId: t.systemId,
-    encryptedData: t.encryptedData,
-    updatedAt: t.updatedAt,
-    archived: t.archived,
-  };
 }
 
 // ── Factory ─────────────────────────────────────────────────────────
