@@ -56,7 +56,7 @@ export interface FriendDashboardKeyGrant {
  */
 export interface FriendDashboardResponse {
   readonly systemId: SystemId;
-  /** Total non-archived member count (unfiltered — intentional privacy decision). */
+  /** Bucket-visible non-archived member count (filtered by friend's assigned buckets). */
   readonly memberCount: number;
   readonly activeFronting: {
     readonly sessions: readonly FriendDashboardFrontingSession[];

@@ -1,11 +1,12 @@
 import {
+  bucketContentTags,
   customFronts,
   frontingSessions,
   keyGrants,
   members,
   systemStructureEntities,
 } from "@pluralscape/db/pg";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, countDistinct, eq, inArray, isNull } from "drizzle-orm";
 
 import { filterVisibleEntities, loadBucketTags } from "../lib/bucket-access.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
@@ -16,6 +17,7 @@ import { MAX_ACTIVE_SESSIONS, MAX_PAGE_LIMIT } from "../service.constants.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AccountId,
+  BucketContentEntityType,
   BucketId,
   CustomFrontId,
   EncryptedBlob,
@@ -28,14 +30,154 @@ import type {
   SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { SQL } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-// ── Internal result types (DB row → dashboard shape) ────────────
+// ── Internal types ─────────────────────────────────────────────
 
 interface DashboardEntityRow {
   readonly id: string;
   readonly encryptedData: EncryptedBlob;
 }
+
+/** Decomposed table reference for the generic queryVisibleEntities helper. */
+interface DashboardTableRef {
+  readonly table: PgTable;
+  readonly id: PgColumn;
+  readonly systemId: PgColumn;
+  readonly encryptedData: PgColumn;
+  readonly archived: PgColumn;
+}
+
+/** Per-request cache key for loadBucketTags results. */
+type BucketTagCacheKey = `${string}:${string}`;
+
+/**
+ * Request-scoped cache for loadBucketTags results.
+ *
+ * Created fresh per `getFriendDashboard` call to avoid cross-tenant
+ * cache poisoning. Keyed by `systemId:entityType`.
+ */
+export type BucketTagCache = Map<BucketTagCacheKey, ReadonlyMap<string, readonly BucketId[]>>;
+
+function bucketTagCacheKey(
+  systemId: SystemId,
+  entityType: BucketContentEntityType,
+): BucketTagCacheKey {
+  return `${systemId}:${entityType}`;
+}
+
+/** Load bucket tags with per-request caching per (systemId, entityType). */
+export async function cachedLoadBucketTags(
+  tx: PostgresJsDatabase,
+  systemId: SystemId,
+  entityType: BucketContentEntityType,
+  entityIds: readonly string[],
+  cache: BucketTagCache,
+): Promise<ReadonlyMap<string, readonly BucketId[]>> {
+  if (entityIds.length === 0) {
+    return new Map();
+  }
+
+  const key = bucketTagCacheKey(systemId, entityType);
+  const cached = cache.get(key);
+
+  if (cached) {
+    const allPresent = entityIds.every((id) => cached.has(id));
+    if (allPresent) {
+      return cached;
+    }
+  }
+
+  const result = await loadBucketTags(tx, systemId, entityType, entityIds);
+
+  // Merge with existing cached entries for this key
+  const merged = cached ? new Map(cached) : new Map<string, readonly BucketId[]>();
+  for (const [entityId, bucketIds] of result) {
+    merged.set(entityId, bucketIds);
+  }
+
+  cache.set(key, merged);
+
+  return result;
+}
+
+// ── Generic visible entities helper (M11 + M3) ────────────────
+
+/**
+ * Query non-archived entities visible to a friend via bucket intersection,
+ * using an INNER JOIN on bucket_content_tags for SQL-level filtering.
+ *
+ * This replaces the previous pattern of fetching all entities, loading
+ * bucket tags, and filtering in memory.
+ */
+async function queryVisibleEntities<TId extends string>(
+  tx: PostgresJsDatabase,
+  ref: DashboardTableRef,
+  entityType: BucketContentEntityType,
+  systemId: SystemId,
+  friendBucketIds: readonly BucketId[],
+  mapId: (id: string) => TId,
+): Promise<readonly { readonly id: TId; readonly encryptedData: string }[]> {
+  if (friendBucketIds.length === 0) {
+    return [];
+  }
+
+  const conds: SQL[] = [
+    eq(ref.systemId, systemId),
+    eq(ref.archived, false),
+    inArray(bucketContentTags.bucketId, friendBucketIds),
+  ];
+
+  const rows = await tx
+    .selectDistinctOn([ref.id], {
+      id: ref.id,
+      encryptedData: ref.encryptedData,
+    })
+    .from(ref.table)
+    .innerJoin(
+      bucketContentTags,
+      and(
+        eq(bucketContentTags.entityId, ref.id),
+        eq(bucketContentTags.systemId, ref.systemId),
+        eq(bucketContentTags.entityType, entityType),
+      ),
+    )
+    .where(and(...conds))
+    .limit(MAX_PAGE_LIMIT);
+
+  return (rows as DashboardEntityRow[]).map((r) => ({
+    id: mapId(r.id),
+    encryptedData: encryptedBlobToBase64(r.encryptedData),
+  }));
+}
+
+// ── Table references ───────────────────────────────────────────
+
+const MEMBER_REF: DashboardTableRef = {
+  table: members,
+  id: members.id,
+  systemId: members.systemId,
+  encryptedData: members.encryptedData,
+  archived: members.archived,
+};
+
+const CUSTOM_FRONT_REF: DashboardTableRef = {
+  table: customFronts,
+  id: customFronts.id,
+  systemId: customFronts.systemId,
+  encryptedData: customFronts.encryptedData,
+  archived: customFronts.archived,
+};
+
+const STRUCTURE_ENTITY_REF: DashboardTableRef = {
+  table: systemStructureEntities,
+  id: systemStructureEntities.id,
+  systemId: systemStructureEntities.systemId,
+  encryptedData: systemStructureEntities.encryptedData,
+  archived: systemStructureEntities.archived,
+};
 
 // ── Query helpers ───────────────────────────────────────────────
 
@@ -50,6 +192,7 @@ export async function queryVisibleActiveFronting(
   tx: PostgresJsDatabase,
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
+  cache: BucketTagCache,
 ): Promise<{
   sessions: FriendDashboardResponse["activeFronting"]["sessions"];
   isCofronting: boolean;
@@ -92,37 +235,37 @@ export async function queryVisibleActiveFronting(
     if (r.structureEntityId) structureEntityIds.add(r.structureEntityId);
   }
 
-  // Load bucket tags for each subject entity type in parallel
+  // Load bucket tags for each subject entity type in parallel (with caching)
   const [memberBucketMap, cfBucketMap, steBucketMap] = await Promise.all([
     memberIds.size > 0
-      ? loadBucketTags(tx, systemId, "member", [...memberIds])
+      ? cachedLoadBucketTags(tx, systemId, "member", [...memberIds], cache)
       : new Map<string, BucketId[]>(),
     customFrontIds.size > 0
-      ? loadBucketTags(tx, systemId, "custom-front", [...customFrontIds])
+      ? cachedLoadBucketTags(tx, systemId, "custom-front", [...customFrontIds], cache)
       : new Map<string, BucketId[]>(),
     structureEntityIds.size > 0
-      ? loadBucketTags(tx, systemId, "structure-entity", [...structureEntityIds])
+      ? cachedLoadBucketTags(tx, systemId, "structure-entity", [...structureEntityIds], cache)
       : new Map<string, BucketId[]>(),
   ]);
 
   // Build a session-to-bucket map by merging subject entity bucket tags
   const sessionBucketMap = new Map<string, BucketId[]>();
   for (const r of rows) {
-    const buckets: BucketId[] = [];
+    const sessionBuckets: BucketId[] = [];
     if (r.memberId) {
       const mb = memberBucketMap.get(r.memberId);
-      if (mb) buckets.push(...mb);
+      if (mb) sessionBuckets.push(...mb);
     }
     if (r.customFrontId) {
       const cb = cfBucketMap.get(r.customFrontId);
-      if (cb) buckets.push(...cb);
+      if (cb) sessionBuckets.push(...cb);
     }
     if (r.structureEntityId) {
       const sb = steBucketMap.get(r.structureEntityId);
-      if (sb) buckets.push(...sb);
+      if (sb) sessionBuckets.push(...sb);
     }
-    if (buckets.length > 0) {
-      sessionBucketMap.set(r.id, buckets);
+    if (sessionBuckets.length > 0) {
+      sessionBucketMap.set(r.id, sessionBuckets);
     }
   }
 
@@ -155,27 +298,14 @@ export async function queryVisibleMembers(
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
 ): Promise<FriendDashboardResponse["visibleMembers"]> {
-  if (friendBucketIds.length === 0) {
-    return [];
-  }
-
-  const rows: DashboardEntityRow[] = await tx
-    .select({
-      id: members.id,
-      encryptedData: members.encryptedData,
-    })
-    .from(members)
-    .where(and(eq(members.systemId, systemId), eq(members.archived, false)))
-    .limit(MAX_PAGE_LIMIT);
-
-  const memberIds = rows.map((r) => r.id);
-  const entityBucketMap = await loadBucketTags(tx, systemId, "member", memberIds);
-  const visible = filterVisibleEntities(rows, friendBucketIds, entityBucketMap, (r) => r.id);
-
-  return visible.map((r) => ({
-    id: r.id as MemberId,
-    encryptedData: encryptedBlobToBase64(r.encryptedData),
-  }));
+  return queryVisibleEntities(
+    tx,
+    MEMBER_REF,
+    "member",
+    systemId,
+    friendBucketIds,
+    (id) => id as MemberId,
+  );
 }
 
 /** Fetch non-archived custom fronts visible to a friend via bucket intersection. */
@@ -184,27 +314,14 @@ export async function queryVisibleCustomFronts(
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
 ): Promise<FriendDashboardResponse["visibleCustomFronts"]> {
-  if (friendBucketIds.length === 0) {
-    return [];
-  }
-
-  const rows: DashboardEntityRow[] = await tx
-    .select({
-      id: customFronts.id,
-      encryptedData: customFronts.encryptedData,
-    })
-    .from(customFronts)
-    .where(and(eq(customFronts.systemId, systemId), eq(customFronts.archived, false)))
-    .limit(MAX_PAGE_LIMIT);
-
-  const cfIds = rows.map((r) => r.id);
-  const entityBucketMap = await loadBucketTags(tx, systemId, "custom-front", cfIds);
-  const visible = filterVisibleEntities(rows, friendBucketIds, entityBucketMap, (r) => r.id);
-
-  return visible.map((r) => ({
-    id: r.id as CustomFrontId,
-    encryptedData: encryptedBlobToBase64(r.encryptedData),
-  }));
+  return queryVisibleEntities(
+    tx,
+    CUSTOM_FRONT_REF,
+    "custom-front",
+    systemId,
+    friendBucketIds,
+    (id) => id as CustomFrontId,
+  );
 }
 
 /** Fetch non-archived structure entities visible to a friend via bucket intersection. */
@@ -213,43 +330,49 @@ export async function queryVisibleStructureEntities(
   systemId: SystemId,
   friendBucketIds: readonly BucketId[],
 ): Promise<FriendDashboardResponse["visibleStructureEntities"]> {
-  if (friendBucketIds.length === 0) {
-    return [];
-  }
-
-  const rows: DashboardEntityRow[] = await tx
-    .select({
-      id: systemStructureEntities.id,
-      encryptedData: systemStructureEntities.encryptedData,
-    })
-    .from(systemStructureEntities)
-    .where(
-      and(
-        eq(systemStructureEntities.systemId, systemId),
-        eq(systemStructureEntities.archived, false),
-      ),
-    )
-    .limit(MAX_PAGE_LIMIT);
-
-  const entityIds = rows.map((r) => r.id);
-  const entityBucketMap = await loadBucketTags(tx, systemId, "structure-entity", entityIds);
-  const visible = filterVisibleEntities(rows, friendBucketIds, entityBucketMap, (r) => r.id);
-
-  return visible.map((r) => ({
-    id: r.id as SystemStructureEntityId,
-    encryptedData: encryptedBlobToBase64(r.encryptedData),
-  }));
+  return queryVisibleEntities(
+    tx,
+    STRUCTURE_ENTITY_REF,
+    "structure-entity",
+    systemId,
+    friendBucketIds,
+    (id) => id as SystemStructureEntityId,
+  );
 }
 
-/** Count total non-archived members (NOT bucket-filtered). */
+/**
+ * Count non-archived members visible to a friend via bucket intersection.
+ *
+ * Uses INNER JOIN on bucket_content_tags to count only members the friend
+ * can see, preventing system size leakage (H2 security fix).
+ */
 export async function queryMemberCount(
   tx: PostgresJsDatabase,
   systemId: SystemId,
+  friendBucketIds: readonly BucketId[],
 ): Promise<number> {
+  if (friendBucketIds.length === 0) {
+    return 0;
+  }
+
   const [result] = await tx
-    .select({ value: count() })
+    .select({ value: countDistinct(members.id) })
     .from(members)
-    .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
+    .innerJoin(
+      bucketContentTags,
+      and(
+        eq(bucketContentTags.entityId, members.id),
+        eq(bucketContentTags.systemId, members.systemId),
+        eq(bucketContentTags.entityType, "member"),
+      ),
+    )
+    .where(
+      and(
+        eq(members.systemId, systemId),
+        eq(members.archived, false),
+        inArray(bucketContentTags.bucketId, friendBucketIds),
+      ),
+    );
 
   return result?.value ?? 0;
 }
@@ -299,6 +422,7 @@ export async function getFriendDashboard(
 ): Promise<FriendDashboardResponse> {
   return withCrossAccountRead(db, async (tx) => {
     const access = await assertFriendAccess(tx, connectionId, auth);
+    const requestCache: BucketTagCache = new Map();
 
     const [
       activeFronting,
@@ -308,11 +432,11 @@ export async function getFriendDashboard(
       memberCount,
       activeKeyGrants,
     ] = await Promise.all([
-      queryVisibleActiveFronting(tx, access.targetSystemId, access.assignedBucketIds),
+      queryVisibleActiveFronting(tx, access.targetSystemId, access.assignedBucketIds, requestCache),
       queryVisibleMembers(tx, access.targetSystemId, access.assignedBucketIds),
       queryVisibleCustomFronts(tx, access.targetSystemId, access.assignedBucketIds),
       queryVisibleStructureEntities(tx, access.targetSystemId, access.assignedBucketIds),
-      queryMemberCount(tx, access.targetSystemId),
+      queryMemberCount(tx, access.targetSystemId, access.assignedBucketIds),
       queryActiveKeyGrants(tx, access.targetSystemId, auth.accountId),
     ]);
 
