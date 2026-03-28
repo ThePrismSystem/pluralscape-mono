@@ -15,6 +15,7 @@ vi.mock("../../lib/encrypted-blob.js", () => ({
 
 vi.mock("../../lib/bucket-access.js", () => ({
   filterVisibleEntities: vi.fn().mockReturnValue([]),
+  loadBucketTags: vi.fn().mockResolvedValue(new Map()),
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({

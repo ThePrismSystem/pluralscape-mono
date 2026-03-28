@@ -1,4 +1,64 @@
-import type { BucketAccessCheck, BucketId } from "@pluralscape/types";
+import { bucketContentTags } from "@pluralscape/db/pg";
+import { and, eq, inArray } from "drizzle-orm";
+
+import { MAX_IN_CLAUSE_SIZE } from "../service.constants.js";
+
+import type {
+  BucketAccessCheck,
+  BucketContentEntityType,
+  BucketId,
+  SystemId,
+} from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+/**
+ * Load bucket content tags for a set of entities and build a map
+ * from entity ID to bucket IDs.
+ *
+ * Batches the IN clause when entityIds exceeds MAX_IN_CLAUSE_SIZE
+ * to avoid hitting PostgreSQL parameter limits.
+ */
+export async function loadBucketTags(
+  tx: PostgresJsDatabase,
+  systemId: SystemId,
+  entityType: BucketContentEntityType,
+  entityIds: readonly string[],
+): Promise<ReadonlyMap<string, readonly BucketId[]>> {
+  if (entityIds.length === 0) {
+    return new Map();
+  }
+
+  const map = new Map<string, BucketId[]>();
+
+  for (let offset = 0; offset < entityIds.length; offset += MAX_IN_CLAUSE_SIZE) {
+    const batch = entityIds.slice(offset, offset + MAX_IN_CLAUSE_SIZE);
+
+    const tags = await tx
+      .select({
+        entityId: bucketContentTags.entityId,
+        bucketId: bucketContentTags.bucketId,
+      })
+      .from(bucketContentTags)
+      .where(
+        and(
+          eq(bucketContentTags.systemId, systemId),
+          eq(bucketContentTags.entityType, entityType),
+          inArray(bucketContentTags.entityId, batch),
+        ),
+      );
+
+    for (const tag of tags) {
+      const existing = map.get(tag.entityId);
+      if (existing) {
+        existing.push(tag.bucketId as BucketId);
+      } else {
+        map.set(tag.entityId, [tag.bucketId as BucketId]);
+      }
+    }
+  }
+
+  return map;
+}
 
 /**
  * Check whether a friend has access to content using bucket intersection logic.

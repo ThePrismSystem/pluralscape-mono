@@ -107,6 +107,7 @@ export {
   CheckInRecordQuerySchema,
   parseTimeToMinutes,
 } from "./timer.js";
+export { FriendExportQuerySchema } from "./friend-export.js";
 export {
   CreateWebhookConfigBodySchema,
   UpdateWebhookConfigBodySchema,
