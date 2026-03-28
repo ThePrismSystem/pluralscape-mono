@@ -6,8 +6,9 @@
  * bucket export uses a direct JOIN on bucket_content_tags — entities are
  * either tagged or not, so no overfetch loop is needed.
  */
+import { batchedManifestQueries } from "../lib/batch.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
-import { computeDataEtag } from "../lib/etag.js";
+import { computeDataEtag, computeManifestEtag } from "../lib/etag.js";
 import { fromCompositeCursor, toCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -52,14 +53,7 @@ export async function getBucketExportManifest(
 
     const entries = await buildManifestEntries(tx, systemId, bucketId);
 
-    // Compute overall ETag from all per-type max timestamps
-    const globalMaxUpdatedAt = entries.reduce<UnixMillis | null>((acc, e) => {
-      if (e.lastUpdatedAt === null) return acc;
-      if (acc === null) return e.lastUpdatedAt;
-      return e.lastUpdatedAt > acc ? e.lastUpdatedAt : acc;
-    }, null);
-    const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
-    const etag = computeDataEtag(globalMaxUpdatedAt, totalCount);
+    const etag = computeManifestEtag(entries);
 
     return {
       systemId,
@@ -70,7 +64,7 @@ export async function getBucketExportManifest(
   });
 }
 
-/** Build manifest entries for all entity types in parallel. */
+/** Build manifest entries for all entity types in batched parallel groups. */
 async function buildManifestEntries(
   tx: PostgresJsDatabase,
   systemId: SystemId,
@@ -78,8 +72,8 @@ async function buildManifestEntries(
 ): Promise<readonly BucketExportManifestEntry[]> {
   const entityTypes = Object.keys(BUCKET_EXPORT_TABLE_REGISTRY) as BucketContentEntityType[];
 
-  return Promise.all(
-    entityTypes.map(async (entityType) => {
+  return batchedManifestQueries(
+    entityTypes.map((entityType) => async () => {
       const { count, maxUpdatedAt } = await BUCKET_EXPORT_TABLE_REGISTRY[
         entityType
       ].queryManifestCount(tx, systemId, bucketId);

@@ -1,11 +1,11 @@
 ---
 # api-37ii
 title: "H5: Extract shared export table infrastructure"
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-28T21:26:35Z
-updated_at: 2026-03-28T21:26:35Z
+updated_at: 2026-03-28T22:01:45Z
 parent: ps-tkuz
 ---
 

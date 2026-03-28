@@ -17,6 +17,26 @@ export function computeDataEtag(maxUpdatedAt: UnixMillis | null, entityCount: nu
   return `W/"${hash}"`;
 }
 
+/** Entry shape accepted by computeManifestEtag — requires count and lastUpdatedAt. */
+interface ManifestEtagEntry {
+  readonly count: number;
+  readonly lastUpdatedAt: UnixMillis | null;
+}
+
+/**
+ * Compute an overall manifest ETag from per-entity-type manifest entries.
+ *
+ * Derives a global MAX(updatedAt) across all entries and a total count,
+ * then delegates to computeDataEtag for the hash.
+ */
+export function computeManifestEtag(entries: readonly ManifestEtagEntry[]): string {
+  const timestamps = entries.map((e) => e.lastUpdatedAt).filter((t): t is UnixMillis => t !== null);
+  const globalMaxUpdatedAt: UnixMillis | null =
+    timestamps.length > 0 ? (Math.max(...timestamps) as UnixMillis) : null;
+  const totalCount = entries.reduce((sum, e) => sum + e.count, 0);
+  return computeDataEtag(globalMaxUpdatedAt, totalCount);
+}
+
 /**
  * Check whether an If-None-Match request header matches the current ETag.
  *
