@@ -1,11 +1,11 @@
 ---
 # api-g475
 title: Feature completeness audit
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-29T02:58:32Z
-updated_at: 2026-03-29T02:58:32Z
+updated_at: 2026-03-29T21:32:17Z
 parent: api-e7gt
 ---
 
@@ -44,10 +44,26 @@ Identify gaps and create follow-up beans for any missing endpoints.
 
 ## Checklist
 
-- [ ] Enumerate all features from M1-M7 scope documents
-- [ ] Map each feature to its API endpoints
-- [ ] Identify missing endpoints or incomplete CRUD sets
-- [ ] Identify missing query filters or sort options the client will need
-- [ ] Verify all list endpoints support the client's pagination needs
-- [ ] Document gaps with severity (blocker vs. nice-to-have)
-- [ ] Create follow-up beans for any missing functionality
+- [x] Enumerate all features from M1-M7 scope documents
+- [x] Map each feature to its API endpoints
+- [x] Identify missing endpoints or incomplete CRUD sets
+- [x] Identify missing query filters or sort options the client will need
+- [x] Verify all list endpoints support the client's pagination needs
+- [x] Document gaps with severity (blocker vs. nice-to-have)
+- [x] Create follow-up beans for any missing functionality
+
+## Summary of Changes
+
+Completed feature completeness audit across 15 domains against 5 sources of truth (features.md, milestones.md, ADRs, CHANGELOG, 961 completed beans).
+
+Audit document: docs/audits/feature-completeness-audit-2026-03-29.md
+
+Findings: 52 gaps total (11 blocker, 24 medium, 17 low). 16 follow-up beans created under parent api-e7gt (5 critical, 10 high, 1 normal aggregated low).
+
+Key blockers:
+
+- Structure entity REST routes missing (M4 refactor removed old routes, generic never added)
+- Account deletion endpoint absent
+- Friend request accept/reject flow missing
+- API key management entirely absent
+- Custom field value routes for groups and structure entities missing
