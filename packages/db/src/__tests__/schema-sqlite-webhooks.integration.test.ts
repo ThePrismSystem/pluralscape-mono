@@ -548,92 +548,16 @@ describe("SQLite webhooks schema", () => {
       expect(retryable[0]?.id).toBe(pendingId);
     });
 
-    it("defaults archived to false and archivedAt to null", () => {
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(webhookDeliveries)
-        .values({
-          id,
-          webhookId: deliveryWhId,
-          systemId: deliverySystemId,
-          eventType: "member.created",
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id)).all();
-      expect(rows[0]?.archived).toBe(false);
-      expect(rows[0]?.archivedAt).toBeNull();
-    });
-
-    it("round-trips archived: true with archivedAt timestamp", () => {
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(webhookDeliveries)
-        .values({
-          id,
-          webhookId: deliveryWhId,
-          systemId: deliverySystemId,
-          eventType: "member.created",
-          archived: true,
-          archivedAt: now,
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id)).all();
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+    it("rejects delivery with neither encrypted_data nor payload_data via CHECK constraint", () => {
       const now = Date.now();
 
       expect(() =>
         client
           .prepare(
-            "INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at, archived, archived_at) VALUES (?, ?, ?, 'member.created', ?, 1, NULL)",
+            "INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at, encrypted_data, payload_data) VALUES (?, ?, ?, 'member.created', ?, NULL, NULL)",
           )
           .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, now),
       ).toThrow(/CHECK|constraint/i);
-    });
-
-    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
-      const now = Date.now();
-
-      expect(() =>
-        client
-          .prepare(
-            "INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at, archived, archived_at) VALUES (?, ?, ?, 'member.created', ?, 0, ?)",
-          )
-          .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, now, now),
-      ).toThrow(/CHECK|constraint/i);
-    });
-
-    it("updates archived from false to true", () => {
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(webhookDeliveries)
-        .values({
-          id,
-          webhookId: deliveryWhId,
-          systemId: deliverySystemId,
-          eventType: "member.created",
-          createdAt: now,
-        })
-        .run();
-
-      db.update(webhookDeliveries)
-        .set({ archived: true, archivedAt: now })
-        .where(eq(webhookDeliveries.id, id))
-        .run();
-
-      const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id)).all();
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 });
