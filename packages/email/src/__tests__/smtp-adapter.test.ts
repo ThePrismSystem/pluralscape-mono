@@ -17,8 +17,6 @@ function createMockTransport() {
       accepted: ["test@example.com"],
       rejected: [],
     }),
-    close: vi.fn(),
-    verify: vi.fn().mockResolvedValue(true),
   };
 }
 

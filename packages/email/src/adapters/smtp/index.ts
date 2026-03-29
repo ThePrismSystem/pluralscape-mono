@@ -29,22 +29,26 @@ export interface SmtpConfig {
   readonly maxConnections?: number;
 }
 
-/**
- * Minimal interface for a Nodemailer transport.
- * Used for dependency injection in tests.
- */
-interface NodemailerTransport {
-  sendMail: (options: {
-    from: string;
-    to: string;
-    subject: string;
-    html: string;
-    text: string;
-    replyTo?: string;
-  }) => Promise<{ messageId?: string; accepted?: string[]; rejected?: string[] }>;
-  close: () => void;
-  verify: () => Promise<boolean>;
+/** Mail options passed to the underlying transport's sendMail. */
+interface SendMailOptions {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  replyTo?: string;
 }
+
+/** Result shape from a sendMail call — only the messageId is needed. */
+interface SendMailResult {
+  messageId?: string;
+}
+
+/**
+ * Abstraction over the transport's sendMail method.
+ * Allows dependency injection for testing without matching Nodemailer's full overloaded type.
+ */
+type SendMailFn = (options: SendMailOptions) => Promise<SendMailResult>;
 
 /** SMTP error codes indicating a configuration or connection issue. */
 const CONNECTION_ERROR_CODES = new Set(["ECONNREFUSED", "ECONNRESET", "EAUTH", "ESOCKET", "ETLS"]);
@@ -93,29 +97,47 @@ const RATE_LIMIT_RESPONSE_CODES = new Set([
  */
 export class SmtpEmailAdapter implements EmailAdapter {
   readonly providerName = "smtp" as const;
-  private readonly transport: NodemailerTransport;
+  private readonly sendMailFn: SendMailFn;
   private readonly fromAddress: string;
 
   constructor(config: SmtpConfig, fromAddress?: string) {
-    this.transport = nodemailer.createTransport({
+    const baseOptions = {
       host: config.host,
       port: config.port,
       secure: config.secure,
       auth: config.auth,
-      pool: config.pool,
-      maxConnections: config.maxConnections,
-    });
+    };
+
+    const transport =
+      config.pool === true
+        ? nodemailer.createTransport({
+            ...baseOptions,
+            pool: true,
+            maxConnections: config.maxConnections,
+          })
+        : nodemailer.createTransport(baseOptions);
+
+    this.sendMailFn = async (opts) => {
+      const info = await transport.sendMail(opts);
+      return { messageId: info.messageId };
+    };
     this.fromAddress = fromAddress ?? DEFAULT_FROM_ADDRESS;
   }
 
   /**
-   * Creates an adapter from a pre-configured Nodemailer transport.
+   * Creates an adapter from a mock transport object.
    * Primarily used for testing with mocked transports.
    */
-  static fromTransport(transport: NodemailerTransport, fromAddress?: string): SmtpEmailAdapter {
+  static fromTransport(
+    transport: { sendMail: SendMailFn },
+    fromAddress?: string,
+  ): SmtpEmailAdapter {
     const adapter = Object.create(SmtpEmailAdapter.prototype) as SmtpEmailAdapter;
     Object.defineProperty(adapter, "providerName", { value: "smtp", writable: false });
-    Object.defineProperty(adapter, "transport", { value: transport, writable: false });
+    Object.defineProperty(adapter, "sendMailFn", {
+      value: (opts: SendMailOptions) => transport.sendMail(opts),
+      writable: false,
+    });
     Object.defineProperty(adapter, "fromAddress", {
       value: fromAddress ?? DEFAULT_FROM_ADDRESS,
       writable: false,
@@ -127,7 +149,7 @@ export class SmtpEmailAdapter implements EmailAdapter {
     const to = typeof params.to === "string" ? params.to : params.to.join(", ");
 
     try {
-      const result = await this.transport.sendMail({
+      const result = await this.sendMailFn({
         from: params.from ?? this.fromAddress,
         to,
         subject: params.subject,
