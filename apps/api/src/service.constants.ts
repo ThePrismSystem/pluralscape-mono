@@ -54,6 +54,9 @@ export const WEBHOOK_TIMESTAMP_HEADER = "X-Pluralscape-Timestamp";
 /** Maximum age in days for terminal (success/failed) webhook deliveries before cleanup. */
 export const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
 
+/** Number of rows deleted per iteration during webhook delivery cleanup. */
+export const WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE = 1_000;
+
 // ── Webhook delivery worker ─────────────────────────────────────
 
 /** HMAC algorithm used for signing webhook payloads. */
