@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-import { DEFAULT_FROM_ADDRESS } from "../../email.constants.js";
+import { DEFAULT_FROM_ADDRESS, validateSendParams } from "../../email.constants.js";
 import {
   EmailConfigurationError,
   EmailDeliveryError,
@@ -146,6 +146,7 @@ export class SmtpEmailAdapter implements EmailAdapter {
   }
 
   async send(params: EmailSendParams): Promise<EmailSendResult> {
+    validateSendParams(params);
     const to = typeof params.to === "string" ? params.to : params.to.join(", ");
 
     try {

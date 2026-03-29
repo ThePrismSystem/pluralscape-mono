@@ -236,6 +236,22 @@ describe("ResendEmailAdapter", () => {
       ).rejects.toThrow(InvalidRecipientError);
     });
 
+    it("maps missing_required_field to InvalidRecipientError", async () => {
+      mockClient.emails.send.mockResolvedValueOnce({
+        data: null,
+        error: { name: "missing_required_field", message: "Missing required field" },
+      });
+
+      await expect(
+        adapter.send({
+          to: "user@example.com",
+          subject: "Test",
+          html: "<p>Hi</p>",
+          text: "Hi",
+        }),
+      ).rejects.toThrow(InvalidRecipientError);
+    });
+
     it("maps application_error to EmailDeliveryError", async () => {
       mockClient.emails.send.mockResolvedValueOnce({
         data: null,

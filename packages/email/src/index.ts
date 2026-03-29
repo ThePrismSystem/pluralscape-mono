@@ -11,8 +11,13 @@ export {
   InvalidRecipientError,
 } from "./errors.js";
 
-// ── Constants ───────────────────────────────────────────────────────
-export { DEFAULT_FROM_ADDRESS, MAX_RECIPIENTS, MAX_SUBJECT_LENGTH } from "./email.constants.js";
+// ── Constants & validation ──────────────────────────────────────────
+export {
+  DEFAULT_FROM_ADDRESS,
+  MAX_RECIPIENTS,
+  MAX_SUBJECT_LENGTH,
+  validateSendParams,
+} from "./email.constants.js";
 
 // ── Adapters ────────────────────────────────────────────────────────
 export { StubEmailAdapter } from "./adapters/stub.js";

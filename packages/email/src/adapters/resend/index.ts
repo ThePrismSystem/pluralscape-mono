@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-import { DEFAULT_FROM_ADDRESS } from "../../email.constants.js";
+import { DEFAULT_FROM_ADDRESS, validateSendParams } from "../../email.constants.js";
 import {
   EmailConfigurationError,
   EmailDeliveryError,
@@ -45,7 +45,11 @@ const CONFIGURATION_ERROR_CODES = new Set([
 ]);
 
 /** Error code names that indicate an invalid recipient or parameter. */
-const RECIPIENT_ERROR_CODES = new Set(["validation_error", "invalid_parameter"]);
+const RECIPIENT_ERROR_CODES = new Set([
+  "validation_error",
+  "invalid_parameter",
+  "missing_required_field",
+]);
 
 /**
  * Email adapter backed by the Resend API.
@@ -78,6 +82,7 @@ export class ResendEmailAdapter implements EmailAdapter {
   }
 
   async send(params: EmailSendParams): Promise<EmailSendResult> {
+    validateSendParams(params);
     const to = typeof params.to === "string" ? [params.to] : [...params.to];
 
     const response = await this.client.emails.send({
