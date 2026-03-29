@@ -69,6 +69,8 @@ export function mockWebhookConfigServiceFactory(): Record<string, ReturnType<typ
     deleteWebhookConfig: vi.fn(),
     archiveWebhookConfig: vi.fn(),
     restoreWebhookConfig: vi.fn(),
+    rotateWebhookSecret: vi.fn(),
+    testWebhookConfig: vi.fn(),
     parseWebhookConfigQuery: vi.fn().mockReturnValue({}),
   };
 }

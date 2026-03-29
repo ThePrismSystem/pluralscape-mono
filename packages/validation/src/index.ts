@@ -110,6 +110,7 @@ export {
 export { FriendExportQuerySchema } from "./friend-export.js";
 export {
   CreateWebhookConfigBodySchema,
+  RotateWebhookSecretBodySchema,
   UpdateWebhookConfigBodySchema,
   WebhookConfigQuerySchema,
   WebhookDeliveryQuerySchema,

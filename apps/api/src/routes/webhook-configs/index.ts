@@ -6,6 +6,8 @@ import { deleteRoute } from "./delete.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
 import { restoreRoute } from "./restore.js";
+import { rotateSecretRoute } from "./rotate-secret.js";
+import { testRoute } from "./test.js";
 import { updateRoute } from "./update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -20,3 +22,5 @@ webhookConfigRoutes.route("/", deleteRoute);
 webhookConfigRoutes.route("/", createRoute);
 webhookConfigRoutes.route("/", archiveRoute);
 webhookConfigRoutes.route("/", restoreRoute);
+webhookConfigRoutes.route("/", rotateSecretRoute);
+webhookConfigRoutes.route("/", testRoute);
