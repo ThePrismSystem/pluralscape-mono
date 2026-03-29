@@ -3,7 +3,7 @@
   "created": "2026-03-29T00:00:00Z",
   "baseBranch": "main",
   "planFile": "beans:api-7xw0,api-9wze",
-  "status": "reviewing",
+  "status": "complete",
   "partitions": [
     {
       "id": 1,
@@ -104,7 +104,7 @@
       "dependsOn": [4],
       "conflictsWith": [],
       "reviewStatus": "passed",
-      "mergeStatus": "pending",
+      "mergeStatus": "merged",
       "reviewNotes": [
         "Minor: Only member.service.test.ts has webhook dispatch assertions — remaining service tests mock but don't verify arguments"
       ]
