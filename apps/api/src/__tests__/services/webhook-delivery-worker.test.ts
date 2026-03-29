@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { buildIpPinnedFetchArgs } from "../../lib/ip-validation.js";
 import {
   WEBHOOK_MAX_RETRY_ATTEMPTS,
   WEBHOOK_SIGNATURE_HEADER,
@@ -21,9 +22,13 @@ vi.mock("../../lib/logger.js", () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("../../lib/ip-validation.js", () => ({
-  resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
-}));
+vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/ip-validation.js")>();
+  return {
+    ...actual,
+    resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
+  };
+});
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -199,7 +204,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const call = mockFetch.mock.calls[0] ?? [];
     const [url, options] = call as [string, RequestInit];
-    expect(url).toBe("https://example.com/webhook");
+    expect(url).toBe("https://93.184.216.34/webhook");
     expect(options.method).toBe("POST");
     expect(options.body).toBe(JSON.stringify({ event: "test" }));
   });
@@ -221,6 +226,7 @@ describe("processWebhookDelivery (unit)", () => {
     const options = call[1] as RequestInit;
     const headers = options.headers as Record<string, string>;
     expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers["Host"]).toBe("example.com");
     expect(headers[WEBHOOK_SIGNATURE_HEADER]).toMatch(/^[0-9a-f]{64}$/);
     expect(headers[WEBHOOK_TIMESTAMP_HEADER]).toMatch(/^\d+$/);
   });
@@ -330,5 +336,27 @@ describe("findPendingDeliveries (unit)", () => {
     const result = await findPendingDeliveries(db, 10);
 
     expect(result).toEqual(mockResults);
+  });
+});
+
+// ── buildIpPinnedFetchArgs ────────────────────────────────────────
+
+describe("buildIpPinnedFetchArgs", () => {
+  it("replaces hostname with IPv4 and preserves path", () => {
+    const result = buildIpPinnedFetchArgs("https://example.com/webhook", "93.184.216.34");
+    expect(result.pinnedUrl).toBe("https://93.184.216.34/webhook");
+    expect(result.hostHeader).toBe("example.com");
+  });
+
+  it("wraps IPv6 in brackets", () => {
+    const result = buildIpPinnedFetchArgs("https://example.com/hook", "2001:db8::1");
+    expect(result.pinnedUrl).toBe("https://[2001:db8::1]/hook");
+    expect(result.hostHeader).toBe("example.com");
+  });
+
+  it("preserves port in host header", () => {
+    const result = buildIpPinnedFetchArgs("https://example.com:8443/webhook", "93.184.216.34");
+    expect(result.pinnedUrl).toBe("https://93.184.216.34:8443/webhook");
+    expect(result.hostHeader).toBe("example.com:8443");
   });
 });

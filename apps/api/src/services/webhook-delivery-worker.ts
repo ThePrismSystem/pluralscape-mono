@@ -4,7 +4,7 @@ import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
-import { resolveAndValidateUrl } from "../lib/ip-validation.js";
+import { buildIpPinnedFetchArgs, resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { logger } from "../lib/logger.js";
 import {
   HTTP_SUCCESS_MAX,
@@ -119,9 +119,14 @@ export async function processWebhookDelivery(
     return;
   }
 
-  // Pre-flight SSRF check. DNS rebinding TOCTOU is an accepted risk — see ip-validation.ts.
+  // Resolve DNS and validate IPs, then pin to the resolved IP to prevent rebinding.
+  let pinnedUrl: string;
+  let hostHeader: string;
   try {
-    await resolveAndValidateUrl(configUrl);
+    const resolvedIps = await resolveAndValidateUrl(configUrl);
+    const firstIp = resolvedIps[0];
+    if (!firstIp) throw new Error("Webhook URL hostname resolved to no IPs");
+    ({ pinnedUrl, hostHeader } = buildIpPinnedFetchArgs(configUrl, firstIp));
   } catch (error: unknown) {
     logger.warn("[webhook-worker] SSRF validation failed for delivery", {
       deliveryId,
@@ -153,10 +158,11 @@ export async function processWebhookDelivery(
     }, WEBHOOK_DELIVERY_TIMEOUT_MS);
 
     try {
-      const response = await fetchFn(configUrl, {
+      const response = await fetchFn(pinnedUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Host: hostHeader,
           [WEBHOOK_SIGNATURE_HEADER]: signature,
           [WEBHOOK_TIMESTAMP_HEADER]: String(deliveryTimestamp),
         },
