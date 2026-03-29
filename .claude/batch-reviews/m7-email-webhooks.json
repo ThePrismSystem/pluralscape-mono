@@ -58,9 +58,12 @@
       "pr": 318,
       "dependsOn": [1, 2],
       "conflictsWith": [],
-      "reviewStatus": "pending",
-      "mergeStatus": "pending",
-      "reviewNotes": []
+      "reviewStatus": "passed",
+      "mergeStatus": "merged",
+      "reviewNotes": [
+        "Minor: initEmailAdapter and setEmailAdapterForTesting have identical implementations — consider documenting distinction",
+        "Minor: isTemplateVars type guard only checks typeof object — intentional per JSDoc (validated at enqueue time)"
+      ]
     },
     {
       "id": 4,
@@ -100,9 +103,11 @@
       "pr": 317,
       "dependsOn": [4],
       "conflictsWith": [],
-      "reviewStatus": "pending",
+      "reviewStatus": "passed",
       "mergeStatus": "pending",
-      "reviewNotes": []
+      "reviewNotes": [
+        "Minor: Only member.service.test.ts has webhook dispatch assertions — remaining service tests mock but don't verify arguments"
+      ]
     },
     {
       "id": 6,
