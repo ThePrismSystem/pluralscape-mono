@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { PushPayload, PushProvider } from "../../services/push-notification-worker.js";
-import type { AccountId, DeviceTokenId, DeviceTokenPlatform } from "@pluralscape/types";
+import type { AccountId, DeviceTokenId, DeviceTokenPlatform, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -56,27 +56,32 @@ const { logger } = await import("../../lib/logger.js");
 
 const DEVICE_TOKEN_ID = "dt_test-token" as DeviceTokenId;
 const ACCOUNT_ID = "acct_test" as AccountId;
+const SYSTEM_ID = "sys_test" as SystemId;
 const PLATFORM: DeviceTokenPlatform = "ios";
 
 const MOCK_PAYLOAD: PushPayload = {
   title: "Test Notification",
   body: "Test body",
+  data: null,
 };
 
 function makeJobPayload(overrides: Record<string, unknown> = {}): {
   accountId: AccountId;
+  systemId: SystemId;
   deviceTokenId: DeviceTokenId;
   platform: DeviceTokenPlatform;
   payload: PushPayload;
 } {
   return {
     accountId: ACCOUNT_ID,
+    systemId: SYSTEM_ID,
     deviceTokenId: DEVICE_TOKEN_ID,
     platform: PLATFORM,
     payload: MOCK_PAYLOAD,
     ...overrides,
   } as {
     accountId: AccountId;
+    systemId: SystemId;
     deviceTokenId: DeviceTokenId;
     platform: DeviceTokenPlatform;
     payload: PushPayload;
