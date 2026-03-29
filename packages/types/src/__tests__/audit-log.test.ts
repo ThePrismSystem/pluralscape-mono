@@ -166,6 +166,7 @@ describe("AuditEventType", () => {
         case "webhook-config.updated":
         case "webhook-config.archived":
         case "webhook-config.restored":
+        case "webhook-config.secret-rotated":
         case "webhook-config.deleted":
         case "webhook-delivery.deleted":
         case "channel.created":

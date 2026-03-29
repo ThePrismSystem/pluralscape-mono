@@ -142,6 +142,7 @@ export type AuditEventType =
   | "webhook-config.updated"
   | "webhook-config.archived"
   | "webhook-config.restored"
+  | "webhook-config.secret-rotated"
   | "webhook-config.deleted"
   | "webhook-delivery.deleted"
   | "channel.created"

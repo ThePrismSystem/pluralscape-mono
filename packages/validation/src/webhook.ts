@@ -36,6 +36,14 @@ export const UpdateWebhookConfigBodySchema = z
   })
   .readonly();
 
+// ── Rotate Secret ──────────────────────────────────────────────
+
+export const RotateWebhookSecretBodySchema = z
+  .object({
+    version: z.int().min(1),
+  })
+  .readonly();
+
 // ── List query params ───────────────────────────────────────────
 
 export const WebhookConfigQuerySchema = z.object({

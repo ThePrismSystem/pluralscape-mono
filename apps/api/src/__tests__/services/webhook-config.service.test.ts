@@ -33,7 +33,7 @@ vi.mock("../../lib/ip-validation.js", () => ({
   resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
 }));
 
-const mockEnv = { NODE_ENV: "development" as string };
+const mockEnv = { NODE_ENV: "development" as string, LOG_LEVEL: "warn" as string };
 vi.mock("../../env.js", () => ({ env: mockEnv }));
 
 // ── Import under test ────────────────────────────────────────────────
