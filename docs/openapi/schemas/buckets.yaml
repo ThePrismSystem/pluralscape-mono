@@ -122,7 +122,7 @@ AssignBucketFriendRequest:
   properties:
     connectionId:
       type: string
-      pattern: ^frc_
+      pattern: ^fc_
       description: Friend connection ID
     encryptedBucketKey:
       type: string
@@ -139,7 +139,7 @@ BucketFriendAssignmentResponse:
   properties:
     friendConnectionId:
       type: string
-      pattern: ^frc_
+      pattern: ^fc_
       description: Friend connection ID
     bucketId:
       type: string

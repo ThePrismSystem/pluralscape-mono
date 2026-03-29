@@ -18,9 +18,9 @@
         in: query
         required: false
         schema:
-          type: string
-          enum: ["true", "false"]
-        description: Include archived buckets (default false)
+          type: boolean
+          default: false
+        description: Whether to include archived buckets in the results
     responses:
       "200":
         description: Paginated bucket list
@@ -536,7 +536,7 @@
         description: Friend connection ID
         schema:
           type: string
-          pattern: ^frc_
+          pattern: ^fc_
     responses:
       "200":
         description: Friend unassigned from bucket

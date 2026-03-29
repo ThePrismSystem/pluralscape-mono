@@ -742,15 +742,7 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Cursor"
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 50
-          description: Maximum number of items to return (default 50, max 100)
+        - $ref: "#/components/parameters/Limit"
         - name: includeArchived
           in: query
           required: false
@@ -5514,11 +5506,9 @@ paths:
           in: query
           required: false
           schema:
-            type: string
-            enum:
-              - "true"
-              - "false"
-          description: Include archived buckets (default false)
+            type: boolean
+            default: false
+          description: Whether to include archived buckets in the results
       responses:
         "200":
           description: Paginated bucket list
@@ -6042,7 +6032,7 @@ paths:
           description: Friend connection ID
           schema:
             type: string
-            pattern: ^frc_
+            pattern: ^fc_
       responses:
         "200":
           description: Friend unassigned from bucket
@@ -11298,7 +11288,7 @@ components:
       properties:
         connectionId:
           type: string
-          pattern: ^frc_
+          pattern: ^fc_
           description: Friend connection ID
         encryptedBucketKey:
           type: string
@@ -11317,7 +11307,7 @@ components:
       properties:
         friendConnectionId:
           type: string
-          pattern: ^frc_
+          pattern: ^fc_
           description: Friend connection ID
         bucketId:
           type: string

@@ -18,13 +18,12 @@ _No unreleased changes._
 - Friend-side search — paginated friend data export with manifest endpoint, ETag/304 conditional caching, cursor-based keyset pagination across 21 entity types
 - Push notifications — device token registration with ownership validation, notification config CRUD with per-friend preferences, push notification worker with switch alert delivery
 - Report generation — bucket-scoped data export endpoint with manifest counts and key grants
-- OpenAPI 3.1 specification expanded — 258 operations across 41 route domains (was 186 across 28)
+- OpenAPI 3.1 specification expanded — 274 operations across 41 route domains (was 186 across 28)
 - E2E tests expanded — 205 tests across 43 spec files (was 126 across 32)
 
 ### Fixed
 
 - M6 audit remediation — 30 findings across security (device token takeover, member count leak, CRDT factory), performance (SQL-pushed bucket filtering, batch queries, caching), and code quality (shared helpers, barrel exports, constants extraction)
-- M5 audit remediation — performance, type safety, correctness, code pattern, and simplification fixes across communication services
 
 ## Milestone 5: Communication
 
@@ -43,6 +42,7 @@ _No unreleased changes._
 
 ### Fixed
 
+- M5 audit remediation — performance, type safety, correctness, code pattern, and simplification fixes across communication services
 - Consolidated dependency updates and audit vulnerability fixes
 
 ### Changed
