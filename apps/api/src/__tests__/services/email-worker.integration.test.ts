@@ -1,11 +1,26 @@
 import { PGlite } from "@electric-sql/pglite";
 import { initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
-import { pgInsertAccount } from "@pluralscape/db/test-helpers/pg-helpers";
+import { createPgAuthTables, pgInsertAccount } from "@pluralscape/db/test-helpers/pg-helpers";
 import { InMemoryEmailAdapter } from "@pluralscape/email/testing";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+/** 64-hex-char (32-byte) test key for email encryption. */
+const TEST_ENCRYPTION_KEY = vi.hoisted(() => "ab".repeat(32));
+
+vi.mock("../../env.js", async () => {
+  const actual = await vi.importActual<typeof import("../../env.js")>("../../env.js");
+  return {
+    env: {
+      ...actual.env,
+      EMAIL_ENCRYPTION_KEY: TEST_ENCRYPTION_KEY,
+    },
+  };
+});
+
+import { encryptEmail } from "../../lib/email-encrypt.js";
 import { _resetEmailAdapterForTesting, setEmailAdapterForTesting } from "../../lib/email.js";
 import { processEmailJob } from "../../services/email-worker.js";
 import { asDb } from "../helpers/integration-setup.js";
@@ -23,6 +38,7 @@ describe("email-worker (PGlite integration)", () => {
     await initSodium();
     client = await PGlite.create();
     db = drizzle(client, { schema });
+    await createPgAuthTables(client);
     accountId = (await pgInsertAccount(db)) as AccountId;
     emailAdapter = new InMemoryEmailAdapter();
     setEmailAdapterForTesting(emailAdapter);
@@ -33,8 +49,12 @@ describe("email-worker (PGlite integration)", () => {
     await client.close();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     emailAdapter.clear();
+    await db
+      .update(schema.accounts)
+      .set({ encryptedEmail: null })
+      .where(eq(schema.accounts.id, accountId));
   });
 
   function makePayload(
@@ -66,8 +86,41 @@ describe("email-worker (PGlite integration)", () => {
     expect(emailAdapter.sentCount).toBe(0);
   });
 
-  // Adapter error propagation is covered by unit tests (email-worker.test.ts)
-  // which mock resolveAccountEmail to return an address, reaching the adapter.
-  // An integration test for this path would require a test account with
-  // encrypted email (encryption key setup), which is out of scope here.
+  it("sends email when account has encrypted email", async () => {
+    const encrypted = encryptEmail("test@example.com");
+    await db
+      .update(schema.accounts)
+      .set({ encryptedEmail: encrypted })
+      .where(eq(schema.accounts.id, accountId));
+
+    await processEmailJob(asDb(db), makePayload());
+
+    expect(emailAdapter.sentCount).toBe(1);
+    expect(emailAdapter.lastSent?.to).toBe("test@example.com");
+    expect(emailAdapter.lastSent?.subject).toBeTruthy();
+    expect(emailAdapter.lastSent?.html).toBeTruthy();
+    expect(emailAdapter.lastSent?.text).toBeTruthy();
+  });
+
+  it("renders correct template variables", async () => {
+    const encrypted = encryptEmail("vars-test@example.com");
+    await db
+      .update(schema.accounts)
+      .set({ encryptedEmail: encrypted })
+      .where(eq(schema.accounts.id, accountId));
+
+    await processEmailJob(
+      asDb(db),
+      makePayload({
+        vars: {
+          timestamp: "2026-01-15T12:00:00Z",
+          deviceInfo: "Chrome on Windows",
+        },
+      }),
+    );
+
+    expect(emailAdapter.sentCount).toBe(1);
+    const sent = emailAdapter.lastSent;
+    expect(sent?.html).toContain("Chrome on Windows");
+  });
 });
