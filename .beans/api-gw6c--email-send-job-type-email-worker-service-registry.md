@@ -1,11 +1,11 @@
 ---
 # api-gw6c
 title: email-send job type, email worker, service registry
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-29T02:45:57Z
-updated_at: 2026-03-29T03:03:11Z
+updated_at: 2026-03-29T07:00:27Z
 parent: api-7xw0
 blocked_by:
   - api-zeh1
@@ -47,3 +47,5 @@ Job type, worker, and service registry for email delivery.
 - `packages/types/src/jobs.ts` — job type additions
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+## Summary of Changes\n\nImplemented in PR #318: email-send job type in JobPayloadMap, processEmailJob worker, service registry (getEmailAdapter/initEmailAdapter), env vars, startup wiring.
