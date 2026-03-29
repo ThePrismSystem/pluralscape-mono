@@ -10,17 +10,16 @@
       "name": "email-package",
       "description": "Create @pluralscape/email package with EmailAdapter interface, error types, stub/in-memory adapters, contract tests, Resend adapter, SMTP adapter, and email template system",
       "beans": ["api-zeh1", "api-s5hq", "api-w1ia", "api-hvep"],
-      "files": [
-        "packages/email/*",
-        "vitest.config.ts"
-      ],
+      "files": ["packages/email/*", "vitest.config.ts"],
       "branch": "plan/m7-email-webhooks/01-email-package",
       "pr": 311,
       "dependsOn": [],
       "conflictsWith": [],
-      "reviewStatus": "pending",
-      "mergeStatus": "pending",
-      "reviewNotes": []
+      "reviewStatus": "passed",
+      "mergeStatus": "merged",
+      "reviewNotes": [
+        "Minor: Object.create/defineProperty pattern could use private constructor overload, escapeHtml could use replaceAll"
+      ]
     },
     {
       "id": 2,
@@ -39,8 +38,8 @@
       "pr": 310,
       "dependsOn": [],
       "conflictsWith": [],
-      "reviewStatus": "pending",
-      "mergeStatus": "pending",
+      "reviewStatus": "passed",
+      "mergeStatus": "merged",
       "reviewNotes": []
     },
     {
@@ -78,9 +77,11 @@
       "pr": 312,
       "dependsOn": [],
       "conflictsWith": [],
-      "reviewStatus": "pending",
-      "mergeStatus": "pending",
-      "reviewNotes": []
+      "reviewStatus": "passed",
+      "mergeStatus": "merged",
+      "reviewNotes": [
+        "Minor: test naming inconsistency, duplicated stubCtx helper, JSDoc clarity on retry layers"
+      ]
     },
     {
       "id": 5,
@@ -119,9 +120,11 @@
       "pr": 313,
       "dependsOn": [],
       "conflictsWith": [4],
-      "reviewStatus": "pending",
-      "mergeStatus": "pending",
-      "reviewNotes": []
+      "reviewStatus": "passed",
+      "mergeStatus": "merged",
+      "reviewNotes": [
+        "Minor: WebhookTestResult could use discriminated union, abort/timeout test coverage gap, test helper secret type mismatch"
+      ]
     }
   ]
 }
