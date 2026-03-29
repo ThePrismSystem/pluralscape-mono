@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
+import { systems, webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CreateWebhookConfigBodySchema,
@@ -25,6 +25,7 @@ import {
   HTTP_SUCCESS_MAX,
   HTTP_SUCCESS_MIN,
   MAX_PAGE_LIMIT,
+  MAX_WEBHOOK_CONFIGS_PER_SYSTEM,
   MS_PER_SECOND,
   WEBHOOK_DELIVERY_TIMEOUT_MS,
   WEBHOOK_REQUIRED_PROTOCOL,
@@ -170,6 +171,22 @@ export async function createWebhookConfig(
   const timestamp = now();
 
   const created = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Lock the system row to serialize concurrent webhook config creation per system (prevents TOCTOU race)
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existing] = await tx
+      .select({ count: count() })
+      .from(webhookConfigs)
+      .where(and(eq(webhookConfigs.systemId, systemId), eq(webhookConfigs.archived, false)));
+
+    if ((existing?.count ?? 0) >= MAX_WEBHOOK_CONFIGS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_WEBHOOK_CONFIGS_PER_SYSTEM)} webhook configs per system`,
+      );
+    }
+
     const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
 
     const [row] = await tx

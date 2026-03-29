@@ -118,6 +118,29 @@ describe("webhook-config.service (PGlite integration)", () => {
         400,
       );
     });
+
+    it("rejects creation when at per-system quota limit", async () => {
+      const QUOTA_LIMIT = 25;
+      // Bulk-insert configs to fill the quota
+      const values = Array.from({ length: QUOTA_LIMIT }, (_, i) => ({
+        id: `wh_quota-${String(i).padStart(3, "0")}-${crypto.randomUUID()}`,
+        systemId,
+        url: `https://example.com/hook-${String(i)}`,
+        secret: Buffer.from("test-secret-key-pad-to-32-bytes!"),
+        eventTypes: ["fronting.started" as const],
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }));
+      await db.insert(webhookConfigs).values(values);
+
+      await assertApiError(
+        createWebhookConfig(asDb(db), systemId, createParams(), auth, noopAudit),
+        "QUOTA_EXCEEDED",
+        400,
+        "Maximum of 25 webhook configs per system",
+      );
+    });
   });
 
   describe("getWebhookConfig", () => {
