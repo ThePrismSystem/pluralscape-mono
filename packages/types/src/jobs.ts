@@ -28,7 +28,8 @@ export type JobType =
   | "partition-maintenance"
   | "sync-compaction"
   | "device-transfer-cleanup"
-  | "check-in-generate";
+  | "check-in-generate"
+  | "webhook-delivery-cleanup";
 
 /** Current status of a background job. */
 export type JobStatus = "pending" | "running" | "completed" | "cancelled" | "dead-letter";
@@ -84,6 +85,7 @@ export interface JobPayloadMap {
   };
   "device-transfer-cleanup": Record<string, never>;
   "check-in-generate": Record<string, never>;
+  "webhook-delivery-cleanup": Record<string, never>;
 }
 
 /** Result of a completed or failed job. */

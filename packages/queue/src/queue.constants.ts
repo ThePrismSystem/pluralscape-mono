@@ -37,6 +37,9 @@ export const SHUTDOWN_POLL_MS = 10;
 /** Cron expression for daily audit log cleanup (03:00 UTC). */
 export const AUDIT_LOG_CLEANUP_CRON = "0 3 * * *";
 
+/** Cron expression for daily webhook delivery cleanup (03:30 UTC). */
+export const WEBHOOK_DELIVERY_CLEANUP_CRON = "30 3 * * *";
+
 /** Radix for base-36 encoding of job worker tokens. */
 export const BASE_36 = 36;
 
