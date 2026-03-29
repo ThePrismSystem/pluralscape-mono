@@ -92,7 +92,7 @@ Epics:
 - ~~Lifecycle event archive/delete~~ [COMPLETED] — archive/restore/delete endpoints, CRDT strategy upgraded from append-only to append-lww
 - ~~Tech debt / hardening~~ [COMPLETED] — branded types (RecoveryKeyDisplay, KeyVersion, DisplayKey, Sha256Hex, protocol IDs), UnixMillis helper, JobPayloadMap concrete types, N+1 query fixes, cursor TTL enforcement, retry jitter, device transfer code entropy (ADR 024), switches table removal, structured logging, BucketKeyCache LRU eviction, sync engine typed errors (15 tasks, 1 scrapped)
 
-## Milestone 5: Communication
+## Milestone 5: Communication [COMPLETED]
 
 Goal: Internal messaging, boards, notes, polls
 
@@ -104,20 +104,21 @@ Epics:
 - ~~Polls~~ [COMPLETED] — multiple-choice polls with cooperative voting, abstain/veto support, consensus analytics, polymorphic voters (member or structure entity), CRDT sync, lifecycle events, E2E tests
 - ~~Mandatory acknowledgement routing~~ [COMPLETED] — targeted alerts with member confirmation, resolution tracking, CRDT sync, lifecycle events, E2E tests
 - ~~Communication webhooks~~ [COMPLETED] — webhook payloads for all communication entity lifecycle events, integration tests, E2E tests
-- M5 audit remediation [IN PROGRESS] — performance, type safety, correctness, code pattern, and simplification fixes across communication services
+- ~~M5 audit remediation~~ [COMPLETED] — performance, type safety, correctness, code pattern, and simplification fixes across communication services
 
-## Milestone 6: Privacy and Social
+## Milestone 6: Privacy and Social [COMPLETED]
 
 Goal: Privacy engine, friend network, external access
 
 Epics:
 
-- Privacy buckets (features.md section 4), including non-system account impact on friend model (L2)
-- Friend network (features.md section 4)
-- External dashboard (features.md section 4)
-- Friend-side search (features.md section 8)
-- Push notifications (features.md section 4)
-- Report generation (features.md section 10)
+- ~~Privacy buckets~~ [COMPLETED] — intersection-based access control with fail-closed visibility, bucket content tagging for 21 entity types, field bucket visibility controls, Zod validation, CRDT sync strategy, E2E tests, OpenAPI spec
+- ~~Friend network~~ [COMPLETED] — friend code generation/redemption (XXXX-XXXX format), friend connection lifecycle (accept, block, remove, archive), bucket assignment per friend, account ownership helpers, CRDT sync, E2E tests, OpenAPI spec
+- ~~Push notifications~~ [COMPLETED] — device token registration with ownership validation and takeover prevention, notification config CRUD with per-friend preferences, push notification worker with switch alert delivery, CRDT sync, E2E tests, OpenAPI spec
+- ~~External dashboard~~ [COMPLETED] — read-only friend dashboard endpoint filtered by bucket visibility, cross-account RLS helpers, bucket-scoped query helpers for all entity types, CRDT dashboard snapshot projection, E2E tests, OpenAPI spec
+- ~~Friend-side search~~ [COMPLETED] — paginated friend data export with manifest endpoint, ETag/304 conditional caching, cursor-based keyset pagination across 21 entity types, data freshness headers, E2E tests, OpenAPI spec
+- ~~Report generation~~ [COMPLETED] — bucket-scoped data export endpoint with manifest counts and key grants, E2E tests, OpenAPI spec
+- ~~M6 audit remediation~~ [COMPLETED] — 30 findings across security (device token takeover, member count leak, CRDT factory), performance (SQL-pushed bucket filtering, batch queries, caching), and code quality (shared helpers, barrel exports, constants extraction); executed via 10 parallel worktree PRs
 
 ## Milestone 7: Data Portability
 

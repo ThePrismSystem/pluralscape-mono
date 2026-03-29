@@ -1,11 +1,11 @@
 ---
 # api-qj0n
 title: "L6: Extract device-token inline constants to constants file"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-28T21:27:48Z
-updated_at: 2026-03-28T21:27:48Z
+updated_at: 2026-03-29T00:48:44Z
 parent: ps-tkuz
 ---
 

@@ -8,11 +8,11 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-4 complete, Milestone 5 (Communication) nearing completion.**
+**Active development — Milestones 0-6 complete, Milestone 7 (Data Portability) next.**
 
-Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), and 4 (Fronting Engine) are complete. Milestone 5 (Communication) has all features implemented and is in audit remediation. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
+Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), and 6 (Privacy and Social) are complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-Milestone 5 delivered the communication layer: proxy-based system chat with channels and categories, board messages with reorder and pin/unpin, polymorphic private notes, polls with cooperative voting and consensus analytics, mandatory acknowledgement routing, and communication webhook events. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
+Milestone 6 delivered the privacy and social layer: intersection-based privacy buckets with fail-closed access control, friend network with invite codes, read-only friend dashboards filtered by bucket visibility, paginated friend data export for client-side search, push notifications with per-friend preferences, and bucket-scoped report generation. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 
@@ -35,7 +35,7 @@ pnpm test:e2e          # E2E tests (Playwright)
 | Functions  | 96.22%   |
 | Lines      | 96.06%   |
 
-E2E suite: 126 tests across 32 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, and acknowledgements. Run `pnpm test:coverage` for up-to-date numbers.
+E2E suite: 205 tests across 43 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, and report export. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 

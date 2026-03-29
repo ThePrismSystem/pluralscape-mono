@@ -1,11 +1,11 @@
 ---
 # api-ejjv
 title: "L4: Add short-lived cache for loadBucketTags"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-28T21:27:42Z
-updated_at: 2026-03-28T21:27:42Z
+updated_at: 2026-03-29T00:48:45Z
 parent: ps-tkuz
 ---
 

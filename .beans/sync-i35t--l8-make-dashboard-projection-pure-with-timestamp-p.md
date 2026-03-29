@@ -1,11 +1,11 @@
 ---
 # sync-i35t
 title: "L8: Make dashboard projection pure with timestamp parameter"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-28T21:27:54Z
-updated_at: 2026-03-28T21:27:54Z
+updated_at: 2026-03-29T00:48:44Z
 parent: ps-tkuz
 ---
 

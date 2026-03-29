@@ -95,6 +95,8 @@ tags:
     description: Authentication, sessions, and account recovery
   - name: Account
     description: Account management and audit log
+  - name: Friends
+    description: Friend network and friend-facing dashboard
   - name: Systems
     description: Plural system profiles
   - name: System Settings
@@ -109,6 +111,12 @@ tags:
     description: Member groups and group memberships
   - name: Custom Fronts
     description: Abstract cognitive states logged like members
+  - name: Device Tokens
+    description: Push notification device token registration and management
+  - name: Notification Configs
+    description: Per-event notification preferences (enabled, push enabled)
+  - name: Notifications
+    description: Real-time notification delivery via Server-Sent Events
   - name: Fields
     description: Custom field definitions for a system
   - name: Relationships
@@ -127,6 +135,14 @@ tags:
     description: System lifecycle events (splits, fusions, etc.)
   - name: Innerworld
     description: Innerworld regions, entities, and canvas
+  - name: Privacy Buckets
+    description: Privacy buckets for scoping T2-encrypted content and friend sharing
+  - name: Bucket Content Tags
+    description: Tag entities to privacy buckets for friend visibility
+  - name: Bucket Friend Assignments
+    description: Grant and revoke friend access to privacy buckets
+  - name: Bucket Export
+    description: Export bucket contents for friend-facing data sync
   - name: Blobs
     description: Encrypted file upload and download
   - name: Key Rotation
@@ -706,6 +722,656 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "409":
           $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends:
+    get:
+      operationId: listFriendConnections
+      tags:
+        - Friends
+      summary: List friend connections
+      description: |
+        Returns a paginated list of the authenticated account's friend connections,
+        ordered by creation date (newest first).
+
+        By default, archived connections are excluded. Pass `includeArchived=true`
+        to include them.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Whether to include archived connections in the results
+      responses:
+        "200":
+          description: Paginated list of friend connections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}:
+    get:
+      operationId: getFriendConnection
+      tags:
+        - Friends
+      summary: Get a single friend connection
+      description: |
+        Returns the details of a specific friend connection owned by the
+        authenticated account. Returns 404 if the connection does not exist
+        or is archived.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "200":
+          description: Friend connection details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/block:
+    post:
+      operationId: blockFriendConnection
+      tags:
+        - Friends
+      summary: Block a friend connection
+      description: |
+        Blocks a friend connection. Only connections with status `accepted` or
+        `pending` can be blocked. Blocking a connection:
+
+        1. Transitions both sides of the connection to `blocked` status
+        2. Cleans up all bucket assignments in both directions
+        3. Revokes active key grants for the cleaned-up buckets
+        4. Returns pending rotations the client should initiate
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "200":
+          description: Connection blocked with pending key rotations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionWithRotations"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/remove:
+    post:
+      operationId: removeFriendConnection
+      tags:
+        - Friends
+      summary: Remove a friend connection
+      description: |
+        Removes a friend connection. Connections with status `accepted`, `pending`,
+        or `blocked` can be removed. Removing a connection:
+
+        1. Transitions both sides of the connection to `removed` status
+        2. Cleans up all bucket assignments in both directions
+        3. Revokes active key grants for the cleaned-up buckets
+        4. Returns pending rotations the client should initiate
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "200":
+          description: Connection removed with pending key rotations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionWithRotations"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/archive:
+    post:
+      operationId: archiveFriendConnection
+      tags:
+        - Friends
+      summary: Archive a friend connection
+      description: |
+        Soft-archives a friend connection. Archived connections are hidden from
+        the default list view but can be restored later. Returns 204 on success.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/restore:
+    post:
+      operationId: restoreFriendConnection
+      tags:
+        - Friends
+      summary: Restore an archived friend connection
+      description: |
+        Restores a previously archived friend connection. Returns the restored
+        connection details. Returns 404 if the connection is not archived.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "200":
+          description: Restored friend connection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/visibility:
+    put:
+      operationId: updateFriendVisibility
+      tags:
+        - Friends
+      summary: Update friend visibility settings
+      description: |
+        Updates the encrypted visibility settings for a friend connection. The
+        `encryptedData` blob contains the client-encrypted FriendVisibilitySettings
+        (showMembers, showGroups, showStructure). Uses optimistic concurrency
+        control via the `version` field.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFriendVisibilityRequest"
+      responses:
+        "200":
+          description: Updated friend connection with new visibility settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/notifications:
+    get:
+      operationId: getFriendNotificationPreference
+      tags:
+        - Friends
+      summary: Get friend notification preferences
+      description: |
+        Returns the notification preferences for a friend connection. If no
+        preferences exist yet, creates them with default values (all friend
+        event types enabled) and returns the newly created record.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "200":
+          description: Friend notification preferences (created with defaults if not yet set)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendNotificationPreferenceResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    patch:
+      operationId: updateFriendNotificationPreference
+      tags:
+        - Friends
+      summary: Update friend notification preferences
+      description: |
+        Updates the enabled event types for a friend connection's notification
+        preferences. The preference record must already exist (call GET first
+        to auto-create with defaults if needed).
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFriendNotificationPreferenceRequest"
+      responses:
+        "200":
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendNotificationPreferenceResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/export/manifest:
+    get:
+      operationId: getFriendExportManifest
+      tags:
+        - Friends
+      summary: Get friend export manifest
+      description: |
+        Returns the export manifest for a friend connection, containing
+        per-entity-type counts, freshness timestamps, and active key grants.
+
+        The client uses this to decide which entity types need refreshing
+        before starting paginated downloads. Supports conditional requests
+        via `If-None-Match` / `ETag`.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
+          description: ETag from a previous response for conditional request
+      responses:
+        "200":
+          description: Export manifest with entity counts and key grants
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: ETag for conditional requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendExportManifestResponse"
+        "304":
+          description: Not modified (ETag matched)
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/export:
+    get:
+      operationId: getFriendExportPage
+      tags:
+        - Friends
+      summary: Paginated friend data export
+      description: |
+        Returns a paginated page of bucket-visible encrypted entities for a
+        specific entity type. The server returns encrypted blobs for client-side
+        search indexing (zero-knowledge architecture).
+
+        Supports conditional requests via `If-None-Match` / `ETag`.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+        - name: entityType
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/FriendExportEntityType"
+          description: The type of entity to export
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Opaque pagination cursor from a previous response
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum number of items to return (default 50, max 100)
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
+          description: ETag from a previous response for conditional request
+      responses:
+        "200":
+          description: Paginated export data with encrypted entity blobs
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: ETag for conditional requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendExportPageResponse"
+        "304":
+          description: Not modified (ETag matched)
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/dashboard:
+    get:
+      operationId: getFriendDashboard
+      tags:
+        - Friends
+      summary: Get friend dashboard
+      description: |
+        Returns a read-only summary view of a friend's system, filtered by
+        privacy bucket access. The response includes all bucket-visible data.
+
+        **Client responsibility:** The client MUST apply FriendVisibilitySettings
+        (showMembers, showGroups, showStructure) after decrypting the
+        connection's encrypted_data. The server is zero-knowledge and cannot
+        enforce these toggles.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: The friend connection ID (owned by the authenticated account)
+      responses:
+        "200":
+          description: Dashboard data filtered by bucket access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendDashboardResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friend-codes:
+    post:
+      operationId: createFriendCode
+      tags:
+        - Friends
+      summary: Generate a new friend code
+      description: |
+        Generates a new XXXX-XXXX formatted friend code for the authenticated
+        account. The code can be shared with another user to establish a friend
+        connection. Enforces a per-account quota of active (non-archived) codes.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Friend code created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendCodeResponse"
+        "400":
+          description: Quota exceeded (too many active codes)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    get:
+      operationId: listFriendCodes
+      tags:
+        - Friends
+      summary: List active friend codes
+      description: |
+        Returns all active, non-expired, non-archived friend codes for the
+        authenticated account. This endpoint does not use pagination as the
+        per-account quota limits the total number of codes.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of active friend codes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendCodeListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friend-codes/redeem:
+    post:
+      operationId: redeemFriendCode
+      tags:
+        - Friends
+      summary: Redeem a friend code
+      description: |
+        Redeems a friend code to establish a bidirectional friend connection.
+        Creates two connection rows (one for each direction) with status `accepted`,
+        then archives the redeemed code.
+
+        **Error cases:**
+        - `NOT_FOUND`: Code does not exist or is already archived
+        - `FRIEND_CODE_EXPIRED`: Code has passed its expiry time
+        - `CONFLICT`: Cannot redeem your own code, or already friends with the code owner
+
+        Rate limit: 10 req/min (friendCodeRedeem)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedeemFriendCodeRequest"
+      responses:
+        "201":
+          description: Friend connection established
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RedeemFriendCodeResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friend-codes/{codeId}/archive:
+    post:
+      operationId: archiveFriendCode
+      tags:
+        - Friends
+      summary: Archive a friend code
+      description: |
+        Soft-archives a friend code, preventing it from being redeemed.
+        Returns 204 on success. Returns 404 if the code does not exist
+        or is already archived.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: codeId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fcd_
+          description: Friend code ID
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
   /systems:
@@ -2568,6 +3234,230 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/device-tokens:
+    get:
+      operationId: listDeviceTokens
+      tags:
+        - Device Tokens
+      summary: List device tokens
+      description: |
+        Returns all non-revoked device tokens for the specified system,
+        newest first. Tokens are masked for security — only the last 8
+        characters are visible.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      responses:
+        "200":
+          description: List of device tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceTokenListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    post:
+      operationId: registerDeviceToken
+      tags:
+        - Device Tokens
+      summary: Register a device token
+      description: |
+        Registers a push notification token for the current device. Upserts
+        on (token, platform) — if the same token is re-registered, the
+        lastActiveAt timestamp is refreshed.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceTokenRequest"
+      responses:
+        "201":
+          description: Registered device token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceTokenResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /systems/{systemId}/device-tokens/{tokenId}/revoke:
+    post:
+      operationId: revokeDeviceToken
+      tags:
+        - Device Tokens
+      summary: Revoke a device token
+      description: |
+        Revokes a device token by setting its revokedAt timestamp.
+        Returns 404 if the token is not found or already revoked.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: tokenId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^dt_
+          description: Device token ID (prefixed with `dt_`)
+      responses:
+        "204":
+          description: Token revoked
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/notification-configs:
+    get:
+      operationId: listNotificationConfigs
+      tags:
+        - Notification Configs
+      summary: List notification configurations
+      description: |
+        Returns all non-archived notification configs for the specified system.
+        Configs are auto-created with defaults (enabled: true, pushEnabled: true)
+        on first access per event type.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      responses:
+        "200":
+          description: List of notification configs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationConfigListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /systems/{systemId}/notification-configs/{eventType}:
+    patch:
+      operationId: updateNotificationConfig
+      tags:
+        - Notification Configs
+      summary: Update a notification configuration
+      description: |
+        Updates the enabled/pushEnabled flags for a specific event type.
+        If no config exists for the event type, one is auto-created with
+        defaults merged with the provided overrides.
+
+        At least one of `enabled` or `pushEnabled` must be provided.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: eventType
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/NotificationEventType"
+          description: The notification event type to configure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotificationConfigRequest"
+      responses:
+        "200":
+          description: Updated (or newly created) notification config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationConfigResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /notifications/stream:
+    get:
+      operationId: streamNotifications
+      tags:
+        - Notifications
+      summary: Subscribe to real-time notifications (SSE)
+      description: |
+        Opens a Server-Sent Events stream for real-time notification delivery.
+
+        - Requires session auth (Bearer token)
+        - Subscribes to the account's Valkey pub/sub channel
+        - Sends heartbeat comments (`: heartbeat`) every 30 seconds to prevent proxy timeouts
+        - Supports reconnection via the `Last-Event-ID` header to replay missed events
+          from a ring buffer (up to 100 events, 5-minute window)
+        - If the replay window is exceeded, a `full-sync` event is sent instead
+        - Maximum 5 concurrent SSE connections per account
+
+        **Event types:**
+        - `notification` — a notification payload (default for untyped messages)
+        - `full-sync` — replay window exceeded; client should perform a full sync
+
+        Rate limit: 10 req/min (sseStream)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema:
+            type: string
+          description: |
+            Last event ID received by the client. Used to replay missed events
+            on reconnection. If the ID falls outside the replay buffer window,
+            a `full-sync` event is sent instead.
+      responses:
+        "200":
+          description: SSE stream opened
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream. Each event follows the SSE format:
+
+                  ```
+                  event: notification
+                  data: {"systemId":"sys_...","eventType":"switch-reminder",...}
+                  id: 42
+
+                  ```
+
+                  Heartbeats are sent as SSE comments:
+
+                  ```
+                  : heartbeat
+
+                  ```
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          description: Too many concurrent SSE connections for this account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: TOO_MANY_STREAMS
+                  message:
+                    type: string
+                    example: Maximum of 5 concurrent SSE connections per account exceeded
   /systems/{systemId}/fields:
     get:
       operationId: listFieldDefinitions
@@ -4589,6 +5479,691 @@ paths:
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets:
+    get:
+      operationId: listBuckets
+      tags:
+        - Privacy Buckets
+      summary: List privacy buckets
+      description: |
+        Returns a paginated list of privacy buckets for the specified system.
+        By default, archived buckets are excluded.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Whether to include archived buckets in the results
+      responses:
+        "200":
+          description: Paginated bucket list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/BucketResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createBucket
+      tags:
+        - Privacy Buckets
+      summary: Create a privacy bucket
+      description: |
+        Creates a new privacy bucket within the specified system.
+        Each system has a maximum bucket quota.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBucketRequest"
+      responses:
+        "201":
+          description: Bucket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}:
+    get:
+      operationId: getBucket
+      tags:
+        - Privacy Buckets
+      summary: Get a privacy bucket
+      description: |
+        Returns a single privacy bucket by ID. Returns 404 if the bucket
+        does not exist or is archived.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      responses:
+        "200":
+          description: Bucket details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateBucket
+      tags:
+        - Privacy Buckets
+      summary: Update a privacy bucket
+      description: |
+        Updates the encrypted payload for an existing privacy bucket.
+        Returns 409 if the provided version conflicts with the server's current version.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBucketRequest"
+      responses:
+        "200":
+          description: Bucket updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteBucket
+      tags:
+        - Privacy Buckets
+      summary: Delete a privacy bucket
+      description: |
+        Permanently deletes a privacy bucket. Returns 409 if the bucket has
+        dependents (content tags, key grants, friend assignments, field visibility
+        rules, or key rotations). This action is irreversible.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/archive:
+    post:
+      operationId: archiveBucket
+      tags:
+        - Privacy Buckets
+      summary: Archive a privacy bucket
+      description: |
+        Marks a privacy bucket as archived. Archived buckets are hidden from
+        default list responses but remain accessible.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/restore:
+    post:
+      operationId: restoreBucket
+      tags:
+        - Privacy Buckets
+      summary: Restore an archived privacy bucket
+      description: |
+        Removes the archived flag from a privacy bucket, making it visible
+        in default list responses again.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      responses:
+        "200":
+          description: Bucket restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/tags:
+    get:
+      operationId: listBucketContentTags
+      tags:
+        - Bucket Content Tags
+      summary: List content tags for a bucket
+      description: |
+        Returns all content tags for the specified bucket. Optionally filter
+        by entity type. Results are not paginated (returns all tags up to
+        the system page limit).
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - member
+              - group
+              - channel
+              - message
+              - note
+              - poll
+              - relationship
+              - structure-entity-type
+              - structure-entity
+              - journal-entry
+              - wiki-page
+              - custom-front
+              - fronting-session
+              - board-message
+              - acknowledgement
+              - innerworld-entity
+              - innerworld-region
+              - field-definition
+              - field-value
+              - member-photo
+              - fronting-comment
+          description: Filter by entity type
+      responses:
+        "200":
+          description: Content tags list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BucketContentTagResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: tagBucketContent
+      tags:
+        - Bucket Content Tags
+      summary: Tag an entity to a bucket
+      description: |
+        Associates an entity with a privacy bucket. The entity will be included
+        in bucket exports and visible to friends with access to this bucket.
+        Idempotent — tagging an already-tagged entity is a no-op.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TagContentRequest"
+      responses:
+        "201":
+          description: Content tagged
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketContentTagResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/tags/{entityType}/{entityId}:
+    delete:
+      operationId: untagBucketContent
+      tags:
+        - Bucket Content Tags
+      summary: Remove a content tag from a bucket
+      description: |
+        Removes the association between an entity and a privacy bucket.
+        The entity will no longer be included in bucket exports for this bucket.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+        - name: entityType
+          in: path
+          required: true
+          description: Entity type
+          schema:
+            type: string
+            enum:
+              - member
+              - group
+              - channel
+              - message
+              - note
+              - poll
+              - relationship
+              - structure-entity-type
+              - structure-entity
+              - journal-entry
+              - wiki-page
+              - custom-front
+              - fronting-session
+              - board-message
+              - acknowledgement
+              - innerworld-entity
+              - innerworld-region
+              - field-definition
+              - field-value
+              - member-photo
+              - fronting-comment
+        - name: entityId
+          in: path
+          required: true
+          description: Entity ID
+          schema:
+            type: string
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/friends:
+    get:
+      operationId: listBucketFriendAssignments
+      tags:
+        - Bucket Friend Assignments
+      summary: List friend assignments for a bucket
+      description: |
+        Returns all friend connections that have been granted access to the
+        specified privacy bucket.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      responses:
+        "200":
+          description: Friend assignment list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BucketFriendAssignmentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: assignBucketToFriend
+      tags:
+        - Bucket Friend Assignments
+      summary: Assign a bucket to a friend
+      description: |
+        Grants a friend access to a privacy bucket by creating a friend bucket
+        assignment and a key grant. The client must encrypt the bucket's symmetric
+        key with the friend's X25519 public key and provide it as `encryptedBucketKey`.
+        Idempotent — assigning an already-assigned friend is a no-op.
+
+        The friend connection must exist and have `accepted` status.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignBucketFriendRequest"
+      responses:
+        "201":
+          description: Friend assigned to bucket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketFriendAssignmentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/friends/{connectionId}:
+    delete:
+      operationId: unassignBucketFromFriend
+      tags:
+        - Bucket Friend Assignments
+      summary: Unassign a bucket from a friend
+      description: |
+        Revokes a friend's access to a privacy bucket. Deletes the friend bucket
+        assignment and revokes all associated key grants. A key rotation should
+        be initiated after unassignment to ensure forward secrecy.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Bucket ID
+          schema:
+            type: string
+            pattern: ^bkt_
+        - name: connectionId
+          in: path
+          required: true
+          description: Friend connection ID
+          schema:
+            type: string
+            pattern: ^fc_
+      responses:
+        "200":
+          description: Friend unassigned from bucket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnassignBucketFriendResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/export/manifest:
+    get:
+      operationId: getBucketExportManifest
+      tags:
+        - Bucket Export
+      summary: Get bucket export manifest
+      description: |
+        Returns per-entity-type counts and freshness timestamps for all entities
+        tagged with the specified privacy bucket. The client uses this to decide
+        which entity types need refreshing before starting paginated downloads.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: systemId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^sys_
+          description: The system ID (must be owned by the authenticated account)
+        - name: bucketId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^bkt_
+          description: The privacy bucket ID
+      responses:
+        "200":
+          description: Manifest with per-entity-type counts
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Weak ETag for conditional requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketExportManifestResponse"
+        "304":
+          description: Not Modified (ETag match)
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/export:
+    get:
+      operationId: getBucketExportPage
+      tags:
+        - Bucket Export
+      summary: Get paginated bucket export
+      description: |
+        Returns a paginated page of encrypted entities tagged with the specified
+        privacy bucket. Entities are ordered by updatedAt ASC, id ASC for
+        deterministic cursor-based pagination.
+
+        The server returns encrypted blobs — all decryption and rendering
+        happens client-side (zero-knowledge).
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: systemId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^sys_
+          description: The system ID (must be owned by the authenticated account)
+        - name: bucketId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^bkt_
+          description: The privacy bucket ID
+        - name: entityType
+          in: query
+          required: true
+          schema:
+            type: string
+          description: The entity type to export (e.g. "member", "group")
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum number of entities per page
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor from a previous response
+      responses:
+        "200":
+          description: Page of encrypted entities
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Weak ETag for conditional requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BucketExportPageResponse"
+        "304":
+          description: Not Modified (ETag match)
+        "400":
+          $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -8953,6 +10528,147 @@ components:
         version:
           type: integer
           minimum: 1
+    DeviceTokenPlatform:
+      type: string
+      enum:
+        - ios
+        - android
+        - web
+      description: Push notification platform
+    DeviceTokenResponse:
+      description: |
+        A registered device push token. Tokens are masked — only the last 8
+        characters are visible.
+      type: object
+      required:
+        - id
+        - systemId
+        - platform
+        - token
+        - lastActiveAt
+        - createdAt
+      properties:
+        id:
+          type: string
+          pattern: ^dt_
+          description: Device token ID (prefixed with `dt_`)
+        systemId:
+          type: string
+          pattern: ^sys_
+          description: System ID that owns this token
+        platform:
+          $ref: "#/components/schemas/DeviceTokenPlatform"
+        token:
+          type: string
+          description: Masked token string (only last 8 characters visible)
+          example: "***abcd1234"
+        lastActiveAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when the token was last active
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the token was registered
+    RegisterDeviceTokenRequest:
+      type: object
+      required:
+        - platform
+        - token
+      properties:
+        platform:
+          $ref: "#/components/schemas/DeviceTokenPlatform"
+        token:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Push token from APNs, FCM, or web-push
+    DeviceTokenListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeviceTokenResponse"
+    NotificationEventType:
+      type: string
+      enum:
+        - switch-reminder
+        - check-in-due
+        - acknowledgement-requested
+        - message-received
+        - sync-conflict
+        - friend-switch-alert
+      description: Event types that can trigger a notification
+    NotificationConfigResponse:
+      description: |
+        Per-event notification configuration.
+        T3 (all fields plaintext) — the server uses these flags to decide delivery.
+      type: object
+      properties:
+        id:
+          type: string
+          description: Notification config ID (ncfg_ prefix)
+        systemId:
+          type: string
+          description: System ID (sys_ prefix)
+        eventType:
+          $ref: "#/components/schemas/NotificationEventType"
+        enabled:
+          type: boolean
+          description: Whether in-app notifications are enabled for this event type
+        pushEnabled:
+          type: boolean
+          description: Whether push notifications are enabled for this event type
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the config was created
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the config was last updated
+    UpdateNotificationConfigRequest:
+      description: |
+        At least one of `enabled` or `pushEnabled` must be provided.
+        If the config does not yet exist for the given event type, it is
+        auto-created with defaults (enabled: true, pushEnabled: true) before
+        applying the provided overrides.
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: Whether in-app notifications are enabled
+        pushEnabled:
+          type: boolean
+          description: Whether push notifications are enabled
+    NotificationConfigListResponse:
+      description: Wrapper for a list of notification configs
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationConfigResponse"
+    SseStreamEvent:
+      description: |
+        A Server-Sent Event delivered over the notification stream.
+        The `event` field contains the event type and `data` contains
+        the JSON-serialized payload.
+      type: object
+      properties:
+        event:
+          type: string
+          description: SSE event type (e.g., 'notification', 'full-sync')
+        data:
+          type: string
+          description: JSON-serialized event payload
+        id:
+          type: string
+          description: Monotonically increasing event ID for replay
     RelationshipType:
       type: string
       enum:
@@ -9441,6 +11157,184 @@ components:
     CanvasResponse:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
+    BucketResponse:
+      description: |
+        A privacy bucket. Buckets scope T2-encrypted content for friend sharing.
+        Each bucket has its own symmetric key (XChaCha20-Poly1305) and controls
+        which entities are visible to which friends via content tags and key grants.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          required:
+            - archived
+          properties:
+            id:
+              type: string
+              pattern: ^bkt_
+              example: bkt_abc123def456
+            archived:
+              type: boolean
+              default: false
+            archivedAt:
+              type: integer
+              format: int64
+              nullable: true
+              description: Unix timestamp in milliseconds when archived, null if not archived
+    CreateBucketRequest:
+      type: object
+      required:
+        - encryptedData
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted bucket data (name, description, color, etc.)
+    UpdateBucketRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted bucket data
+        version:
+          type: integer
+          minimum: 1
+    BucketContentTagResponse:
+      type: object
+      required:
+        - entityType
+        - entityId
+        - bucketId
+      properties:
+        entityType:
+          type: string
+          enum:
+            - member
+            - group
+            - channel
+            - message
+            - note
+            - poll
+            - relationship
+            - structure-entity-type
+            - structure-entity
+            - journal-entry
+            - wiki-page
+            - custom-front
+            - fronting-session
+            - board-message
+            - acknowledgement
+            - innerworld-entity
+            - innerworld-region
+            - field-definition
+            - field-value
+            - member-photo
+            - fronting-comment
+          description: Type of entity tagged to this bucket
+        entityId:
+          type: string
+          description: ID of the tagged entity
+        bucketId:
+          type: string
+          pattern: ^bkt_
+          description: Bucket ID
+    TagContentRequest:
+      type: object
+      required:
+        - entityType
+        - entityId
+      properties:
+        entityType:
+          type: string
+          enum:
+            - member
+            - group
+            - channel
+            - message
+            - note
+            - poll
+            - relationship
+            - structure-entity-type
+            - structure-entity
+            - journal-entry
+            - wiki-page
+            - custom-front
+            - fronting-session
+            - board-message
+            - acknowledgement
+            - innerworld-entity
+            - innerworld-region
+            - field-definition
+            - field-value
+            - member-photo
+            - fronting-comment
+        entityId:
+          type: string
+          minLength: 1
+          description: ID of the entity to tag
+    AssignBucketFriendRequest:
+      type: object
+      required:
+        - connectionId
+        - encryptedBucketKey
+        - keyVersion
+      properties:
+        connectionId:
+          type: string
+          pattern: ^fc_
+          description: Friend connection ID
+        encryptedBucketKey:
+          type: string
+          minLength: 1
+          description: Bucket symmetric key encrypted with the friend's X25519 public key (base64)
+        keyVersion:
+          type: integer
+          minimum: 1
+          description: Version of the bucket key being granted
+    BucketFriendAssignmentResponse:
+      type: object
+      required:
+        - friendConnectionId
+        - bucketId
+        - friendAccountId
+      properties:
+        friendConnectionId:
+          type: string
+          pattern: ^fc_
+          description: Friend connection ID
+        bucketId:
+          type: string
+          pattern: ^bkt_
+          description: Bucket ID
+        friendAccountId:
+          type: string
+          pattern: ^acc_
+          description: Account ID of the friend
+    UnassignBucketFriendResponse:
+      type: object
+      required:
+        - pendingRotation
+      properties:
+        pendingRotation:
+          type: object
+          required:
+            - systemId
+            - bucketId
+          properties:
+            systemId:
+              type: string
+              pattern: ^sys_
+            bucketId:
+              type: string
+              pattern: ^bkt_
+          description: Indicates a key rotation should be initiated for this bucket after unassignment
     BlobPurpose:
       type: string
       enum:
@@ -10201,6 +12095,502 @@ components:
           type: boolean
           const: true
           description: Must be true to confirm the user has backed up their recovery key
+    FriendDashboardResponse:
+      type: object
+      required:
+        - systemId
+        - memberCount
+        - activeFronting
+        - visibleMembers
+        - visibleCustomFronts
+        - visibleStructureEntities
+        - keyGrants
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+        memberCount:
+          type: integer
+          minimum: 0
+          description: |
+            Total non-archived member count (unfiltered). This reveals system
+            size even with zero bucket access. The system owner accepted this
+            friend connection, so revealing system size is an intentional
+            privacy decision.
+        activeFronting:
+          type: object
+          required:
+            - sessions
+            - isCofronting
+          properties:
+            sessions:
+              type: array
+              items:
+                $ref: "#/components/schemas/FriendDashboardFrontingSession"
+            isCofronting:
+              type: boolean
+        visibleMembers:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendDashboardMember"
+        visibleCustomFronts:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendDashboardCustomFront"
+        visibleStructureEntities:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendDashboardStructureEntity"
+        keyGrants:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendDashboardKeyGrant"
+          description: |
+            Active (non-revoked) key grants for this friend. During key
+            rotation, old grants may be revoked before content migration
+            completes. The client should handle decryption failures
+            gracefully during rotation windows.
+    FriendDashboardFrontingSession:
+      type: object
+      required:
+        - id
+        - memberId
+        - customFrontId
+        - structureEntityId
+        - startTime
+        - encryptedData
+      properties:
+        id:
+          type: string
+          pattern: ^fs_
+        memberId:
+          type: string
+          nullable: true
+          pattern: ^mem_
+        customFrontId:
+          type: string
+          nullable: true
+          pattern: ^cf_
+        structureEntityId:
+          type: string
+          nullable: true
+          pattern: ^ste_
+        startTime:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+        encryptedData:
+          type: string
+          description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+    FriendDashboardMember:
+      type: object
+      required:
+        - id
+        - encryptedData
+      properties:
+        id:
+          type: string
+          pattern: ^mem_
+        encryptedData:
+          type: string
+          description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+    FriendDashboardCustomFront:
+      type: object
+      required:
+        - id
+        - encryptedData
+      properties:
+        id:
+          type: string
+          pattern: ^cf_
+        encryptedData:
+          type: string
+          description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+    FriendDashboardStructureEntity:
+      type: object
+      required:
+        - id
+        - encryptedData
+      properties:
+        id:
+          type: string
+          pattern: ^ste_
+        encryptedData:
+          type: string
+          description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+    FriendDashboardKeyGrant:
+      type: object
+      required:
+        - id
+        - bucketId
+        - encryptedKey
+        - keyVersion
+      properties:
+        id:
+          type: string
+          pattern: ^kg_
+        bucketId:
+          type: string
+          pattern: ^bkt_
+        encryptedKey:
+          type: string
+          description: Base64-encoded encrypted bucket symmetric key
+        keyVersion:
+          type: integer
+          minimum: 1
+    FriendConnectionResponse:
+      type: object
+      required:
+        - id
+        - accountId
+        - friendAccountId
+        - status
+        - encryptedData
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          pattern: ^fc_
+          description: Friend connection ID
+          example: fc_abc123def456
+        accountId:
+          type: string
+          pattern: ^acc_
+          description: Owning account ID
+          example: acc_abc123def456
+        friendAccountId:
+          type: string
+          pattern: ^acc_
+          description: Friend's account ID
+          example: acc_def456ghi789
+        status:
+          $ref: "#/components/schemas/FriendConnectionStatus"
+        encryptedData:
+          type: string
+          nullable: true
+          contentEncoding: base64
+          description: |
+            Base64-encoded encrypted visibility settings (T1 master-key encrypted).
+            Contains FriendVisibilitySettings (showMembers, showGroups, showStructure).
+            Null until the user configures visibility for this friend.
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic concurrency version for updates
+          example: 1
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1710000000000
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1710000000000
+    FriendConnectionWithRotations:
+      allOf:
+        - $ref: "#/components/schemas/FriendConnectionResponse"
+        - type: object
+          required:
+            - pendingRotations
+          properties:
+            pendingRotations:
+              type: array
+              items:
+                $ref: "#/components/schemas/PendingRotation"
+              description: |
+                Bucket assignments that were cleaned up during the block/remove
+                operation. The client should initiate key rotation for these buckets.
+    FriendConnectionStatus:
+      type: string
+      enum:
+        - pending
+        - accepted
+        - blocked
+        - removed
+      description: Current status of the friend connection
+    FriendConnectionListResponse:
+      type: object
+      required:
+        - data
+        - nextCursor
+        - hasMore
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendConnectionResponse"
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page, null if no more results
+        hasMore:
+          type: boolean
+          description: Whether more results exist beyond this page
+    UpdateFriendVisibilityRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          minLength: 1
+          contentEncoding: base64
+          description: |
+            Base64-encoded encrypted visibility settings blob.
+            The client encrypts FriendVisibilitySettings with the master key.
+        version:
+          type: integer
+          minimum: 1
+          description: Current version for optimistic concurrency control
+    FriendCodeResponse:
+      type: object
+      required:
+        - id
+        - accountId
+        - code
+        - createdAt
+        - expiresAt
+        - archived
+      properties:
+        id:
+          type: string
+          pattern: ^fcd_
+          description: Friend code ID
+          example: fcd_abc123def456
+        accountId:
+          type: string
+          pattern: ^acc_
+          description: Owning account ID
+          example: acc_abc123def456
+        code:
+          type: string
+          pattern: ^[A-Z0-9]{4}-[A-Z0-9]{4}$
+          description: Human-readable XXXX-XXXX formatted code
+          example: AB12-CD34
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1710000000000
+        expiresAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix timestamp in milliseconds when the code expires, null if no expiry
+          example: null
+        archived:
+          type: boolean
+          description: Whether the code has been archived (redeemed or manually archived)
+          example: false
+    FriendCodeListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendCodeResponse"
+    RedeemFriendCodeRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          pattern: ^[A-Z0-9]{4}-[A-Z0-9]{4}$
+          description: XXXX-XXXX alphanumeric friend code to redeem
+          example: AB12-CD34
+    RedeemFriendCodeResponse:
+      type: object
+      required:
+        - connectionIds
+      properties:
+        connectionIds:
+          type: array
+          items:
+            type: string
+            pattern: ^fc_
+          minItems: 2
+          maxItems: 2
+          description: |
+            The two bidirectional connection IDs created by the redemption.
+            First is the code owner's connection, second is the redeemer's.
+          example:
+            - fc_abc123def456
+            - fc_ghi789jkl012
+    FriendNotificationPreferenceResponse:
+      type: object
+      required:
+        - id
+        - accountId
+        - friendConnectionId
+        - enabledEventTypes
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          pattern: ^fnp_
+          description: Friend notification preference ID
+          example: fnp_abc123def456
+        accountId:
+          type: string
+          pattern: ^acc_
+          description: Owning account ID
+          example: acc_abc123def456
+        friendConnectionId:
+          type: string
+          pattern: ^fc_
+          description: Associated friend connection ID
+          example: fc_abc123def456
+        enabledEventTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendNotificationEventType"
+          description: List of event types for which notifications are enabled
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1710000000000
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1710000000000
+    FriendNotificationEventType:
+      type: string
+      enum:
+        - friend-switch-alert
+      description: Types of friend notification events
+    UpdateFriendNotificationPreferenceRequest:
+      type: object
+      required:
+        - enabledEventTypes
+      properties:
+        enabledEventTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendNotificationEventType"
+          description: List of event types for which notifications should be enabled
+    FriendExportEntityType:
+      type: string
+      enum:
+        - member
+        - group
+        - channel
+        - message
+        - note
+        - poll
+        - relationship
+        - structure-entity-type
+        - structure-entity
+        - journal-entry
+        - wiki-page
+        - custom-front
+        - fronting-session
+        - board-message
+        - acknowledgement
+        - innerworld-entity
+        - innerworld-region
+        - field-definition
+        - field-value
+        - member-photo
+        - fronting-comment
+      description: Entity types available for friend-side data export
+    FriendExportManifestResponse:
+      type: object
+      required:
+        - systemId
+        - entries
+        - keyGrants
+        - etag
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+          description: The friend's system ID
+          example: sys_abc123def456
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendExportManifestEntry"
+          description: Per-entity-type counts and freshness timestamps
+        keyGrants:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendDashboardKeyGrant"
+          description: Active key grants for decrypting bucket-encrypted data
+        etag:
+          type: string
+          description: ETag for conditional requests (If-None-Match)
+    FriendExportManifestEntry:
+      type: object
+      required:
+        - entityType
+        - count
+        - lastUpdatedAt
+      properties:
+        entityType:
+          $ref: "#/components/schemas/FriendExportEntityType"
+        count:
+          type: integer
+          minimum: 0
+          description: Number of bucket-visible entities of this type
+        lastUpdatedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix timestamp in milliseconds of the most recently updated entity, null if count is 0
+    FriendExportEntity:
+      type: object
+      required:
+        - id
+        - entityType
+        - encryptedData
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Entity ID with type-specific prefix
+        entityType:
+          $ref: "#/components/schemas/FriendExportEntityType"
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          description: Base64-encoded encrypted entity data (T2 per-bucket encryption)
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+    FriendExportPageResponse:
+      type: object
+      required:
+        - data
+        - nextCursor
+        - hasMore
+        - etag
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendExportEntity"
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page, null if no more results
+        hasMore:
+          type: boolean
+          description: Whether more results exist beyond this page
+        etag:
+          type: string
+          description: ETag for conditional requests (If-None-Match)
     PlaintextImageSource:
       description: |
         How an image is referenced. Either a blob stored via the Blobs API
@@ -10942,6 +13332,111 @@ components:
         notes:
           type: string
           nullable: true
+    PendingRotation:
+      type: object
+      required:
+        - systemId
+        - bucketId
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+          description: System that owns the bucket
+          example: sys_abc123def456
+        bucketId:
+          type: string
+          pattern: ^bkt_
+          description: Bucket whose key should be rotated
+          example: bkt_abc123def456
+    BucketExportManifestEntry:
+      type: object
+      required:
+        - entityType
+        - count
+        - lastUpdatedAt
+      properties:
+        entityType:
+          type: string
+          description: The entity type (e.g. "member", "group", "custom-front")
+        count:
+          type: integer
+          minimum: 0
+          description: Number of entities of this type tagged with the bucket
+        lastUpdatedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix timestamp (ms) of the most recently updated entity, or null if count is 0
+    BucketExportManifestResponse:
+      type: object
+      required:
+        - systemId
+        - bucketId
+        - entries
+        - etag
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+        bucketId:
+          type: string
+          pattern: ^bkt_
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/BucketExportManifestEntry"
+          description: Per-entity-type counts and freshness timestamps
+        etag:
+          type: string
+          description: Weak ETag for conditional requests
+    BucketExportEntity:
+      type: object
+      required:
+        - id
+        - entityType
+        - encryptedData
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: The entity ID (prefixed by type, e.g. "mem_", "grp_")
+        entityType:
+          type: string
+          description: The entity type
+        encryptedData:
+          type: string
+          description: Base64-encoded encrypted blob (T2 per-bucket encryption)
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+    BucketExportPageResponse:
+      type: object
+      required:
+        - items
+        - nextCursor
+        - hasMore
+        - totalCount
+        - etag
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BucketExportEntity"
+        nextCursor:
+          type: string
+          nullable: true
+          description: Cursor for the next page, or null if no more pages
+        hasMore:
+          type: boolean
+          description: Whether more pages are available
+        totalCount:
+          type: integer
+          nullable: true
+          description: Total count (always null for export endpoints)
+        etag:
+          type: string
+          description: Weak ETag for conditional requests
     WebhookEventType:
       type: string
       enum:
@@ -11703,6 +14198,7 @@ x-tagGroups:
     tags:
       - Auth
       - Account
+      - Friends
   - name: System Management
     tags:
       - Systems
@@ -11735,7 +14231,18 @@ x-tagGroups:
     tags:
       - Analytics
       - Fronting Reports
+  - name: Privacy
+    tags:
+      - Privacy Buckets
+      - Bucket Content Tags
+      - Bucket Friend Assignments
+      - Bucket Export
   - name: Media & Crypto
     tags:
       - Blobs
       - Key Rotation
+  - name: Notifications
+    tags:
+      - Notification Configs
+      - Notifications
+      - Device Tokens

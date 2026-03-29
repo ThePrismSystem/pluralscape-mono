@@ -1,11 +1,11 @@
 ---
 # api-pyy1
 title: "M3: Push bucket filtering into SQL for dashboard queries"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-28T21:26:57Z
-updated_at: 2026-03-28T21:26:57Z
+updated_at: 2026-03-29T00:48:45Z
 parent: ps-tkuz
 ---
 

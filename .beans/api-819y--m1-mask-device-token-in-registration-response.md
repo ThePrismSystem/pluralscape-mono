@@ -1,11 +1,11 @@
 ---
 # api-819y
 title: "M1: Mask device token in registration response"
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-03-28T21:26:48Z
-updated_at: 2026-03-28T21:26:48Z
+updated_at: 2026-03-29T00:48:44Z
 parent: ps-tkuz
 ---
 

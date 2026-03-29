@@ -1,0 +1,130 @@
+# Friend code paths (account-level, no SystemId parameter)
+
+/account/friend-codes:
+  post:
+    operationId: createFriendCode
+    tags: [Friends]
+    summary: Generate a new friend code
+    description: |
+      Generates a new XXXX-XXXX formatted friend code for the authenticated
+      account. The code can be shared with another user to establish a friend
+      connection. Enforces a per-account quota of active (non-archived) codes.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    responses:
+      "201":
+        description: Friend code created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendCodeResponse"
+      "400":
+        description: Quota exceeded (too many active codes)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  get:
+    operationId: listFriendCodes
+    tags: [Friends]
+    summary: List active friend codes
+    description: |
+      Returns all active, non-expired, non-archived friend codes for the
+      authenticated account. This endpoint does not use pagination as the
+      per-account quota limits the total number of codes.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: List of active friend codes
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendCodeListResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friend-codes/redeem:
+  post:
+    operationId: redeemFriendCode
+    tags: [Friends]
+    summary: Redeem a friend code
+    description: |
+      Redeems a friend code to establish a bidirectional friend connection.
+      Creates two connection rows (one for each direction) with status `accepted`,
+      then archives the redeemed code.
+
+      **Error cases:**
+      - `NOT_FOUND`: Code does not exist or is already archived
+      - `FRIEND_CODE_EXPIRED`: Code has passed its expiry time
+      - `CONFLICT`: Cannot redeem your own code, or already friends with the code owner
+
+      Rate limit: 10 req/min (friendCodeRedeem)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/friends.yaml#/RedeemFriendCodeRequest"
+    responses:
+      "201":
+        description: Friend connection established
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/RedeemFriendCodeResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friend-codes/{codeId}/archive:
+  post:
+    operationId: archiveFriendCode
+    tags: [Friends]
+    summary: Archive a friend code
+    description: |
+      Soft-archives a friend code, preventing it from being redeemed.
+      Returns 204 on success. Returns 404 if the code does not exist
+      or is already archived.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: codeId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fcd_"
+        description: Friend code ID
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

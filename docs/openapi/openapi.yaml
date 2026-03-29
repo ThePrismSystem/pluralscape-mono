@@ -95,7 +95,7 @@ x-tagGroups:
   - name: Infrastructure
     tags: [Health]
   - name: Authentication & Account
-    tags: [Auth, Account]
+    tags: [Auth, Account, Friends]
   - name: System Management
     tags: [Systems, System Settings]
   - name: Core Resources
@@ -108,8 +108,12 @@ x-tagGroups:
     tags: [Fronting Sessions, Fronting Comments]
   - name: Analytics
     tags: [Analytics, Fronting Reports]
+  - name: Privacy
+    tags: [Privacy Buckets, Bucket Content Tags, Bucket Friend Assignments, Bucket Export]
   - name: Media & Crypto
     tags: [Blobs, Key Rotation]
+  - name: Notifications
+    tags: [Notification Configs, Notifications, Device Tokens]
 
 tags:
   - name: Health
@@ -134,6 +138,12 @@ tags:
     description: Member groups and group memberships
   - name: Custom Fronts
     description: Abstract cognitive states logged like members
+  - name: Device Tokens
+    description: Push notification device token registration and management
+  - name: Notification Configs
+    description: Per-event notification preferences (enabled, push enabled)
+  - name: Notifications
+    description: Real-time notification delivery via Server-Sent Events
   - name: Fields
     description: Custom field definitions for a system
   - name: Relationships
@@ -152,6 +162,14 @@ tags:
     description: System lifecycle events (splits, fusions, etc.)
   - name: Innerworld
     description: Innerworld regions, entities, and canvas
+  - name: Privacy Buckets
+    description: Privacy buckets for scoping T2-encrypted content and friend sharing
+  - name: Bucket Content Tags
+    description: Tag entities to privacy buckets for friend visibility
+  - name: Bucket Friend Assignments
+    description: Grant and revoke friend access to privacy buckets
+  - name: Bucket Export
+    description: Export bucket contents for friend-facing data sync
   - name: Blobs
     description: Encrypted file upload and download
   - name: Key Rotation
@@ -329,6 +347,26 @@ components:
       $ref: "./schemas/custom-fronts.yaml#/CreateCustomFrontRequest"
     UpdateCustomFrontRequest:
       $ref: "./schemas/custom-fronts.yaml#/UpdateCustomFrontRequest"
+    # Device Tokens
+    DeviceTokenPlatform:
+      $ref: "./schemas/device-tokens.yaml#/DeviceTokenPlatform"
+    DeviceTokenResponse:
+      $ref: "./schemas/device-tokens.yaml#/DeviceTokenResponse"
+    RegisterDeviceTokenRequest:
+      $ref: "./schemas/device-tokens.yaml#/RegisterDeviceTokenRequest"
+    DeviceTokenListResponse:
+      $ref: "./schemas/device-tokens.yaml#/DeviceTokenListResponse"
+    # Notification Configs
+    NotificationEventType:
+      $ref: "./schemas/notification-configs.yaml#/NotificationEventType"
+    NotificationConfigResponse:
+      $ref: "./schemas/notification-configs.yaml#/NotificationConfigResponse"
+    UpdateNotificationConfigRequest:
+      $ref: "./schemas/notification-configs.yaml#/UpdateNotificationConfigRequest"
+    NotificationConfigListResponse:
+      $ref: "./schemas/notification-configs.yaml#/NotificationConfigListResponse"
+    SseStreamEvent:
+      $ref: "./schemas/notification-configs.yaml#/SseStreamEvent"
     # Relationships
     RelationshipType:
       $ref: "./schemas/relationships.yaml#/RelationshipType"
@@ -387,6 +425,23 @@ components:
       $ref: "./schemas/innerworld.yaml#/UpdateCanvasRequest"
     CanvasResponse:
       $ref: "./schemas/innerworld.yaml#/CanvasResponse"
+    # Privacy Buckets
+    BucketResponse:
+      $ref: "./schemas/buckets.yaml#/BucketResponse"
+    CreateBucketRequest:
+      $ref: "./schemas/buckets.yaml#/CreateBucketRequest"
+    UpdateBucketRequest:
+      $ref: "./schemas/buckets.yaml#/UpdateBucketRequest"
+    BucketContentTagResponse:
+      $ref: "./schemas/buckets.yaml#/BucketContentTagResponse"
+    TagContentRequest:
+      $ref: "./schemas/buckets.yaml#/TagContentRequest"
+    AssignBucketFriendRequest:
+      $ref: "./schemas/buckets.yaml#/AssignBucketFriendRequest"
+    BucketFriendAssignmentResponse:
+      $ref: "./schemas/buckets.yaml#/BucketFriendAssignmentResponse"
+    UnassignBucketFriendResponse:
+      $ref: "./schemas/buckets.yaml#/UnassignBucketFriendResponse"
     # Blobs
     BlobPurpose:
       $ref: "./schemas/blobs.yaml#/BlobPurpose"
@@ -473,6 +528,41 @@ components:
       $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardStructureEntity"
     FriendDashboardKeyGrant:
       $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardKeyGrant"
+    # Friends
+    FriendConnectionResponse:
+      $ref: "./schemas/friends.yaml#/FriendConnectionResponse"
+    FriendConnectionWithRotations:
+      $ref: "./schemas/friends.yaml#/FriendConnectionWithRotations"
+    FriendConnectionStatus:
+      $ref: "./schemas/friends.yaml#/FriendConnectionStatus"
+    FriendConnectionListResponse:
+      $ref: "./schemas/friends.yaml#/FriendConnectionListResponse"
+    UpdateFriendVisibilityRequest:
+      $ref: "./schemas/friends.yaml#/UpdateFriendVisibilityRequest"
+    FriendCodeResponse:
+      $ref: "./schemas/friends.yaml#/FriendCodeResponse"
+    FriendCodeListResponse:
+      $ref: "./schemas/friends.yaml#/FriendCodeListResponse"
+    RedeemFriendCodeRequest:
+      $ref: "./schemas/friends.yaml#/RedeemFriendCodeRequest"
+    RedeemFriendCodeResponse:
+      $ref: "./schemas/friends.yaml#/RedeemFriendCodeResponse"
+    FriendNotificationPreferenceResponse:
+      $ref: "./schemas/friends.yaml#/FriendNotificationPreferenceResponse"
+    FriendNotificationEventType:
+      $ref: "./schemas/friends.yaml#/FriendNotificationEventType"
+    UpdateFriendNotificationPreferenceRequest:
+      $ref: "./schemas/friends.yaml#/UpdateFriendNotificationPreferenceRequest"
+    FriendExportEntityType:
+      $ref: "./schemas/friends.yaml#/FriendExportEntityType"
+    FriendExportManifestResponse:
+      $ref: "./schemas/friends.yaml#/FriendExportManifestResponse"
+    FriendExportManifestEntry:
+      $ref: "./schemas/friends.yaml#/FriendExportManifestEntry"
+    FriendExportEntity:
+      $ref: "./schemas/friends.yaml#/FriendExportEntity"
+    FriendExportPageResponse:
+      $ref: "./schemas/friends.yaml#/FriendExportPageResponse"
     # Plaintext (client-side encryption contracts)
     PlaintextImageSource:
       $ref: "./schemas/plaintext.yaml#/PlaintextImageSource"
@@ -600,9 +690,36 @@ paths:
     $ref: "./paths/account.yaml#/~1account~1audit-log"
   /account/settings:
     $ref: "./paths/account.yaml#/~1account~1settings"
-  # Friend Dashboard
+  # Friends
+  /account/friends:
+    $ref: "./paths/friends.yaml#/~1account~1friends"
+  /account/friends/{connectionId}:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D"
+  /account/friends/{connectionId}/block:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1block"
+  /account/friends/{connectionId}/remove:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1remove"
+  /account/friends/{connectionId}/archive:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1archive"
+  /account/friends/{connectionId}/restore:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1restore"
+  /account/friends/{connectionId}/visibility:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1visibility"
+  /account/friends/{connectionId}/notifications:
+    $ref: "./paths/friend-notifications.yaml#/~1account~1friends~1%7BconnectionId%7D~1notifications"
+  /account/friends/{connectionId}/export/manifest:
+    $ref: "./paths/friend-export.yaml#/~1account~1friends~1%7BconnectionId%7D~1export~1manifest"
+  /account/friends/{connectionId}/export:
+    $ref: "./paths/friend-export.yaml#/~1account~1friends~1%7BconnectionId%7D~1export"
   /account/friends/{connectionId}/dashboard:
     $ref: "./paths/friend-dashboard.yaml#/~1account~1friends~1%7BconnectionId%7D~1dashboard"
+  # Friend Codes
+  /account/friend-codes:
+    $ref: "./paths/friend-codes.yaml#/~1account~1friend-codes"
+  /account/friend-codes/redeem:
+    $ref: "./paths/friend-codes.yaml#/~1account~1friend-codes~1redeem"
+  /account/friend-codes/{codeId}/archive:
+    $ref: "./paths/friend-codes.yaml#/~1account~1friend-codes~1%7BcodeId%7D~1archive"
   # Systems
   /systems:
     $ref: "./paths/systems.yaml#/~1systems"
@@ -686,6 +803,19 @@ paths:
     $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1restore"
   /systems/{systemId}/custom-fronts/{customFrontId}/delete:
     $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1delete"
+  # Device Tokens
+  /systems/{systemId}/device-tokens:
+    $ref: "./paths/device-tokens.yaml#/~1systems~1%7BsystemId%7D~1device-tokens"
+  /systems/{systemId}/device-tokens/{tokenId}/revoke:
+    $ref: "./paths/device-tokens.yaml#/~1systems~1%7BsystemId%7D~1device-tokens~1%7BtokenId%7D~1revoke"
+  # Notification Configs
+  /systems/{systemId}/notification-configs:
+    $ref: "./paths/notification-configs.yaml#/~1systems~1%7BsystemId%7D~1notification-configs"
+  /systems/{systemId}/notification-configs/{eventType}:
+    $ref: "./paths/notification-configs.yaml#/~1systems~1%7BsystemId%7D~1notification-configs~1%7BeventType%7D"
+  # Notifications
+  /notifications/stream:
+    $ref: "./paths/notifications.yaml#/~1notifications~1stream"
   # Field Definitions
   /systems/{systemId}/fields:
     $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields"
@@ -772,12 +902,29 @@ paths:
     $ref: "./paths/blobs.yaml#/~1systems~1%7BsystemId%7D~1blobs~1%7BblobId%7D~1download-url"
   /systems/{systemId}/blobs/{blobId}:
     $ref: "./paths/blobs.yaml#/~1systems~1%7BsystemId%7D~1blobs~1%7BblobId%7D"
-  # Key Rotation
+  # Buckets
+  /systems/{systemId}/buckets:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets"
+  /systems/{systemId}/buckets/{bucketId}:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D"
+  /systems/{systemId}/buckets/{bucketId}/archive:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1archive"
+  /systems/{systemId}/buckets/{bucketId}/restore:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1restore"
+  /systems/{systemId}/buckets/{bucketId}/tags:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1tags"
+  /systems/{systemId}/buckets/{bucketId}/tags/{entityType}/{entityId}:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1tags~1%7BentityType%7D~1%7BentityId%7D"
+  /systems/{systemId}/buckets/{bucketId}/friends:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1friends"
+  /systems/{systemId}/buckets/{bucketId}/friends/{connectionId}:
+    $ref: "./paths/buckets.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1friends~1%7BconnectionId%7D"
   # Bucket Export
   /systems/{systemId}/buckets/{bucketId}/export/manifest:
     $ref: "./paths/bucket-export.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1export~1manifest"
   /systems/{systemId}/buckets/{bucketId}/export:
     $ref: "./paths/bucket-export.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1export"
+  # Key Rotation
   /systems/{systemId}/buckets/{bucketId}/rotations:
     $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations"
   /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/progress:

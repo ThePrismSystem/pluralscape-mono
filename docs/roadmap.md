@@ -1,12 +1,5 @@
 # Roadmap
 
-## Milestone: Milestone 6: Privacy and Social ([ps-6itw](.beans/ps-6itw--milestone-6-privacy-and-social.md))
-
-> Privacy engine, friend network, external access
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Second-pass zero-knowledge hardening for member-identifying columns ([db-jpjm](.beans/db-jpjm--second-pass-zero-knowledge-hardening-for-member-id.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Re-evaluate audit_log.detail encryption tier (T1 vs T3) ([db-kcmt](.beans/db-kcmt--re-evaluate-audit-logdetail-encryption-tier-t1-vs.md))
-
 ## Milestone: Milestone 7: Data Portability ([ps-n8uk](.beans/ps-n8uk--milestone-7-data-portability.md))
 
 > Import from SP/PK, export, API surface
@@ -36,6 +29,16 @@
 
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
+
+## Milestone: Milestone 6: Privacy and Social ([ps-6itw](.beans/ps-6itw--milestone-6-privacy-and-social.md))
+
+> Privacy engine, friend network, external access
+
+### Epic: Friend network ([api-rl9o](.beans/api-rl9o--friend-network.md))
+
+> Friend codes, connection management, bucket assignment. Account-level operations per ADR 021.
+
+- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Friend network E2E tests and OpenAPI ([api-ghp5](.beans/api-ghp5--friend-network-e2e-tests-and-openapi.md))
 
 ## No Milestone
 
@@ -73,6 +76,8 @@
 ### Miscellaneous
 
 - ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Account settings UI: audit log IP tracking opt-in ([mobile-zxe4](.beans/mobile-zxe4--account-settings-ui-audit-log-ip-tracking-opt-in.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-a2x5](.beans/api-a2x5--fix-friend-dashboard-review-issues.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-wk6u](.beans/api-wk6u--fix-friend-dashboard-review-issues.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) M4 comprehensive audit ([ps-6u44](.beans/ps-6u44--m4-comprehensive-audit.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add structure entity service with HAS_DEPENDENTS checking ([api-l9ar](.beans/api-l9ar--add-structure-entity-service-with-has-dependents-c.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Structure-entity deletion must check note dependencies ([api-m3up](.beans/api-m3up--structure-entity-deletion-must-check-note-dependen.md))

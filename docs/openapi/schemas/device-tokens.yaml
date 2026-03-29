@@ -1,0 +1,56 @@
+DeviceTokenPlatform:
+  type: string
+  enum: [ios, android, web]
+  description: "Push notification platform"
+
+DeviceTokenResponse:
+  description: |
+    A registered device push token. Tokens are masked — only the last 8
+    characters are visible.
+  type: object
+  required: [id, systemId, platform, token, lastActiveAt, createdAt]
+  properties:
+    id:
+      type: string
+      pattern: ^dt_
+      description: "Device token ID (prefixed with `dt_`)"
+    systemId:
+      type: string
+      pattern: ^sys_
+      description: "System ID that owns this token"
+    platform:
+      $ref: "#/DeviceTokenPlatform"
+    token:
+      type: string
+      description: "Masked token string (only last 8 characters visible)"
+      example: "***abcd1234"
+    lastActiveAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: "Unix milliseconds when the token was last active"
+    createdAt:
+      type: integer
+      format: int64
+      description: "Unix milliseconds when the token was registered"
+
+RegisterDeviceTokenRequest:
+  type: object
+  required: [platform, token]
+  properties:
+    platform:
+      $ref: "#/DeviceTokenPlatform"
+    token:
+      type: string
+      minLength: 1
+      maxLength: 512
+      description: "Push token from APNs, FCM, or web-push"
+
+DeviceTokenListResponse:
+  type: object
+  required: [data]
+  properties:
+    data:
+      type: array
+      items:
+        $ref: "#/DeviceTokenResponse"

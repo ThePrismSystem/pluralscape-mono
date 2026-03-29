@@ -1,0 +1,167 @@
+BucketResponse:
+  description: |
+    A privacy bucket. Buckets scope T2-encrypted content for friend sharing.
+    Each bucket has its own symmetric key (XChaCha20-Poly1305) and controls
+    which entities are visible to which friends via content tags and key grants.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [archived]
+      properties:
+        id:
+          type: string
+          pattern: ^bkt_
+          example: "bkt_abc123def456"
+        archived:
+          type: boolean
+          default: false
+        archivedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix timestamp in milliseconds when archived, null if not archived
+
+CreateBucketRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted bucket data (name, description, color, etc.)"
+
+UpdateBucketRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted bucket data"
+    version:
+      type: integer
+      minimum: 1
+
+BucketContentTagResponse:
+  type: object
+  required: [entityType, entityId, bucketId]
+  properties:
+    entityType:
+      type: string
+      enum:
+        - member
+        - group
+        - channel
+        - message
+        - note
+        - poll
+        - relationship
+        - structure-entity-type
+        - structure-entity
+        - journal-entry
+        - wiki-page
+        - custom-front
+        - fronting-session
+        - board-message
+        - acknowledgement
+        - innerworld-entity
+        - innerworld-region
+        - field-definition
+        - field-value
+        - member-photo
+        - fronting-comment
+      description: Type of entity tagged to this bucket
+    entityId:
+      type: string
+      description: ID of the tagged entity
+    bucketId:
+      type: string
+      pattern: ^bkt_
+      description: Bucket ID
+
+TagContentRequest:
+  type: object
+  required: [entityType, entityId]
+  properties:
+    entityType:
+      type: string
+      enum:
+        - member
+        - group
+        - channel
+        - message
+        - note
+        - poll
+        - relationship
+        - structure-entity-type
+        - structure-entity
+        - journal-entry
+        - wiki-page
+        - custom-front
+        - fronting-session
+        - board-message
+        - acknowledgement
+        - innerworld-entity
+        - innerworld-region
+        - field-definition
+        - field-value
+        - member-photo
+        - fronting-comment
+    entityId:
+      type: string
+      minLength: 1
+      description: ID of the entity to tag
+
+AssignBucketFriendRequest:
+  type: object
+  required: [connectionId, encryptedBucketKey, keyVersion]
+  properties:
+    connectionId:
+      type: string
+      pattern: ^fc_
+      description: Friend connection ID
+    encryptedBucketKey:
+      type: string
+      minLength: 1
+      description: Bucket symmetric key encrypted with the friend's X25519 public key (base64)
+    keyVersion:
+      type: integer
+      minimum: 1
+      description: Version of the bucket key being granted
+
+BucketFriendAssignmentResponse:
+  type: object
+  required: [friendConnectionId, bucketId, friendAccountId]
+  properties:
+    friendConnectionId:
+      type: string
+      pattern: ^fc_
+      description: Friend connection ID
+    bucketId:
+      type: string
+      pattern: ^bkt_
+      description: Bucket ID
+    friendAccountId:
+      type: string
+      pattern: ^acc_
+      description: Account ID of the friend
+
+UnassignBucketFriendResponse:
+  type: object
+  required: [pendingRotation]
+  properties:
+    pendingRotation:
+      type: object
+      required: [systemId, bucketId]
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+        bucketId:
+          type: string
+          pattern: ^bkt_
+      description: Indicates a key rotation should be initiated for this bucket after unassignment

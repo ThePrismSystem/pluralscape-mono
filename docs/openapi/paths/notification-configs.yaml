@@ -1,0 +1,65 @@
+/systems/{systemId}/notification-configs:
+  get:
+    operationId: listNotificationConfigs
+    tags: [Notification Configs]
+    summary: List notification configurations
+    description: |
+      Returns all non-archived notification configs for the specified system.
+      Configs are auto-created with defaults (enabled: true, pushEnabled: true)
+      on first access per event type.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: List of notification configs
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/notification-configs.yaml#/NotificationConfigListResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+
+/systems/{systemId}/notification-configs/{eventType}:
+  patch:
+    operationId: updateNotificationConfig
+    tags: [Notification Configs]
+    summary: Update a notification configuration
+    description: |
+      Updates the enabled/pushEnabled flags for a specific event type.
+      If no config exists for the event type, one is auto-created with
+      defaults merged with the provided overrides.
+
+      At least one of `enabled` or `pushEnabled` must be provided.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: eventType
+        in: path
+        required: true
+        schema:
+          $ref: "../schemas/notification-configs.yaml#/NotificationEventType"
+        description: The notification event type to configure
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/notification-configs.yaml#/UpdateNotificationConfigRequest"
+    responses:
+      "200":
+        description: Updated (or newly created) notification config
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/notification-configs.yaml#/NotificationConfigResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"

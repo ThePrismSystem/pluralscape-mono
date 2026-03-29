@@ -1,11 +1,11 @@
 ---
 # sync-sbbp
 title: "M9: Add archiveFriendConnection projection"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-28T21:27:17Z
-updated_at: 2026-03-28T21:27:17Z
+updated_at: 2026-03-29T00:48:45Z
 parent: ps-tkuz
 ---
 

@@ -1,11 +1,11 @@
 ---
 # api-kq93
 title: "H1: Fix device token takeover via upsert"
-status: todo
+status: completed
 type: bug
 priority: critical
 created_at: 2026-03-28T21:26:20Z
-updated_at: 2026-03-28T21:26:20Z
+updated_at: 2026-03-29T00:48:44Z
 parent: ps-tkuz
 ---
 

@@ -1,10 +1,11 @@
 ---
 # ps-tkuz
 title: M6 comprehensive audit remediation
-status: todo
+status: completed
 type: epic
+priority: normal
 created_at: 2026-03-28T21:26:10Z
-updated_at: 2026-03-28T21:26:10Z
+updated_at: 2026-03-29T00:48:50Z
 parent: ps-6itw
 ---
 

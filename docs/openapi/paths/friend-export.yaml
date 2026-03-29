@@ -1,0 +1,127 @@
+# Friend export paths (account-level, no SystemId parameter)
+
+/account/friends/{connectionId}/export/manifest:
+  get:
+    operationId: getFriendExportManifest
+    tags: [Friends]
+    summary: Get friend export manifest
+    description: |
+      Returns the export manifest for a friend connection, containing
+      per-entity-type counts, freshness timestamps, and active key grants.
+
+      The client uses this to decide which entity types need refreshing
+      before starting paginated downloads. Supports conditional requests
+      via `If-None-Match` / `ETag`.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+      - name: If-None-Match
+        in: header
+        required: false
+        schema:
+          type: string
+        description: ETag from a previous response for conditional request
+    responses:
+      "200":
+        description: Export manifest with entity counts and key grants
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: ETag for conditional requests
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendExportManifestResponse"
+      "304":
+        description: Not modified (ETag matched)
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}/export:
+  get:
+    operationId: getFriendExportPage
+    tags: [Friends]
+    summary: Paginated friend data export
+    description: |
+      Returns a paginated page of bucket-visible encrypted entities for a
+      specific entity type. The server returns encrypted blobs for client-side
+      search indexing (zero-knowledge architecture).
+
+      Supports conditional requests via `If-None-Match` / `ETag`.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+      - name: entityType
+        in: query
+        required: true
+        schema:
+          $ref: "../schemas/friends.yaml#/FriendExportEntityType"
+        description: The type of entity to export
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Opaque pagination cursor from a previous response
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+        description: Maximum number of items to return (default 50, max 100)
+      - name: If-None-Match
+        in: header
+        required: false
+        schema:
+          type: string
+        description: ETag from a previous response for conditional request
+    responses:
+      "200":
+        description: Paginated export data with encrypted entity blobs
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: ETag for conditional requests
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendExportPageResponse"
+      "304":
+        description: Not modified (ETag matched)
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
