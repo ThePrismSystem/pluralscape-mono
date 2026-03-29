@@ -308,6 +308,7 @@ describe("SQLite views / query helpers", () => {
           status: "failed",
           attemptCount: 2,
           nextRetryAt: now - 60000,
+          payloadData: { test: true },
           createdAt: now,
         })
         .run();
@@ -321,6 +322,7 @@ describe("SQLite views / query helpers", () => {
           status: "failed",
           attemptCount: 5,
           nextRetryAt: now - 60000,
+          payloadData: { test: true },
           createdAt: now,
         })
         .run();
@@ -334,6 +336,7 @@ describe("SQLite views / query helpers", () => {
           status: "failed",
           attemptCount: 2,
           nextRetryAt: now + 60000,
+          payloadData: { test: true },
           createdAt: now,
         })
         .run();

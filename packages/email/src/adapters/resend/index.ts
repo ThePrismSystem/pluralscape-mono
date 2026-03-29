@@ -51,6 +51,11 @@ const RECIPIENT_ERROR_CODES = new Set([
   "missing_required_field",
 ]);
 
+/** Discriminated init options for ResendEmailAdapter. */
+type ResendAdapterInit =
+  | { readonly kind: "config"; readonly config: ResendEmailAdapterConfig }
+  | { readonly kind: "client"; readonly client: ResendClient; readonly fromAddress?: string };
+
 /**
  * Email adapter backed by the Resend API.
  *
@@ -61,9 +66,22 @@ export class ResendEmailAdapter implements EmailAdapter {
   private readonly client: ResendClient;
   private readonly fromAddress: string;
 
-  constructor(config: ResendEmailAdapterConfig) {
-    this.client = new Resend(config.apiKey);
-    this.fromAddress = config.fromAddress ?? DEFAULT_FROM_ADDRESS;
+  private constructor(init: ResendAdapterInit) {
+    switch (init.kind) {
+      case "config":
+        this.client = new Resend(init.config.apiKey);
+        this.fromAddress = init.config.fromAddress ?? DEFAULT_FROM_ADDRESS;
+        break;
+      case "client":
+        this.client = init.client;
+        this.fromAddress = init.fromAddress ?? DEFAULT_FROM_ADDRESS;
+        break;
+    }
+  }
+
+  /** Creates an adapter from a Resend API key configuration. */
+  static create(config: ResendEmailAdapterConfig): ResendEmailAdapter {
+    return new ResendEmailAdapter({ kind: "config", config });
   }
 
   /**
@@ -71,14 +89,7 @@ export class ResendEmailAdapter implements EmailAdapter {
    * Primarily used for testing with mocked clients.
    */
   static fromClient(client: ResendClient, fromAddress?: string): ResendEmailAdapter {
-    const adapter = Object.create(ResendEmailAdapter.prototype) as ResendEmailAdapter;
-    Object.defineProperty(adapter, "providerName", { value: "resend", writable: false });
-    Object.defineProperty(adapter, "client", { value: client, writable: false });
-    Object.defineProperty(adapter, "fromAddress", {
-      value: fromAddress ?? DEFAULT_FROM_ADDRESS,
-      writable: false,
-    });
-    return adapter;
+    return new ResendEmailAdapter({ kind: "client", client, fromAddress });
   }
 
   async send(params: EmailSendParams): Promise<EmailSendResult> {

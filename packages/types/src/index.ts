@@ -424,7 +424,6 @@ export type {
   WebhookConfig,
   ArchivedWebhookConfig,
   WebhookDelivery,
-  ArchivedWebhookDelivery,
   WebhookEventPayloadMap,
 } from "./webhooks.js";
 

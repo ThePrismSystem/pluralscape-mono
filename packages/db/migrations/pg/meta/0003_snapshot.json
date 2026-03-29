@@ -1,5 +1,5 @@
 {
-  "id": "c7bca5a5-c564-419c-bc3a-f17b55ae746f",
+  "id": "b1baf099-3c3f-4c88-b236-a5377ebb6d8a",
   "prevId": "2d45a435-6988-4b49-95a6-b80e4dfa0b61",
   "version": "7",
   "dialect": "postgresql",
@@ -9405,19 +9405,6 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
-        },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -9515,22 +9502,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "webhook_deliveries_pending_retry_idx": {
-          "name": "webhook_deliveries_pending_retry_idx",
-          "columns": [
-            {
-              "expression": "next_retry_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"webhook_deliveries\".\"status\" = 'pending'",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -9573,9 +9544,9 @@
           "name": "webhook_deliveries_http_status_check",
           "value": "\"webhook_deliveries\".\"http_status\" IS NULL OR (\"webhook_deliveries\".\"http_status\" >= 100 AND \"webhook_deliveries\".\"http_status\" <= 599)"
         },
-        "webhook_deliveries_archived_consistency_check": {
-          "name": "webhook_deliveries_archived_consistency_check",
-          "value": "(\"webhook_deliveries\".\"archived\" = true) = (\"webhook_deliveries\".\"archived_at\" IS NOT NULL)"
+        "webhook_deliveries_payload_presence_check": {
+          "name": "webhook_deliveries_payload_presence_check",
+          "value": "\"webhook_deliveries\".\"encrypted_data\" IS NOT NULL OR \"webhook_deliveries\".\"payload_data\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false

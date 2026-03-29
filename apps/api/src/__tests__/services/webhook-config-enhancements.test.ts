@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { WEBHOOK_SECRET_BYTES } from "../../service.constants.js";
+import { asDb } from "../helpers/mock-db.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
+import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { SystemId, WebhookId } from "@pluralscape/types";
 
 // -- Mocks ----------------------------------------------------------------
@@ -39,10 +42,6 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
   invalidateWebhookConfigCache: vi.fn(),
 }));
 
-vi.mock("../../env.js", () => ({
-  env: { NODE_ENV: "test" },
-}));
-
 vi.mock("../../lib/logger.js", () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
 }));
@@ -58,16 +57,9 @@ const { rotateWebhookSecret, testWebhookConfig } =
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
 const WH_ID = "wh_550e8400-e29b-41d4-a716-446655440001" as WebhookId;
 
-const MOCK_AUTH = {
-  accountId: "acct_test",
-  systemId: SYS_ID,
-  sessionId: "sess_test",
-  accountType: "system" as const,
-  ownedSystemIds: new Set([SYS_ID]),
-  auditLogIpTracking: false,
-};
+const AUTH = makeTestAuth({ systemId: SYS_ID });
 
-const MOCK_AUDIT = vi.fn();
+const mockAudit: AuditWriter = vi.fn();
 
 const NOW = 1_700_000_000;
 
@@ -128,12 +120,12 @@ describe("rotateWebhookSecret", () => {
     const mockTx = makeRotateMockTx();
 
     const result = await rotateWebhookSecret(
-      mockTx as never,
+      asDb(mockTx),
       SYS_ID,
       WH_ID,
       { version: 1 },
-      MOCK_AUTH as never,
-      MOCK_AUDIT as never,
+      AUTH,
+      mockAudit,
     );
 
     expect(result.id).toBe(WH_ID);
@@ -144,30 +136,16 @@ describe("rotateWebhookSecret", () => {
   it("invalidates the webhook config cache", async () => {
     const mockTx = makeRotateMockTx();
 
-    await rotateWebhookSecret(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      { version: 1 },
-      MOCK_AUTH as never,
-      MOCK_AUDIT as never,
-    );
+    await rotateWebhookSecret(asDb(mockTx), SYS_ID, WH_ID, { version: 1 }, AUTH, mockAudit);
 
     expect(invalidateWebhookConfigCache).toHaveBeenCalledWith(SYS_ID);
   });
 
   it("writes an audit log entry", async () => {
     const mockTx = makeRotateMockTx();
-    const audit = vi.fn();
+    const audit: AuditWriter = vi.fn();
 
-    await rotateWebhookSecret(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      { version: 1 },
-      MOCK_AUTH as never,
-      audit as never,
-    );
+    await rotateWebhookSecret(asDb(mockTx), SYS_ID, WH_ID, { version: 1 }, AUTH, audit);
 
     expect(audit).toHaveBeenCalledWith(
       expect.anything(),
@@ -178,10 +156,10 @@ describe("rotateWebhookSecret", () => {
   });
 
   it("rejects invalid params (missing version)", async () => {
-    const mockTx = {} as never;
+    const mockTx = makeReadMockTx([]);
 
     await expect(
-      rotateWebhookSecret(mockTx, SYS_ID, WH_ID, {}, MOCK_AUTH as never, MOCK_AUDIT as never),
+      rotateWebhookSecret(asDb(mockTx), SYS_ID, WH_ID, {}, AUTH, mockAudit),
     ).rejects.toThrow("Invalid payload");
   });
 
@@ -189,12 +167,12 @@ describe("rotateWebhookSecret", () => {
     const mockTx = makeRotateMockTx();
 
     const result = await rotateWebhookSecret(
-      mockTx as never,
+      asDb(mockTx),
       SYS_ID,
       WH_ID,
       { version: 1 },
-      MOCK_AUTH as never,
-      MOCK_AUDIT as never,
+      AUTH,
+      mockAudit,
     );
     const decoded = Buffer.from(result.secret, "base64");
     expect(decoded.length).toBe(WEBHOOK_SECRET_BYTES);
@@ -208,13 +186,7 @@ describe("testWebhookConfig", () => {
     const mockTx = makeReadMockTx([makeTestConfigRow()]);
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    const result = await testWebhookConfig(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      MOCK_AUTH as never,
-      mockFetch as never,
-    );
+    const result = await testWebhookConfig(asDb(mockTx), SYS_ID, WH_ID, AUTH, mockFetch);
 
     expect(result.success).toBe(true);
     expect(result.httpStatus).toBe(200);
@@ -227,13 +199,7 @@ describe("testWebhookConfig", () => {
       .fn()
       .mockResolvedValue(new Response("Internal Server Error", { status: 500 }));
 
-    const result = await testWebhookConfig(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      MOCK_AUTH as never,
-      mockFetch as never,
-    );
+    const result = await testWebhookConfig(asDb(mockTx), SYS_ID, WH_ID, AUTH, mockFetch);
 
     expect(result.success).toBe(false);
     expect(result.httpStatus).toBe(500);
@@ -243,13 +209,7 @@ describe("testWebhookConfig", () => {
     const mockTx = makeReadMockTx([makeTestConfigRow()]);
     const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-    const result = await testWebhookConfig(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      MOCK_AUTH as never,
-      mockFetch as never,
-    );
+    const result = await testWebhookConfig(asDb(mockTx), SYS_ID, WH_ID, AUTH, mockFetch);
 
     expect(result.success).toBe(false);
     expect(result.httpStatus).toBeNull();
@@ -259,16 +219,16 @@ describe("testWebhookConfig", () => {
   it("throws NOT_FOUND when config does not exist", async () => {
     const mockTx = makeReadMockTx([]);
 
-    await expect(
-      testWebhookConfig(mockTx as never, SYS_ID, WH_ID, MOCK_AUTH as never),
-    ).rejects.toThrow("Webhook config not found");
+    await expect(testWebhookConfig(asDb(mockTx), SYS_ID, WH_ID, AUTH)).rejects.toThrow(
+      "Webhook config not found",
+    );
   });
 
   it("includes signature and timestamp headers in the request", async () => {
     const mockTx = makeReadMockTx([makeTestConfigRow()]);
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await testWebhookConfig(mockTx as never, SYS_ID, WH_ID, MOCK_AUTH as never, mockFetch as never);
+    await testWebhookConfig(asDb(mockTx), SYS_ID, WH_ID, AUTH, mockFetch);
 
     const call = mockFetch.mock.calls[0] ?? [];
     const options = call[1] as RequestInit;

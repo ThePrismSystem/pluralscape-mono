@@ -90,6 +90,15 @@ const RATE_LIMIT_RESPONSE_CODES = new Set([
   SMTP_INSUFFICIENT_STORAGE,
 ]);
 
+/** Discriminated init options for SmtpEmailAdapter. */
+type SmtpAdapterInit =
+  | { readonly kind: "config"; readonly config: SmtpConfig; readonly fromAddress?: string }
+  | {
+      readonly kind: "transport";
+      readonly transport: { sendMail: SendMailFn };
+      readonly fromAddress?: string;
+    };
+
 /**
  * Email adapter backed by SMTP via Nodemailer.
  *
@@ -100,28 +109,42 @@ export class SmtpEmailAdapter implements EmailAdapter {
   private readonly sendMailFn: SendMailFn;
   private readonly fromAddress: string;
 
-  constructor(config: SmtpConfig, fromAddress?: string) {
-    const baseOptions = {
-      host: config.host,
-      port: config.port,
-      secure: config.secure,
-      auth: config.auth,
-    };
+  private constructor(init: SmtpAdapterInit) {
+    switch (init.kind) {
+      case "config": {
+        const baseOptions = {
+          host: init.config.host,
+          port: init.config.port,
+          secure: init.config.secure,
+          auth: init.config.auth,
+        };
 
-    const transport =
-      config.pool === true
-        ? nodemailer.createTransport({
-            ...baseOptions,
-            pool: true,
-            maxConnections: config.maxConnections,
-          })
-        : nodemailer.createTransport(baseOptions);
+        const nodeTransport =
+          init.config.pool === true
+            ? nodemailer.createTransport({
+                ...baseOptions,
+                pool: true,
+                maxConnections: init.config.maxConnections,
+              })
+            : nodemailer.createTransport(baseOptions);
 
-    this.sendMailFn = async (opts) => {
-      const info = await transport.sendMail(opts);
-      return { messageId: info.messageId };
-    };
-    this.fromAddress = fromAddress ?? DEFAULT_FROM_ADDRESS;
+        this.sendMailFn = async (opts) => {
+          const info = await nodeTransport.sendMail(opts);
+          return { messageId: info.messageId };
+        };
+        this.fromAddress = init.fromAddress ?? DEFAULT_FROM_ADDRESS;
+        break;
+      }
+      case "transport":
+        this.sendMailFn = (opts: SendMailOptions) => init.transport.sendMail(opts);
+        this.fromAddress = init.fromAddress ?? DEFAULT_FROM_ADDRESS;
+        break;
+    }
+  }
+
+  /** Creates an adapter from SMTP connection configuration. */
+  static create(config: SmtpConfig, fromAddress?: string): SmtpEmailAdapter {
+    return new SmtpEmailAdapter({ kind: "config", config, fromAddress });
   }
 
   /**
@@ -132,17 +155,7 @@ export class SmtpEmailAdapter implements EmailAdapter {
     transport: { sendMail: SendMailFn },
     fromAddress?: string,
   ): SmtpEmailAdapter {
-    const adapter = Object.create(SmtpEmailAdapter.prototype) as SmtpEmailAdapter;
-    Object.defineProperty(adapter, "providerName", { value: "smtp", writable: false });
-    Object.defineProperty(adapter, "sendMailFn", {
-      value: (opts: SendMailOptions) => transport.sendMail(opts),
-      writable: false,
-    });
-    Object.defineProperty(adapter, "fromAddress", {
-      value: fromAddress ?? DEFAULT_FROM_ADDRESS,
-      writable: false,
-    });
-    return adapter;
+    return new SmtpEmailAdapter({ kind: "transport", transport, fromAddress });
   }
 
   async send(params: EmailSendParams): Promise<EmailSendResult> {

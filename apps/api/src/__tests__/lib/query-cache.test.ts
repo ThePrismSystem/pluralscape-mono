@@ -86,4 +86,68 @@ describe("QueryCache", () => {
     cache.set("key", obj);
     expect(cache.get("key")).toEqual(obj);
   });
+
+  describe("maxSize bounded eviction", () => {
+    const SMALL_MAX_SIZE = 3;
+    const LONG_TTL_MS = 60_000;
+    const SHORT_TTL_MS = 100;
+
+    it("accepts a custom maxSize", () => {
+      const cache = new QueryCache<string>(LONG_TTL_MS, SMALL_MAX_SIZE);
+      for (let i = 0; i < SMALL_MAX_SIZE; i++) {
+        cache.set(`k${String(i)}`, `v${String(i)}`);
+      }
+      expect(cache.approximateSize).toBe(SMALL_MAX_SIZE);
+    });
+
+    it("evicts the oldest entry when at capacity", () => {
+      const cache = new QueryCache<string>(LONG_TTL_MS, SMALL_MAX_SIZE);
+
+      cache.set("a", "1");
+      cache.set("b", "2");
+      cache.set("c", "3");
+
+      // At capacity — inserting "d" should evict "a" (oldest)
+      cache.set("d", "4");
+
+      expect(cache.approximateSize).toBe(SMALL_MAX_SIZE);
+      expect(cache.get("a")).toBeUndefined();
+      expect(cache.get("b")).toBe("2");
+      expect(cache.get("c")).toBe("3");
+      expect(cache.get("d")).toBe("4");
+    });
+
+    it("sweeps expired entries before evicting by age", () => {
+      const cache = new QueryCache<string>(SHORT_TTL_MS, SMALL_MAX_SIZE);
+
+      cache.set("old1", "x");
+      cache.set("old2", "y");
+      cache.set("old3", "z");
+
+      // Expire all existing entries
+      vi.advanceTimersByTime(SHORT_TTL_MS + 1);
+
+      // Insert a new entry — expired entries are swept, no FIFO eviction needed
+      cache.set("fresh", "new");
+
+      expect(cache.approximateSize).toBe(1);
+      expect(cache.get("fresh")).toBe("new");
+    });
+
+    it("does not evict when updating an existing key", () => {
+      const cache = new QueryCache<string>(LONG_TTL_MS, SMALL_MAX_SIZE);
+
+      cache.set("a", "1");
+      cache.set("b", "2");
+      cache.set("c", "3");
+
+      // Updating "a" should not trigger eviction even though size == maxSize
+      cache.set("a", "updated");
+
+      expect(cache.approximateSize).toBe(SMALL_MAX_SIZE);
+      expect(cache.get("a")).toBe("updated");
+      expect(cache.get("b")).toBe("2");
+      expect(cache.get("c")).toBe("3");
+    });
+  });
 });

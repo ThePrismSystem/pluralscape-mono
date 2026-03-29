@@ -3,9 +3,10 @@ import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { WebhookDeliveryQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -192,9 +193,5 @@ export async function deleteWebhookDelivery(
 export function parseWebhookDeliveryQuery(
   query: Record<string, string | undefined>,
 ): WebhookDeliveryListOptions {
-  const result = WebhookDeliveryQuerySchema.safeParse(query);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
-  }
-  return result.data;
+  return parseQuery(WebhookDeliveryQuerySchema, query);
 }

@@ -36,6 +36,20 @@
       "when": 1774775439915,
       "tag": "0004_daily_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774782324145,
+      "tag": "0005_aspiring_valeria_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774783482796,
+      "tag": "0006_youthful_the_hand",
+      "breakpoints": true
     }
   ]
 }

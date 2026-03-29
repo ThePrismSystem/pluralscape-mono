@@ -8,6 +8,7 @@ import {
 
 import { env } from "../env.js";
 
+import { assertBasicEmailFormat } from "./email-format.js";
 import { fromHex } from "./hex.js";
 
 import type { AeadKey } from "@pluralscape/crypto";
@@ -44,6 +45,7 @@ export function getEmailEncryptionKey(): AeadKey | null {
  * @throws {Error} if EMAIL_ENCRYPTION_KEY is not configured
  */
 export function encryptEmail(email: string): Uint8Array {
+  assertBasicEmailFormat(email);
   const key = getEmailEncryptionKey();
   if (!key) {
     throw new Error("EMAIL_ENCRYPTION_KEY is required for email encryption but not configured.");

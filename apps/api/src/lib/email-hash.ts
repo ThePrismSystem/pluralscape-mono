@@ -3,6 +3,7 @@ import { getSodium } from "@pluralscape/crypto";
 import { env } from "../env.js";
 import { EMAIL_HASH_LENGTH, PEPPER_HEX_LENGTH } from "../routes/auth/auth.constants.js";
 
+import { assertBasicEmailFormat } from "./email-format.js";
 import { fromHex, toHex } from "./hex.js";
 
 /**
@@ -34,6 +35,7 @@ export function getEmailHashPepper(): Uint8Array {
  * Returns a hex-encoded string suitable for the `emailHash` column.
  */
 export function hashEmail(email: string): string {
+  assertBasicEmailFormat(email);
   const adapter = getSodium();
   const pepper = getEmailHashPepper();
   const normalized = email.toLowerCase().trim();

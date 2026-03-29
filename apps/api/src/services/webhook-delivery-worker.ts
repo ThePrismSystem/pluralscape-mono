@@ -7,17 +7,17 @@ import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
 import { buildIpPinnedFetchArgs, resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { logger } from "../lib/logger.js";
+import { sendSignedWebhookRequest } from "../lib/webhook-fetch.js";
 import {
   HTTP_SUCCESS_MAX,
   HTTP_SUCCESS_MIN,
   MS_PER_SECOND,
   WEBHOOK_BASE_BACKOFF_MS,
   WEBHOOK_DEFAULT_JITTER_FRACTION,
-  WEBHOOK_DELIVERY_TIMEOUT_MS,
   WEBHOOK_HMAC_ALGORITHM,
+  WEBHOOK_HOST_THROTTLE_DELAY_MS,
   WEBHOOK_MAX_RETRY_ATTEMPTS,
-  WEBHOOK_SIGNATURE_HEADER,
-  WEBHOOK_TIMESTAMP_HEADER,
+  WEBHOOK_PER_HOST_MAX_CONCURRENT,
 } from "../service.constants.js";
 
 import {
@@ -25,8 +25,38 @@ import {
   getWebhookPayloadEncryptionKey,
 } from "./webhook-payload-encryption.js";
 
+import type { FetchFn } from "../lib/webhook-fetch.js";
 import type { SystemId, WebhookDeliveryId, WebhookEventType, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+// ── Per-hostname concurrency throttle ──────────────────────────────
+
+const hostSlots = new Map<string, number>();
+
+/** Try to acquire a concurrency slot for the given hostname. */
+export function acquireHostSlot(hostname: string): boolean {
+  const current = hostSlots.get(hostname) ?? 0;
+  if (current >= WEBHOOK_PER_HOST_MAX_CONCURRENT) {
+    return false;
+  }
+  hostSlots.set(hostname, current + 1);
+  return true;
+}
+
+/** Release a concurrency slot for the given hostname. */
+export function releaseHostSlot(hostname: string): void {
+  const current = hostSlots.get(hostname) ?? 0;
+  if (current <= 0) {
+    logger.debug("[webhook-worker] releasing host slot for hostname with no active slots", {
+      hostname,
+    });
+    hostSlots.delete(hostname);
+  } else if (current <= 1) {
+    hostSlots.delete(hostname);
+  } else {
+    hostSlots.set(hostname, current - 1);
+  }
+}
 
 /**
  * Compute HMAC-SHA256 signature for a webhook payload using the config's secret.
@@ -55,7 +85,7 @@ export function calculateBackoffMs(
   return Math.max(0, Math.round(delay + jitter));
 }
 
-/** Mark a delivery as failed and log the reason. */
+/** Mark a delivery as failed (early-exit paths only — no attemptCount increment). */
 async function markDeliveryFailed(
   db: PostgresJsDatabase,
   deliveryId: WebhookDeliveryId,
@@ -79,7 +109,7 @@ async function markDeliveryFailed(
 export async function processWebhookDelivery(
   db: PostgresJsDatabase,
   deliveryId: WebhookDeliveryId,
-  fetchFn: typeof fetch = fetch,
+  fetchFn: FetchFn = fetch,
 ): Promise<void> {
   // Load delivery and associated config in a single query
   const [row] = await db
@@ -180,98 +210,92 @@ export async function processWebhookDelivery(
     return;
   }
 
+  // Per-hostname concurrency throttle — defer delivery if at capacity
+  const hostname = new URL(configUrl).hostname;
+  if (!acquireHostSlot(hostname)) {
+    logger.warn("[webhook-worker] host concurrency limit reached, deferring delivery", {
+      deliveryId,
+      hostname,
+    });
+    await db
+      .update(webhookDeliveries)
+      .set({ nextRetryAt: now() + WEBHOOK_HOST_THROTTLE_DELAY_MS })
+      .where(eq(webhookDeliveries.id, deliveryId));
+    return;
+  }
+
   const timestamp = now();
   const deliveryTimestamp = Math.floor(Date.now() / MS_PER_SECOND);
-  const signature = computeWebhookSignature(
-    Buffer.from(configSecret),
-    deliveryTimestamp,
-    payloadJson,
-  );
 
-  let httpStatus: number | null = null;
-
+  const secretBuffer = Buffer.from(configSecret);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, WEBHOOK_DELIVERY_TIMEOUT_MS);
+    const signature = computeWebhookSignature(secretBuffer, deliveryTimestamp, payloadJson);
 
-    try {
-      const response = await fetchFn(pinnedUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Host: hostHeader,
-          [WEBHOOK_SIGNATURE_HEADER]: signature,
-          [WEBHOOK_TIMESTAMP_HEADER]: String(deliveryTimestamp),
-        },
-        body: payloadJson,
-        signal: controller.signal,
-      });
-      httpStatus = response.status;
-    } finally {
-      clearTimeout(timeout);
+    const result = await sendSignedWebhookRequest({
+      url: pinnedUrl,
+      signature,
+      timestamp: deliveryTimestamp,
+      payloadJson,
+      fetchFn,
+      hostHeader: pinnedUrl !== configUrl ? hostHeader : undefined,
+    });
+
+    const httpStatus = "httpStatus" in result ? result.httpStatus : null;
+    const isSuccess =
+      httpStatus !== null && httpStatus >= HTTP_SUCCESS_MIN && httpStatus <= HTTP_SUCCESS_MAX;
+
+    if (isSuccess) {
+      await db
+        .update(webhookDeliveries)
+        .set({
+          status: "success",
+          httpStatus,
+          lastAttemptAt: timestamp,
+          attemptCount: sql`${webhookDeliveries.attemptCount} + 1`,
+        })
+        .where(eq(webhookDeliveries.id, deliveryId));
+      return;
     }
-  } catch (error: unknown) {
-    // Only swallow network/timeout errors — re-throw unexpected errors
-    if (
-      !(
-        error instanceof TypeError ||
-        (error instanceof DOMException && error.name === "AbortError")
-      )
-    ) {
-      throw error;
+
+    // Failure path — use atomic increment for consistency
+    if (row.attemptCount + 1 >= WEBHOOK_MAX_RETRY_ATTEMPTS) {
+      await db
+        .update(webhookDeliveries)
+        .set({
+          status: "failed",
+          httpStatus,
+          lastAttemptAt: timestamp,
+          attemptCount: sql`${webhookDeliveries.attemptCount} + 1`,
+        })
+        .where(eq(webhookDeliveries.id, deliveryId));
+      return;
     }
-    // Network or timeout error — httpStatus stays null
-  }
 
-  const isSuccess =
-    httpStatus !== null && httpStatus >= HTTP_SUCCESS_MIN && httpStatus <= HTTP_SUCCESS_MAX;
+    const backoffMs = calculateBackoffMs(row.attemptCount + 1, WEBHOOK_BASE_BACKOFF_MS);
+    const nextRetryAt = timestamp + backoffMs;
 
-  if (isSuccess) {
     await db
       .update(webhookDeliveries)
       .set({
-        status: "success",
         httpStatus,
         lastAttemptAt: timestamp,
         attemptCount: sql`${webhookDeliveries.attemptCount} + 1`,
+        nextRetryAt,
       })
       .where(eq(webhookDeliveries.id, deliveryId));
-    return;
+  } finally {
+    secretBuffer.fill(0);
+    releaseHostSlot(hostname);
   }
-
-  // Failure path — use atomic increment for consistency
-  if (row.attemptCount + 1 >= WEBHOOK_MAX_RETRY_ATTEMPTS) {
-    await db
-      .update(webhookDeliveries)
-      .set({
-        status: "failed",
-        httpStatus,
-        lastAttemptAt: timestamp,
-        attemptCount: sql`${webhookDeliveries.attemptCount} + 1`,
-      })
-      .where(eq(webhookDeliveries.id, deliveryId));
-    return;
-  }
-
-  const backoffMs = calculateBackoffMs(row.attemptCount + 1, WEBHOOK_BASE_BACKOFF_MS);
-  const nextRetryAt = timestamp + backoffMs;
-
-  await db
-    .update(webhookDeliveries)
-    .set({
-      httpStatus,
-      lastAttemptAt: timestamp,
-      attemptCount: sql`${webhookDeliveries.attemptCount} + 1`,
-      nextRetryAt,
-    })
-    .where(eq(webhookDeliveries.id, deliveryId));
 }
 
 /**
  * Query delivery records ready for retry (status = 'pending' and nextRetryAt <= now).
  * Used by the delivery worker to find work.
+ *
+ * This is a background worker query that intentionally queries across all
+ * systems without tenant scoping. The worker processes deliveries globally
+ * and does not operate within a single tenant's RLS context.
  */
 export async function findPendingDeliveries(
   db: PostgresJsDatabase,

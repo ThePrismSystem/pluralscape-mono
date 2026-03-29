@@ -9,15 +9,17 @@ import type { JobPayloadMap } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
- * Type guard bridging the job payload's serialized vars to typed template vars.
- * Template name → vars shape is validated at enqueue time; this guard
- * satisfies TypeScript at the deserialization boundary.
+ * Assertion bridging the job payload's serialized vars to typed template vars.
+ * Template name → vars shape is validated at enqueue time; this assertion
+ * satisfies TypeScript at the deserialization boundary and throws on non-object input.
  */
-function isTemplateVars<T extends EmailTemplateName>(
-  _template: T,
+function assertTemplateVars<T extends EmailTemplateName>(
+  template: T,
   vars: unknown,
-): vars is EmailTemplateMap[T] {
-  return typeof vars === "object" && vars !== null;
+): asserts vars is EmailTemplateMap[T] {
+  if (typeof vars !== "object" || vars === null) {
+    throw new Error(`Invalid template vars for ${template}`);
+  }
 }
 
 /**
@@ -42,9 +44,7 @@ export async function processEmailJob(
   }
 
   // Validate vars shape at the deserialization boundary
-  if (!isTemplateVars(template, vars)) {
-    throw new Error(`Invalid template vars for ${template}`);
-  }
+  assertTemplateVars(template, vars);
 
   // Render the template — vars are narrowed by the type guard above
   const rendered = renderTemplate(template, vars);

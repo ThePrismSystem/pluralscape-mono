@@ -71,6 +71,12 @@ export const HTTP_SUCCESS_MAX = 299;
 /** Default request timeout for webhook delivery (10 seconds). */
 export const WEBHOOK_DELIVERY_TIMEOUT_MS = 10_000;
 
+/** Maximum concurrent webhook deliveries per target hostname. */
+export const WEBHOOK_PER_HOST_MAX_CONCURRENT = 5;
+
+/** Delay before re-polling a delivery that was skipped due to host throttling (30 seconds). */
+export const WEBHOOK_HOST_THROTTLE_DELAY_MS = 30_000;
+
 /** Default jitter fraction for backoff (25%). */
 export const WEBHOOK_DEFAULT_JITTER_FRACTION = 0.25;
 
