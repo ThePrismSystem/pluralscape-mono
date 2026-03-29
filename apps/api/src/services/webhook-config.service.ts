@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
+import { systems, webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CreateWebhookConfigBodySchema,
@@ -11,10 +11,15 @@ import {
 import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 
 import { env } from "../env.js";
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_CONFLICT,
+  HTTP_NOT_FOUND,
+  HTTP_TOO_MANY_REQUESTS,
+} from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
-import { resolveAndValidateUrl } from "../lib/ip-validation.js";
+import { buildIpPinnedFetchArgs, resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -25,6 +30,7 @@ import {
   HTTP_SUCCESS_MAX,
   HTTP_SUCCESS_MIN,
   MAX_PAGE_LIMIT,
+  MAX_WEBHOOK_CONFIGS_PER_SYSTEM,
   MS_PER_SECOND,
   WEBHOOK_DELIVERY_TIMEOUT_MS,
   WEBHOOK_REQUIRED_PROTOCOL,
@@ -170,6 +176,22 @@ export async function createWebhookConfig(
   const timestamp = now();
 
   const created = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Lock the system row to serialize concurrent webhook config creation per system (prevents TOCTOU race)
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existing] = await tx
+      .select({ count: count() })
+      .from(webhookConfigs)
+      .where(and(eq(webhookConfigs.systemId, systemId), eq(webhookConfigs.archived, false)));
+
+    if ((existing?.count ?? 0) >= MAX_WEBHOOK_CONFIGS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_WEBHOOK_CONFIGS_PER_SYSTEM)} webhook configs per system`,
+      );
+    }
+
     const secretBytes = randomBytes(WEBHOOK_SECRET_BYTES);
 
     const [row] = await tx
@@ -432,6 +454,23 @@ const WEBHOOK_CONFIG_LIFECYCLE: ArchivableEntityConfig<WebhookId> = {
   entityName: "Webhook config",
   archiveEvent: "webhook-config.archived" as const,
   restoreEvent: "webhook-config.restored" as const,
+  onRestore: async (tx, systemId) => {
+    // restoreEntity sets archived=false BEFORE calling onRestore, so the
+    // just-restored config is already counted as non-archived. Use strict >
+    // because the restored config is already included in the count.
+    const [existing] = await tx
+      .select({ count: count() })
+      .from(webhookConfigs)
+      .where(and(eq(webhookConfigs.systemId, systemId), eq(webhookConfigs.archived, false)));
+
+    if ((existing?.count ?? 0) > MAX_WEBHOOK_CONFIGS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_WEBHOOK_CONFIGS_PER_SYSTEM)} webhook configs per system`,
+      );
+    }
+  },
 };
 
 export async function archiveWebhookConfig(
@@ -619,6 +658,23 @@ export async function testWebhookConfig(
   );
 
   const startMs = Date.now();
+
+  let pinnedUrl: string;
+  let hostHeader: string;
+  try {
+    const resolvedIps = await resolveAndValidateUrl(config.url);
+    const firstIp = resolvedIps[0];
+    if (!firstIp) throw new Error("Webhook URL hostname resolved to no IPs");
+    ({ pinnedUrl, hostHeader } = buildIpPinnedFetchArgs(config.url, firstIp));
+  } catch (err: unknown) {
+    return {
+      success: false,
+      httpStatus: null,
+      error: `SSRF validation failed: ${err instanceof Error ? err.message : String(err)}`,
+      durationMs: Date.now() - startMs,
+    };
+  }
+
   let httpStatus: number | null = null;
   let error: string | null = null;
 
@@ -629,10 +685,11 @@ export async function testWebhookConfig(
     }, WEBHOOK_DELIVERY_TIMEOUT_MS);
 
     try {
-      const response = await fetchFn(config.url, {
+      const response = await fetchFn(pinnedUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Host: hostHeader,
           [WEBHOOK_SIGNATURE_HEADER]: signature,
           [WEBHOOK_TIMESTAMP_HEADER]: String(deliveryTimestamp),
         },

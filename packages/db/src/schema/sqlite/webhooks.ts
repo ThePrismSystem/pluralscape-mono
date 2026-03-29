@@ -9,12 +9,7 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import {
-  sqliteBinary,
-  sqliteEncryptedBlob,
-  sqliteJson,
-  sqliteTimestamp,
-} from "../../columns/sqlite.js";
+import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -72,7 +67,7 @@ export const webhookDeliveries = sqliteTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: sqliteTimestamp("last_attempt_at"),
     nextRetryAt: sqliteTimestamp("next_retry_at"),
-    encryptedData: sqliteEncryptedBlob("encrypted_data"),
+    encryptedData: sqliteBinary("encrypted_data"),
     payloadData: sqliteJson("payload_data").$type<Record<string, unknown>>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     ...archivable(),
@@ -87,6 +82,9 @@ export const webhookDeliveries = sqliteTable(
     index("webhook_deliveries_system_retry_idx")
       .on(t.systemId, t.status, t.nextRetryAt)
       .where(sql`${t.status} NOT IN ('success', 'failed')`),
+    index("webhook_deliveries_pending_retry_idx")
+      .on(t.nextRetryAt)
+      .where(sql`${t.status} = 'pending'`),
     foreignKey({
       columns: [t.webhookId, t.systemId],
       foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],
@@ -94,6 +92,10 @@ export const webhookDeliveries = sqliteTable(
     check("webhook_deliveries_event_type_check", enumCheck(t.eventType, WEBHOOK_EVENT_TYPES)),
     check("webhook_deliveries_status_check", enumCheck(t.status, WEBHOOK_DELIVERY_STATUSES)),
     check("webhook_deliveries_attempt_count_check", sql`${t.attemptCount} >= 0`),
+    check(
+      "webhook_deliveries_payload_check",
+      sql`${t.encryptedData} IS NOT NULL OR ${t.payloadData} IS NOT NULL`,
+    ),
     check(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,

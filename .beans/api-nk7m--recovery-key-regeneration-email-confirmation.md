@@ -1,11 +1,11 @@
 ---
 # api-nk7m
 title: Recovery key regeneration email confirmation
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-29T03:03:11Z
+updated_at: 2026-03-29T07:00:31Z
 parent: api-7xw0
 blocked_by:
   - api-gw6c
@@ -26,3 +26,5 @@ M5: Send email confirmation when a recovery key is regenerated to alert account 
 Moved to M4 (ps-mmpz) — no email infrastructure exists yet.
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+## Summary of Changes\n\nImplemented in PR #318: fire-and-forget email-send job enqueued on recovery key regeneration with timestamp and device info.

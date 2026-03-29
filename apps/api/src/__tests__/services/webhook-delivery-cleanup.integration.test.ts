@@ -112,4 +112,22 @@ describe("webhook-delivery-cleanup (PGlite integration)", () => {
     const countCustom = await cleanupWebhookDeliveries(asDb(db), 5);
     expect(countCustom).toBe(1);
   });
+
+  it("deletes in batches and returns total count", async () => {
+    const testBatchSize = 10;
+    const totalRecords = testBatchSize + 5;
+    for (let i = 0; i < totalRecords; i++) {
+      await insertDelivery("success", WEBHOOK_DELIVERY_RETENTION_DAYS + 1);
+    }
+
+    const count = await cleanupWebhookDeliveries(
+      asDb(db),
+      WEBHOOK_DELIVERY_RETENTION_DAYS,
+      testBatchSize,
+    );
+    expect(count).toBe(totalRecords);
+
+    const remaining = await db.select().from(webhookDeliveries);
+    expect(remaining.length).toBe(0);
+  });
 });

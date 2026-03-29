@@ -68,7 +68,6 @@ export interface JobPayloadMap {
   "import-process": Record<string, unknown>;
   "webhook-deliver": {
     readonly deliveryId: WebhookDeliveryId;
-    readonly payload: Readonly<Record<string, unknown>>;
   };
   "notification-send": {
     readonly accountId: AccountId;

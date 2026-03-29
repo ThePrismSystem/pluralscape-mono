@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { buildIpPinnedFetchArgs } from "../../lib/ip-validation.js";
 import {
   WEBHOOK_MAX_RETRY_ATTEMPTS,
   WEBHOOK_SIGNATURE_HEADER,
@@ -21,8 +22,22 @@ vi.mock("../../lib/logger.js", () => ({
   logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("../../lib/ip-validation.js", () => ({
-  resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
+vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/ip-validation.js")>();
+  return {
+    ...actual,
+    resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
+  };
+});
+
+vi.mock("@pluralscape/crypto", async () => {
+  const actual = await vi.importActual("@pluralscape/crypto");
+  return { ...actual, getSodium: vi.fn().mockReturnValue({ memzero: vi.fn() }) };
+});
+
+vi.mock("../../services/webhook-payload-encryption.js", () => ({
+  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(null),
+  decryptWebhookPayload: vi.fn(),
 }));
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -135,6 +150,8 @@ const JOINED_ROW = {
   systemId: "sys_test-system",
   eventType: "fronting.started",
   attemptCount: 0,
+  encryptedData: null,
+  payloadData: { event: "test" },
   configUrl: "https://example.com/webhook",
   configSecret: "dGVzdC1zZWNyZXQta2V5",
   configEnabled: true,
@@ -147,7 +164,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await processWebhookDelivery(db, "wd_missing" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_missing" as WebhookDeliveryId);
 
     expect(chain.update).not.toHaveBeenCalled();
   });
@@ -158,7 +175,7 @@ describe("processWebhookDelivery (unit)", () => {
       { ...JOINED_ROW, configUrl: null, configSecret: null, configEnabled: null },
     ]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -167,7 +184,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configEnabled: false }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -176,7 +193,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configSecret: null }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -188,18 +205,13 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
     // Bun's fetch includes a static `preconnect` method that vi.fn() can't satisfy
-    await processWebhookDelivery(
-      db,
-      "wd_test" as WebhookDeliveryId,
-      { event: "test" },
-      mockFetch as never,
-    );
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
     const call = mockFetch.mock.calls[0] ?? [];
     const [url, options] = call as [string, RequestInit];
-    expect(url).toBe("https://example.com/webhook");
+    expect(url).toBe("https://93.184.216.34/webhook");
     expect(options.method).toBe("POST");
     expect(options.body).toBe(JSON.stringify({ event: "test" }));
   });
@@ -210,17 +222,13 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(
-      db,
-      "wd_test" as WebhookDeliveryId,
-      { event: "test" },
-      mockFetch as never,
-    );
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const call = mockFetch.mock.calls[0] ?? [];
     const options = call[1] as RequestInit;
     const headers = options.headers as Record<string, string>;
     expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers["Host"]).toBe("example.com");
     expect(headers[WEBHOOK_SIGNATURE_HEADER]).toMatch(/^[0-9a-f]{64}$/);
     expect(headers[WEBHOOK_TIMESTAMP_HEADER]).toMatch(/^\d+$/);
   });
@@ -231,7 +239,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "success" }));
   });
@@ -242,7 +250,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -259,7 +267,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -270,7 +278,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -284,7 +292,7 @@ describe("processWebhookDelivery (unit)", () => {
     const abortErr = new DOMException("The operation was aborted", "AbortError");
     const mockFetch = vi.fn().mockRejectedValue(abortErr);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -298,8 +306,69 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error("unexpected"));
 
     await expect(
-      processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never),
+      processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never),
     ).rejects.toThrow("unexpected");
+  });
+
+  it("marks as failed when encrypted payload but no key configured", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
+    ]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("marks as failed when delivery has no payload data", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, encryptedData: null, payloadData: null }]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("marks as failed when decryption throws", async () => {
+    const { decryptWebhookPayload } = await import("../../services/webhook-payload-encryption.js");
+    const { getWebhookPayloadEncryptionKey } =
+      await import("../../services/webhook-payload-encryption.js");
+    vi.mocked(getWebhookPayloadEncryptionKey).mockReturnValueOnce(new Uint8Array(32) as never);
+    vi.mocked(decryptWebhookPayload).mockImplementationOnce(() => {
+      throw new Error("decryption failed");
+    });
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
+    ]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("decrypts encrypted payload and sends it via fetch", async () => {
+    const { decryptWebhookPayload } = await import("../../services/webhook-payload-encryption.js");
+    const { getWebhookPayloadEncryptionKey } =
+      await import("../../services/webhook-payload-encryption.js");
+    const expectedJson = '{"event":"test","systemId":"sys_test-system"}';
+    vi.mocked(getWebhookPayloadEncryptionKey).mockReturnValueOnce(new Uint8Array(32) as never);
+    vi.mocked(decryptWebhookPayload).mockReturnValueOnce(expectedJson);
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
+    ]);
+
+    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(options.body).toBe(expectedJson);
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "success" }));
   });
 });
 
@@ -330,5 +399,27 @@ describe("findPendingDeliveries (unit)", () => {
     const result = await findPendingDeliveries(db, 10);
 
     expect(result).toEqual(mockResults);
+  });
+});
+
+// ── buildIpPinnedFetchArgs ────────────────────────────────────────
+
+describe("buildIpPinnedFetchArgs", () => {
+  it("replaces hostname with IPv4 and preserves path", () => {
+    const result = buildIpPinnedFetchArgs("https://example.com/webhook", "93.184.216.34");
+    expect(result.pinnedUrl).toBe("https://93.184.216.34/webhook");
+    expect(result.hostHeader).toBe("example.com");
+  });
+
+  it("wraps IPv6 in brackets", () => {
+    const result = buildIpPinnedFetchArgs("https://example.com/hook", "2001:db8::1");
+    expect(result.pinnedUrl).toBe("https://[2001:db8::1]/hook");
+    expect(result.hostHeader).toBe("example.com");
+  });
+
+  it("preserves port in host header", () => {
+    const result = buildIpPinnedFetchArgs("https://example.com:8443/webhook", "93.184.216.34");
+    expect(result.pinnedUrl).toBe("https://93.184.216.34:8443/webhook");
+    expect(result.hostHeader).toBe("example.com:8443");
   });
 });

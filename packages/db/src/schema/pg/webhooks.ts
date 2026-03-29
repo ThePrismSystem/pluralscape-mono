@@ -11,7 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -83,7 +83,7 @@ export const webhookDeliveries = pgTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: pgTimestamp("last_attempt_at"),
     nextRetryAt: pgTimestamp("next_retry_at"),
-    encryptedData: pgEncryptedBlob("encrypted_data"),
+    encryptedData: pgBinary("encrypted_data"),
     payloadData: jsonb("payload_data").$type<Record<string, unknown>>(),
     createdAt: pgTimestamp("created_at").notNull(),
     ...archivable(),
@@ -98,6 +98,9 @@ export const webhookDeliveries = pgTable(
     index("webhook_deliveries_system_retry_idx")
       .on(t.systemId, t.status, t.nextRetryAt)
       .where(sql`${t.status} NOT IN ('success', 'failed')`),
+    index("webhook_deliveries_pending_retry_idx")
+      .on(t.nextRetryAt)
+      .where(sql`${t.status} = 'pending'`),
     foreignKey({
       columns: [t.webhookId, t.systemId],
       foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],
@@ -105,6 +108,10 @@ export const webhookDeliveries = pgTable(
     check("webhook_deliveries_event_type_check", enumCheck(t.eventType, WEBHOOK_EVENT_TYPES)),
     check("webhook_deliveries_status_check", enumCheck(t.status, WEBHOOK_DELIVERY_STATUSES)),
     check("webhook_deliveries_attempt_count_check", sql`${t.attemptCount} >= 0`),
+    check(
+      "webhook_deliveries_payload_check",
+      sql`${t.encryptedData} IS NOT NULL OR ${t.payloadData} IS NOT NULL`,
+    ),
     check(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,

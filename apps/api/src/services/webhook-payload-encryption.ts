@@ -1,27 +1,68 @@
-import { createCipheriv, randomBytes } from "node:crypto";
+import {
+  AEAD_KEY_BYTES,
+  AEAD_NONCE_BYTES,
+  assertAeadKey,
+  assertAeadNonce,
+  getSodium,
+} from "@pluralscape/crypto";
 
-/** AES-256-GCM nonce size in bytes. */
-const NONCE_BYTES = 12;
+import { env } from "../env.js";
+import { fromHex } from "../lib/hex.js";
 
-/** AES-256-GCM authentication tag length in bytes. */
-const AUTH_TAG_BYTES = 16;
+import type { AeadKey } from "@pluralscape/crypto";
 
-/** AES-256-GCM cipher algorithm identifier. */
-const CIPHER_ALGORITHM = "aes-256-gcm";
+/** Expected hex length for a 32-byte AEAD key. */
+const ENCRYPTION_KEY_HEX_LENGTH = AEAD_KEY_BYTES * 2;
 
 /**
- * Encrypt a webhook payload using AES-256-GCM.
- *
- * Returns base64-encoded bytes: `nonce || ciphertext || authTag`.
- * The caller is responsible for providing the correct 256-bit key.
+ * Get the server-held webhook payload encryption key from the environment.
+ * Returns null if the key is not configured (development/testing).
  */
-export function encryptWebhookPayload(plaintext: string, key: Buffer): string {
-  const nonce = randomBytes(NONCE_BYTES);
-  const cipher = createCipheriv(CIPHER_ALGORITHM, key, nonce, { authTagLength: AUTH_TAG_BYTES });
+export function getWebhookPayloadEncryptionKey(): AeadKey | null {
+  const hex = env.WEBHOOK_PAYLOAD_ENCRYPTION_KEY;
+  if (!hex) {
+    return null;
+  }
+  if (hex.length !== ENCRYPTION_KEY_HEX_LENGTH) {
+    throw new Error(
+      `WEBHOOK_PAYLOAD_ENCRYPTION_KEY must be a ${String(ENCRYPTION_KEY_HEX_LENGTH)}-character hex string (${String(AEAD_KEY_BYTES)} bytes).`,
+    );
+  }
+  const key = fromHex(hex);
+  assertAeadKey(key);
+  return key;
+}
 
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
-  const authTag = cipher.getAuthTag();
+/**
+ * Encrypt a webhook payload using XChaCha20-Poly1305 with the server-held key.
+ * Returns the combined nonce + ciphertext as a Uint8Array suitable for bytea storage.
+ */
+export function encryptWebhookPayload(plaintext: string, key: AeadKey): Uint8Array {
+  assertAeadKey(key);
+  const adapter = getSodium();
+  const plaintextBytes = new TextEncoder().encode(plaintext);
+  const result = adapter.aeadEncrypt(plaintextBytes, null, key);
+  const combined = new Uint8Array(AEAD_NONCE_BYTES + result.ciphertext.length);
+  combined.set(result.nonce, 0);
+  combined.set(result.ciphertext, AEAD_NONCE_BYTES);
+  return combined;
+}
 
-  // nonce || ciphertext || authTag
-  return Buffer.concat([nonce, encrypted, authTag]).toString("base64");
+/**
+ * Decrypt a webhook payload from its encrypted storage form.
+ * Expects the combined nonce + ciphertext format produced by encryptWebhookPayload.
+ *
+ * @throws {Error} if decryption fails (wrong key, corrupted data)
+ */
+export function decryptWebhookPayload(encrypted: Uint8Array, key: AeadKey): string {
+  assertAeadKey(key);
+  if (encrypted.length <= AEAD_NONCE_BYTES) {
+    throw new Error("Encrypted webhook payload too short");
+  }
+  const adapter = getSodium();
+  const nonce = encrypted.slice(0, AEAD_NONCE_BYTES);
+  const ciphertext = encrypted.slice(AEAD_NONCE_BYTES);
+  assertAeadNonce(nonce);
+  const plaintext = adapter.aeadDecrypt(ciphertext, nonce, null, key);
+  return new TextDecoder().decode(plaintext);
 }

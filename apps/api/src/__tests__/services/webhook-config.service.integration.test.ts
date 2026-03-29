@@ -8,9 +8,13 @@ import {
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../lib/ip-validation.js", () => ({
-  resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
-}));
+vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/ip-validation.js")>();
+  return {
+    ...actual,
+    resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
+  };
+});
 
 import { WEBHOOK_SECRET_BYTES } from "../../service.constants.js";
 import {
@@ -21,6 +25,8 @@ import {
   listWebhookConfigs,
   parseWebhookConfigQuery,
   restoreWebhookConfig,
+  rotateWebhookSecret,
+  testWebhookConfig,
   updateWebhookConfig,
 } from "../../services/webhook-config.service.js";
 import {
@@ -116,6 +122,29 @@ describe("webhook-config.service (PGlite integration)", () => {
         ),
         "VALIDATION_ERROR",
         400,
+      );
+    });
+
+    it("rejects creation when at per-system quota limit", async () => {
+      const QUOTA_LIMIT = 25;
+      // Bulk-insert configs to fill the quota
+      const values = Array.from({ length: QUOTA_LIMIT }, (_, i) => ({
+        id: `wh_quota-${String(i).padStart(3, "0")}-${crypto.randomUUID()}`,
+        systemId,
+        url: `https://example.com/hook-${String(i)}`,
+        secret: Buffer.from("test-secret-key-pad-to-32-bytes!"),
+        eventTypes: ["fronting.started" as const],
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }));
+      await db.insert(webhookConfigs).values(values);
+
+      await assertApiError(
+        createWebhookConfig(asDb(db), systemId, createParams(), auth, noopAudit),
+        "QUOTA_EXCEEDED",
+        429,
+        "Maximum of 25 webhook configs per system",
       );
     });
   });
@@ -286,6 +315,39 @@ describe("webhook-config.service (PGlite integration)", () => {
       expect(restored.archived).toBe(false);
       expect(restored.version).toBe(3);
     });
+
+    it("rejects restore when active configs are at quota limit", async () => {
+      const QUOTA_LIMIT = 25;
+      // Create one config and archive it
+      const toArchive = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams({ url: "https://example.com/archived" }),
+        auth,
+        noopAudit,
+      );
+      await archiveWebhookConfig(asDb(db), systemId, toArchive.id, auth, noopAudit);
+
+      // Fill the quota with new active configs
+      const values = Array.from({ length: QUOTA_LIMIT }, (_, i) => ({
+        id: `wh_rq-${String(i).padStart(3, "0")}-${crypto.randomUUID().slice(0, 8)}`,
+        systemId,
+        url: `https://example.com/restore-hook-${String(i)}`,
+        secret: Buffer.from("test-secret-key-pad-to-32-bytes!"),
+        eventTypes: ["fronting.started" as const],
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }));
+      await db.insert(webhookConfigs).values(values);
+
+      // Restoring the archived config should exceed quota
+      await assertApiError(
+        restoreWebhookConfig(asDb(db), systemId, toArchive.id, auth, noopAudit),
+        "QUOTA_EXCEEDED",
+        429,
+      );
+    });
   });
 
   describe("listWebhookConfigs", () => {
@@ -338,6 +400,161 @@ describe("webhook-config.service (PGlite integration)", () => {
         includeArchived: true,
       });
       expect(result.items.length).toBe(1);
+    });
+  });
+
+  describe("rotateWebhookSecret", () => {
+    it("rotates secret and increments version", async () => {
+      const audit = spyAudit();
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+
+      const rotated = await rotateWebhookSecret(
+        asDb(db),
+        systemId,
+        created.id,
+        { version: 1 },
+        auth,
+        audit,
+      );
+
+      expect(rotated.version).toBe(2);
+      expect(rotated.secret).toBeDefined();
+      expect(rotated.secret).not.toBe(created.secret);
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("webhook-config.secret-rotated");
+    });
+
+    it("throws CONFLICT on stale version", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+      await rotateWebhookSecret(asDb(db), systemId, created.id, { version: 1 }, auth, noopAudit);
+
+      await assertApiError(
+        rotateWebhookSecret(asDb(db), systemId, created.id, { version: 1 }, auth, noopAudit),
+        "CONFLICT",
+        409,
+      );
+    });
+
+    it("throws NOT_FOUND for nonexistent config", async () => {
+      await assertApiError(
+        rotateWebhookSecret(asDb(db), systemId, genWebhookId(), { version: 1 }, auth, noopAudit),
+        "NOT_FOUND",
+        404,
+      );
+    });
+  });
+
+  describe("testWebhookConfig", () => {
+    it("returns success for 200 response", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+      const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+
+      const result = await testWebhookConfig(
+        asDb(db),
+        systemId,
+        created.id,
+        auth,
+        mockFetch as never,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.httpStatus).toBe(200);
+      expect(result.error).toBeNull();
+      expect(result.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("returns failure for 500 response", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+      const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
+
+      const result = await testWebhookConfig(
+        asDb(db),
+        systemId,
+        created.id,
+        auth,
+        mockFetch as never,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(500);
+    });
+
+    it("returns error for network failure", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+      const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+
+      const result = await testWebhookConfig(
+        asDb(db),
+        systemId,
+        created.id,
+        auth,
+        mockFetch as never,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBeNull();
+      expect(result.error).toBe("fetch failed");
+    });
+
+    it("throws NOT_FOUND for nonexistent config", async () => {
+      await assertApiError(
+        testWebhookConfig(asDb(db), systemId, genWebhookId(), auth),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("returns SSRF error when URL validation rejects", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+
+      const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
+      vi.mocked(resolveAndValidateUrl)
+        .mockRejectedValueOnce(new Error("private IP"))
+        // Restore default for subsequent tests
+        .mockResolvedValue(["93.184.216.34"]);
+
+      const result = await testWebhookConfig(asDb(db), systemId, created.id, auth);
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBeNull();
+      expect(result.error).toContain("SSRF validation failed");
+      expect(result.error).toContain("private IP");
     });
   });
 

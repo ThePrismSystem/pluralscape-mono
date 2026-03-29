@@ -305,11 +305,9 @@ export function isPrivateIp(ip: string): boolean {
  * **DNS rebinding (TOCTOU):** This pre-flight check resolves DNS
  * independently from a subsequent `fetch()`. A sophisticated attacker
  * could return a public IP here then rebind to a private IP before the
- * HTTP connection is established. This is an accepted limitation —
- * standard `fetch()` does not expose the resolved IP or support
- * connecting to a specific address. The config-time URL validation is
- * the primary defense; the delivery-time check is defense-in-depth
- * against DNS changes between config creation and delivery.
+ * HTTP connection is established. Callers should use
+ * `buildIpPinnedFetchArgs` to pin the HTTP request to the resolved IP
+ * and eliminate this rebinding window.
  */
 export async function resolveAndValidateUrl(url: string): Promise<string[]> {
   let hostname: string;
@@ -340,4 +338,29 @@ export async function resolveAndValidateUrl(url: string): Promise<string[]> {
   }
 
   return resolvedIps;
+}
+
+/**
+ * Build fetch arguments that pin the HTTP request to a specific resolved IP,
+ * eliminating the DNS rebinding TOCTOU window between validation and fetch.
+ *
+ * Replaces the hostname in the URL with the resolved IP and returns the
+ * original Host header for the server to match virtual hosts.
+ *
+ * **TLS caveat:** For HTTPS, connecting to an IP may cause a certificate
+ * mismatch unless the server's cert covers the IP as a SAN. The `Host`
+ * header alone does not fix SNI — most `fetch` implementations derive SNI
+ * from the URL hostname, not the `Host` header, so the TLS ClientHello
+ * will contain the IP rather than the original domain. For this reason,
+ * IP pinning is defense-in-depth; URL validation at config creation time
+ * remains the primary SSRF defense.
+ */
+export function buildIpPinnedFetchArgs(
+  originalUrl: string,
+  resolvedIp: string,
+): { pinnedUrl: string; hostHeader: string } {
+  const parsed = new URL(originalUrl);
+  const hostHeader = parsed.host;
+  parsed.hostname = resolvedIp.includes(":") ? `[${resolvedIp}]` : resolvedIp;
+  return { pinnedUrl: parsed.toString(), hostHeader };
 }

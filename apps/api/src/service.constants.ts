@@ -33,6 +33,9 @@ export const MAX_ACTIVE_SESSIONS = 200;
 /** Maximum number of IDs in a single SQL IN clause to avoid parameter limits. */
 export const MAX_IN_CLAUSE_SIZE = 500;
 
+/** Maximum number of non-archived webhook configs per system. */
+export const MAX_WEBHOOK_CONFIGS_PER_SYSTEM = 25;
+
 /** Number of random bytes for webhook HMAC signing secrets (32 bytes = 256-bit). */
 export const WEBHOOK_SECRET_BYTES = 32;
 
@@ -50,6 +53,9 @@ export const WEBHOOK_TIMESTAMP_HEADER = "X-Pluralscape-Timestamp";
 
 /** Maximum age in days for terminal (success/failed) webhook deliveries before cleanup. */
 export const WEBHOOK_DELIVERY_RETENTION_DAYS = 30;
+
+/** Number of rows deleted per iteration during webhook delivery cleanup. */
+export const WEBHOOK_DELIVERY_CLEANUP_BATCH_SIZE = 1_000;
 
 // ── Webhook delivery worker ─────────────────────────────────────
 

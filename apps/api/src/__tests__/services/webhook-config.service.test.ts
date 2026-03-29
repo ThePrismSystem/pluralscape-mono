@@ -102,6 +102,9 @@ describe("webhook-config service", () => {
     it("creates a webhook config and returns result with secret", async () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow();
+      // Quota check: system lock (.for) + count query (.where terminal)
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([row]);
 
       const result = await createWebhookConfig(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit);
@@ -145,6 +148,8 @@ describe("webhook-config service", () => {
       mockEnv.NODE_ENV = "development";
 
       const row = makeWebhookRow({ url: "http://localhost:3000/webhook" });
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([row]);
 
       const result = await createWebhookConfig(
@@ -161,6 +166,8 @@ describe("webhook-config service", () => {
 
     it("throws when INSERT returns no rows", async () => {
       const { db, chain } = mockDb();
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
@@ -180,6 +187,8 @@ describe("webhook-config service", () => {
     it("sets cryptoKeyId to null when not provided", async () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow({ cryptoKeyId: null });
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([row]);
 
       const result = await createWebhookConfig(
@@ -688,6 +697,16 @@ describe("webhook-config service", () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow({ archived: false, archivedAt: null, version: 2 });
       chain.returning.mockResolvedValueOnce([row]);
+      // onRestore quota check: select({count}).from().where() — 2nd .where() call
+      let whereCallCount = 0;
+      chain.where.mockImplementation((): unknown => {
+        whereCallCount++;
+        // Call 2 is the onRestore quota count query (no .limit() follows)
+        if (whereCallCount === 2) {
+          return Promise.resolve([{ count: 1 }]);
+        }
+        return chain;
+      });
 
       const result = await restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
 
