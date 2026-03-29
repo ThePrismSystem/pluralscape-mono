@@ -1,11 +1,11 @@
 ---
 # api-i0pw
 title: Add missing SMTP error code tests
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-29T07:12:47Z
-updated_at: 2026-03-29T07:12:47Z
+updated_at: 2026-03-29T12:48:12Z
 parent: api-kjyg
 ---
 

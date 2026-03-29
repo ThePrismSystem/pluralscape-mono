@@ -1,11 +1,11 @@
 ---
 # api-77fq
 title: Sanitize error messages in webhook test endpoint
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-03-29T07:12:46Z
-updated_at: 2026-03-29T07:12:46Z
+updated_at: 2026-03-29T12:48:11Z
 parent: api-kjyg
 ---
 

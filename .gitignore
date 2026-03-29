@@ -54,6 +54,9 @@ docs/planning/project-scope.md
 # Local audits (not committed unless explicitly requested)
 docs/local-audits/
 
+# Superpowers specs and plans (local working docs)
+docs/superpowers/
+
 # Agent config (per-contributor)
 CLAUDE.md
 .claude/

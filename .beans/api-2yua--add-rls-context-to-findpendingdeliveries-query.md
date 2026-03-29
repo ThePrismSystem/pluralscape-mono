@@ -1,11 +1,11 @@
 ---
 # api-2yua
 title: Add RLS context to findPendingDeliveries query
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-03-29T07:12:46Z
-updated_at: 2026-03-29T07:12:46Z
+updated_at: 2026-03-29T12:48:11Z
 parent: api-kjyg
 ---
 

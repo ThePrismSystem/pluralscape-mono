@@ -1,11 +1,11 @@
 ---
 # api-9z5n
 title: Extract shared parsePaginatedQuery helper for list routes
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-29T07:13:17Z
-updated_at: 2026-03-29T07:13:17Z
+updated_at: 2026-03-29T12:48:11Z
 parent: api-kjyg
 ---
 
