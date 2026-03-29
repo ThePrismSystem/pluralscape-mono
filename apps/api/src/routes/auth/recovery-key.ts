@@ -4,7 +4,9 @@ import { HTTP_BAD_REQUEST, HTTP_CREATED, HTTP_NOT_FOUND } from "../../http.const
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
+import { logger } from "../../lib/logger.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { getQueue } from "../../lib/queue.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError } from "../../services/auth.service.js";
@@ -36,6 +38,32 @@ recoveryKeyRoutes.post("/regenerate", createCategoryRateLimiter("authHeavy"), as
 
   try {
     const result = await regenerateRecoveryKeyBackup(db, auth.accountId, body, audit);
+
+    // Fire-and-forget: enqueue recovery-key-regenerated email notification
+    const queue = getQueue();
+    if (queue) {
+      queue
+        .enqueue({
+          type: "email-send",
+          systemId: null,
+          payload: {
+            accountId: auth.accountId,
+            template: "recovery-key-regenerated",
+            vars: {
+              timestamp: new Date().toISOString(),
+              deviceInfo: c.req.header("user-agent") ?? "Unknown device",
+            },
+          },
+          idempotencyKey: `email:recovery-key-regen:${auth.accountId}:${String(Date.now())}`,
+        })
+        .catch((err: unknown) => {
+          logger.warn("[recovery-key] failed to enqueue email notification", {
+            accountId: auth.accountId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+    }
+
     return c.json(result, HTTP_CREATED);
   } catch (error: unknown) {
     if (error instanceof NoActiveRecoveryKeyError) {
