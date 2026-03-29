@@ -78,6 +78,9 @@ importers:
       '@pluralscape/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@pluralscape/email':
+        specifier: workspace:*
+        version: link:../../packages/email
       '@pluralscape/queue':
         specifier: workspace:^
         version: link:../../packages/queue
