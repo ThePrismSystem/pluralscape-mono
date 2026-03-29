@@ -146,7 +146,7 @@ async function start(): Promise<void> {
     if (!apiKey) {
       throw new Error("RESEND_API_KEY is required when EMAIL_PROVIDER=resend");
     }
-    initEmailAdapter(new ResendEmailAdapter({ apiKey, fromAddress: env.EMAIL_FROM }));
+    initEmailAdapter(ResendEmailAdapter.create({ apiKey, fromAddress: env.EMAIL_FROM }));
     logger.info("Email adapter initialized", { provider: "resend" });
   } else if (emailProvider === "smtp") {
     const { SmtpEmailAdapter } = await import("@pluralscape/email/smtp");
@@ -158,7 +158,7 @@ async function start(): Promise<void> {
     const auth =
       env.SMTP_USER && env.SMTP_PASS ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined;
     initEmailAdapter(
-      new SmtpEmailAdapter({ host, port, secure: env.SMTP_SECURE, auth }, env.EMAIL_FROM),
+      SmtpEmailAdapter.create({ host, port, secure: env.SMTP_SECURE, auth }, env.EMAIL_FROM),
     );
     logger.info("Email adapter initialized", { provider: "smtp" });
   } else {
