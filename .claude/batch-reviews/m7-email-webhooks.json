@@ -3,7 +3,7 @@
   "created": "2026-03-29T00:00:00Z",
   "baseBranch": "main",
   "planFile": "beans:api-7xw0,api-9wze",
-  "status": "planning",
+  "status": "implementing",
   "partitions": [
     {
       "id": 1,
@@ -14,8 +14,8 @@
         "packages/email/*",
         "vitest.config.ts"
       ],
-      "branch": null,
-      "pr": null,
+      "branch": "plan/m7-email-webhooks/01-email-package",
+      "pr": 311,
       "dependsOn": [],
       "conflictsWith": [],
       "reviewStatus": "pending",
@@ -35,8 +35,8 @@
         "apps/api/src/env.ts",
         "docs/adr/*"
       ],
-      "branch": null,
-      "pr": null,
+      "branch": "plan/m7-email-webhooks/02-encrypted-email-storage",
+      "pr": 310,
       "dependsOn": [],
       "conflictsWith": [],
       "reviewStatus": "pending",
@@ -74,8 +74,8 @@
         "apps/api/src/services/webhook-dispatcher.ts",
         "apps/api/src/services/webhook-delivery-cleanup.ts"
       ],
-      "branch": null,
-      "pr": null,
+      "branch": "plan/m7-email-webhooks/04-webhook-job-wiring",
+      "pr": 312,
       "dependsOn": [],
       "conflictsWith": [],
       "reviewStatus": "pending",
@@ -115,8 +115,8 @@
         "apps/api/src/services/webhook-delivery-worker.ts",
         "docs/"
       ],
-      "branch": null,
-      "pr": null,
+      "branch": "plan/m7-email-webhooks/06-webhook-enhancements",
+      "pr": 313,
       "dependsOn": [],
       "conflictsWith": [4],
       "reviewStatus": "pending",
