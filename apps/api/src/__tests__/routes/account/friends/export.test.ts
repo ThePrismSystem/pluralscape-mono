@@ -7,7 +7,7 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { FriendExportManifestResponse, SystemId } from "@pluralscape/types";
+import type { FriendExportManifestResponse, SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ const CONNECTION_ID = "fc_550e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_MANIFEST: FriendExportManifestResponse = {
   systemId: "sys_target" as SystemId,
-  entries: [{ entityType: "member", count: 5, lastUpdatedAt: 2000 as never }],
+  entries: [{ entityType: "member", count: 5, lastUpdatedAt: 2000 as UnixMillis }],
   keyGrants: [],
   etag: "test-etag",
 };

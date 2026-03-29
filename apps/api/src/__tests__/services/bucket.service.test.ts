@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { BucketId, SystemId } from "@pluralscape/types";
+
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -322,7 +324,7 @@ describe("bucket service", () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
       await listBuckets({} as never, SYSTEM_ID, AUTH, { limit: 9999 });
-      expect(mockTx.limit).toHaveBeenCalled();
+      expect(mockTx.limit).toHaveBeenCalledWith(MAX_PAGE_LIMIT);
     });
 
     it("rejects when ownership check fails", async () => {

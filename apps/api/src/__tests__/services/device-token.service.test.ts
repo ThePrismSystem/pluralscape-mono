@@ -222,7 +222,7 @@ describe("device-token service", () => {
 
   describe("listDeviceTokens", () => {
     it("returns list of masked tokens", async () => {
-      mockTx.limit.mockResolvedValueOnce([makeTokenRow(), makeTokenRow({ id: "dtk_other" })]);
+      mockTx.limit.mockResolvedValueOnce([makeTokenRow(), makeTokenRow({ id: "dt_other" })]);
 
       const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
 
