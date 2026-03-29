@@ -5,8 +5,11 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-21T10:19:23Z
-parent: ps-n8uk
+updated_at: 2026-03-29T02:46:05Z
+parent: api-7xw0
+blocked_by:
+  - api-gw6c
+  - api-pdy8
 ---
 
 M5: Send email confirmation when a recovery key is regenerated to alert account owner.

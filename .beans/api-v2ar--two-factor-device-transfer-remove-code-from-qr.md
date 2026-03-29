@@ -5,10 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-21T00:34:19Z
-updated_at: 2026-03-21T10:22:06Z
-parent: ps-n8uk
-blocked_by:
-  - ps-38gq
+updated_at: 2026-03-29T02:27:59Z
+parent: ps-qcfr
 ---
 
 L6 implementation: remove transfer code from QR payload, require manual entry as second factor. Needs UX design.
