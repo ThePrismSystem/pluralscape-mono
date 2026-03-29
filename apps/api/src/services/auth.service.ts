@@ -18,6 +18,7 @@ import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/va
 import { and, asc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
+import { encryptEmail, getEmailEncryptionKey } from "../lib/email-encrypt.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
@@ -98,6 +99,9 @@ export async function registerAccount(
     }
   }
 
+  // Encrypt email for server-side storage (null if key not configured)
+  const encryptedEmailBytes = getEmailEncryptionKey() ? encryptEmail(parsed.email) : null;
+
   // Serialize keys for DB storage
   const kdfSaltHex = toHex(kdfSalt);
   const encMasterKeyBytes = serializeEncryptedPayload(encryptedMasterKey);
@@ -123,6 +127,7 @@ export async function registerAccount(
         passwordHash,
         kdfSalt: kdfSaltHex,
         encryptedMasterKey: encMasterKeyBytes,
+        encryptedEmail: encryptedEmailBytes,
         createdAt: timestamp,
         updatedAt: timestamp,
       });

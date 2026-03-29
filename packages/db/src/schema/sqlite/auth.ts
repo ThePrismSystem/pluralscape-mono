@@ -21,6 +21,8 @@ export const accounts = sqliteTable(
     // Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key.
     // Null for legacy accounts that have not yet migrated to the two-layer architecture.
     encryptedMasterKey: sqliteBinary("encrypted_master_key"),
+    /** Server-side encrypted email for operational communication (ADR 029). Null for pre-migration accounts. */
+    encryptedEmail: sqliteBinary("encrypted_email"),
     /** When true, IP address and user-agent are persisted in audit log entries. Default off (ADR 028). */
     auditLogIpTracking: integer("audit_log_ip_tracking", { mode: "boolean" })
       .notNull()

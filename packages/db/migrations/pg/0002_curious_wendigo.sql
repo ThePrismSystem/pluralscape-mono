@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "encrypted_email" "bytea";
