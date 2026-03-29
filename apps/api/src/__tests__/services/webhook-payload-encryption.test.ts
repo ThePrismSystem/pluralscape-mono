@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { encryptWebhookPayload } from "../../services/webhook-payload-encryption.js";
 
-// ── encryptWebhookPayload ���─────────────────────────────────────
+// -- encryptWebhookPayload ------------------------------------------------
 
 describe("encryptWebhookPayload", () => {
   it("returns an encrypted payload that differs from the input", () => {
