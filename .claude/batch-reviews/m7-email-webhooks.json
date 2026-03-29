@@ -1,0 +1,127 @@
+{
+  "name": "m7-email-webhooks",
+  "created": "2026-03-29T00:00:00Z",
+  "baseBranch": "main",
+  "planFile": "beans:api-7xw0,api-9wze",
+  "status": "implementing",
+  "partitions": [
+    {
+      "id": 1,
+      "name": "email-package",
+      "description": "Create @pluralscape/email package with EmailAdapter interface, error types, stub/in-memory adapters, contract tests, Resend adapter, SMTP adapter, and email template system",
+      "beans": ["api-zeh1", "api-s5hq", "api-w1ia", "api-hvep"],
+      "files": [
+        "packages/email/*",
+        "vitest.config.ts"
+      ],
+      "branch": "plan/m7-email-webhooks/01-email-package",
+      "pr": 311,
+      "dependsOn": [],
+      "conflictsWith": [],
+      "reviewStatus": "pending",
+      "mergeStatus": "pending",
+      "reviewNotes": []
+    },
+    {
+      "id": 2,
+      "name": "encrypted-email-storage",
+      "description": "Server-side encrypted email storage with ADR, DB schema changes, encrypt/decrypt utilities, email resolution, and registration wiring",
+      "beans": ["api-pdy8"],
+      "files": [
+        "packages/db/src/schema/pg/auth.ts",
+        "packages/db/migrations/pg/*",
+        "apps/api/src/lib/email-encrypt.ts",
+        "apps/api/src/lib/email-resolve.ts",
+        "apps/api/src/env.ts",
+        "docs/adr/*"
+      ],
+      "branch": "plan/m7-email-webhooks/02-encrypted-email-storage",
+      "pr": 310,
+      "dependsOn": [],
+      "conflictsWith": [],
+      "reviewStatus": "pending",
+      "mergeStatus": "pending",
+      "reviewNotes": []
+    },
+    {
+      "id": 3,
+      "name": "email-worker",
+      "description": "Email-send job type, processEmailJob worker, service registry, startup wiring, and recovery key regeneration email",
+      "beans": ["api-gw6c", "api-nk7m"],
+      "files": [
+        "packages/types/src/jobs.ts",
+        "apps/api/src/services/email-worker.ts",
+        "apps/api/src/lib/email.ts",
+        "apps/api/src/env.ts",
+        "apps/api/src/index.ts"
+      ],
+      "branch": null,
+      "pr": null,
+      "dependsOn": [1, 2],
+      "conflictsWith": [],
+      "reviewStatus": "pending",
+      "mergeStatus": "pending",
+      "reviewNotes": []
+    },
+    {
+      "id": 4,
+      "name": "webhook-job-wiring",
+      "description": "Register webhook delivery as BullMQ job with handler, wire dispatchWebhookEvent to enqueue jobs, and add delivery cleanup cron job",
+      "beans": ["api-p4th", "api-aizs"],
+      "files": [
+        "apps/api/src/jobs/webhook-deliver.ts",
+        "apps/api/src/jobs/webhook-delivery-cleanup.ts",
+        "apps/api/src/services/webhook-dispatcher.ts",
+        "apps/api/src/services/webhook-delivery-cleanup.ts"
+      ],
+      "branch": "plan/m7-email-webhooks/04-webhook-job-wiring",
+      "pr": 312,
+      "dependsOn": [],
+      "conflictsWith": [],
+      "reviewStatus": "pending",
+      "mergeStatus": "pending",
+      "reviewNotes": []
+    },
+    {
+      "id": 5,
+      "name": "webhook-event-dispatch",
+      "description": "Wire dispatchWebhookEvent calls for 9 identity events (member, group, fronting, lifecycle, custom-front) and 4 friend events",
+      "beans": ["api-q642", "api-smlf"],
+      "files": [
+        "apps/api/src/services/member.service.ts",
+        "apps/api/src/services/group.service.ts",
+        "apps/api/src/services/fronting-session.service.ts",
+        "apps/api/src/services/lifecycle-event.service.ts",
+        "apps/api/src/services/custom-front.service.ts",
+        "apps/api/src/services/friend-connection.service.ts"
+      ],
+      "branch": null,
+      "pr": null,
+      "dependsOn": [4],
+      "conflictsWith": [],
+      "reviewStatus": "pending",
+      "mergeStatus": "pending",
+      "reviewNotes": []
+    },
+    {
+      "id": 6,
+      "name": "webhook-enhancements",
+      "description": "Webhook secret rotation endpoint, test/ping endpoint, payload encryption when crypto key set, and signature verification guide",
+      "beans": ["api-pb39", "api-rbgd", "api-6m0c", "api-56a0"],
+      "files": [
+        "apps/api/src/routes/webhook-configs/rotate-secret.ts",
+        "apps/api/src/routes/webhook-configs/test.ts",
+        "apps/api/src/services/webhook-config.service.ts",
+        "apps/api/src/services/webhook-delivery-worker.ts",
+        "docs/"
+      ],
+      "branch": "plan/m7-email-webhooks/06-webhook-enhancements",
+      "pr": 313,
+      "dependsOn": [],
+      "conflictsWith": [4],
+      "reviewStatus": "pending",
+      "mergeStatus": "pending",
+      "reviewNotes": []
+    }
+  ]
+}
