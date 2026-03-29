@@ -18,7 +18,9 @@ const AUTH = makeTestAuth({ accountId: "acct_test", systemId: "sys_mine" });
 const BUCKET_IDS: readonly BucketId[] = ["bkt_1" as BucketId, "bkt_2" as BucketId];
 
 const MOCK_ACCESS = {
+  targetAccountId: "acct_target" as never,
   targetSystemId: SYSTEM_ID,
+  connectionId: CONNECTION_ID,
   assignedBucketIds: BUCKET_IDS,
 };
 

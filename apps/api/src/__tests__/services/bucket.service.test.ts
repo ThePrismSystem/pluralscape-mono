@@ -43,12 +43,23 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
  */
 const thenableQueue: unknown[][] = [];
 
-/**
- * Mock tx that is both chainable and thenable.
- * When awaited directly, it resolves by shifting from `thenableQueue`.
- * When further chained (`.where().limit()`), chain methods take priority.
- */
-const mockTx: Record<string, ReturnType<typeof vi.fn>> & { then?: unknown } = {
+interface MockTx {
+  select: ReturnType<typeof vi.fn>;
+  from: ReturnType<typeof vi.fn>;
+  where: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
+  insert: ReturnType<typeof vi.fn>;
+  values: ReturnType<typeof vi.fn>;
+  returning: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  for: ReturnType<typeof vi.fn>;
+  orderBy: ReturnType<typeof vi.fn>;
+  execute: ReturnType<typeof vi.fn>;
+  then?: (resolve?: (v: unknown) => unknown) => Promise<unknown>;
+}
+
+const mockTx: MockTx = {
   select: vi.fn(),
   from: vi.fn(),
   where: vi.fn(),
