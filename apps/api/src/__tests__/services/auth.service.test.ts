@@ -64,6 +64,9 @@ const mockVerifyPassword = vi.fn<(hash: string, password: string) => boolean>();
 mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
 
 vi.mock("@pluralscape/crypto", () => ({
+  AEAD_KEY_BYTES: 32,
+  AEAD_NONCE_BYTES: 24,
+  assertAeadNonce: () => undefined,
   GENERIC_HASH_BYTES_MAX: 64,
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),

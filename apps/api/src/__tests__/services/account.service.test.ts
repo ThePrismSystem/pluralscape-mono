@@ -11,9 +11,11 @@ import type { AccountId, SessionId } from "@pluralscape/types";
 const mockMemzero = vi.fn();
 
 vi.mock("@pluralscape/crypto", () => ({
+  AEAD_KEY_BYTES: 32,
   PWHASH_SALT_BYTES: 16,
   AEAD_NONCE_BYTES: 24,
   AEAD_TAG_BYTES: 16,
+  assertAeadNonce: () => undefined,
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
     memzero: mockMemzero,
