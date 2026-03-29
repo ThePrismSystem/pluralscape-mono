@@ -1,7 +1,7 @@
 ---
 # api-w1ia
 title: SMTP adapter (Nodemailer)
-status: todo
+status: done
 type: task
 priority: normal
 created_at: 2026-03-29T02:45:38Z
@@ -37,3 +37,7 @@ SMTP adapter using Nodemailer for @pluralscape/email. Ships alongside Resend to 
 - [ ] Typecheck clean
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+## Summary of Changes
+
+Implemented `SmtpEmailAdapter` in `packages/email/src/adapters/smtp/` with `SmtpConfig` type (host, port, secure, auth, pool, maxConnections). Maps SMTP error codes and Nodemailer error codes to package error types. Uses `SendMailFn` abstraction for type-safe DI in tests. Added `nodemailer` + `@types/nodemailer` dependencies. Package export `./smtp`. 22 unit tests passing including contract suite and comprehensive error mapping.

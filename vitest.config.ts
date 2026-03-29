@@ -10,6 +10,7 @@ const PACKAGES = [
   "storage",
   "validation",
   "rotation-worker",
+  "email",
 ];
 
 function projectConfig(name: string, root: string) {
@@ -144,6 +145,9 @@ export default defineConfig({
         "packages/sync/src/relay-service.ts",
         // rotation-worker: interface-only file
         "packages/rotation-worker/src/types.ts",
+        // email: interface-only and type-only files (no executable code)
+        "packages/email/src/interface.ts",
+        "packages/email/src/templates/types.ts",
       ],
       reporter: ["text", "lcov", "html"],
       reportsDirectory: "./coverage",
