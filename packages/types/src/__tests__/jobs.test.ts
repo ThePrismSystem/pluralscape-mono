@@ -50,6 +50,7 @@ describe("JobType", () => {
         case "sync-compaction":
         case "device-transfer-cleanup":
         case "check-in-generate":
+        case "webhook-delivery-cleanup":
           return type;
         default: {
           const _exhaustive: never = type;

@@ -6,6 +6,7 @@ export {
   DEFAULT_POLL_INTERVAL_MS,
   DEFAULT_SHUTDOWN_TIMEOUT_MS,
   DEFAULT_TIMEOUT_MS,
+  WEBHOOK_DELIVERY_CLEANUP_CRON,
 } from "./queue.constants.js";
 export type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "./types.js";
 
