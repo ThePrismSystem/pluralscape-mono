@@ -32,14 +32,14 @@
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/prettier-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
-    "@redocly/cli": "^2.25.1",
+    "@redocly/cli": "^2.25.2",
     "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^10.0.3",
     "husky": "^9.1.7",
-    "knip": "^6.0.0",
+    "knip": "^6.1.0",
     "lint-staged": "^16.4.0",
     "prettier": "^3.5.3",
-    "turbo": "^2.8.17",
+    "turbo": "^2.8.21",
     "typescript": "^6.0.0",
     "vitest": "^4.1.0"
   },
@@ -54,7 +54,7 @@
   },
   "pnpm": {
     "overrides": {
-      "@trpc/server": "11.15.0",
+      "@trpc/server": "11.16.0",
       "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.6.2",
       "ioredis": "5.10.1",
       "esbuild": ">=0.25.0",

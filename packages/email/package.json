@@ -12,13 +12,13 @@
   },
   "dependencies": {
     "nodemailer": "^8.0.4",
-    "resend": "^4.1.2"
+    "resend": "^6.0.0"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@types/bun": "^1.2.4",
-    "@types/nodemailer": "^6.4.17",
+    "@types/nodemailer": "^7.0.0",
     "eslint": "^10.0.3",
     "typescript": "^6.0.0"
   },
