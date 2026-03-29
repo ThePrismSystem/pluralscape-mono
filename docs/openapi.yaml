@@ -7468,6 +7468,85 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/webhook-configs/{webhookId}/rotate-secret:
+    post:
+      operationId: rotateWebhookSecret
+      tags:
+        - Webhook Configs
+      summary: Rotate webhook signing secret
+      description: |
+        Generates a new HMAC signing secret for the webhook configuration.
+        The old secret is immediately invalidated. Returns the new secret
+        (base64-encoded), which is only exposed in this response.
+
+        Requires the current `version` for optimistic concurrency control.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Webhook config ID (wh_ prefix)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RotateWebhookSecretRequest"
+      responses:
+        "200":
+          description: Secret rotated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookConfigCreateResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /systems/{systemId}/webhook-configs/{webhookId}/test:
+    post:
+      operationId: testWebhookConfig
+      tags:
+        - Webhook Configs
+      summary: Send a test webhook
+      description: |
+        Sends a test ping to the webhook URL and returns the result.
+        The test payload uses event type `test.ping` with a timestamp.
+
+        The webhook must be enabled and not archived.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Webhook config ID (wh_ prefix)
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookTestResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /systems/{systemId}/webhook-configs/{webhookId}/restore:
     post:
       operationId: restoreWebhookConfig
@@ -13485,6 +13564,19 @@ components:
         - acknowledgement.archived
         - acknowledgement.restored
         - acknowledgement.deleted
+        - bucket.created
+        - bucket.updated
+        - bucket.archived
+        - bucket.restored
+        - bucket.deleted
+        - bucket-content-tag.tagged
+        - bucket-content-tag.untagged
+        - field-bucket-visibility.set
+        - field-bucket-visibility.removed
+        - friend.connected
+        - friend.removed
+        - friend.bucket-assigned
+        - friend.bucket-unassigned
     WebhookConfigResponse:
       description: |
         A webhook configuration. The `secret` field is only included in the
@@ -13590,6 +13682,32 @@ components:
           type: integer
           minimum: 1
           description: Current version for OCC check
+    RotateWebhookSecretRequest:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          description: Current version for OCC check
+    WebhookTestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the test delivery succeeded
+        httpStatus:
+          type: integer
+          nullable: true
+          description: HTTP status code from the target URL
+        error:
+          type: string
+          nullable: true
+          description: Error message if the delivery failed
+        durationMs:
+          type: number
+          description: Round-trip time in milliseconds
     WebhookDeliveryResponse:
       description: A webhook delivery record.
       type: object

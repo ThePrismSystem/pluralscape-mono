@@ -26,6 +26,7 @@ erDiagram
         varchar account_type "default 'system'"
         varchar email_hash
         varchar email_salt
+        binary encrypted_email "AES-256-GCM, server-side key"
         varchar password_hash
         varchar kdf_salt
         boolean audit_log_ip_tracking "default false"
