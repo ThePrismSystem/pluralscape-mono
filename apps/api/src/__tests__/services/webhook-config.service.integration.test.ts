@@ -8,9 +8,13 @@ import {
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../lib/ip-validation.js", () => ({
-  resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
-}));
+vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/ip-validation.js")>();
+  return {
+    ...actual,
+    resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
+  };
+});
 
 import { WEBHOOK_SECRET_BYTES } from "../../service.constants.js";
 import {
@@ -139,7 +143,7 @@ describe("webhook-config.service (PGlite integration)", () => {
       await assertApiError(
         createWebhookConfig(asDb(db), systemId, createParams(), auth, noopAudit),
         "QUOTA_EXCEEDED",
-        400,
+        429,
         "Maximum of 25 webhook configs per system",
       );
     });
@@ -310,6 +314,39 @@ describe("webhook-config.service (PGlite integration)", () => {
       const restored = await restoreWebhookConfig(asDb(db), systemId, created.id, auth, noopAudit);
       expect(restored.archived).toBe(false);
       expect(restored.version).toBe(3);
+    });
+
+    it("rejects restore when active configs are at quota limit", async () => {
+      const QUOTA_LIMIT = 25;
+      // Create one config and archive it
+      const toArchive = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams({ url: "https://example.com/archived" }),
+        auth,
+        noopAudit,
+      );
+      await archiveWebhookConfig(asDb(db), systemId, toArchive.id, auth, noopAudit);
+
+      // Fill the quota with new active configs
+      const values = Array.from({ length: QUOTA_LIMIT }, (_, i) => ({
+        id: `wh_rq-${String(i).padStart(3, "0")}-${crypto.randomUUID().slice(0, 8)}`,
+        systemId,
+        url: `https://example.com/restore-hook-${String(i)}`,
+        secret: Buffer.from("test-secret-key-pad-to-32-bytes!"),
+        eventTypes: ["fronting.started" as const],
+        enabled: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }));
+      await db.insert(webhookConfigs).values(values);
+
+      // Restoring the archived config should exceed quota
+      await assertApiError(
+        restoreWebhookConfig(asDb(db), systemId, toArchive.id, auth, noopAudit),
+        "QUOTA_EXCEEDED",
+        429,
+      );
     });
   });
 
@@ -495,6 +532,29 @@ describe("webhook-config.service (PGlite integration)", () => {
         "NOT_FOUND",
         404,
       );
+    });
+
+    it("returns SSRF error when URL validation rejects", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+
+      const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
+      vi.mocked(resolveAndValidateUrl)
+        .mockRejectedValueOnce(new Error("private IP"))
+        // Restore default for subsequent tests
+        .mockResolvedValue(["93.184.216.34"]);
+
+      const result = await testWebhookConfig(asDb(db), systemId, created.id, auth);
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBeNull();
+      expect(result.error).toContain("SSRF validation failed");
+      expect(result.error).toContain("private IP");
     });
   });
 

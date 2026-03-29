@@ -697,6 +697,16 @@ describe("webhook-config service", () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow({ archived: false, archivedAt: null, version: 2 });
       chain.returning.mockResolvedValueOnce([row]);
+      // onRestore quota check: select({count}).from().where() — 2nd .where() call
+      let whereCallCount = 0;
+      chain.where.mockImplementation((): unknown => {
+        whereCallCount++;
+        // Call 2 is the onRestore quota count query (no .limit() follows)
+        if (whereCallCount === 2) {
+          return Promise.resolve([{ count: 1 }]);
+        }
+        return chain;
+      });
 
       const result = await restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
 

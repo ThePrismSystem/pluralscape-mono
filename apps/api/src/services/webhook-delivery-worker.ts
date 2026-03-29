@@ -25,7 +25,7 @@ import {
   getWebhookPayloadEncryptionKey,
 } from "./webhook-payload-encryption.js";
 
-import type { WebhookDeliveryId } from "@pluralscape/types";
+import type { SystemId, WebhookDeliveryId, WebhookEventType, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
@@ -142,6 +142,13 @@ export async function processWebhookDelivery(
     }
     try {
       payloadJson = decryptWebhookPayload(row.encryptedData, key);
+    } catch (err: unknown) {
+      logger.warn("[webhook-worker] decryption failed for delivery", {
+        deliveryId,
+        reason: err instanceof Error ? err.message : String(err),
+      });
+      await markDeliveryFailed(db, deliveryId);
+      return;
     } finally {
       getSodium().memzero(key);
     }
@@ -269,8 +276,15 @@ export async function processWebhookDelivery(
 export async function findPendingDeliveries(
   db: PostgresJsDatabase,
   limit: number,
-): Promise<readonly { id: string; webhookId: string; systemId: string; eventType: string }[]> {
-  return db
+): Promise<
+  readonly {
+    id: WebhookDeliveryId;
+    webhookId: WebhookId;
+    systemId: SystemId;
+    eventType: WebhookEventType;
+  }[]
+> {
+  const rows = await db
     .select({
       id: webhookDeliveries.id,
       webhookId: webhookDeliveries.webhookId,
@@ -285,4 +299,11 @@ export async function findPendingDeliveries(
       ),
     )
     .limit(limit);
+
+  return rows as {
+    id: WebhookDeliveryId;
+    webhookId: WebhookId;
+    systemId: SystemId;
+    eventType: WebhookEventType;
+  }[];
 }

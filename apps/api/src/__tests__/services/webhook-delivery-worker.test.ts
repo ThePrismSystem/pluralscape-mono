@@ -30,6 +30,11 @@ vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
   };
 });
 
+vi.mock("@pluralscape/crypto", async () => {
+  const actual = await vi.importActual("@pluralscape/crypto");
+  return { ...actual, getSodium: vi.fn().mockReturnValue({ memzero: vi.fn() }) };
+});
+
 vi.mock("../../services/webhook-payload-encryption.js", () => ({
   getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(null),
   decryptWebhookPayload: vi.fn(),
@@ -323,6 +328,47 @@ describe("processWebhookDelivery (unit)", () => {
     await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("marks as failed when decryption throws", async () => {
+    const { decryptWebhookPayload } = await import("../../services/webhook-payload-encryption.js");
+    const { getWebhookPayloadEncryptionKey } =
+      await import("../../services/webhook-payload-encryption.js");
+    vi.mocked(getWebhookPayloadEncryptionKey).mockReturnValueOnce(new Uint8Array(32) as never);
+    vi.mocked(decryptWebhookPayload).mockImplementationOnce(() => {
+      throw new Error("decryption failed");
+    });
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
+    ]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("decrypts encrypted payload and sends it via fetch", async () => {
+    const { decryptWebhookPayload } = await import("../../services/webhook-payload-encryption.js");
+    const { getWebhookPayloadEncryptionKey } =
+      await import("../../services/webhook-payload-encryption.js");
+    const expectedJson = '{"event":"test","systemId":"sys_test-system"}';
+    vi.mocked(getWebhookPayloadEncryptionKey).mockReturnValueOnce(new Uint8Array(32) as never);
+    vi.mocked(decryptWebhookPayload).mockReturnValueOnce(expectedJson);
+
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
+    ]);
+
+    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(options.body).toBe(expectedJson);
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "success" }));
   });
 });
 

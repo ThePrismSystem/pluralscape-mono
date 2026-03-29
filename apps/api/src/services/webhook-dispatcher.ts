@@ -100,28 +100,18 @@ async function executeDispatch<K extends WebhookEventType>(
     const values = matchingConfigs.map((config) => {
       const deliveryId = createId(ID_PREFIXES.webhookDelivery);
       deliveryIds.push(deliveryId);
-      if (encryptionKey) {
-        return {
-          id: deliveryId,
-          webhookId: config.id,
-          systemId,
-          eventType,
-          status: "pending" as const,
-          attemptCount: 0,
-          encryptedData: encryptWebhookPayload(payloadJson, encryptionKey),
-          createdAt: timestamp,
-        };
-      }
-      return {
+      const base = {
         id: deliveryId,
         webhookId: config.id,
         systemId,
         eventType,
         status: "pending" as const,
         attemptCount: 0,
-        payloadData: { ...payload, systemId },
         createdAt: timestamp,
       };
+      return encryptionKey
+        ? { ...base, encryptedData: encryptWebhookPayload(payloadJson, encryptionKey) }
+        : { ...base, payloadData: { ...payload, systemId } };
     });
 
     await db.insert(webhookDeliveries).values(values);

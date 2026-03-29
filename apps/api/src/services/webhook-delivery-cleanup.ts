@@ -25,7 +25,7 @@ export async function cleanupWebhookDeliveries(
 ): Promise<number> {
   const cutoff = now() - retentionDays * MS_PER_DAY;
   let totalDeleted = 0;
-  let deletedCount: number;
+  let deletedCount = 0;
 
   do {
     const batch = await db

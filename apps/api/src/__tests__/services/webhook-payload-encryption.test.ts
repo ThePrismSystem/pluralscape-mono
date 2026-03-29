@@ -1,13 +1,30 @@
-import { AEAD_NONCE_BYTES, AEAD_TAG_BYTES, assertAeadKey, initSodium } from "@pluralscape/crypto";
-import { beforeAll, describe, expect, it } from "vitest";
+import {
+  AEAD_KEY_BYTES,
+  AEAD_NONCE_BYTES,
+  AEAD_TAG_BYTES,
+  assertAeadKey,
+  initSodium,
+} from "@pluralscape/crypto";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+const mockEnv = vi.hoisted(() => {
+  const env: Record<string, string | undefined> = {};
+  return env;
+});
+vi.mock("../../env.js", () => ({ env: mockEnv }));
 
 import {
   decryptWebhookPayload,
   encryptWebhookPayload,
+  getWebhookPayloadEncryptionKey,
 } from "../../services/webhook-payload-encryption.js";
 
 beforeAll(async () => {
   await initSodium();
+});
+
+afterEach(() => {
+  delete mockEnv.WEBHOOK_PAYLOAD_ENCRYPTION_KEY;
 });
 
 function makeTestKey() {
@@ -15,6 +32,27 @@ function makeTestKey() {
   assertAeadKey(key);
   return key;
 }
+
+// -- getWebhookPayloadEncryptionKey -----------------------------------------
+
+describe("getWebhookPayloadEncryptionKey", () => {
+  it("returns null when env var is not set", () => {
+    delete mockEnv.WEBHOOK_PAYLOAD_ENCRYPTION_KEY;
+    expect(getWebhookPayloadEncryptionKey()).toBeNull();
+  });
+
+  it("returns an AeadKey when env var is a valid 64-char hex string", () => {
+    mockEnv.WEBHOOK_PAYLOAD_ENCRYPTION_KEY = "ab".repeat(AEAD_KEY_BYTES);
+    const key = getWebhookPayloadEncryptionKey();
+    expect(key).toBeInstanceOf(Uint8Array);
+    expect(key).toHaveLength(AEAD_KEY_BYTES);
+  });
+
+  it("throws when env var has wrong length", () => {
+    mockEnv.WEBHOOK_PAYLOAD_ENCRYPTION_KEY = "abcd";
+    expect(() => getWebhookPayloadEncryptionKey()).toThrow("64-character hex string");
+  });
+});
 
 // -- encryptWebhookPayload ------------------------------------------------
 

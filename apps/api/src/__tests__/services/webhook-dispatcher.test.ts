@@ -33,10 +33,19 @@ const mockRawDb = {
   transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockDb)),
 };
 
+const mockGetKey = vi.fn().mockReturnValue(null);
+const mockEncrypt = vi.fn().mockReturnValue(new Uint8Array([1, 2, 3]));
+
 vi.mock("../../services/webhook-payload-encryption.js", () => ({
-  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(null),
-  encryptWebhookPayload: vi.fn(),
+  getWebhookPayloadEncryptionKey: mockGetKey,
+  encryptWebhookPayload: mockEncrypt,
 }));
+
+const mockMemzero = vi.fn();
+vi.mock("@pluralscape/crypto", async () => {
+  const actual = await vi.importActual("@pluralscape/crypto");
+  return { ...actual, getSodium: vi.fn().mockReturnValue({ memzero: mockMemzero }) };
+});
 
 vi.mock("@pluralscape/db/pg", () => ({
   webhookConfigs: { systemId: "system_id", enabled: "enabled", archived: "archived" },
@@ -224,5 +233,30 @@ describe("dispatchWebhookEvent", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("stores encryptedData when encryption key is configured", async () => {
+    const fakeKey = new Uint8Array(32).fill(0xab);
+    mockGetKey.mockReturnValueOnce(fakeKey);
+    mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+    mockInsertValues.mockResolvedValueOnce(undefined);
+
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+
+    const insertedValues = mockInsertValues.mock.calls[0]?.[0] as Record<string, unknown>[];
+    expect(insertedValues[0]).toHaveProperty("encryptedData");
+    expect(insertedValues[0]).not.toHaveProperty("payloadData");
+    expect(mockEncrypt).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls memzero on encryption key after dispatch", async () => {
+    const fakeKey = new Uint8Array(32).fill(0xab);
+    mockGetKey.mockReturnValueOnce(fakeKey);
+    mockWhere.mockResolvedValueOnce([{ id: "wh_config-1", eventTypes: ["member.created"] }]);
+    mockInsertValues.mockResolvedValueOnce(undefined);
+
+    await dispatchWebhookEvent(mockDb as never, systemId, eventType, payload);
+
+    expect(mockMemzero).toHaveBeenCalledWith(fakeKey);
   });
 });

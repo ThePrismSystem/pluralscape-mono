@@ -348,9 +348,12 @@ export async function resolveAndValidateUrl(url: string): Promise<string[]> {
  * original Host header for the server to match virtual hosts.
  *
  * **TLS caveat:** For HTTPS, connecting to an IP may cause a certificate
- * mismatch unless the server's cert covers the IP or uses SNI. The primary
- * SSRF defense remains DNS validation; IP pinning eliminates the rebinding
- * window.
+ * mismatch unless the server's cert covers the IP as a SAN. The `Host`
+ * header alone does not fix SNI — most `fetch` implementations derive SNI
+ * from the URL hostname, not the `Host` header, so the TLS ClientHello
+ * will contain the IP rather than the original domain. For this reason,
+ * IP pinning is defense-in-depth; URL validation at config creation time
+ * remains the primary SSRF defense.
  */
 export function buildIpPinnedFetchArgs(
   originalUrl: string,
