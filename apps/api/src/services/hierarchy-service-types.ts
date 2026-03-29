@@ -1,6 +1,13 @@
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { AuditEventType, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  AuditEventType,
+  PaginatedResult,
+  SystemId,
+  UnixMillis,
+  WebhookEventPayloadMap,
+  WebhookEventType,
+} from "@pluralscape/types";
 import type { ColumnBaseConfig, ColumnDataType } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -85,6 +92,17 @@ export interface HierarchyServiceConfig<
     parsed: Record<string, unknown>,
     systemId: SystemId,
   ) => Promise<void>;
+  /**
+   * Optional webhook event types to dispatch on create/update.
+   * When provided, the factory calls dispatchWebhookEvent after audit logging.
+   * The `buildPayload` function constructs a strongly-typed payload from the entity ID.
+   */
+  readonly webhookEvents?: {
+    readonly created: WebhookEventType;
+    readonly updated: WebhookEventType;
+    /** Construct the webhook payload from the entity ID. */
+    readonly buildPayload: (entityId: string) => WebhookEventPayloadMap[WebhookEventType];
+  };
 }
 
 // ── Base result type ───────────────────────────────────────────────

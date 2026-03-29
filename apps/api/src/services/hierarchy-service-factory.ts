@@ -17,6 +17,7 @@ import {
 } from "../service.constants.js";
 
 import { checkDependents } from "./hierarchy-service-helpers.js";
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { HierarchyService, HierarchyServiceConfig } from "./hierarchy-service-types.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -131,6 +132,14 @@ export function createHierarchyService<
         detail: `${entityName} created`,
         systemId,
       });
+      if (cfg.webhookEvents) {
+        await dispatchWebhookEvent(
+          tx,
+          systemId,
+          cfg.webhookEvents.created,
+          cfg.webhookEvents.buildPayload(entityId),
+        );
+      }
 
       return toResult(row as TRow);
     });
@@ -269,6 +278,14 @@ export function createHierarchyService<
         detail: `${entityName} updated`,
         systemId,
       });
+      if (cfg.webhookEvents) {
+        await dispatchWebhookEvent(
+          tx,
+          systemId,
+          cfg.webhookEvents.updated,
+          cfg.webhookEvents.buildPayload(entityId),
+        );
+      }
 
       return toResult(row as TRow);
     });

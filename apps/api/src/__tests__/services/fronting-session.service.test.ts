@@ -33,6 +33,10 @@ vi.mock("../../lib/validate-subject-ids.js", () => ({
   validateSubjectIds: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../services/webhook-dispatcher.js", () => ({
+  dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");

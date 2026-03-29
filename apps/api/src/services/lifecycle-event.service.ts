@@ -24,6 +24,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -174,6 +176,9 @@ export async function createLifecycleEvent(
       actor: { kind: "account", id: auth.accountId },
       detail: `Lifecycle event ${parsed.eventType} recorded`,
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "lifecycle.event-recorded", {
+      eventId: row.id as LifecycleEventId,
     });
 
     return toLifecycleEventResult(row);

@@ -9,6 +9,7 @@ import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
 import { assertBucketExists } from "./bucket.service.js";
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -128,6 +129,10 @@ export async function assignBucketToFriend(
         detail: `Assigned bucket to friend connection ${params.connectionId}`,
         systemId,
       });
+      await dispatchWebhookEvent(tx, systemId, "friend.bucket-assigned", {
+        connectionId: params.connectionId,
+        bucketId,
+      });
     }
 
     return {
@@ -191,6 +196,10 @@ export async function unassignBucketFromFriend(
       actor: { kind: "account", id: auth.accountId },
       detail: `Unassigned bucket from friend connection ${connectionId}`,
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "friend.bucket-unassigned", {
+      connectionId,
+      bucketId,
     });
 
     return { pendingRotation: { systemId, bucketId } };

@@ -34,6 +34,8 @@ import {
   MAX_MEMBER_LIMIT,
 } from "../routes/members/members.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -124,6 +126,9 @@ export async function createMember(
       actor: { kind: "account", id: auth.accountId },
       detail: "Member created",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "member.created", {
+      memberId: row.id as MemberId,
     });
 
     return toMemberResult(row);
@@ -257,6 +262,9 @@ export async function updateMember(
       actor: { kind: "account", id: auth.accountId },
       detail: "Member updated",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "member.updated", {
+      memberId: row.id as MemberId,
     });
 
     return toMemberResult(row);
@@ -407,6 +415,9 @@ export async function duplicateMember(
       detail: `Member duplicated from ${memberId}${membershipsCopied > 0 ? ` (${String(membershipsCopied)} membership(s) copied)` : ""}`,
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "member.created", {
+      memberId: row.id as MemberId,
+    });
 
     return toMemberResult(row);
   });
@@ -456,6 +467,7 @@ export async function archiveMember(
       detail: "Member archived (photos cascade-archived, field values preserved)",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "member.archived", { memberId });
 
     await tx
       .update(members)

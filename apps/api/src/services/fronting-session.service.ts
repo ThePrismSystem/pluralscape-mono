@@ -29,6 +29,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -154,6 +156,9 @@ export async function createFrontingSession(
       actor: { kind: "account", id: auth.accountId },
       detail: "Fronting session created",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "fronting.started", {
+      sessionId: row.id as FrontingSessionId,
     });
 
     return toFrontingSessionResult(row);
@@ -414,6 +419,7 @@ export async function endFrontingSession(
       detail: "Fronting session ended",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "fronting.ended", { sessionId });
 
     return toFrontingSessionResult(row);
   });
