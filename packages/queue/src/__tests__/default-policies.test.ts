@@ -30,6 +30,7 @@ const ALL_JOB_TYPES: readonly JobType[] = [
   "device-transfer-cleanup",
   "check-in-generate",
   "webhook-delivery-cleanup",
+  "email-send",
 ] as const;
 
 describe("DEFAULT_RETRY_POLICIES", () => {
@@ -74,7 +75,7 @@ describe("DEFAULT_RETRY_POLICIES", () => {
 });
 
 describe("applyDefaultPolicies", () => {
-  it("sets all 19 policies on the queue", () => {
+  it("sets all 20 policies on the queue", () => {
     const queue = new InMemoryJobQueue(mockLogger);
     applyDefaultPolicies(queue);
 

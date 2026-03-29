@@ -26,7 +26,7 @@ describe("JobType", () => {
 
   it("rejects invalid types", () => {
     // @ts-expect-error invalid job type
-    assertType<JobType>("email-send");
+    assertType<JobType>("non-existent-job");
   });
 
   it("is exhaustive in a switch", () => {
@@ -51,6 +51,7 @@ describe("JobType", () => {
         case "device-transfer-cleanup":
         case "check-in-generate":
         case "webhook-delivery-cleanup":
+        case "email-send":
           return type;
         default: {
           const _exhaustive: never = type;
@@ -103,6 +104,13 @@ describe("JobPayloadMap", () => {
   it("each entry extends Record<string, unknown>", () => {
     expectTypeOf<JobPayloadMap["sync-push"]>().toExtend<Record<string, unknown>>();
     expectTypeOf<JobPayloadMap["webhook-deliver"]>().toExtend<Record<string, unknown>>();
+  });
+
+  it("email-send payload has typed fields", () => {
+    type Payload = JobPayloadMap["email-send"];
+    expectTypeOf<Payload["accountId"]>().toExtend<string>();
+    expectTypeOf<Payload["template"]>().toBeString();
+    expectTypeOf<Payload["vars"]>().toExtend<Readonly<Record<string, unknown>>>();
   });
 
   it("notification-send payload has typed fields", () => {
