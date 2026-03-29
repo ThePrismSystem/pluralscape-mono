@@ -1,7 +1,6 @@
 import { escapeHtml, wrapInBaseLayout } from "./base-layout.js";
 
-import type { RecoveryKeyRegeneratedVars } from "./types.js";
-import type { RenderedEmail } from "./types.js";
+import type { RecoveryKeyRegeneratedVars, RenderedEmail } from "./types.js";
 
 const SUBJECT = "Your recovery key was regenerated";
 

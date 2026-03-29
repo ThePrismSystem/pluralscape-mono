@@ -1,7 +1,6 @@
 import { escapeHtml, wrapInBaseLayout } from "./base-layout.js";
 
-import type { WebhookFailureDigestVars } from "./types.js";
-import type { RenderedEmail } from "./types.js";
+import type { WebhookFailureDigestVars, RenderedEmail } from "./types.js";
 
 const SUBJECT = "Webhook delivery failures detected";
 

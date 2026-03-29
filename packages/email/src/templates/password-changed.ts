@@ -1,7 +1,6 @@
 import { escapeHtml, wrapInBaseLayout } from "./base-layout.js";
 
-import type { PasswordChangedVars } from "./types.js";
-import type { RenderedEmail } from "./types.js";
+import type { PasswordChangedVars, RenderedEmail } from "./types.js";
 
 const SUBJECT = "Your password was changed";
 

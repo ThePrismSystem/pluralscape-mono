@@ -1,7 +1,6 @@
 import { escapeHtml, wrapInBaseLayout } from "./base-layout.js";
 
-import type { TwoFactorChangedVars } from "./types.js";
-import type { RenderedEmail } from "./types.js";
+import type { TwoFactorChangedVars, RenderedEmail } from "./types.js";
 
 const SUBJECT = "Two-factor authentication settings changed";
 

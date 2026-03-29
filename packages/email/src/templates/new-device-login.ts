@@ -1,7 +1,6 @@
 import { escapeHtml, wrapInBaseLayout } from "./base-layout.js";
 
-import type { NewDeviceLoginVars } from "./types.js";
-import type { RenderedEmail } from "./types.js";
+import type { NewDeviceLoginVars, RenderedEmail } from "./types.js";
 
 const SUBJECT = "New device login detected";
 
