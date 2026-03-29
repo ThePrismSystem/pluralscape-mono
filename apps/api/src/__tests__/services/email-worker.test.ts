@@ -4,14 +4,22 @@ import { mockDb } from "../helpers/mock-db.js";
 
 import type { EmailAdapter, EmailSendParams, EmailSendResult } from "@pluralscape/email";
 import type { EmailTemplateName as EmailTemplateNameFromEmail } from "@pluralscape/email/templates";
-import type { AccountId, EmailTemplateName as EmailTemplateNameFromTypes, JobPayloadMap } from "@pluralscape/types";
+import type {
+  AccountId,
+  EmailTemplateName as EmailTemplateNameFromTypes,
+  JobPayloadMap,
+} from "@pluralscape/types";
 
 // ── Compile-time assertion: EmailTemplateName must stay in sync ──────
 // packages/types defines EmailTemplateName as a manual union literal,
 // packages/email derives it from EmailTemplateMap. These assignments fail
 // at build time if the two drift apart.
-type _AssertEmailSuperset = EmailTemplateNameFromEmail extends EmailTemplateNameFromTypes ? true : never;
-type _AssertEmailSubset = EmailTemplateNameFromTypes extends EmailTemplateNameFromEmail ? true : never;
+type _AssertEmailSuperset = EmailTemplateNameFromEmail extends EmailTemplateNameFromTypes
+  ? true
+  : never;
+type _AssertEmailSubset = EmailTemplateNameFromTypes extends EmailTemplateNameFromEmail
+  ? true
+  : never;
 export type { _AssertEmailSuperset, _AssertEmailSubset };
 
 // ── Mocks ────────────────────────────────────────────────────────────

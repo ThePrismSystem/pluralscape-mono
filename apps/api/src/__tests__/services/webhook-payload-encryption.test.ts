@@ -108,7 +108,8 @@ describe("decryptWebhookPayload failures", () => {
     const key = makeTestKey();
     const encrypted = encryptWebhookPayload("test", key);
     // Flip a byte in the ciphertext portion (after the nonce)
-    encrypted[25] ^= 0xff;
+    const TAMPER_OFFSET = 25;
+    encrypted[TAMPER_OFFSET] = (encrypted[TAMPER_OFFSET] ?? 0) ^ 0xff;
     expect(() => decryptWebhookPayload(encrypted, key)).toThrow();
   });
 
