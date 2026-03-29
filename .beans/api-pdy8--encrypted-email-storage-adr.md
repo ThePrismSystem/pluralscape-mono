@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: critical
 created_at: 2026-03-29T02:45:25Z
-updated_at: 2026-03-29T02:45:25Z
+updated_at: 2026-03-29T03:03:11Z
 parent: api-7xw0
 ---
 
@@ -40,3 +40,5 @@ Server-side encrypted email storage and ADR documenting the decision.
 
 - `packages/db/src/schema/pg/auth.ts` — accounts table
 - `apps/api/src/lib/email-hash.ts` — existing email hashing
+
+\n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.

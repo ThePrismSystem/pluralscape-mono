@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-29T02:58:19Z
-updated_at: 2026-03-29T03:00:42Z
+updated_at: 2026-03-29T03:03:12Z
 parent: api-e7gt
 blocked_by:
   - api-g475
@@ -50,3 +50,5 @@ Also verify the reverse:
 - [ ] Verify examples are valid
 - [ ] Fix all discrepancies found
 - [ ] OpenAPI spec validates cleanly (`openapi-generator validate` or equivalent)
+
+\n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.

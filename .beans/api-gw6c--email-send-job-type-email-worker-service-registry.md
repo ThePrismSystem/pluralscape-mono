@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-29T02:45:57Z
-updated_at: 2026-03-29T02:46:04Z
+updated_at: 2026-03-29T03:03:11Z
 parent: api-7xw0
 blocked_by:
   - api-zeh1
@@ -45,3 +45,5 @@ Job type, worker, and service registry for email delivery.
 - `apps/api/src/services/push-notification-worker.ts` — worker pattern
 - `apps/api/src/lib/storage.ts` — service registry pattern
 - `packages/types/src/jobs.ts` — job type additions
+
+\n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.

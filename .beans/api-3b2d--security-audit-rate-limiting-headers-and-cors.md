@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-29T02:59:10Z
-updated_at: 2026-03-29T02:59:10Z
+updated_at: 2026-03-29T03:03:11Z
 parent: api-e7gt
 ---
 
@@ -61,3 +61,5 @@ Audit and tune rate limiting, security headers, and CORS configuration.
 - [ ] Audit TRUST_PROXY and X-Forwarded-For handling
 - [ ] Verify Cache-Control on sensitive endpoints
 - [ ] Fix all issues found
+
+\n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.

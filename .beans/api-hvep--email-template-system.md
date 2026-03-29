@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-29T02:45:47Z
-updated_at: 2026-03-29T02:45:47Z
+updated_at: 2026-03-29T03:03:11Z
 parent: api-7xw0
 blocked_by:
   - api-zeh1
@@ -41,3 +41,5 @@ Typed string interpolation email templates in @pluralscape/email.
 - [ ] Configure package export: `./templates`
 - [ ] Unit tests for all templates (correct variable interpolation, HTML/text output)
 - [ ] Typecheck clean
+
+\n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
