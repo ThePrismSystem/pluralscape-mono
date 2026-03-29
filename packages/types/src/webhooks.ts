@@ -274,9 +274,4 @@ export interface WebhookDelivery {
   readonly lastAttemptAt: UnixMillis | null;
   readonly nextRetryAt: UnixMillis | null;
   readonly createdAt: UnixMillis;
-  readonly archived: false;
-  readonly archivedAt: UnixMillis | null;
 }
-
-/** An archived webhook delivery. */
-export type ArchivedWebhookDelivery = Archived<WebhookDelivery>;

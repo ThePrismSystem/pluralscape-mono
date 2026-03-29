@@ -86,7 +86,6 @@ export const webhookDeliveries = pgTable(
     encryptedData: pgBinary("encrypted_data"),
     payloadData: jsonb("payload_data").$type<Record<string, unknown>>(),
     createdAt: pgTimestamp("created_at").notNull(),
-    ...archivable(),
   },
   (t) => [
     index("webhook_deliveries_webhook_id_idx").on(t.webhookId),
@@ -116,7 +115,10 @@ export const webhookDeliveries = pgTable(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
     ),
-    archivableConsistencyCheckFor("webhook_deliveries", t.archived, t.archivedAt),
+    check(
+      "webhook_deliveries_payload_presence_check",
+      sql`${t.encryptedData} IS NOT NULL OR ${t.payloadData} IS NOT NULL`,
+    ),
   ],
 );
 

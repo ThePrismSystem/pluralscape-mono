@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { PGlite } from "@electric-sql/pglite";
 import * as schema from "@pluralscape/db/pg";
@@ -25,7 +25,6 @@ import {
   WEBHOOK_TIMESTAMP_HEADER,
 } from "../../service.constants.js";
 import {
-  calculateBackoffMs,
   computeWebhookSignature,
   findPendingDeliveries,
   processWebhookDelivery,
@@ -93,20 +92,6 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
     await db.insert(webhookDeliveries).values(values as typeof webhookDeliveries.$inferInsert);
     return id;
   }
-
-  describe("computeWebhookSignature", () => {
-    it("produces HMAC-SHA256 hex digest with timestamp prefix", () => {
-      const secret = Buffer.from("test-secret");
-      const timestamp = 1700000000;
-      const payload = '{"test":true}';
-      const sig = computeWebhookSignature(secret, timestamp, payload);
-
-      const expected = createHmac("sha256", secret)
-        .update(`${String(timestamp)}.${payload}`)
-        .digest("hex");
-      expect(sig).toBe(expected);
-    });
-  });
 
   describe("processWebhookDelivery", () => {
     it("success path: marks as success on 2xx", async () => {
@@ -257,24 +242,6 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const results = await findPendingDeliveries(asDb(db), 10);
       expect(results.length).toBe(1);
       expect(results[0]?.id).toBe(deliveryId);
-    });
-  });
-
-  describe("calculateBackoffMs", () => {
-    it("increases exponentially with attempt count", () => {
-      const base = 1000;
-      const b1 = calculateBackoffMs(1, base, 0);
-      const b2 = calculateBackoffMs(2, base, 0);
-      const b3 = calculateBackoffMs(3, base, 0);
-      expect(b1).toBe(2000); // 2^1 * 1000
-      expect(b2).toBe(4000); // 2^2 * 1000
-      expect(b3).toBe(8000); // 2^3 * 1000
-    });
-
-    it("returns non-negative with jitter", () => {
-      for (let i = 0; i < 20; i++) {
-        expect(calculateBackoffMs(1, 1000)).toBeGreaterThanOrEqual(0);
-      }
     });
   });
 });

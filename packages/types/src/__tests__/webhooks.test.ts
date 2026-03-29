@@ -6,7 +6,6 @@ import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 import type {
   ArchivedWebhookConfig,
-  ArchivedWebhookDelivery,
   WebhookConfig,
   WebhookDelivery,
   WebhookDeliveryStatus,
@@ -143,14 +142,5 @@ describe("WebhookDelivery", () => {
     expectTypeOf<WebhookDelivery["lastAttemptAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<WebhookDelivery["nextRetryAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<WebhookDelivery["createdAt"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<WebhookDelivery["archivedAt"]>().toEqualTypeOf<UnixMillis | null>();
-  });
-
-  it("has archived as false literal", () => {
-    expectTypeOf<WebhookDelivery["archived"]>().toEqualTypeOf<false>();
-  });
-
-  it("ArchivedWebhookDelivery has archived as true literal", () => {
-    expectTypeOf<ArchivedWebhookDelivery["archived"]>().toEqualTypeOf<true>();
   });
 });
