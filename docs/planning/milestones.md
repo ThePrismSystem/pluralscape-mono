@@ -120,24 +120,23 @@ Epics:
 - ~~Report generation~~ [COMPLETED] — bucket-scoped data export endpoint with manifest counts and key grants, E2E tests, OpenAPI spec
 - ~~M6 audit remediation~~ [COMPLETED] — 30 findings across security (device token takeover, member count leak, CRDT factory), performance (SQL-pushed bucket filtering, batch queries, caching), and code quality (shared helpers, barrel exports, constants extraction); executed via 10 parallel worktree PRs
 
-## Milestone 7: Data Portability
+## Milestone 7: Data Portability [IN PROGRESS]
 
-Goal: Import from SP/PK, export, API surface
+Goal: Email notifications, webhook enhancements, public API audit, integration guides
 
 Epics:
 
-- Simply Plural import (features.md section 10)
-- PluralKit import (features.md section 10)
-- Data export (features.md section 10)
-- PluralKit bridge (features.md section 9)
-- Public REST API — ADR 013 (features.md section 9)
-- API key management UI (features.md section 9)
-- User-configurable webhooks (features.md section 9)
+- ~~Email notification system~~ [COMPLETED] — `packages/email` with Resend adapter (hosted), SMTP/Nodemailer adapter (self-hosted), stub adapter (dev/testing), in-memory adapter (unit tests); 5 security notification templates (new device login, password changed, recovery key regenerated, two-factor changed, webhook failure digest); email worker with BullMQ job handler; encrypted email storage on accounts (ADR 029, ADR 030)
+- ~~Webhook enhancements~~ [COMPLETED] — secret rotation endpoint, test/ping endpoint, optional payload encryption via API key, HMAC signature verification guide, BullMQ job handlers for delivery and cleanup
+- ~~Webhook event dispatch~~ [COMPLETED] — wired `dispatchWebhookEvent` for 13 identity and friend events (member, fronting, group, lifecycle, custom-front, bucket, field-bucket-visibility, friend)
+- ~~M7 audit remediation~~ [COMPLETED] — high-priority (anti-enumeration timing, ownership consolidation, strict typing), medium+low (webhook cast removal, email worker fixes, zod imports, dependency updates)
+- Public REST API audit (features.md section 9)
+- Email & webhook audit findings
 - Integration guides (features.md section 9)
 
 ## Milestone 8: Client App
 
-Goal: Full-featured cross-platform UI (web, iOS, Android via Expo)
+Goal: Full-featured cross-platform UI (web, iOS, Android via Expo), import/export, bridge
 
 Epics:
 
@@ -155,6 +154,11 @@ Epics:
 - Littles Safe Mode (features.md section 13)
 - Offline-first client integration (features.md section 15)
 - Web platform support
+- Simply Plural import (features.md section 10)
+- PluralKit import (features.md section 10)
+- Data export (features.md section 10)
+- PluralKit bridge (features.md section 9)
+- API key management UI (features.md section 9)
 
 ## Milestone 9: Self-Hosted
 
@@ -204,7 +208,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 ## Architecture Decision Records
 
-28 accepted ADRs cover the full stack:
+30 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -228,6 +232,8 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - [ADR 026: Lifecycle Event Type-Specific Validation](../adr/026-lifecycle-event-type-validation.md) — type-discriminated validation for lifecycle event subtypes
 - [ADR 027: Webhook Secret Rotation](../adr/027-webhook-secret-rotation.md) — procedure for rotating webhook HMAC signing secrets
 - [ADR 028: Opt-in IP Audit Logging](../adr/028-opt-in-ip-audit-logging.md) — IP address and user-agent audit logging is opt-in per account (default off)
+- [ADR 029: Server-Side Encrypted Email](../adr/029-server-side-encrypted-email.md) — AES-256-GCM encryption for server-held email addresses (BLAKE2b hash preserved for lookup)
+- [ADR 030: Email Provider Selection](../adr/030-email-provider-selection.md) — Resend for hosted, Nodemailer/SMTP for self-hosted, stub for dev
 
 ## Development Sequence Rationale
 
@@ -235,7 +241,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 2. **API Core** (M2): CRUD operations are the foundation for everything above. Auth gates all other endpoints. Recovery key generation happens at registration.
 3. **Sync and Real-Time** (M3): With sync protocol designed in M1, implementation happens early so every subsequent feature is built on top of the sync layer rather than retrofitted. Multi-device key recovery also lives here.
 4. **Fronting, Communication, Privacy** (M4-M6): Ordered by complexity and dependency. Fronting is the most-used feature. Communication builds on member identity. Privacy governs visibility of everything and integrates the three-tier encryption model.
-5. **Data Portability** (M7): Import/export can be built once the data model is stable. Imports run client-side (encrypted data). Doing it too early risks rework as the schema evolves.
-6. **Client App** (M8): UI consumes the API. Building it after the API is stable prevents constant frontend rework. In practice, M8 epics will be developed in parallel with M2-M7 (each API feature gets its corresponding UI). Targets web, iOS, and Android via Expo.
+5. **Data Portability** (M7): Email notifications, webhook enhancements, and public API audit — infrastructure that supports external integration. Import/export and bridge features moved to M8 since they require the client app.
+6. **Client App** (M8): UI consumes the API. Building it after the API is stable prevents constant frontend rework. Includes import/export, PluralKit bridge, and API key management since these are client-side features. In practice, M8 epics will be developed in parallel with M2-M7 (each API feature gets its corresponding UI). Targets web, iOS, and Android via Expo.
 7. **Self-Hosted** (M9): Two-tier model — minimal single binary for personal use, full Docker Compose for feature parity. Depends on the SQLite adapter and full feature set being stable.
 8. **Polish** (M10): Final hardening pass before public launch.

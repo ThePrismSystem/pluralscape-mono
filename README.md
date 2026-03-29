@@ -8,11 +8,11 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-6 complete, Milestone 7 (Data Portability) next.**
+**Active development — Milestones 0-6 complete, Milestone 7 (Data Portability) in progress.**
 
 Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), and 6 (Privacy and Social) are complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-Milestone 6 delivered the privacy and social layer: intersection-based privacy buckets with fail-closed access control, friend network with invite codes, read-only friend dashboards filtered by bucket visibility, paginated friend data export for client-side search, push notifications with per-friend preferences, and bucket-scoped report generation. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
+Milestone 7 is building the data portability layer: email notifications (Resend + SMTP adapters with 5 security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), and webhook event dispatch for identity and friend events. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 
@@ -59,6 +59,7 @@ packages/
   db/              Drizzle ORM schemas — PostgreSQL + SQLite dual-dialect
   sync/            CRDT sync protocol — Automerge
   api-client/      tRPC + TanStack Query client bindings
+  email/           Transactional email — Resend + SMTP adapters, templates
   i18n/            Internationalization — locale formatting, nomenclature
   queue/           Background job queue — SQLite-backed with retry/DLQ
   rotation-worker/ Key rotation worker — processes bucket key rotation chunks
@@ -78,7 +79,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (28 accepted)
+  adr/             Architecture Decision Records (30 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -197,7 +198,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 28 accepted ADRs cover the full stack from licensing through opt-in IP audit logging. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 30 accepted ADRs cover the full stack from licensing through email provider selection. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 

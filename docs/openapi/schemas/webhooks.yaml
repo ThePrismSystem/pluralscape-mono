@@ -104,6 +104,33 @@ UpdateWebhookConfigRequest:
       minimum: 1
       description: "Current version for OCC check"
 
+RotateWebhookSecretRequest:
+  type: object
+  required: [version]
+  properties:
+    version:
+      type: integer
+      minimum: 1
+      description: "Current version for OCC check"
+
+WebhookTestResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+      description: "Whether the test delivery succeeded"
+    httpStatus:
+      type: integer
+      nullable: true
+      description: "HTTP status code from the target URL"
+    error:
+      type: string
+      nullable: true
+      description: "Error message if the delivery failed"
+    durationMs:
+      type: number
+      description: "Round-trip time in milliseconds"
+
 WebhookEventType:
   type: string
   enum:
@@ -152,6 +179,19 @@ WebhookEventType:
     - acknowledgement.archived
     - acknowledgement.restored
     - acknowledgement.deleted
+    - bucket.created
+    - bucket.updated
+    - bucket.archived
+    - bucket.restored
+    - bucket.deleted
+    - bucket-content-tag.tagged
+    - bucket-content-tag.untagged
+    - field-bucket-visibility.set
+    - field-bucket-visibility.removed
+    - friend.connected
+    - friend.removed
+    - friend.bucket-assigned
+    - friend.bucket-unassigned
 
 WebhookDeliveryResponse:
   description: A webhook delivery record.

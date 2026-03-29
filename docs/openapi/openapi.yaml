@@ -971,6 +971,10 @@ paths:
     $ref: "./paths/webhook-configs.yaml#/~1systems~1%7BsystemId%7D~1webhook-configs~1%7BwebhookId%7D"
   /systems/{systemId}/webhook-configs/{webhookId}/archive:
     $ref: "./paths/webhook-configs.yaml#/~1systems~1%7BsystemId%7D~1webhook-configs~1%7BwebhookId%7D~1archive"
+  /systems/{systemId}/webhook-configs/{webhookId}/rotate-secret:
+    $ref: "./paths/webhook-configs.yaml#/~1systems~1%7BsystemId%7D~1webhook-configs~1%7BwebhookId%7D~1rotate-secret"
+  /systems/{systemId}/webhook-configs/{webhookId}/test:
+    $ref: "./paths/webhook-configs.yaml#/~1systems~1%7BsystemId%7D~1webhook-configs~1%7BwebhookId%7D~1test"
   /systems/{systemId}/webhook-configs/{webhookId}/restore:
     $ref: "./paths/webhook-configs.yaml#/~1systems~1%7BsystemId%7D~1webhook-configs~1%7BwebhookId%7D~1restore"
   # Webhook Deliveries

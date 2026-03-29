@@ -4,9 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
 
-## [Unreleased]
+## [Unreleased] — Milestone 7: Data Portability (in progress)
 
-_No unreleased changes._
+### Added
+
+- Email package (`packages/email`) — transactional email system with `EmailAdapter` interface, Resend adapter (hosted), SMTP adapter via Nodemailer (self-hosted), stub adapter (dev/testing), in-memory adapter (unit tests), and send parameter validation
+- Email templates — 5 security notification templates: new device login, password changed, recovery key regenerated, two-factor changed, webhook failure digest
+- Encrypted email storage — server-side encrypted email column on accounts table (ADR 029) with BLAKE2b hash for deterministic lookup preserved
+- Email worker — `processEmailJob` BullMQ worker with email service registry, email-send job type and retry policy, recovery key regeneration email notification
+- ADR 029: Server-side encrypted email storage — AES-256-GCM encryption for email addresses stored server-side
+- ADR 030: Email provider selection — Resend for hosted, Nodemailer/SMTP for self-hosted, stub for dev
+- Webhook enhancements — secret rotation endpoint, test/ping endpoint, optional payload encryption via API key, HMAC signature verification guide
+- Webhook BullMQ handlers — job handlers for webhook delivery and cleanup (replacing queue-package handlers)
+- Webhook event dispatch — wired `dispatchWebhookEvent` for 13 identity and friend events (member, fronting, group, lifecycle, custom-front, bucket, friend)
+
+### Fixed
+
+- M7 audit remediation (high priority) — anti-enumeration timing for auth endpoints, ownership consolidation, strict typing replacements for loose `Record<string, unknown>` types
+- M7 audit remediation (medium + low) — webhook `as never` cast removal, email worker review findings, inconsistent zod imports, dependency updates
 
 ## Milestone 6: Privacy and Social
 

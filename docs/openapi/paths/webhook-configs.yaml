@@ -200,6 +200,85 @@
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
 
+/systems/{systemId}/webhook-configs/{webhookId}/rotate-secret:
+  post:
+    operationId: rotateWebhookSecret
+    tags: [Webhook Configs]
+    summary: Rotate webhook signing secret
+    description: |
+      Generates a new HMAC signing secret for the webhook configuration.
+      The old secret is immediately invalidated. Returns the new secret
+      (base64-encoded), which is only exposed in this response.
+
+      Requires the current `version` for optimistic concurrency control.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Webhook config ID (wh_ prefix)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/webhooks.yaml#/RotateWebhookSecretRequest"
+    responses:
+      "200":
+        description: Secret rotated successfully
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/webhooks.yaml#/WebhookConfigCreateResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+
+/systems/{systemId}/webhook-configs/{webhookId}/test:
+  post:
+    operationId: testWebhookConfig
+    tags: [Webhook Configs]
+    summary: Send a test webhook
+    description: |
+      Sends a test ping to the webhook URL and returns the result.
+      The test payload uses event type `test.ping` with a timestamp.
+
+      The webhook must be enabled and not archived.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: webhookId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Webhook config ID (wh_ prefix)
+    responses:
+      "200":
+        description: Test result
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/webhooks.yaml#/WebhookTestResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
 /systems/{systemId}/webhook-configs/{webhookId}/restore:
   post:
     operationId: restoreWebhookConfig
