@@ -114,6 +114,8 @@ All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audit
 | [SQLCipher](https://github.com/nicktimko/sqlcipher)        | Encrypted SQLite                                       | BSD 3-Clause |
 | [Valkey](https://github.com/valkey-io/valkey)              | Pub/sub for real-time horizontal scaling               | BSD 3-Clause |
 | [BullMQ](https://github.com/taskforcesh/bullmq)            | Background job queue (Valkey-backed)                   | MIT          |
+| [Resend](https://github.com/resendlabs/resend-node)        | Transactional email API (hosted deployments)           | MIT          |
+| [Nodemailer](https://github.com/nodemailer/nodemailer)     | SMTP email delivery (self-hosted deployments)          | MIT-0        |
 | [MinIO](https://github.com/minio/minio)                    | S3-compatible object storage (self-hosted media)       | AGPL-3.0     |
 | [Bun](https://github.com/oven-sh/bun)                      | JavaScript/TypeScript runtime                          | MIT          |
 
