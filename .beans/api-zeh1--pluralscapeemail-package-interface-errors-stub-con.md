@@ -1,7 +1,7 @@
 ---
 # api-zeh1
 title: "@pluralscape/email package — interface, errors, stub, contract tests"
-status: todo
+status: done
 type: task
 priority: high
 created_at: 2026-03-29T02:45:15Z
@@ -41,3 +41,7 @@ Create packages/email/ following the adapter pattern from @pluralscape/storage a
 - `packages/storage/package.json` — multi-export pattern
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+## Summary of Changes
+
+Created `packages/email/` with `EmailAdapter` interface, `EmailSendParams`/`EmailSendResult` types, four error classes (`EmailDeliveryError`, `EmailConfigurationError`, `EmailRateLimitError`, `InvalidRecipientError`), `StubEmailAdapter`, `InMemoryEmailAdapter`, and `runEmailAdapterContract()` contract test suite. Package exports `.` and `./testing`. Registered in root `vitest.config.ts` PACKAGES array. 45 unit tests passing.

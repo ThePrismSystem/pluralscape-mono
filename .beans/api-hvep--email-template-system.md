@@ -1,7 +1,7 @@
 ---
 # api-hvep
 title: Email template system
-status: todo
+status: done
 type: task
 priority: normal
 created_at: 2026-03-29T02:45:47Z
@@ -43,3 +43,7 @@ Typed string interpolation email templates in @pluralscape/email.
 - [ ] Typecheck clean
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+## Summary of Changes
+
+Implemented typed email template system with `renderTemplate()` function, `EmailTemplateMap` for compile-time variable type safety, and five templates: `recovery-key-regenerated`, `new-device-login`, `password-changed`, `two-factor-changed`, `webhook-failure-digest`. Each template produces both HTML (responsive layout with Pluralscape branding) and plain-text output. HTML output uses `escapeHtml` for XSS prevention. Package export `./templates`. 31 unit tests passing including XSS prevention and variable interpolation coverage.
