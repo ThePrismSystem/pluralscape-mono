@@ -19,6 +19,7 @@ import { tenantCtx } from "../lib/tenant-context.js";
 
 import { createHierarchyService } from "./hierarchy-service-factory.js";
 import { mapBaseFields } from "./hierarchy-service-helpers.js";
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -135,6 +136,11 @@ const groupHierarchy = createHierarchyService<
     deleted: "group.deleted",
     archived: "group.archived",
     restored: "group.restored",
+  },
+  webhookEvents: {
+    created: "group.created",
+    updated: "group.updated",
+    idField: "groupId",
   },
 });
 
@@ -264,6 +270,7 @@ export async function moveGroup(
       detail: `Group moved to parent ${targetParentGroupId ?? "root"}`,
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "group.updated", { groupId });
 
     return toGroupResult(row);
   });
@@ -383,6 +390,9 @@ export async function copyGroup(
       actor: { kind: "account", id: auth.accountId },
       detail: `Group copied from ${groupId}`,
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "group.created", {
+      groupId: newGroupId as GroupId,
     });
 
     return toGroupResult(row);

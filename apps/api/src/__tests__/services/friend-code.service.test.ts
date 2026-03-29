@@ -11,6 +11,10 @@ vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../services/webhook-dispatcher.js", () => ({
+  dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { generateFriendCode, listFriendCodes, archiveFriendCode, redeemFriendCode } =

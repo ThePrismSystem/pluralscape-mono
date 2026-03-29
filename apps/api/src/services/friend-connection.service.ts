@@ -20,6 +20,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { AccountArchivableEntityConfig } from "../lib/entity-lifecycle.js";
@@ -316,7 +318,8 @@ async function cleanupBucketAssignments(
  * 1. Transition caller's connection status
  * 2. Mirror the status on the reverse connection
  * 3. Clean up bucket assignments in both directions
- * 4. Return result with pending key rotations
+ * 4. Dispatch friend.removed webhook to the caller's owned systems
+ * 5. Return result with pending key rotations
  */
 async function terminateConnection(
   db: PostgresJsDatabase,
@@ -380,6 +383,14 @@ async function terminateConnection(
         accountId,
         timestamp,
       );
+    }
+
+    // Dispatch friend.removed to all systems owned by the acting account
+    for (const systemId of auth.ownedSystemIds) {
+      await dispatchWebhookEvent(tx, systemId, "friend.removed", {
+        connectionId,
+        friendAccountId: existing.friendAccountId as AccountId,
+      });
     }
 
     return {

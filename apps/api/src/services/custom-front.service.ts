@@ -18,6 +18,8 @@ import {
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
@@ -107,6 +109,9 @@ export async function createCustomFront(
       actor: { kind: "account", id: auth.accountId },
       detail: "Custom front created",
       systemId,
+    });
+    await dispatchWebhookEvent(tx, systemId, "custom-front.changed", {
+      customFrontId: row.id as CustomFrontId,
     });
 
     return toCustomFrontResult(row);
@@ -238,6 +243,7 @@ export async function updateCustomFront(
       detail: "Custom front updated",
       systemId,
     });
+    await dispatchWebhookEvent(tx, systemId, "custom-front.changed", { customFrontId });
 
     return toCustomFrontResult(row);
   });

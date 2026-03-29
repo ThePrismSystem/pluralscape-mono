@@ -19,6 +19,7 @@ import {
   MAX_CODE_GENERATION_RETRIES,
   MAX_FRIEND_CODES_PER_ACCOUNT,
 } from "./friend-code.constants.js";
+import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -96,10 +97,6 @@ function toFriendCodeResult(row: typeof friendCodes.$inferSelect): FriendCodeRes
     archived: row.archived,
   };
 }
-
-// Webhook dispatch for friend events is deferred until "friend.connected"
-// is added to WebhookEventType and WebhookEventPayloadMap. When enabled,
-// dispatch to all systems owned by both accounts (iterate auth.ownedSystemIds).
 
 // ── GENERATE ────────────────────────────────────────────────────────
 
@@ -260,6 +257,10 @@ export async function archiveFriendCode(
  * Uses SELECT FOR UPDATE to prevent concurrent double-redemption.
  * Creates two directional connection rows (A->B and B->A) both with
  * status "accepted". Archives the code after successful redemption.
+ *
+ * Dispatches `friend.connected` webhook events to all systems owned by the
+ * redeeming account. The code owner's systems are not notified here — they
+ * receive events when bucket assignments are made on their systems.
  */
 export async function redeemFriendCode(
   db: PostgresJsDatabase,
@@ -380,6 +381,14 @@ export async function redeemFriendCode(
       accountId: redeemerId,
       systemId: null,
     });
+
+    // Dispatch friend.connected to all systems owned by the redeemer
+    for (const systemId of auth.ownedSystemIds) {
+      await dispatchWebhookEvent(tx, systemId, "friend.connected", {
+        connectionId: connectionIdBA,
+        friendAccountId: codeOwnerId,
+      });
+    }
 
     return {
       connectionIds: [connAB.id as FriendConnectionId, connBA.id as FriendConnectionId],

@@ -80,6 +80,10 @@ vi.mock("drizzle-orm", async (importOriginal) => {
   };
 });
 
+vi.mock("../../services/webhook-dispatcher.js", () => ({
+  dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
+}));
+
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const {

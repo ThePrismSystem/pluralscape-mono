@@ -37,6 +37,10 @@ vi.mock("../../lib/entity-lifecycle.js", () => ({
   restoreEntity: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../services/webhook-dispatcher.js", () => ({
+  dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const {

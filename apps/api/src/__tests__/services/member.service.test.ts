@@ -33,6 +33,10 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../services/webhook-dispatcher.js", () => ({
+  dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
