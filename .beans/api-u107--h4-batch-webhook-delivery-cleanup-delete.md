@@ -1,6 +1,6 @@
 ---
 # api-u107
-title: 'H4: Batch webhook delivery cleanup DELETE'
+title: "H4: Batch webhook delivery cleanup DELETE"
 status: completed
 type: task
 created_at: 2026-03-29T09:52:35Z

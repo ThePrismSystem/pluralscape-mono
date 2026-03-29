@@ -1,6 +1,6 @@
 ---
 # api-sj5f
-title: 'H5: Partial index for pending delivery polling'
+title: "H5: Partial index for pending delivery polling"
 status: completed
 type: task
 created_at: 2026-03-29T09:52:35Z

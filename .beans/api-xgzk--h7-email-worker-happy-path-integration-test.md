@@ -1,6 +1,6 @@
 ---
 # api-xgzk
-title: 'H7: Email worker happy-path integration test'
+title: "H7: Email worker happy-path integration test"
 status: completed
 type: task
 created_at: 2026-03-29T09:52:36Z

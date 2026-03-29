@@ -1,6 +1,6 @@
 ---
 # api-dcwd
-title: 'H1: Wire webhook payload encryption into dispatch/delivery path'
+title: "H1: Wire webhook payload encryption into dispatch/delivery path"
 status: completed
 type: task
 created_at: 2026-03-29T09:52:35Z
