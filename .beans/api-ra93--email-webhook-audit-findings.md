@@ -1,10 +1,11 @@
 ---
 # api-ra93
 title: Email & webhook audit findings
-status: todo
+status: completed
 type: epic
+priority: normal
 created_at: 2026-03-29T07:11:05Z
-updated_at: 2026-03-29T07:11:05Z
+updated_at: 2026-03-29T12:48:17Z
 parent: ps-n8uk
 ---
 

@@ -1,11 +1,11 @@
 ---
 # api-zor7
 title: Add composite index on (system_id, event_type) for deliveries
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-29T07:13:17Z
-updated_at: 2026-03-29T07:13:17Z
+updated_at: 2026-03-29T12:48:12Z
 parent: api-kjyg
 ---
 

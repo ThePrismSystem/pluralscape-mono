@@ -1,11 +1,11 @@
 ---
 # api-f39h
 title: Eliminate double DNS resolution in webhook delivery
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-29T07:12:46Z
-updated_at: 2026-03-29T07:13:23Z
+updated_at: 2026-03-29T12:48:11Z
 parent: api-kjyg
 blocked_by:
   - api-n81d

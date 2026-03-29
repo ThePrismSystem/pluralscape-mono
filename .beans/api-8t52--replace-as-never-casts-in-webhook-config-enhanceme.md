@@ -1,11 +1,11 @@
 ---
 # api-8t52
 title: Replace as never casts in webhook-config-enhancements tests
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-29T07:13:17Z
-updated_at: 2026-03-29T07:13:17Z
+updated_at: 2026-03-29T12:48:12Z
 parent: api-kjyg
 ---
 

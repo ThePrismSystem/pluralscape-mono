@@ -1,11 +1,11 @@
 ---
 # api-f7gz
 title: Extract markDeliveryFailed helper in delivery worker
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-29T07:12:46Z
-updated_at: 2026-03-29T07:12:46Z
+updated_at: 2026-03-29T12:48:11Z
 parent: api-kjyg
 ---
 

@@ -1,11 +1,11 @@
 ---
 # api-mth5
 title: Remove unused archivable columns from webhookDeliveries
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-29T07:13:17Z
-updated_at: 2026-03-29T07:13:17Z
+updated_at: 2026-03-29T12:48:12Z
 parent: api-kjyg
 ---
 
