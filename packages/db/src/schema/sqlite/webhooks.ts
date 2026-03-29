@@ -87,6 +87,9 @@ export const webhookDeliveries = sqliteTable(
     index("webhook_deliveries_system_retry_idx")
       .on(t.systemId, t.status, t.nextRetryAt)
       .where(sql`${t.status} NOT IN ('success', 'failed')`),
+    index("webhook_deliveries_pending_retry_idx")
+      .on(t.nextRetryAt)
+      .where(sql`${t.status} = 'pending'`),
     foreignKey({
       columns: [t.webhookId, t.systemId],
       foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],
