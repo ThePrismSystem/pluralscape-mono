@@ -5,6 +5,7 @@ import type {
   PaginatedResult,
   SystemId,
   UnixMillis,
+  WebhookEventPayloadMap,
   WebhookEventType,
 } from "@pluralscape/types";
 import type { ColumnBaseConfig, ColumnDataType } from "drizzle-orm";
@@ -94,14 +95,13 @@ export interface HierarchyServiceConfig<
   /**
    * Optional webhook event types to dispatch on create/update.
    * When provided, the factory calls dispatchWebhookEvent after audit logging.
-   * The payload is `{ [idField]: entityId }` where idField defaults to the
-   * lowercased entityName + "Id" (e.g. "groupId" for entityName "Group").
+   * The `buildPayload` function constructs a strongly-typed payload from the entity ID.
    */
   readonly webhookEvents?: {
     readonly created: WebhookEventType;
     readonly updated: WebhookEventType;
-    /** Field name for the entity ID in the webhook payload (e.g. "groupId"). */
-    readonly idField: string;
+    /** Construct the webhook payload from the entity ID. */
+    readonly buildPayload: (entityId: string) => WebhookEventPayloadMap[WebhookEventType];
   };
 }
 

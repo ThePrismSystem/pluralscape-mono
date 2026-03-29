@@ -140,7 +140,7 @@ const groupHierarchy = createHierarchyService<
   webhookEvents: {
     created: "group.created",
     updated: "group.updated",
-    idField: "groupId",
+    buildPayload: (entityId: string) => ({ groupId: entityId as GroupId }),
   },
 });
 

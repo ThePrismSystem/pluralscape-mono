@@ -133,9 +133,12 @@ export function createHierarchyService<
         systemId,
       });
       if (cfg.webhookEvents) {
-        await dispatchWebhookEvent(tx, systemId, cfg.webhookEvents.created, {
-          [cfg.webhookEvents.idField]: entityId,
-        } as never);
+        await dispatchWebhookEvent(
+          tx,
+          systemId,
+          cfg.webhookEvents.created,
+          cfg.webhookEvents.buildPayload(entityId),
+        );
       }
 
       return toResult(row as TRow);
@@ -276,9 +279,12 @@ export function createHierarchyService<
         systemId,
       });
       if (cfg.webhookEvents) {
-        await dispatchWebhookEvent(tx, systemId, cfg.webhookEvents.updated, {
-          [cfg.webhookEvents.idField]: entityId,
-        } as never);
+        await dispatchWebhookEvent(
+          tx,
+          systemId,
+          cfg.webhookEvents.updated,
+          cfg.webhookEvents.buildPayload(entityId),
+        );
       }
 
       return toResult(row as TRow);
