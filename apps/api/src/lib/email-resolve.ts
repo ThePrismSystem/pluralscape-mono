@@ -30,5 +30,12 @@ export async function resolveAccountEmail(
     return null;
   }
 
-  return decryptEmail(row.encryptedEmail);
+  try {
+    return decryptEmail(row.encryptedEmail);
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes("EMAIL_ENCRYPTION_KEY")) {
+      return null;
+    }
+    throw error;
+  }
 }

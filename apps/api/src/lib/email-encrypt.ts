@@ -1,4 +1,10 @@
-import { AEAD_KEY_BYTES, AEAD_NONCE_BYTES, assertAeadNonce, getSodium } from "@pluralscape/crypto";
+import {
+  AEAD_KEY_BYTES,
+  AEAD_NONCE_BYTES,
+  assertAeadKey,
+  assertAeadNonce,
+  getSodium,
+} from "@pluralscape/crypto";
 
 import { env } from "../env.js";
 
@@ -15,7 +21,7 @@ const ENCRYPTION_KEY_HEX_LENGTH = AEAD_KEY_BYTES * 2;
  */
 export function getEmailEncryptionKey(): AeadKey | null {
   const hex = env.EMAIL_ENCRYPTION_KEY;
-  if (!hex || hex.length === 0) {
+  if (!hex) {
     return null;
   }
   if (hex.length !== ENCRYPTION_KEY_HEX_LENGTH) {
@@ -23,7 +29,9 @@ export function getEmailEncryptionKey(): AeadKey | null {
       `EMAIL_ENCRYPTION_KEY must be a ${String(ENCRYPTION_KEY_HEX_LENGTH)}-character hex string (${String(AEAD_KEY_BYTES)} bytes).`,
     );
   }
-  return fromHex(hex) as AeadKey;
+  const key = fromHex(hex);
+  assertAeadKey(key);
+  return key;
 }
 
 /**
@@ -41,18 +49,22 @@ export function encryptEmail(email: string): Uint8Array {
     throw new Error("EMAIL_ENCRYPTION_KEY is required for email encryption but not configured.");
   }
 
-  const adapter = getSodium();
-  const normalized = email.toLowerCase().trim();
-  const plaintext = new TextEncoder().encode(normalized);
+  try {
+    const adapter = getSodium();
+    const normalized = email.toLowerCase().trim();
+    const plaintext = new TextEncoder().encode(normalized);
 
-  const result = adapter.aeadEncrypt(plaintext, null, key);
+    const result = adapter.aeadEncrypt(plaintext, null, key);
 
-  // Combine nonce + ciphertext for storage
-  const combined = new Uint8Array(AEAD_NONCE_BYTES + result.ciphertext.length);
-  combined.set(result.nonce, 0);
-  combined.set(result.ciphertext, AEAD_NONCE_BYTES);
+    // Combine nonce + ciphertext for storage
+    const combined = new Uint8Array(AEAD_NONCE_BYTES + result.ciphertext.length);
+    combined.set(result.nonce, 0);
+    combined.set(result.ciphertext, AEAD_NONCE_BYTES);
 
-  return combined;
+    return combined;
+  } finally {
+    getSodium().memzero(key);
+  }
 }
 
 /**
@@ -72,12 +84,16 @@ export function decryptEmail(encrypted: Uint8Array): string {
     throw new Error("Encrypted email data is too short to contain a valid nonce and ciphertext.");
   }
 
-  const adapter = getSodium();
-  const nonce = encrypted.slice(0, AEAD_NONCE_BYTES);
-  const ciphertext = encrypted.slice(AEAD_NONCE_BYTES);
+  try {
+    const adapter = getSodium();
+    const nonce = encrypted.slice(0, AEAD_NONCE_BYTES);
+    const ciphertext = encrypted.slice(AEAD_NONCE_BYTES);
 
-  assertAeadNonce(nonce);
-  const plaintext = adapter.aeadDecrypt(ciphertext, nonce, null, key);
+    assertAeadNonce(nonce);
+    const plaintext = adapter.aeadDecrypt(ciphertext, nonce, null, key);
 
-  return new TextDecoder().decode(plaintext);
+    return new TextDecoder().decode(plaintext);
+  } finally {
+    getSodium().memzero(key);
+  }
 }
