@@ -10,7 +10,6 @@ import {
 } from "@pluralscape/validation";
 import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 
-import { env } from "../env.js";
 import {
   HTTP_BAD_REQUEST,
   HTTP_CONFLICT,
@@ -22,9 +21,11 @@ import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { buildIpPinnedFetchArgs, resolveAndValidateUrl } from "../lib/ip-validation.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { parseQuery } from "../lib/query-parse.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
+import { sendSignedWebhookRequest } from "../lib/webhook-fetch.js";
 import {
   DEFAULT_PAGE_LIMIT,
   HTTP_SUCCESS_MAX,
@@ -32,11 +33,8 @@ import {
   MAX_PAGE_LIMIT,
   MAX_WEBHOOK_CONFIGS_PER_SYSTEM,
   MS_PER_SECOND,
-  WEBHOOK_DELIVERY_TIMEOUT_MS,
   WEBHOOK_REQUIRED_PROTOCOL,
   WEBHOOK_SECRET_BYTES,
-  WEBHOOK_SIGNATURE_HEADER,
-  WEBHOOK_TIMESTAMP_HEADER,
 } from "../service.constants.js";
 
 import { computeWebhookSignature } from "./webhook-delivery-worker.js";
@@ -127,19 +125,21 @@ function toWebhookConfigResult(row: {
   };
 }
 
+/** Localhost patterns exempt from the HTTPS requirement. */
+const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
 /**
  * Validate a webhook URL for protocol and SSRF safety.
  *
- * - Enforces HTTPS in production.
+ * - Always enforces HTTPS, with an exemption for localhost/127.0.0.1/::1.
  * - Resolves the hostname and checks all resolved IPs against private/reserved ranges.
  */
 async function validateWebhookUrl(url: string): Promise<void> {
-  if (env.NODE_ENV === "production" && !url.startsWith(WEBHOOK_REQUIRED_PROTOCOL)) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "VALIDATION_ERROR",
-      "Webhook URL must use HTTPS in production",
-    );
+  const parsed = new URL(url);
+  const isLocalhost = LOCALHOST_HOSTS.has(parsed.hostname);
+
+  if (!isLocalhost && !url.startsWith(WEBHOOK_REQUIRED_PROTOCOL)) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Webhook URL must use HTTPS");
   }
 
   try {
@@ -320,25 +320,16 @@ export async function updateWebhookConfig(
 
   const timestamp = now();
 
-  const setFields: Record<string, unknown> = {
-    updatedAt: timestamp,
-    version: sql`${webhookConfigs.version} + 1`,
-  };
-
-  if (url !== undefined) {
-    setFields.url = url;
-  }
-  if (eventTypes !== undefined) {
-    setFields.eventTypes = eventTypes;
-  }
-  if (enabled !== undefined) {
-    setFields.enabled = enabled;
-  }
-
   const result = await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const updated = await tx
       .update(webhookConfigs)
-      .set(setFields)
+      .set({
+        updatedAt: timestamp,
+        version: sql`${webhookConfigs.version} + 1`,
+        ...(url !== undefined && { url }),
+        ...(eventTypes !== undefined && { eventTypes }),
+        ...(enabled !== undefined && { enabled }),
+      })
       .where(
         and(
           eq(webhookConfigs.id, webhookId),
@@ -511,11 +502,7 @@ export async function restoreWebhookConfig(
 export function parseWebhookConfigQuery(
   query: Record<string, string | undefined>,
 ): WebhookConfigListOptions {
-  const result = WebhookConfigQuerySchema.safeParse(query);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid query parameters");
-  }
-  return result.data;
+  return parseQuery(WebhookConfigQuerySchema, query);
 }
 
 // ── ROTATE SECRET ──────────────────────────────────────────────────
@@ -612,7 +599,7 @@ export async function testWebhookConfig(
   systemId: SystemId,
   webhookId: WebhookId,
   auth: AuthContext,
-  fetchFn: typeof fetch = fetch,
+  fetchFn: (input: string | URL | Request, init?: RequestInit) => Promise<Response> = fetch,
 ): Promise<WebhookTestResult> {
   assertSystemOwnership(systemId, auth);
 
@@ -651,11 +638,6 @@ export async function testWebhookConfig(
   };
   const payloadJson = JSON.stringify(testPayload);
   const deliveryTimestamp = Math.floor(Date.now() / MS_PER_SECOND);
-  const signature = computeWebhookSignature(
-    Buffer.from(config.secret),
-    deliveryTimestamp,
-    payloadJson,
-  );
 
   const startMs = Date.now();
 
@@ -675,44 +657,34 @@ export async function testWebhookConfig(
     };
   }
 
-  let httpStatus: number | null = null;
-  let error: string | null = null;
-
+  const secretBuffer = Buffer.from(config.secret);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, WEBHOOK_DELIVERY_TIMEOUT_MS);
+    const signature = computeWebhookSignature(secretBuffer, deliveryTimestamp, payloadJson);
 
-    try {
-      const response = await fetchFn(pinnedUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Host: hostHeader,
-          [WEBHOOK_SIGNATURE_HEADER]: signature,
-          [WEBHOOK_TIMESTAMP_HEADER]: String(deliveryTimestamp),
-        },
-        body: payloadJson,
-        signal: controller.signal,
-      });
-      httpStatus = response.status;
-    } finally {
-      clearTimeout(timeout);
+    const fetchResult = await sendSignedWebhookRequest({
+      url: pinnedUrl,
+      signature,
+      timestamp: deliveryTimestamp,
+      payloadJson,
+      fetchFn,
+      hostHeader: pinnedUrl !== config.url ? hostHeader : undefined,
+    });
+    const durationMs = Date.now() - startMs;
+
+    if ("error" in fetchResult) {
+      return {
+        success: false,
+        httpStatus: null,
+        error: "Webhook endpoint request failed (network error)",
+        durationMs,
+      };
     }
-  } catch (err: unknown) {
-    if (err instanceof TypeError) {
-      error = err.message;
-    } else if (err instanceof DOMException && err.name === "AbortError") {
-      error = "Request timed out";
-    } else {
-      throw err;
-    }
+
+    const success =
+      fetchResult.httpStatus >= HTTP_SUCCESS_MIN && fetchResult.httpStatus <= HTTP_SUCCESS_MAX;
+
+    return { success, httpStatus: fetchResult.httpStatus, error: null, durationMs };
+  } finally {
+    secretBuffer.fill(0);
   }
-
-  const durationMs = Date.now() - startMs;
-  const success =
-    httpStatus !== null && httpStatus >= HTTP_SUCCESS_MIN && httpStatus <= HTTP_SUCCESS_MAX;
-
-  return { success, httpStatus, error, durationMs };
 }
