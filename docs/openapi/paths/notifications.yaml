@@ -1,0 +1,71 @@
+/notifications/stream:
+  get:
+    operationId: streamNotifications
+    tags: [Notifications]
+    summary: Subscribe to real-time notifications (SSE)
+    description: |
+      Opens a Server-Sent Events stream for real-time notification delivery.
+
+      - Requires session auth (Bearer token)
+      - Subscribes to the account's Valkey pub/sub channel
+      - Sends heartbeat comments (`: heartbeat`) every 30 seconds to prevent proxy timeouts
+      - Supports reconnection via the `Last-Event-ID` header to replay missed events
+        from a ring buffer (up to 100 events, 5-minute window)
+      - If the replay window is exceeded, a `full-sync` event is sent instead
+      - Maximum 5 concurrent SSE connections per account
+
+      **Event types:**
+      - `notification` — a notification payload (default for untyped messages)
+      - `full-sync` — replay window exceeded; client should perform a full sync
+
+      Rate limit: 10 req/min (sseStream)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: Last-Event-ID
+        in: header
+        required: false
+        schema:
+          type: string
+        description: |
+          Last event ID received by the client. Used to replay missed events
+          on reconnection. If the ID falls outside the replay buffer window,
+          a `full-sync` event is sent instead.
+    responses:
+      "200":
+        description: SSE stream opened
+        content:
+          text/event-stream:
+            schema:
+              type: string
+              description: |
+                Server-Sent Events stream. Each event follows the SSE format:
+
+                ```
+                event: notification
+                data: {"systemId":"sys_...","eventType":"switch-reminder",...}
+                id: 42
+
+                ```
+
+                Heartbeats are sent as SSE comments:
+
+                ```
+                : heartbeat
+
+                ```
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        description: Too many concurrent SSE connections for this account
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: TOO_MANY_STREAMS
+                message:
+                  type: string
+                  example: "Maximum of 5 concurrent SSE connections per account exceeded"

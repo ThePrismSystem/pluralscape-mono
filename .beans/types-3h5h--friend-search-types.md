@@ -1,10 +1,11 @@
 ---
 # types-3h5h
 title: Friend search types
-status: todo
+status: completed
 type: feature
+priority: normal
 created_at: 2026-03-26T16:05:42Z
-updated_at: 2026-03-26T16:05:42Z
+updated_at: 2026-03-29T00:48:46Z
 parent: client-q5jh
 ---
 

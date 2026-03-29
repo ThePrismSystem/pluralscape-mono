@@ -1,11 +1,11 @@
 ---
 # sync-hwvb
 title: "L12: Address TODO comments in sync conflict resolution tests"
-status: todo
+status: completed
 type: task
 priority: deferred
 created_at: 2026-03-28T21:28:06Z
-updated_at: 2026-03-28T21:28:06Z
+updated_at: 2026-03-29T00:48:44Z
 parent: ps-tkuz
 ---
 

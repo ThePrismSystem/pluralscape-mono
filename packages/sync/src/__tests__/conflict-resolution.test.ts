@@ -340,7 +340,7 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
     expect(sessionA.document).toEqual(sessionB.document);
 
     // Both parentGroupId values are set — cycle is present in merged state.
-    // Post-merge cycle detection (DFS traversal) is application-layer (sync-80bn — todo).
+    // Post-merge cycle detection (DFS traversal) is application-layer.
     expect(sessionA.document.groups["groupA"]?.parentGroupId?.val).toBe("groupB");
     expect(sessionA.document.groups["groupB"]?.parentGroupId?.val).toBe("groupA");
   });
@@ -764,7 +764,7 @@ describe("Category 8: sort order conflicts", () => {
 
     // Each group has some sortOrder — LWW picked a winner per field.
     // Ties or inversions may exist; post-merge normalization (re-numbering)
-    // is application-layer (sync-80bn — todo).
+    // is application-layer.
     const orders = ["grp_1", "grp_2", "grp_3"].map((id) => sessionA.document.groups[id]?.sortOrder);
     expect(orders).toEqual([expect.any(Number), expect.any(Number), expect.any(Number)]);
   });

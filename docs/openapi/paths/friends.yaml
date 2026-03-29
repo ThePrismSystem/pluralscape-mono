@@ -1,0 +1,283 @@
+# Friend connection paths (account-level, no SystemId parameter)
+
+/account/friends:
+  get:
+    operationId: listFriendConnections
+    tags: [Friends]
+    summary: List friend connections
+    description: |
+      Returns a paginated list of the authenticated account's friend connections,
+      ordered by creation date (newest first).
+
+      By default, archived connections are excluded. Pass `includeArchived=true`
+      to include them.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+        description: Maximum number of items to return (default 50, max 100)
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: Whether to include archived connections in the results
+    responses:
+      "200":
+        description: Paginated list of friend connections
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendConnectionListResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}:
+  get:
+    operationId: getFriendConnection
+    tags: [Friends]
+    summary: Get a single friend connection
+    description: |
+      Returns the details of a specific friend connection owned by the
+      authenticated account. Returns 404 if the connection does not exist
+      or is archived.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    responses:
+      "200":
+        description: Friend connection details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendConnectionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}/block:
+  post:
+    operationId: blockFriendConnection
+    tags: [Friends]
+    summary: Block a friend connection
+    description: |
+      Blocks a friend connection. Only connections with status `accepted` or
+      `pending` can be blocked. Blocking a connection:
+
+      1. Transitions both sides of the connection to `blocked` status
+      2. Cleans up all bucket assignments in both directions
+      3. Revokes active key grants for the cleaned-up buckets
+      4. Returns pending rotations the client should initiate
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    responses:
+      "200":
+        description: Connection blocked with pending key rotations
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendConnectionWithRotations"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}/remove:
+  post:
+    operationId: removeFriendConnection
+    tags: [Friends]
+    summary: Remove a friend connection
+    description: |
+      Removes a friend connection. Connections with status `accepted`, `pending`,
+      or `blocked` can be removed. Removing a connection:
+
+      1. Transitions both sides of the connection to `removed` status
+      2. Cleans up all bucket assignments in both directions
+      3. Revokes active key grants for the cleaned-up buckets
+      4. Returns pending rotations the client should initiate
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    responses:
+      "200":
+        description: Connection removed with pending key rotations
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendConnectionWithRotations"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}/archive:
+  post:
+    operationId: archiveFriendConnection
+    tags: [Friends]
+    summary: Archive a friend connection
+    description: |
+      Soft-archives a friend connection. Archived connections are hidden from
+      the default list view but can be restored later. Returns 204 on success.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}/restore:
+  post:
+    operationId: restoreFriendConnection
+    tags: [Friends]
+    summary: Restore an archived friend connection
+    description: |
+      Restores a previously archived friend connection. Returns the restored
+      connection details. Returns 404 if the connection is not archived.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    responses:
+      "200":
+        description: Restored friend connection
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendConnectionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}/visibility:
+  put:
+    operationId: updateFriendVisibility
+    tags: [Friends]
+    summary: Update friend visibility settings
+    description: |
+      Updates the encrypted visibility settings for a friend connection. The
+      `encryptedData` blob contains the client-encrypted FriendVisibilitySettings
+      (showMembers, showGroups, showStructure). Uses optimistic concurrency
+      control via the `version` field.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/friends.yaml#/UpdateFriendVisibilityRequest"
+    responses:
+      "200":
+        description: Updated friend connection with new visibility settings
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendConnectionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

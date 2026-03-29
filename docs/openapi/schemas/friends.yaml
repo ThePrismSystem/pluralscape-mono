@@ -1,0 +1,340 @@
+# Friend connection, friend code, visibility, and notification preference schemas
+
+FriendConnectionResponse:
+  type: object
+  required: [id, accountId, friendAccountId, status, encryptedData, version, createdAt, updatedAt]
+  properties:
+    id:
+      type: string
+      pattern: "^fc_"
+      description: Friend connection ID
+      example: "fc_abc123def456"
+    accountId:
+      type: string
+      pattern: "^acc_"
+      description: Owning account ID
+      example: "acc_abc123def456"
+    friendAccountId:
+      type: string
+      pattern: "^acc_"
+      description: Friend's account ID
+      example: "acc_def456ghi789"
+    status:
+      $ref: "#/FriendConnectionStatus"
+    encryptedData:
+      type: string
+      nullable: true
+      contentEncoding: base64
+      description: |
+        Base64-encoded encrypted visibility settings (T1 master-key encrypted).
+        Contains FriendVisibilitySettings (showMembers, showGroups, showStructure).
+        Null until the user configures visibility for this friend.
+    version:
+      type: integer
+      minimum: 1
+      description: Optimistic concurrency version for updates
+      example: 1
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+      example: 1710000000000
+    updatedAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+      example: 1710000000000
+
+FriendConnectionWithRotations:
+  allOf:
+    - $ref: "#/FriendConnectionResponse"
+    - type: object
+      required: [pendingRotations]
+      properties:
+        pendingRotations:
+          type: array
+          items:
+            $ref: "#/PendingRotation"
+          description: |
+            Bucket assignments that were cleaned up during the block/remove
+            operation. The client should initiate key rotation for these buckets.
+
+PendingRotation:
+  type: object
+  required: [systemId, bucketId]
+  properties:
+    systemId:
+      type: string
+      pattern: "^sys_"
+      description: System that owns the bucket
+      example: "sys_abc123def456"
+    bucketId:
+      type: string
+      pattern: "^bkt_"
+      description: Bucket whose key should be rotated
+      example: "bkt_abc123def456"
+
+FriendConnectionStatus:
+  type: string
+  enum: [pending, accepted, blocked, removed]
+  description: Current status of the friend connection
+
+FriendConnectionListResponse:
+  type: object
+  required: [data, nextCursor, hasMore]
+  properties:
+    data:
+      type: array
+      items:
+        $ref: "#/FriendConnectionResponse"
+    nextCursor:
+      type: string
+      nullable: true
+      description: Cursor for the next page, null if no more results
+    hasMore:
+      type: boolean
+      description: Whether more results exist beyond this page
+
+UpdateFriendVisibilityRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      contentEncoding: base64
+      description: |
+        Base64-encoded encrypted visibility settings blob.
+        The client encrypts FriendVisibilitySettings with the master key.
+    version:
+      type: integer
+      minimum: 1
+      description: Current version for optimistic concurrency control
+
+# ── Friend Codes ──────────────────────────────────────────────────────
+
+FriendCodeResponse:
+  type: object
+  required: [id, accountId, code, createdAt, expiresAt, archived]
+  properties:
+    id:
+      type: string
+      pattern: "^fcd_"
+      description: Friend code ID
+      example: "fcd_abc123def456"
+    accountId:
+      type: string
+      pattern: "^acc_"
+      description: Owning account ID
+      example: "acc_abc123def456"
+    code:
+      type: string
+      pattern: "^[A-Z0-9]{4}-[A-Z0-9]{4}$"
+      description: "Human-readable XXXX-XXXX formatted code"
+      example: "AB12-CD34"
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+      example: 1710000000000
+    expiresAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: Unix timestamp in milliseconds when the code expires, null if no expiry
+      example: null
+    archived:
+      type: boolean
+      description: Whether the code has been archived (redeemed or manually archived)
+      example: false
+
+FriendCodeListResponse:
+  type: object
+  required: [data]
+  properties:
+    data:
+      type: array
+      items:
+        $ref: "#/FriendCodeResponse"
+
+RedeemFriendCodeRequest:
+  type: object
+  required: [code]
+  properties:
+    code:
+      type: string
+      pattern: "^[A-Z0-9]{4}-[A-Z0-9]{4}$"
+      description: "XXXX-XXXX alphanumeric friend code to redeem"
+      example: "AB12-CD34"
+
+RedeemFriendCodeResponse:
+  type: object
+  required: [connectionIds]
+  properties:
+    connectionIds:
+      type: array
+      items:
+        type: string
+        pattern: "^fc_"
+      minItems: 2
+      maxItems: 2
+      description: |
+        The two bidirectional connection IDs created by the redemption.
+        First is the code owner's connection, second is the redeemer's.
+      example: ["fc_abc123def456", "fc_ghi789jkl012"]
+
+# ── Friend Notification Preferences ──────────────────────────────────
+
+FriendNotificationPreferenceResponse:
+  type: object
+  required: [id, accountId, friendConnectionId, enabledEventTypes, createdAt, updatedAt]
+  properties:
+    id:
+      type: string
+      pattern: "^fnp_"
+      description: Friend notification preference ID
+      example: "fnp_abc123def456"
+    accountId:
+      type: string
+      pattern: "^acc_"
+      description: Owning account ID
+      example: "acc_abc123def456"
+    friendConnectionId:
+      type: string
+      pattern: "^fc_"
+      description: Associated friend connection ID
+      example: "fc_abc123def456"
+    enabledEventTypes:
+      type: array
+      items:
+        $ref: "#/FriendNotificationEventType"
+      description: List of event types for which notifications are enabled
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+      example: 1710000000000
+    updatedAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+      example: 1710000000000
+
+FriendNotificationEventType:
+  type: string
+  enum: [friend-switch-alert]
+  description: Types of friend notification events
+
+UpdateFriendNotificationPreferenceRequest:
+  type: object
+  required: [enabledEventTypes]
+  properties:
+    enabledEventTypes:
+      type: array
+      items:
+        $ref: "#/FriendNotificationEventType"
+      description: List of event types for which notifications should be enabled
+
+# ── Friend Export ─────────────────────────────────────────────────────
+
+FriendExportEntityType:
+  type: string
+  enum:
+    - member
+    - group
+    - channel
+    - message
+    - note
+    - poll
+    - relationship
+    - structure-entity-type
+    - structure-entity
+    - journal-entry
+    - wiki-page
+    - custom-front
+    - fronting-session
+    - board-message
+    - acknowledgement
+    - innerworld-entity
+    - innerworld-region
+    - field-definition
+    - field-value
+    - member-photo
+    - fronting-comment
+  description: Entity types available for friend-side data export
+
+FriendExportManifestEntry:
+  type: object
+  required: [entityType, count, lastUpdatedAt]
+  properties:
+    entityType:
+      $ref: "#/FriendExportEntityType"
+    count:
+      type: integer
+      minimum: 0
+      description: Number of bucket-visible entities of this type
+    lastUpdatedAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: Unix timestamp in milliseconds of the most recently updated entity, null if count is 0
+
+FriendExportManifestResponse:
+  type: object
+  required: [systemId, entries, keyGrants, etag]
+  properties:
+    systemId:
+      type: string
+      pattern: "^sys_"
+      description: The friend's system ID
+      example: "sys_abc123def456"
+    entries:
+      type: array
+      items:
+        $ref: "#/FriendExportManifestEntry"
+      description: Per-entity-type counts and freshness timestamps
+    keyGrants:
+      type: array
+      items:
+        $ref: "../schemas/friend-dashboard.yaml#/FriendDashboardKeyGrant"
+      description: Active key grants for decrypting bucket-encrypted data
+    etag:
+      type: string
+      description: ETag for conditional requests (If-None-Match)
+
+FriendExportEntity:
+  type: object
+  required: [id, entityType, encryptedData, updatedAt]
+  properties:
+    id:
+      type: string
+      description: Entity ID with type-specific prefix
+    entityType:
+      $ref: "#/FriendExportEntityType"
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      description: Base64-encoded encrypted entity data (T2 per-bucket encryption)
+    updatedAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+
+FriendExportPageResponse:
+  type: object
+  required: [data, nextCursor, hasMore, etag]
+  properties:
+    data:
+      type: array
+      items:
+        $ref: "#/FriendExportEntity"
+    nextCursor:
+      type: string
+      nullable: true
+      description: Cursor for the next page, null if no more results
+    hasMore:
+      type: boolean
+      description: Whether more results exist beyond this page
+    etag:
+      type: string
+      description: ETag for conditional requests (If-None-Match)

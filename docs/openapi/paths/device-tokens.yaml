@@ -1,0 +1,85 @@
+/systems/{systemId}/device-tokens:
+  get:
+    operationId: listDeviceTokens
+    tags: [Device Tokens]
+    summary: List device tokens
+    description: |
+      Returns all non-revoked device tokens for the specified system,
+      newest first. Tokens are masked for security — only the last 8
+      characters are visible.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: List of device tokens
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/device-tokens.yaml#/DeviceTokenListResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+
+  post:
+    operationId: registerDeviceToken
+    tags: [Device Tokens]
+    summary: Register a device token
+    description: |
+      Registers a push notification token for the current device. Upserts
+      on (token, platform) — if the same token is re-registered, the
+      lastActiveAt timestamp is refreshed.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/device-tokens.yaml#/RegisterDeviceTokenRequest"
+    responses:
+      "201":
+        description: Registered device token
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/device-tokens.yaml#/DeviceTokenResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+
+/systems/{systemId}/device-tokens/{tokenId}/revoke:
+  post:
+    operationId: revokeDeviceToken
+    tags: [Device Tokens]
+    summary: Revoke a device token
+    description: |
+      Revokes a device token by setting its revokedAt timestamp.
+      Returns 404 if the token is not found or already revoked.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^dt_
+        description: "Device token ID (prefixed with `dt_`)"
+    responses:
+      "204":
+        description: Token revoked
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"

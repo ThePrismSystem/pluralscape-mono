@@ -1,10 +1,11 @@
 ---
 # api-f3l2
 title: Bucket OpenAPI spec additions
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-03-26T20:37:00Z
-updated_at: 2026-03-26T20:37:00Z
+updated_at: 2026-03-29T00:48:46Z
 parent: api-e3hk
 ---
 

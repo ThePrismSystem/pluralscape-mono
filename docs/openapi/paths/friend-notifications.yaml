@@ -1,0 +1,79 @@
+# Friend notification preference paths (account-level, no SystemId parameter)
+
+/account/friends/{connectionId}/notifications:
+  get:
+    operationId: getFriendNotificationPreference
+    tags: [Friends]
+    summary: Get friend notification preferences
+    description: |
+      Returns the notification preferences for a friend connection. If no
+      preferences exist yet, creates them with default values (all friend
+      event types enabled) and returns the newly created record.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    responses:
+      "200":
+        description: Friend notification preferences (created with defaults if not yet set)
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendNotificationPreferenceResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  patch:
+    operationId: updateFriendNotificationPreference
+    tags: [Friends]
+    summary: Update friend notification preferences
+    description: |
+      Updates the enabled event types for a friend connection's notification
+      preferences. The preference record must already exist (call GET first
+      to auto-create with defaults if needed).
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: Friend connection ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/friends.yaml#/UpdateFriendNotificationPreferenceRequest"
+    responses:
+      "200":
+        description: Updated notification preferences
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friends.yaml#/FriendNotificationPreferenceResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

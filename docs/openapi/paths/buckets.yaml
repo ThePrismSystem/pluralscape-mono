@@ -1,0 +1,552 @@
+/systems/{systemId}/buckets:
+  get:
+    operationId: listBuckets
+    tags: [Privacy Buckets]
+    summary: List privacy buckets
+    description: |
+      Returns a paginated list of privacy buckets for the specified system.
+      By default, archived buckets are excluded.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: Include archived buckets (default false)
+    responses:
+      "200":
+        description: Paginated bucket list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/buckets.yaml#/BucketResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createBucket
+    tags: [Privacy Buckets]
+    summary: Create a privacy bucket
+    description: |
+      Creates a new privacy bucket within the specified system.
+      Each system has a maximum bucket quota.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/buckets.yaml#/CreateBucketRequest"
+    responses:
+      "201":
+        description: Bucket created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/buckets.yaml#/BucketResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}:
+  get:
+    operationId: getBucket
+    tags: [Privacy Buckets]
+    summary: Get a privacy bucket
+    description: |
+      Returns a single privacy bucket by ID. Returns 404 if the bucket
+      does not exist or is archived.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    responses:
+      "200":
+        description: Bucket details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/buckets.yaml#/BucketResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateBucket
+    tags: [Privacy Buckets]
+    summary: Update a privacy bucket
+    description: |
+      Updates the encrypted payload for an existing privacy bucket.
+      Returns 409 if the provided version conflicts with the server's current version.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/buckets.yaml#/UpdateBucketRequest"
+    responses:
+      "200":
+        description: Bucket updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/buckets.yaml#/BucketResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteBucket
+    tags: [Privacy Buckets]
+    summary: Delete a privacy bucket
+    description: |
+      Permanently deletes a privacy bucket. Returns 409 if the bucket has
+      dependents (content tags, key grants, friend assignments, field visibility
+      rules, or key rotations). This action is irreversible.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/archive:
+  post:
+    operationId: archiveBucket
+    tags: [Privacy Buckets]
+    summary: Archive a privacy bucket
+    description: |
+      Marks a privacy bucket as archived. Archived buckets are hidden from
+      default list responses but remain accessible.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/restore:
+  post:
+    operationId: restoreBucket
+    tags: [Privacy Buckets]
+    summary: Restore an archived privacy bucket
+    description: |
+      Removes the archived flag from a privacy bucket, making it visible
+      in default list responses again.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    responses:
+      "200":
+        description: Bucket restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/buckets.yaml#/BucketResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/tags:
+  get:
+    operationId: listBucketContentTags
+    tags: [Bucket Content Tags]
+    summary: List content tags for a bucket
+    description: |
+      Returns all content tags for the specified bucket. Optionally filter
+      by entity type. Results are not paginated (returns all tags up to
+      the system page limit).
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+      - name: entityType
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+            - member
+            - group
+            - channel
+            - message
+            - note
+            - poll
+            - relationship
+            - structure-entity-type
+            - structure-entity
+            - journal-entry
+            - wiki-page
+            - custom-front
+            - fronting-session
+            - board-message
+            - acknowledgement
+            - innerworld-entity
+            - innerworld-region
+            - field-definition
+            - field-value
+            - member-photo
+            - fronting-comment
+        description: Filter by entity type
+    responses:
+      "200":
+        description: Content tags list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../schemas/buckets.yaml#/BucketContentTagResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: tagBucketContent
+    tags: [Bucket Content Tags]
+    summary: Tag an entity to a bucket
+    description: |
+      Associates an entity with a privacy bucket. The entity will be included
+      in bucket exports and visible to friends with access to this bucket.
+      Idempotent — tagging an already-tagged entity is a no-op.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/buckets.yaml#/TagContentRequest"
+    responses:
+      "201":
+        description: Content tagged
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/buckets.yaml#/BucketContentTagResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/tags/{entityType}/{entityId}:
+  delete:
+    operationId: untagBucketContent
+    tags: [Bucket Content Tags]
+    summary: Remove a content tag from a bucket
+    description: |
+      Removes the association between an entity and a privacy bucket.
+      The entity will no longer be included in bucket exports for this bucket.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+      - name: entityType
+        in: path
+        required: true
+        description: Entity type
+        schema:
+          type: string
+          enum:
+            - member
+            - group
+            - channel
+            - message
+            - note
+            - poll
+            - relationship
+            - structure-entity-type
+            - structure-entity
+            - journal-entry
+            - wiki-page
+            - custom-front
+            - fronting-session
+            - board-message
+            - acknowledgement
+            - innerworld-entity
+            - innerworld-region
+            - field-definition
+            - field-value
+            - member-photo
+            - fronting-comment
+      - name: entityId
+        in: path
+        required: true
+        description: Entity ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/friends:
+  get:
+    operationId: listBucketFriendAssignments
+    tags: [Bucket Friend Assignments]
+    summary: List friend assignments for a bucket
+    description: |
+      Returns all friend connections that have been granted access to the
+      specified privacy bucket.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    responses:
+      "200":
+        description: Friend assignment list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../schemas/buckets.yaml#/BucketFriendAssignmentResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: assignBucketToFriend
+    tags: [Bucket Friend Assignments]
+    summary: Assign a bucket to a friend
+    description: |
+      Grants a friend access to a privacy bucket by creating a friend bucket
+      assignment and a key grant. The client must encrypt the bucket's symmetric
+      key with the friend's X25519 public key and provide it as `encryptedBucketKey`.
+      Idempotent — assigning an already-assigned friend is a no-op.
+
+      The friend connection must exist and have `accepted` status.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/buckets.yaml#/AssignBucketFriendRequest"
+    responses:
+      "201":
+        description: Friend assigned to bucket
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/buckets.yaml#/BucketFriendAssignmentResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/friends/{connectionId}:
+  delete:
+    operationId: unassignBucketFromFriend
+    tags: [Bucket Friend Assignments]
+    summary: Unassign a bucket from a friend
+    description: |
+      Revokes a friend's access to a privacy bucket. Deletes the friend bucket
+      assignment and revokes all associated key grants. A key rotation should
+      be initiated after unassignment to ensure forward secrecy.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Bucket ID
+        schema:
+          type: string
+          pattern: ^bkt_
+      - name: connectionId
+        in: path
+        required: true
+        description: Friend connection ID
+        schema:
+          type: string
+          pattern: ^frc_
+    responses:
+      "200":
+        description: Friend unassigned from bucket
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/buckets.yaml#/UnassignBucketFriendResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

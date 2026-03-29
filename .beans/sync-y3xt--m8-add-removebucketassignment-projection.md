@@ -1,11 +1,11 @@
 ---
 # sync-y3xt
 title: "M8: Add removeBucketAssignment projection"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-28T21:27:14Z
-updated_at: 2026-03-28T21:27:14Z
+updated_at: 2026-03-29T00:48:44Z
 parent: ps-tkuz
 ---
 

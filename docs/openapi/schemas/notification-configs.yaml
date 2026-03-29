@@ -1,0 +1,80 @@
+NotificationEventType:
+  type: string
+  enum:
+    - switch-reminder
+    - check-in-due
+    - acknowledgement-requested
+    - message-received
+    - sync-conflict
+    - friend-switch-alert
+  description: "Event types that can trigger a notification"
+
+NotificationConfigResponse:
+  description: |
+    Per-event notification configuration.
+    T3 (all fields plaintext) — the server uses these flags to decide delivery.
+  type: object
+  properties:
+    id:
+      type: string
+      description: "Notification config ID (ncfg_ prefix)"
+    systemId:
+      type: string
+      description: "System ID (sys_ prefix)"
+    eventType:
+      $ref: "#/NotificationEventType"
+    enabled:
+      type: boolean
+      description: "Whether in-app notifications are enabled for this event type"
+    pushEnabled:
+      type: boolean
+      description: "Whether push notifications are enabled for this event type"
+    createdAt:
+      type: integer
+      format: int64
+      description: "Unix milliseconds when the config was created"
+    updatedAt:
+      type: integer
+      format: int64
+      description: "Unix milliseconds when the config was last updated"
+
+UpdateNotificationConfigRequest:
+  description: |
+    At least one of `enabled` or `pushEnabled` must be provided.
+    If the config does not yet exist for the given event type, it is
+    auto-created with defaults (enabled: true, pushEnabled: true) before
+    applying the provided overrides.
+  type: object
+  properties:
+    enabled:
+      type: boolean
+      description: "Whether in-app notifications are enabled"
+    pushEnabled:
+      type: boolean
+      description: "Whether push notifications are enabled"
+
+NotificationConfigListResponse:
+  description: "Wrapper for a list of notification configs"
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: "#/NotificationConfigResponse"
+
+SseStreamEvent:
+  description: |
+    A Server-Sent Event delivered over the notification stream.
+    The `event` field contains the event type and `data` contains
+    the JSON-serialized payload.
+  type: object
+  properties:
+    event:
+      type: string
+      description: "SSE event type (e.g., 'notification', 'full-sync')"
+    data:
+      type: string
+      description: "JSON-serialized event payload"
+    id:
+      type: string
+      description: "Monotonically increasing event ID for replay"
