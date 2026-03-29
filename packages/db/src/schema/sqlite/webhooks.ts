@@ -92,10 +92,6 @@ export const webhookDeliveries = sqliteTable(
     check("webhook_deliveries_status_check", enumCheck(t.status, WEBHOOK_DELIVERY_STATUSES)),
     check("webhook_deliveries_attempt_count_check", sql`${t.attemptCount} >= 0`),
     check(
-      "webhook_deliveries_payload_check",
-      sql`${t.encryptedData} IS NOT NULL OR ${t.payloadData} IS NOT NULL`,
-    ),
-    check(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
     ),

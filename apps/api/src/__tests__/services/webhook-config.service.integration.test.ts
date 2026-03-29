@@ -523,7 +523,7 @@ describe("webhook-config.service (PGlite integration)", () => {
 
       expect(result.success).toBe(false);
       expect(result.httpStatus).toBeNull();
-      expect(result.error).toBe("fetch failed");
+      expect(result.error).toBe("Webhook endpoint request failed (network error)");
     });
 
     it("throws NOT_FOUND for nonexistent config", async () => {

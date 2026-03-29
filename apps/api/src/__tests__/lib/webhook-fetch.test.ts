@@ -23,10 +23,11 @@ describe("sendSignedWebhookRequest", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const call = mockFetch.mock.calls[0] ?? [];
     const opts = call[1] as RequestInit;
-    const headers = opts.headers as Record<string, string>;
-    expect(headers["X-Pluralscape-Signature"]).toBe("abc123");
-    expect(headers["X-Pluralscape-Timestamp"]).toBe("1700000000");
-    expect(headers["Content-Type"]).toBe("application/json");
+    expect(opts.headers).toMatchObject({
+      "X-Pluralscape-Signature": "abc123",
+      "X-Pluralscape-Timestamp": "1700000000",
+      "Content-Type": "application/json",
+    });
   });
 
   it("includes Host header when hostHeader is provided", async () => {
@@ -39,8 +40,7 @@ describe("sendSignedWebhookRequest", () => {
 
     const call = mockFetch.mock.calls[0] ?? [];
     const opts = call[1] as RequestInit;
-    const headers = opts.headers as Record<string, string>;
-    expect(headers["Host"]).toBe("original.example.com");
+    expect(opts.headers).toMatchObject({ Host: "original.example.com" });
   });
 
   it("does not include Host header when not provided", async () => {
@@ -49,8 +49,7 @@ describe("sendSignedWebhookRequest", () => {
 
     const call = mockFetch.mock.calls[0] ?? [];
     const opts = call[1] as RequestInit;
-    const headers = opts.headers as Record<string, string>;
-    expect(headers["Host"]).toBeUndefined();
+    expect(opts.headers).not.toHaveProperty("Host");
   });
 
   it("returns network error on TypeError", async () => {

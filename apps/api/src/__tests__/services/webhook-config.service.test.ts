@@ -33,8 +33,9 @@ vi.mock("../../lib/ip-validation.js", () => ({
   resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
 }));
 
-const mockEnv = { NODE_ENV: "development" as string, LOG_LEVEL: "warn" as string };
-vi.mock("../../env.js", () => ({ env: mockEnv }));
+vi.mock("../../env.js", () => ({
+  env: { NODE_ENV: "development", LOG_LEVEL: "warn" },
+}));
 
 // ── Import under test ────────────────────────────────────────────────
 
@@ -124,10 +125,8 @@ describe("webhook-config service", () => {
       ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
     });
 
-    it("throws VALIDATION_ERROR for non-HTTPS URL in production", async () => {
+    it("rejects non-localhost HTTP URL", async () => {
       const { db } = mockDb();
-      const originalEnv = mockEnv.NODE_ENV;
-      mockEnv.NODE_ENV = "production";
 
       await expect(
         createWebhookConfig(
@@ -138,15 +137,10 @@ describe("webhook-config service", () => {
           mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-
-      mockEnv.NODE_ENV = originalEnv;
     });
 
-    it("allows HTTP URL in non-production environment", async () => {
+    it("allows localhost HTTP URL", async () => {
       const { db, chain } = mockDb();
-      const originalEnv = mockEnv.NODE_ENV;
-      mockEnv.NODE_ENV = "development";
-
       const row = makeWebhookRow({ url: "http://localhost:3000/webhook" });
       chain.for.mockResolvedValueOnce([]);
       chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
@@ -160,8 +154,57 @@ describe("webhook-config service", () => {
         mockAudit,
       );
       expect(result.url).toBe("http://localhost:3000/webhook");
+    });
 
-      mockEnv.NODE_ENV = originalEnv;
+    it("allows 127.0.0.1 HTTP URL", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow({ url: "http://127.0.0.1:3000/webhook" });
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
+      chain.returning.mockResolvedValueOnce([row]);
+
+      const result = await createWebhookConfig(
+        db,
+        SYSTEM_ID,
+        { ...validCreatePayload, url: "http://127.0.0.1:3000/webhook" },
+        AUTH,
+        mockAudit,
+      );
+      expect(result.url).toBe("http://127.0.0.1:3000/webhook");
+    });
+
+    it("allows ::1 HTTP URL", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow({ url: "http://[::1]:3000/webhook" });
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
+      chain.returning.mockResolvedValueOnce([row]);
+
+      const result = await createWebhookConfig(
+        db,
+        SYSTEM_ID,
+        { ...validCreatePayload, url: "http://[::1]:3000/webhook" },
+        AUTH,
+        mockAudit,
+      );
+      expect(result.url).toBe("http://[::1]:3000/webhook");
+    });
+
+    it("allows HTTPS URL for non-localhost", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow({ url: "https://example.com/webhook" });
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
+      chain.returning.mockResolvedValueOnce([row]);
+
+      const result = await createWebhookConfig(
+        db,
+        SYSTEM_ID,
+        { ...validCreatePayload, url: "https://example.com/webhook" },
+        AUTH,
+        mockAudit,
+      );
+      expect(result.url).toBe("https://example.com/webhook");
     });
 
     it("throws when INSERT returns no rows", async () => {
@@ -412,8 +455,6 @@ describe("webhook-config service", () => {
 
     it("validates URL protocol when url is present in update", async () => {
       const { db } = mockDb();
-      const originalEnv = mockEnv.NODE_ENV;
-      mockEnv.NODE_ENV = "production";
 
       await expect(
         updateWebhookConfig(
@@ -425,17 +466,12 @@ describe("webhook-config service", () => {
           mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
-
-      mockEnv.NODE_ENV = originalEnv;
     });
 
     it("skips URL protocol validation when url is undefined", async () => {
       const { db, chain } = mockDb();
       const updatedRow = makeWebhookRow({ version: 2, enabled: false });
       chain.returning.mockResolvedValueOnce([updatedRow]);
-
-      const originalEnv = mockEnv.NODE_ENV;
-      mockEnv.NODE_ENV = "production";
 
       const result = await updateWebhookConfig(
         db,
@@ -446,8 +482,6 @@ describe("webhook-config service", () => {
         mockAudit,
       );
       expect(result.enabled).toBe(false);
-
-      mockEnv.NODE_ENV = originalEnv;
     });
 
     it("delegates to assertOccUpdated for version conflict detection", async () => {

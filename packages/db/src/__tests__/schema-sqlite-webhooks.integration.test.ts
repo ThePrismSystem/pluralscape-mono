@@ -318,6 +318,7 @@ describe("SQLite webhooks schema", () => {
           webhookId: deliveryWhId,
           systemId: deliverySystemId,
           eventType: "member.created",
+          payloadData: { test: true },
           createdAt: now,
         })
         .run();
@@ -336,8 +337,8 @@ describe("SQLite webhooks schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at)
-             VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at, payload_data)
+             VALUES (?, ?, ?, ?, ?, '{"test":true}')`,
           )
           .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "invalid-event", now),
       ).toThrow();
@@ -349,8 +350,8 @@ describe("SQLite webhooks schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, status, created_at, payload_data)
+             VALUES (?, ?, ?, ?, ?, ?, '{"test":true}')`,
           )
           .run(
             crypto.randomUUID(),
@@ -369,8 +370,8 @@ describe("SQLite webhooks schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, attempt_count, created_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, attempt_count, created_at, payload_data)
+             VALUES (?, ?, ?, ?, ?, ?, '{"test":true}')`,
           )
           .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "member.created", -1, now),
       ).toThrow();
@@ -382,8 +383,8 @@ describe("SQLite webhooks schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at, payload_data)
+             VALUES (?, ?, ?, ?, ?, ?, '{"test":true}')`,
           )
           .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "member.created", 99, now),
       ).toThrow();
@@ -391,8 +392,8 @@ describe("SQLite webhooks schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at, payload_data)
+             VALUES (?, ?, ?, ?, ?, ?, '{"test":true}')`,
           )
           .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "member.created", 600, now),
       ).toThrow();
@@ -408,6 +409,7 @@ describe("SQLite webhooks schema", () => {
           webhookId: deliveryWhId,
           systemId: deliverySystemId,
           eventType: "member.created",
+          payloadData: { test: true },
           createdAt: now,
         })
         .run();
@@ -446,6 +448,7 @@ describe("SQLite webhooks schema", () => {
             systemId: deliverySystemId,
             eventType: "member.created" as const,
             status: "success" as const,
+            payloadData: { test: true },
             createdAt: thirtyOneDaysAgo,
           },
           {
@@ -454,6 +457,7 @@ describe("SQLite webhooks schema", () => {
             systemId: deliverySystemId,
             eventType: "member.created" as const,
             status: "failed" as const,
+            payloadData: { test: true },
             createdAt: now,
           },
           {
@@ -462,6 +466,7 @@ describe("SQLite webhooks schema", () => {
             systemId: deliverySystemId,
             eventType: "member.created" as const,
             status: "pending" as const,
+            payloadData: { test: true },
             createdAt: thirtyOneDaysAgo,
           },
         ])
@@ -492,6 +497,7 @@ describe("SQLite webhooks schema", () => {
           webhookId: deliveryWhId,
           systemId: deliverySystemId,
           eventType: "member.created",
+          payloadData: { test: true },
           createdAt: now,
         })
         .run();
@@ -518,6 +524,7 @@ describe("SQLite webhooks schema", () => {
             eventType: "member.created" as const,
             status: "pending" as const,
             nextRetryAt: retryAt,
+            payloadData: { test: true },
             createdAt: now,
           },
           {
@@ -526,6 +533,7 @@ describe("SQLite webhooks schema", () => {
             systemId: deliverySystemId,
             eventType: "member.created" as const,
             status: "success" as const,
+            payloadData: { test: true },
             createdAt: now,
           },
           {
@@ -534,6 +542,7 @@ describe("SQLite webhooks schema", () => {
             systemId: deliverySystemId,
             eventType: "member.created" as const,
             status: "failed" as const,
+            payloadData: { test: true },
             createdAt: now,
           },
         ])

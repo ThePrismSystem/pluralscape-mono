@@ -71,6 +71,13 @@
       "when": 1774782326590,
       "tag": "0009_colorful_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1774783485210,
+      "tag": "0010_natural_zzzax",
+      "breakpoints": true
     }
   ]
 }

@@ -131,6 +131,42 @@ describe("email-worker", () => {
       );
     });
 
+    it("throws when template vars is null", async () => {
+      const { db } = mockDb();
+      mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
+
+      await expect(processEmailJob(db, makeJobPayload({ vars: null as never }))).rejects.toThrow(
+        "Invalid template vars",
+      );
+    });
+
+    it("throws when template vars is a string", async () => {
+      const { db } = mockDb();
+      mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
+
+      await expect(processEmailJob(db, makeJobPayload({ vars: "bad" as never }))).rejects.toThrow(
+        "Invalid template vars",
+      );
+    });
+
+    it("throws when template vars is undefined", async () => {
+      const { db } = mockDb();
+      mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
+
+      await expect(
+        processEmailJob(db, makeJobPayload({ vars: undefined as never })),
+      ).rejects.toThrow("Invalid template vars");
+    });
+
+    it("includes template name in assertion error message", async () => {
+      const { db } = mockDb();
+      mockResolveAccountEmail.mockResolvedValueOnce("user@example.com");
+
+      await expect(processEmailJob(db, makeJobPayload({ vars: null as never }))).rejects.toThrow(
+        "recovery-key-regenerated",
+      );
+    });
+
     it("propagates email resolution errors for queue retry", async () => {
       const { db } = mockDb();
       const decryptError = new Error("Decryption failed");

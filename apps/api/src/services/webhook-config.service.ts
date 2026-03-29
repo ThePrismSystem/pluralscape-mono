@@ -43,6 +43,7 @@ import { invalidateWebhookConfigCache } from "./webhook-dispatcher.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
+import type { FetchFn } from "../lib/webhook-fetch.js";
 import type {
   PaginatedResult,
   SystemId,
@@ -126,7 +127,7 @@ function toWebhookConfigResult(row: {
 }
 
 /** Localhost patterns exempt from the HTTPS requirement. */
-const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const LOCALHOST_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 /**
  * Validate a webhook URL for protocol and SSRF safety.
@@ -599,7 +600,7 @@ export async function testWebhookConfig(
   systemId: SystemId,
   webhookId: WebhookId,
   auth: AuthContext,
-  fetchFn: (input: string | URL | Request, init?: RequestInit) => Promise<Response> = fetch,
+  fetchFn: FetchFn = fetch,
 ): Promise<WebhookTestResult> {
   assertSystemOwnership(systemId, auth);
 
@@ -672,12 +673,11 @@ export async function testWebhookConfig(
     const durationMs = Date.now() - startMs;
 
     if ("error" in fetchResult) {
-      return {
-        success: false,
-        httpStatus: null,
-        error: "Webhook endpoint request failed (network error)",
-        durationMs,
-      };
+      const errorMessage =
+        fetchResult.error === "timeout"
+          ? "Request timed out"
+          : "Webhook endpoint request failed (network error)";
+      return { success: false, httpStatus: null, error: errorMessage, durationMs };
     }
 
     const success =

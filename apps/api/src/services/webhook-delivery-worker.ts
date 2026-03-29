@@ -15,6 +15,7 @@ import {
   WEBHOOK_BASE_BACKOFF_MS,
   WEBHOOK_DEFAULT_JITTER_FRACTION,
   WEBHOOK_HMAC_ALGORITHM,
+  WEBHOOK_HOST_THROTTLE_DELAY_MS,
   WEBHOOK_MAX_RETRY_ATTEMPTS,
   WEBHOOK_PER_HOST_MAX_CONCURRENT,
 } from "../service.constants.js";
@@ -24,6 +25,7 @@ import {
   getWebhookPayloadEncryptionKey,
 } from "./webhook-payload-encryption.js";
 
+import type { FetchFn } from "../lib/webhook-fetch.js";
 import type { SystemId, WebhookDeliveryId, WebhookEventType, WebhookId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -44,7 +46,12 @@ export function acquireHostSlot(hostname: string): boolean {
 /** Release a concurrency slot for the given hostname. */
 export function releaseHostSlot(hostname: string): void {
   const current = hostSlots.get(hostname) ?? 0;
-  if (current <= 1) {
+  if (current <= 0) {
+    logger.debug("[webhook-worker] releasing host slot for hostname with no active slots", {
+      hostname,
+    });
+    hostSlots.delete(hostname);
+  } else if (current <= 1) {
     hostSlots.delete(hostname);
   } else {
     hostSlots.set(hostname, current - 1);
@@ -102,7 +109,7 @@ async function markDeliveryFailed(
 export async function processWebhookDelivery(
   db: PostgresJsDatabase,
   deliveryId: WebhookDeliveryId,
-  fetchFn: (input: string | URL | Request, init?: RequestInit) => Promise<Response> = fetch,
+  fetchFn: FetchFn = fetch,
 ): Promise<void> {
   // Load delivery and associated config in a single query
   const [row] = await db
@@ -203,13 +210,17 @@ export async function processWebhookDelivery(
     return;
   }
 
-  // Per-hostname concurrency throttle — skip delivery if at capacity
+  // Per-hostname concurrency throttle — defer delivery if at capacity
   const hostname = new URL(configUrl).hostname;
   if (!acquireHostSlot(hostname)) {
-    logger.warn("[webhook-worker] host concurrency limit reached, skipping delivery", {
+    logger.warn("[webhook-worker] host concurrency limit reached, deferring delivery", {
       deliveryId,
       hostname,
     });
+    await db
+      .update(webhookDeliveries)
+      .set({ nextRetryAt: now() + WEBHOOK_HOST_THROTTLE_DELAY_MS })
+      .where(eq(webhookDeliveries.id, deliveryId));
     return;
   }
 

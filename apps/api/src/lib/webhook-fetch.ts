@@ -4,6 +4,9 @@ import {
   WEBHOOK_TIMESTAMP_HEADER,
 } from "../service.constants.js";
 
+/** Fetch function signature used across webhook modules. */
+export type FetchFn = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
 /** Options for sending a signed webhook request. */
 export interface SignedWebhookRequestOptions {
   /** The target URL. */
@@ -15,7 +18,7 @@ export interface SignedWebhookRequestOptions {
   /** JSON-serialized payload body. */
   readonly payloadJson: string;
   /** Fetch implementation (defaults to global fetch). */
-  readonly fetchFn?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+  readonly fetchFn?: FetchFn;
   /** Request timeout in milliseconds. */
   readonly timeoutMs?: number;
   /** Host header override (for IP-pinned requests). */
