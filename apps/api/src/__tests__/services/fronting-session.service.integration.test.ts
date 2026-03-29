@@ -8,7 +8,13 @@ import {
 } from "@pluralscape/db/test-helpers/pg-helpers";
 import { ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../services/webhook-dispatcher.js", () => ({
+  dispatchWebhookEvent: vi.fn().mockResolvedValue([]),
+  invalidateWebhookConfigCache: vi.fn(),
+  clearWebhookConfigCache: vi.fn(),
+}));
 
 import {
   createFrontingComment as createComment,
