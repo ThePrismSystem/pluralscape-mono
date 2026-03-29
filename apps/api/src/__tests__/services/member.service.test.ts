@@ -51,6 +51,8 @@ const {
   deleteMember,
 } = await import("../../services/member.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
+const { dispatchWebhookEvent: mockDispatchWebhookEvent } =
+  await import("../../services/webhook-dispatcher.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -108,6 +110,12 @@ describe("createMember", () => {
     expect(mockAudit).toHaveBeenCalledWith(
       chain,
       expect.objectContaining({ eventType: "member.created" }),
+    );
+    expect(mockDispatchWebhookEvent).toHaveBeenCalledWith(
+      chain,
+      SYSTEM_ID,
+      "member.created",
+      expect.objectContaining({ memberId: expect.any(String) }),
     );
   });
 
