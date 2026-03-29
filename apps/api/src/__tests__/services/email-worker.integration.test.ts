@@ -23,9 +23,9 @@ describe("email-worker (PGlite integration)", () => {
     await initSodium();
     client = await PGlite.create();
     db = drizzle(client, { schema });
-
-    // Create tables — pgInsertAccount creates the accounts table
     accountId = (await pgInsertAccount(db)) as AccountId;
+    emailAdapter = new InMemoryEmailAdapter();
+    setEmailAdapterForTesting(emailAdapter);
   });
 
   afterAll(async () => {
@@ -35,12 +35,6 @@ describe("email-worker (PGlite integration)", () => {
 
   afterEach(() => {
     emailAdapter.clear();
-  });
-
-  // Initialize adapter before tests
-  beforeAll(() => {
-    emailAdapter = new InMemoryEmailAdapter();
-    setEmailAdapterForTesting(emailAdapter);
   });
 
   function makePayload(
@@ -72,24 +66,8 @@ describe("email-worker (PGlite integration)", () => {
     expect(emailAdapter.sentCount).toBe(0);
   });
 
-  it("propagates adapter send errors for queue retry", async () => {
-    // Create a failing adapter
-    const failingAdapter: InMemoryEmailAdapter & {
-      send: typeof InMemoryEmailAdapter.prototype.send;
-    } = Object.create(emailAdapter);
-    Object.defineProperty(failingAdapter, "send", {
-      value: () => Promise.reject(new Error("Adapter failure")),
-    });
-    setEmailAdapterForTesting(failingAdapter);
-
-    try {
-      // This will skip because the test account has no encrypted email,
-      // so we test the adapter error path indirectly via the unit test.
-      // The integration confirms real DB + adapter wiring works.
-      await processEmailJob(asDb(db), makePayload());
-      expect(emailAdapter.sentCount).toBe(0);
-    } finally {
-      setEmailAdapterForTesting(emailAdapter);
-    }
-  });
+  // Adapter error propagation is covered by unit tests (email-worker.test.ts)
+  // which mock resolveAccountEmail to return an address, reaching the adapter.
+  // An integration test for this path would require a test account with
+  // encrypted email (encryption key setup), which is out of scope here.
 });

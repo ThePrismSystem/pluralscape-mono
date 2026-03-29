@@ -16,8 +16,8 @@
   "dependencies": {
     "@hono/node-server": "^1.13.8",
     "@pluralscape/crypto": "workspace:*",
-    "@pluralscape/email": "workspace:*",
     "@pluralscape/db": "workspace:*",
+    "@pluralscape/email": "workspace:*",
     "@pluralscape/queue": "workspace:^",
     "@pluralscape/storage": "workspace:*",
     "@pluralscape/sync": "workspace:*",
