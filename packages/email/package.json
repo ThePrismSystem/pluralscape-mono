@@ -1,0 +1,31 @@
+{
+  "name": "@pluralscape/email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/__tests__/testing-exports.ts",
+    "./resend": "./src/adapters/resend/index.ts",
+    "./smtp": "./src/adapters/smtp/index.ts",
+    "./templates": "./src/templates/index.ts"
+  },
+  "dependencies": {
+    "nodemailer": "^6.10.1",
+    "resend": "^4.1.2"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "@types/bun": "^1.2.4",
+    "@types/nodemailer": "^6.4.17",
+    "eslint": "^10.0.3",
+    "typescript": "^6.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
+  }
+}

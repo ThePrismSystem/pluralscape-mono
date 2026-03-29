@@ -10,6 +10,7 @@ const PACKAGES = [
   "storage",
   "validation",
   "rotation-worker",
+  "email",
 ];
 
 function projectConfig(name: string, root: string) {
