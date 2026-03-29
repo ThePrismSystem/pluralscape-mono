@@ -6,7 +6,6 @@ import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { BucketId, SystemId } from "@pluralscape/types";
 
-
 // ── Mocks ────────────────────────────────────────────────────────────
 
 vi.mock("@pluralscape/crypto", () => ({
@@ -324,7 +323,7 @@ describe("bucket service", () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
       await listBuckets({} as never, SYSTEM_ID, AUTH, { limit: 9999 });
-      expect(mockTx.limit).toHaveBeenCalledWith(MAX_PAGE_LIMIT);
+      expect(mockTx.limit).toHaveBeenCalledWith(MAX_PAGE_LIMIT + 1);
     });
 
     it("rejects when ownership check fails", async () => {
