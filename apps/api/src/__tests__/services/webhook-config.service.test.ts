@@ -1,10 +1,29 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { WEBHOOK_SECRET_BYTES } from "../../service.constants.js";
+import { captureWhereArg, mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
+import { makeTestAuth } from "../helpers/test-auth.js";
 
 import type { SystemId, WebhookId } from "@pluralscape/types";
 
-// ── Mocks ────────────────────────────────────────────────────────
+// ── Mock external deps ───────────────────────────────────────────────
+
+vi.mock("node:crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:crypto")>();
+  return {
+    ...actual,
+    randomBytes: vi.fn(() => Buffer.from("a".repeat(64), "hex")),
+  };
+});
+
+vi.mock("@pluralscape/crypto", async () => {
+  const { createCryptoMock } = await import("../helpers/mock-crypto.js");
+  return createCryptoMock();
+});
+
+vi.mock("../../lib/audit-log.js", () => ({
+  writeAuditLog: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn(),
@@ -14,326 +33,711 @@ vi.mock("../../lib/ip-validation.js", () => ({
   resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
 }));
 
-vi.mock("../../lib/rls-context.js", () => ({
-  withTenantTransaction: vi
-    .fn()
-    .mockImplementation((_db: unknown, _ctx: unknown, fn: (tx: unknown) => Promise<unknown>) =>
-      fn(_db),
-    ),
-  withTenantRead: vi
-    .fn()
-    .mockImplementation((_db: unknown, _ctx: unknown, fn: (tx: unknown) => Promise<unknown>) =>
-      fn(_db),
-    ),
-}));
+const mockEnv = { NODE_ENV: "development" as string };
+vi.mock("../../env.js", () => ({ env: mockEnv }));
 
-vi.mock("../../lib/tenant-context.js", () => ({
-  tenantCtx: vi.fn().mockReturnValue({}),
-}));
+// ── Import under test ────────────────────────────────────────────────
 
-vi.mock("../../services/webhook-dispatcher.js", () => ({
-  invalidateWebhookConfigCache: vi.fn(),
-}));
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
-vi.mock("../../env.js", () => ({
-  env: { NODE_ENV: "test" },
-}));
+const {
+  createWebhookConfig,
+  listWebhookConfigs,
+  getWebhookConfig,
+  updateWebhookConfig,
+  deleteWebhookConfig,
+  archiveWebhookConfig,
+  restoreWebhookConfig,
+  parseWebhookConfigQuery,
+} = await import("../../services/webhook-config.service.js");
 
-vi.mock("../../lib/logger.js", () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
-}));
+// ── Fixtures ─────────────────────────────────────────────────────────
 
-// ── Imports after mocks ──────────────────────────────────────────
+const SYSTEM_ID = "sys_00000000-0000-4000-a000-000000000001" as SystemId;
+const WH_ID = "wh_00000000-0000-4000-a000-000000000002" as WebhookId;
 
-const { invalidateWebhookConfigCache } = await import("../../services/webhook-dispatcher.js");
-const { rotateWebhookSecret, testWebhookConfig } =
-  await import("../../services/webhook-config.service.js");
+const AUTH = makeTestAuth({
+  accountId: "acct_00000000-0000-4000-a000-000000000003",
+  systemId: SYSTEM_ID,
+  sessionId: "sess_00000000-0000-4000-a000-000000000004",
+});
 
-// ── Fixtures ─────────────────────────────────────────────────────
+const mockAudit = vi.fn().mockResolvedValue(undefined);
 
-const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
-const WH_ID = "wh_550e8400-e29b-41d4-a716-446655440001" as WebhookId;
-
-const MOCK_AUTH = {
-  accountId: "acct_test",
-  systemId: SYS_ID,
-  sessionId: "sess_test",
-  accountType: "system" as const,
-  ownedSystemIds: new Set([SYS_ID]),
-  auditLogIpTracking: false,
-};
-
-const MOCK_AUDIT = vi.fn();
-
-const NOW = 1700000000;
-
-function makeConfigRow(overrides?: Record<string, unknown>) {
+function makeWebhookRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: WH_ID,
-    systemId: SYS_ID,
+    systemId: SYSTEM_ID,
     url: "https://example.com/webhook",
     eventTypes: ["member.created"],
     enabled: true,
     cryptoKeyId: null,
-    version: 2,
+    version: 1,
     archived: false,
     archivedAt: null,
-    createdAt: NOW,
-    updatedAt: NOW,
+    createdAt: 1000,
+    updatedAt: 1000,
     ...overrides,
   };
 }
 
-// ── rotateWebhookSecret ─────────────────────────────────────────
+// ── Tests ────────────────────────────────────────────────────────────
 
-describe("rotateWebhookSecret", () => {
-  it("generates a new secret and returns it as base64", async () => {
-    const updatedRow = makeConfigRow({ version: 2 });
-    const mockTx = {
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([updatedRow]),
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ id: WH_ID }]),
-    };
-
-    const result = await rotateWebhookSecret(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      { version: 1 },
-      MOCK_AUTH as never,
-      MOCK_AUDIT as never,
-    );
-
-    expect(result.id).toBe(WH_ID);
-    expect(result.secret).toBeDefined();
-    expect(result.version).toBe(2);
+describe("webhook-config service", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
   });
 
-  it("invalidates the webhook config cache", async () => {
-    const updatedRow = makeConfigRow({ version: 2 });
-    const mockTx = {
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([updatedRow]),
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ id: WH_ID }]),
-    };
+  // ── createWebhookConfig ────────────────────────────────────────────
 
-    await rotateWebhookSecret(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      { version: 1 },
-      MOCK_AUTH as never,
-      MOCK_AUDIT as never,
-    );
-
-    expect(invalidateWebhookConfigCache).toHaveBeenCalledWith(SYS_ID);
-  });
-
-  it("writes an audit log entry", async () => {
-    const updatedRow = makeConfigRow({ version: 2 });
-    const mockTx = {
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([updatedRow]),
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ id: WH_ID }]),
-    };
-
-    const audit = vi.fn();
-    await rotateWebhookSecret(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      { version: 1 },
-      MOCK_AUTH as never,
-      audit as never,
-    );
-
-    expect(audit).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        eventType: "webhook-config.secret-rotated",
-      }),
-    );
-  });
-
-  it("rejects invalid params (missing version)", async () => {
-    const mockTx = {} as never;
-
-    await expect(
-      rotateWebhookSecret(mockTx, SYS_ID, WH_ID, {}, MOCK_AUTH as never, MOCK_AUDIT as never),
-    ).rejects.toThrow("Invalid payload");
-  });
-
-  it("generates a secret of the correct byte length", async () => {
-    const updatedRow = makeConfigRow({ version: 2 });
-    const mockTx = {
-      update: vi.fn().mockReturnThis(),
-      set: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      returning: vi.fn().mockResolvedValue([updatedRow]),
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([{ id: WH_ID }]),
-    };
-
-    const result = await rotateWebhookSecret(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      { version: 1 },
-      MOCK_AUTH as never,
-      MOCK_AUDIT as never,
-    );
-    const decoded = Buffer.from(result.secret, "base64");
-    expect(decoded.length).toBe(WEBHOOK_SECRET_BYTES);
-  });
-});
-
-// ── testWebhookConfig ───────────────────────────────────────────
-
-describe("testWebhookConfig", () => {
-  it("sends a synthetic ping payload and returns success result", async () => {
-    const configRow = {
-      id: WH_ID,
-      systemId: SYS_ID,
+  describe("createWebhookConfig", () => {
+    const validCreatePayload = {
       url: "https://example.com/webhook",
-      secret: Buffer.from("test-secret-key").toString("base64"),
+      eventTypes: ["member.created"],
       enabled: true,
-      archived: false,
-    };
-    const mockTx = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([configRow]),
+      cryptoKeyId: undefined,
     };
 
-    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+    it("creates a webhook config and returns result with secret", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow();
+      chain.returning.mockResolvedValueOnce([row]);
 
-    const result = await testWebhookConfig(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      MOCK_AUTH as never,
-      mockFetch as never,
-    );
+      const result = await createWebhookConfig(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit);
 
-    expect(result.success).toBe(true);
-    expect(result.httpStatus).toBe(200);
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result.id).toEqual(expect.stringMatching(/^wh_/));
+      expect(result.url).toBe("https://example.com/webhook");
+      expect(result.secret).toBeDefined();
+      expect(typeof result.secret).toBe("string");
+      expect(mockAudit).toHaveBeenCalledOnce();
+    });
+
+    it("throws VALIDATION_ERROR when payload is invalid", async () => {
+      const { db } = mockDb();
+
+      await expect(
+        createWebhookConfig(db, SYSTEM_ID, { bad: "payload" }, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+    });
+
+    it("throws VALIDATION_ERROR for non-HTTPS URL in production", async () => {
+      const { db } = mockDb();
+      const originalEnv = mockEnv.NODE_ENV;
+      mockEnv.NODE_ENV = "production";
+
+      await expect(
+        createWebhookConfig(
+          db,
+          SYSTEM_ID,
+          { ...validCreatePayload, url: "http://example.com/webhook" },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+
+      mockEnv.NODE_ENV = originalEnv;
+    });
+
+    it("allows HTTP URL in non-production environment", async () => {
+      const { db, chain } = mockDb();
+      const originalEnv = mockEnv.NODE_ENV;
+      mockEnv.NODE_ENV = "development";
+
+      const row = makeWebhookRow({ url: "http://localhost:3000/webhook" });
+      chain.returning.mockResolvedValueOnce([row]);
+
+      const result = await createWebhookConfig(
+        db,
+        SYSTEM_ID,
+        { ...validCreatePayload, url: "http://localhost:3000/webhook" },
+        AUTH,
+        mockAudit,
+      );
+      expect(result.url).toBe("http://localhost:3000/webhook");
+
+      mockEnv.NODE_ENV = originalEnv;
+    });
+
+    it("throws when INSERT returns no rows", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        createWebhookConfig(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to create webhook config");
+    });
+
+    it("throws 404 when system ownership check fails", async () => {
+      const { db } = mockDb();
+      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+
+      await expect(
+        createWebhookConfig(db, "sys_other" as SystemId, validCreatePayload, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("sets cryptoKeyId to null when not provided", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow({ cryptoKeyId: null });
+      chain.returning.mockResolvedValueOnce([row]);
+
+      const result = await createWebhookConfig(
+        db,
+        SYSTEM_ID,
+        {
+          url: "https://example.com/webhook",
+          eventTypes: ["member.created"],
+          enabled: true,
+          // cryptoKeyId omitted
+        },
+        AUTH,
+        mockAudit,
+      );
+      expect(result.cryptoKeyId).toBeNull();
+    });
   });
 
-  it("returns failure result on non-2xx response", async () => {
-    const configRow = {
-      id: WH_ID,
-      systemId: SYS_ID,
-      url: "https://example.com/webhook",
-      secret: Buffer.from("test-secret-key").toString("base64"),
-      enabled: true,
-      archived: false,
-    };
-    const mockTx = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([configRow]),
-    };
+  // ── listWebhookConfigs ─────────────────────────────────────────────
 
-    const mockFetch = vi
-      .fn()
-      .mockResolvedValue(new Response("Internal Server Error", { status: 500 }));
+  describe("listWebhookConfigs", () => {
+    function callListWithFilter(
+      chain: ReturnType<typeof mockDb>["chain"],
+      rows: Record<string, unknown>[] = [],
+    ): void {
+      chain.limit.mockResolvedValueOnce(rows);
+    }
 
-    const result = await testWebhookConfig(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      MOCK_AUTH as never,
-      mockFetch as never,
-    );
+    it("returns paginated results with default options", async () => {
+      const { db, chain } = mockDb();
+      callListWithFilter(chain, [makeWebhookRow()]);
 
-    expect(result.success).toBe(false);
-    expect(result.httpStatus).toBe(500);
+      const result = await listWebhookConfigs(db, SYSTEM_ID, AUTH);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]?.id).toBe(WH_ID);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it("excludes archived configs by default", async () => {
+      const { db, chain } = mockDb();
+      callListWithFilter(chain);
+
+      await listWebhookConfigs(db, SYSTEM_ID, AUTH);
+
+      const whereArg = captureWhereArg(chain);
+      expect(whereArg).toBeDefined();
+    });
+
+    it("includes archived configs when includeArchived is true", async () => {
+      const { db, chain } = mockDb();
+      callListWithFilter(chain);
+
+      await listWebhookConfigs(db, SYSTEM_ID, AUTH, { includeArchived: true });
+
+      const whereArg = captureWhereArg(chain);
+      expect(whereArg).toBeDefined();
+    });
+
+    it("applies cursor condition when cursor is provided", async () => {
+      const { db, chain } = mockDb();
+      callListWithFilter(chain);
+
+      await listWebhookConfigs(db, SYSTEM_ID, AUTH, { cursor: "wh_prev-cursor" });
+
+      expect(chain.where).toHaveBeenCalled();
+    });
+
+    it("caps limit at MAX_PAGE_LIMIT", async () => {
+      const { db, chain } = mockDb();
+      callListWithFilter(chain);
+
+      await listWebhookConfigs(db, SYSTEM_ID, AUTH, { limit: 500 });
+
+      // The effective limit should be capped at MAX_PAGE_LIMIT (100), so limit(101) is called
+      expect(chain.limit).toHaveBeenCalledWith(101);
+    });
+
+    it("uses DEFAULT_PAGE_LIMIT when limit is not provided", async () => {
+      const { db, chain } = mockDb();
+      callListWithFilter(chain);
+
+      await listWebhookConfigs(db, SYSTEM_ID, AUTH);
+
+      // DEFAULT_PAGE_LIMIT is 25, so limit(26) is called
+      expect(chain.limit).toHaveBeenCalledWith(26);
+    });
+
+    it("returns hasMore true when more records exist", async () => {
+      const { db, chain } = mockDb();
+      // Return limit+1 rows to trigger hasMore
+      const rows = Array.from({ length: 26 }, (_, i) =>
+        makeWebhookRow({
+          id: `wh_00000000-0000-4000-a000-0000000001${String(i).padStart(2, "0")}`,
+        }),
+      );
+      callListWithFilter(chain, rows);
+
+      const result = await listWebhookConfigs(db, SYSTEM_ID, AUTH);
+
+      expect(result.hasMore).toBe(true);
+      expect(result.items).toHaveLength(25);
+      expect(result.nextCursor).not.toBeNull();
+    });
+
+    it("throws 404 when system ownership check fails", async () => {
+      const { db } = mockDb();
+      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+
+      await expect(listWebhookConfigs(db, "sys_other" as SystemId, AUTH)).rejects.toThrow(
+        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
+    });
   });
 
-  it("returns failure result on network error", async () => {
-    const configRow = {
-      id: WH_ID,
-      systemId: SYS_ID,
-      url: "https://example.com/webhook",
-      secret: Buffer.from("test-secret-key").toString("base64"),
-      enabled: true,
-      archived: false,
-    };
-    const mockTx = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([configRow]),
-    };
+  // ── getWebhookConfig ───────────────────────────────────────────────
 
-    const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+  describe("getWebhookConfig", () => {
+    it("returns a webhook config when found", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow();
+      chain.limit.mockResolvedValueOnce([row]);
 
-    const result = await testWebhookConfig(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      MOCK_AUTH as never,
-      mockFetch as never,
-    );
+      const result = await getWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH);
 
-    expect(result.success).toBe(false);
-    expect(result.httpStatus).toBeNull();
-    expect(result.error).toBeDefined();
+      expect(result.id).toBe(WH_ID);
+      expect(result.url).toBe("https://example.com/webhook");
+    });
+
+    it("throws 404 NOT_FOUND when webhook config is not found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        getWebhookConfig(
+          db,
+          SYSTEM_ID,
+          "wh_00000000-0000-4000-a000-000000000099" as WebhookId,
+          AUTH,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("throws 404 when system ownership check fails", async () => {
+      const { db } = mockDb();
+      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+
+      await expect(getWebhookConfig(db, "sys_other" as SystemId, WH_ID, AUTH)).rejects.toThrow(
+        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
+    });
+
+    it("maps row fields correctly via toWebhookConfigResult", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow({
+        id: "wh_00000000-0000-4000-a000-000000000010",
+        systemId: SYSTEM_ID,
+        url: "https://mapped.example.com/hook",
+        eventTypes: ["fronting.started", "fronting.ended"],
+        enabled: false,
+        cryptoKeyId: "ak_key123",
+        version: 3,
+        archived: false,
+        archivedAt: null,
+        createdAt: 5000,
+        updatedAt: 6000,
+      });
+      chain.limit.mockResolvedValueOnce([row]);
+
+      const result = await getWebhookConfig(
+        db,
+        SYSTEM_ID,
+        "wh_00000000-0000-4000-a000-000000000010" as WebhookId,
+        AUTH,
+      );
+
+      expect(result).toEqual({
+        id: "wh_00000000-0000-4000-a000-000000000010",
+        systemId: SYSTEM_ID,
+        url: "https://mapped.example.com/hook",
+        eventTypes: ["fronting.started", "fronting.ended"],
+        enabled: false,
+        cryptoKeyId: "ak_key123",
+        version: 3,
+        archived: false,
+        archivedAt: null,
+        createdAt: 5000,
+        updatedAt: 6000,
+      });
+    });
   });
 
-  it("throws NOT_FOUND when config does not exist", async () => {
-    const mockTx = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([]),
-    };
+  // ── updateWebhookConfig ────────────────────────────────────────────
 
-    await expect(
-      testWebhookConfig(mockTx as never, SYS_ID, WH_ID, MOCK_AUTH as never),
-    ).rejects.toThrow("Webhook config not found");
+  describe("updateWebhookConfig", () => {
+    it("updates a webhook config successfully", async () => {
+      const { db, chain } = mockDb();
+      const updatedRow = makeWebhookRow({ version: 2, url: "https://new.example.com/hook" });
+      chain.returning.mockResolvedValueOnce([updatedRow]);
+
+      const result = await updateWebhookConfig(
+        db,
+        SYSTEM_ID,
+        WH_ID,
+        { url: "https://new.example.com/hook", version: 1 },
+        AUTH,
+        mockAudit,
+      );
+
+      expect(result.url).toBe("https://new.example.com/hook");
+      expect(mockAudit).toHaveBeenCalledOnce();
+    });
+
+    it("throws VALIDATION_ERROR when payload is invalid", async () => {
+      const { db } = mockDb();
+
+      await expect(
+        updateWebhookConfig(db, SYSTEM_ID, WH_ID, { bad: "data" }, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+    });
+
+    it("validates URL protocol when url is present in update", async () => {
+      const { db } = mockDb();
+      const originalEnv = mockEnv.NODE_ENV;
+      mockEnv.NODE_ENV = "production";
+
+      await expect(
+        updateWebhookConfig(
+          db,
+          SYSTEM_ID,
+          WH_ID,
+          { url: "http://insecure.example.com/hook", version: 1 },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+
+      mockEnv.NODE_ENV = originalEnv;
+    });
+
+    it("skips URL protocol validation when url is undefined", async () => {
+      const { db, chain } = mockDb();
+      const updatedRow = makeWebhookRow({ version: 2, enabled: false });
+      chain.returning.mockResolvedValueOnce([updatedRow]);
+
+      const originalEnv = mockEnv.NODE_ENV;
+      mockEnv.NODE_ENV = "production";
+
+      const result = await updateWebhookConfig(
+        db,
+        SYSTEM_ID,
+        WH_ID,
+        { enabled: false, version: 1 },
+        AUTH,
+        mockAudit,
+      );
+      expect(result.enabled).toBe(false);
+
+      mockEnv.NODE_ENV = originalEnv;
+    });
+
+    it("delegates to assertOccUpdated for version conflict detection", async () => {
+      const { db, chain } = mockDb();
+      // update returns empty — triggers assertOccUpdated
+      chain.returning.mockResolvedValueOnce([]);
+      // existsFn re-query: entity exists → 409 CONFLICT
+      chain.limit.mockResolvedValueOnce([{ id: WH_ID }]);
+
+      await expect(
+        updateWebhookConfig(db, SYSTEM_ID, WH_ID, { version: 1 }, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+    });
+
+    it("delegates to assertOccUpdated for not-found detection", async () => {
+      const { db, chain } = mockDb();
+      // update returns empty
+      chain.returning.mockResolvedValueOnce([]);
+      // existsFn re-query: entity not found → 404 NOT_FOUND
+      chain.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        updateWebhookConfig(db, SYSTEM_ID, WH_ID, { version: 1 }, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("throws 404 when system ownership check fails", async () => {
+      const { db } = mockDb();
+      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+
+      await expect(
+        updateWebhookConfig(db, "sys_other" as SystemId, WH_ID, {}, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("includes eventTypes and enabled in set fields when provided", async () => {
+      const { db, chain } = mockDb();
+      const updatedRow = makeWebhookRow({
+        version: 2,
+        eventTypes: ["fronting.started"],
+        enabled: false,
+      });
+      chain.returning.mockResolvedValueOnce([updatedRow]);
+
+      const result = await updateWebhookConfig(
+        db,
+        SYSTEM_ID,
+        WH_ID,
+        { eventTypes: ["fronting.started"], enabled: false, version: 1 },
+        AUTH,
+        mockAudit,
+      );
+      expect(result.eventTypes).toEqual(["fronting.started"]);
+      expect(result.enabled).toBe(false);
+    });
   });
 
-  it("includes signature and timestamp headers in the request", async () => {
-    const configRow = {
-      id: WH_ID,
-      systemId: SYS_ID,
-      url: "https://example.com/webhook",
-      secret: Buffer.from("test-secret-key").toString("base64"),
-      enabled: true,
-      archived: false,
-    };
-    const mockTx = {
-      select: vi.fn().mockReturnThis(),
-      from: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue([configRow]),
-    };
+  // ── deleteWebhookConfig ────────────────────────────────────────────
 
-    const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
+  describe("deleteWebhookConfig", () => {
+    /**
+     * Helper: configure the mock chain for delete flow.
+     *
+     * The delete transaction issues:
+     *   1. select().from().where().limit(1) — existence check
+     *   2. select({count}).from().where()   — pending delivery count (no .limit())
+     *   3. delete().where()                 — actual deletion
+     *
+     * Query 2 ends at .where() with no .limit(), so the second .where() call
+     * must directly resolve to an array instead of returning the chain.
+     */
+    function setupDeleteMocks(
+      chain: ReturnType<typeof mockDb>["chain"],
+      existsResult: Record<string, unknown>[],
+      countResult?: Record<string, unknown>[],
+    ): void {
+      chain.limit.mockResolvedValueOnce(existsResult);
 
-    await testWebhookConfig(mockTx as never, SYS_ID, WH_ID, MOCK_AUTH as never, mockFetch as never);
+      if (countResult !== undefined) {
+        let whereCallCount = 0;
+        chain.where.mockImplementation((): unknown => {
+          whereCallCount++;
+          // Call 2 is the count query (no .limit() follows)
+          if (whereCallCount === 2) {
+            return Promise.resolve(countResult);
+          }
+          return chain;
+        });
+      }
+    }
 
-    const call = mockFetch.mock.calls[0] ?? [];
-    const options = call[1] as RequestInit;
-    const headers = options.headers as Record<string, string>;
-    expect(headers["X-Pluralscape-Signature"]).toMatch(/^[0-9a-f]{64}$/);
-    expect(headers["X-Pluralscape-Timestamp"]).toMatch(/^\d+$/);
+    it("deletes a webhook config with no pending deliveries", async () => {
+      const { db, chain } = mockDb();
+      setupDeleteMocks(chain, [{ id: WH_ID }], [{ count: 0 }]);
+
+      await deleteWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
+
+      expect(mockAudit).toHaveBeenCalledOnce();
+      expect(chain.delete).toHaveBeenCalled();
+    });
+
+    it("throws 404 when webhook config is not found", async () => {
+      const { db, chain } = mockDb();
+      setupDeleteMocks(chain, []);
+
+      await expect(
+        deleteWebhookConfig(
+          db,
+          SYSTEM_ID,
+          "wh_00000000-0000-4000-a000-000000000099" as WebhookId,
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("throws 409 HAS_DEPENDENTS when pending deliveries exist", async () => {
+      const { db, chain } = mockDb();
+      setupDeleteMocks(chain, [{ id: WH_ID }], [{ count: 3 }]);
+
+      await expect(deleteWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }),
+      );
+    });
+
+    it("throws when count query returns no rows", async () => {
+      const { db, chain } = mockDb();
+      setupDeleteMocks(chain, [{ id: WH_ID }], []);
+
+      await expect(deleteWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        "Unexpected: count query returned no rows",
+      );
+    });
+
+    it("throws 404 when system ownership check fails", async () => {
+      const { db } = mockDb();
+      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+
+      await expect(
+        deleteWebhookConfig(db, "sys_other" as SystemId, WH_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("calls .for('update') on the existence check query to prevent race conditions", async () => {
+      const { db, chain } = mockDb();
+      setupDeleteMocks(chain, [{ id: WH_ID }], [{ count: 0 }]);
+
+      await deleteWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
+
+      expect(chain.for).toHaveBeenCalledWith("update");
+    });
+  });
+
+  // ── archiveWebhookConfig ───────────────────────────────────────────
+
+  describe("archiveWebhookConfig", () => {
+    /**
+     * Helper: configure mock chain for archive lifecycle flow.
+     *
+     * archiveEntity issues:
+     *   1. update().set().where().returning({id}) — archive attempt
+     *   2. select({id}).from().where()            — existence re-query (no .limit())
+     *
+     * When the update returns empty, query 2 ends at .where() with no .limit(),
+     * so the second .where() call must resolve to an array directly.
+     */
+    function setupArchiveMocks(
+      chain: ReturnType<typeof mockDb>["chain"],
+      updateResult: Record<string, unknown>[],
+      reQueryResult?: Record<string, unknown>[],
+    ): void {
+      chain.returning.mockResolvedValueOnce(updateResult);
+
+      if (reQueryResult !== undefined) {
+        let whereCallCount = 0;
+        chain.where.mockImplementation((): unknown => {
+          whereCallCount++;
+          // Call 2 is the re-query (no .limit() follows)
+          if (whereCallCount === 2) {
+            return Promise.resolve(reQueryResult);
+          }
+          return chain;
+        });
+      }
+    }
+
+    it("archives a webhook config", async () => {
+      const { db, chain } = mockDb();
+      chain.returning.mockResolvedValueOnce([{ id: WH_ID }]);
+
+      await archiveWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
+
+      expect(chain.transaction).toHaveBeenCalled();
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "webhook-config.archived" }),
+      );
+    });
+
+    it("throws 409 ALREADY_ARCHIVED when already archived", async () => {
+      const { db, chain } = mockDb();
+      setupArchiveMocks(chain, [], [{ id: WH_ID }]);
+
+      await expect(archiveWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 409, code: "ALREADY_ARCHIVED" }),
+      );
+    });
+
+    it("throws 404 when record not found (update empty, re-query empty)", async () => {
+      const { db, chain } = mockDb();
+      setupArchiveMocks(chain, [], []);
+
+      await expect(archiveWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
+    });
+  });
+
+  // ── restoreWebhookConfig ───────────────────────────────────────────
+
+  describe("restoreWebhookConfig", () => {
+    /**
+     * Helper: configure mock chain for restore lifecycle flow.
+     * Same pattern as setupArchiveMocks — re-query ends at .where() with no .limit().
+     */
+    function setupRestoreMocks(
+      chain: ReturnType<typeof mockDb>["chain"],
+      updateResult: Record<string, unknown>[],
+      reQueryResult?: Record<string, unknown>[],
+    ): void {
+      chain.returning.mockResolvedValueOnce(updateResult);
+
+      if (reQueryResult !== undefined) {
+        let whereCallCount = 0;
+        chain.where.mockImplementation((): unknown => {
+          whereCallCount++;
+          // Call 2 is the re-query (no .limit() follows)
+          if (whereCallCount === 2) {
+            return Promise.resolve(reQueryResult);
+          }
+          return chain;
+        });
+      }
+    }
+
+    it("restores a webhook config and returns mapped result", async () => {
+      const { db, chain } = mockDb();
+      const row = makeWebhookRow({ archived: false, archivedAt: null, version: 2 });
+      chain.returning.mockResolvedValueOnce([row]);
+
+      const result = await restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit);
+
+      expect(chain.transaction).toHaveBeenCalled();
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "webhook-config.restored" }),
+      );
+      expect(result.id).toBe(WH_ID);
+      expect(result.archived).toBe(false);
+    });
+
+    it("throws 409 NOT_ARCHIVED when not archived", async () => {
+      const { db, chain } = mockDb();
+      setupRestoreMocks(chain, [], [{ id: WH_ID }]);
+
+      await expect(restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 409, code: "NOT_ARCHIVED" }),
+      );
+    });
+
+    it("throws 404 when record not found", async () => {
+      const { db, chain } = mockDb();
+      setupRestoreMocks(chain, [], []);
+
+      await expect(restoreWebhookConfig(db, SYSTEM_ID, WH_ID, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
+    });
+  });
+
+  // ── parseWebhookConfigQuery ────────────────────────────────────────
+
+  describe("parseWebhookConfigQuery", () => {
+    it("returns parsed query options on valid input", () => {
+      const result = parseWebhookConfigQuery({ includeArchived: "true" });
+
+      expect(result).toEqual({ includeArchived: true });
+    });
+
+    it("throws VALIDATION_ERROR on invalid query params", () => {
+      expect(() => parseWebhookConfigQuery({ includeArchived: "not-a-boolean" })).toThrow(
+        expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
+      );
+    });
+
+    it("returns empty options when no query params provided", () => {
+      const result = parseWebhookConfigQuery({});
+
+      expect(result).toEqual({ includeArchived: false });
+    });
   });
 });
