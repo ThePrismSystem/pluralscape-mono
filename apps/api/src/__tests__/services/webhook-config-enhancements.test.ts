@@ -46,9 +46,8 @@ vi.mock("../../lib/logger.js", () => ({
 // -- Imports after mocks --------------------------------------------------
 
 const { invalidateWebhookConfigCache } = await import("../../services/webhook-dispatcher.js");
-const { rotateWebhookSecret, testWebhookConfig } = await import(
-  "../../services/webhook-config.service.js"
-);
+const { rotateWebhookSecret, testWebhookConfig } =
+  await import("../../services/webhook-config.service.js");
 
 // -- Fixtures -------------------------------------------------------------
 
@@ -265,13 +264,7 @@ describe("testWebhookConfig", () => {
     const mockTx = makeReadMockTx([makeTestConfigRow()]);
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await testWebhookConfig(
-      mockTx as never,
-      SYS_ID,
-      WH_ID,
-      MOCK_AUTH as never,
-      mockFetch as never,
-    );
+    await testWebhookConfig(mockTx as never, SYS_ID, WH_ID, MOCK_AUTH as never, mockFetch as never);
 
     const call = mockFetch.mock.calls[0] ?? [];
     const options = call[1] as RequestInit;
