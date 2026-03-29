@@ -122,4 +122,12 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     jitterFraction: 0.2,
   },
   "webhook-delivery-cleanup": HEAVY_BACKOFF,
+  "email-send": {
+    maxRetries: 3,
+    backoffMs: 5_000,
+    backoffMultiplier: 2,
+    maxBackoffMs: 60_000,
+    strategy: "exponential",
+    jitterFraction: 0.2,
+  },
 };

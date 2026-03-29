@@ -9,6 +9,14 @@ import type {
 import type { DeviceTokenPlatform } from "./notifications.js";
 import type { UnixMillis } from "./timestamps.js";
 
+/** Template names supported by the email system (mirrors @pluralscape/email). */
+export type EmailTemplateName =
+  | "recovery-key-regenerated"
+  | "new-device-login"
+  | "password-changed"
+  | "two-factor-changed"
+  | "webhook-failure-digest";
+
 /** The kind of background job. */
 export type JobType =
   | "sync-push"
@@ -29,7 +37,8 @@ export type JobType =
   | "sync-compaction"
   | "device-transfer-cleanup"
   | "check-in-generate"
-  | "webhook-delivery-cleanup";
+  | "webhook-delivery-cleanup"
+  | "email-send";
 
 /** Current status of a background job. */
 export type JobStatus = "pending" | "running" | "completed" | "cancelled" | "dead-letter";
@@ -86,6 +95,11 @@ export interface JobPayloadMap {
   "device-transfer-cleanup": Record<string, never>;
   "check-in-generate": Record<string, never>;
   "webhook-delivery-cleanup": Record<string, never>;
+  "email-send": {
+    readonly accountId: AccountId;
+    readonly template: EmailTemplateName;
+    readonly vars: Readonly<Record<string, unknown>>;
+  };
 }
 
 /** Result of a completed or failed job. */

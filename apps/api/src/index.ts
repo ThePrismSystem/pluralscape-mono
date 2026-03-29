@@ -8,6 +8,7 @@ import { env } from "./env.js";
 import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
 import { ApiHttpError } from "./lib/api-error.js";
 import { getRawClient } from "./lib/db.js";
+import { initEmailAdapter } from "./lib/email.js";
 import { logger } from "./lib/logger.js";
 import { setNotificationPubSub } from "./lib/notification-pubsub.js";
 import { sanitizeS3Error } from "./lib/s3-log-sanitizer.js";
@@ -135,6 +136,35 @@ async function start(): Promise<void> {
   } else {
     const storageRoot = env.BLOB_STORAGE_PATH;
     initStorageAdapter(new FilesystemBlobStorageAdapter({ storageRoot }));
+  }
+
+  // Initialize email adapter based on EMAIL_PROVIDER env
+  const emailProvider = env.EMAIL_PROVIDER;
+  if (emailProvider === "resend") {
+    const { ResendEmailAdapter } = await import("@pluralscape/email/resend");
+    const apiKey = env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error("RESEND_API_KEY is required when EMAIL_PROVIDER=resend");
+    }
+    initEmailAdapter(new ResendEmailAdapter({ apiKey, fromAddress: env.EMAIL_FROM }));
+    logger.info("Email adapter initialized", { provider: "resend" });
+  } else if (emailProvider === "smtp") {
+    const { SmtpEmailAdapter } = await import("@pluralscape/email/smtp");
+    const host = env.SMTP_HOST;
+    const port = env.SMTP_PORT;
+    if (!host || !port) {
+      throw new Error("SMTP_HOST and SMTP_PORT are required when EMAIL_PROVIDER=smtp");
+    }
+    const auth =
+      env.SMTP_USER && env.SMTP_PASS ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined;
+    initEmailAdapter(
+      new SmtpEmailAdapter({ host, port, secure: env.SMTP_SECURE, auth }, env.EMAIL_FROM),
+    );
+    logger.info("Email adapter initialized", { provider: "smtp" });
+  } else {
+    const { StubEmailAdapter } = await import("@pluralscape/email");
+    initEmailAdapter(new StubEmailAdapter());
+    logger.info("Email adapter initialized", { provider: "stub" });
   }
 
   // Resolve rate limit store: prefer Valkey if configured, fall back to in-memory
