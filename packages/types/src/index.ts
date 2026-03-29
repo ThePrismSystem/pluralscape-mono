@@ -395,6 +395,7 @@ export type {
 // ── Jobs ──────────────────────────────────────────────────────
 export type {
   BackoffStrategy,
+  EmailTemplateName,
   JobType,
   JobStatus,
   JobPayloadMap,
