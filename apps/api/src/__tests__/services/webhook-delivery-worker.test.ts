@@ -30,6 +30,11 @@ vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
   };
 });
 
+vi.mock("../../services/webhook-payload-encryption.js", () => ({
+  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(null),
+  decryptWebhookPayload: vi.fn(),
+}));
+
 // ── Tests ────────────────────────────────────────────────────────
 
 describe("computeWebhookSignature", () => {
@@ -140,6 +145,8 @@ const JOINED_ROW = {
   systemId: "sys_test-system",
   eventType: "fronting.started",
   attemptCount: 0,
+  encryptedData: null,
+  payloadData: { event: "test" },
   configUrl: "https://example.com/webhook",
   configSecret: "dGVzdC1zZWNyZXQta2V5",
   configEnabled: true,
@@ -152,7 +159,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await processWebhookDelivery(db, "wd_missing" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_missing" as WebhookDeliveryId);
 
     expect(chain.update).not.toHaveBeenCalled();
   });
@@ -163,7 +170,7 @@ describe("processWebhookDelivery (unit)", () => {
       { ...JOINED_ROW, configUrl: null, configSecret: null, configEnabled: null },
     ]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -172,7 +179,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configEnabled: false }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -181,7 +188,7 @@ describe("processWebhookDelivery (unit)", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, configSecret: null }]);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {});
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -193,12 +200,7 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
     // Bun's fetch includes a static `preconnect` method that vi.fn() can't satisfy
-    await processWebhookDelivery(
-      db,
-      "wd_test" as WebhookDeliveryId,
-      { event: "test" },
-      mockFetch as never,
-    );
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
@@ -215,12 +217,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(
-      db,
-      "wd_test" as WebhookDeliveryId,
-      { event: "test" },
-      mockFetch as never,
-    );
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const call = mockFetch.mock.calls[0] ?? [];
     const options = call[1] as RequestInit;
@@ -237,7 +234,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "success" }));
   });
@@ -248,7 +245,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -265,7 +262,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
@@ -276,7 +273,7 @@ describe("processWebhookDelivery (unit)", () => {
 
     const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -290,7 +287,7 @@ describe("processWebhookDelivery (unit)", () => {
     const abortErr = new DOMException("The operation was aborted", "AbortError");
     const mockFetch = vi.fn().mockRejectedValue(abortErr);
 
-    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never);
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never);
 
     const setCall = chain.set.mock.calls[0] ?? [];
     const setArg = setCall[0] as Record<string, unknown>;
@@ -304,8 +301,28 @@ describe("processWebhookDelivery (unit)", () => {
     const mockFetch = vi.fn().mockRejectedValue(new Error("unexpected"));
 
     await expect(
-      processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, {}, mockFetch as never),
+      processWebhookDelivery(db, "wd_test" as WebhookDeliveryId, mockFetch as never),
     ).rejects.toThrow("unexpected");
+  });
+
+  it("marks as failed when encrypted payload but no key configured", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([
+      { ...JOINED_ROW, encryptedData: new Uint8Array([1, 2, 3]), payloadData: null },
+    ]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
+  });
+
+  it("marks as failed when delivery has no payload data", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ ...JOINED_ROW, encryptedData: null, payloadData: null }]);
+
+    await processWebhookDelivery(db, "wd_test" as WebhookDeliveryId);
+
+    expect(chain.set).toHaveBeenCalledWith(expect.objectContaining({ status: "failed" }));
   });
 });
 

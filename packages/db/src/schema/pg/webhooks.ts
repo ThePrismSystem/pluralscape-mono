@@ -11,7 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -83,7 +83,7 @@ export const webhookDeliveries = pgTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: pgTimestamp("last_attempt_at"),
     nextRetryAt: pgTimestamp("next_retry_at"),
-    encryptedData: pgEncryptedBlob("encrypted_data"),
+    encryptedData: pgBinary("encrypted_data"),
     payloadData: jsonb("payload_data").$type<Record<string, unknown>>(),
     createdAt: pgTimestamp("created_at").notNull(),
     ...archivable(),

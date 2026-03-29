@@ -102,6 +102,9 @@ describe("webhook-config service", () => {
     it("creates a webhook config and returns result with secret", async () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow();
+      // Quota check: system lock (.for) + count query (.where terminal)
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([row]);
 
       const result = await createWebhookConfig(db, SYSTEM_ID, validCreatePayload, AUTH, mockAudit);
@@ -145,6 +148,8 @@ describe("webhook-config service", () => {
       mockEnv.NODE_ENV = "development";
 
       const row = makeWebhookRow({ url: "http://localhost:3000/webhook" });
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([row]);
 
       const result = await createWebhookConfig(
@@ -161,6 +166,8 @@ describe("webhook-config service", () => {
 
     it("throws when INSERT returns no rows", async () => {
       const { db, chain } = mockDb();
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
@@ -180,6 +187,8 @@ describe("webhook-config service", () => {
     it("sets cryptoKeyId to null when not provided", async () => {
       const { db, chain } = mockDb();
       const row = makeWebhookRow({ cryptoKeyId: null });
+      chain.for.mockResolvedValueOnce([]);
+      chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ count: 0 }]);
       chain.returning.mockResolvedValueOnce([row]);
 
       const result = await createWebhookConfig(

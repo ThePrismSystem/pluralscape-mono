@@ -3,6 +3,7 @@ import { vi } from "vitest";
 /** Factory for the standard @pluralscape/crypto mock used across service tests. */
 export function createCryptoMock(): Record<string, unknown> {
   return {
+    AEAD_KEY_BYTES: 32,
     serializeEncryptedBlob: vi.fn(() => new Uint8Array([1, 2, 3])),
     deserializeEncryptedBlob: vi.fn((data: Uint8Array) => ({
       tier: 1,

@@ -33,6 +33,11 @@ const mockRawDb = {
   transaction: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn(mockDb)),
 };
 
+vi.mock("../../services/webhook-payload-encryption.js", () => ({
+  getWebhookPayloadEncryptionKey: vi.fn().mockReturnValue(null),
+  encryptWebhookPayload: vi.fn(),
+}));
+
 vi.mock("@pluralscape/db/pg", () => ({
   webhookConfigs: { systemId: "system_id", enabled: "enabled", archived: "archived" },
   webhookDeliveries: { status: "status", nextRetryAt: "next_retry_at" },

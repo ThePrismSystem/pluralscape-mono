@@ -13,6 +13,6 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export function createWebhookDeliverHandler(db: PostgresJsDatabase): JobHandler<"webhook-deliver"> {
   return async (job, ctx) => {
     if (ctx.signal.aborted) return;
-    await processWebhookDelivery(db, job.payload.deliveryId, job.payload.payload);
+    await processWebhookDelivery(db, job.payload.deliveryId);
   };
 }

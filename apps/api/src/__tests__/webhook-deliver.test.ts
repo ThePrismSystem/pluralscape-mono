@@ -27,7 +27,6 @@ function stubJob(
     status: "running",
     payload: {
       deliveryId: "whdel_test123" as WebhookDeliveryId,
-      payload: { eventType: "member.created", systemId: "sys_abc" },
     },
     attempts: 1,
     maxAttempts: 3,
@@ -67,10 +66,7 @@ describe("webhook-deliver handler", () => {
 
     await handler(job, stubCtx());
 
-    expect(mockProcessWebhookDelivery).toHaveBeenCalledWith(db, "whdel_test123", {
-      eventType: "member.created",
-      systemId: "sys_abc",
-    });
+    expect(mockProcessWebhookDelivery).toHaveBeenCalledWith(db, "whdel_test123");
   });
 
   it("skips processing when signal is already aborted", async () => {

@@ -9,12 +9,7 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import {
-  sqliteBinary,
-  sqliteEncryptedBlob,
-  sqliteJson,
-  sqliteTimestamp,
-} from "../../columns/sqlite.js";
+import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import {
   archivable,
   archivableConsistencyCheckFor,
@@ -72,7 +67,7 @@ export const webhookDeliveries = sqliteTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: sqliteTimestamp("last_attempt_at"),
     nextRetryAt: sqliteTimestamp("next_retry_at"),
-    encryptedData: sqliteEncryptedBlob("encrypted_data"),
+    encryptedData: sqliteBinary("encrypted_data"),
     payloadData: sqliteJson("payload_data").$type<Record<string, unknown>>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     ...archivable(),

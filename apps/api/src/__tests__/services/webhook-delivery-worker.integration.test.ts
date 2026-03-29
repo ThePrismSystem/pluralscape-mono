@@ -11,9 +11,13 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../lib/ip-validation.js", () => ({
-  resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
-}));
+vi.mock("../../lib/ip-validation.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/ip-validation.js")>();
+  return {
+    ...actual,
+    resolveAndValidateUrl: vi.fn().mockResolvedValue(["93.184.216.34"]),
+  };
+});
 
 import {
   WEBHOOK_MAX_RETRY_ATTEMPTS,
@@ -111,12 +115,12 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
 
       const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-      await processWebhookDelivery(asDb(db), deliveryId, payload, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, mockFetch as never);
 
       // Verify the fetch was called with correct signature and timestamp
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const call = mockFetch.mock.calls[0] ?? [];
-      expect(call[0]).toBe("https://example.com/hook");
+      expect(call[0]).toBe("https://93.184.216.34/hook");
       const headers = new Headers((call[1] as RequestInit | undefined)?.headers);
 
       // Verify timestamp header is present and is a valid Unix timestamp
@@ -147,7 +151,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -165,7 +169,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       });
       const mockFetch = vi.fn().mockResolvedValue(new Response("Error", { status: 500 }));
 
-      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -191,7 +195,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery({ webhookId: disabledWhId });
       const mockFetch = vi.fn();
 
-      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, mockFetch as never);
 
       expect(mockFetch).not.toHaveBeenCalled();
       const [row] = await db
@@ -209,7 +213,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
 
-      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, mockFetch as never);
 
       const [row] = await db
         .select()
@@ -224,7 +228,7 @@ describe("webhook-delivery-worker (PGlite integration)", () => {
       const deliveryId = await insertDelivery();
       const mockFetch = vi.fn().mockResolvedValue(new Response("OK", { status: 200 }));
 
-      await processWebhookDelivery(asDb(db), deliveryId, { test: true }, mockFetch as never);
+      await processWebhookDelivery(asDb(db), deliveryId, mockFetch as never);
 
       const call = mockFetch.mock.calls[0] ?? [];
       const headers = new Headers((call[1] as RequestInit | undefined)?.headers);

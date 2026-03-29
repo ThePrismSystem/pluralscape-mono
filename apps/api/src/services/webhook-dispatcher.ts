@@ -1,9 +1,15 @@
+import { getSodium } from "@pluralscape/crypto";
 import { webhookConfigs, webhookDeliveries } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { and, eq } from "drizzle-orm";
 
 import { WEBHOOK_CONFIGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { QueryCache } from "../lib/query-cache.js";
+
+import {
+  encryptWebhookPayload,
+  getWebhookPayloadEncryptionKey,
+} from "./webhook-payload-encryption.js";
 
 import type {
   SystemId,
@@ -87,23 +93,43 @@ async function executeDispatch<K extends WebhookEventType>(
 
   const timestamp = now();
   const deliveryIds: string[] = [];
+  const payloadJson = JSON.stringify({ ...payload, systemId });
+  const encryptionKey = getWebhookPayloadEncryptionKey();
 
-  const values = matchingConfigs.map((config) => {
-    const deliveryId = createId(ID_PREFIXES.webhookDelivery);
-    deliveryIds.push(deliveryId);
-    return {
-      id: deliveryId,
-      webhookId: config.id,
-      systemId,
-      eventType,
-      status: "pending" as const,
-      attemptCount: 0,
-      payloadData: { ...payload, systemId },
-      createdAt: timestamp,
-    };
-  });
+  try {
+    const values = matchingConfigs.map((config) => {
+      const deliveryId = createId(ID_PREFIXES.webhookDelivery);
+      deliveryIds.push(deliveryId);
+      if (encryptionKey) {
+        return {
+          id: deliveryId,
+          webhookId: config.id,
+          systemId,
+          eventType,
+          status: "pending" as const,
+          attemptCount: 0,
+          encryptedData: encryptWebhookPayload(payloadJson, encryptionKey),
+          createdAt: timestamp,
+        };
+      }
+      return {
+        id: deliveryId,
+        webhookId: config.id,
+        systemId,
+        eventType,
+        status: "pending" as const,
+        attemptCount: 0,
+        payloadData: { ...payload, systemId },
+        createdAt: timestamp,
+      };
+    });
 
-  await db.insert(webhookDeliveries).values(values);
+    await db.insert(webhookDeliveries).values(values);
+  } finally {
+    if (encryptionKey) {
+      getSodium().memzero(encryptionKey);
+    }
+  }
 
   return deliveryIds;
 }
