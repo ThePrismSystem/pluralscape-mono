@@ -569,7 +569,7 @@ export async function routeMessage(
         // Post-success: set ownership and broadcast to other subscribers
         try {
           documentOwnership.set(msg.docId, state.systemId);
-          await broadcastDocumentUpdateWithSync(
+          const broadcastResult = await broadcastDocumentUpdateWithSync(
             {
               type: "DocumentUpdate",
               correlationId: null,
@@ -581,6 +581,12 @@ export async function routeMessage(
             log,
             pubsub,
           );
+          if (broadcastResult.syncPublished === false) {
+            log.warn("Cross-instance sync publish failed for SubmitChangeRequest", {
+              connectionId: state.connectionId,
+              docId: msg.docId,
+            });
+          }
         } catch (err) {
           log.error("Post-submit side-effect failed for SubmitChangeRequest", {
             connectionId: state.connectionId,

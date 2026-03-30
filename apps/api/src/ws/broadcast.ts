@@ -27,6 +27,8 @@ export interface BroadcastResult {
   readonly delivered: number;
   readonly failed: number;
   readonly total: number;
+  /** Whether the update was published to Valkey for cross-instance fan-out. null = no pubsub configured. */
+  readonly syncPublished: boolean | null;
 }
 
 /**
@@ -40,7 +42,7 @@ export function broadcastDocumentUpdate(
   log: AppLogger,
 ): BroadcastResult {
   const subscribers = manager.getSubscribers(update.docId);
-  if (subscribers.size === 0) return { delivered: 0, failed: 0, total: 0 };
+  if (subscribers.size === 0) return { delivered: 0, failed: 0, total: 0, syncPublished: null };
 
   // C2: Wrap serialization in try/catch — log and return early on failure
   let serialized: string;
@@ -51,7 +53,7 @@ export function broadcastDocumentUpdate(
       docId: update.docId,
       error: formatError(err),
     });
-    return { delivered: 0, failed: subscribers.size, total: subscribers.size };
+    return { delivered: 0, failed: subscribers.size, total: subscribers.size, syncPublished: null };
   }
 
   let delivered = 0;
@@ -101,7 +103,12 @@ export function broadcastDocumentUpdate(
     });
   }
 
-  return { delivered, failed: deadConnections.length, total: subscribers.size };
+  return {
+    delivered,
+    failed: deadConnections.length,
+    total: subscribers.size,
+    syncPublished: null,
+  };
 }
 
 /** Wire-format payload published to Valkey for cross-instance fan-out. */
@@ -130,26 +137,29 @@ export async function broadcastDocumentUpdateWithSync(
   const result = broadcastDocumentUpdate(update, excludeConnectionId, manager, log);
 
   // Phase 2: Cross-instance fan-out via Valkey (best-effort)
-  if (pubsub) {
-    const channel = `${VALKEY_CHANNEL_PREFIX_SYNC}${update.docId}`;
-    const message: ValkeyBroadcastMessage = {
-      serverId: pubsub.id,
-      update,
-    };
-    try {
-      const published = await pubsub.publish(channel, JSON.stringify(message));
-      if (!published) {
-        log.debug("Valkey publish returned false for DocumentUpdate", {
-          docId: update.docId,
-        });
-      }
-    } catch (err) {
-      log.warn("Failed to publish DocumentUpdate to Valkey", {
-        docId: update.docId,
-        error: formatError(err),
-      });
-    }
+  if (!pubsub) {
+    return { ...result, syncPublished: null };
   }
 
-  return result;
+  const channel = `${VALKEY_CHANNEL_PREFIX_SYNC}${update.docId}`;
+  const message: ValkeyBroadcastMessage = {
+    serverId: pubsub.id,
+    update,
+  };
+  try {
+    const published = await pubsub.publish(channel, JSON.stringify(message));
+    if (!published) {
+      log.warn("Valkey publish returned false for DocumentUpdate", {
+        docId: update.docId,
+      });
+      return { ...result, syncPublished: false };
+    }
+    return { ...result, syncPublished: true };
+  } catch (err) {
+    log.warn("Failed to publish DocumentUpdate to Valkey", {
+      docId: update.docId,
+      error: formatError(err),
+    });
+    return { ...result, syncPublished: false };
+  }
 }
