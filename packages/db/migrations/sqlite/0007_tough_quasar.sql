@@ -1,1 +1,0 @@
-CREATE INDEX `webhook_deliveries_pending_retry_idx` ON `webhook_deliveries` (`next_retry_at`) WHERE "webhook_deliveries"."status" = 'pending';

@@ -207,7 +207,7 @@ describe("friend-code.service (PGlite integration)", () => {
   // ── redeemFriendCode ──────────────────────────────────────────────
 
   describe("redeemFriendCode", () => {
-    it("creates 2 connections (A->B and B->A) both accepted, archives code", async () => {
+    it("creates 2 connections (A->B and B->A) both pending, archives code", async () => {
       const created = await generateFriendCode(asDb(db), accountIdA, authA, noopAudit);
 
       const result = await redeemFriendCode(asDb(db), created.code, authB, noopAudit);
@@ -224,8 +224,8 @@ describe("friend-code.service (PGlite integration)", () => {
       );
       expect(aToBs).toHaveLength(1);
       expect(bToAs).toHaveLength(1);
-      expect(aToBs[0]?.status).toBe("accepted");
-      expect(bToAs[0]?.status).toBe("accepted");
+      expect(aToBs[0]?.status).toBe("pending");
+      expect(bToAs[0]?.status).toBe("pending");
 
       // Verify code is archived
       const codes = await listFriendCodes(asDb(db), accountIdA, authA);

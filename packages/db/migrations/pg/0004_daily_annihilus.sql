@@ -1,1 +1,0 @@
-ALTER TABLE "webhook_deliveries" ADD CONSTRAINT "webhook_deliveries_payload_check" CHECK ("webhook_deliveries"."encrypted_data" IS NOT NULL OR "webhook_deliveries"."payload_data" IS NOT NULL);

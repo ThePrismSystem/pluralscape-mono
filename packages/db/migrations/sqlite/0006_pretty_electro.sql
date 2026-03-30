@@ -1,1 +1,0 @@
-ALTER TABLE `accounts` ADD `encrypted_email` blob;
