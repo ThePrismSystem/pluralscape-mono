@@ -187,3 +187,5 @@ export {
   FRIEND_NOTIFICATION_EVENT_TYPE_VALUES,
 } from "./validation.constants.js";
 export { CreateApiKeyBodySchema } from "./api-key.js";
+export { PurgeSystemBodySchema } from "./system-purge.js";
+export { CreateSnapshotBodySchema, DuplicateSystemBodySchema } from "./snapshot.js";

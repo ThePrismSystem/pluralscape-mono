@@ -62,6 +62,10 @@ describe("AuditEventType", () => {
         case "system.created":
         case "system.profile-updated":
         case "system.deleted":
+        case "system.purged":
+        case "system.duplicated":
+        case "snapshot.created":
+        case "snapshot.deleted":
         case "group.created":
         case "group.updated":
         case "group.archived":
