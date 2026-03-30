@@ -1,11 +1,11 @@
 ---
 # api-sojx
 title: "Security audit: authentication and authorization"
-status: todo
+status: in-progress
 type: task
 priority: critical
 created_at: 2026-03-29T02:58:44Z
-updated_at: 2026-03-29T03:03:11Z
+updated_at: 2026-03-30T21:50:49Z
 parent: api-e7gt
 ---
 
