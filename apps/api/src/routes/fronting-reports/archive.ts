@@ -10,6 +10,10 @@ import { archiveFrontingReport } from "../../services/fronting-report.service.js
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
+/**
+ * Archive returns 204 (void from generic `archiveEntity`) while restore returns 200 with body.
+ * This pattern is consistent across all archive/restore pairs in the API.
+ */
 export const archiveRoute = new Hono<AuthEnv>();
 
 archiveRoute.use("*", createCategoryRateLimiter("write"));
