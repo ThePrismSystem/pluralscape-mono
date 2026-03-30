@@ -36,6 +36,7 @@ export {
   CreateMemberBodySchema,
   UpdateMemberBodySchema,
   DuplicateMemberBodySchema,
+  MemberListQuerySchema,
 } from "./member.js";
 export {
   CreateFieldDefinitionBodySchema,
