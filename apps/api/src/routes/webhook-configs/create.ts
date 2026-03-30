@@ -6,6 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { createWebhookConfig } from "../../services/webhook-config.service.js";
 
@@ -24,5 +25,5 @@ createRoute.post("/", async (c) => {
   const db = await getDb();
   const result = await createWebhookConfig(db, systemId, body, auth, audit);
   c.header("Cache-Control", "no-store");
-  return c.json(result, HTTP_CREATED);
+  return c.json(envelope(result), HTTP_CREATED);
 });

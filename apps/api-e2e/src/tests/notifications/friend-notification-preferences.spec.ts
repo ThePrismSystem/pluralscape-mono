@@ -69,10 +69,10 @@ test.describe("Friend notification preferences", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const body = (await res.json()) as FriendNotifPrefResponse;
-      expect(body.id).toMatch(/^fnp_/);
-      expect(body.friendConnectionId).toBe(connectionId);
-      expect(body.enabledEventTypes).toEqual(["friend-switch-alert"]);
+      const body = (await res.json()) as { data: FriendNotifPrefResponse };
+      expect(body.data.id).toMatch(/^fnp_/);
+      expect(body.data.friendConnectionId).toBe(connectionId);
+      expect(body.data.enabledEventTypes).toEqual(["friend-switch-alert"]);
     });
 
     await test.step("PATCH clears event types", async () => {
@@ -82,8 +82,8 @@ test.describe("Friend notification preferences", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const body = (await res.json()) as FriendNotifPrefResponse;
-      expect(body.enabledEventTypes).toEqual([]);
+      const body = (await res.json()) as { data: FriendNotifPrefResponse };
+      expect(body.data.enabledEventTypes).toEqual([]);
     });
 
     await test.step("GET confirms cleared state", async () => {
@@ -92,8 +92,8 @@ test.describe("Friend notification preferences", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const body = (await res.json()) as FriendNotifPrefResponse;
-      expect(body.enabledEventTypes).toEqual([]);
+      const body = (await res.json()) as { data: FriendNotifPrefResponse };
+      expect(body.data.enabledEventTypes).toEqual([]);
     });
 
     await test.step("PATCH restores event types", async () => {
@@ -103,8 +103,8 @@ test.describe("Friend notification preferences", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const body = (await res.json()) as FriendNotifPrefResponse;
-      expect(body.enabledEventTypes).toEqual(["friend-switch-alert"]);
+      const body = (await res.json()) as { data: FriendNotifPrefResponse };
+      expect(body.data.enabledEventTypes).toEqual(["friend-switch-alert"]);
     });
   });
 

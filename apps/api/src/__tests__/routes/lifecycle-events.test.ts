@@ -86,8 +86,8 @@ describe("POST /systems/:id/lifecycle-events", () => {
     const app = createApp();
     const res = await postJSON(app, BASE_URL, VALID_BODY);
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(EVT_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(EVT_ID);
   });
 
   it("forwards systemId, body, auth to service", async () => {
@@ -214,8 +214,8 @@ describe("GET /systems/:id/lifecycle-events/:eventId", () => {
     const app = createApp();
     const res = await app.request(EVT_URL);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(EVT_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(EVT_ID);
   });
 
   it("returns 404 when not found", async () => {
@@ -348,8 +348,8 @@ describe("POST /systems/:id/lifecycle-events/:eventId/restore", () => {
     const res = await app.request(`${EVT_URL}/restore`, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(EVT_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(EVT_ID);
   });
 
   it("returns 404 when archived event not found", async () => {

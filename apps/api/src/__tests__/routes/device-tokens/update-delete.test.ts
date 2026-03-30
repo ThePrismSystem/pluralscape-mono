@@ -63,8 +63,8 @@ describe("PUT /systems/:id/device-tokens/:tokenId", () => {
     const app = createApp();
     const res = await putJSON(app, TOKEN_URL, { platform: "ios" });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(TOKEN_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(TOKEN_ID);
   });
 
   it("returns 400 when body has no updatable fields", async () => {

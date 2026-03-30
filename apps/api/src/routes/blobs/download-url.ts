@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { getStorageAdapter } from "../../lib/storage.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { getDownloadUrl } from "../../services/blob.service.js";
@@ -20,5 +21,5 @@ downloadUrlRoute.get("/:blobId/download-url", async (c) => {
   const db = await getDb();
   const storageAdapter = getStorageAdapter();
   const result = await getDownloadUrl(db, storageAdapter, systemId, blobId, auth);
-  return c.json(result);
+  return c.json(envelope(result));
 });

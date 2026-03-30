@@ -68,9 +68,9 @@ describe("POST /systems/:systemId/webhook-configs/:webhookId/rotate-secret", () 
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as WebhookConfigCreateResult;
-    expect(body.id).toBe(WH_ID);
-    expect(body.secret).toBe("bmV3LXNlY3JldC1rZXk=");
+    const body = (await res.json()) as { data: WebhookConfigCreateResult };
+    expect(body.data.id).toBe(WH_ID);
+    expect(body.data.secret).toBe("bmV3LXNlY3JldC1rZXk=");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 

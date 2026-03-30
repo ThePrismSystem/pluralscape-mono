@@ -8,6 +8,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { updateDeviceToken } from "../../services/device-token.service.js";
 
@@ -36,5 +37,5 @@ updateRoute.put("/:tokenId", async (c) => {
 
   const db = await getDb();
   const result = await updateDeviceToken(db, systemId, tokenId, parsed.data, auth, audit);
-  return c.json(result);
+  return c.json(envelope(result));
 });

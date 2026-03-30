@@ -43,10 +43,10 @@ test.describe("Notification configs", () => {
       );
       expect(res.ok()).toBe(true);
 
-      const body = (await res.json()) as NotificationConfigResponse;
-      expect(body.eventType).toBe("friend-switch-alert");
-      expect(body.enabled).toBe(false);
-      expect(body.pushEnabled).toBe(true);
+      const body = (await res.json()) as { data: NotificationConfigResponse };
+      expect(body.data.eventType).toBe("friend-switch-alert");
+      expect(body.data.enabled).toBe(false);
+      expect(body.data.pushEnabled).toBe(true);
     });
 
     await test.step("list includes updated config", async () => {

@@ -76,13 +76,13 @@ describe("GET /systems/:systemId/blobs/:blobId", () => {
     const res = await app.request(BASE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_BLOB_RESULT;
-    expect(body.id).toBe(BLOB_ID);
-    expect(body.purpose).toBe("avatar");
-    expect(body.sizeBytes).toBe(1024);
-    expect(body.mimeType).toBe("image/png");
-    expect(body.checksum).toBe("a".repeat(64));
-    expect(body.uploadedAt).toBe(1700000000000);
+    const body = (await res.json()) as { data: typeof MOCK_BLOB_RESULT };
+    expect(body.data.id).toBe(BLOB_ID);
+    expect(body.data.purpose).toBe("avatar");
+    expect(body.data.sizeBytes).toBe(1024);
+    expect(body.data.mimeType).toBe("image/png");
+    expect(body.data.checksum).toBe("a".repeat(64));
+    expect(body.data.uploadedAt).toBe(1700000000000);
   });
 
   it("returns 404 when blob not found", async () => {

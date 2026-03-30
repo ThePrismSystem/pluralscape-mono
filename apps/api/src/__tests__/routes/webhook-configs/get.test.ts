@@ -65,10 +65,10 @@ describe("GET /systems/:systemId/webhook-configs/:webhookId", () => {
     const res = await app.request(`/systems/${SYS_ID}/webhook-configs/${WH_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as WebhookConfigResult;
-    expect(body.id).toBe(WH_ID);
-    expect(body.url).toBe("https://example.com/webhook");
-    expect(body).not.toHaveProperty("secret");
+    const body = (await res.json()) as { data: WebhookConfigResult };
+    expect(body.data.id).toBe(WH_ID);
+    expect(body.data.url).toBe("https://example.com/webhook");
+    expect(body.data).not.toHaveProperty("secret");
   });
 
   it("returns 400 for invalid webhook ID format", async () => {

@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { listDeviceTokens } from "../../services/device-token.service.js";
 
@@ -18,5 +19,5 @@ listRoute.get("/", async (c) => {
 
   const db = await getDb();
   const tokens = await listDeviceTokens(db, systemId, auth);
-  return c.json({ data: tokens });
+  return c.json(envelope({ data: tokens }));
 });

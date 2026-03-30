@@ -78,10 +78,10 @@ describe("POST /systems/:systemId/blobs/upload-url", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as typeof MOCK_UPLOAD_RESULT;
-    expect(body.blobId).toBe("blob_660e8400-e29b-41d4-a716-446655440000");
-    expect(body.uploadUrl).toBe("https://storage.example.com/presigned-upload");
-    expect(body.expiresAt).toBe(1700000000000);
+    const body = (await res.json()) as { data: typeof MOCK_UPLOAD_RESULT };
+    expect(body.data.blobId).toBe("blob_660e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.uploadUrl).toBe("https://storage.example.com/presigned-upload");
+    expect(body.data.expiresAt).toBe(1700000000000);
   });
 
   it("returns 400 for malformed JSON body", async () => {

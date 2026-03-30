@@ -27,10 +27,10 @@ test.describe("Timer Config and Check-In Records", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const timer = await res.json();
-      expect(timer).toHaveProperty("id");
-      expect(timer.enabled).toBe(true);
-      timerId = timer.id as string;
+      const body = (await res.json()) as { data: { id: string; enabled: boolean } };
+      expect(body.data).toHaveProperty("id");
+      expect(body.data.enabled).toBe(true);
+      timerId = body.data.id;
     });
 
     await test.step("get timer config", async () => {
@@ -38,8 +38,8 @@ test.describe("Timer Config and Check-In Records", () => {
         headers: authHeaders,
       });
       expect(res.status()).toBe(200);
-      const timer = await res.json();
-      expect(timer.id).toBe(timerId);
+      const body = (await res.json()) as { data: { id: string } };
+      expect(body.data.id).toBe(timerId);
     });
 
     await test.step("create check-in record", async () => {
@@ -51,11 +51,13 @@ test.describe("Timer Config and Check-In Records", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const record = await res.json();
-      expect(record).toHaveProperty("id");
-      expect(record.dismissed).toBe(false);
-      expect(record.respondedAt).toBeNull();
-      recordId = record.id as string;
+      const body = (await res.json()) as {
+        data: { id: string; dismissed: boolean; respondedAt: null };
+      };
+      expect(body.data).toHaveProperty("id");
+      expect(body.data.dismissed).toBe(false);
+      expect(body.data.respondedAt).toBeNull();
+      recordId = body.data.id;
     });
 
     await test.step("list check-in records", async () => {
@@ -80,9 +82,11 @@ test.describe("Timer Config and Check-In Records", () => {
         },
       );
       expect(res.status()).toBe(200);
-      const record = await res.json();
-      expect(record.respondedAt).not.toBeNull();
-      expect(record.respondedByMemberId).toBe(memberId);
+      const body = (await res.json()) as {
+        data: { respondedAt: number | null; respondedByMemberId: string | null };
+      };
+      expect(body.data.respondedAt).not.toBeNull();
+      expect(body.data.respondedByMemberId).toBe(memberId);
     });
 
     await test.step("create second check-in for dismiss test", async () => {
@@ -94,8 +98,8 @@ test.describe("Timer Config and Check-In Records", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const record = await res.json();
-      record2Id = record.id as string;
+      const body = (await res.json()) as { data: { id: string } };
+      record2Id = body.data.id;
     });
 
     await test.step("dismiss check-in", async () => {
@@ -104,8 +108,8 @@ test.describe("Timer Config and Check-In Records", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(200);
-      const record = await res.json();
-      expect(record.dismissed).toBe(true);
+      const body = (await res.json()) as { data: { dismissed: boolean } };
+      expect(body.data.dismissed).toBe(true);
     });
 
     await test.step("archive timer config", async () => {

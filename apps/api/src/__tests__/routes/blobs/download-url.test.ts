@@ -70,10 +70,10 @@ describe("GET /systems/:systemId/blobs/:blobId/download-url", () => {
     const res = await app.request(BASE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_DOWNLOAD_RESULT;
-    expect(body.blobId).toBe(BLOB_ID);
-    expect(body.downloadUrl).toBe("https://storage.example.com/presigned-download");
-    expect(body.expiresAt).toBe(1700000000000);
+    const body = (await res.json()) as { data: typeof MOCK_DOWNLOAD_RESULT };
+    expect(body.data.blobId).toBe(BLOB_ID);
+    expect(body.data.downloadUrl).toBe("https://storage.example.com/presigned-download");
+    expect(body.data.expiresAt).toBe(1700000000000);
   });
 
   it("returns 404 when blob not found", async () => {

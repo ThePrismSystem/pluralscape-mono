@@ -90,8 +90,8 @@ describe("POST /systems/:id/timer-configs", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("tmr_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("tmr_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 400 for malformed JSON body", async () => {
@@ -141,8 +141,8 @@ describe("GET /systems/:id/timer-configs/:timerId", () => {
     const res = await app.request(TIMER_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("tmr_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("tmr_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when not found", async () => {
@@ -182,8 +182,8 @@ describe("PUT /systems/:id/timer-configs/:timerId", () => {
     const res = await putJSON(app, TIMER_URL, { encryptedData: "dGVzdA==", version: 1 });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(2);
   });
 
   it("returns 409 on version conflict", async () => {
@@ -306,8 +306,8 @@ describe("POST /systems/:id/timer-configs/:timerId/restore", () => {
     const res = await app.request(`${TIMER_URL}/restore`, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("tmr_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("tmr_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when not found", async () => {

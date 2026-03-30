@@ -76,8 +76,8 @@ describe("POST /systems/:id/check-in-records/:recordId/restore", () => {
     const res = await app.request(RESTORE_URL, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(RECORD_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(RECORD_ID);
   });
 
   it("forwards systemId, recordId, auth to service", async () => {

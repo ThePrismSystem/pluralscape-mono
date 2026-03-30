@@ -57,8 +57,8 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = await res.json();
-      webhookId = body.id as string;
+      const body = (await res.json()) as { data: { id: string } };
+      webhookId = body.data.id;
     });
 
     let channelId: string;
@@ -115,7 +115,7 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
-      webhookId = (await res.json()).id as string;
+      webhookId = ((await res.json()) as { data: { id: string } }).data.id;
     });
 
     let pollId: string;
@@ -180,7 +180,7 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
-      webhookId = (await res.json()).id as string;
+      webhookId = ((await res.json()) as { data: { id: string } }).data.id;
     });
 
     let ackId: string;
@@ -236,7 +236,7 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
-      webhookId = (await res.json()).id as string;
+      webhookId = ((await res.json()) as { data: { id: string } }).data.id;
     });
 
     let pollId: string;

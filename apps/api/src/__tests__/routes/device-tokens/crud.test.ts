@@ -69,8 +69,8 @@ describe("POST /systems/:systemId/device-tokens", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as typeof MOCK_TOKEN;
-    expect(body.id).toBe(TOKEN_ID);
+    const body = (await res.json()) as { data: typeof MOCK_TOKEN };
+    expect(body.data.id).toBe(TOKEN_ID);
   });
 
   it("passes parsed body to service", async () => {
@@ -131,8 +131,8 @@ describe("GET /systems/:systemId/device-tokens", () => {
     const res = await createApp().request(BASE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: (typeof MOCK_TOKEN)[] };
-    expect(body.data).toHaveLength(1);
+    const body = (await res.json()) as { data: { data: (typeof MOCK_TOKEN)[] } };
+    expect(body.data.data).toHaveLength(1);
   });
 
   it("returns 200 with empty list", async () => {
@@ -141,8 +141,8 @@ describe("GET /systems/:systemId/device-tokens", () => {
     const res = await createApp().request(BASE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: never[] };
-    expect(body.data).toHaveLength(0);
+    const body = (await res.json()) as { data: { data: never[] } };
+    expect(body.data.data).toHaveLength(0);
   });
 
   it("passes auth context and systemId to service", async () => {

@@ -82,12 +82,12 @@ describe("POST /systems/:systemId/blobs/:blobId/confirm", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_BLOB_RESULT;
-    expect(body.id).toBe(BLOB_ID);
-    expect(body.checksum).toBe("a".repeat(64));
-    expect(body.mimeType).toBe("image/png");
-    expect(body.sizeBytes).toBe(1024);
-    expect(body.purpose).toBe("avatar");
+    const body = (await res.json()) as { data: typeof MOCK_BLOB_RESULT };
+    expect(body.data.id).toBe(BLOB_ID);
+    expect(body.data.checksum).toBe("a".repeat(64));
+    expect(body.data.mimeType).toBe("image/png");
+    expect(body.data.sizeBytes).toBe(1024);
+    expect(body.data.purpose).toBe("avatar");
   });
 
   it("returns 400 for malformed JSON body", async () => {

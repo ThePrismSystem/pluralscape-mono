@@ -30,12 +30,12 @@ test.describe("Device tokens", () => {
       });
       expect(res.status()).toBe(HTTP_CREATED);
 
-      const body = (await res.json()) as DeviceTokenResponse;
-      expect(body.id).toMatch(/^dt_/);
-      expect(body.platform).toBe("ios");
-      expect(body.token).toBe("***oken-abc");
-      expect(body.systemId).toBe(systemId);
-      tokenId = body.id;
+      const body = (await res.json()) as { data: DeviceTokenResponse };
+      expect(body.data.id).toMatch(/^dt_/);
+      expect(body.data.platform).toBe("ios");
+      expect(body.data.token).toBe("***oken-abc");
+      expect(body.data.systemId).toBe(systemId);
+      tokenId = body.data.id;
     });
 
     await test.step("list includes registered token", async () => {
@@ -44,8 +44,8 @@ test.describe("Device tokens", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const body = (await res.json()) as DeviceTokenListResponse;
-      const ids = body.data.map((t) => t.id);
+      const outer = (await res.json()) as { data: DeviceTokenListResponse };
+      const ids = outer.data.data.map((t) => t.id);
       expect(ids).toContain(tokenId);
     });
 
@@ -62,8 +62,8 @@ test.describe("Device tokens", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const body = (await res.json()) as DeviceTokenListResponse;
-      const ids = body.data.map((t) => t.id);
+      const outer = (await res.json()) as { data: DeviceTokenListResponse };
+      const ids = outer.data.data.map((t) => t.id);
       expect(ids).not.toContain(tokenId);
     });
   });
