@@ -84,8 +84,8 @@ describe("PUT /systems/:systemId/structure/entity-links/:linkId", () => {
     const res = await putJSON(app, BASE_URL, { sortOrder: 5 });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { sortOrder: number };
-    expect(body.sortOrder).toBe(5);
+    const body = (await res.json()) as { data: { sortOrder: number } };
+    expect(body.data.sortOrder).toBe(5);
   });
 
   it("returns 404 when not found", async () => {

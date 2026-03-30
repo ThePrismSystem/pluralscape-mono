@@ -44,9 +44,10 @@ test.describe("Relationships CRUD", () => {
       });
       expect(createRes.status()).toBe(201);
       const relationship = await createRes.json();
-      expect(relationship).toHaveProperty("id");
-      relationshipId = relationship.id as string;
-      relationshipVersion = relationship.version as number;
+      expect(relationship).toHaveProperty("data");
+      expect(relationship.data).toHaveProperty("id");
+      relationshipId = relationship.data.id as string;
+      relationshipVersion = relationship.data.version as number;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
@@ -55,9 +56,9 @@ test.describe("Relationships CRUD", () => {
       });
       expect(getRes.status()).toBe(200);
       const fetched = await getRes.json();
-      expect(fetched.id).toBe(relationshipId);
+      expect(fetched.data.id).toBe(relationshipId);
 
-      const decrypted = decryptFromApi(fetched.encryptedData as string);
+      const decrypted = decryptFromApi(fetched.data.encryptedData as string);
       expect(decrypted).toEqual(RELATIONSHIP_DATA);
     });
 
@@ -93,7 +94,7 @@ test.describe("Relationships CRUD", () => {
         headers: authHeaders,
       });
       const updatedRelationship = await updatedGet.json();
-      const decryptedUpdate = decryptFromApi(updatedRelationship.encryptedData as string);
+      const decryptedUpdate = decryptFromApi(updatedRelationship.data.encryptedData as string);
       expect(decryptedUpdate).toEqual(UPDATED_RELATIONSHIP_DATA);
     });
 

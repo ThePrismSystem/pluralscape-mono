@@ -123,8 +123,8 @@ describe("POST /systems/:systemId/structure/entity-links", () => {
       sortOrder: 0,
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as EntityLinkResult;
-    expect(body.id).toBe(LINK_ID);
+    const body = (await res.json()) as { data: EntityLinkResult };
+    expect(body.data.id).toBe(LINK_ID);
   });
 
   it("forwards params to service", async () => {
@@ -232,8 +232,8 @@ describe("POST /systems/:systemId/structure/entity-member-links", () => {
       sortOrder: 0,
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as EntityMemberLinkResult;
-    expect(body.id).toBe(ML_ID);
+    const body = (await res.json()) as { data: EntityMemberLinkResult };
+    expect(body.data.id).toBe(ML_ID);
   });
 });
 
@@ -325,8 +325,8 @@ describe("POST /systems/:systemId/structure/entity-associations", () => {
       targetEntityId: "ste_660e8400-e29b-41d4-a716-446655440000",
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as EntityAssociationResult;
-    expect(body.id).toBe(ASSOC_ID);
+    const body = (await res.json()) as { data: EntityAssociationResult };
+    expect(body.data.id).toBe(ASSOC_ID);
   });
 });
 
