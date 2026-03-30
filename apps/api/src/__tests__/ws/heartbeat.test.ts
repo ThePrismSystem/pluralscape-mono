@@ -1,28 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { clearHeartbeat, handlePong, startHeartbeat } from "../../ws/heartbeat.js";
 import { WS_HEARTBEAT_INTERVAL_MS, WS_PONG_TIMEOUT_MS } from "../../ws/ws.constants.js";
-
-import type { AppLogger } from "../../lib/logger.js";
-
-// ── Helpers ────────────────────────────────────────────────────────
-
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
-  return { close: vi.fn(), send: vi.fn() };
-}
-
-const warnSpy = vi.fn();
-
-function mockLog(): AppLogger {
-  return {
-    [APP_LOGGER_BRAND]: true as const,
-    info: vi.fn(),
-    warn: warnSpy,
-    error: vi.fn(),
-    debug: vi.fn(),
-  };
-}
+import { createMockLogger, mockWs } from "../helpers/ws-test-helpers.js";
 
 describe("heartbeat", () => {
   beforeEach(() => {
@@ -36,10 +16,10 @@ describe("heartbeat", () => {
   describe("startHeartbeat", () => {
     it("sends a Ping message at the heartbeat interval", () => {
       const ws = mockWs();
-      const log = mockLog();
+      const { logger } = createMockLogger();
       const connectionId = "conn-hb-1";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
 
       // No ping sent immediately
       expect(ws.send).not.toHaveBeenCalled();
@@ -56,10 +36,10 @@ describe("heartbeat", () => {
 
     it("sends multiple pings at each interval", () => {
       const ws = mockWs();
-      const log = mockLog();
+      const { logger } = createMockLogger();
       const connectionId = "conn-hb-2";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
 
       // Simulate pong response after first ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -78,10 +58,10 @@ describe("heartbeat", () => {
 
     it("closes connection when pong is not received within timeout", () => {
       const ws = mockWs();
-      const log = mockLog();
+      const { logger, methods } = createMockLogger();
       const connectionId = "conn-hb-timeout";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -91,7 +71,7 @@ describe("heartbeat", () => {
       vi.advanceTimersByTime(WS_PONG_TIMEOUT_MS);
 
       expect(ws.close).toHaveBeenCalledOnce();
-      expect(warnSpy).toHaveBeenCalledWith(
+      expect(methods.warn).toHaveBeenCalledWith(
         expect.stringContaining("heartbeat"),
         expect.objectContaining({ connectionId: "conn-hb-timeout" }),
       );
@@ -99,10 +79,10 @@ describe("heartbeat", () => {
 
     it("does not close connection when pong is received in time", () => {
       const ws = mockWs();
-      const log = mockLog();
+      const { logger } = createMockLogger();
       const connectionId = "conn-hb-pong";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -120,13 +100,90 @@ describe("heartbeat", () => {
     });
   });
 
+  describe("onDead callback", () => {
+    it("calls onDead when ping send fails", () => {
+      const ws = mockWs();
+      ws.send.mockImplementation(() => {
+        throw new Error("broken pipe");
+      });
+      const { logger } = createMockLogger();
+      const onDead = vi.fn();
+
+      startHeartbeat("conn-dead-ping", ws as never, logger, onDead);
+
+      // Trigger ping — send will throw
+      vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
+
+      expect(onDead).toHaveBeenCalledOnce();
+    });
+
+    it("stops interval after ping send failure", () => {
+      const ws = mockWs();
+      ws.send.mockImplementation(() => {
+        throw new Error("broken pipe");
+      });
+      const { logger } = createMockLogger();
+      const onDead = vi.fn();
+
+      startHeartbeat("conn-dead-interval", ws as never, logger, onDead);
+
+      // Trigger ping — send will throw, heartbeat should be cleared
+      vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
+      expect(onDead).toHaveBeenCalledOnce();
+
+      // Advance another interval — no more pings should be attempted
+      onDead.mockClear();
+      vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
+      // send was called once (the failed attempt), no additional calls
+      expect(ws.send).toHaveBeenCalledTimes(1);
+      expect(onDead).not.toHaveBeenCalled();
+    });
+
+    it("calls onDead on normal pong timeout close", () => {
+      const ws = mockWs();
+      const { logger } = createMockLogger();
+      const onDead = vi.fn();
+
+      startHeartbeat("conn-dead-timeout", ws as never, logger, onDead);
+
+      // Trigger ping
+      vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
+
+      // No pong — advance past timeout
+      vi.advanceTimersByTime(WS_PONG_TIMEOUT_MS);
+
+      expect(ws.close).toHaveBeenCalledOnce();
+      expect(onDead).toHaveBeenCalledOnce();
+    });
+
+    it("calls onDead when ws.close throws on pong timeout", () => {
+      const ws = mockWs();
+      ws.close.mockImplementation(() => {
+        throw new Error("already closed");
+      });
+      const { logger } = createMockLogger();
+      const onDead = vi.fn();
+
+      startHeartbeat("conn-dead-close-throws", ws as never, logger, onDead);
+
+      // Trigger ping
+      vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
+
+      // No pong — advance past timeout, ws.close throws
+      vi.advanceTimersByTime(WS_PONG_TIMEOUT_MS);
+
+      expect(ws.close).toHaveBeenCalledOnce();
+      expect(onDead).toHaveBeenCalledOnce();
+    });
+  });
+
   describe("clearHeartbeat", () => {
     it("stops all timers for a connection", () => {
       const ws = mockWs();
-      const log = mockLog();
+      const { logger } = createMockLogger();
       const connectionId = "conn-hb-clear";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
 
       // Trigger ping to start pong timeout
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -151,10 +208,10 @@ describe("heartbeat", () => {
 
     it("is safe to call twice for same connection", () => {
       const ws = mockWs();
-      const log = mockLog();
+      const { logger } = createMockLogger();
       const connectionId = "conn-hb-double-clear";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
       clearHeartbeat(connectionId);
       expect(() => {
         clearHeartbeat(connectionId);
@@ -165,10 +222,10 @@ describe("heartbeat", () => {
   describe("handlePong", () => {
     it("clears the pong timeout", () => {
       const ws = mockWs();
-      const log = mockLog();
+      const { logger } = createMockLogger();
       const connectionId = "conn-hb-pong-clear";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
 
       // Trigger ping
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
@@ -195,16 +252,16 @@ describe("heartbeat", () => {
       ws.send.mockImplementation(() => {
         throw new Error("broken pipe");
       });
-      const log = mockLog();
+      const { logger, methods } = createMockLogger();
       const connectionId = "conn-hb-send-fail";
 
-      startHeartbeat(connectionId, ws as never, log);
+      startHeartbeat(connectionId, ws as never, logger);
 
       // Trigger ping — send will throw
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
 
       // Should have logged the error but not crashed
-      expect(warnSpy).toHaveBeenCalled();
+      expect(methods.warn).toHaveBeenCalled();
 
       clearHeartbeat(connectionId);
     });

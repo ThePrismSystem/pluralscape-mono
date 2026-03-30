@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { broadcastDocumentUpdateWithSync } from "../../ws/broadcast.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import { VALKEY_CHANNEL_PREFIX_SYNC } from "../../ws/ws.constants.js";
 import { asSyncDocId } from "../helpers/crypto-test-fixtures.js";
+import { createMockLogger, mockWs } from "../helpers/ws-test-helpers.js";
 
-import type { AppLogger } from "../../lib/logger.js";
 import type { DocumentUpdate } from "@pluralscape/sync";
 import type { AccountId, SessionId, SyncDocumentId, SystemId } from "@pluralscape/types";
 
@@ -17,20 +16,6 @@ interface MockPubSub {
   readonly id: string;
   publish(channel: string, message: string): Promise<boolean>;
   readonly connected: boolean;
-}
-
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
-  return { close: vi.fn(), send: vi.fn() };
-}
-
-function mockLog(): AppLogger {
-  return {
-    [APP_LOGGER_BRAND]: true as const,
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  };
 }
 
 function mockAuth(accountId = "acct_test" as AccountId) {
@@ -70,7 +55,7 @@ function mockPubSub(serverId = "server-1"): {
 
 describe("broadcastDocumentUpdateWithSync", () => {
   let manager: ConnectionManager;
-  const log = mockLog();
+  const { logger: log, methods: logMethods } = createMockLogger();
 
   beforeEach(() => {
     manager = new ConnectionManager();
@@ -99,6 +84,7 @@ describe("broadcastDocumentUpdateWithSync", () => {
     expect(ws1.send).not.toHaveBeenCalled();
     expect(ws2.send).toHaveBeenCalledOnce();
     expect(result.delivered).toBe(1);
+    expect(result.syncPublished).toBe(true);
 
     // Valkey publish
     const expectedChannel = `${VALKEY_CHANNEL_PREFIX_SYNC}doc-1`;
@@ -128,9 +114,10 @@ describe("broadcastDocumentUpdateWithSync", () => {
 
     expect(ws1.send).toHaveBeenCalledOnce();
     expect(result.delivered).toBe(1);
+    expect(result.syncPublished).toBeNull();
   });
 
-  it("continues local delivery when Valkey publish fails", async () => {
+  it("continues local delivery when Valkey publish returns false", async () => {
     const ws1 = mockWs();
     manager.register("conn-1", ws1 as never, Date.now());
     manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
@@ -150,6 +137,37 @@ describe("broadcastDocumentUpdateWithSync", () => {
     // Local delivery still works
     expect(ws1.send).toHaveBeenCalledOnce();
     expect(result.delivered).toBe(1);
+    expect(result.syncPublished).toBe(false);
+    expect(logMethods.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Valkey publish returned false"),
+      expect.any(Object),
+    );
+  });
+
+  it("reports syncPublished false when Valkey publish throws", async () => {
+    const ws1 = mockWs();
+    manager.register("conn-1", ws1 as never, Date.now());
+    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.addSubscription("conn-1", "doc-1");
+
+    const { pubsub, publishMock } = mockPubSub();
+    publishMock.mockRejectedValueOnce(new Error("connection lost"));
+
+    const result = await broadcastDocumentUpdateWithSync(
+      makeUpdate(),
+      "nobody",
+      manager,
+      log,
+      pubsub,
+    );
+
+    expect(ws1.send).toHaveBeenCalledOnce();
+    expect(result.delivered).toBe(1);
+    expect(result.syncPublished).toBe(false);
+    expect(logMethods.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to publish"),
+      expect.any(Object),
+    );
   });
 
   it("uses correct Valkey channel prefix", async () => {
