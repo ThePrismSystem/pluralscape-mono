@@ -1,6 +1,10 @@
 import { polls, pollVotes } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-import { CastVoteBodySchema, PollVoteQuerySchema } from "@pluralscape/validation";
+import {
+  CastVoteBodySchema,
+  PollVoteQuerySchema,
+  UpdatePollVoteBodySchema,
+} from "@pluralscape/validation";
 import { and, count, desc, eq, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -246,6 +250,252 @@ export async function listVotes(
       .limit(effectiveLimit + 1);
 
     return buildCompositePaginatedResult(rows, effectiveLimit, toVoteResult, (i) => i.createdAt);
+  });
+}
+
+// ── UPDATE VOTE ────────────────────────────────────────────────────
+
+export async function updatePollVote(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  pollId: PollId,
+  voteId: PollVoteId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<PollVoteResult> {
+  assertSystemOwnership(systemId, auth);
+
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    UpdatePollVoteBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Fetch the vote with row lock for OCC
+    const [existing] = await tx
+      .select()
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.id, voteId),
+          eq(pollVotes.pollId, pollId),
+          eq(pollVotes.systemId, systemId),
+          eq(pollVotes.archived, false),
+        ),
+      )
+      .for("update")
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll vote not found");
+    }
+
+    // Verify the parent poll is still open
+    const [poll] = await tx
+      .select()
+      .from(polls)
+      .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId), eq(polls.archived, false)))
+      .limit(1);
+
+    if (!poll) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+    }
+
+    if (poll.status === POLL_STATUS_CLOSED) {
+      throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll is closed");
+    }
+
+    if (poll.endsAt !== null && now() >= poll.endsAt) {
+      throw new ApiHttpError(HTTP_CONFLICT, "POLL_CLOSED", "Poll has ended");
+    }
+
+    // Veto check
+    if (parsed.isVeto === true && !poll.allowVeto) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "VETO_NOT_ALLOWED",
+        "Veto is not allowed for this poll",
+      );
+    }
+
+    // Abstain check
+    if (parsed.optionId === null && !poll.allowAbstain) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "ABSTAIN_NOT_ALLOWED",
+        "Abstain is not allowed for this poll",
+      );
+    }
+
+    const timestamp = now();
+    const [updated] = await tx
+      .update(pollVotes)
+      .set({
+        optionId: parsed.optionId,
+        isVeto: parsed.isVeto ?? existing.isVeto,
+        encryptedData: blob,
+        votedAt: timestamp,
+      })
+      .where(and(eq(pollVotes.id, voteId), eq(pollVotes.systemId, systemId)))
+      .returning();
+
+    if (!updated) {
+      throw new Error("Failed to update poll vote — UPDATE returned no rows");
+    }
+
+    await audit(tx, {
+      eventType: "poll-vote.updated",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Poll vote updated",
+      systemId,
+    });
+
+    const result = toVoteResult(updated);
+    await dispatchWebhookEvent(tx, systemId, "poll-vote.updated", {
+      pollId,
+      voteId: result.id,
+    });
+
+    return result;
+  });
+}
+
+// ── DELETE (ARCHIVE) VOTE ──────────────────────────────────────────
+
+/**
+ * Soft-archives a poll vote. Poll votes use an append-only CRDT strategy,
+ * so hard deletes are not permitted — we archive instead to preserve
+ * the immutable append log.
+ */
+export async function deletePollVote(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  pollId: PollId,
+  voteId: PollVoteId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  assertSystemOwnership(systemId, auth);
+
+  await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const [existing] = await tx
+      .select({ id: pollVotes.id, archived: pollVotes.archived })
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.id, voteId),
+          eq(pollVotes.pollId, pollId),
+          eq(pollVotes.systemId, systemId),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll vote not found");
+    }
+
+    if (existing.archived) {
+      throw new ApiHttpError(HTTP_CONFLICT, "ALREADY_ARCHIVED", "Poll vote is already archived");
+    }
+
+    const timestamp = now();
+    await tx
+      .update(pollVotes)
+      .set({ archived: true, archivedAt: timestamp })
+      .where(and(eq(pollVotes.id, voteId), eq(pollVotes.systemId, systemId)));
+
+    await audit(tx, {
+      eventType: "poll-vote.archived",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Poll vote archived",
+      systemId,
+    });
+
+    await dispatchWebhookEvent(tx, systemId, "poll-vote.archived", {
+      pollId,
+      voteId,
+    });
+  });
+}
+
+// ── POLL RESULTS ───────────────────────────────────────────────────
+
+export interface PollResultsOptionCount {
+  readonly optionId: string | null;
+  readonly count: number;
+}
+
+export interface PollResults {
+  readonly pollId: PollId;
+  readonly totalVotes: number;
+  readonly vetoCount: number;
+  readonly optionCounts: readonly PollResultsOptionCount[];
+}
+
+export async function getPollResults(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  pollId: PollId,
+  auth: AuthContext,
+): Promise<PollResults> {
+  assertSystemOwnership(systemId, auth);
+
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    // Verify poll exists
+    const [poll] = await tx
+      .select({ id: polls.id })
+      .from(polls)
+      .where(and(eq(polls.id, pollId), eq(polls.systemId, systemId)))
+      .limit(1);
+
+    if (!poll) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Poll not found");
+    }
+
+    // Count non-archived votes grouped by optionId
+    const optionRows = await tx
+      .select({
+        optionId: pollVotes.optionId,
+        count: count(),
+      })
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.pollId, pollId),
+          eq(pollVotes.systemId, systemId),
+          eq(pollVotes.archived, false),
+        ),
+      )
+      .groupBy(pollVotes.optionId);
+
+    // Count vetoes separately
+    const [vetoRow] = await tx
+      .select({ count: count() })
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.pollId, pollId),
+          eq(pollVotes.systemId, systemId),
+          eq(pollVotes.archived, false),
+          eq(pollVotes.isVeto, true),
+        ),
+      );
+
+    const optionCounts: PollResultsOptionCount[] = optionRows.map((row) => ({
+      optionId: row.optionId ?? null,
+      count: row.count,
+    }));
+
+    const totalVotes = optionCounts.reduce((sum, oc) => sum + oc.count, 0);
+
+    return {
+      pollId,
+      totalVotes,
+      vetoCount: vetoRow?.count ?? 0,
+      optionCounts,
+    };
   });
 }
 

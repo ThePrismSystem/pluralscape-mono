@@ -77,6 +77,8 @@ describe("WebhookEventType", () => {
         case "poll.deleted":
         case "poll-vote.cast":
         case "poll-vote.vetoed":
+        case "poll-vote.updated":
+        case "poll-vote.archived":
         case "acknowledgement.created":
         case "acknowledgement.confirmed":
         case "acknowledgement.archived":
