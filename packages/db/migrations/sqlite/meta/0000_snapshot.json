@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "917b0a0c-ffc1-4dcf-896a-93be3cea71ac",
+  "id": "177b1132-3194-47c0-9b4c-055a95459966",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -3406,6 +3406,43 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -3432,6 +3469,14 @@
         "fronting_reports_format_check": {
           "name": "fronting_reports_format_check",
           "value": "\"fronting_reports\".\"format\" IS NULL OR \"fronting_reports\".\"format\" IN ('html', 'pdf')"
+        },
+        "fronting_reports_version_check": {
+          "name": "fronting_reports_version_check",
+          "value": "\"fronting_reports\".\"version\" >= 1"
+        },
+        "fronting_reports_archived_consistency_check": {
+          "name": "fronting_reports_archived_consistency_check",
+          "value": "(\"fronting_reports\".\"archived\" = true) = (\"fronting_reports\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
