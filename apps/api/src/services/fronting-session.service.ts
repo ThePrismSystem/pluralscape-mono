@@ -198,6 +198,14 @@ export async function listFrontingSessions(
       conditions.push(eq(frontingSessions.structureEntityId, opts.structureEntityId));
     }
 
+    if (opts.activeOnly && (opts.endFrom !== undefined || opts.endUntil !== undefined)) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "VALIDATION_ERROR",
+        "Cannot combine activeOnly with endFrom or endUntil filters",
+      );
+    }
+
     if (opts.startFrom !== undefined) {
       conditions.push(gte(frontingSessions.startTime, opts.startFrom));
     }
@@ -207,15 +215,13 @@ export async function listFrontingSessions(
     }
 
     // End-time filters exclude active sessions (null endTime) by requiring endTime IS NOT NULL
-    if (opts.endFrom !== undefined) {
+    if (opts.endFrom !== undefined || opts.endUntil !== undefined) {
       conditions.push(isNotNull(frontingSessions.endTime));
+    }
+    if (opts.endFrom !== undefined) {
       conditions.push(gte(frontingSessions.endTime, opts.endFrom));
     }
-
     if (opts.endUntil !== undefined) {
-      if (opts.endFrom === undefined) {
-        conditions.push(isNotNull(frontingSessions.endTime));
-      }
       conditions.push(lte(frontingSessions.endTime, opts.endUntil));
     }
 
