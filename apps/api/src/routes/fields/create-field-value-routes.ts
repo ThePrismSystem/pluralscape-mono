@@ -81,7 +81,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
 
     const db = await getDb();
     const result = await setFieldValueForOwner(db, systemId, owner, fieldDefId, body, auth, audit);
-    return c.json(result, HTTP_CREATED);
+    return c.json(envelope(result), HTTP_CREATED);
   });
 
   // ── LIST (GET /) ────────────────────────────────────────────────
@@ -118,7 +118,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
       auth,
       audit,
     );
-    return c.json(result);
+    return c.json(envelope(result));
   });
 
   // ── DELETE (DELETE /:fieldDefId) ────────────────────────────────

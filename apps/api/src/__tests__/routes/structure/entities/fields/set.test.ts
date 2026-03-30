@@ -80,13 +80,15 @@ describe("POST /systems/:systemId/structure/entities/:entityId/fields/:fieldDefI
 
     expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      id: string;
-      structureEntityId: string;
-      version: number;
+      data: {
+        id: string;
+        structureEntityId: string;
+        version: number;
+      };
     };
-    expect(body.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.structureEntityId).toBe(ENTITY_ID);
-    expect(body.version).toBe(1);
+    expect(body.data.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.structureEntityId).toBe(ENTITY_ID);
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards owner with kind structureEntity to service", async () => {

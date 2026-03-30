@@ -79,10 +79,10 @@ describe("POST /systems/:systemId/groups/:groupId/fields/:fieldDefId", () => {
     const res = await postJSON(app, FIELD_PATH, VALID_BODY);
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; groupId: string; version: number };
-    expect(body.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.groupId).toBe(GRP_ID);
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: { id: string; groupId: string; version: number } };
+    expect(body.data.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.groupId).toBe(GRP_ID);
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards owner with kind group to service", async () => {

@@ -71,15 +71,15 @@ describe("GET /systems/:id/buckets/:bucketId/rotations/:rotationId", () => {
     const res = await createApp().request(PROGRESS_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_ROTATION;
-    expect(body.id).toBe(ROTATION_ID);
-    expect(body.bucketId).toBe(BUCKET_ID);
-    expect(body.state).toBe("migrating");
-    expect(body.completedItems).toBe(6);
-    expect(body.totalItems).toBe(10);
-    expect(body.failedItems).toBe(0);
-    expect(body.fromKeyVersion).toBe(1);
-    expect(body.toKeyVersion).toBe(2);
+    const body = (await res.json()) as { data: typeof MOCK_ROTATION };
+    expect(body.data.id).toBe(ROTATION_ID);
+    expect(body.data.bucketId).toBe(BUCKET_ID);
+    expect(body.data.state).toBe("migrating");
+    expect(body.data.completedItems).toBe(6);
+    expect(body.data.totalItems).toBe(10);
+    expect(body.data.failedItems).toBe(0);
+    expect(body.data.fromKeyVersion).toBe(1);
+    expect(body.data.toKeyVersion).toBe(2);
   });
 
   it("returns 404 when rotation not found", async () => {

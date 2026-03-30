@@ -6,6 +6,7 @@ import { HTTP_BAD_REQUEST, HTTP_NOT_MODIFIED } from "../../http.constants.js";
 import { getDb } from "../../lib/db.js";
 import { checkConditionalRequest } from "../../lib/etag.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
   getBucketExportManifest,
@@ -35,7 +36,7 @@ exportRoutes.get("/manifest", async (c) => {
     return c.body(null, HTTP_NOT_MODIFIED);
   }
 
-  return c.json(result);
+  return c.json(envelope(result));
 });
 
 // ── Paginated export ───────────────────────────────────────────────
@@ -63,5 +64,5 @@ exportRoutes.get("/", async (c) => {
     return c.body(null, HTTP_NOT_MODIFIED);
   }
 
-  return c.json(result);
+  return c.json(envelope(result));
 });

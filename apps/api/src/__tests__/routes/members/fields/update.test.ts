@@ -76,10 +76,10 @@ describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
     const res = await putJSON(app, FIELD_PATH, VALID_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; memberId: string; version: number };
-    expect(body.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.memberId).toBe(MEM_ID);
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: { id: string; memberId: string; version: number } };
+    expect(body.data.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.memberId).toBe(MEM_ID);
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards systemId, owner, fieldDefId, body, auth, and audit writer to service", async () => {

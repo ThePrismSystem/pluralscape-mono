@@ -108,13 +108,13 @@ test.describe("Bucket export", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ManifestResponse;
+      const body = (await res.json()) as { data: ManifestResponse };
 
-      expect(body.systemId).toBe(systemId);
-      expect(body.bucketId).toBe(bucket.id);
-      expect(body.entries.length).toBeGreaterThan(0);
+      expect(body.data.systemId).toBe(systemId);
+      expect(body.data.bucketId).toBe(bucket.id);
+      expect(body.data.entries.length).toBeGreaterThan(0);
 
-      for (const entry of body.entries) {
+      for (const entry of body.data.entries) {
         expect(entry.count).toBe(0);
         expect(entry.lastUpdatedAt).toBeNull();
       }
@@ -132,9 +132,9 @@ test.describe("Bucket export", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ManifestResponse;
+      const body = (await res.json()) as { data: ManifestResponse };
 
-      const memberEntry = body.entries.find((e) => e.entityType === "member");
+      const memberEntry = body.data.entries.find((e) => e.entityType === "member");
       expect(memberEntry).toBeDefined();
       expect(memberEntry?.count).toBe(1);
       expect(memberEntry?.lastUpdatedAt).toBeGreaterThan(0);
@@ -149,10 +149,10 @@ test.describe("Bucket export", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ManifestResponse;
+      const body = (await res.json()) as { data: ManifestResponse };
 
       // 21 bucket content entity types
-      expect(body.entries).toHaveLength(21);
+      expect(body.data.entries).toHaveLength(21);
     });
 
     test("returns ETag header", async ({ request, authHeaders }) => {
@@ -246,9 +246,9 @@ test.describe("Bucket export", () => {
           { headers: authHeaders },
         );
         expect(res.status()).toBe(HTTP_OK);
-        const body = (await res.json()) as ExportPageResponse;
-        expect(body.data).toHaveLength(1);
-        expect(body.data[0]?.entityType).toBe(entityType);
+        const body = (await res.json()) as { data: ExportPageResponse };
+        expect(body.data.data).toHaveLength(1);
+        expect(body.data.data[0]?.entityType).toBe(entityType);
       }
     });
 
@@ -266,19 +266,19 @@ test.describe("Bucket export", () => {
         { headers: authHeaders },
       );
       expect(page1Res.status()).toBe(HTTP_OK);
-      const page1 = (await page1Res.json()) as ExportPageResponse;
-      expect(page1.data).toHaveLength(2);
-      expect(page1.hasMore).toBe(true);
-      expect(page1.nextCursor).toBeTruthy();
+      const page1 = (await page1Res.json()) as { data: ExportPageResponse };
+      expect(page1.data.data).toHaveLength(2);
+      expect(page1.data.hasMore).toBe(true);
+      expect(page1.data.nextCursor).toBeTruthy();
 
       const page2Res = await request.get(
-        `/v1/systems/${systemId}/buckets/${bucket.id}/export?entityType=member&limit=2&cursor=${String(page1.nextCursor)}`,
+        `/v1/systems/${systemId}/buckets/${bucket.id}/export?entityType=member&limit=2&cursor=${String(page1.data.nextCursor)}`,
         { headers: authHeaders },
       );
       expect(page2Res.status()).toBe(HTTP_OK);
-      const page2 = (await page2Res.json()) as ExportPageResponse;
-      expect(page2.data).toHaveLength(1);
-      expect(page2.hasMore).toBe(false);
+      const page2 = (await page2Res.json()) as { data: ExportPageResponse };
+      expect(page2.data.data).toHaveLength(1);
+      expect(page2.data.hasMore).toBe(false);
     });
 
     test("empty bucket returns empty result", async ({ request, authHeaders }) => {
@@ -290,10 +290,10 @@ test.describe("Bucket export", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ExportPageResponse;
-      expect(body.data).toHaveLength(0);
-      expect(body.hasMore).toBe(false);
-      expect(body.nextCursor).toBeNull();
+      const body = (await res.json()) as { data: ExportPageResponse };
+      expect(body.data.data).toHaveLength(0);
+      expect(body.data.hasMore).toBe(false);
+      expect(body.data.nextCursor).toBeNull();
     });
 
     test("non-owner receives 404", async ({ request }) => {
@@ -355,10 +355,10 @@ test.describe("Bucket export", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ExportPageResponse;
-      expect(body.data).toHaveLength(2);
+      const body = (await res.json()) as { data: ExportPageResponse };
+      expect(body.data.data).toHaveLength(2);
 
-      const ids = body.data.map((i) => i.id).sort();
+      const ids = body.data.data.map((i) => i.id).sort();
       expect(ids).toEqual([m1.id, m2.id].sort());
     });
 
@@ -441,9 +441,9 @@ test.describe("Bucket export", () => {
           : `/v1/systems/${systemId}/buckets/${bucket.id}/export?entityType=member&limit=2`;
         const res = await request.get(url, { headers: authHeaders });
         expect(res.status()).toBe(HTTP_OK);
-        const body = (await res.json()) as ExportPageResponse;
-        collected.push(...body.data.map((i) => i.id));
-        cursor = body.nextCursor;
+        const body = (await res.json()) as { data: ExportPageResponse };
+        collected.push(...body.data.data.map((i) => i.id));
+        cursor = body.data.nextCursor;
         pageCount++;
       } while (cursor !== null && pageCount < 10);
 

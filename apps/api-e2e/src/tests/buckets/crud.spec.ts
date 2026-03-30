@@ -22,10 +22,12 @@ test.describe("Bucket CRUD", () => {
         headers: authHeaders,
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as { id: string; encryptedData: string; archived: boolean };
-      expect(body.id).toBe(bucketId);
-      expect(body.encryptedData).toBeTruthy();
-      expect(body.archived).toBe(false);
+      const body = (await res.json()) as {
+        data: { id: string; encryptedData: string; archived: boolean };
+      };
+      expect(body.data.id).toBe(bucketId);
+      expect(body.data.encryptedData).toBeTruthy();
+      expect(body.data.archived).toBe(false);
     });
 
     // ── List ──
@@ -49,9 +51,9 @@ test.describe("Bucket CRUD", () => {
         },
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as { version: number };
-      expect(body.version).toBe(version + 1);
-      version = body.version;
+      const body = (await res.json()) as { data: { version: number } };
+      expect(body.data.version).toBe(version + 1);
+      version = body.data.version;
     });
 
     // ── Archive ──
@@ -88,8 +90,8 @@ test.describe("Bucket CRUD", () => {
         headers: authHeaders,
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as { archived: boolean };
-      expect(body.archived).toBe(false);
+      const body = (await res.json()) as { data: { archived: boolean } };
+      expect(body.data.archived).toBe(false);
     });
 
     // ── Delete ──

@@ -86,9 +86,9 @@ describe("GET /systems/:systemId/buckets/:bucketId/export/manifest", () => {
     const res = await createApp().request(MANIFEST_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as BucketExportManifestResponse;
-    expect(body.systemId).toBe(SYS_ID);
-    expect(body.entries).toHaveLength(2);
+    const body = (await res.json()) as { data: BucketExportManifestResponse };
+    expect(body.data.systemId).toBe(SYS_ID);
+    expect(body.data.entries).toHaveLength(2);
   });
 
   it("sets ETag header from manifest response", async () => {
@@ -145,9 +145,9 @@ describe("GET /systems/:systemId/buckets/:bucketId/export", () => {
     const res = await createApp().request(`${EXPORT_URL}?entityType=member`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as BucketExportPageResponse;
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0]?.entityType).toBe("member");
+    const body = (await res.json()) as { data: BucketExportPageResponse };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.entityType).toBe("member");
   });
 
   it("returns 400 for missing entityType", async () => {

@@ -74,10 +74,10 @@ describe("POST /systems/:systemId/fields", () => {
     const res = await postJSON(app, `/systems/${SYS_ID}/fields`, VALID_BODY);
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; fieldType: string; version: number };
-    expect(body.id).toBe(FLD_ID);
-    expect(body.fieldType).toBe("text");
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: { id: string; fieldType: string; version: number } };
+    expect(body.data.id).toBe(FLD_ID);
+    expect(body.data.fieldType).toBe("text");
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards systemId, body, auth, and audit writer to service", async () => {

@@ -73,8 +73,8 @@ export async function createCustomFront(
     data: { encryptedData: encryptForApi({ label }) },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { id: string; version: number };
-  return { id: body.id, version: body.version };
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
 }
 
 /**
@@ -97,8 +97,8 @@ export async function createFieldDefinition(
     },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { id: string; version: number };
-  return { id: body.id, version: body.version };
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
 }
 
 /**
@@ -119,8 +119,8 @@ export async function createFrontingSession(
     },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { id: string; version: number };
-  return { id: body.id, version: body.version };
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
 }
 
 /**
@@ -144,8 +144,8 @@ export async function createRelationship(
     },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { id: string; version: number };
-  return { id: body.id, version: body.version };
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
 }
 
 /**
@@ -301,6 +301,6 @@ export async function createBucket(
     data: { encryptedData: encryptForApi({ name }) },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { id: string; version: number };
-  return { id: body.id, version: body.version };
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
 }
