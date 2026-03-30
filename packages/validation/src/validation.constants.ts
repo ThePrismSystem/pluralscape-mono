@@ -133,6 +133,12 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
 /** Maximum character length for device push tokens (APNs/FCM/web-push). */
 export const MAX_DEVICE_TOKEN_LENGTH = 512;
 
+/** Maximum character length for free-form query parameter string fields (entity IDs, event types, resource types). */
+export const MAX_QUERY_PARAM_STRING_LENGTH = 256;
+
+/** Maximum character length for opaque pagination cursor strings. */
+export const MAX_CURSOR_LENGTH = 1024;
+
 /** All valid device token platform values, used for Zod enum validation. */
 export const DEVICE_TOKEN_PLATFORM_VALUES = [
   "ios",

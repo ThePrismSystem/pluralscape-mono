@@ -171,6 +171,40 @@ describe("AuditLogQuerySchema", () => {
     }
   });
 
+  it("rejects event_type exceeding 256 characters", () => {
+    const result = AuditLogQuerySchema.safeParse({ event_type: "a".repeat(257) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["event_type"]);
+    }
+  });
+
+  it("accepts event_type at the 256 character boundary", () => {
+    const result = AuditLogQuerySchema.safeParse({ event_type: "a".repeat(256) });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects resource_type exceeding 256 characters", () => {
+    const result = AuditLogQuerySchema.safeParse({ resource_type: "a".repeat(257) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["resource_type"]);
+    }
+  });
+
+  it("rejects cursor exceeding 1024 characters", () => {
+    const result = AuditLogQuerySchema.safeParse({ cursor: "a".repeat(1025) });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.path).toEqual(["cursor"]);
+    }
+  });
+
+  it("accepts cursor at the 1024 character boundary", () => {
+    const result = AuditLogQuerySchema.safeParse({ cursor: "a".repeat(1024) });
+    expect(result.success).toBe(true);
+  });
+
   it("accepts all fields together", () => {
     const result = AuditLogQuerySchema.safeParse({
       event_type: "member.removed",
