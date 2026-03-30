@@ -174,6 +174,8 @@ export type {
   FriendDashboardKeyGrant,
   FriendDashboardResponse,
   FriendAccessContext,
+  FriendDashboardSyncEntry,
+  FriendDashboardSyncResponse,
 } from "./friend-dashboard.js";
 
 // ── Friend Export ────────────────────────────────────────────────────
