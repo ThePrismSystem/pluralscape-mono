@@ -5,6 +5,7 @@ import { authMiddleware } from "../../middleware/auth.js";
 import { auditLogRoute } from "./audit-log.js";
 import { changeEmailRoute } from "./change-email.js";
 import { changePasswordRoute } from "./change-password.js";
+import { deleteRoute } from "./delete.js";
 import { deviceTransferRoute } from "./device-transfer.js";
 import { friendCodeRoutes } from "./friend-codes/index.js";
 import { friendRoutes } from "./friends/index.js";
@@ -19,6 +20,7 @@ export const accountRoutes = new Hono<AuthEnv>();
 accountRoutes.use("*", authMiddleware());
 
 accountRoutes.route("/", getRoute);
+accountRoutes.route("/", deleteRoute);
 accountRoutes.route("/email", changeEmailRoute);
 accountRoutes.route("/password", changePasswordRoute);
 accountRoutes.route("/audit-log", auditLogRoute);
