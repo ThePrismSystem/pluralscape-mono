@@ -54,7 +54,7 @@ interface ExportEntity {
 }
 
 interface ExportPageResponse {
-  readonly items: readonly ExportEntity[];
+  readonly data: readonly ExportEntity[];
   readonly nextCursor: string | null;
   readonly hasMore: boolean;
   readonly totalCount: number | null;
@@ -116,14 +116,14 @@ test.describe("Friend data export", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ManifestResponse;
+      const body = (await res.json()) as { data: ManifestResponse };
 
-      expect(body.systemId).toBeTruthy();
-      expect(body.entries.length).toBeGreaterThan(0);
-      expect(body.etag).toBeTruthy();
+      expect(body.data.systemId).toBeTruthy();
+      expect(body.data.entries.length).toBeGreaterThan(0);
+      expect(body.data.etag).toBeTruthy();
 
       // All counts should be 0 with no bucket assignments
-      for (const entry of body.entries) {
+      for (const entry of body.data.entries) {
         expect(entry.count).toBe(0);
         expect(entry.lastUpdatedAt).toBeNull();
       }
@@ -152,16 +152,16 @@ test.describe("Friend data export", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ManifestResponse;
+      const body = (await res.json()) as { data: ManifestResponse };
 
-      const memberEntry = body.entries.find((e) => e.entityType === "member");
+      const memberEntry = body.data.entries.find((e) => e.entityType === "member");
       expect(memberEntry).toBeDefined();
       expect(memberEntry?.count).toBe(1);
       expect(memberEntry?.lastUpdatedAt).toBeGreaterThan(0);
 
       // Key grants present
-      expect(body.keyGrants).toHaveLength(1);
-      expect(body.keyGrants[0]?.bucketId).toBe(bucket.id);
+      expect(body.data.keyGrants).toHaveLength(1);
+      expect(body.data.keyGrants[0]?.bucketId).toBe(bucket.id);
     });
 
     test("returns 304 when ETag matches", async ({
@@ -232,11 +232,11 @@ test.describe("Friend data export", () => {
       expect(res.status()).toBe(HTTP_OK);
       const body = (await res.json()) as ExportPageResponse;
 
-      expect(body.items).toHaveLength(1);
-      expect(body.items[0]?.id).toBe(visible.id);
-      expect(body.items[0]?.entityType).toBe("member");
-      expect(body.items[0]?.encryptedData).toBeTruthy();
-      expect(body.items[0]?.updatedAt).toBeGreaterThan(0);
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0]?.id).toBe(visible.id);
+      expect(body.data[0]?.entityType).toBe("member");
+      expect(body.data[0]?.encryptedData).toBeTruthy();
+      expect(body.data[0]?.updatedAt).toBeGreaterThan(0);
       expect(body.etag).toBeTruthy();
     });
 
@@ -265,7 +265,7 @@ test.describe("Friend data export", () => {
       expect(page1Res.status()).toBe(HTTP_OK);
       const page1 = (await page1Res.json()) as ExportPageResponse;
 
-      expect(page1.items.length).toBeGreaterThanOrEqual(1);
+      expect(page1.data.length).toBeGreaterThanOrEqual(1);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeTruthy();
 
@@ -279,7 +279,7 @@ test.describe("Friend data export", () => {
       const page2 = (await page2Res.json()) as ExportPageResponse;
 
       // Collect all IDs across pages
-      const allIds = [...page1.items.map((i) => i.id), ...page2.items.map((i) => i.id)];
+      const allIds = [...page1.data.map((i) => i.id), ...page2.data.map((i) => i.id)];
       // All 3 created members should appear across both pages
       for (const id of memberIds) {
         expect(allIds).toContain(id);
@@ -322,8 +322,8 @@ test.describe("Friend data export", () => {
         { headers: accountB.headers },
       );
       const memberBody = (await memberRes.json()) as ExportPageResponse;
-      expect(memberBody.items).toHaveLength(1);
-      expect(memberBody.items[0]?.entityType).toBe("member");
+      expect(memberBody.data).toHaveLength(1);
+      expect(memberBody.data[0]?.entityType).toBe("member");
 
       // Export groups
       const groupRes = await request.get(
@@ -331,8 +331,8 @@ test.describe("Friend data export", () => {
         { headers: accountB.headers },
       );
       const groupBody = (await groupRes.json()) as ExportPageResponse;
-      expect(groupBody.items).toHaveLength(1);
-      expect(groupBody.items[0]?.entityType).toBe("group");
+      expect(groupBody.data).toHaveLength(1);
+      expect(groupBody.data[0]?.entityType).toBe("group");
 
       // Export custom fronts
       const cfRes = await request.get(
@@ -340,8 +340,8 @@ test.describe("Friend data export", () => {
         { headers: accountB.headers },
       );
       const cfBody = (await cfRes.json()) as ExportPageResponse;
-      expect(cfBody.items).toHaveLength(1);
-      expect(cfBody.items[0]?.entityType).toBe("custom-front");
+      expect(cfBody.data).toHaveLength(1);
+      expect(cfBody.data[0]?.entityType).toBe("custom-front");
     });
 
     test("returns 304 when ETag matches", async ({

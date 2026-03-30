@@ -40,8 +40,8 @@ describe("GET /systems/:id/groups/tree", () => {
     const res = await app.request(TREE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as unknown[];
-    expect(body).toEqual([]);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toEqual([]);
   });
 
   it("applies the readHeavy rate limit category", () => {

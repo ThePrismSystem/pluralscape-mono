@@ -1,7 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { ApiErrorCode } from "../api-constants.js";
-import type { ActionResult, ApiError, ApiResponse, Result, ValidationError } from "../results.js";
+import type { ApiError, ApiResponse, Result, ValidationError } from "../results.js";
 
 describe("Result", () => {
   it("discriminates on ok field", () => {
@@ -62,16 +62,6 @@ describe("ApiResponse", () => {
       // @ts-expect-error cannot have both data and error
       { data: "ok", error: { code: "INTERNAL_ERROR", message: "fail" }, requestId: "abc" },
     );
-  });
-});
-
-describe("ActionResult", () => {
-  it("has success: true", () => {
-    expectTypeOf<ActionResult["success"]>().toEqualTypeOf<true>();
-  });
-
-  it("accepts valid action result", () => {
-    assertType({ success: true });
   });
 });
 

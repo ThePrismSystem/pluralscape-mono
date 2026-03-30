@@ -207,7 +207,7 @@ export async function listGroupMembers(
     const nextCursor = hasMore && lastItem ? toCursor(lastItem.memberId) : null;
 
     return {
-      items,
+      data: items,
       nextCursor,
       hasMore,
       totalCount: null,
@@ -270,7 +270,7 @@ export async function listMemberGroupMemberships(
     const nextCursor = hasMore && lastItem ? toCursor(lastItem.groupId) : null;
 
     return {
-      items,
+      data: items,
       nextCursor,
       hasMore,
       totalCount: null,

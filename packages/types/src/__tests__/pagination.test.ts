@@ -18,7 +18,7 @@ describe("PaginationCursor", () => {
 describe("PaginatedResult", () => {
   it("is generic over item type", () => {
     type Result = PaginatedResult<{ id: string; name: string }>;
-    expectTypeOf<Result["items"]>().toEqualTypeOf<ReadonlyArray<{ id: string; name: string }>>();
+    expectTypeOf<Result["data"]>().toEqualTypeOf<ReadonlyArray<{ id: string; name: string }>>();
   });
 
   it("has cursor and hasMore fields", () => {
@@ -34,7 +34,7 @@ describe("PaginatedResult", () => {
 
   it("rejects mutation of readonly fields", () => {
     const result: PaginatedResult<string> = {
-      items: [],
+      data: [],
       nextCursor: null,
       hasMore: false,
       totalCount: null,

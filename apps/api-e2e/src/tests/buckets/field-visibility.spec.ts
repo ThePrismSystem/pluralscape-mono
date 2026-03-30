@@ -23,7 +23,8 @@ async function createFieldDefinition(
     },
   });
   expect(res.status()).toBe(201);
-  return (await res.json()) as { id: string };
+  const body = (await res.json()) as { data: { id: string } };
+  return body.data;
 }
 
 test.describe("Field Bucket Visibility", () => {
@@ -42,9 +43,9 @@ test.describe("Field Bucket Visibility", () => {
         },
       );
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as VisibilityEntry;
-      expect(body.fieldDefinitionId).toBe(field.id);
-      expect(body.bucketId).toBe(bucket.id);
+      const body = (await res.json()) as { data: VisibilityEntry };
+      expect(body.data.fieldDefinitionId).toBe(field.id);
+      expect(body.data.bucketId).toBe(bucket.id);
     });
 
     // ── List visibility ──

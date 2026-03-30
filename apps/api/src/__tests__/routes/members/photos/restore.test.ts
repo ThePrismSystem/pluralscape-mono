@@ -73,10 +73,10 @@ describe("POST /systems/:systemId/members/:memberId/photos/:photoId/restore", ()
     const res = await app.request(RESTORE_PATH, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof PHOTO_RESULT;
-    expect(body.id).toBe(PHOTO_ID);
-    expect(body.memberId).toBe(MEM_ID);
-    expect(body.archived).toBe(false);
+    const body = (await res.json()) as { data: typeof PHOTO_RESULT };
+    expect(body.data.id).toBe(PHOTO_ID);
+    expect(body.data.memberId).toBe(MEM_ID);
+    expect(body.data.archived).toBe(false);
   });
 
   it("returns 404 when photo not found", async () => {

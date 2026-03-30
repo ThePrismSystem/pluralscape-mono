@@ -6,7 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
-import { wrapAction } from "../../lib/response.js";
+import { envelope } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
@@ -36,7 +36,7 @@ sessionsRoute.get("/sessions", async (c) => {
   const limit = parsePaginationLimit(limitParam, DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT);
 
   const result = await listSessions(db, auth.accountId, parseCursor(cursor), limit);
-  return c.json(result);
+  return c.json(envelope(result));
 });
 
 // DELETE /auth/sessions/:id — revoke a specific session
@@ -81,5 +81,5 @@ sessionsRoute.post("/sessions/revoke-all", async (c) => {
   const audit = createAuditWriter(c, auth);
 
   const count = await revokeAllSessions(db, auth.accountId, auth.sessionId, audit);
-  return c.json(wrapAction({ revokedCount: count }));
+  return c.json(envelope({ revokedCount: count }));
 });

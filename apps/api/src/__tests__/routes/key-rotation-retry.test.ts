@@ -67,9 +67,9 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/retry", () =
     const app = createApp();
     const res = await postJSON(app, RETRY_URL, {});
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; state: string };
-    expect(body.id).toBe(ROTATION_ID);
-    expect(body.state).toBe("migrating");
+    const body = (await res.json()) as { data: { id: string; state: string } };
+    expect(body.data.id).toBe(ROTATION_ID);
+    expect(body.data.state).toBe("migrating");
   });
 
   it("forwards systemId, bucketId, rotationId, auth to service", async () => {

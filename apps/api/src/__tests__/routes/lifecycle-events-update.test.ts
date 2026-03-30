@@ -74,9 +74,9 @@ describe("PUT /systems/:id/lifecycle-events/:eventId", () => {
     const app = createApp();
     const res = await putJSON(app, EVT_URL, VALID_BODY);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; version: number };
-    expect(body.id).toBe(EVT_ID);
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { id: string; version: number } };
+    expect(body.data.id).toBe(EVT_ID);
+    expect(body.data.version).toBe(2);
   });
 
   it("forwards systemId, eventId, body, auth to service", async () => {

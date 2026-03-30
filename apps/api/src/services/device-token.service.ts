@@ -1,14 +1,19 @@
 import { deviceTokens } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
-import { MAX_DEVICE_TOKENS_PER_LIST, TOKEN_MASK_VISIBLE_CHARS } from "./device-token.constants.js";
+import {
+  DEFAULT_DEVICE_TOKEN_LIMIT,
+  MAX_DEVICE_TOKENS_PER_LIST,
+  TOKEN_MASK_VISIBLE_CHARS,
+} from "./device-token.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -16,6 +21,7 @@ import type {
   AuditEventType,
   DeviceTokenId,
   DeviceTokenPlatform,
+  PaginatedResult,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -259,20 +265,41 @@ export async function listDeviceTokens(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-): Promise<readonly DeviceTokenResult[]> {
+  opts?: { cursor?: string; limit?: number },
+): Promise<PaginatedResult<DeviceTokenResult>> {
   assertSystemOwnership(systemId, auth);
 
+  const limit = Math.min(opts?.limit ?? DEFAULT_DEVICE_TOKEN_LIMIT, MAX_DEVICE_TOKENS_PER_LIST);
+
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const conditions = [eq(deviceTokens.systemId, systemId), isNull(deviceTokens.revokedAt)];
+
+    if (opts?.cursor) {
+      const decoded = fromCompositeCursor(opts.cursor, "dt");
+      const cursorCondition = or(
+        lt(deviceTokens.createdAt, decoded.sortValue),
+        and(eq(deviceTokens.createdAt, decoded.sortValue), lt(deviceTokens.id, decoded.id)),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
+    }
+
     const rows = await tx
       .select()
       .from(deviceTokens)
-      .where(and(eq(deviceTokens.systemId, systemId), isNull(deviceTokens.revokedAt)))
-      .orderBy(desc(deviceTokens.createdAt))
-      .limit(MAX_DEVICE_TOKENS_PER_LIST);
+      .where(and(...conditions))
+      .orderBy(desc(deviceTokens.createdAt), desc(deviceTokens.id))
+      .limit(limit + 1);
 
-    return rows.map((row) => {
-      const result = toDeviceTokenResult(row);
-      return { ...result, token: maskToken(result.token) };
-    });
+    return buildCompositePaginatedResult(
+      rows,
+      limit,
+      (row) => {
+        const result = toDeviceTokenResult(row);
+        return { ...result, token: maskToken(result.token) };
+      },
+      (item) => item.createdAt,
+    );
   });
 }

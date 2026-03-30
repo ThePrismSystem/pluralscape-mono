@@ -184,7 +184,7 @@ describe("listEntities", () => {
 
     const result = await listEntities(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -195,8 +195,8 @@ describe("listEntities", () => {
 
     const result = await listEntities(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(ENTITY_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(ENTITY_ID);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -208,7 +208,7 @@ describe("listEntities", () => {
 
     const result = await listEntities(db, SYSTEM_ID, AUTH, { limit: 1 });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     const { nextCursor } = result;
     expect(nextCursor).not.toBeNull();
@@ -223,7 +223,7 @@ describe("listEntities", () => {
 
     const result = await listEntities(db, SYSTEM_ID, AUTH, { regionId: REGION_ID });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(chain.where).toHaveBeenCalled();
   });
 

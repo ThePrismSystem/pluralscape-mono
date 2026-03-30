@@ -152,13 +152,13 @@ export function buildPaginatedResult<TRow, TResult extends { id: string }>(
   mapper: (row: TRow) => TResult,
 ): PaginatedResult<TResult> {
   if (limit <= 0) {
-    return { items: [], nextCursor: null, hasMore: false, totalCount: null };
+    return { data: [], nextCursor: null, hasMore: false, totalCount: null };
   }
   const hasMore = rows.length > limit;
-  const items = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
-  const lastItem = items[items.length - 1];
+  const data = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
+  const lastItem = data[data.length - 1];
   const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-  return { items, nextCursor, hasMore, totalCount: null };
+  return { data, nextCursor, hasMore, totalCount: null };
 }
 
 /**
@@ -176,12 +176,12 @@ export function buildCompositePaginatedResult<TRow, TResult extends { id: string
   sortValueExtractor: (item: TResult) => number,
 ): PaginatedResult<TResult> {
   if (limit <= 0) {
-    return { items: [], nextCursor: null, hasMore: false, totalCount: null };
+    return { data: [], nextCursor: null, hasMore: false, totalCount: null };
   }
   const hasMore = rows.length > limit;
-  const items = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
-  const lastItem = items[items.length - 1];
+  const data = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
+  const lastItem = data[data.length - 1];
   const nextCursor =
     hasMore && lastItem ? toCompositeCursor(sortValueExtractor(lastItem), lastItem.id) : null;
-  return { items, nextCursor, hasMore, totalCount: null };
+  return { data, nextCursor, hasMore, totalCount: null };
 }

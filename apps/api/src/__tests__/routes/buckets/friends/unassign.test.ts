@@ -66,9 +66,9 @@ describe("DELETE /systems/:id/buckets/:bucketId/friends/:connectionId", () => {
     const res = await createApp().request(BASE_URL, { method: "DELETE" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_UNASSIGN_RESULT;
-    expect(body.pendingRotation.systemId).toBe(SYS_ID);
-    expect(body.pendingRotation.bucketId).toBe(BUCKET_ID);
+    const body = (await res.json()) as { data: typeof MOCK_UNASSIGN_RESULT };
+    expect(body.data.pendingRotation.systemId).toBe(SYS_ID);
+    expect(body.data.pendingRotation.bucketId).toBe(BUCKET_ID);
   });
 
   it("passes correct args to service", async () => {

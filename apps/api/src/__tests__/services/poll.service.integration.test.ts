@@ -185,17 +185,17 @@ describe("poll.service (PGlite integration)", () => {
       }
 
       const page1 = await listPolls(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listPolls(asDb(db), systemId, auth, {
         cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
 
-      const allIds = [...page1.items.map((p) => p.id), ...page2.items.map((p) => p.id)];
+      const allIds = [...page1.data.map((p) => p.id), ...page2.data.map((p) => p.id)];
       expect(new Set(allIds).size).toBe(3);
     });
 
@@ -206,12 +206,12 @@ describe("poll.service (PGlite integration)", () => {
       await closePoll(asDb(db), systemId, poll.id, auth, noopAudit);
 
       const openResult = await listPolls(asDb(db), systemId, auth, { status: "open" });
-      expect(openResult.items).toHaveLength(1);
-      expect(openResult.items[0]?.status).toBe("open");
+      expect(openResult.data).toHaveLength(1);
+      expect(openResult.data[0]?.status).toBe("open");
 
       const closedResult = await listPolls(asDb(db), systemId, auth, { status: "closed" });
-      expect(closedResult.items).toHaveLength(1);
-      expect(closedResult.items[0]?.status).toBe("closed");
+      expect(closedResult.data).toHaveLength(1);
+      expect(closedResult.data[0]?.status).toBe("closed");
     });
 
     it("includes archived when includeArchived=true", async () => {
@@ -220,7 +220,7 @@ describe("poll.service (PGlite integration)", () => {
       await archivePoll(asDb(db), systemId, poll.id, auth, noopAudit);
 
       const result = await listPolls(asDb(db), systemId, auth, { includeArchived: true });
-      expect(result.items.some((item) => item.id === poll.id)).toBe(true);
+      expect(result.data.some((item) => item.id === poll.id)).toBe(true);
     });
 
     it("respects limit", async () => {
@@ -229,13 +229,13 @@ describe("poll.service (PGlite integration)", () => {
       }
 
       const result = await listPolls(asDb(db), systemId, auth, { limit: 3 });
-      expect(result.items).toHaveLength(3);
+      expect(result.data).toHaveLength(3);
       expect(result.hasMore).toBe(true);
     });
 
     it("returns empty list when no polls", async () => {
       const result = await listPolls(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });
@@ -522,7 +522,7 @@ describe("poll.service (PGlite integration)", () => {
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       const result = await listPolls(asDb(db), otherSystemId, otherAuth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

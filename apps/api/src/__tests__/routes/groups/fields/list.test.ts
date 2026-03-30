@@ -61,8 +61,8 @@ describe("GET /systems/:systemId/groups/:groupId/fields", () => {
     const res = await app.request(`/systems/${SYS_ID}/groups/${GRP_ID}/fields`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { items: unknown[] } };
-    expect(body.data.items).toEqual([]);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toEqual([]);
   });
 
   it("forwards owner with kind group to service", async () => {

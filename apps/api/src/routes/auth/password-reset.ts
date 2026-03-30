@@ -7,6 +7,7 @@ import { getDb } from "../../lib/db.js";
 import { getContextLogger } from "../../lib/logger.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
   DecryptionFailedError,
@@ -33,11 +34,13 @@ passwordResetRoute.post("/recovery-key", async (c) => {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
     }
 
-    return c.json({
-      sessionToken: result.sessionToken,
-      recoveryKey: result.recoveryKey,
-      accountId: result.accountId,
-    });
+    return c.json(
+      envelope({
+        sessionToken: result.sessionToken,
+        recoveryKey: result.recoveryKey,
+        accountId: result.accountId,
+      }),
+    );
   } catch (error) {
     if (error instanceof ApiHttpError) throw error;
     if (

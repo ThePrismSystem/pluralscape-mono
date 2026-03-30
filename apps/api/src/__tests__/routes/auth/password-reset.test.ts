@@ -86,13 +86,11 @@ describe("POST /password-reset/recovery-key", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      sessionToken: string;
-      recoveryKey: string;
-      accountId: string;
+      data: { sessionToken: string; recoveryKey: string; accountId: string };
     };
-    expect(body.sessionToken).toBe("sess_new");
-    expect(body.recoveryKey).toBe("NEW-RECOVERY-KEY");
-    expect(body.accountId).toBe("acct_123");
+    expect(body.data.sessionToken).toBe("sess_new");
+    expect(body.data.recoveryKey).toBe("NEW-RECOVERY-KEY");
+    expect(body.data.accountId).toBe("acct_123");
   });
 
   it("returns 401 when account not found (anti-enumeration)", async () => {

@@ -11,11 +11,11 @@ test.describe("POST /v1/auth/login", () => {
 
     expect(res.status()).toBe(200);
     const body = await res.json();
-    expect(body).toHaveProperty("sessionToken");
-    expect(body).toHaveProperty("accountId");
-    expect(body).toHaveProperty("systemId");
-    expect(body.accountType).toBe("system");
-    expect(body.sessionToken).toMatch(/^[0-9a-f]{64}$/);
+    expect(body).toHaveProperty("data.sessionToken");
+    expect(body).toHaveProperty("data.accountId");
+    expect(body).toHaveProperty("data.systemId");
+    expect(body.data.accountType).toBe("system");
+    expect(body.data.sessionToken).toMatch(/^[0-9a-f]{64}$/);
   });
 
   test("rejects wrong password with 401", async ({ request, registeredAccount }) => {

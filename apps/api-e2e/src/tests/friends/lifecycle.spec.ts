@@ -33,7 +33,7 @@ interface FriendConnectionResponse {
 }
 
 interface FriendConnectionListResponse {
-  readonly items: readonly FriendConnectionResponse[];
+  readonly data: readonly FriendConnectionResponse[];
   readonly hasMore: boolean;
   readonly nextCursor: string | null;
 }
@@ -65,7 +65,7 @@ test.describe("Friend lifecycle", () => {
     });
     expect(listA.ok()).toBe(true);
     const bodyA = (await listA.json()) as FriendConnectionListResponse;
-    const connA = bodyA.items.find((c) => c.id === connectionIdA);
+    const connA = bodyA.data.find((c) => c.id === connectionIdA);
     expect(connA).toBeTruthy();
     expect(connA?.status).toBe("accepted");
     expect(connA?.friendAccountId).toBe(accountB.accountId);
@@ -76,7 +76,7 @@ test.describe("Friend lifecycle", () => {
     });
     expect(listB.ok()).toBe(true);
     const bodyB = (await listB.json()) as FriendConnectionListResponse;
-    const connB = bodyB.items.find((c) => c.id === connectionIdB);
+    const connB = bodyB.data.find((c) => c.id === connectionIdB);
     expect(connB).toBeTruthy();
     expect(connB?.status).toBe("accepted");
     expect(connB?.friendAccountId).toBe(accountA.accountId);
@@ -90,10 +90,10 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(res.status()).toBe(HTTP_OK);
-    const body = (await res.json()) as FriendConnectionResponse;
-    expect(body.id).toBe(connectionIdA);
-    expect(body.status).toBe("accepted");
-    expect(body.version).toBeGreaterThanOrEqual(1);
+    const body = (await res.json()) as { data: FriendConnectionResponse };
+    expect(body.data.id).toBe(connectionIdA);
+    expect(body.data.status).toBe("accepted");
+    expect(body.data.version).toBeGreaterThanOrEqual(1);
   });
 
   test("bucket assignment: assign, list, unassign", async ({
@@ -115,10 +115,10 @@ test.describe("Friend lifecycle", () => {
         },
       });
       expect(res.status()).toBe(HTTP_CREATED);
-      const body = (await res.json()) as BucketAssignmentResponse;
-      expect(body.friendConnectionId).toBe(connectionIdA);
-      expect(body.bucketId).toBe(bucketId);
-      expect(body.friendAccountId).toBeTruthy();
+      const body = (await res.json()) as { data: BucketAssignmentResponse };
+      expect(body.data.friendConnectionId).toBe(connectionIdA);
+      expect(body.data.bucketId).toBe(bucketId);
+      expect(body.data.friendAccountId).toBeTruthy();
     });
 
     // ── List bucket assignments ──
@@ -140,10 +140,10 @@ test.describe("Friend lifecycle", () => {
       );
       expect(res.status()).toBe(HTTP_OK);
       const body = (await res.json()) as {
-        pendingRotation: { systemId: string; bucketId: string };
+        data: { pendingRotation: { systemId: string; bucketId: string } };
       };
-      expect(body.pendingRotation.systemId).toBe(systemId);
-      expect(body.pendingRotation.bucketId).toBe(bucketId);
+      expect(body.data.pendingRotation.systemId).toBe(systemId);
+      expect(body.data.pendingRotation.bucketId).toBe(bucketId);
     });
 
     await test.step("list is empty after unassign", async () => {
@@ -165,8 +165,8 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(getRes.ok()).toBe(true);
-    const initial = (await getRes.json()) as FriendConnectionResponse;
-    const initialVersion = initial.version;
+    const initial = (await getRes.json()) as { data: FriendConnectionResponse };
+    const initialVersion = initial.data.version;
 
     // Update visibility with encrypted data
     const updateRes = await request.put(`/v1/account/friends/${connectionIdA}/visibility`, {
@@ -177,10 +177,10 @@ test.describe("Friend lifecycle", () => {
       },
     });
     expect(updateRes.ok()).toBe(true);
-    const updated = (await updateRes.json()) as FriendConnectionResponse;
-    expect(updated.id).toBe(connectionIdA);
-    expect(updated.version).toBe(initialVersion + 1);
-    expect(updated.encryptedData).toBeTruthy();
+    const updated = (await updateRes.json()) as { data: FriendConnectionResponse };
+    expect(updated.data.id).toBe(connectionIdA);
+    expect(updated.data.version).toBe(initialVersion + 1);
+    expect(updated.data.encryptedData).toBeTruthy();
   });
 
   test("block connection", async ({ request, friendAccounts: { accountA, connectionIdA } }) => {
@@ -188,9 +188,9 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(res.ok()).toBe(true);
-    const body = (await res.json()) as FriendConnectionResponse;
-    expect(body.id).toBe(connectionIdA);
-    expect(body.status).toBe("blocked");
+    const body = (await res.json()) as { data: FriendConnectionResponse };
+    expect(body.data.id).toBe(connectionIdA);
+    expect(body.data.status).toBe("blocked");
   });
 
   test("remove connection", async ({ request, friendAccounts: { accountA, connectionIdA } }) => {
@@ -198,9 +198,9 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(res.ok()).toBe(true);
-    const body = (await res.json()) as FriendConnectionResponse;
-    expect(body.id).toBe(connectionIdA);
-    expect(body.status).toBe("removed");
+    const body = (await res.json()) as { data: FriendConnectionResponse };
+    expect(body.data.id).toBe(connectionIdA);
+    expect(body.data.status).toBe("removed");
   });
 
   test("archive and restore connection", async ({
@@ -221,7 +221,7 @@ test.describe("Friend lifecycle", () => {
       });
       expect(res.ok()).toBe(true);
       const body = (await res.json()) as FriendConnectionListResponse;
-      const ids = body.items.map((c) => c.id);
+      const ids = body.data.map((c) => c.id);
       expect(ids).not.toContain(connectionIdA);
     });
 
@@ -231,7 +231,7 @@ test.describe("Friend lifecycle", () => {
       });
       expect(res.ok()).toBe(true);
       const body = (await res.json()) as FriendConnectionListResponse;
-      const ids = body.items.map((c) => c.id);
+      const ids = body.data.map((c) => c.id);
       expect(ids).toContain(connectionIdA);
     });
 
@@ -241,8 +241,8 @@ test.describe("Friend lifecycle", () => {
         headers: accountA.headers,
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as FriendConnectionResponse;
-      expect(body.id).toBe(connectionIdA);
+      const body = (await res.json()) as { data: FriendConnectionResponse };
+      expect(body.data.id).toBe(connectionIdA);
     });
 
     await test.step("restored connection back in default list", async () => {
@@ -251,7 +251,7 @@ test.describe("Friend lifecycle", () => {
       });
       expect(res.ok()).toBe(true);
       const body = (await res.json()) as FriendConnectionListResponse;
-      const ids = body.items.map((c) => c.id);
+      const ids = body.data.map((c) => c.id);
       expect(ids).toContain(connectionIdA);
     });
   });

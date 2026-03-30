@@ -78,8 +78,8 @@ describe("POST /systems/:id/groups", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("grp_new");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("grp_new");
   });
 
   it("forwards auth and audit writer to service", async () => {

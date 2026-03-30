@@ -16,7 +16,7 @@ interface NoteResponse {
 }
 
 interface NoteListResponse {
-  items: NoteResponse[];
+  data: NoteResponse[];
   nextCursor: string | null;
   hasMore: boolean;
   totalCount: number | null;
@@ -51,22 +51,22 @@ test.describe("Notes CRUD", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as NoteResponse;
-      expect(body.id).toMatch(/^note_/);
-      expect(body.authorEntityType).toBeNull();
-      expect(body.authorEntityId).toBeNull();
-      expect(body.version).toBe(1);
-      expect(body.archived).toBe(false);
-      noteId = body.id;
-      noteVersion = body.version;
+      const body = (await res.json()) as { data: NoteResponse };
+      expect(body.data.id).toMatch(/^note_/);
+      expect(body.data.authorEntityType).toBeNull();
+      expect(body.data.authorEntityId).toBeNull();
+      expect(body.data.version).toBe(1);
+      expect(body.data.archived).toBe(false);
+      noteId = body.data.id;
+      noteVersion = body.data.version;
     });
 
     await test.step("get note and verify encryption round-trip", async () => {
       const res = await request.get(`${noteUrl}/${noteId}`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as NoteResponse;
-      expect(body.id).toBe(noteId);
-      const decrypted = decryptFromApi(body.encryptedData);
+      const body = (await res.json()) as { data: NoteResponse };
+      expect(body.data.id).toBe(noteId);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(NOTE_DATA);
     });
 
@@ -74,9 +74,9 @@ test.describe("Notes CRUD", () => {
       const res = await request.get(noteUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as NoteListResponse;
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.some((item) => item.id === noteId)).toBe(true);
+      expect(body.data.some((item) => item.id === noteId)).toBe(true);
     });
 
     await test.step("update note", async () => {
@@ -88,9 +88,9 @@ test.describe("Notes CRUD", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as NoteResponse;
-      expect(body.version).toBe(noteVersion + 1);
-      noteVersion = body.version;
+      const body = (await res.json()) as { data: NoteResponse };
+      expect(body.data.version).toBe(noteVersion + 1);
+      noteVersion = body.data.version;
     });
 
     await test.step("archive note", async () => {
@@ -102,22 +102,22 @@ test.describe("Notes CRUD", () => {
       const res = await request.get(noteUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as NoteListResponse;
-      expect(body.items.every((item) => item.id !== noteId)).toBe(true);
+      expect(body.data.every((item) => item.id !== noteId)).toBe(true);
     });
 
     await test.step("archived returned with includeArchived=true", async () => {
       const res = await request.get(`${noteUrl}?includeArchived=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as NoteListResponse;
-      expect(body.items.some((item) => item.id === noteId)).toBe(true);
+      expect(body.data.some((item) => item.id === noteId)).toBe(true);
     });
 
     await test.step("restore note", async () => {
       const res = await request.post(`${noteUrl}/${noteId}/restore`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as NoteResponse;
-      expect(body.archived).toBe(false);
-      noteVersion = body.version;
+      const body = (await res.json()) as { data: NoteResponse };
+      expect(body.data.archived).toBe(false);
+      noteVersion = body.data.version;
     });
 
     await test.step("delete note", async () => {
@@ -150,19 +150,19 @@ test.describe("Notes CRUD", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as NoteResponse;
-      expect(body.id).toMatch(/^note_/);
-      expect(body.authorEntityType).toBe("member");
-      expect(body.authorEntityId).toBe(member.id);
-      noteId = body.id;
+      const body = (await res.json()) as { data: NoteResponse };
+      expect(body.data.id).toMatch(/^note_/);
+      expect(body.data.authorEntityType).toBe("member");
+      expect(body.data.authorEntityId).toBe(member.id);
+      noteId = body.data.id;
     });
 
     await test.step("list filtered by authorEntityType=member", async () => {
       const res = await request.get(`${noteUrl}?authorEntityType=member`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as NoteListResponse;
-      expect(body.items.some((item) => item.id === noteId)).toBe(true);
-      for (const item of body.items) {
+      expect(body.data.some((item) => item.id === noteId)).toBe(true);
+      for (const item of body.data) {
         expect(item.authorEntityType).toBe("member");
       }
     });
@@ -176,8 +176,8 @@ test.describe("Notes CRUD", () => {
       );
       expect(res.status()).toBe(200);
       const body = (await res.json()) as NoteListResponse;
-      expect(body.items.some((item) => item.id === noteId)).toBe(true);
-      for (const item of body.items) {
+      expect(body.data.some((item) => item.id === noteId)).toBe(true);
+      for (const item of body.data) {
         expect(item.authorEntityId).toBe(member.id);
       }
     });
@@ -186,8 +186,8 @@ test.describe("Notes CRUD", () => {
       const res = await request.get(`${noteUrl}?systemWide=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as NoteListResponse;
-      expect(body.items.every((item) => item.id !== noteId)).toBe(true);
-      for (const item of body.items) {
+      expect(body.data.every((item) => item.id !== noteId)).toBe(true);
+      for (const item of body.data) {
         expect(item.authorEntityType).toBeNull();
       }
     });
@@ -201,9 +201,9 @@ test.describe("Notes CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(NOTE_DATA) },
     });
-    const note = (await createRes.json()) as NoteResponse;
+    const note = (await createRes.json()) as { data: NoteResponse };
 
-    const res = await request.put(`${noteUrl}/${note.id}`, {
+    const res = await request.put(`${noteUrl}/${note.data.id}`, {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(UPDATED_NOTE_DATA), version: 999 },
     });
@@ -218,11 +218,11 @@ test.describe("Notes CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(NOTE_DATA) },
     });
-    const note = (await createRes.json()) as NoteResponse;
+    const note = (await createRes.json()) as { data: NoteResponse };
 
-    await request.post(`${noteUrl}/${note.id}/archive`, { headers: authHeaders });
+    await request.post(`${noteUrl}/${note.data.id}/archive`, { headers: authHeaders });
 
-    const res = await request.post(`${noteUrl}/${note.id}/archive`, { headers: authHeaders });
+    const res = await request.post(`${noteUrl}/${note.data.id}/archive`, { headers: authHeaders });
     expect(res.status()).toBe(409);
   });
 
@@ -234,9 +234,9 @@ test.describe("Notes CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(NOTE_DATA) },
     });
-    const note = (await createRes.json()) as NoteResponse;
+    const note = (await createRes.json()) as { data: NoteResponse };
 
-    const res = await request.post(`${noteUrl}/${note.id}/restore`, { headers: authHeaders });
+    const res = await request.post(`${noteUrl}/${note.data.id}/restore`, { headers: authHeaders });
     expect(res.status()).toBe(409);
   });
 

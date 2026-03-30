@@ -58,10 +58,10 @@ describe("GET /account", () => {
     const res = await app.request("/account");
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof mockInfo;
-    expect(body.accountId).toBe("acct_test");
-    expect(body.accountType).toBe("system");
-    expect(body.systemId).toBe("sys_test");
+    const body = (await res.json()) as { data: typeof mockInfo };
+    expect(body.data.accountId).toBe("acct_test");
+    expect(body.data.accountType).toBe("system");
+    expect(body.data.systemId).toBe("sys_test");
     expect(vi.mocked(getAccountInfo)).toHaveBeenCalledWith({}, "acct_test");
   });
 

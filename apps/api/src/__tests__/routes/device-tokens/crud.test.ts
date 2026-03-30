@@ -69,8 +69,8 @@ describe("POST /systems/:systemId/device-tokens", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as typeof MOCK_TOKEN;
-    expect(body.id).toBe(TOKEN_ID);
+    const body = (await res.json()) as { data: typeof MOCK_TOKEN };
+    expect(body.data.id).toBe(TOKEN_ID);
   });
 
   it("passes parsed body to service", async () => {
@@ -117,6 +117,8 @@ describe("POST /systems/:systemId/device-tokens", () => {
 });
 
 describe("GET /systems/:systemId/device-tokens", () => {
+  const PAGINATED_EMPTY = { data: [], nextCursor: null, hasMore: false, totalCount: null };
+
   beforeEach(() => {
     vi.mocked(listDeviceTokens).mockReset();
   });
@@ -126,7 +128,12 @@ describe("GET /systems/:systemId/device-tokens", () => {
   });
 
   it("returns 200 with token list", async () => {
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce([MOCK_TOKEN] as never);
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce({
+      data: [MOCK_TOKEN],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    } as never);
 
     const res = await createApp().request(BASE_URL);
 
@@ -136,7 +143,7 @@ describe("GET /systems/:systemId/device-tokens", () => {
   });
 
   it("returns 200 with empty list", async () => {
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce([]);
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
 
     const res = await createApp().request(BASE_URL);
 
@@ -145,12 +152,46 @@ describe("GET /systems/:systemId/device-tokens", () => {
     expect(body.data).toHaveLength(0);
   });
 
+  it("passes cursor and limit to service", async () => {
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
+
+    await createApp().request(`${BASE_URL}?limit=10`);
+
+    expect(vi.mocked(listDeviceTokens)).toHaveBeenCalledWith(
+      {},
+      SYSTEM_ID,
+      MOCK_AUTH,
+      expect.objectContaining({ limit: 10 }),
+    );
+  });
+
   it("passes auth context and systemId to service", async () => {
-    vi.mocked(listDeviceTokens).mockResolvedValueOnce([]);
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
 
     await createApp().request(BASE_URL);
 
-    expect(vi.mocked(listDeviceTokens)).toHaveBeenCalledWith({}, SYSTEM_ID, MOCK_AUTH);
+    expect(vi.mocked(listDeviceTokens)).toHaveBeenCalledWith(
+      {},
+      SYSTEM_ID,
+      MOCK_AUTH,
+      expect.objectContaining({ limit: 25 }),
+    );
+  });
+
+  it("passes cursor query param to service", async () => {
+    const { toCursor } = await import("../../../lib/pagination.js");
+    const cursor = toCursor("some-entity-id");
+
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
+
+    await createApp().request(`${BASE_URL}?cursor=${encodeURIComponent(cursor)}`);
+
+    expect(vi.mocked(listDeviceTokens)).toHaveBeenCalledWith(
+      {},
+      SYSTEM_ID,
+      MOCK_AUTH,
+      expect.objectContaining({ cursor: "some-entity-id" }),
+    );
   });
 });
 

@@ -53,10 +53,10 @@ describe("UpdateInput<Member>", () => {
 });
 
 describe("PaginatedResult<MemberListItem>", () => {
-  it("items are readonly MemberListItem array", () => {
+  it("data are readonly MemberListItem array", () => {
     type Result = PaginatedResult<MemberListItem>;
-    expectTypeOf<Result["items"]>().toEqualTypeOf<readonly MemberListItem[]>();
-    expectTypeOf<Result["items"][0]["id"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<Result["data"]>().toEqualTypeOf<readonly MemberListItem[]>();
+    expectTypeOf<Result["data"][0]["id"]>().toEqualTypeOf<MemberId>();
   });
 });
 

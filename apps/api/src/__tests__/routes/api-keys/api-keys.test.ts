@@ -54,7 +54,7 @@ const MOCK_CREATE_RESULT: ApiKeyCreateResult = {
 };
 
 const MOCK_PAGINATED_RESULT: PaginatedResult<ApiKeyResult> = {
-  items: [MOCK_API_KEY_RESULT],
+  data: [MOCK_API_KEY_RESULT],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -82,9 +82,9 @@ describe("POST /systems/:systemId/api-keys", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as ApiKeyCreateResult;
-    expect(body.id).toBe(AK_ID);
-    expect(body.token).toBe(MOCK_CREATE_RESULT.token);
+    const body = (await res.json()) as { data: ApiKeyCreateResult };
+    expect(body.data.id).toBe(AK_ID);
+    expect(body.data.token).toBe(MOCK_CREATE_RESULT.token);
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
@@ -132,8 +132,8 @@ describe("GET /systems/:systemId/api-keys", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<ApiKeyResult>;
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.id).toBe(AK_ID);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.id).toBe(AK_ID);
     expect(body.hasMore).toBe(false);
   });
 
@@ -163,10 +163,10 @@ describe("GET /systems/:systemId/api-keys/:apiKeyId", () => {
     const res = await app.request(`/systems/${SYS_ID}/api-keys/${AK_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as ApiKeyResult;
-    expect(body.id).toBe(AK_ID);
-    expect(body).not.toHaveProperty("token");
-    expect(body).not.toHaveProperty("tokenHash");
+    const body = (await res.json()) as { data: ApiKeyResult };
+    expect(body.data.id).toBe(AK_ID);
+    expect(body.data).not.toHaveProperty("token");
+    expect(body.data).not.toHaveProperty("tokenHash");
   });
 
   it("returns 400 for invalid apiKeyId", async () => {

@@ -284,9 +284,9 @@ describe("listMemberPhotos", () => {
 
     const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]?.id).toBe(PHOTO_ID);
-    expect(result.items[1]?.id).toBe("mp_second");
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.id).toBe(PHOTO_ID);
+    expect(result.data[1]?.id).toBe("mp_second");
     expect(result.hasMore).toBe(false);
   });
 
@@ -299,7 +299,7 @@ describe("listMemberPhotos", () => {
 
     const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
 
@@ -326,7 +326,7 @@ describe("listMemberPhotos", () => {
 
     const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result.items).toHaveLength(25);
+    expect(result.data).toHaveLength(25);
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).not.toBeNull();
   });
@@ -341,7 +341,7 @@ describe("listMemberPhotos", () => {
 
     const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });

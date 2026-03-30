@@ -163,8 +163,8 @@ describe("timer-config.service (PGlite integration)", () => {
       const t2 = await createTimerConfig(asDb(db), systemId, createParams(), auth, noopAudit);
 
       const result = await listTimerConfigs(asDb(db), systemId, auth);
-      expect(result.items.length).toBe(2);
-      const ids = result.items.map((i) => i.id);
+      expect(result.data.length).toBe(2);
+      const ids = result.data.map((i) => i.id);
       expect(ids).toContain(t1.id);
       expect(ids).toContain(t2.id);
     });
@@ -175,7 +175,7 @@ describe("timer-config.service (PGlite integration)", () => {
       await createTimerConfig(asDb(db), systemId, createParams(), auth, noopAudit);
 
       const result = await listTimerConfigs(asDb(db), systemId, auth);
-      expect(result.items.length).toBe(1);
+      expect(result.data.length).toBe(1);
     });
   });
 

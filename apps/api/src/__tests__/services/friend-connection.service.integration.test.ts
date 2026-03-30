@@ -118,8 +118,8 @@ describe("friend-connection.service (PGlite integration)", () => {
 
       const result = await listFriendConnections(asDb(db), accountId, auth);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.accountId).toBe(accountId);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.accountId).toBe(accountId);
     });
 
     it("supports composite cursor pagination", async () => {
@@ -131,7 +131,7 @@ describe("friend-connection.service (PGlite integration)", () => {
       await insertConnection(db, { accountId, friendAccountId: friend3 });
 
       const page1 = await listFriendConnections(asDb(db), accountId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeDefined();
 
@@ -139,7 +139,7 @@ describe("friend-connection.service (PGlite integration)", () => {
         cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
     });
 
@@ -150,14 +150,14 @@ describe("friend-connection.service (PGlite integration)", () => {
 
       const result = await listFriendConnections(asDb(db), accountId, auth);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.accountId).toBe(accountId);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.accountId).toBe(accountId);
     });
 
     it("returns empty list when no connections exist", async () => {
       const result = await listFriendConnections(asDb(db), accountId, auth);
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
 
     it("excludes archived connections by default", async () => {
@@ -175,9 +175,9 @@ describe("friend-connection.service (PGlite integration)", () => {
 
       const result = await listFriendConnections(asDb(db), accountId, auth);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.id).toBe(activeId);
-      expect(result.items.find((c) => c.id === archivedId)).toBeUndefined();
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.id).toBe(activeId);
+      expect(result.data.find((c) => c.id === archivedId)).toBeUndefined();
     });
 
     it("includes archived connections when includeArchived is true", async () => {
@@ -197,7 +197,7 @@ describe("friend-connection.service (PGlite integration)", () => {
         includeArchived: true,
       });
 
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
     });
 
     it("throws INVALID_CURSOR for malformed cursor string", async () => {
@@ -315,8 +315,8 @@ describe("friend-connection.service (PGlite integration)", () => {
 
       // B->A should also be blocked (bilateral behavior)
       const listB = await listFriendConnections(asDb(db), friendAccountId, friendAuth);
-      expect(listB.items).toHaveLength(1);
-      expect(listB.items[0]?.status).toBe("blocked");
+      expect(listB.data).toHaveLength(1);
+      expect(listB.data[0]?.status).toBe("blocked");
     });
 
     it("writes audit event", async () => {

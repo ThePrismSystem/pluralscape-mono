@@ -103,8 +103,8 @@ describe("POST /systems/:id/board-messages (create)", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(BM_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(BM_ID);
   });
 
   it("forwards systemId, body, auth, and audit writer to service", async () => {
@@ -140,7 +140,7 @@ describe("POST /systems/:id/board-messages (create)", () => {
 describe("GET /systems/:id/board-messages (list)", () => {
   it("returns 200 with paginated result", async () => {
     vi.mocked(listBoardMessages).mockResolvedValueOnce({
-      items: [MOCK_RESULT],
+      data: [MOCK_RESULT],
       nextCursor: null,
       hasMore: false,
       totalCount: null,
@@ -149,8 +149,8 @@ describe("GET /systems/:id/board-messages (list)", () => {
     const res = await createApp().request(BASE);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(1);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(1);
   });
 });
 
@@ -161,8 +161,8 @@ describe("GET /systems/:id/board-messages/:boardMessageId", () => {
     const res = await createApp().request(`${BASE}/${BM_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(BM_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(BM_ID);
   });
 
   it("returns 404 when board message not found", async () => {
@@ -284,8 +284,8 @@ describe("POST /systems/:id/board-messages/:boardMessageId/restore", () => {
     const res = await postJSON(createApp(), `${BASE}/${BM_ID}/restore`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(3);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(3);
   });
 
   it("returns 409 when not archived", async () => {
@@ -340,8 +340,8 @@ describe("POST /systems/:id/board-messages/:boardMessageId/pin", () => {
     const res = await postJSON(createApp(), `${BASE}/${BM_ID}/pin`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { pinned: boolean };
-    expect(body.pinned).toBe(true);
+    const body = (await res.json()) as { data: { pinned: boolean } };
+    expect(body.data.pinned).toBe(true);
   });
 
   it("forwards systemId, boardMessageId, auth, and audit writer to service", async () => {
@@ -386,8 +386,8 @@ describe("POST /systems/:id/board-messages/:boardMessageId/unpin", () => {
     const res = await postJSON(createApp(), `${BASE}/${BM_ID}/unpin`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { pinned: boolean };
-    expect(body.pinned).toBe(false);
+    const body = (await res.json()) as { data: { pinned: boolean } };
+    expect(body.data.pinned).toBe(false);
   });
 
   it("returns 409 when not pinned", async () => {

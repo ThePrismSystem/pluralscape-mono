@@ -65,9 +65,9 @@ describe("GET /:id/nomenclature", () => {
     const res = await app.request(`/${SYS_ID}/nomenclature`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_RESULT;
-    expect(body.systemId).toBe(SYS_ID);
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: typeof MOCK_RESULT };
+    expect(body.data.systemId).toBe(SYS_ID);
+    expect(body.data.version).toBe(1);
   });
 
   it("applies the readDefault rate limit category", () => {
@@ -108,8 +108,8 @@ describe("PUT /:id/nomenclature", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_RESULT;
-    expect(body.systemId).toBe(SYS_ID);
+    const body = (await res.json()) as { data: typeof MOCK_RESULT };
+    expect(body.data.systemId).toBe(SYS_ID);
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {

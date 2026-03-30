@@ -74,9 +74,9 @@ describe("POST /systems/:id/buckets/:bucketId/friends", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as typeof MOCK_ASSIGNMENT;
-    expect(body.friendConnectionId).toBe(CONNECTION_ID);
-    expect(body.bucketId).toBe(BUCKET_ID);
+    const body = (await res.json()) as { data: typeof MOCK_ASSIGNMENT };
+    expect(body.data.friendConnectionId).toBe(CONNECTION_ID);
+    expect(body.data.bucketId).toBe(BUCKET_ID);
   });
 
   it("passes correct args to service", async () => {

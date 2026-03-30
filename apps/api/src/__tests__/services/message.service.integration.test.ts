@@ -240,10 +240,10 @@ describe("message.service (PGlite integration)", () => {
       }
 
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth);
-      expect(result.items).toHaveLength(3);
+      expect(result.data).toHaveLength(3);
       // Should be descending by timestamp
-      expect(result.items[0]?.timestamp).toBeGreaterThan(result.items[1]?.timestamp ?? 0);
-      expect(result.items[1]?.timestamp).toBeGreaterThan(result.items[2]?.timestamp ?? 0);
+      expect(result.data[0]?.timestamp).toBeGreaterThan(result.data[1]?.timestamp ?? 0);
+      expect(result.data[1]?.timestamp).toBeGreaterThan(result.data[2]?.timestamp ?? 0);
     });
 
     it("paginates with cursor", async () => {
@@ -260,7 +260,7 @@ describe("message.service (PGlite integration)", () => {
       }
 
       const page1 = await listMessages(asDb(db), systemId, testChannel.id, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeTruthy();
 
@@ -268,10 +268,10 @@ describe("message.service (PGlite integration)", () => {
         cursor: page1.nextCursor ?? "",
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
       // Ensure no overlap
-      const allIds = [...page1.items.map((m) => m.id), ...page2.items.map((m) => m.id)];
+      const allIds = [...page1.data.map((m) => m.id), ...page2.data.map((m) => m.id)];
       expect(new Set(allIds).size).toBe(3);
     });
 
@@ -297,8 +297,8 @@ describe("message.service (PGlite integration)", () => {
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth, {
         before: (baseTs + 5_000) as UnixMillis,
       });
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.timestamp).toBe(baseTs);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.timestamp).toBe(baseTs);
     });
 
     it("does not return messages from other channels", async () => {
@@ -319,7 +319,7 @@ describe("message.service (PGlite integration)", () => {
       );
 
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
 
     it("filters with after timestamp", async () => {
@@ -344,8 +344,8 @@ describe("message.service (PGlite integration)", () => {
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth, {
         after: (baseTs + 5_000) as UnixMillis,
       });
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.timestamp).toBe(baseTs + 10_000);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.timestamp).toBe(baseTs + 10_000);
     });
 
     it("excludes archived messages by default", async () => {
@@ -361,7 +361,7 @@ describe("message.service (PGlite integration)", () => {
       await archiveMessage(asDb(db), systemId, msg.id, auth, noopAudit);
 
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth);
-      expect(result.items.every((m) => m.id !== msg.id)).toBe(true);
+      expect(result.data.every((m) => m.id !== msg.id)).toBe(true);
     });
 
     it("includes archived messages when includeArchived is true", async () => {
@@ -379,7 +379,7 @@ describe("message.service (PGlite integration)", () => {
       const result = await listMessages(asDb(db), systemId, testChannel.id, auth, {
         includeArchived: true,
       });
-      expect(result.items.some((m) => m.id === msg.id)).toBe(true);
+      expect(result.data.some((m) => m.id === msg.id)).toBe(true);
     });
   });
 
@@ -527,7 +527,7 @@ describe("message.service (PGlite integration)", () => {
       );
 
       const result = await listMessages(asDb(db), otherSystemId, otherChannel.id, otherAuth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

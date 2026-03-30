@@ -208,7 +208,7 @@ describe("bucket.service (PGlite integration)", () => {
 
       const result = await listBuckets(asDb(db), systemId, auth);
 
-      expect(result.items.length).toBeGreaterThanOrEqual(2);
+      expect(result.data.length).toBeGreaterThanOrEqual(2);
     });
 
     it("supports cursor pagination", async () => {
@@ -235,7 +235,7 @@ describe("bucket.service (PGlite integration)", () => {
       );
 
       const page1 = await listBuckets(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeDefined();
 
@@ -243,7 +243,7 @@ describe("bucket.service (PGlite integration)", () => {
         cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
     });
 
@@ -259,7 +259,7 @@ describe("bucket.service (PGlite integration)", () => {
       await archiveBucket(asDb(db), systemId, created.id, auth, noopAudit);
 
       const result = await listBuckets(asDb(db), systemId, auth, { includeArchived: true });
-      const ids = result.items.map((i) => i.id);
+      const ids = result.data.map((i) => i.id);
 
       expect(ids).toContain(created.id);
     });
@@ -267,7 +267,7 @@ describe("bucket.service (PGlite integration)", () => {
     it("returns empty list when no buckets", async () => {
       const result = await listBuckets(asDb(db), systemId, auth);
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 
@@ -500,7 +500,7 @@ describe("bucket.service (PGlite integration)", () => {
 
       const result = await listBuckets(asDb(db), otherSystemId, otherAuth);
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

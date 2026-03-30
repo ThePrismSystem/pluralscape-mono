@@ -70,8 +70,8 @@ describe("POST /account/friend-codes/redeem", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as typeof MOCK_REDEEM_RESULT;
-    expect(body.connectionIds).toHaveLength(2);
+    const body = (await res.json()) as { data: typeof MOCK_REDEEM_RESULT };
+    expect(body.data.connectionIds).toHaveLength(2);
   });
 
   it("passes code and auth to service", async () => {

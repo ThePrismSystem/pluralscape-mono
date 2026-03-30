@@ -16,7 +16,7 @@ interface BmResponse {
 }
 
 interface BmListResponse {
-  items: BmResponse[];
+  data: BmResponse[];
   nextCursor: string | null;
   hasMore: boolean;
   totalCount: number | null;
@@ -48,22 +48,22 @@ test.describe("Board Messages CRUD", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as BmResponse;
-      expect(body.id).toMatch(/^bm_/);
-      expect(body.pinned).toBe(false);
-      expect(body.sortOrder).toBe(0);
-      expect(body.version).toBe(1);
-      expect(body.archived).toBe(false);
-      bmId = body.id;
-      bmVersion = body.version;
+      const body = (await res.json()) as { data: BmResponse };
+      expect(body.data.id).toMatch(/^bm_/);
+      expect(body.data.pinned).toBe(false);
+      expect(body.data.sortOrder).toBe(0);
+      expect(body.data.version).toBe(1);
+      expect(body.data.archived).toBe(false);
+      bmId = body.data.id;
+      bmVersion = body.data.version;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
       const res = await request.get(`${bmUrl}/${bmId}`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as BmResponse;
-      expect(body.id).toBe(bmId);
-      const decrypted = decryptFromApi(body.encryptedData);
+      const body = (await res.json()) as { data: BmResponse };
+      expect(body.data.id).toBe(bmId);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(BM_DATA);
     });
 
@@ -71,9 +71,9 @@ test.describe("Board Messages CRUD", () => {
       const res = await request.get(bmUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as BmListResponse;
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.some((item) => item.id === bmId)).toBe(true);
+      expect(body.data.some((item) => item.id === bmId)).toBe(true);
     });
 
     await test.step("update with new encrypted data", async () => {
@@ -85,25 +85,25 @@ test.describe("Board Messages CRUD", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as BmResponse;
-      expect(body.version).toBe(bmVersion + 1);
-      bmVersion = body.version;
+      const body = (await res.json()) as { data: BmResponse };
+      expect(body.data.version).toBe(bmVersion + 1);
+      bmVersion = body.data.version;
     });
 
     await test.step("pin board message", async () => {
       const res = await request.post(`${bmUrl}/${bmId}/pin`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as BmResponse;
-      expect(body.pinned).toBe(true);
-      bmVersion = body.version;
+      const body = (await res.json()) as { data: BmResponse };
+      expect(body.data.pinned).toBe(true);
+      bmVersion = body.data.version;
     });
 
     await test.step("unpin board message", async () => {
       const res = await request.post(`${bmUrl}/${bmId}/unpin`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as BmResponse;
-      expect(body.pinned).toBe(false);
-      bmVersion = body.version;
+      const body = (await res.json()) as { data: BmResponse };
+      expect(body.data.pinned).toBe(false);
+      bmVersion = body.data.version;
     });
 
     await test.step("archive board message", async () => {
@@ -115,22 +115,22 @@ test.describe("Board Messages CRUD", () => {
       const res = await request.get(bmUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as BmListResponse;
-      expect(body.items.every((item) => item.id !== bmId)).toBe(true);
+      expect(body.data.every((item) => item.id !== bmId)).toBe(true);
     });
 
     await test.step("archived returned with includeArchived=true", async () => {
       const res = await request.get(`${bmUrl}?includeArchived=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as BmListResponse;
-      expect(body.items.some((item) => item.id === bmId)).toBe(true);
+      expect(body.data.some((item) => item.id === bmId)).toBe(true);
     });
 
     await test.step("restore board message", async () => {
       const res = await request.post(`${bmUrl}/${bmId}/restore`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as BmResponse;
-      expect(body.archived).toBe(false);
-      bmVersion = body.version;
+      const body = (await res.json()) as { data: BmResponse };
+      expect(body.data.archived).toBe(false);
+      bmVersion = body.data.version;
     });
 
     await test.step("delete board message", async () => {
@@ -154,7 +154,7 @@ test.describe("Board Messages CRUD", () => {
       data: { encryptedData: encryptForApi({ content: "First", senderId: "mem_1" }), sortOrder: 0 },
     });
     expect(res1.status()).toBe(201);
-    const bm1 = (await res1.json()) as BmResponse;
+    const bm1 = (await res1.json()) as { data: BmResponse };
 
     const res2 = await request.post(bmUrl, {
       headers: authHeaders,
@@ -164,28 +164,28 @@ test.describe("Board Messages CRUD", () => {
       },
     });
     expect(res2.status()).toBe(201);
-    const bm2 = (await res2.json()) as BmResponse;
+    const bm2 = (await res2.json()) as { data: BmResponse };
 
     // Reorder: swap sortOrders
     const reorderRes = await request.post(`${bmUrl}/reorder`, {
       headers: authHeaders,
       data: {
         operations: [
-          { boardMessageId: bm1.id, sortOrder: 1 },
-          { boardMessageId: bm2.id, sortOrder: 0 },
+          { boardMessageId: bm1.data.id, sortOrder: 1 },
+          { boardMessageId: bm2.data.id, sortOrder: 0 },
         ],
       },
     });
     expect(reorderRes.status()).toBe(204);
 
     // Verify sortOrders updated
-    const getRes1 = await request.get(`${bmUrl}/${bm1.id}`, { headers: authHeaders });
-    const body1 = (await getRes1.json()) as BmResponse;
-    expect(body1.sortOrder).toBe(1);
+    const getRes1 = await request.get(`${bmUrl}/${bm1.data.id}`, { headers: authHeaders });
+    const body1 = (await getRes1.json()) as { data: BmResponse };
+    expect(body1.data.sortOrder).toBe(1);
 
-    const getRes2 = await request.get(`${bmUrl}/${bm2.id}`, { headers: authHeaders });
-    const body2 = (await getRes2.json()) as BmResponse;
-    expect(body2.sortOrder).toBe(0);
+    const getRes2 = await request.get(`${bmUrl}/${bm2.data.id}`, { headers: authHeaders });
+    const body2 = (await getRes2.json()) as { data: BmResponse };
+    expect(body2.data.sortOrder).toBe(0);
   });
 
   test("list filtered by pinned", async ({ request, authHeaders }) => {
@@ -206,7 +206,7 @@ test.describe("Board Messages CRUD", () => {
     const pinnedRes = await request.get(`${bmUrl}?pinned=true`, { headers: authHeaders });
     expect(pinnedRes.status()).toBe(200);
     const pinnedBody = (await pinnedRes.json()) as BmListResponse;
-    for (const item of pinnedBody.items) {
+    for (const item of pinnedBody.data) {
       expect(item.pinned).toBe(true);
     }
   });
@@ -219,9 +219,9 @@ test.describe("Board Messages CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(BM_DATA), sortOrder: 0 },
     });
-    const bm = (await createRes.json()) as BmResponse;
+    const bm = (await createRes.json()) as { data: BmResponse };
 
-    const res = await request.put(`${bmUrl}/${bm.id}`, {
+    const res = await request.put(`${bmUrl}/${bm.data.id}`, {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(UPDATED_BM_DATA), version: 999 },
     });
@@ -236,11 +236,11 @@ test.describe("Board Messages CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(BM_DATA), sortOrder: 0 },
     });
-    const bm = (await createRes.json()) as BmResponse;
+    const bm = (await createRes.json()) as { data: BmResponse };
 
-    await request.post(`${bmUrl}/${bm.id}/archive`, { headers: authHeaders });
+    await request.post(`${bmUrl}/${bm.data.id}/archive`, { headers: authHeaders });
 
-    const res = await request.post(`${bmUrl}/${bm.id}/archive`, { headers: authHeaders });
+    const res = await request.post(`${bmUrl}/${bm.data.id}/archive`, { headers: authHeaders });
     expect(res.status()).toBe(409);
   });
 
@@ -252,9 +252,9 @@ test.describe("Board Messages CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(BM_DATA), sortOrder: 0 },
     });
-    const bm = (await createRes.json()) as BmResponse;
+    const bm = (await createRes.json()) as { data: BmResponse };
 
-    const res = await request.post(`${bmUrl}/${bm.id}/restore`, { headers: authHeaders });
+    const res = await request.post(`${bmUrl}/${bm.data.id}/restore`, { headers: authHeaders });
     expect(res.status()).toBe(409);
   });
 
@@ -279,9 +279,9 @@ test.describe("Board Messages CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(BM_DATA), sortOrder: 0, pinned: true },
     });
-    const bm = (await createRes.json()) as BmResponse;
+    const bm = (await createRes.json()) as { data: BmResponse };
 
-    const res = await request.post(`${bmUrl}/${bm.id}/pin`, { headers: authHeaders });
+    const res = await request.post(`${bmUrl}/${bm.data.id}/pin`, { headers: authHeaders });
     expect(res.status()).toBe(409);
   });
 
@@ -293,9 +293,9 @@ test.describe("Board Messages CRUD", () => {
       headers: authHeaders,
       data: { encryptedData: encryptForApi(BM_DATA), sortOrder: 0 },
     });
-    const bm = (await createRes.json()) as BmResponse;
+    const bm = (await createRes.json()) as { data: BmResponse };
 
-    const res = await request.post(`${bmUrl}/${bm.id}/unpin`, { headers: authHeaders });
+    const res = await request.post(`${bmUrl}/${bm.data.id}/unpin`, { headers: authHeaders });
     expect(res.status()).toBe(409);
   });
 });

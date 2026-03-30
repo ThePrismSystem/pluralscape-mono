@@ -111,15 +111,14 @@ describe("POST /:id/setup/nomenclature", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with result on success", async () => {
+  it("returns 204 with no body", async () => {
     vi.mocked(setupNomenclatureStep).mockResolvedValueOnce(MOCK_STEP_RESULT);
 
     const app = createApp();
     const res = await postJSON(app, `/${SYS_ID}/setup/nomenclature`, { encryptedData: "data" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { success: true } };
-    expect(body.data.success).toBe(true);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("content-length")).toBeNull();
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
@@ -158,15 +157,14 @@ describe("POST /:id/setup/profile", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with result on success", async () => {
+  it("returns 204 with no body", async () => {
     vi.mocked(setupProfileStep).mockResolvedValueOnce(MOCK_STEP_RESULT);
 
     const app = createApp();
     const res = await postJSON(app, `/${SYS_ID}/setup/profile`, { encryptedData: "data" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { success: true } };
-    expect(body.data.success).toBe(true);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("content-length")).toBeNull();
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {

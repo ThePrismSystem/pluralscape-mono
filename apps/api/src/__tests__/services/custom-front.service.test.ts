@@ -156,7 +156,7 @@ describe("listCustomFronts", () => {
 
     const result = await listCustomFronts(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
 
@@ -166,8 +166,8 @@ describe("listCustomFronts", () => {
 
     const result = await listCustomFronts(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(CF_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(CF_ID);
   });
 
   it("caps limit to MAX_CUSTOM_FRONT_LIMIT", async () => {

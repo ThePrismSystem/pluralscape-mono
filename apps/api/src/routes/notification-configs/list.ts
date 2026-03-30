@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { listNotificationConfigs } from "../../services/notification-config.service.js";
 
@@ -18,5 +19,5 @@ listRoute.get("/", async (c) => {
 
   const db = await getDb();
   const configs = await listNotificationConfigs(db, systemId, auth);
-  return c.json({ data: configs });
+  return c.json(envelope(configs));
 });

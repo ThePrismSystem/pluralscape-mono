@@ -57,9 +57,9 @@ describe("POST /systems/:systemId/webhook-configs/:webhookId/test", () => {
     const res = await postJSON(app, `/systems/${SYS_ID}/webhook-configs/${WH_ID}/test`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as WebhookTestResult;
-    expect(body.success).toBe(true);
-    expect(body.httpStatus).toBe(200);
+    const body = (await res.json()) as { data: WebhookTestResult };
+    expect(body.data.success).toBe(true);
+    expect(body.data.httpStatus).toBe(200);
   });
 
   it("calls service with correct parameters", async () => {
@@ -84,8 +84,8 @@ describe("POST /systems/:systemId/webhook-configs/:webhookId/test", () => {
     const res = await postJSON(app, `/systems/${SYS_ID}/webhook-configs/${WH_ID}/test`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as WebhookTestResult;
-    expect(body.success).toBe(false);
-    expect(body.httpStatus).toBe(500);
+    const body = (await res.json()) as { data: WebhookTestResult };
+    expect(body.data.success).toBe(false);
+    expect(body.data.httpStatus).toBe(500);
   });
 });

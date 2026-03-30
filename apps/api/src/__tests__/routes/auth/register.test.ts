@@ -68,15 +68,12 @@ describe("POST /register", () => {
 
     expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      sessionToken: string;
-      recoveryKey: string;
-      accountId: string;
-      accountType: string;
+      data: { sessionToken: string; recoveryKey: string; accountId: string; accountType: string };
     };
-    expect(body.sessionToken).toBe("tok_abc");
-    expect(body.recoveryKey).toBe("rk_abc");
-    expect(body.accountId).toBe("acct_123");
-    expect(body.accountType).toBe("system");
+    expect(body.data.sessionToken).toBe("tok_abc");
+    expect(body.data.recoveryKey).toBe("rk_abc");
+    expect(body.data.accountId).toBe("acct_123");
+    expect(body.data.accountType).toBe("system");
     // Register is unauthenticated — createAuditWriter should be called without auth
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything());
   });

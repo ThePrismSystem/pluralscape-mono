@@ -87,8 +87,8 @@ describe("POST /systems/:id/custom-fronts/:customFrontId/restore", () => {
     const res = await app.request(RESTORE_URL, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(2);
   });
 
   it("returns 404 when not found", async () => {

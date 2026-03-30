@@ -40,20 +40,20 @@ test.describe("Fields CRUD", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = await res.json();
-      expect(body).toHaveProperty("id");
-      expect(body).toHaveProperty("version");
-      fieldId = body.id as string;
-      fieldVersion = body.version as number;
+      const body = (await res.json()) as { data: { id: string; version: number } };
+      expect(body.data).toHaveProperty("id");
+      expect(body.data).toHaveProperty("version");
+      fieldId = body.data.id;
+      fieldVersion = body.data.version;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
       const res = await request.get(`${fieldsUrl}/${fieldId}`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = await res.json();
-      expect(body.id).toBe(fieldId);
+      const body = (await res.json()) as { data: { id: string; encryptedData: string } };
+      expect(body.data.id).toBe(fieldId);
 
-      const decrypted = decryptFromApi(body.encryptedData as string);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(FIELD_DEF_DATA);
     });
 
@@ -61,9 +61,9 @@ test.describe("Fields CRUD", () => {
       const res = await request.get(fieldsUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body).toHaveProperty("items");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
-      const ids = (body.items as { id: string }[]).map((f) => f.id);
+      expect(body).toHaveProperty("data");
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
+      const ids = (body.data as { id: string }[]).map((f) => f.id);
       expect(ids).toContain(fieldId);
     });
 
@@ -76,12 +76,12 @@ test.describe("Fields CRUD", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const updated = await res.json();
-      fieldVersion = updated.version as number;
+      const updated = (await res.json()) as { data: { version: number } };
+      fieldVersion = updated.data.version;
 
       const getRes = await request.get(`${fieldsUrl}/${fieldId}`, { headers: authHeaders });
-      const fetched = await getRes.json();
-      const decrypted = decryptFromApi(fetched.encryptedData as string);
+      const fetched = (await getRes.json()) as { data: { encryptedData: string } };
+      const decrypted = decryptFromApi(fetched.data.encryptedData);
       expect(decrypted).toEqual(UPDATED_FIELD_DEF_DATA);
     });
 
@@ -125,9 +125,9 @@ test.describe("Fields CRUD", () => {
         data: { encryptedData: encryptForApi(FIELD_VALUE_DATA) },
       });
       expect(res.status()).toBe(201);
-      const body = await res.json();
-      expect(body).toHaveProperty("version");
-      valueVersion = body.version as number;
+      const body = (await res.json()) as { data: { version: number } };
+      expect(body.data).toHaveProperty("version");
+      valueVersion = body.data.version;
     });
 
     await test.step("list includes field value", async () => {
@@ -135,10 +135,8 @@ test.describe("Fields CRUD", () => {
       expect(res.status()).toBe(200);
       const body = await res.json();
       expect(body).toHaveProperty("data");
-      expect(body.data).toHaveProperty("items");
-      const ids = (body.data.items as { fieldDefinitionId: string }[]).map(
-        (v) => v.fieldDefinitionId,
-      );
+      expect(Array.isArray(body.data)).toBe(true);
+      const ids = (body.data as { fieldDefinitionId: string }[]).map((v) => v.fieldDefinitionId);
       expect(ids).toContain(fieldDef.id);
     });
 

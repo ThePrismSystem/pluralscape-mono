@@ -66,7 +66,7 @@ const MOCK_RECORD = {
   archivedAt: null,
 };
 
-const EMPTY_PAGE = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -88,8 +88,8 @@ describe("POST /systems/:id/check-in-records", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("cir_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("cir_660e8400-e29b-41d4-a716-446655440000");
   });
 });
 
@@ -109,7 +109,7 @@ describe("GET /systems/:id/check-in-records", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });
 
@@ -128,8 +128,8 @@ describe("GET /systems/:id/check-in-records/:recordId", () => {
     const res = await app.request(RECORD_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("cir_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("cir_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when not found", async () => {
@@ -176,8 +176,8 @@ describe("POST /systems/:id/check-in-records/:recordId/respond", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { respondedAt: number };
-    expect(body.respondedAt).toBe(2000);
+    const body = (await res.json()) as { data: { respondedAt: number } };
+    expect(body.data.respondedAt).toBe(2000);
   });
 
   it("returns 409 when already responded", async () => {
@@ -252,8 +252,8 @@ describe("POST /systems/:id/check-in-records/:recordId/dismiss", () => {
     const res = await app.request(`${RECORD_URL}/dismiss`, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { dismissed: boolean };
-    expect(body.dismissed).toBe(true);
+    const body = (await res.json()) as { data: { dismissed: boolean } };
+    expect(body.data.dismissed).toBe(true);
   });
 
   it("returns 409 when already dismissed", async () => {

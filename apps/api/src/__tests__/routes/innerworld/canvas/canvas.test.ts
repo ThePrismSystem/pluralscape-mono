@@ -65,9 +65,9 @@ describe("GET /systems/:id/innerworld/canvas", () => {
     const res = await createApp().request(BASE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_CANVAS;
-    expect(body.id).toBe("iwc_660e8400-e29b-41d4-a716-446655440000");
-    expect(body.encryptedData).toBe("dGVzdA==");
+    const body = (await res.json()) as { data: typeof MOCK_CANVAS };
+    expect(body.data.id).toBe("iwc_660e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.encryptedData).toBe("dGVzdA==");
   });
 
   it("returns 404 when canvas not found", async () => {
@@ -100,9 +100,9 @@ describe("PUT /systems/:id/innerworld/canvas", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_CANVAS;
-    expect(body.id).toBe("iwc_660e8400-e29b-41d4-a716-446655440000");
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: typeof MOCK_CANVAS };
+    expect(body.data.id).toBe("iwc_660e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.version).toBe(1);
   });
 
   it("returns 400 for malformed JSON body", async () => {

@@ -6,7 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
-import { wrapResult } from "../../lib/response.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
   deleteFieldValueForOwner,
@@ -81,7 +81,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
 
     const db = await getDb();
     const result = await setFieldValueForOwner(db, systemId, owner, fieldDefId, body, auth, audit);
-    return c.json(result, HTTP_CREATED);
+    return c.json(envelope(result), HTTP_CREATED);
   });
 
   // ── LIST (GET /) ────────────────────────────────────────────────
@@ -94,7 +94,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
 
     const db = await getDb();
     const result = await listFieldValuesForOwner(db, systemId, owner, auth);
-    return c.json(wrapResult({ items: result }));
+    return c.json(envelope(result));
   });
 
   // ── UPDATE (PUT /:fieldDefId) ───────────────────────────────────
@@ -118,7 +118,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
       auth,
       audit,
     );
-    return c.json(result);
+    return c.json(envelope(result));
   });
 
   // ── DELETE (DELETE /:fieldDefId) ────────────────────────────────

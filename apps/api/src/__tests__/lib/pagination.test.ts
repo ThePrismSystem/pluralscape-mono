@@ -73,7 +73,7 @@ describe("buildPaginatedResult", () => {
   it("returns empty result for empty rows", () => {
     const result = buildPaginatedResult([], 10, identity);
     expect(result).toEqual({
-      items: [],
+      data: [],
       nextCursor: null,
       hasMore: false,
       totalCount: null,
@@ -86,7 +86,7 @@ describe("buildPaginatedResult", () => {
       { id: "b", name: "Bob" },
     ];
     const result = buildPaginatedResult(rows, 5, identity);
-    expect(result.items).toEqual(rows);
+    expect(result.data).toEqual(rows);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
     expect(result.totalCount).toBeNull();
@@ -98,7 +98,7 @@ describe("buildPaginatedResult", () => {
       { id: "b", name: "Bob" },
     ];
     const result = buildPaginatedResult(rows, 2, identity);
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -110,8 +110,8 @@ describe("buildPaginatedResult", () => {
       { id: "c", name: "Carol" },
     ];
     const result = buildPaginatedResult(rows, 2, identity);
-    expect(result.items).toHaveLength(2);
-    expect(result.items[1]).toEqual({ id: "b", name: "Bob" });
+    expect(result.data).toHaveLength(2);
+    expect(result.data[1]).toEqual({ id: "b", name: "Bob" });
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).not.toBeNull();
     if (result.nextCursor) {
@@ -126,7 +126,7 @@ describe("buildPaginatedResult", () => {
       doubled: row.value * 2,
     });
     const result = buildPaginatedResult(rows, 5, mapper);
-    expect(result.items).toEqual([{ id: "x", doubled: 84 }]);
+    expect(result.data).toEqual([{ id: "x", doubled: 84 }]);
   });
 });
 
@@ -354,7 +354,7 @@ describe("buildCompositePaginatedResult", () => {
 
   it("returns empty result for no rows", () => {
     const result = buildCompositePaginatedResult([], 10, mapper, extractor);
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
     expect(result.nextCursor).toBeNull();
     expect(result.hasMore).toBe(false);
     expect(result.totalCount).toBeNull();
@@ -366,7 +366,7 @@ describe("buildCompositePaginatedResult", () => {
       { id: "b", score: 200 },
     ];
     const result = buildCompositePaginatedResult(rows, 5, mapper, extractor);
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -378,9 +378,9 @@ describe("buildCompositePaginatedResult", () => {
       { id: "c", score: 100 },
     ];
     const result = buildCompositePaginatedResult(rows, 2, mapper, extractor);
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]?.id).toBe("a");
-    expect(result.items[1]?.id).toBe("b");
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.id).toBe("a");
+    expect(result.data[1]?.id).toBe("b");
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).not.toBeNull();
 
@@ -395,6 +395,6 @@ describe("buildCompositePaginatedResult", () => {
     const rows = [{ id: "raw", score: 50 }];
     const customMapper = (row: TestRow): TestRow => ({ ...row, id: `mapped_${row.id}` });
     const result = buildCompositePaginatedResult(rows, 10, customMapper, extractor);
-    expect(result.items[0]?.id).toBe("mapped_raw");
+    expect(result.data[0]?.id).toBe("mapped_raw");
   });
 });

@@ -331,7 +331,7 @@ describe("hierarchy-service-factory — list", () => {
 
     const result = await service.list(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
   });
 
@@ -343,7 +343,7 @@ describe("hierarchy-service-factory — list", () => {
     const result = await service.list(db, SYSTEM_ID, AUTH, undefined, 1);
 
     expect(result.hasMore).toBe(true);
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
   it("includes archived entities when includeArchived is true", async () => {
@@ -353,7 +353,7 @@ describe("hierarchy-service-factory — list", () => {
 
     const result = await service.list(db, SYSTEM_ID, AUTH, undefined, 25, true);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
   it("applies cursor filter when cursor provided", async () => {
@@ -363,7 +363,7 @@ describe("hierarchy-service-factory — list", () => {
 
     const result = await service.list(db, SYSTEM_ID, AUTH, "ent_cursor");
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(chain.where).toHaveBeenCalled();
   });
 
@@ -374,7 +374,7 @@ describe("hierarchy-service-factory — list", () => {
 
     const result = await service.list(db, SYSTEM_ID, AUTH, undefined, 999_999);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
   });
 
   it("returns empty result when no entities", async () => {
@@ -383,7 +383,7 @@ describe("hierarchy-service-factory — list", () => {
 
     const result = await service.list(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });

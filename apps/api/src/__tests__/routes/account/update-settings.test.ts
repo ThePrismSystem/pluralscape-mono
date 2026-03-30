@@ -65,13 +65,11 @@ describe("PUT /account/settings", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      ok: boolean;
-      auditLogIpTracking: boolean;
-      version: number;
+      data: { ok: boolean; auditLogIpTracking: boolean; version: number };
     };
-    expect(body.ok).toBe(true);
-    expect(body.auditLogIpTracking).toBe(true);
-    expect(body.version).toBe(2);
+    expect(body.data.ok).toBe(true);
+    expect(body.data.auditLogIpTracking).toBe(true);
+    expect(body.data.version).toBe(2);
   });
 
   it("returns 409 on ConcurrencyError", async () => {

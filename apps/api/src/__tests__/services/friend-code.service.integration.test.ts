@@ -132,8 +132,8 @@ describe("friend-code.service (PGlite integration)", () => {
 
       const result = await listFriendCodes(asDb(db), accountIdA, authA);
 
-      expect(result.items).toHaveLength(2);
-      for (const code of result.items) {
+      expect(result.data).toHaveLength(2);
+      for (const code of result.data) {
         expect(code.archived).toBe(false);
       }
     });
@@ -144,14 +144,14 @@ describe("friend-code.service (PGlite integration)", () => {
 
       const result = await listFriendCodes(asDb(db), accountIdA, authA);
 
-      const ids = result.items.map((c) => c.id);
+      const ids = result.data.map((c) => c.id);
       expect(ids).not.toContain(created.id);
     });
 
     it("returns empty list when no codes exist", async () => {
       const result = await listFriendCodes(asDb(db), accountIdA, authA);
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 
@@ -164,7 +164,7 @@ describe("friend-code.service (PGlite integration)", () => {
       await archiveFriendCode(asDb(db), accountIdA, created.id, authA, noopAudit);
 
       const remaining = await listFriendCodes(asDb(db), accountIdA, authA);
-      const ids = remaining.items.map((c) => c.id);
+      const ids = remaining.data.map((c) => c.id);
       expect(ids).not.toContain(created.id);
     });
 
@@ -229,7 +229,7 @@ describe("friend-code.service (PGlite integration)", () => {
 
       // Verify code is archived
       const codes = await listFriendCodes(asDb(db), accountIdA, authA);
-      const redeemed = codes.items.find((c) => c.id === created.id);
+      const redeemed = codes.data.find((c) => c.id === created.id);
       expect(redeemed).toBeUndefined();
     });
 

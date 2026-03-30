@@ -93,8 +93,8 @@ describe("POST /systems/:id/acknowledgements (create)", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(ACK_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(ACK_ID);
   });
 
   it("forwards systemId, body, auth, and audit writer to service", async () => {
@@ -128,7 +128,7 @@ describe("POST /systems/:id/acknowledgements (create)", () => {
 describe("GET /systems/:id/acknowledgements (list)", () => {
   it("returns 200 with paginated result", async () => {
     vi.mocked(listAcknowledgements).mockResolvedValueOnce({
-      items: [MOCK_RESULT],
+      data: [MOCK_RESULT],
       nextCursor: null,
       hasMore: false,
       totalCount: null,
@@ -137,8 +137,8 @@ describe("GET /systems/:id/acknowledgements (list)", () => {
     const res = await createApp().request(BASE);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(1);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(1);
   });
 });
 
@@ -149,8 +149,8 @@ describe("GET /systems/:id/acknowledgements/:acknowledgementId", () => {
     const res = await createApp().request(`${BASE}/${ACK_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(ACK_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(ACK_ID);
   });
 
   it("returns 404 when acknowledgement not found", async () => {
@@ -204,8 +204,8 @@ describe("POST /systems/:id/acknowledgements/:acknowledgementId/confirm", () => 
     const res = await postJSON(createApp(), `${BASE}/${ACK_ID}/confirm`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { confirmed: boolean };
-    expect(body.confirmed).toBe(true);
+    const body = (await res.json()) as { data: { confirmed: boolean } };
+    expect(body.data.confirmed).toBe(true);
   });
 
   it("forwards systemId, ackId, body, auth, and audit writer to service", async () => {
@@ -288,8 +288,8 @@ describe("POST /systems/:id/acknowledgements/:acknowledgementId/restore", () => 
     const res = await postJSON(createApp(), `${BASE}/${ACK_ID}/restore`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(3);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(3);
   });
 
   it("returns 409 when not archived", async () => {

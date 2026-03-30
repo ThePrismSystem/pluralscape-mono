@@ -261,7 +261,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
       await createAcknowledgement(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
 
       const result = await listAcknowledgements(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.hasMore).toBe(false);
     });
 
@@ -277,8 +277,8 @@ describe("acknowledgement.service (PGlite integration)", () => {
       await confirmAcknowledgement(asDb(db), systemId, ack.id, {}, auth, noopAudit);
 
       const result = await listAcknowledgements(asDb(db), systemId, auth, { confirmed: true });
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.confirmed).toBe(true);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.confirmed).toBe(true);
     });
 
     it("filters by confirmed=false (pending)", async () => {
@@ -293,8 +293,8 @@ describe("acknowledgement.service (PGlite integration)", () => {
       await confirmAcknowledgement(asDb(db), systemId, ack.id, {}, auth, noopAudit);
 
       const result = await listAcknowledgements(asDb(db), systemId, auth, { confirmed: false });
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.confirmed).toBe(false);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.confirmed).toBe(false);
     });
 
     it("includes archived when includeArchived=true", async () => {
@@ -310,7 +310,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
       const result = await listAcknowledgements(asDb(db), systemId, auth, {
         includeArchived: true,
       });
-      expect(result.items.some((item) => item.id === ack.id)).toBe(true);
+      expect(result.data.some((item) => item.id === ack.id)).toBe(true);
     });
 
     it("supports cursor pagination (newest first)", async () => {
@@ -319,17 +319,17 @@ describe("acknowledgement.service (PGlite integration)", () => {
       }
 
       const page1 = await listAcknowledgements(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listAcknowledgements(asDb(db), systemId, auth, {
         cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
 
-      const allIds = [...page1.items.map((a) => a.id), ...page2.items.map((a) => a.id)];
+      const allIds = [...page1.data.map((a) => a.id), ...page2.data.map((a) => a.id)];
       expect(new Set(allIds).size).toBe(3);
     });
   });
@@ -457,7 +457,7 @@ describe("acknowledgement.service (PGlite integration)", () => {
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       const result = await listAcknowledgements(asDb(db), otherSystemId, otherAuth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

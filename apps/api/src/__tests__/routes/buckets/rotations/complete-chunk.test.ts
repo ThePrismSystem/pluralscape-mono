@@ -82,14 +82,14 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/complete", (
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_COMPLETION_RESPONSE;
-    expect(body.rotation.id).toBe(ROTATION_ID);
-    expect(body.rotation.bucketId).toBe(BUCKET_ID);
-    expect(body.rotation.state).toBe("migrating");
-    expect(body.rotation.completedItems).toBe(3);
-    expect(body.rotation.totalItems).toBe(5);
-    expect(body.rotation.failedItems).toBe(0);
-    expect(body.transitioned).toBe(false);
+    const body = (await res.json()) as { data: typeof MOCK_COMPLETION_RESPONSE };
+    expect(body.data.rotation.id).toBe(ROTATION_ID);
+    expect(body.data.rotation.bucketId).toBe(BUCKET_ID);
+    expect(body.data.rotation.state).toBe("migrating");
+    expect(body.data.rotation.completedItems).toBe(3);
+    expect(body.data.rotation.totalItems).toBe(5);
+    expect(body.data.rotation.failedItems).toBe(0);
+    expect(body.data.transitioned).toBe(false);
   });
 
   it("returns 400 for malformed JSON body", async () => {

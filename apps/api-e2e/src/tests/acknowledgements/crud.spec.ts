@@ -16,7 +16,7 @@ interface AcknowledgementResponse {
 }
 
 interface AcknowledgementListResponse {
-  items: AcknowledgementResponse[];
+  data: AcknowledgementResponse[];
   nextCursor: string | null;
   hasMore: boolean;
   totalCount: number | null;
@@ -53,20 +53,20 @@ test.describe("Acknowledgements CRUD", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as AcknowledgementResponse;
-      expect(body.id).toMatch(/^ack_/);
-      expect(body.confirmed).toBe(false);
-      expect(body.version).toBe(1);
-      expect(body.archived).toBe(false);
-      ackId = body.id;
+      const body = (await res.json()) as { data: AcknowledgementResponse };
+      expect(body.data.id).toMatch(/^ack_/);
+      expect(body.data.confirmed).toBe(false);
+      expect(body.data.version).toBe(1);
+      expect(body.data.archived).toBe(false);
+      ackId = body.data.id;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
       const res = await request.get(`${acksUrl}/${ackId}`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as AcknowledgementResponse;
-      expect(body.id).toBe(ackId);
-      const decrypted = decryptFromApi(body.encryptedData);
+      const body = (await res.json()) as { data: AcknowledgementResponse };
+      expect(body.data.id).toBe(ackId);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(ACK_DATA);
     });
 
@@ -74,16 +74,16 @@ test.describe("Acknowledgements CRUD", () => {
       const res = await request.get(acksUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("list pending (confirmed=false)", async () => {
       const res = await request.get(`${acksUrl}?confirmed=false`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("confirm acknowledgement", async () => {
@@ -94,9 +94,9 @@ test.describe("Acknowledgements CRUD", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as AcknowledgementResponse;
-      expect(body.confirmed).toBe(true);
-      expect(body.version).toBe(2);
+      const body = (await res.json()) as { data: AcknowledgementResponse };
+      expect(body.data.confirmed).toBe(true);
+      expect(body.data.version).toBe(2);
     });
 
     await test.step("confirm again is idempotent", async () => {
@@ -105,24 +105,24 @@ test.describe("Acknowledgements CRUD", () => {
         data: {},
       });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as AcknowledgementResponse;
-      expect(body.confirmed).toBe(true);
+      const body = (await res.json()) as { data: AcknowledgementResponse };
+      expect(body.data.confirmed).toBe(true);
       // Version should NOT change on idempotent re-confirm
-      expect(body.version).toBe(2);
+      expect(body.data.version).toBe(2);
     });
 
     await test.step("list confirmed (confirmed=true)", async () => {
       const res = await request.get(`${acksUrl}?confirmed=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("not in pending list after confirm", async () => {
       const res = await request.get(`${acksUrl}?confirmed=false`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
+      expect(body.data.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
     });
 
     await test.step("archive acknowledgement", async () => {
@@ -134,21 +134,21 @@ test.describe("Acknowledgements CRUD", () => {
       const res = await request.get(acksUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
+      expect(body.data.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
     });
 
     await test.step("archived in list with includeArchived=true", async () => {
       const res = await request.get(`${acksUrl}?includeArchived=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("restore acknowledgement", async () => {
       const res = await request.post(`${acksUrl}/${ackId}/restore`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as AcknowledgementResponse;
-      expect(body.archived).toBe(false);
+      const body = (await res.json()) as { data: AcknowledgementResponse };
+      expect(body.data.archived).toBe(false);
     });
 
     await test.step("delete acknowledgement", async () => {

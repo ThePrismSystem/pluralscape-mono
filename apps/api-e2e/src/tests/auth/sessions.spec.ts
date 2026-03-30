@@ -6,8 +6,8 @@ test.describe("Session management", () => {
 
     expect(res.status()).toBe(200);
     const body = await res.json();
-    expect(body).toHaveProperty("sessions");
-    expect(body.sessions.length).toBeGreaterThanOrEqual(1);
+    expect(body).toHaveProperty("data");
+    expect(body.data.sessions.length).toBeGreaterThanOrEqual(1);
   });
 
   test("POST /v1/auth/logout invalidates the session", async ({ request, registeredAccount }) => {

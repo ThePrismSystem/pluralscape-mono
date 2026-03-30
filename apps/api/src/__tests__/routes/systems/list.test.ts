@@ -41,7 +41,7 @@ const { systemRoutes } = await import("../../../routes/systems/index.js");
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const EMPTY_PAGE: PaginatedResult<SystemProfileResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -66,7 +66,7 @@ describe("GET /systems", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<SystemProfileResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
     expect(body.nextCursor).toBeNull();
     expect(body.totalCount).toBeNull();
@@ -74,7 +74,7 @@ describe("GET /systems", () => {
 
   it("returns 200 with paginated systems", async () => {
     const page: PaginatedResult<SystemProfileResult> = {
-      items: [
+      data: [
         {
           id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
           encryptedData: null,
@@ -94,7 +94,7 @@ describe("GET /systems", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<SystemProfileResult>;
-    expect(body.items).toHaveLength(1);
+    expect(body.data).toHaveLength(1);
     expect(body.hasMore).toBe(true);
     expect(body.nextCursor).toBeTruthy();
   });

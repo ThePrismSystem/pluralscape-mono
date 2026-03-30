@@ -322,8 +322,8 @@ describe("listApiKeys", () => {
 
     const result = await listApiKeys({} as never, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(API_KEY_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(API_KEY_ID);
     expect(result.hasMore).toBe(false);
   });
 
@@ -343,7 +343,7 @@ describe("listApiKeys", () => {
 
     const result = await listApiKeys({} as never, SYSTEM_ID, AUTH, { includeRevoked: true });
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
   });
 
   it("uses custom limit", async () => {
@@ -372,7 +372,7 @@ describe("listApiKeys", () => {
     const result = await listApiKeys({} as never, SYSTEM_ID, AUTH);
 
     expect(result.hasMore).toBe(true);
-    expect(result.items).toHaveLength(25);
+    expect(result.data).toHaveLength(25);
     expect(result.nextCursor).not.toBeNull();
   });
 });

@@ -8,23 +8,30 @@ import crypto from "node:crypto";
 
 import { test as base, type APIRequestContext } from "@playwright/test";
 
-interface RegisterResponse {
+interface RegisterData {
   sessionToken: string;
   recoveryKey: string;
   accountId: string;
   accountType: string;
 }
 
+interface RegisterResponse {
+  data: RegisterData;
+}
+
+interface AccountInfo extends RegisterData {
+  email: string;
+  password: string;
+}
+
 interface AuthFixtures {
   /** A freshly registered account with session token. */
-  registeredAccount: RegisterResponse & { email: string; password: string };
+  registeredAccount: AccountInfo;
   /** Pre-built Authorization header for the registered account. */
   authHeaders: Record<string, string>;
 }
 
-async function registerUniqueAccount(
-  request: APIRequestContext,
-): Promise<RegisterResponse & { email: string; password: string }> {
+async function registerUniqueAccount(request: APIRequestContext): Promise<AccountInfo> {
   const uuid = crypto.randomUUID();
   const email = `e2e-${uuid}@test.pluralscape.local`;
   const password = `E2E-TestPass-${uuid}`;
@@ -42,8 +49,8 @@ async function registerUniqueAccount(
     throw new Error(`Registration failed (${String(res.status())}): ${body}`);
   }
 
-  const data = (await res.json()) as RegisterResponse;
-  return { ...data, email, password };
+  const envelope = (await res.json()) as RegisterResponse;
+  return { ...envelope.data, email, password };
 }
 
 export const test = base.extend<AuthFixtures>({

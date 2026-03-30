@@ -101,11 +101,11 @@ describe("sessions route", () => {
       const res = await app.request("/auth/sessions");
 
       expect(res.status).toBe(200);
-      const body = (await res.json()) as typeof mockSessions;
-      expect(body.sessions).toHaveLength(2);
-      expect(body.nextCursor).not.toBeNull();
-      if (body.nextCursor) {
-        expect(fromCursor(body.nextCursor, PAGINATION.cursorTtlMs)).toBe("sess_2");
+      const body = (await res.json()) as { data: typeof mockSessions };
+      expect(body.data.sessions).toHaveLength(2);
+      expect(body.data.nextCursor).not.toBeNull();
+      if (body.data.nextCursor) {
+        expect(fromCursor(body.data.nextCursor, PAGINATION.cursorTtlMs)).toBe("sess_2");
       }
       expect(vi.mocked(listSessions)).toHaveBeenCalledWith({}, "acct_test", undefined, 25);
     });
@@ -236,7 +236,7 @@ describe("sessions route", () => {
   // ── POST /auth/sessions/revoke-all ─────────────────────────────
 
   describe("POST /auth/sessions/revoke-all", () => {
-    it("returns success with revokedCount in data envelope", async () => {
+    it("returns revokedCount in data envelope", async () => {
       vi.mocked(revokeAllSessions).mockResolvedValueOnce(3);
 
       const app = createApp();
@@ -246,9 +246,8 @@ describe("sessions route", () => {
 
       expect(res.status).toBe(200);
       const body = (await res.json()) as {
-        data: { success: true; revokedCount: number };
+        data: { revokedCount: number };
       };
-      expect(body.data.success).toBe(true);
       expect(body.data.revokedCount).toBe(3);
       expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledWith(
         {},

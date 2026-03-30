@@ -15,11 +15,11 @@ test.describe("POST /v1/auth/register", () => {
 
     expect(res.status()).toBe(201);
     const body = await res.json();
-    expect(body).toHaveProperty("sessionToken");
-    expect(body).toHaveProperty("recoveryKey");
-    expect(body).toHaveProperty("accountId");
-    expect(body.accountType).toBe("system");
-    expect(body.sessionToken).toMatch(/^[0-9a-f]{64}$/);
+    expect(body).toHaveProperty("data.sessionToken");
+    expect(body).toHaveProperty("data.recoveryKey");
+    expect(body).toHaveProperty("data.accountId");
+    expect(body.data.accountType).toBe("system");
+    expect(body.data.sessionToken).toMatch(/^[0-9a-f]{64}$/);
   });
 
   test("rejects registration with missing fields", async ({ request }) => {
@@ -58,7 +58,7 @@ test.describe("POST /v1/auth/register", () => {
     const second = await request.post("/v1/auth/register", { data: body });
     expect(second.status()).toBe(201);
     const secondBody = await second.json();
-    expect(secondBody).toHaveProperty("sessionToken");
-    expect(secondBody).toHaveProperty("recoveryKey");
+    expect(secondBody).toHaveProperty("data.sessionToken");
+    expect(secondBody).toHaveProperty("data.recoveryKey");
   });
 });

@@ -8,6 +8,8 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { envelope } from "../../lib/response.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { registerDeviceToken } from "../../services/device-token.service.js";
 
@@ -16,6 +18,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const registerRoute = new Hono<AuthEnv>();
 
 registerRoute.use("*", createCategoryRateLimiter("write"));
+registerRoute.use("*", createIdempotencyMiddleware());
 
 registerRoute.post("/", async (c) => {
   const auth = c.get("auth");
@@ -35,5 +38,5 @@ registerRoute.post("/", async (c) => {
 
   const db = await getDb();
   const result = await registerDeviceToken(db, systemId, parsed.data, auth, audit);
-  return c.json(result, HTTP_CREATED);
+  return c.json(envelope(result), HTTP_CREATED);
 });

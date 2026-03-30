@@ -79,10 +79,10 @@ describe("PUT /systems/:systemId/fields/:fieldId", () => {
     const res = await putJSON(app, `/systems/${SYS_ID}/fields/${FLD_ID}`, VALID_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; fieldType: string; version: number };
-    expect(body.id).toBe(FLD_ID);
-    expect(body.fieldType).toBe("text");
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: { id: string; fieldType: string; version: number } };
+    expect(body.data.id).toBe(FLD_ID);
+    expect(body.data.fieldType).toBe("text");
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards systemId, fieldId, body, auth, and audit writer to service", async () => {

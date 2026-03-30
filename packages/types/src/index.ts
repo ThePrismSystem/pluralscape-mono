@@ -90,7 +90,6 @@ export { CursorInvalidError } from "./pagination.js";
 // ── Results ─────────────────────────────────────────────────────────
 export type {
   Result,
-  ActionResult,
   ApiError,
   ApiErrorResponse,
   ApiResponse,

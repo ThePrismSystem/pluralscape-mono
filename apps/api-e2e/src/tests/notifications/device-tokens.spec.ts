@@ -16,6 +16,9 @@ interface DeviceTokenResponse {
 
 interface DeviceTokenListResponse {
   readonly data: readonly DeviceTokenResponse[];
+  readonly nextCursor: string | null;
+  readonly hasMore: boolean;
+  readonly totalCount: number | null;
 }
 
 test.describe("Device tokens", () => {
@@ -30,12 +33,12 @@ test.describe("Device tokens", () => {
       });
       expect(res.status()).toBe(HTTP_CREATED);
 
-      const body = (await res.json()) as DeviceTokenResponse;
-      expect(body.id).toMatch(/^dt_/);
-      expect(body.platform).toBe("ios");
-      expect(body.token).toBe("***oken-abc");
-      expect(body.systemId).toBe(systemId);
-      tokenId = body.id;
+      const body = (await res.json()) as { data: DeviceTokenResponse };
+      expect(body.data.id).toMatch(/^dt_/);
+      expect(body.data.platform).toBe("ios");
+      expect(body.data.token).toBe("***oken-abc");
+      expect(body.data.systemId).toBe(systemId);
+      tokenId = body.data.id;
     });
 
     await test.step("list includes registered token", async () => {

@@ -60,8 +60,8 @@ describe("PUT /systems/:id", () => {
     const res = await putJSON(app, "/systems/sys_550e8400-e29b-41d4-a716-446655440000", VALID_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(2);
   });
 
   it("forwards systemId, body, auth, and audit writer to service", async () => {

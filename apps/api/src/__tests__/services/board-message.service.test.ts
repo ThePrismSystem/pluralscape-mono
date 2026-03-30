@@ -174,7 +174,7 @@ describe("board-message service", () => {
 
       const result = await listBoardMessages(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
     });
 
@@ -183,7 +183,7 @@ describe("board-message service", () => {
 
       const result = await listBoardMessages(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toEqual([]);
+      expect(result.data).toEqual([]);
     });
 
     it("detects hasMore when more rows exist than limit", async () => {
@@ -194,7 +194,7 @@ describe("board-message service", () => {
       const result = await listBoardMessages(db, SYSTEM_ID, AUTH, { limit: 1 });
 
       expect(result.hasMore).toBe(true);
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it("applies pinned filter when provided", async () => {
@@ -203,7 +203,7 @@ describe("board-message service", () => {
 
       const result = await listBoardMessages(db, SYSTEM_ID, AUTH, { pinned: true });
 
-      expect(result.items[0]?.pinned).toBe(true);
+      expect(result.data[0]?.pinned).toBe(true);
     });
   });
 

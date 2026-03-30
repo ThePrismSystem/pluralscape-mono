@@ -3,7 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
-import { wrapResult } from "../../../lib/response.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { getSetupStatus } from "../../../services/setup.service.js";
 
@@ -18,5 +18,5 @@ setupStatusRoute.get("/", async (c) => {
 
   const db = await getDb();
   const result = await getSetupStatus(db, systemId, auth);
-  return c.json(wrapResult(result));
+  return c.json(envelope(result));
 });

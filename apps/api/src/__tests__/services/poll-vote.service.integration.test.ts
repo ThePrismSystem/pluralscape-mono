@@ -397,7 +397,7 @@ describe("poll-vote.service (PGlite integration)", () => {
       );
 
       const result = await listVotes(asDb(db), otherSystemId, pollB.id, otherAuth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 
@@ -411,7 +411,7 @@ describe("poll-vote.service (PGlite integration)", () => {
 
       const result = await listVotes(asDb(db), systemId, poll.id, auth);
 
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.hasMore).toBe(false);
     });
 
@@ -424,17 +424,17 @@ describe("poll-vote.service (PGlite integration)", () => {
       }
 
       const page1 = await listVotes(asDb(db), systemId, poll.id, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listVotes(asDb(db), systemId, poll.id, auth, {
         cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
 
-      const allIds = [...page1.items.map((v) => v.id), ...page2.items.map((v) => v.id)];
+      const allIds = [...page1.data.map((v) => v.id), ...page2.data.map((v) => v.id)];
       expect(new Set(allIds).size).toBe(3);
     });
 
@@ -443,7 +443,7 @@ describe("poll-vote.service (PGlite integration)", () => {
 
       const result = await listVotes(asDb(db), systemId, poll.id, auth);
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });
@@ -456,13 +456,13 @@ describe("poll-vote.service (PGlite integration)", () => {
       await db.update(pollVotes).set({ archived: true, archivedAt: Date.now() });
 
       const result = await listVotes(asDb(db), systemId, poll.id, auth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
 
       const withArchived = await listVotes(asDb(db), systemId, poll.id, auth, {
         includeArchived: true,
       });
-      expect(withArchived.items).toHaveLength(1);
-      expect(withArchived.items[0]?.archived).toBe(true);
+      expect(withArchived.data).toHaveLength(1);
+      expect(withArchived.data[0]?.archived).toBe(true);
     });
 
     it("returns NOT_FOUND for nonexistent poll", async () => {
@@ -485,7 +485,7 @@ describe("poll-vote.service (PGlite integration)", () => {
         includeArchived: true,
       });
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it("returns INVALID_CURSOR for garbage cursor string", async () => {

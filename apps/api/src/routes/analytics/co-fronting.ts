@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { parseAnalyticsQuery } from "../../services/analytics-query.service.js";
 import { computeCoFrontingBreakdown } from "../../services/analytics.service.js";
@@ -20,5 +21,5 @@ coFrontingAnalyticsRoute.get("/", async (c) => {
 
   const db = await getDb();
   const result = await computeCoFrontingBreakdown(db, systemId, auth, dateRange);
-  return c.json(result);
+  return c.json(envelope(result));
 });

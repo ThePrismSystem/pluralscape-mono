@@ -176,7 +176,7 @@ describe("listFieldDefinitions", () => {
 
     const result = await listFieldDefinitions(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
     expect(result.totalCount).toBeNull();
@@ -188,8 +188,8 @@ describe("listFieldDefinitions", () => {
 
     const result = await listFieldDefinitions(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe("fld_test-field");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe("fld_test-field");
     expect(result.hasMore).toBe(false);
   });
 
@@ -211,7 +211,7 @@ describe("listFieldDefinitions", () => {
       includeArchived: true,
     });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(chain.where).toHaveBeenCalled();
   });
 });

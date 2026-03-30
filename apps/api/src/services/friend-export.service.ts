@@ -212,7 +212,7 @@ async function queryExportPage(
   }
 
   return {
-    items,
+    data: items,
     nextCursor,
     hasMore,
     totalCount: null,
@@ -222,7 +222,7 @@ async function queryExportPage(
 
 function emptyPage(): FriendExportPageResponse {
   return {
-    items: [],
+    data: [],
     nextCursor: null,
     hasMore: false,
     totalCount: null,

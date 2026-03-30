@@ -68,15 +68,12 @@ describe("POST /login", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      sessionToken: string;
-      accountId: string;
-      systemId: string;
-      accountType: string;
+      data: { sessionToken: string; accountId: string; systemId: string; accountType: string };
     };
-    expect(body.sessionToken).toBe("tok_login");
-    expect(body.accountId).toBe("acct_456");
-    expect(body.systemId).toBe("sys_789");
-    expect(body.accountType).toBe("system");
+    expect(body.data.sessionToken).toBe("tok_login");
+    expect(body.data.accountId).toBe("acct_456");
+    expect(body.data.systemId).toBe("sys_789");
+    expect(body.data.accountType).toBe("system");
     // Login is unauthenticated — createAuditWriter should be called without auth
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything());
   });

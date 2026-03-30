@@ -253,8 +253,8 @@ describe("listRelationships", () => {
 
     const result = await listRelationships(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(RELATIONSHIP_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(RELATIONSHIP_ID);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
     expect(result.totalCount).toBeNull();
@@ -266,7 +266,7 @@ describe("listRelationships", () => {
 
     const result = await listRelationships(db, SYSTEM_ID, AUTH, undefined, 25, "mem_source");
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(chain.where).toHaveBeenCalled();
   });
 
@@ -275,7 +275,7 @@ describe("listRelationships", () => {
 
     const result = await listRelationships(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -287,7 +287,7 @@ describe("listRelationships", () => {
 
     const result = await listRelationships(db, SYSTEM_ID, AUTH, undefined, 1);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     const { nextCursor } = result;
     expect(nextCursor).not.toBeNull();

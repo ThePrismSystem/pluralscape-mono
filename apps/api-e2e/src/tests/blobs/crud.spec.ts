@@ -31,11 +31,13 @@ async function requestUploadUrl(
     },
   });
   expect(res.status()).toBe(201);
-  const body = (await res.json()) as { blobId: string; uploadUrl: string; expiresAt: string };
-  expect(body).toHaveProperty("blobId");
-  expect(body).toHaveProperty("uploadUrl");
-  expect(body).toHaveProperty("expiresAt");
-  return body;
+  const json = (await res.json()) as {
+    data: { blobId: string; uploadUrl: string; expiresAt: string };
+  };
+  expect(json.data).toHaveProperty("blobId");
+  expect(json.data).toHaveProperty("uploadUrl");
+  expect(json.data).toHaveProperty("expiresAt");
+  return json.data;
 }
 
 /**
@@ -100,20 +102,22 @@ test.describe("Blobs CRUD", () => {
         headers: authHeaders,
       });
       expect(getRes.status()).toBe(200);
-      const metadata = (await getRes.json()) as {
-        id: string;
-        systemId: string;
-        purpose: string;
-        mimeType: string;
-        sizeBytes: number;
-        checksum: string;
-        uploadedAt: string;
-        thumbnailOfBlobId: string | null;
+      const getBody = (await getRes.json()) as {
+        data: {
+          id: string;
+          systemId: string;
+          purpose: string;
+          mimeType: string;
+          sizeBytes: number;
+          checksum: string;
+          uploadedAt: string;
+          thumbnailOfBlobId: string | null;
+        };
       };
-      expect(metadata.id).toBe(blobId);
-      expect(metadata.systemId).toBe(systemId);
-      expect(metadata.purpose).toBe("avatar");
-      expect(metadata.mimeType).toBe("image/png");
+      expect(getBody.data.id).toBe(blobId);
+      expect(getBody.data.systemId).toBe(systemId);
+      expect(getBody.data.purpose).toBe("avatar");
+      expect(getBody.data.mimeType).toBe("image/png");
     });
 
     await test.step("get download url", async () => {
@@ -121,9 +125,9 @@ test.describe("Blobs CRUD", () => {
         headers: authHeaders,
       });
       expect(downloadRes.status()).toBe(200);
-      const body = (await downloadRes.json()) as { blobId: string; downloadUrl: string };
-      expect(body.blobId).toBe(blobId);
-      expect(typeof body.downloadUrl).toBe("string");
+      const body = (await downloadRes.json()) as { data: { blobId: string; downloadUrl: string } };
+      expect(body.data.blobId).toBe(blobId);
+      expect(typeof body.data.downloadUrl).toBe("string");
     });
 
     await test.step("delete blob", async () => {
@@ -152,11 +156,11 @@ test.describe("Blobs CRUD", () => {
     const listRes = await request.get(blobsUrl, { headers: authHeaders });
     expect(listRes.status()).toBe(200);
     const body = (await listRes.json()) as {
-      items: Array<{ id: string }>;
+      data: Array<{ id: string }>;
       nextCursor: string | null;
       hasMore: boolean;
     };
-    expect(body.items.length).toBeGreaterThanOrEqual(2);
+    expect(body.data.length).toBeGreaterThanOrEqual(2);
     expect(body).toHaveProperty("nextCursor");
     expect(body).toHaveProperty("hasMore");
   });

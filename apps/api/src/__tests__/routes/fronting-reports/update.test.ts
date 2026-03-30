@@ -67,10 +67,10 @@ describe("PUT /systems/:systemId/fronting-reports/:reportId", () => {
     const res = await putJSON(app, UPDATE_URL, MOCK_UPDATE_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_UPDATE_RESULT;
-    expect(body.id).toBe(REPORT_ID);
-    expect(body.encryptedData).toBe("dXBkYXRlZA==");
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: typeof MOCK_UPDATE_RESULT };
+    expect(body.data.id).toBe(REPORT_ID);
+    expect(body.data.encryptedData).toBe("dXBkYXRlZA==");
+    expect(body.data.version).toBe(2);
   });
 
   it("returns 404 when not found", async () => {

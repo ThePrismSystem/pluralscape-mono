@@ -33,9 +33,10 @@ test.describe("Custom Fronts CRUD", () => {
         data: { encryptedData },
       });
       expect(createRes.status()).toBe(201);
-      const body = await createRes.json();
-      expect(body).toHaveProperty("id");
-      customFrontId = body.id as string;
+      const body = (await createRes.json()) as { data: Record<string, unknown> };
+      expect(body).toHaveProperty("data");
+      expect(body.data).toHaveProperty("id");
+      customFrontId = body.data.id as string;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
@@ -43,21 +44,22 @@ test.describe("Custom Fronts CRUD", () => {
         headers: authHeaders,
       });
       expect(getRes.status()).toBe(200);
-      const body = await getRes.json();
-      expect(body.id).toBe(customFrontId);
+      const body = (await getRes.json()) as { data: Record<string, unknown> };
+      const cf = body.data;
+      expect(cf.id).toBe(customFrontId);
 
-      const decrypted = decryptFromApi(body.encryptedData as string);
+      const decrypted = decryptFromApi(cf.encryptedData as string);
       expect(decrypted).toEqual(CUSTOM_FRONT_DATA);
-      customFrontVersion = body.version as number;
+      customFrontVersion = cf.version as number;
     });
 
     await test.step("list includes created custom front", async () => {
       const listRes = await request.get(customFrontsUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
     });
 
     await test.step("update with new encrypted data", async () => {
@@ -74,8 +76,8 @@ test.describe("Custom Fronts CRUD", () => {
       const updatedGet = await request.get(`${customFrontsUrl}/${customFrontId}`, {
         headers: authHeaders,
       });
-      const updatedBody = await updatedGet.json();
-      const decryptedUpdate = decryptFromApi(updatedBody.encryptedData as string);
+      const updatedBody = (await updatedGet.json()) as { data: Record<string, unknown> };
+      const decryptedUpdate = decryptFromApi(updatedBody.data.encryptedData as string);
       expect(decryptedUpdate).toEqual(UPDATED_CUSTOM_FRONT_DATA);
     });
 

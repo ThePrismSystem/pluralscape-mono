@@ -69,10 +69,10 @@ describe("POST /systems/:systemId/webhook-configs", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as WebhookConfigCreateResult;
-    expect(body.id).toBe(WH_ID);
-    expect(body.secret).toBe("dGVzdC1zZWNyZXQ=");
-    expect(body.url).toBe("https://example.com/webhook");
+    const body = (await res.json()) as { data: WebhookConfigCreateResult };
+    expect(body.data.id).toBe(WH_ID);
+    expect(body.data.secret).toBe("dGVzdC1zZWNyZXQ=");
+    expect(body.data.url).toBe("https://example.com/webhook");
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 

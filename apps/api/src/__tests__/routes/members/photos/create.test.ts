@@ -75,10 +75,10 @@ describe("POST /systems/:systemId/members/:memberId/photos", () => {
     const res = await postJSON(app, PHOTOS_PATH, VALID_BODY);
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; memberId: string; version: number };
-    expect(body.id).toBe("mp_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.memberId).toBe(MEM_ID);
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: { id: string; memberId: string; version: number } };
+    expect(body.data.id).toBe("mp_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.memberId).toBe(MEM_ID);
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards systemId, memberId, body, auth, and audit writer to service", async () => {

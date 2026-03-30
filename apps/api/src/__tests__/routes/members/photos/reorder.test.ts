@@ -74,9 +74,9 @@ describe("PUT /systems/:systemId/members/:memberId/photos/reorder", () => {
     const res = await putJSON(app, REORDER_PATH, VALID_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { items: (typeof PHOTO_RESULT)[] } };
-    expect(body.data.items).toHaveLength(1);
-    expect(body.data.items[0]?.id).toBe(PHOTO_ID);
+    const body = (await res.json()) as { data: { data: (typeof PHOTO_RESULT)[] } };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.id).toBe(PHOTO_ID);
   });
 
   it("forwards systemId, memberId, body, and auth to service", async () => {

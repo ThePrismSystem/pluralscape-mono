@@ -36,7 +36,7 @@ export interface BucketRotationItem {
 
 /** Response from claiming a rotation chunk. */
 export interface ChunkClaimResponse {
-  readonly items: readonly BucketRotationItem[];
+  readonly data: readonly BucketRotationItem[];
   readonly rotationState: RotationState;
 }
 

@@ -60,8 +60,8 @@ describe("GET /systems/:id/groups/:groupId", () => {
     const res = await app.request(GROUP_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("grp_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("grp_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when group not found", async () => {

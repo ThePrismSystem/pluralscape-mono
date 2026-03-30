@@ -634,7 +634,7 @@ describe("listVotes — includeArchived and cursor branches", () => {
 
     const result = await listVotes(db, SYSTEM_ID, POLL_ID, AUTH, { includeArchived: true });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
   it("clamps limit to MAX_PAGE_LIMIT", async () => {
@@ -644,7 +644,7 @@ describe("listVotes — includeArchived and cursor branches", () => {
 
     const result = await listVotes(db, SYSTEM_ID, POLL_ID, AUTH, { limit: 999_999 });
 
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
   });
 
   it("uses DEFAULT_PAGE_LIMIT when limit is undefined", async () => {
@@ -654,6 +654,6 @@ describe("listVotes — includeArchived and cursor branches", () => {
 
     const result = await listVotes(db, SYSTEM_ID, POLL_ID, AUTH);
 
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
   });
 });

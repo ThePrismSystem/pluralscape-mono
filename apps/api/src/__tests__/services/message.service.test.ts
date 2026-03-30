@@ -191,7 +191,7 @@ describe("message service", () => {
 
       const result = await listMessages(db, SYSTEM_ID, CHANNEL_ID, AUTH);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
     });
 
@@ -200,7 +200,7 @@ describe("message service", () => {
 
       const result = await listMessages(db, SYSTEM_ID, CHANNEL_ID, AUTH);
 
-      expect(result.items).toEqual([]);
+      expect(result.data).toEqual([]);
     });
 
     it("detects hasMore when more rows exist than limit", async () => {
@@ -211,7 +211,7 @@ describe("message service", () => {
       const result = await listMessages(db, SYSTEM_ID, CHANNEL_ID, AUTH, { limit: 1 });
 
       expect(result.hasMore).toBe(true);
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it("applies timestamp filters when provided", async () => {

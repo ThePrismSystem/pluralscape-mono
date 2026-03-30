@@ -74,9 +74,9 @@ describe("POST /systems/:systemId/members/:memberId/duplicate", () => {
     const res = await postJSON(app, `/systems/${SYS_ID}/members/${MEM_ID}/duplicate`, VALID_BODY);
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; version: number };
-    expect(body.id).toBe(MEM_ID);
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: { id: string; version: number } };
+    expect(body.data.id).toBe(MEM_ID);
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards systemId, memberId, body, auth, and audit writer to service", async () => {

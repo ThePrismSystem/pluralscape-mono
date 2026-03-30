@@ -34,10 +34,10 @@ test.describe("Device transfer endpoints", () => {
 
     expect(res.status()).toBe(201);
     const body = await res.json();
-    expect(body).toHaveProperty("transferId");
-    expect(body).toHaveProperty("expiresAt");
-    expect(typeof body.transferId).toBe("string");
-    expect(typeof body.expiresAt).toBe("number");
+    expect(body).toHaveProperty("data.transferId");
+    expect(body).toHaveProperty("data.expiresAt");
+    expect(typeof body.data.transferId).toBe("string");
+    expect(typeof body.data.expiresAt).toBe("number");
   });
 
   test("POST /v1/account/device-transfer without auth returns 401", async ({ request }) => {
@@ -59,7 +59,8 @@ test.describe("Device transfer endpoints", () => {
       data: payload,
     });
     expect(initRes.status()).toBe(201);
-    const { transferId } = (await initRes.json()) as { transferId: string };
+    const initBody = (await initRes.json()) as { data: { transferId: string } };
+    const { transferId } = initBody.data;
 
     // Try to complete with wrong code
     const completeRes = await request.post(`/v1/account/device-transfer/${transferId}/complete`, {
@@ -88,7 +89,8 @@ test.describe("Device transfer endpoints", () => {
       data: payload,
     });
     expect(initRes.status()).toBe(201);
-    const { transferId } = (await initRes.json()) as { transferId: string };
+    const initBody = (await initRes.json()) as { data: { transferId: string } };
+    const { transferId } = initBody.data;
 
     // Try 5 wrong codes
     for (let i = 0; i < 5; i++) {

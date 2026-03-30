@@ -221,7 +221,7 @@ describe("channel.service (PGlite integration)", () => {
       }
 
       const page1 = await listChannels(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
     });
 
@@ -242,8 +242,8 @@ describe("channel.service (PGlite integration)", () => {
       );
 
       const categories = await listChannels(asDb(db), systemId, auth, { type: "category" });
-      expect(categories.items).toHaveLength(1);
-      expect(categories.items[0]?.type).toBe("category");
+      expect(categories.data).toHaveLength(1);
+      expect(categories.data[0]?.type).toBe("category");
     });
 
     it("filters by parentId", async () => {
@@ -275,8 +275,8 @@ describe("channel.service (PGlite integration)", () => {
       );
 
       const filtered = await listChannels(asDb(db), systemId, auth, { parentId: category.id });
-      expect(filtered.items).toHaveLength(1);
-      expect(filtered.items[0]?.parentId).toBe(category.id);
+      expect(filtered.data).toHaveLength(1);
+      expect(filtered.data[0]?.parentId).toBe(category.id);
     });
 
     it("excludes archived channels by default", async () => {
@@ -291,7 +291,7 @@ describe("channel.service (PGlite integration)", () => {
       await archiveChannel(asDb(db), systemId, ch.id, auth, noopAudit);
 
       const result = await listChannels(asDb(db), systemId, auth);
-      expect(result.items.every((c) => c.id !== ch.id)).toBe(true);
+      expect(result.data.every((c) => c.id !== ch.id)).toBe(true);
     });
 
     it("includes archived channels when includeArchived is true", async () => {
@@ -306,7 +306,7 @@ describe("channel.service (PGlite integration)", () => {
       await archiveChannel(asDb(db), systemId, ch.id, auth, noopAudit);
 
       const result = await listChannels(asDb(db), systemId, auth, { includeArchived: true });
-      expect(result.items.some((c) => c.id === ch.id)).toBe(true);
+      expect(result.data.some((c) => c.id === ch.id)).toBe(true);
     });
 
     it("follows cursor to page 2 with no overlap", async () => {
@@ -321,7 +321,7 @@ describe("channel.service (PGlite integration)", () => {
       }
 
       const page1 = await listChannels(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeTruthy();
 
@@ -329,10 +329,10 @@ describe("channel.service (PGlite integration)", () => {
         cursor: parseCursor(page1.nextCursor ?? undefined),
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
 
-      const allIds = [...page1.items.map((c) => c.id), ...page2.items.map((c) => c.id)];
+      const allIds = [...page1.data.map((c) => c.id), ...page2.data.map((c) => c.id)];
       expect(new Set(allIds).size).toBe(3);
     });
   });
@@ -486,7 +486,7 @@ describe("channel.service (PGlite integration)", () => {
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       const result = await listChannels(asDb(db), otherSystemId, otherAuth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

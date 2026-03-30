@@ -1,11 +1,11 @@
 import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
+import { HTTP_NO_CONTENT } from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
-import { wrapAction } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { setupNomenclatureStep } from "../../../services/setup.service.js";
 
@@ -24,5 +24,5 @@ nomenclatureStepRoute.post("/", async (c) => {
 
   const db = await getDb();
   await setupNomenclatureStep(db, systemId, body, auth, audit);
-  return c.json(wrapAction());
+  return c.body(null, HTTP_NO_CONTENT);
 });

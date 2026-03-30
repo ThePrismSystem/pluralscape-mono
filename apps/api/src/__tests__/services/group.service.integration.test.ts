@@ -184,7 +184,7 @@ describe("group.service (PGlite integration)", () => {
       await createGroup(asDb(db), systemId, groupParams({ sortOrder: 1 }), auth, noopAudit);
 
       const result = await listGroups(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.hasMore).toBe(false);
     });
 
@@ -194,7 +194,7 @@ describe("group.service (PGlite integration)", () => {
       await archiveGroup(asDb(db), systemId, g1.id, auth, noopAudit);
 
       const result = await listGroups(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it("supports cursor pagination", async () => {
@@ -202,12 +202,12 @@ describe("group.service (PGlite integration)", () => {
       await createGroup(asDb(db), systemId, groupParams({ sortOrder: 1 }), auth, noopAudit);
 
       const page1 = await listGroups(asDb(db), systemId, auth, undefined, 1);
-      expect(page1.items).toHaveLength(1);
+      expect(page1.data).toHaveLength(1);
       expect(page1.hasMore).toBe(true);
 
-      const page2 = await listGroups(asDb(db), systemId, auth, page1.items[0]?.id, 1);
-      expect(page2.items).toHaveLength(1);
-      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
+      const page2 = await listGroups(asDb(db), systemId, auth, page1.data[0]?.id, 1);
+      expect(page2.data).toHaveLength(1);
+      expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
     });
   });
 
@@ -583,8 +583,8 @@ describe("group.service (PGlite integration)", () => {
       await addMember(asDb(db), systemId, g.id, { memberId }, auth, noopAudit);
 
       const result = await listGroupMembers(asDb(db), systemId, g.id, auth);
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.memberId).toBe(memberId);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.memberId).toBe(memberId);
     });
 
     it("removes a member from a group", async () => {
@@ -594,7 +594,7 @@ describe("group.service (PGlite integration)", () => {
       await removeMember(asDb(db), systemId, g.id, memberId, auth, noopAudit);
 
       const result = await listGroupMembers(asDb(db), systemId, g.id, auth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
 
     it("throws NOT_FOUND when removing nonexistent membership", async () => {

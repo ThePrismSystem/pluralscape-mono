@@ -19,14 +19,16 @@ test.describe("Webhook Config Flow", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const webhook = await res.json();
-      expect(webhook).toHaveProperty("id");
-      expect(webhook.secret).toBeTruthy();
-      expect(typeof webhook.secret).toBe("string");
-      expect(webhook.url).toBe("https://example.com/e2e-hook");
-      expect(webhook.eventTypes).toEqual(["fronting.started"]);
-      webhookId = webhook.id as string;
-      secret = webhook.secret as string;
+      const body = (await res.json()) as {
+        data: { id: string; secret: string; url: string; eventTypes: string[] };
+      };
+      expect(body.data).toHaveProperty("id");
+      expect(body.data.secret).toBeTruthy();
+      expect(typeof body.data.secret).toBe("string");
+      expect(body.data.url).toBe("https://example.com/e2e-hook");
+      expect(body.data.eventTypes).toEqual(["fronting.started"]);
+      webhookId = body.data.id;
+      secret = body.data.secret;
       expect(secret.length).toBeGreaterThan(0);
     });
 
@@ -35,10 +37,10 @@ test.describe("Webhook Config Flow", () => {
         headers: authHeaders,
       });
       expect(res.status()).toBe(200);
-      const webhook = await res.json();
-      expect(webhook.id).toBe(webhookId);
-      expect(webhook.url).toBe("https://example.com/e2e-hook");
-      expect(webhook).not.toHaveProperty("secret");
+      const body = (await res.json()) as { data: { id: string; url: string } };
+      expect(body.data.id).toBe(webhookId);
+      expect(body.data.url).toBe("https://example.com/e2e-hook");
+      expect(body.data).not.toHaveProperty("secret");
     });
 
     await test.step("list includes webhook", async () => {
@@ -47,8 +49,8 @@ test.describe("Webhook Config Flow", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
-      const ids = (body.items as { id: string }[]).map((w) => w.id);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
+      const ids = (body.data as { id: string }[]).map((w) => w.id);
       expect(ids).toContain(webhookId);
     });
 
@@ -61,8 +63,8 @@ test.describe("Webhook Config Flow", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const webhook = await res.json();
-      expect(webhook.url).toBe("https://example.com/e2e-hook-updated");
+      const body = (await res.json()) as { data: { url: string } };
+      expect(body.data.url).toBe("https://example.com/e2e-hook-updated");
     });
 
     await test.step("archive", async () => {

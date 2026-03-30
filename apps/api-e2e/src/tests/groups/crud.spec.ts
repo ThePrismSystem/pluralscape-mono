@@ -35,34 +35,36 @@ test.describe("Groups CRUD", () => {
         data: { encryptedData, parentGroupId: null, sortOrder: 0 },
       });
       expect(createRes.status()).toBe(201);
-      const group = await createRes.json();
-      expect(group).toHaveProperty("id");
-      expect(group).toHaveProperty("version");
-      groupId = group.id as string;
-      groupVersion = group.version as number;
+      const body = (await createRes.json()) as { data: { id: string; version: number } };
+      expect(body.data).toHaveProperty("id");
+      expect(body.data).toHaveProperty("version");
+      groupId = body.data.id;
+      groupVersion = body.data.version;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
       const getRes = await request.get(`${groupsUrl}/${groupId}`, { headers: authHeaders });
       expect(getRes.status()).toBe(200);
-      const fetched = await getRes.json();
-      expect(fetched.id).toBe(groupId);
+      const body = (await getRes.json()) as {
+        data: { id: string; encryptedData: string; version: number };
+      };
+      expect(body.data.id).toBe(groupId);
 
-      const decrypted = decryptFromApi(fetched.encryptedData as string);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(GROUP_PROFILE);
-      groupVersion = fetched.version as number;
+      groupVersion = body.data.version;
     });
 
     await test.step("list includes created group", async () => {
       const listRes = await request.get(groupsUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const listed = await listRes.json();
-      expect(listed).toHaveProperty("items");
+      expect(listed).toHaveProperty("data");
       expect(listed).toHaveProperty("nextCursor");
       expect(listed).toHaveProperty("hasMore");
-      expect(listed.items.length).toBeGreaterThanOrEqual(1);
+      expect(listed.data.length).toBeGreaterThanOrEqual(1);
 
-      const found = (listed.items as Array<{ id: string }>).some((g) => g.id === groupId);
+      const found = (listed.data as Array<{ id: string }>).some((g) => g.id === groupId);
       expect(found).toBe(true);
     });
 
@@ -78,10 +80,12 @@ test.describe("Groups CRUD", () => {
       expect(updateRes.status()).toBe(200);
 
       const updatedGet = await request.get(`${groupsUrl}/${groupId}`, { headers: authHeaders });
-      const updatedGroup = await updatedGet.json();
-      const decryptedUpdate = decryptFromApi(updatedGroup.encryptedData as string);
+      const updatedBody = (await updatedGet.json()) as {
+        data: { encryptedData: string; version: number };
+      };
+      const decryptedUpdate = decryptFromApi(updatedBody.data.encryptedData);
       expect(decryptedUpdate).toEqual(UPDATED_GROUP_PROFILE);
-      groupVersion = updatedGroup.version as number;
+      groupVersion = updatedBody.data.version;
     });
 
     await test.step("archive", async () => {
@@ -123,10 +127,13 @@ test.describe("Groups CRUD", () => {
 
     const treeRes = await request.get(`${groupsUrl}/tree`, { headers: authHeaders });
     expect(treeRes.status()).toBe(200);
-    const tree = (await treeRes.json()) as Array<{
-      id: string;
-      children?: Array<{ id: string }>;
-    }>;
+    const treeBody = (await treeRes.json()) as {
+      data: Array<{
+        id: string;
+        children?: Array<{ id: string }>;
+      }>;
+    };
+    const tree = treeBody.data;
 
     const parentNode = tree.find((node) => node.id === parent.id);
     expect(parentNode).toBeDefined();
@@ -158,10 +165,13 @@ test.describe("Groups CRUD", () => {
 
     const treeRes = await request.get(`${groupsUrl}/tree`, { headers: authHeaders });
     expect(treeRes.status()).toBe(200);
-    const tree = (await treeRes.json()) as Array<{
-      id: string;
-      children?: Array<{ id: string }>;
-    }>;
+    const treeBody = (await treeRes.json()) as {
+      data: Array<{
+        id: string;
+        children?: Array<{ id: string }>;
+      }>;
+    };
+    const tree = treeBody.data;
 
     const parentANode = tree.find((node) => node.id === parentA.id);
     const parentBNode = tree.find((node) => node.id === parentB.id);
@@ -201,7 +211,7 @@ test.describe("Groups CRUD", () => {
     const listRes = await request.get(groupsUrl, { headers: authHeaders });
     expect(listRes.status()).toBe(200);
     const listed = await listRes.json();
-    const items = listed.items as Array<{ id: string; sortOrder: number }>;
+    const items = listed.data as Array<{ id: string; sortOrder: number }>;
 
     const sortedIds = items
       .filter((g) => [groupA.id, groupB.id, groupC.id].includes(g.id))
@@ -238,10 +248,8 @@ test.describe("Groups CRUD", () => {
     await test.step("list group members includes added member", async () => {
       const listRes = await request.get(groupMembersUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
-      const body = (await listRes.json()) as {
-        items: Array<{ memberId: string }>;
-      };
-      const memberIds = body.items.map((m) => m.memberId);
+      const body = await listRes.json();
+      const memberIds = (body.data as Array<{ memberId: string }>).map((m) => m.memberId);
       expect(memberIds).toContain(addedMemberId);
     });
 
@@ -255,10 +263,8 @@ test.describe("Groups CRUD", () => {
     await test.step("list after removal excludes member", async () => {
       const listRes = await request.get(groupMembersUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
-      const body = (await listRes.json()) as {
-        items: Array<{ memberId: string }>;
-      };
-      const memberIds = body.items.map((m) => m.memberId);
+      const body = await listRes.json();
+      const memberIds = (body.data as Array<{ memberId: string }>).map((m) => m.memberId);
       expect(memberIds).not.toContain(addedMemberId);
     });
 

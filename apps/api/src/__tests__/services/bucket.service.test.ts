@@ -308,7 +308,7 @@ describe("bucket service", () => {
       mockTx.limit.mockResolvedValueOnce([makeBucketRow()]);
 
       const result = await listBuckets({} as never, SYSTEM_ID, AUTH);
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
     });
 
@@ -316,7 +316,7 @@ describe("bucket service", () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
       const result = await listBuckets({} as never, SYSTEM_ID, AUTH);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
 
     it("clamps limit to MAX_PAGE_LIMIT", async () => {

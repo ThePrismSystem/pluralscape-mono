@@ -86,8 +86,8 @@ describe("PUT /systems/:id/polls/:pollId/votes/:voteId", () => {
     const app = createApp();
     const res = await putJSON(app, VOTE_URL, VALID_UPDATE_BODY);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(VOTE_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(VOTE_ID);
   });
 
   it("forwards systemId, pollId, voteId, body, auth to service", async () => {
@@ -213,8 +213,8 @@ describe("GET /systems/:id/polls/:pollId/results", () => {
     const app = createApp();
     const res = await app.request(RESULTS_URL);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { totalVotes: number };
-    expect(body.totalVotes).toBe(5);
+    const body = (await res.json()) as { data: { totalVotes: number } };
+    expect(body.data.totalVotes).toBe(5);
   });
 
   it("forwards systemId, pollId, auth to service", async () => {

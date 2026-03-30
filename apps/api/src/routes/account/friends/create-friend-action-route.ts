@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 
 import type { AuditWriter } from "../../../lib/audit-writer.js";
@@ -36,7 +37,7 @@ export function createFriendActionRoute(action: string, serviceFn: FriendActionF
 
     const db = await getDb();
     const result = await serviceFn(db, auth.accountId, connectionId, auth, audit);
-    return c.json(result);
+    return c.json(envelope(result));
   });
 
   return route;

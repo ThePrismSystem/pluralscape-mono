@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { listTagsByBucket, parseTagQuery } from "../../../services/bucket-content-tag.service.js";
 
@@ -22,5 +23,5 @@ listTagsRoute.get("/", async (c) => {
   const result = await listTagsByBucket(db, systemId, bucketId, auth, {
     entityType: query.entityType,
   });
-  return c.json({ data: result });
+  return c.json(envelope(result));
 });

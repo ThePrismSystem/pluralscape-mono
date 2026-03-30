@@ -155,7 +155,7 @@ describe("listFriendCodes", () => {
 
     const result = await listFriendCodes(db, ACCOUNT_ID, AUTH);
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.hasMore).toBe(false);
     expect(chain.transaction).toHaveBeenCalled();
   });

@@ -6,6 +6,8 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { envelope } from "../../lib/response.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { createApiKey } from "../../services/api-key.service.js";
 
@@ -14,6 +16,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const createRoute = new Hono<AuthEnv>();
 
 createRoute.use("*", createCategoryRateLimiter("write"));
+createRoute.use("*", createIdempotencyMiddleware());
 
 createRoute.post("/", async (c) => {
   const auth = c.get("auth");
@@ -24,5 +27,5 @@ createRoute.post("/", async (c) => {
   const db = await getDb();
   const result = await createApiKey(db, systemId, body, auth, audit);
   c.header("Cache-Control", "no-store");
-  return c.json(result, HTTP_CREATED);
+  return c.json(envelope(result), HTTP_CREATED);
 });

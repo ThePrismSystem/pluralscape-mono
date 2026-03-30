@@ -109,8 +109,8 @@ describe("PATCH /systems/:systemId/notification-configs/:eventType", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_CONFIG;
-    expect(body.enabled).toBe(false);
+    const body = (await res.json()) as { data: typeof MOCK_CONFIG };
+    expect(body.data.enabled).toBe(false);
   });
 
   it("passes eventType and params to service", async () => {

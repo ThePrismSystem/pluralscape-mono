@@ -6,7 +6,8 @@ test.describe("Systems CRUD", () => {
 
     expect(res.status()).toBe(201);
     const body = await res.json();
-    expect(body).toHaveProperty("id");
+    expect(body).toHaveProperty("data");
+    expect(body.data).toHaveProperty("id");
   });
 
   test("GET /v1/systems lists owned systems", async ({ request, authHeaders }) => {
@@ -15,19 +16,19 @@ test.describe("Systems CRUD", () => {
     expect(res.status()).toBe(200);
     const body = await res.json();
     // Paginated response with items array
-    expect(body).toHaveProperty("items");
-    expect(body.items.length).toBeGreaterThanOrEqual(1);
+    expect(body).toHaveProperty("data");
+    expect(body.data.length).toBeGreaterThanOrEqual(1);
   });
 
   test("GET /v1/systems/:id returns a single system", async ({ request, authHeaders }) => {
     const listRes = await request.get("/v1/systems", { headers: authHeaders });
     const body = await listRes.json();
-    const systemId = body.items[0].id as string;
+    const systemId = body.data[0].id as string;
 
     const res = await request.get(`/v1/systems/${systemId}`, { headers: authHeaders });
     expect(res.status()).toBe(200);
     const system = await res.json();
-    expect(system.id).toBe(systemId);
+    expect(system.data.id).toBe(systemId);
   });
 
   test("missing Bearer token returns 401", async ({ request }) => {

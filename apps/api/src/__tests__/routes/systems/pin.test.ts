@@ -57,15 +57,14 @@ describe("POST /:id/pin", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with success in data envelope", async () => {
+  it("returns 204 with no body", async () => {
     vi.mocked(setPin).mockResolvedValueOnce(undefined);
 
     const app = createApp();
     const res = await postJSON(app, `/${SYS_ID}/pin`, { pin: "1234" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { success: true } };
-    expect(body.data.success).toBe(true);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("content-length")).toBeNull();
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
@@ -103,15 +102,14 @@ describe("DELETE /:id/pin", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with success in data envelope", async () => {
+  it("returns 204 with no body", async () => {
     vi.mocked(removePin).mockResolvedValueOnce(undefined);
 
     const app = createApp();
     const res = await deleteJSON(app, `/${SYS_ID}/pin`, { pin: "1234" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { success: true } };
-    expect(body.data.success).toBe(true);
+    expect(res.status).toBe(204);
+    expect(res.headers.get("content-length")).toBeNull();
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
@@ -156,8 +154,8 @@ describe("POST /:id/pin/verify", () => {
     const res = await postJSON(app, `/${SYS_ID}/pin/verify`, { pin: "1234" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { verified: boolean };
-    expect(body.verified).toBe(true);
+    const body = (await res.json()) as { data: { verified: boolean } };
+    expect(body.data.verified).toBe(true);
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {

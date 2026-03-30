@@ -80,10 +80,10 @@ describe("GET /account/friends/:connectionId/dashboard", () => {
     const res = await createApp().request(`/account/friends/${CONNECTION_ID}/dashboard`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as FriendDashboardResponse;
-    expect(body.systemId).toBe("sys_target");
-    expect(body.memberCount).toBe(5);
-    expect(body.activeFronting.isCofronting).toBe(false);
+    const body = (await res.json()) as { data: FriendDashboardResponse };
+    expect(body.data.systemId).toBe("sys_target");
+    expect(body.data.memberCount).toBe(5);
+    expect(body.data.activeFronting.isCofronting).toBe(false);
   });
 
   it("passes correct args to service", async () => {

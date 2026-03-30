@@ -24,7 +24,8 @@ test.describe("Fronting Comments CRUD", () => {
       },
     });
     expect(sessionRes.status()).toBe(201);
-    const session = (await sessionRes.json()) as { id: string; version: number };
+    const sessionBody = (await sessionRes.json()) as { data: { id: string; version: number } };
+    const session = sessionBody.data;
 
     const baseUrl = `/v1/systems/${systemId}/fronting-sessions/${session.id}/comments`;
     let commentId: string;
@@ -39,11 +40,13 @@ test.describe("Fronting Comments CRUD", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = await res.json();
-      expect(body).toHaveProperty("id");
-      expect(body.memberId).toBe(member.id);
-      commentId = body.id as string;
-      commentVersion = body.version as number;
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      expect(body).toHaveProperty("data");
+      const comment = body.data;
+      expect(comment).toHaveProperty("id");
+      expect(comment.memberId).toBe(member.id);
+      commentId = comment.id as string;
+      commentVersion = comment.version as number;
     });
 
     await test.step("get comment and verify encryption round-trip", async () => {
@@ -51,10 +54,11 @@ test.describe("Fronting Comments CRUD", () => {
         headers: authHeaders,
       });
       expect(res.status()).toBe(200);
-      const body = await res.json();
-      expect(body.id).toBe(commentId);
-      expect(body.encryptedData).toBeTruthy();
-      const decrypted = decryptFromApi(body.encryptedData as string) as { text: string };
+      const body = (await res.json()) as { data: Record<string, unknown> };
+      const comment = body.data;
+      expect(comment.id).toBe(commentId);
+      expect(comment.encryptedData).toBeTruthy();
+      const decrypted = decryptFromApi(comment.encryptedData as string) as { text: string };
       expect(decrypted.text).toBe("Feeling good today");
     });
 
@@ -64,10 +68,10 @@ test.describe("Fronting Comments CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("nextCursor");
       expect(body).toHaveProperty("hasMore");
-      const ids = (body.items as { id: string }[]).map((c) => c.id);
+      const ids = (body.data as { id: string }[]).map((c) => c.id);
       expect(ids).toContain(commentId);
     });
 
@@ -80,9 +84,9 @@ test.describe("Fronting Comments CRUD", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const body = await res.json();
-      expect(body.version).toBe(commentVersion + 1);
-      commentVersion = body.version as number;
+      const body = (await res.json()) as { data: { version: number } };
+      expect(body.data.version).toBe(commentVersion + 1);
+      commentVersion = body.data.version;
     });
 
     await test.step("archive comment", async () => {

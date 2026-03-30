@@ -79,10 +79,10 @@ describe("system.service (PGlite integration)", () => {
     it("returns systems for account with pagination shape", async () => {
       const result = await listSystems(asDb(db), accountId);
 
-      expect(result.items).toBeInstanceOf(Array);
-      expect(result.items.length).toBeGreaterThanOrEqual(1);
+      expect(result.data).toBeInstanceOf(Array);
+      expect(result.data.length).toBeGreaterThanOrEqual(1);
       expect(result).toHaveProperty("hasMore");
-      expect(result.items[0]?.id).toBe(systemId);
+      expect(result.data[0]?.id).toBe(systemId);
     });
   });
 

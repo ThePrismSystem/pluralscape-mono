@@ -251,9 +251,7 @@ describe("BucketExportEntity", () => {
 
 describe("BucketExportPageResponse", () => {
   it("has PaginatedResult fields", () => {
-    expectTypeOf<BucketExportPageResponse["items"]>().toEqualTypeOf<
-      readonly BucketExportEntity[]
-    >();
+    expectTypeOf<BucketExportPageResponse["data"]>().toEqualTypeOf<readonly BucketExportEntity[]>();
     expectTypeOf<BucketExportPageResponse["nextCursor"]>().toEqualTypeOf<PaginationCursor | null>();
     expectTypeOf<BucketExportPageResponse["hasMore"]>().toEqualTypeOf<boolean>();
     expectTypeOf<BucketExportPageResponse["totalCount"]>().toEqualTypeOf<number | null>();

@@ -44,9 +44,10 @@ test.describe("Innerworld CRUD", () => {
       });
       expect(createRes.status()).toBe(201);
       const body = await createRes.json();
-      expect(body).toHaveProperty("id");
-      expect(body).toHaveProperty("version");
-      entityId = body.id as string;
+      expect(body).toHaveProperty("data");
+      expect(body.data).toHaveProperty("id");
+      expect(body.data).toHaveProperty("version");
+      entityId = body.data.id as string;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
@@ -55,22 +56,22 @@ test.describe("Innerworld CRUD", () => {
       });
       expect(getRes.status()).toBe(200);
       const body = await getRes.json();
-      expect(body.id).toBe(entityId);
+      expect(body.data.id).toBe(entityId);
 
-      const decrypted = decryptFromApi(body.encryptedData as string);
+      const decrypted = decryptFromApi(body.data.encryptedData as string);
       expect(decrypted).toEqual(ENTITY_DATA);
-      entityVersion = body.version as number;
+      entityVersion = body.data.version as number;
     });
 
     await test.step("list includes created entity", async () => {
       const listRes = await request.get(entitiesUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("nextCursor");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-      const found = (body.items as Array<{ id: string }>).some((e) => e.id === entityId);
+      const found = (body.data as Array<{ id: string }>).some((e) => e.id === entityId);
       expect(found).toBe(true);
     });
 
@@ -89,7 +90,7 @@ test.describe("Innerworld CRUD", () => {
         headers: authHeaders,
       });
       const updatedBody = await updatedGet.json();
-      const decryptedUpdate = decryptFromApi(updatedBody.encryptedData as string);
+      const decryptedUpdate = decryptFromApi(updatedBody.data.encryptedData as string);
       expect(decryptedUpdate).toEqual(UPDATED_ENTITY_DATA);
     });
 
@@ -139,9 +140,10 @@ test.describe("Innerworld CRUD", () => {
       });
       expect(createRes.status()).toBe(201);
       const body = await createRes.json();
-      expect(body).toHaveProperty("id");
-      expect(body).toHaveProperty("version");
-      regionId = body.id as string;
+      expect(body).toHaveProperty("data");
+      expect(body.data).toHaveProperty("id");
+      expect(body.data).toHaveProperty("version");
+      regionId = body.data.id as string;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
@@ -150,22 +152,22 @@ test.describe("Innerworld CRUD", () => {
       });
       expect(getRes.status()).toBe(200);
       const body = await getRes.json();
-      expect(body.id).toBe(regionId);
+      expect(body.data.id).toBe(regionId);
 
-      const decrypted = decryptFromApi(body.encryptedData as string);
+      const decrypted = decryptFromApi(body.data.encryptedData as string);
       expect(decrypted).toEqual(REGION_DATA);
-      regionVersion = body.version as number;
+      regionVersion = body.data.version as number;
     });
 
     await test.step("list includes created region", async () => {
       const listRes = await request.get(regionsUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("nextCursor");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-      const found = (body.items as Array<{ id: string }>).some((r) => r.id === regionId);
+      const found = (body.data as Array<{ id: string }>).some((r) => r.id === regionId);
       expect(found).toBe(true);
     });
 
@@ -184,7 +186,7 @@ test.describe("Innerworld CRUD", () => {
         headers: authHeaders,
       });
       const updatedBody = await updatedGet.json();
-      const decryptedUpdate = decryptFromApi(updatedBody.encryptedData as string);
+      const decryptedUpdate = decryptFromApi(updatedBody.data.encryptedData as string);
       expect(decryptedUpdate).toEqual(UPDATED_REGION_DATA);
     });
 
@@ -230,14 +232,14 @@ test.describe("Innerworld CRUD", () => {
     });
     expect(createRes.status()).toBe(201);
     const entity = await createRes.json();
-    const entityId = entity.id as string;
+    const entityId = entity.data.id as string;
 
     const getRes = await request.get(`${entitiesUrl}/${entityId}`, {
       headers: authHeaders,
     });
     expect(getRes.status()).toBe(200);
     const fetched = await getRes.json();
-    expect(fetched.regionId).toBe(region.id);
+    expect(fetched.data.regionId).toBe(region.id);
 
     // Cleanup
     await request.delete(`${entitiesUrl}/${entityId}`, { headers: authHeaders });

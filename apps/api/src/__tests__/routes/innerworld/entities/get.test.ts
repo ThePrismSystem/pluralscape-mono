@@ -65,10 +65,10 @@ describe("GET /systems/:id/innerworld/entities/:entityId", () => {
     const res = await createApp().request(ENTITY_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_ENTITY;
-    expect(body.id).toBe("iwe_660e8400-e29b-41d4-a716-446655440000");
-    expect(body.encryptedData).toBe("dGVzdA==");
-    expect(body.archived).toBe(false);
+    const body = (await res.json()) as { data: typeof MOCK_ENTITY };
+    expect(body.data.id).toBe("iwe_660e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.encryptedData).toBe("dGVzdA==");
+    expect(body.data.archived).toBe(false);
   });
 
   it("returns 404 when not found", async () => {

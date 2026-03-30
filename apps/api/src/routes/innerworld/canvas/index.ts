@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { getCanvas, upsertCanvas } from "../../../services/innerworld-canvas.service.js";
 
@@ -21,7 +22,7 @@ canvasReadRoutes.get("/", async (c) => {
 
   const db = await getDb();
   const result = await getCanvas(db, systemId, auth);
-  return c.json(result);
+  return c.json(envelope(result));
 });
 
 canvasRoutes.route("/", canvasReadRoutes);
@@ -37,7 +38,7 @@ canvasWriteRoutes.put("/", async (c) => {
 
   const db = await getDb();
   const result = await upsertCanvas(db, systemId, body, auth, audit);
-  return c.json(result);
+  return c.json(envelope(result));
 });
 
 canvasRoutes.route("/", canvasWriteRoutes);

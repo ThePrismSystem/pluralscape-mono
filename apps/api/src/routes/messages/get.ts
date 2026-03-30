@@ -4,6 +4,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { getMessage } from "../../services/message.service.js";
 
@@ -25,5 +26,5 @@ getRoute.get("/:messageId", async (c) => {
   const result = await getMessage(db, systemId, messageId, auth, {
     timestamp: query.timestamp,
   });
-  return c.json(result);
+  return c.json(envelope(result));
 });

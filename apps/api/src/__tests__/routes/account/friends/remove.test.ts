@@ -76,10 +76,10 @@ describe("POST /account/friends/:connectionId/remove", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_CONNECTION;
-    expect(body.id).toBe(CONNECTION_ID);
-    expect(body.status).toBe("removed");
-    expect(body.pendingRotations).toEqual([]);
+    const body = (await res.json()) as { data: typeof MOCK_CONNECTION };
+    expect(body.data.id).toBe(CONNECTION_ID);
+    expect(body.data.status).toBe("removed");
+    expect(body.data.pendingRotations).toEqual([]);
   });
 
   it("passes correct args to service", async () => {

@@ -429,7 +429,7 @@ describe("listBlobs", () => {
 
     const result: PaginatedResult<BlobResult> = await listBlobs(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -441,8 +441,8 @@ describe("listBlobs", () => {
 
     const result = await listBlobs(db, SYSTEM_ID, AUTH, { limit: 25 });
 
-    expect(result.items).toHaveLength(2);
-    const first = result.items[0];
+    expect(result.data).toHaveLength(2);
+    const first = result.data[0];
     expect(first).toBeDefined();
     expect(first?.id).toBe(BLOB_ID);
     expect(result.hasMore).toBe(false);
@@ -460,7 +460,7 @@ describe("listBlobs", () => {
 
     const result = await listBlobs(db, SYSTEM_ID, AUTH, { limit: 2 });
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.hasMore).toBe(true);
     const { nextCursor } = result;
     expect(nextCursor).not.toBeNull();

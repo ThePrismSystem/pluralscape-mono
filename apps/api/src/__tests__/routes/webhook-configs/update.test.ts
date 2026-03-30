@@ -68,10 +68,10 @@ describe("PUT /systems/:systemId/webhook-configs/:webhookId", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as WebhookConfigResult;
-    expect(body.id).toBe(WH_ID);
-    expect(body.url).toBe("https://example.com/webhook-updated");
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: WebhookConfigResult };
+    expect(body.data.id).toBe(WH_ID);
+    expect(body.data.url).toBe("https://example.com/webhook-updated");
+    expect(body.data.version).toBe(2);
   });
 
   it("passes body and IDs to service function", async () => {

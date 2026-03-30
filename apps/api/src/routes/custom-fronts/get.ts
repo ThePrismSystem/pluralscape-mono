@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { getCustomFront } from "../../services/custom-front.service.js";
 
@@ -18,5 +19,5 @@ getRoute.get("/:customFrontId", async (c) => {
 
   const db = await getDb();
   const result = await getCustomFront(db, systemId, customFrontId, auth);
-  return c.json(result);
+  return c.json(envelope(result));
 });

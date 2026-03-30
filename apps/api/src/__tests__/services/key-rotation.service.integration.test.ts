@@ -308,9 +308,9 @@ describe("key-rotation.service (PGlite integration)", () => {
         auth,
       );
 
-      expect(claim.items).toHaveLength(3);
+      expect(claim.data).toHaveLength(3);
       expect(claim.rotationState).toBe(ROTATION_STATES.migrating);
-      for (const item of claim.items) {
+      for (const item of claim.data) {
         expect(item.status).toBe(ROTATION_ITEM_STATUSES.claimed);
         expect(item.claimedBy).toBe(auth.sessionId);
       }
@@ -338,7 +338,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         auth,
       );
 
-      expect(claim.items).toHaveLength(0);
+      expect(claim.data).toHaveLength(0);
     });
 
     it("respects chunkSize limit", async () => {
@@ -363,7 +363,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         auth,
       );
 
-      expect(claim.items).toHaveLength(2);
+      expect(claim.data).toHaveLength(2);
     });
 
     it("throws NOT_FOUND for a non-existent rotation", async () => {
@@ -435,7 +435,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         bucketId,
         rotation.id,
         {
-          items: claim.items.map((item) => ({
+          items: claim.data.map((item) => ({
             itemId: item.id,
             status: "completed",
           })),
@@ -480,8 +480,8 @@ describe("key-rotation.service (PGlite integration)", () => {
         rotation.id,
         {
           items: [
-            { itemId: (claim.items[0] as { id: string }).id, status: "completed" },
-            { itemId: (claim.items[1] as { id: string }).id, status: "failed" },
+            { itemId: (claim.data[0] as { id: string }).id, status: "completed" },
+            { itemId: (claim.data[1] as { id: string }).id, status: "failed" },
           ],
         },
         auth,
@@ -498,7 +498,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       const items = await db
         .select()
         .from(bucketRotationItems)
-        .where(eq(bucketRotationItems.id, (claim.items[1] as { id: string }).id));
+        .where(eq(bucketRotationItems.id, (claim.data[1] as { id: string }).id));
       expect(items[0]?.status).toBe(ROTATION_ITEM_STATUSES.pending);
       expect(items[0]?.attempts).toBe(1);
     });
@@ -584,7 +584,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         bucketId,
         rotation.id,
         {
-          items: claim.items.map((item) => ({
+          items: claim.data.map((item) => ({
             itemId: item.id,
             status: "completed" as const,
           })),
@@ -632,7 +632,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         bucketId,
         rotation.id,
         {
-          items: claim.items.map((item) => ({
+          items: claim.data.map((item) => ({
             itemId: item.id,
             status: "completed" as const,
           })),
@@ -689,7 +689,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         { chunkSize: 3 },
         auth,
       );
-      expect(chunk1.items).toHaveLength(3);
+      expect(chunk1.data).toHaveLength(3);
       expect(chunk1.rotationState).toBe(ROTATION_STATES.migrating);
 
       // Step 3: Complete first chunk
@@ -699,7 +699,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         bucketId,
         rotation.id,
         {
-          items: chunk1.items.map((item) => ({
+          items: chunk1.data.map((item) => ({
             itemId: item.id,
             status: "completed" as const,
           })),
@@ -720,7 +720,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         { chunkSize: 10 },
         auth,
       );
-      expect(chunk2.items).toHaveLength(2);
+      expect(chunk2.data).toHaveLength(2);
 
       // Step 5: Complete remaining chunk
       const completion2 = await completeRotationChunk(
@@ -729,7 +729,7 @@ describe("key-rotation.service (PGlite integration)", () => {
         bucketId,
         rotation.id,
         {
-          items: chunk2.items.map((item) => ({
+          items: chunk2.data.map((item) => ({
             itemId: item.id,
             status: "completed" as const,
           })),
@@ -775,7 +775,7 @@ describe("key-rotation.service (PGlite integration)", () => {
           auth,
         );
 
-        if (claim.items.length === 0) break;
+        if (claim.data.length === 0) break;
 
         await completeRotationChunk(
           asDb(db),
@@ -783,7 +783,7 @@ describe("key-rotation.service (PGlite integration)", () => {
           bucketId,
           rotation.id,
           {
-            items: claim.items.map((item) => ({
+            items: claim.data.map((item) => ({
               itemId: item.id,
               status: "failed" as const,
             })),

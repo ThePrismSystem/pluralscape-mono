@@ -89,8 +89,8 @@ describe("GET /account/friends/:connectionId/notifications", () => {
     const res = await createApp().request(BASE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_PREFERENCE;
-    expect(body.id).toBe(MOCK_PREFERENCE.id);
+    const body = (await res.json()) as { data: typeof MOCK_PREFERENCE };
+    expect(body.data.id).toBe(MOCK_PREFERENCE.id);
   });
 
   it("passes connectionId and auth to service", async () => {
@@ -135,8 +135,8 @@ describe("PATCH /account/friends/:connectionId/notifications", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_PREFERENCE;
-    expect(body.enabledEventTypes).toEqual([]);
+    const body = (await res.json()) as { data: typeof MOCK_PREFERENCE };
+    expect(body.data.enabledEventTypes).toEqual([]);
   });
 
   it("passes params and auth to service", async () => {

@@ -308,10 +308,10 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const page = await getBucketExportPage(asDb(db), systemId, bucketId, ownerAuth, "member", 10);
 
-    expect(page.items).toHaveLength(1);
-    expect(page.items[0]?.id).toBe(mid);
-    expect(page.items[0]?.entityType).toBe("member");
-    expect(page.items[0]?.encryptedData).toEqual(expect.any(String));
+    expect(page.data).toHaveLength(1);
+    expect(page.data[0]?.id).toBe(mid);
+    expect(page.data[0]?.entityType).toBe("member");
+    expect(page.data[0]?.encryptedData).toEqual(expect.any(String));
   });
 
   it("excludes entities not tagged with the bucket", async () => {
@@ -324,9 +324,9 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const page = await getBucketExportPage(asDb(db), systemId, bucketA, ownerAuth, "member", 10);
 
-    expect(page.items).toHaveLength(1);
-    expect(page.items[0]?.id).toBe(taggedMember);
-    const ids = page.items.map((i) => i.id);
+    expect(page.data).toHaveLength(1);
+    expect(page.data[0]?.id).toBe(taggedMember);
+    const ids = page.data.map((i) => i.id);
     expect(ids).not.toContain(untaggedMember);
   });
 
@@ -338,7 +338,7 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const page = await getBucketExportPage(asDb(db), systemId, bucketId, ownerAuth, "member", 10);
 
-    expect(page.items).toHaveLength(0);
+    expect(page.data).toHaveLength(0);
   });
 
   it("paginates correctly with limit", async () => {
@@ -351,7 +351,7 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const page1 = await getBucketExportPage(asDb(db), systemId, bucketId, ownerAuth, "member", 2);
 
-    expect(page1.items).toHaveLength(2);
+    expect(page1.data).toHaveLength(2);
     expect(page1.hasMore).toBe(true);
     expect(page1.nextCursor).not.toBeNull();
   });
@@ -377,12 +377,12 @@ describe("bucket-export.service (PGlite integration)", () => {
       page1.nextCursor ?? undefined,
     );
 
-    expect(page2.items).toHaveLength(1);
+    expect(page2.data).toHaveLength(1);
     expect(page2.hasMore).toBe(false);
 
     // Pages must not overlap
-    const page1Ids = new Set(page1.items.map((i) => i.id));
-    for (const item of page2.items) {
+    const page1Ids = new Set(page1.data.map((i) => i.id));
+    for (const item of page2.data) {
       expect(page1Ids.has(item.id)).toBe(false);
     }
   });
@@ -392,7 +392,7 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const page = await getBucketExportPage(asDb(db), systemId, bucketId, ownerAuth, "group", 10);
 
-    expect(page.items).toHaveLength(0);
+    expect(page.data).toHaveLength(0);
     expect(page.hasMore).toBe(false);
     expect(page.nextCursor).toBeNull();
   });
@@ -420,9 +420,9 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const page = await getBucketExportPage(asDb(db), systemId, bucketId, ownerAuth, "member", 10);
 
-    expect(page.items[0]?.id).toBe(m1);
-    expect(page.items[1]?.id).toBe(m3);
-    expect(page.items[2]?.id).toBe(m2);
+    expect(page.data[0]?.id).toBe(m1);
+    expect(page.data[1]?.id).toBe(m3);
+    expect(page.data[2]?.id).toBe(m2);
   });
 
   it("throws 404 for non-existent bucket (page)", async () => {
@@ -486,9 +486,9 @@ describe("bucket-export.service (PGlite integration)", () => {
 
     const page = await getBucketExportPage(asDb(db), systemId, bucketId, ownerAuth, "group", 10);
 
-    expect(page.items).toHaveLength(1);
-    expect(page.items[0]?.id).toBe(g1);
-    expect(page.items[0]?.entityType).toBe("group");
+    expect(page.data).toHaveLength(1);
+    expect(page.data[0]?.id).toBe(g1);
+    expect(page.data[0]?.entityType).toBe("group");
   });
 
   it("exports custom-front entities tagged with the bucket", async () => {
@@ -505,9 +505,9 @@ describe("bucket-export.service (PGlite integration)", () => {
       10,
     );
 
-    expect(page.items).toHaveLength(1);
-    expect(page.items[0]?.id).toBe(cf1);
-    expect(page.items[0]?.entityType).toBe("custom-front");
+    expect(page.data).toHaveLength(1);
+    expect(page.data[0]?.id).toBe(cf1);
+    expect(page.data[0]?.entityType).toBe("custom-front");
   });
 
   // ── ETag invalidation ─────────────────────────────────────────────

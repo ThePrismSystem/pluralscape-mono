@@ -361,7 +361,7 @@ describe("webhook-config.service (PGlite integration)", () => {
         noopAudit,
       );
       const result = await listWebhookConfigs(asDb(db), systemId, auth);
-      expect(result.items.length).toBe(2);
+      expect(result.data.length).toBe(2);
     });
 
     it("supports pagination", async () => {
@@ -375,22 +375,22 @@ describe("webhook-config.service (PGlite integration)", () => {
       );
 
       const page1 = await listWebhookConfigs(asDb(db), systemId, auth, { limit: 1 });
-      expect(page1.items.length).toBe(1);
+      expect(page1.data.length).toBe(1);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listWebhookConfigs(asDb(db), systemId, auth, {
-        cursor: page1.items[0]?.id,
+        cursor: page1.data[0]?.id,
         limit: 1,
       });
-      expect(page2.items.length).toBe(1);
-      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
+      expect(page2.data.length).toBe(1);
+      expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
     });
 
     it("excludes archived by default", async () => {
       const wh = await createWebhookConfig(asDb(db), systemId, createParams(), auth, noopAudit);
       await archiveWebhookConfig(asDb(db), systemId, wh.id, auth, noopAudit);
       const result = await listWebhookConfigs(asDb(db), systemId, auth);
-      expect(result.items.length).toBe(0);
+      expect(result.data.length).toBe(0);
     });
 
     it("includes archived when requested", async () => {
@@ -399,7 +399,7 @@ describe("webhook-config.service (PGlite integration)", () => {
       const result = await listWebhookConfigs(asDb(db), systemId, auth, {
         includeArchived: true,
       });
-      expect(result.items.length).toBe(1);
+      expect(result.data.length).toBe(1);
     });
   });
 

@@ -410,7 +410,7 @@ describe("RotationWorker", () => {
   });
 
   it("stops when claimChunk returns an empty items array", async () => {
-    apiClient.claimChunk.mockResolvedValue({ items: [], rotationState: "migrating" });
+    apiClient.claimChunk.mockResolvedValue({ data: [], rotationState: "migrating" });
 
     const worker = new RotationWorker(makeConfig());
     await worker.start();
@@ -423,8 +423,8 @@ describe("RotationWorker", () => {
   it("processes a full chunk and calls completeChunk", async () => {
     const item = makeItem("1");
     apiClient.claimChunk
-      .mockResolvedValueOnce({ items: [item], rotationState: "migrating" })
-      .mockResolvedValueOnce({ items: [], rotationState: "migrating" });
+      .mockResolvedValueOnce({ data: [item], rotationState: "migrating" })
+      .mockResolvedValueOnce({ data: [], rotationState: "migrating" });
     apiClient.fetchEntityBlob.mockResolvedValue({
       payload: makePayload(),
       keyVersion: OLD_KEY_VERSION,
@@ -448,8 +448,8 @@ describe("RotationWorker", () => {
   it("calls onProgress with the rotation after each chunk", async () => {
     const rotation = makeRotation("migrating");
     apiClient.claimChunk
-      .mockResolvedValueOnce({ items: [makeItem("1")], rotationState: "migrating" })
-      .mockResolvedValueOnce({ items: [], rotationState: "migrating" });
+      .mockResolvedValueOnce({ data: [makeItem("1")], rotationState: "migrating" })
+      .mockResolvedValueOnce({ data: [], rotationState: "migrating" });
     apiClient.fetchEntityBlob.mockResolvedValue({
       payload: makePayload(),
       keyVersion: OLD_KEY_VERSION,
@@ -466,7 +466,7 @@ describe("RotationWorker", () => {
 
   it("stops after completeChunk returns a completed rotation state", async () => {
     apiClient.claimChunk.mockResolvedValue({
-      items: [makeItem("1")],
+      data: [makeItem("1")],
       rotationState: "migrating",
     });
     apiClient.fetchEntityBlob.mockResolvedValue({
@@ -486,7 +486,7 @@ describe("RotationWorker", () => {
 
   it("stops after completeChunk returns a failed rotation state", async () => {
     apiClient.claimChunk.mockResolvedValue({
-      items: [makeItem("1")],
+      data: [makeItem("1")],
       rotationState: "migrating",
     });
     apiClient.fetchEntityBlob.mockResolvedValue({
@@ -524,7 +524,7 @@ describe("RotationWorker", () => {
       () =>
         new Promise<ChunkClaimResponse>((resolve) => {
           resolveChunk = () => {
-            resolve({ items: [], rotationState: "migrating" });
+            resolve({ data: [], rotationState: "migrating" });
           };
         }),
     );
@@ -541,7 +541,7 @@ describe("RotationWorker", () => {
   });
 
   it("isRunning is false after completion", async () => {
-    apiClient.claimChunk.mockResolvedValue({ items: [], rotationState: "migrating" });
+    apiClient.claimChunk.mockResolvedValue({ data: [], rotationState: "migrating" });
 
     const worker = new RotationWorker(makeConfig());
     await worker.start();
@@ -556,11 +556,11 @@ describe("RotationWorker", () => {
         () =>
           new Promise<ChunkClaimResponse>((resolve) => {
             firstResolve = () => {
-              resolve({ items: [], rotationState: "migrating" });
+              resolve({ data: [], rotationState: "migrating" });
             };
           }),
       )
-      .mockResolvedValue({ items: [], rotationState: "migrating" });
+      .mockResolvedValue({ data: [], rotationState: "migrating" });
 
     const worker = new RotationWorker(makeConfig());
     const first = worker.start();
@@ -574,7 +574,7 @@ describe("RotationWorker", () => {
   });
 
   it("uses the configured chunkSize when claiming chunks", async () => {
-    apiClient.claimChunk.mockResolvedValue({ items: [], rotationState: "migrating" });
+    apiClient.claimChunk.mockResolvedValue({ data: [], rotationState: "migrating" });
 
     const worker = new RotationWorker(makeConfig({ chunkSize: 25 }));
     await worker.start();
@@ -585,9 +585,9 @@ describe("RotationWorker", () => {
   it("processes multiple chunks in sequence until empty", async () => {
     const rotation = makeRotation("migrating");
     apiClient.claimChunk
-      .mockResolvedValueOnce({ items: [makeItem("1"), makeItem("2")], rotationState: "migrating" })
-      .mockResolvedValueOnce({ items: [makeItem("3")], rotationState: "migrating" })
-      .mockResolvedValueOnce({ items: [], rotationState: "migrating" });
+      .mockResolvedValueOnce({ data: [makeItem("1"), makeItem("2")], rotationState: "migrating" })
+      .mockResolvedValueOnce({ data: [makeItem("3")], rotationState: "migrating" })
+      .mockResolvedValueOnce({ data: [], rotationState: "migrating" });
     apiClient.fetchEntityBlob.mockResolvedValue({
       payload: makePayload(),
       keyVersion: OLD_KEY_VERSION,

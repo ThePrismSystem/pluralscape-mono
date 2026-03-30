@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTP_OK } from "../../../http.constants.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { getSnapshot } from "../../../services/snapshot.service.js";
 
@@ -24,5 +25,5 @@ getRoute.get("/:snapshotId", async (c) => {
 
   const db = await getDb();
   const result = await getSnapshot(db, systemId, snapshotId, auth);
-  return c.json(result, HTTP_OK);
+  return c.json(envelope(result), HTTP_OK);
 });

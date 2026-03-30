@@ -70,10 +70,10 @@ describe("PUT /systems/:id/innerworld/entities/:entityId", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_ENTITY;
-    expect(body.id).toBe("iwe_660e8400-e29b-41d4-a716-446655440000");
-    expect(body.version).toBe(2);
-    expect(body.updatedAt).toBe(2000);
+    const body = (await res.json()) as { data: typeof MOCK_ENTITY };
+    expect(body.data.id).toBe("iwe_660e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.version).toBe(2);
+    expect(body.data.updatedAt).toBe(2000);
   });
 
   it("returns 400 for malformed JSON body", async () => {

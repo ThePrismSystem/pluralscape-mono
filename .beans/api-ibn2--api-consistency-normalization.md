@@ -1,11 +1,11 @@
 ---
 # api-ibn2
 title: API consistency normalization
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-29T02:59:27Z
-updated_at: 2026-03-29T03:03:12Z
+updated_at: 2026-03-30T14:43:49Z
 parent: api-e7gt
 blocked_by:
   - api-g475
@@ -72,3 +72,15 @@ Normalize API surface for consistency. Pre-release — breaking changes are fine
 - [ ] Update OpenAPI spec to reflect changes
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+## Summary of Changes
+
+- Added `{ data: T }` response envelope to all non-204 route responses via `envelope()` helper
+- Renamed `PaginatedResult.items` to `PaginatedResult.data` for uniform `data` key across all responses
+- Removed `wrapResult()`, `wrapAction()`, and `ActionResult` type — replaced with single `envelope()` helper
+- Added opt-in `Idempotency-Key` header infrastructure (Valkey-backed with in-memory fallback)
+- Wired idempotency middleware on all 40 POST-create (201) endpoints
+- Paginated device tokens list endpoint (was raw array, now cursor-based)
+- Converted 6 action-only routes from `{ success: true }` to 204 no-content
+- Final consistency audit verified: error shapes, naming conventions, status codes, pagination all consistent
+- Full test suite passes: 7865 unit tests, integration tests, E2E tests including new idempotency tests

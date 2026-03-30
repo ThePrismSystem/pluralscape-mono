@@ -169,7 +169,7 @@ describe("listMembers", () => {
 
     const result = await listMembers(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
     expect(result.totalCount).toBeNull();
@@ -181,8 +181,8 @@ describe("listMembers", () => {
 
     const result = await listMembers(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe("mem_test-member");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe("mem_test-member");
     expect(result.hasMore).toBe(false);
   });
 
@@ -193,7 +193,7 @@ describe("listMembers", () => {
 
     const result = await listMembers(db, SYSTEM_ID, AUTH, { limit: 1 });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     const { nextCursor } = result;
     expect(nextCursor).not.toBeNull();
@@ -237,7 +237,7 @@ describe("listMembers", () => {
 
     const result = await listMembers(db, SYSTEM_ID, AUTH, { includeArchived: true });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(chain.where).toHaveBeenCalled();
   });
 });

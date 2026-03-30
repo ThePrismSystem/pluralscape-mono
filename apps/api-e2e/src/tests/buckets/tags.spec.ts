@@ -20,10 +20,10 @@ test.describe("Bucket Content Tags", () => {
         data: { entityType: "member", entityId: member.id },
       });
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as TagEntry;
-      expect(body.entityType).toBe("member");
-      expect(body.entityId).toBe(member.id);
-      expect(body.bucketId).toBe(bucket.id);
+      const body = (await res.json()) as { data: TagEntry };
+      expect(body.data.entityType).toBe("member");
+      expect(body.data.entityId).toBe(member.id);
+      expect(body.data.bucketId).toBe(bucket.id);
     });
 
     // ── List tags ──

@@ -230,7 +230,7 @@ describe("poll service", () => {
 
       const result = await listPolls(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
     });
 
@@ -239,7 +239,7 @@ describe("poll service", () => {
 
       const result = await listPolls(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toEqual([]);
+      expect(result.data).toEqual([]);
     });
 
     it("applies status filter when provided", async () => {
@@ -248,7 +248,7 @@ describe("poll service", () => {
 
       const result = await listPolls(db, SYSTEM_ID, AUTH, { status: "closed" });
 
-      expect(result.items[0]?.status).toBe("closed");
+      expect(result.data[0]?.status).toBe("closed");
     });
 
     it("detects hasMore when more rows exist than limit", async () => {
@@ -259,7 +259,7 @@ describe("poll service", () => {
       const result = await listPolls(db, SYSTEM_ID, AUTH, { limit: 1 });
 
       expect(result.hasMore).toBe(true);
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
   });
 

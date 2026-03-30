@@ -87,7 +87,7 @@ const MOCK_ENTITY_TYPE: EntityTypeResult = {
 };
 
 const EMPTY_PAGE: PaginatedResult<EntityTypeResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -108,8 +108,8 @@ describe("POST /systems/:systemId/structure/entity-types", () => {
     const app = createApp();
     const res = await postJSON(app, BASE, { encryptedData: "dGVzdA==", sortOrder: 0 });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as EntityTypeResult;
-    expect(body.id).toBe(ET_ID);
+    const body = (await res.json()) as { data: EntityTypeResult };
+    expect(body.data.id).toBe(ET_ID);
   });
 
   it("forwards systemId, body, auth, and audit to service", async () => {
@@ -172,7 +172,7 @@ describe("GET /systems/:systemId/structure/entity-types", () => {
     const res = await app.request(BASE);
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<EntityTypeResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 
@@ -212,8 +212,8 @@ describe("GET /systems/:systemId/structure/entity-types/:entityTypeId", () => {
     const app = createApp();
     const res = await app.request(`${BASE}/${ET_ID}`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as EntityTypeResult;
-    expect(body.id).toBe(ET_ID);
+    const body = (await res.json()) as { data: EntityTypeResult };
+    expect(body.data.id).toBe(ET_ID);
   });
 
   it("returns 404 when entity type not found", async () => {
@@ -254,8 +254,8 @@ describe("PUT /systems/:systemId/structure/entity-types/:entityTypeId", () => {
       version: 1,
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as EntityTypeResult;
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: EntityTypeResult };
+    expect(body.data.version).toBe(2);
   });
 
   it("forwards entityTypeId to service", async () => {
@@ -306,8 +306,8 @@ describe("POST /systems/:systemId/structure/entity-types/:entityTypeId/restore",
     const app = createApp();
     const res = await app.request(`${BASE}/${ET_ID}/restore`, { method: "POST" });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as EntityTypeResult;
-    expect(body.id).toBe(ET_ID);
+    const body = (await res.json()) as { data: EntityTypeResult };
+    expect(body.data.id).toBe(ET_ID);
   });
 });
 

@@ -157,7 +157,7 @@ describe("board-message.service (PGlite integration)", () => {
       }
 
       const page1 = await listBoardMessages(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
     });
 
@@ -185,10 +185,10 @@ describe("board-message.service (PGlite integration)", () => {
       );
 
       const result = await listBoardMessages(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(3);
-      expect(result.items[0]?.sortOrder).toBe(0);
-      expect(result.items[1]?.sortOrder).toBe(1);
-      expect(result.items[2]?.sortOrder).toBe(2);
+      expect(result.data).toHaveLength(3);
+      expect(result.data[0]?.sortOrder).toBe(0);
+      expect(result.data[1]?.sortOrder).toBe(1);
+      expect(result.data[2]?.sortOrder).toBe(2);
     });
 
     it("filters by pinned", async () => {
@@ -208,8 +208,8 @@ describe("board-message.service (PGlite integration)", () => {
       );
 
       const pinned = await listBoardMessages(asDb(db), systemId, auth, { pinned: true });
-      expect(pinned.items).toHaveLength(1);
-      expect(pinned.items[0]?.pinned).toBe(true);
+      expect(pinned.data).toHaveLength(1);
+      expect(pinned.data[0]?.pinned).toBe(true);
     });
 
     it("filters by pinned=false", async () => {
@@ -229,8 +229,8 @@ describe("board-message.service (PGlite integration)", () => {
       );
 
       const unpinned = await listBoardMessages(asDb(db), systemId, auth, { pinned: false });
-      expect(unpinned.items).toHaveLength(1);
-      expect(unpinned.items[0]?.pinned).toBe(false);
+      expect(unpinned.data).toHaveLength(1);
+      expect(unpinned.data[0]?.pinned).toBe(false);
     });
 
     it("excludes archived by default", async () => {
@@ -245,7 +245,7 @@ describe("board-message.service (PGlite integration)", () => {
       await archiveBoardMessage(asDb(db), systemId, bm.id, auth, noopAudit);
 
       const result = await listBoardMessages(asDb(db), systemId, auth);
-      expect(result.items.every((item) => item.id !== bm.id)).toBe(true);
+      expect(result.data.every((item) => item.id !== bm.id)).toBe(true);
     });
 
     it("includes archived when includeArchived is true", async () => {
@@ -260,7 +260,7 @@ describe("board-message.service (PGlite integration)", () => {
       await archiveBoardMessage(asDb(db), systemId, bm.id, auth, noopAudit);
 
       const result = await listBoardMessages(asDb(db), systemId, auth, { includeArchived: true });
-      expect(result.items.some((item) => item.id === bm.id)).toBe(true);
+      expect(result.data.some((item) => item.id === bm.id)).toBe(true);
     });
 
     it("follows cursor to page 2 with no overlap", async () => {
@@ -275,17 +275,17 @@ describe("board-message.service (PGlite integration)", () => {
       }
 
       const page1 = await listBoardMessages(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listBoardMessages(asDb(db), systemId, auth, {
         cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
 
-      const allIds = [...page1.items.map((bm) => bm.id), ...page2.items.map((bm) => bm.id)];
+      const allIds = [...page1.data.map((bm) => bm.id), ...page2.data.map((bm) => bm.id)];
       expect(new Set(allIds).size).toBe(3);
     });
   });
@@ -848,7 +848,7 @@ describe("board-message.service (PGlite integration)", () => {
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       const result = await listBoardMessages(asDb(db), otherSystemId, otherAuth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

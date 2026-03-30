@@ -79,7 +79,7 @@ const MOCK_COMMENT = {
   updatedAt: 1000 as never,
 };
 
-const EMPTY_PAGE = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -101,8 +101,8 @@ describe("POST .../fronting-sessions/:sessionId/comments", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when parent session not found", async () => {
@@ -148,7 +148,7 @@ describe("GET .../fronting-sessions/:sessionId/comments", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 
   it("passes includeArchived option to service", async () => {
@@ -211,8 +211,8 @@ describe("GET .../comments/:commentId", () => {
     const res = await app.request(COMMENT_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when not found", async () => {
@@ -245,8 +245,8 @@ describe("PUT .../comments/:commentId", () => {
     const res = await putJSON(app, COMMENT_URL, { encryptedData: "dGVzdA==", version: 1 });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(2);
   });
 
   it("returns 409 on version conflict", async () => {
@@ -343,8 +343,8 @@ describe("POST .../comments/:commentId/restore", () => {
     const res = await app.request(`${COMMENT_URL}/restore`, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when archived comment not found", async () => {

@@ -76,9 +76,9 @@ describe("GET /:id/settings", () => {
     const res = await app.request(`/${SYS_ID}/settings`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_SETTINGS;
-    expect(body.id).toBe("sset_abc");
-    expect(body.locale).toBe("en-US");
+    const body = (await res.json()) as { data: typeof MOCK_SETTINGS };
+    expect(body.data.id).toBe("sset_abc");
+    expect(body.data.locale).toBe("en-US");
   });
 
   it("applies the readDefault rate limit category", () => {
@@ -114,8 +114,8 @@ describe("PUT /:id/settings", () => {
     const res = await putJSON(app, `/${SYS_ID}/settings`, { encryptedData: "data", version: 1 });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_SETTINGS;
-    expect(body.id).toBe("sset_abc");
+    const body = (await res.json()) as { data: typeof MOCK_SETTINGS };
+    expect(body.data.id).toBe("sset_abc");
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {

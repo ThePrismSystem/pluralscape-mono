@@ -73,7 +73,7 @@ describe("listSystems", () => {
 
     const result = await listSystems(db, AUTH.accountId);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
     expect(result.totalCount).toBeNull();
@@ -85,8 +85,8 @@ describe("listSystems", () => {
 
     const result = await listSystems(db, AUTH.accountId);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe("sys_test-system");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe("sys_test-system");
     expect(result.hasMore).toBe(false);
   });
 
@@ -98,7 +98,7 @@ describe("listSystems", () => {
 
     const result = await listSystems(db, AUTH.accountId, undefined, 1);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     const { nextCursor } = result;
     expect(nextCursor).not.toBeNull();

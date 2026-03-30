@@ -33,7 +33,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const EMPTY_PAGE: PaginatedResult<WebhookConfigResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -58,7 +58,7 @@ describe("GET /systems/:systemId/webhook-configs", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<WebhookConfigResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 

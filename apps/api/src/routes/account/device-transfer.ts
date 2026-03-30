@@ -15,6 +15,7 @@ import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { envelope } from "../../lib/response.js";
 import { createRateLimiter } from "../../middleware/rate-limit.js";
 import {
   KeyDerivationUnavailableError,
@@ -81,7 +82,7 @@ deviceTransferRoute.post("/", async (c) => {
       parseResult.data,
       audit,
     );
-    return c.json(result, HTTP_CREATED);
+    return c.json(envelope(result), HTTP_CREATED);
   } catch (error: unknown) {
     if (error instanceof TransferValidationError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
@@ -160,7 +161,7 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
       parseResult.data.code,
       audit,
     );
-    return c.json(result);
+    return c.json(envelope(result));
   } catch (error: unknown) {
     if (error instanceof TransferNotFoundError) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", error.message);

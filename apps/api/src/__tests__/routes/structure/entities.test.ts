@@ -93,7 +93,7 @@ const MOCK_ENTITY: StructureEntityResult = {
 };
 
 const EMPTY_PAGE: PaginatedResult<StructureEntityResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -119,8 +119,8 @@ describe("POST /systems/:systemId/structure/entities", () => {
       sortOrder: 0,
     });
     expect(res.status).toBe(201);
-    const body = (await res.json()) as StructureEntityResult;
-    expect(body.id).toBe(ENTITY_ID);
+    const body = (await res.json()) as { data: StructureEntityResult };
+    expect(body.data.id).toBe(ENTITY_ID);
   });
 
   it("forwards params to service", async () => {
@@ -164,7 +164,7 @@ describe("GET /systems/:systemId/structure/entities", () => {
     const res = await app.request(BASE);
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<StructureEntityResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 
   it("forwards entityTypeId filter to service", async () => {
@@ -193,8 +193,8 @@ describe("GET /systems/:systemId/structure/entities/:entityId", () => {
     const app = createApp();
     const res = await app.request(`${BASE}/${ENTITY_ID}`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as StructureEntityResult;
-    expect(body.id).toBe(ENTITY_ID);
+    const body = (await res.json()) as { data: StructureEntityResult };
+    expect(body.data.id).toBe(ENTITY_ID);
   });
 
   it("returns 404 when entity not found", async () => {
@@ -233,8 +233,8 @@ describe("PUT /systems/:systemId/structure/entities/:entityId", () => {
       version: 1,
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as StructureEntityResult;
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: StructureEntityResult };
+    expect(body.data.version).toBe(2);
   });
 });
 
@@ -267,8 +267,8 @@ describe("POST /systems/:systemId/structure/entities/:entityId/restore", () => {
     const app = createApp();
     const res = await app.request(`${BASE}/${ENTITY_ID}/restore`, { method: "POST" });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as StructureEntityResult;
-    expect(body.id).toBe(ENTITY_ID);
+    const body = (await res.json()) as { data: StructureEntityResult };
+    expect(body.data.id).toBe(ENTITY_ID);
   });
 });
 
@@ -337,9 +337,9 @@ describe("GET /systems/:systemId/structure/entities/:entityId/hierarchy", () => 
     const app = createApp();
     const res = await app.request(`${BASE}/${ENTITY_ID}/hierarchy`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: HierarchyNode[] };
-    expect(body.items).toHaveLength(1);
-    const first = body.items[0];
+    const body = (await res.json()) as { data: HierarchyNode[] };
+    expect(body.data).toHaveLength(1);
+    const first = body.data[0];
     expect(first).toBeDefined();
     expect(first?.entityId).toBe(ENTITY_ID);
   });
