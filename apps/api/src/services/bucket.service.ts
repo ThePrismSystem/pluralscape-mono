@@ -49,6 +49,7 @@ interface ListBucketOpts {
   readonly cursor?: string;
   readonly limit?: number;
   readonly includeArchived?: boolean;
+  readonly archivedOnly?: boolean;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -227,7 +228,10 @@ export async function listBuckets(
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [eq(buckets.systemId, systemId)];
 
-    if (!opts.includeArchived) {
+    if (opts.archivedOnly) {
+      // archivedOnly takes precedence: show only archived buckets
+      conditions.push(eq(buckets.archived, true));
+    } else if (!opts.includeArchived) {
       conditions.push(eq(buckets.archived, false));
     }
 
@@ -380,6 +384,7 @@ export async function restoreBucket(
 
 export function parseBucketQuery(query: Record<string, string | undefined>): {
   includeArchived: boolean;
+  archivedOnly: boolean;
 } {
   return parseQuery(BucketQuerySchema, query);
 }

@@ -19,8 +19,9 @@ listRoute.get("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const { memberId } = RelationshipQuerySchema.parse({
+  const { memberId, type } = RelationshipQuerySchema.parse({
     memberId: c.req.query("memberId"),
+    type: c.req.query("type"),
   });
 
   const db = await getDb();
@@ -31,6 +32,7 @@ listRoute.get("/", async (c) => {
     parseCursor(cursorParam),
     limit,
     memberId,
+    type,
   );
   return c.json(result);
 });

@@ -144,17 +144,19 @@ describe("listFriendCodes", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns active non-expired codes", async () => {
+  it("returns active non-expired codes with pagination", async () => {
     const { db, chain } = mockDb();
     const rows = [makeFriendCodeRow(), makeFriendCodeRow({ id: "frc_second" })];
     chain.where.mockReturnValue(chain);
     chain.orderBy.mockReturnValue(chain);
+    chain.limit.mockReturnValue(chain);
     // Override the final resolution in the chain to return rows
-    chain.orderBy.mockResolvedValueOnce(rows);
+    chain.limit.mockResolvedValueOnce(rows);
 
     const result = await listFriendCodes(db, ACCOUNT_ID, AUTH);
 
-    expect(result).toHaveLength(2);
+    expect(result.items).toHaveLength(2);
+    expect(result.hasMore).toBe(false);
     expect(chain.transaction).toHaveBeenCalled();
   });
 });

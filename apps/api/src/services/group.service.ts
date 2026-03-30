@@ -154,6 +154,7 @@ export const listGroups: (
   auth: AuthContext,
   cursor?: string,
   limit?: number,
+  includeArchived?: boolean,
 ) => Promise<PaginatedResult<GroupResult>> = groupHierarchy.list;
 
 export const getGroup = groupHierarchy.get;

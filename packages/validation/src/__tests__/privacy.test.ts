@@ -105,6 +105,27 @@ describe("BucketQuerySchema", () => {
       expect(result.data.includeArchived).toBe(true);
     }
   });
+
+  it("defaults archivedOnly to false when omitted", () => {
+    const result = BucketQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.archivedOnly).toBe(false);
+    }
+  });
+
+  it("parses archivedOnly boolean", () => {
+    const result = BucketQuerySchema.safeParse({ archivedOnly: "true" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.archivedOnly).toBe(true);
+    }
+  });
+
+  it("rejects invalid archivedOnly value", () => {
+    const result = BucketQuerySchema.safeParse({ archivedOnly: "maybe" });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("TagContentBodySchema", () => {

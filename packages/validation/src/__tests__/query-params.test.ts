@@ -245,6 +245,46 @@ describe("RelationshipQuerySchema", () => {
     const result = RelationshipQuerySchema.safeParse({ memberId: "null" });
     expect(result.success).toBe(false);
   });
+
+  it("accepts valid type filter", () => {
+    const result = RelationshipQuerySchema.safeParse({ type: "partner" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.type).toBe("partner");
+    }
+  });
+
+  it("accepts all valid type values", () => {
+    const types = [
+      "split-from",
+      "fused-from",
+      "sibling",
+      "partner",
+      "parent-child",
+      "protector-of",
+      "caretaker-of",
+      "gatekeeper-of",
+      "source",
+      "custom",
+    ];
+    for (const t of types) {
+      const result = RelationshipQuerySchema.safeParse({ type: t });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("accepts omitted type", () => {
+    const result = RelationshipQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.type).toBeUndefined();
+    }
+  });
+
+  it("rejects invalid type value", () => {
+    const result = RelationshipQuerySchema.safeParse({ type: "invalid-type" });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ── InnerWorldEntityQuerySchema ──────────────────────────────────

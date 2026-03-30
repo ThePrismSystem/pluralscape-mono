@@ -136,6 +136,7 @@ export interface HierarchyService<TId extends string, TResult extends { readonly
     auth: AuthContext,
     cursor?: string,
     limit?: number,
+    includeArchived?: boolean,
   ) => Promise<PaginatedResult<TResult>>;
 
   readonly get: (

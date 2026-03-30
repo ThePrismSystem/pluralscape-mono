@@ -1,9 +1,11 @@
 import { ID_PREFIXES } from "@pluralscape/types";
+import { IncludeArchivedQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
+import { parseQuery } from "../../lib/query-parse.js";
 import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
@@ -34,9 +36,19 @@ listRoute.get("/", async (c) => {
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
   const fields = parseSparseFields(c.req.query("fields"), GROUP_FIELDS);
+  const { includeArchived } = parseQuery(IncludeArchivedQuerySchema, {
+    includeArchived: c.req.query("includeArchived"),
+  });
 
   const db = await getDb();
-  const result = await listGroups(db, systemId, auth, parseCursor(cursorParam), limit);
+  const result = await listGroups(
+    db,
+    systemId,
+    auth,
+    parseCursor(cursorParam),
+    limit,
+    includeArchived,
+  );
 
   if (!fields) return c.json(result);
 
