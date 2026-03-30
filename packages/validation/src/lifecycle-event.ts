@@ -99,3 +99,13 @@ export const CreateLifecycleEventBodySchema = z
     plaintextMetadata: PlaintextMetadataSchema.optional(),
   })
   .readonly();
+
+export const UpdateLifecycleEventBodySchema = z
+  .object({
+    eventType: z.enum(LIFECYCLE_EVENT_TYPES).optional(),
+    occurredAt: z.int().min(0).optional(),
+    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
+    plaintextMetadata: PlaintextMetadataSchema.optional(),
+    version: z.int().min(1),
+  })
+  .readonly();

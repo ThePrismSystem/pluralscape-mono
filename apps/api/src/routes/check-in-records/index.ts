@@ -7,6 +7,7 @@ import { dismissRoute } from "./dismiss.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
 import { respondRoute } from "./respond.js";
+import { restoreRoute } from "./restore.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
@@ -20,3 +21,4 @@ checkInRecordRoutes.route("/", archiveRoute);
 checkInRecordRoutes.route("/", deleteRoute);
 checkInRecordRoutes.route("/", respondRoute);
 checkInRecordRoutes.route("/", dismissRoute);
+checkInRecordRoutes.route("/", restoreRoute);

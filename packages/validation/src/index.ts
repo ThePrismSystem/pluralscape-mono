@@ -59,6 +59,7 @@ export {
 export { CreateRelationshipBodySchema, UpdateRelationshipBodySchema } from "./relationship.js";
 export {
   CreateLifecycleEventBodySchema,
+  UpdateLifecycleEventBodySchema,
   LIFECYCLE_EVENT_TYPES,
   validateLifecycleMetadata,
 } from "./lifecycle-event.js";
@@ -148,6 +149,7 @@ export {
   CreatePollBodySchema,
   UpdatePollBodySchema,
   CastVoteBodySchema,
+  UpdatePollVoteBodySchema,
   PollQuerySchema,
   PollVoteQuerySchema,
 } from "./poll.js";
@@ -158,6 +160,7 @@ export {
 } from "./acknowledgement.js";
 export {
   RegisterDeviceTokenBodySchema,
+  UpdateDeviceTokenBodySchema,
   UpdateNotificationConfigBodySchema,
   UpdateFriendNotificationPreferenceBodySchema,
 } from "./notification.js";

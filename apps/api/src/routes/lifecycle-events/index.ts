@@ -6,6 +6,7 @@ import { deleteRoute } from "./delete.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
 import { restoreRoute } from "./restore.js";
+import { updateRoute } from "./update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
@@ -14,6 +15,7 @@ export const lifecycleEventRoutes = new Hono<AuthEnv>();
 lifecycleEventRoutes.route("/", listRoute);
 lifecycleEventRoutes.route("/", getRoute);
 lifecycleEventRoutes.route("/", createRoute);
+lifecycleEventRoutes.route("/", updateRoute);
 lifecycleEventRoutes.route("/", deleteRoute);
 lifecycleEventRoutes.route("/", archiveRoute);
 lifecycleEventRoutes.route("/", restoreRoute);
