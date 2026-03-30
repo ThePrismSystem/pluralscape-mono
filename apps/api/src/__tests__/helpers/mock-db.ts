@@ -31,6 +31,7 @@ export interface MockChain {
   transaction: ReturnType<typeof vi.fn>;
   for: ReturnType<typeof vi.fn>;
   onConflictDoNothing: ReturnType<typeof vi.fn>;
+  groupBy: ReturnType<typeof vi.fn>;
   execute: ReturnType<typeof vi.fn>;
 }
 
@@ -56,8 +57,15 @@ export function mockDb(overrides?: Partial<MockChain>): {
     for: vi.fn(),
     onConflictDoNothing: vi.fn(),
     execute: vi.fn(),
-    ...overrides,
+    groupBy: vi.fn(),
   };
+
+  // Apply overrides after construction so Partial<MockChain> doesn't widen types
+  if (overrides) {
+    for (const [key, value] of Object.entries(overrides)) {
+      (chain as never as Record<string, unknown>)[key] = value;
+    }
+  }
 
   // Wire up fluent chaining: each method returns the chain
   chain.select.mockReturnValue(chain);
@@ -74,6 +82,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
   chain.delete.mockReturnValue(chain);
   chain.for.mockReturnValue(chain);
   chain.onConflictDoNothing.mockReturnValue(chain);
+  chain.groupBy.mockResolvedValue([]);
   // execute is used by RLS context helpers (setTenantContext, setAccountId)
   chain.execute.mockResolvedValue(undefined);
   // transaction passes the chain as tx and awaits the callback.
