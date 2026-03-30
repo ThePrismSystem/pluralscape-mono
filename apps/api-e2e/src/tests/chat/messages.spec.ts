@@ -30,11 +30,11 @@ test.describe("Messages CRUD", () => {
       });
       expect(res.status()).toBe(201);
       const body = await res.json();
-      expect(body.id).toMatch(/^msg_/);
-      expect(body.channelId).toBe(channel.id);
-      expect(body.replyToId).toBeNull();
-      expect(body.editedAt).toBeNull();
-      messageId = body.id as string;
+      expect(body.data.id).toMatch(/^msg_/);
+      expect(body.data.channelId).toBe(channel.id);
+      expect(body.data.replyToId).toBeNull();
+      expect(body.data.editedAt).toBeNull();
+      messageId = body.data.id as string;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
@@ -43,10 +43,10 @@ test.describe("Messages CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.id).toBe(messageId);
-      const decrypted = decryptFromApi(body.encryptedData as string);
+      expect(body.data.id).toBe(messageId);
+      const decrypted = decryptFromApi(body.data.encryptedData as string);
       expect(decrypted).toEqual(MESSAGE_DATA);
-      messageVersion = body.version as number;
+      messageVersion = body.data.version as number;
     });
 
     await test.step("list includes created message", async () => {
@@ -68,9 +68,9 @@ test.describe("Messages CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.version).toBe(messageVersion + 1);
-      expect(body.editedAt).not.toBeNull();
-      messageVersion = body.version as number;
+      expect(body.data.version).toBe(messageVersion + 1);
+      expect(body.data.editedAt).not.toBeNull();
+      messageVersion = body.data.version as number;
     });
 
     await test.step("archive message", async () => {
@@ -128,7 +128,7 @@ test.describe("Messages CRUD", () => {
     });
     expect(res.status()).toBe(201);
     const body = await res.json();
-    expect(body.replyToId).toBe(original.id);
+    expect(body.data.replyToId).toBe(original.id);
   });
 
   test("messages list in descending timestamp order with pagination", async ({
@@ -182,7 +182,7 @@ test.describe("Messages CRUD", () => {
     });
     expect(res.status()).toBe(200);
     const body = await res.json();
-    expect(body.id).toBe(msg.id);
+    expect(body.data.id).toBe(msg.id);
   });
 
   test("create message in nonexistent channel returns 404", async ({ request, authHeaders }) => {

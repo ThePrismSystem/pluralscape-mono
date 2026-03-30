@@ -61,20 +61,20 @@ test.describe("Polls CRUD", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as PollResponse;
-      expect(body.id).toMatch(/^poll_/);
-      expect(body.status).toBe("open");
-      expect(body.version).toBe(1);
-      pollId = body.id;
-      pollVersion = body.version;
+      const body = (await res.json()) as { data: PollResponse };
+      expect(body.data.id).toMatch(/^poll_/);
+      expect(body.data.status).toBe("open");
+      expect(body.data.version).toBe(1);
+      pollId = body.data.id;
+      pollVersion = body.data.version;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
       const res = await request.get(`${pollsUrl}/${pollId}`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as PollResponse;
-      expect(body.id).toBe(pollId);
-      const decrypted = decryptFromApi(body.encryptedData);
+      const body = (await res.json()) as { data: PollResponse };
+      expect(body.data.id).toBe(pollId);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(POLL_DATA);
     });
 
@@ -96,18 +96,18 @@ test.describe("Polls CRUD", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as PollResponse;
-      expect(body.version).toBe(pollVersion + 1);
-      pollVersion = body.version;
+      const body = (await res.json()) as { data: PollResponse };
+      expect(body.data.version).toBe(pollVersion + 1);
+      pollVersion = body.data.version;
     });
 
     await test.step("close poll", async () => {
       const res = await request.post(`${pollsUrl}/${pollId}/close`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as PollResponse;
-      expect(body.status).toBe("closed");
-      expect(body.closedAt).not.toBeNull();
-      pollVersion = body.version;
+      const body = (await res.json()) as { data: PollResponse };
+      expect(body.data.status).toBe("closed");
+      expect(body.data.closedAt).not.toBeNull();
+      pollVersion = body.data.version;
     });
 
     await test.step("update closed poll returns 409", async () => {
@@ -145,9 +145,9 @@ test.describe("Polls CRUD", () => {
     await test.step("restore poll", async () => {
       const res = await request.post(`${pollsUrl}/${pollId}/restore`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as PollResponse;
-      expect(body.archived).toBe(false);
-      pollVersion = body.version;
+      const body = (await res.json()) as { data: PollResponse };
+      expect(body.data.archived).toBe(false);
+      pollVersion = body.data.version;
     });
 
     await test.step("delete poll (no votes)", async () => {

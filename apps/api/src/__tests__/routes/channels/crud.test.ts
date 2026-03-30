@@ -91,8 +91,8 @@ describe("POST /systems/:id/channels (create)", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(CH_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(CH_ID);
   });
 
   it("forwards systemId, body, auth, and audit writer to service", async () => {
@@ -151,8 +151,8 @@ describe("GET /systems/:id/channels/:channelId", () => {
     const res = await createApp().request(`${BASE}/${CH_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(CH_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(CH_ID);
   });
 
   it("returns 404 when channel not found", async () => {
@@ -286,8 +286,8 @@ describe("POST /systems/:id/channels/:channelId/restore", () => {
     const res = await postJSON(createApp(), `${BASE}/${CH_ID}/restore`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(3);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(3);
   });
 
   it("returns 409 when not archived", async () => {

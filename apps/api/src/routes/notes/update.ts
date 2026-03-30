@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { updateNote } from "../../services/note.service.js";
 
@@ -23,5 +24,5 @@ updateRoute.put("/:noteId", async (c) => {
 
   const db = await getDb();
   const result = await updateNote(db, systemId, noteId, body, auth, audit);
-  return c.json(result);
+  return c.json(envelope(result));
 });

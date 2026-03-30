@@ -31,9 +31,9 @@ test.describe("Channels CRUD", () => {
       });
       expect(res.status()).toBe(201);
       const body = await res.json();
-      expect(body.type).toBe("category");
-      expect(body.parentId).toBeNull();
-      categoryId = body.id as string;
+      expect(body.data.type).toBe("category");
+      expect(body.data.parentId).toBeNull();
+      categoryId = body.data.id as string;
     });
 
     await test.step("create channel under category", async () => {
@@ -48,9 +48,9 @@ test.describe("Channels CRUD", () => {
       });
       expect(res.status()).toBe(201);
       const body = await res.json();
-      expect(body.type).toBe("channel");
-      expect(body.parentId).toBe(categoryId);
-      channelId = body.id as string;
+      expect(body.data.type).toBe("channel");
+      expect(body.data.parentId).toBe(categoryId);
+      channelId = body.data.id as string;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
@@ -59,10 +59,10 @@ test.describe("Channels CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.id).toBe(channelId);
-      const decrypted = decryptFromApi(body.encryptedData as string);
+      expect(body.data.id).toBe(channelId);
+      const decrypted = decryptFromApi(body.data.encryptedData as string);
       expect(decrypted).toEqual(CHANNEL_DATA);
-      channelVersion = body.version as number;
+      channelVersion = body.data.version as number;
     });
 
     await test.step("list includes created channels", async () => {
@@ -105,7 +105,7 @@ test.describe("Channels CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.version).toBe(channelVersion + 1);
+      expect(body.data.version).toBe(channelVersion + 1);
     });
 
     await test.step("archive channel", async () => {

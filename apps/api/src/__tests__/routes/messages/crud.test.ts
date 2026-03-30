@@ -94,8 +94,8 @@ describe("POST /systems/:id/channels/:channelId/messages (create)", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(MSG_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(MSG_ID);
   });
 
   it("forwards systemId, channelId, body, auth, and audit writer to service", async () => {
@@ -154,8 +154,8 @@ describe("GET /systems/:id/channels/:channelId/messages/:messageId", () => {
     const res = await createApp().request(`${BASE}/${MSG_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(MSG_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(MSG_ID);
   });
 
   it("returns 404 when message not found", async () => {
@@ -277,8 +277,8 @@ describe("POST /systems/:id/channels/:channelId/messages/:messageId/restore", ()
     const res = await postJSON(createApp(), `${BASE}/${MSG_ID}/restore`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(3);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(3);
   });
 
   it("returns 409 when not archived", async () => {

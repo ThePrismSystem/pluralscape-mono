@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { updateBoardMessage } from "../../services/board-message.service.js";
 
@@ -27,5 +28,5 @@ updateRoute.put("/:boardMessageId", async (c) => {
 
   const db = await getDb();
   const result = await updateBoardMessage(db, systemId, boardMessageId, body, auth, audit);
-  return c.json(result);
+  return c.json(envelope(result));
 });

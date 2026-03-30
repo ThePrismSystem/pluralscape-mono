@@ -88,8 +88,8 @@ describe("POST /systems/:id/relationships", () => {
     const app = createApp();
     const res = await postJSON(app, BASE_URL, VALID_BODY);
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(REL_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(REL_ID);
   });
 
   it("forwards systemId, body, auth to service", async () => {
@@ -226,8 +226,8 @@ describe("GET /systems/:id/relationships/:relationshipId", () => {
     const app = createApp();
     const res = await app.request(`${BASE_URL}/${REL_ID}`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(REL_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(REL_ID);
   });
 
   it("returns 404 when not found", async () => {
@@ -252,8 +252,8 @@ describe("PUT /systems/:id/relationships/:relationshipId", () => {
     const app = createApp();
     const res = await putJSON(app, `${BASE_URL}/${REL_ID}`, { ...VALID_BODY, version: 1 });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(2);
   });
 });
 

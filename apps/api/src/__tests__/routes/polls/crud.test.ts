@@ -134,8 +134,8 @@ describe("POST /systems/:id/polls (create)", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(POLL_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(POLL_ID);
   });
 
   it("forwards systemId, body, auth, and audit writer to service", async () => {
@@ -200,8 +200,8 @@ describe("GET /systems/:id/polls/:pollId", () => {
     const res = await createApp().request(`${BASE}/${POLL_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(POLL_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(POLL_ID);
   });
 
   it("returns 404 when poll not found", async () => {
@@ -313,8 +313,8 @@ describe("POST /systems/:id/polls/:pollId/close", () => {
     const res = await postJSON(createApp(), `${BASE}/${POLL_ID}/close`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string };
-    expect(body.status).toBe("closed");
+    const body = (await res.json()) as { data: { status: string } };
+    expect(body.data.status).toBe("closed");
   });
 
   it("returns 409 when poll is already closed", async () => {
@@ -378,8 +378,8 @@ describe("POST /systems/:id/polls/:pollId/restore", () => {
     const res = await postJSON(createApp(), `${BASE}/${POLL_ID}/restore`, {});
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(3);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(3);
   });
 
   it("returns 409 when not archived", async () => {
@@ -442,8 +442,8 @@ describe("POST /systems/:id/polls/:pollId/votes (cast vote)", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe(VOTE_ID);
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe(VOTE_ID);
   });
 
   it("returns 409 when poll is closed", async () => {

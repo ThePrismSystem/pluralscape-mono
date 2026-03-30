@@ -51,12 +51,12 @@ test.describe("Poll Voting", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const body = (await res.json()) as VoteResponse;
-      expect(body.id).toMatch(/^pv_/);
-      expect(body.pollId).toBe(pollId);
-      expect(body.voter.entityType).toBe("member");
-      expect(body.voter.entityId).toBe(voter1);
-      voteId = body.id;
+      const body = (await res.json()) as { data: VoteResponse };
+      expect(body.data.id).toMatch(/^pv_/);
+      expect(body.data.pollId).toBe(pollId);
+      expect(body.data.voter.entityType).toBe("member");
+      expect(body.data.voter.entityId).toBe(voter1);
+      voteId = body.data.id;
     });
 
     await test.step("list votes", async () => {
