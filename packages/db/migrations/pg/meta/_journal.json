@@ -8,6 +8,13 @@
       "when": 1774835410988,
       "tag": "0000_yellow_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774855528285,
+      "tag": "0001_past_sasquatch",
+      "breakpoints": true
     }
   ]
 }

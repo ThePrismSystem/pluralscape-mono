@@ -2,22 +2,25 @@ import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto
 import { memberPhotos } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "@pluralscape/validation";
-import { and, count, eq, max } from "drizzle-orm";
+import { and, count, eq, gt, max, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertMemberActive } from "../lib/member-helpers.js";
+import { buildCompositePaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { DecodedCompositeCursor } from "../lib/pagination.js";
 import type {
   EncryptedBlob,
   MemberId,
   MemberPhotoId,
+  PaginatedResult,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -28,7 +31,18 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 const MAX_PHOTOS_PER_MEMBER = 50;
 const MAX_ENCRYPTED_PHOTO_DATA_BYTES = 131_072;
 
+/** Default page size for photo list. */
+export const DEFAULT_PHOTO_LIMIT = 25;
+
+/** Maximum page size for photo list. */
+export const MAX_PHOTO_LIMIT = 50;
+
 // ── Types ───────────────────────────────────────────────────────────
+
+export interface MemberPhotoListOptions {
+  readonly cursor?: DecodedCompositeCursor;
+  readonly limit?: number;
+}
 
 export interface MemberPhotoResult {
   readonly id: MemberPhotoId;
@@ -219,25 +233,42 @@ export async function listMemberPhotos(
   systemId: SystemId,
   memberId: MemberId,
   auth: AuthContext,
-): Promise<MemberPhotoResult[]> {
+  opts: MemberPhotoListOptions = {},
+): Promise<PaginatedResult<MemberPhotoResult>> {
   assertSystemOwnership(systemId, auth);
+
+  const effectiveLimit = Math.min(opts.limit ?? DEFAULT_PHOTO_LIMIT, MAX_PHOTO_LIMIT);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     await assertMemberActive(tx, systemId, memberId);
 
+    const conditions = [
+      eq(memberPhotos.memberId, memberId),
+      eq(memberPhotos.systemId, systemId),
+      eq(memberPhotos.archived, false),
+    ];
+
+    if (opts.cursor) {
+      const cursorCondition = or(
+        gt(memberPhotos.sortOrder, opts.cursor.sortValue),
+        and(eq(memberPhotos.sortOrder, opts.cursor.sortValue), gt(memberPhotos.id, opts.cursor.id)),
+      );
+      if (cursorCondition) conditions.push(cursorCondition);
+    }
+
     const rows = await tx
       .select()
       .from(memberPhotos)
-      .where(
-        and(
-          eq(memberPhotos.memberId, memberId),
-          eq(memberPhotos.systemId, systemId),
-          eq(memberPhotos.archived, false),
-        ),
-      )
-      .orderBy(memberPhotos.sortOrder);
+      .where(and(...conditions))
+      .orderBy(memberPhotos.sortOrder, memberPhotos.id)
+      .limit(effectiveLimit + 1);
 
-    return rows.map(toPhotoResult);
+    return buildCompositePaginatedResult(
+      rows,
+      effectiveLimit,
+      toPhotoResult,
+      (item) => item.sortOrder,
+    );
   });
 }
 

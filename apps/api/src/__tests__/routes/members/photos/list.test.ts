@@ -15,6 +15,8 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 vi.mock("../../../../services/member-photo.service.js", () => ({
   listMemberPhotos: vi.fn(),
+  DEFAULT_PHOTO_LIMIT: 25,
+  MAX_PHOTO_LIMIT: 50,
 }));
 
 vi.mock("../../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -54,6 +56,20 @@ const PHOTO_RESULT = {
   archivedAt: null,
 };
 
+const PAGINATED_RESULT = {
+  items: [PHOTO_RESULT],
+  nextCursor: null,
+  hasMore: false,
+  totalCount: null,
+};
+
+const EMPTY_PAGINATED_RESULT = {
+  items: [],
+  nextCursor: null,
+  hasMore: false,
+  totalCount: null,
+};
+
 const PHOTOS_PATH = `/systems/${SYS_ID}/members/${MEM_ID}/photos`;
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -67,41 +83,45 @@ describe("GET /systems/:systemId/members/:memberId/photos", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with items array in data envelope on success", async () => {
-    vi.mocked(listMemberPhotos).mockResolvedValueOnce([PHOTO_RESULT]);
+  it("returns 200 with paginated result on success", async () => {
+    vi.mocked(listMemberPhotos).mockResolvedValueOnce(PAGINATED_RESULT);
 
     const app = createApp();
     const res = await app.request(PHOTOS_PATH);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { items: (typeof PHOTO_RESULT)[] } };
-    expect(body.data.items).toHaveLength(1);
-    expect(body.data.items[0]?.id).toBe(PHOTO_ID);
-    expect(body.data.items[0]?.memberId).toBe(MEM_ID);
+    const body = (await res.json()) as typeof PAGINATED_RESULT;
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]?.id).toBe(PHOTO_ID);
+    expect(body.items[0]?.memberId).toBe(MEM_ID);
+    expect(body.hasMore).toBe(false);
+    expect(body.nextCursor).toBeNull();
   });
 
-  it("returns 200 with empty items array in data envelope when no photos", async () => {
-    vi.mocked(listMemberPhotos).mockResolvedValueOnce([]);
+  it("returns 200 with empty items when no photos", async () => {
+    vi.mocked(listMemberPhotos).mockResolvedValueOnce(EMPTY_PAGINATED_RESULT);
 
     const app = createApp();
     const res = await app.request(PHOTOS_PATH);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { items: unknown[] } };
-    expect(body.data.items).toEqual([]);
+    const body = (await res.json()) as typeof EMPTY_PAGINATED_RESULT;
+    expect(body.items).toEqual([]);
+    expect(body.hasMore).toBe(false);
   });
 
-  it("forwards systemId, memberId, and auth to service", async () => {
-    vi.mocked(listMemberPhotos).mockResolvedValueOnce([PHOTO_RESULT]);
+  it("forwards systemId, memberId, auth, and pagination opts to service", async () => {
+    vi.mocked(listMemberPhotos).mockResolvedValueOnce(PAGINATED_RESULT);
 
     const app = createApp();
-    await app.request(PHOTOS_PATH);
+    await app.request(`${PHOTOS_PATH}?limit=10`);
 
     expect(vi.mocked(listMemberPhotos)).toHaveBeenCalledWith(
       expect.anything(),
       SYS_ID,
       MEM_ID,
       MOCK_AUTH,
+      expect.objectContaining({ limit: 10 }),
     );
   });
 

@@ -327,6 +327,49 @@ describe("FrontingSessionQuerySchema", () => {
     expect(result.success).toBe(false);
   });
 
+  // ── endFrom / endUntil transforms ────────────────────────────
+
+  it("transforms endFrom from string to number", () => {
+    const result = FrontingSessionQuerySchema.safeParse({
+      endFrom: "1000",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.endFrom).toBe(1000);
+    }
+  });
+
+  it("transforms endUntil from string to number", () => {
+    const result = FrontingSessionQuerySchema.safeParse({
+      endUntil: "5000",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.endUntil).toBe(5000);
+    }
+  });
+
+  it("rejects endFrom with non-numeric string", () => {
+    const result = FrontingSessionQuerySchema.safeParse({
+      endFrom: "not-a-number",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects endFrom with negative value", () => {
+    const result = FrontingSessionQuerySchema.safeParse({
+      endFrom: "-1",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects endUntil with decimal value", () => {
+    const result = FrontingSessionQuerySchema.safeParse({
+      endUntil: "1.5",
+    });
+    expect(result.success).toBe(false);
+  });
+
   // ── boolean coercion ─────────────────────────────────────────
 
   it("coerces activeOnly 'true' to boolean true", () => {

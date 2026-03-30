@@ -12,6 +12,12 @@ export const CreateStructureEntityLinkBodySchema = z
   })
   .readonly();
 
+export const UpdateStructureEntityLinkBodySchema = z
+  .object({
+    sortOrder: z.int().min(0),
+  })
+  .readonly();
+
 // ── Structure Entity Member Links ───────────────────────────────────
 
 export const CreateStructureEntityMemberLinkBodySchema = z

@@ -1,6 +1,9 @@
 import { systemStructureEntityLinks } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
-import { CreateStructureEntityLinkBodySchema } from "@pluralscape/validation";
+import {
+  CreateStructureEntityLinkBodySchema,
+  UpdateStructureEntityLinkBodySchema,
+} from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -31,6 +34,66 @@ export interface EntityLinkResult {
   readonly parentEntityId: SystemStructureEntityId | null;
   readonly sortOrder: number;
   readonly createdAt: UnixMillis;
+}
+
+// ── UPDATE ────────────────────────────────────────────────────────
+
+export async function updateEntityLink(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  linkId: string,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<EntityLinkResult> {
+  assertSystemOwnership(systemId, auth);
+
+  const parsed = UpdateStructureEntityLinkBodySchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
+  }
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const [existing] = await tx
+      .select({ id: systemStructureEntityLinks.id })
+      .from(systemStructureEntityLinks)
+      .where(
+        and(
+          eq(systemStructureEntityLinks.id, linkId),
+          eq(systemStructureEntityLinks.systemId, systemId),
+        ),
+      )
+      .limit(1)
+      .for("update");
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Structure entity link not found");
+    }
+
+    const [row] = await tx
+      .update(systemStructureEntityLinks)
+      .set({ sortOrder: parsed.data.sortOrder })
+      .where(
+        and(
+          eq(systemStructureEntityLinks.id, linkId),
+          eq(systemStructureEntityLinks.systemId, systemId),
+        ),
+      )
+      .returning();
+
+    if (!row) {
+      throw new Error("Failed to update entity link — UPDATE returned no rows");
+    }
+
+    await audit(tx, {
+      eventType: "structure-entity-link.updated",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Structure entity link updated",
+      systemId,
+    });
+
+    return toEntityLinkResult(row);
+  });
 }
 
 // ── Row mapper ────────────────────────────────────────────────────

@@ -33,8 +33,15 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { createFrontingReport, listFrontingReports, getFrontingReport, deleteFrontingReport } =
-  await import("../../services/fronting-report.service.js");
+const {
+  createFrontingReport,
+  updateFrontingReport,
+  listFrontingReports,
+  getFrontingReport,
+  deleteFrontingReport,
+  archiveFrontingReport,
+  restoreFrontingReport,
+} = await import("../../services/fronting-report.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -63,6 +70,11 @@ function makeReportRow(overrides: Record<string, unknown> = {}): Record<string, 
     encryptedData: new Uint8Array([1, 2, 3]),
     format: "html",
     generatedAt: 1000,
+    version: 1,
+    archived: false,
+    archivedAt: null,
+    createdAt: 1000,
+    updatedAt: 1000,
     ...overrides,
   };
 }
@@ -103,6 +115,8 @@ describe("createFrontingReport", () => {
 
     expect(result.id).toBe(REPORT_ID);
     expect(result.format).toBe("html");
+    expect(result.version).toBe(1);
+    expect(result.archived).toBe(false);
     expect(chain.insert).toHaveBeenCalledTimes(1);
   });
 
@@ -144,6 +158,107 @@ describe("createFrontingReport", () => {
         mockAudit,
       ),
     ).rejects.toThrow("INSERT returned no rows");
+  });
+});
+
+// ── updateFrontingReport ────────────────────────────────────────────
+
+describe("updateFrontingReport", () => {
+  it("rejects unauthenticated access", async () => {
+    const { db } = mockDb();
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    await expect(
+      updateFrontingReport(
+        db,
+        SYSTEM_ID,
+        REPORT_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow("System not found");
+  });
+
+  it("updates a report and returns it", async () => {
+    const { db, chain } = mockDb();
+    const updatedRow = makeReportRow({ version: 2, updatedAt: 2000 });
+    chain.returning.mockResolvedValueOnce([updatedRow]);
+
+    const result = await updateFrontingReport(
+      db,
+      SYSTEM_ID,
+      REPORT_ID,
+      { encryptedData: VALID_BLOB_BASE64, version: 1 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe(REPORT_ID);
+    expect(result.version).toBe(2);
+  });
+
+  it("writes an audit log entry on update", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([makeReportRow({ version: 2 })]);
+
+    await updateFrontingReport(
+      db,
+      SYSTEM_ID,
+      REPORT_ID,
+      { encryptedData: VALID_BLOB_BASE64, version: 1 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "fronting-report.updated" }),
+    );
+  });
+
+  it("throws 404 when report not found (version mismatch, entity gone)", async () => {
+    const { db, chain } = mockDb();
+    // OCC update returns empty
+    chain.returning.mockResolvedValueOnce([]);
+    // existsFn returns empty (not found)
+    chain.limit.mockResolvedValueOnce([]);
+
+    await expect(
+      updateFrontingReport(
+        db,
+        SYSTEM_ID,
+        REPORT_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 409 on version conflict", async () => {
+    const { db, chain } = mockDb();
+    // OCC update returns empty
+    chain.returning.mockResolvedValueOnce([]);
+    // existsFn returns the entity (exists but wrong version)
+    chain.limit.mockResolvedValueOnce([{ id: REPORT_ID }]);
+
+    await expect(
+      updateFrontingReport(
+        db,
+        SYSTEM_ID,
+        REPORT_ID,
+        { encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+  });
+
+  it("rejects invalid payload", async () => {
+    const { db } = mockDb();
+    await expect(
+      updateFrontingReport(db, SYSTEM_ID, REPORT_ID, { version: 1 }, AUTH, mockAudit),
+    ).rejects.toThrow("Invalid payload");
   });
 });
 
@@ -246,6 +361,7 @@ describe("getFrontingReport", () => {
 
     const result = await getFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH);
     expect(result.id).toBe(REPORT_ID);
+    expect(result.version).toBe(1);
   });
 
   it("throws 404 when report not found", async () => {
@@ -294,6 +410,112 @@ describe("deleteFrontingReport", () => {
 
     await expect(deleteFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit)).rejects.toThrow(
       "Fronting report not found",
+    );
+  });
+});
+
+// ── archiveFrontingReport ────────────────────────────────────────────
+
+describe("archiveFrontingReport", () => {
+  it("rejects unauthenticated access", async () => {
+    const { db } = mockDb();
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    await expect(archiveFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit)).rejects.toThrow(
+      "System not found",
+    );
+  });
+
+  it("archives a report", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([{ id: REPORT_ID }]);
+
+    await archiveFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit);
+    expect(chain.update).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "fronting-report.archived" }),
+    );
+  });
+
+  it("throws 404 when report not found", async () => {
+    const { db, chain } = mockDb();
+    // update().set().where() returns chain, then .returning() returns empty (no match)
+    chain.returning.mockResolvedValueOnce([]);
+    // existence check: select().from().where() resolves to empty
+    chain.where
+      .mockReturnValueOnce(chain) // update().set().where() — chains to .returning()
+      .mockResolvedValueOnce([]); // select().from().where() — no entity
+
+    await expect(archiveFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("throws ALREADY_ARCHIVED when report is already archived", async () => {
+    const { db, chain } = mockDb();
+    // update().set().where() returns chain, then .returning() returns empty
+    chain.returning.mockResolvedValueOnce([]);
+    // existence check: select().from().where() returns the entity
+    chain.where
+      .mockReturnValueOnce(chain) // update().set().where() — chains to .returning()
+      .mockResolvedValueOnce([{ id: REPORT_ID }]); // select().from().where() — entity exists
+
+    await expect(archiveFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 409, code: "ALREADY_ARCHIVED" }),
+    );
+  });
+});
+
+// ── restoreFrontingReport ────────────────────────────────────────────
+
+describe("restoreFrontingReport", () => {
+  it("rejects unauthenticated access", async () => {
+    const { db } = mockDb();
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    await expect(restoreFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit)).rejects.toThrow(
+      "System not found",
+    );
+  });
+
+  it("restores an archived report", async () => {
+    const { db, chain } = mockDb();
+    const restoredRow = makeReportRow({ archived: false, archivedAt: null, version: 2 });
+    chain.returning.mockResolvedValueOnce([restoredRow]);
+
+    const result = await restoreFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit);
+    expect(result.id).toBe(REPORT_ID);
+    expect(result.archived).toBe(false);
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "fronting-report.restored" }),
+    );
+  });
+
+  it("throws 404 when archived report not found", async () => {
+    const { db, chain } = mockDb();
+    // update().set().where() returns chain, then .returning() returns empty
+    chain.returning.mockResolvedValueOnce([]);
+    // existence check: select().from().where() resolves to empty
+    chain.where
+      .mockReturnValueOnce(chain) // update().set().where() — chains to .returning()
+      .mockResolvedValueOnce([]); // select().from().where() — no entity
+
+    await expect(restoreFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("throws NOT_ARCHIVED when report is not archived", async () => {
+    const { db, chain } = mockDb();
+    // update().set().where() returns chain, then .returning() returns empty
+    chain.returning.mockResolvedValueOnce([]);
+    // existence check: select().from().where() returns the entity
+    chain.where
+      .mockReturnValueOnce(chain) // update().set().where() — chains to .returning()
+      .mockResolvedValueOnce([{ id: REPORT_ID }]); // select().from().where() — entity exists
+
+    await expect(restoreFrontingReport(db, SYSTEM_ID, REPORT_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 409, code: "NOT_ARCHIVED" }),
     );
   });
 });

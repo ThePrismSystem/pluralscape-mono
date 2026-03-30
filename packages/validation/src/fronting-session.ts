@@ -50,6 +50,16 @@ export const FrontingSessionQuerySchema = z.object({
     .transform((v) => Number(v))
     .pipe(z.number().int().min(0))
     .optional(),
+  endFrom: z
+    .string()
+    .transform((v) => Number(v))
+    .pipe(z.number().int().min(0))
+    .optional(),
+  endUntil: z
+    .string()
+    .transform((v) => Number(v))
+    .pipe(z.number().int().min(0))
+    .optional(),
   activeOnly: booleanQueryParam,
   includeArchived: booleanQueryParam,
 });

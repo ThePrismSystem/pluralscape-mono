@@ -48,6 +48,7 @@ const {
   restoreStructureEntity,
   deleteStructureEntity,
   createEntityLink,
+  updateEntityLink,
   listEntityLinks,
   deleteEntityLink,
   createEntityMemberLink,
@@ -935,6 +936,61 @@ describe("listEntityLinks", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.hasMore).toBe(true);
+  });
+});
+
+describe("updateEntityLink", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("updates sortOrder and returns updated link", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sel_test-link" }]);
+    chain.returning.mockResolvedValueOnce([makeEntityLinkRow({ sortOrder: 5 })]);
+
+    const result = await updateEntityLink(
+      db,
+      SYSTEM_ID,
+      "sel_test-link",
+      { sortOrder: 5 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe("sel_test-link");
+    expect(result.sortOrder).toBe(5);
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "structure-entity-link.updated" }),
+    );
+  });
+
+  it("throws NOT_FOUND when link does not exist", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([]);
+
+    await expect(
+      updateEntityLink(db, SYSTEM_ID, "sel_missing", { sortOrder: 0 }, AUTH, mockAudit),
+    ).rejects.toThrow("Structure entity link not found");
+  });
+
+  it("throws VALIDATION_ERROR for invalid payload", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      updateEntityLink(db, SYSTEM_ID, "sel_test-link", {}, AUTH, mockAudit),
+    ).rejects.toThrow("Invalid update payload");
+  });
+
+  it("throws VALIDATION_ERROR for negative sortOrder", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      updateEntityLink(db, SYSTEM_ID, "sel_test-link", { sortOrder: -1 }, AUTH, mockAudit),
+    ).rejects.toThrow("Invalid update payload");
   });
 });
 

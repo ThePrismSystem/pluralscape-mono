@@ -66,6 +66,7 @@ export {
 export type { PlaintextMetadata } from "./lifecycle-event.js";
 export {
   CreateStructureEntityLinkBodySchema,
+  UpdateStructureEntityLinkBodySchema,
   CreateStructureEntityMemberLinkBodySchema,
   CreateStructureEntityAssociationBodySchema,
 } from "./structure-junction.js";
@@ -99,7 +100,11 @@ export {
   StructureEntityMemberLinkQuerySchema,
   StructureEntityAssociationQuerySchema,
 } from "./query-params.js";
-export { AnalyticsQuerySchema, CreateFrontingReportBodySchema } from "./analytics.js";
+export {
+  AnalyticsQuerySchema,
+  CreateFrontingReportBodySchema,
+  UpdateFrontingReportBodySchema,
+} from "./analytics.js";
 export {
   CreateTimerConfigBodySchema,
   UpdateTimerConfigBodySchema,

@@ -47,6 +47,15 @@ export const AnalyticsQuerySchema = z
     { message: "Custom date range must not exceed 366 days" },
   );
 
+// ── Update fronting report ─────────────────────────────────────
+
+export const UpdateFrontingReportBodySchema = z
+  .object({
+    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
+    version: z.int().min(1),
+  })
+  .readonly();
+
 // ── Create fronting report ─────────────────────────────────────
 
 export const CreateFrontingReportBodySchema = z

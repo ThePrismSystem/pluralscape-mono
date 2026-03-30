@@ -238,6 +238,27 @@ describe("listFrontingSessions", () => {
     expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
   });
 
+  it("applies endFrom filter", async () => {
+    const chain = await callListWithFilter({ endFrom: 500 });
+
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
+  });
+
+  it("applies endUntil filter", async () => {
+    const chain = await callListWithFilter({ endUntil: 2000 });
+
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
+  });
+
+  it("applies both endFrom and endUntil filters", async () => {
+    const chain = await callListWithFilter({ endFrom: 500, endUntil: 2000 });
+
+    expect(chain.where).toHaveBeenCalledTimes(1);
+    expect(captureWhereArg(chain)).not.toEqual(baseWhereArg);
+  });
+
   it("applies activeOnly filter", async () => {
     const chain = await callListWithFilter({ activeOnly: true });
 
@@ -774,6 +795,25 @@ describe("parseFrontingSessionQuery", () => {
     const result = parseFrontingSessionQuery({ activeOnly: "true" });
 
     expect(result.activeOnly).toBe(true);
+  });
+
+  it("parses endFrom filter", () => {
+    const result = parseFrontingSessionQuery({ endFrom: "1000" });
+
+    expect(result.endFrom).toBe(1000);
+  });
+
+  it("parses endUntil filter", () => {
+    const result = parseFrontingSessionQuery({ endUntil: "2000" });
+
+    expect(result.endUntil).toBe(2000);
+  });
+
+  it("parses both endFrom and endUntil filters", () => {
+    const result = parseFrontingSessionQuery({ endFrom: "1000", endUntil: "2000" });
+
+    expect(result.endFrom).toBe(1000);
+    expect(result.endUntil).toBe(2000);
   });
 
   it("throws 400 VALIDATION_ERROR for invalid memberId prefix", () => {
