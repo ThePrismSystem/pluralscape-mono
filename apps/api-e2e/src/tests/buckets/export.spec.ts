@@ -194,7 +194,9 @@ test.describe("Bucket export", () => {
           recoveryKeyBackupConfirmed: true,
         },
       });
-      const { data: { sessionToken: token1 } } = (await reg1.json()) as { data: { sessionToken: string } };
+      const {
+        data: { sessionToken: token1 },
+      } = (await reg1.json()) as { data: { sessionToken: string } };
       const headers1 = { Authorization: `Bearer ${token1}` };
 
       const reg2 = await request.post("/v1/auth/register", {
@@ -204,7 +206,9 @@ test.describe("Bucket export", () => {
           recoveryKeyBackupConfirmed: true,
         },
       });
-      const { data: { sessionToken: token2 } } = (await reg2.json()) as { data: { sessionToken: string } };
+      const {
+        data: { sessionToken: token2 },
+      } = (await reg2.json()) as { data: { sessionToken: string } };
       const headers2 = { Authorization: `Bearer ${token2}` };
 
       const systemId = await getSystemId(request, headers1);
@@ -304,7 +308,9 @@ test.describe("Bucket export", () => {
           recoveryKeyBackupConfirmed: true,
         },
       });
-      const { data: { sessionToken: t1 } } = (await reg1.json()) as { data: { sessionToken: string } };
+      const {
+        data: { sessionToken: t1 },
+      } = (await reg1.json()) as { data: { sessionToken: string } };
       const h1 = { Authorization: `Bearer ${t1}` };
 
       const reg2 = await request.post("/v1/auth/register", {
@@ -314,7 +320,9 @@ test.describe("Bucket export", () => {
           recoveryKeyBackupConfirmed: true,
         },
       });
-      const { data: { sessionToken: t2 } } = (await reg2.json()) as { data: { sessionToken: string } };
+      const {
+        data: { sessionToken: t2 },
+      } = (await reg2.json()) as { data: { sessionToken: string } };
       const h2 = { Authorization: `Bearer ${t2}` };
 
       const sysId = await getSystemId(request, h1);

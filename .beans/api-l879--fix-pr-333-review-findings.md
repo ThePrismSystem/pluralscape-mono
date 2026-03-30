@@ -1,6 +1,6 @@
 ---
 # api-l879
-title: 'Fix PR #333 review findings'
+title: "Fix PR #333 review findings"
 status: in-progress
 type: task
 created_at: 2026-03-30T15:10:21Z
