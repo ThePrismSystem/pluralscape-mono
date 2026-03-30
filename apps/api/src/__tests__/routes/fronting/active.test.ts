@@ -89,9 +89,9 @@ describe("GET /systems/:id/fronting/active", () => {
     const res = await app.request(ACTIVE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { sessions: unknown[]; isCofronting: boolean };
-    expect(body.sessions).toEqual([]);
-    expect(body.isCofronting).toBe(false);
+    const body = (await res.json()) as { data: { sessions: unknown[]; isCofronting: boolean } };
+    expect(body.data.sessions).toEqual([]);
+    expect(body.data.isCofronting).toBe(false);
   });
 
   it("returns single active session", async () => {
@@ -105,9 +105,9 @@ describe("GET /systems/:id/fronting/active", () => {
     const res = await app.request(ACTIVE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { sessions: unknown[]; isCofronting: boolean };
-    expect(body.sessions).toHaveLength(1);
-    expect(body.isCofronting).toBe(false);
+    const body = (await res.json()) as { data: { sessions: unknown[]; isCofronting: boolean } };
+    expect(body.data.sessions).toHaveLength(1);
+    expect(body.data.isCofronting).toBe(false);
   });
 
   it("returns isCofronting true when multiple sessions active", async () => {
@@ -127,9 +127,9 @@ describe("GET /systems/:id/fronting/active", () => {
     const res = await app.request(ACTIVE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { sessions: unknown[]; isCofronting: boolean };
-    expect(body.sessions).toHaveLength(2);
-    expect(body.isCofronting).toBe(true);
+    const body = (await res.json()) as { data: { sessions: unknown[]; isCofronting: boolean } };
+    expect(body.data.sessions).toHaveLength(2);
+    expect(body.data.isCofronting).toBe(true);
   });
 
   it("reports isCofronting false when only one member plus custom front", async () => {
@@ -150,9 +150,9 @@ describe("GET /systems/:id/fronting/active", () => {
     const res = await app.request(ACTIVE_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { sessions: unknown[]; isCofronting: boolean };
-    expect(body.sessions).toHaveLength(2);
-    expect(body.isCofronting).toBe(false);
+    const body = (await res.json()) as { data: { sessions: unknown[]; isCofronting: boolean } };
+    expect(body.data.sessions).toHaveLength(2);
+    expect(body.data.isCofronting).toBe(false);
   });
 
   it("includes entity member map when structure entities are fronting", async () => {
@@ -178,8 +178,8 @@ describe("GET /systems/:id/fronting/active", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      entityMemberMap: Record<string, string[]>;
+      data: { entityMemberMap: Record<string, string[]> };
     };
-    expect(body.entityMemberMap["ste_aa0e8400-e29b-41d4-a716-446655440000"]).toHaveLength(2);
+    expect(body.data.entityMemberMap["ste_aa0e8400-e29b-41d4-a716-446655440000"]).toHaveLength(2);
   });
 });

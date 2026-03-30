@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { updateFrontingComment } from "../../../services/fronting-comment.service.js";
 
@@ -28,5 +29,5 @@ updateRoute.put("/:commentId", async (c) => {
 
   const db = await getDb();
   const result = await updateFrontingComment(db, systemId, sessionId, commentId, body, auth, audit);
-  return c.json(result);
+  return c.json(envelope(result));
 });

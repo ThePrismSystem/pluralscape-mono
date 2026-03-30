@@ -93,8 +93,8 @@ describe("POST /systems/:id/fronting-sessions", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("fs_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("fs_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 400 for malformed JSON body", async () => {
@@ -144,8 +144,8 @@ describe("GET /systems/:id/fronting-sessions/:sessionId", () => {
     const res = await app.request(FS_URL);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("fs_660e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("fs_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when not found", async () => {
@@ -185,8 +185,8 @@ describe("PUT /systems/:id/fronting-sessions/:sessionId", () => {
     const res = await putJSON(app, FS_URL, { encryptedData: "dGVzdA==", version: 1 });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(2);
   });
 
   it("returns 409 on version conflict", async () => {
@@ -221,8 +221,8 @@ describe("POST /systems/:id/fronting-sessions/:sessionId/end", () => {
     const res = await postJSON(app, `${FS_URL}/end`, { endTime: 2000, version: 1 });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { endTime: number };
-    expect(body.endTime).toBe(2000);
+    const body = (await res.json()) as { data: { endTime: number } };
+    expect(body.data.endTime).toBe(2000);
   });
 
   it("returns 400 when endTime <= startTime", async () => {

@@ -7,6 +7,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { getQueue } from "../../lib/queue.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { createFrontingSession } from "../../services/fronting-session.service.js";
 import { dispatchSwitchAlertForSession } from "../../services/switch-alert-dispatcher.js";
@@ -40,5 +41,5 @@ createRoute.post("/", async (c) => {
     );
   }
 
-  return c.json(result, HTTP_CREATED);
+  return c.json(envelope(result), HTTP_CREATED);
 });

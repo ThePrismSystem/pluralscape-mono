@@ -6,6 +6,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { createFrontingComment } from "../../../services/fronting-comment.service.js";
 
@@ -28,5 +29,5 @@ createRoute.post("/", async (c) => {
 
   const db = await getDb();
   const result = await createFrontingComment(db, systemId, sessionId, body, auth, audit);
-  return c.json(result, HTTP_CREATED);
+  return c.json(envelope(result), HTTP_CREATED);
 });

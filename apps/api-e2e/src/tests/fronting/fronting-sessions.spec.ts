@@ -30,7 +30,9 @@ test.describe("Fronting Sessions", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const session = await res.json();
+      const body = await res.json();
+      expect(body).toHaveProperty("data");
+      const session = (body as { data: Record<string, unknown> }).data;
       expect(session).toHaveProperty("id");
       expect(session.systemId).toBe(systemId);
       expect(session.startTime).toBeTruthy();
@@ -65,7 +67,8 @@ test.describe("Fronting Sessions", () => {
         headers: authHeaders,
       });
       expect(res.status()).toBe(200);
-      const session = await res.json();
+      const body = await res.json();
+      const session = (body as { data: Record<string, unknown> }).data;
       expect(session.id).toBe(sessionId);
       expect(session.encryptedData).toBeTruthy();
     });
@@ -79,7 +82,8 @@ test.describe("Fronting Sessions", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const session = await res.json();
+      const body = await res.json();
+      const session = (body as { data: Record<string, unknown> }).data;
       expect(session.version).toBe(2);
     });
 
@@ -92,7 +96,8 @@ test.describe("Fronting Sessions", () => {
         },
       });
       expect(res.status()).toBe(200);
-      const session = await res.json();
+      const body = await res.json();
+      const session = (body as { data: Record<string, unknown> }).data;
       expect(session.endTime).not.toBeNull();
     });
 
@@ -151,8 +156,8 @@ test.describe("Fronting Sessions", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const session = await res.json();
-      sessionAId = session.id as string;
+      const body = await res.json();
+      sessionAId = (body as { data: { id: string } }).data.id;
     });
 
     await test.step("create session for member B", async () => {
@@ -165,8 +170,8 @@ test.describe("Fronting Sessions", () => {
         },
       });
       expect(res.status()).toBe(201);
-      const session = await res.json();
-      sessionBId = session.id as string;
+      const body = await res.json();
+      sessionBId = (body as { data: { id: string } }).data.id;
     });
 
     await test.step("list active sessions includes both", async () => {
