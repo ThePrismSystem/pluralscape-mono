@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { BucketId, FriendAccessContext, FriendConnectionId, SystemId } from "@pluralscape/types";
+import type {
+  BucketId,
+  FriendAccessContext,
+  FriendConnectionId,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Mocks ─────────────────────────────────────────────────────────
 
@@ -74,9 +79,7 @@ wireChain();
 // ── Imports after mocks ───────────────────────────────────────────
 
 const { assertFriendAccess } = await import("../../lib/friend-access.js");
-const { getFriendDashboardSync } = await import(
-  "../../services/friend-dashboard-sync.service.js"
-);
+const { getFriendDashboardSync } = await import("../../services/friend-dashboard-sync.service.js");
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
@@ -222,13 +225,11 @@ describe("getFriendDashboardSync", () => {
   });
 
   it("propagates errors from assertFriendAccess", async () => {
-    vi.mocked(assertFriendAccess).mockRejectedValueOnce(
-      new Error("Friend connection not found"),
-    );
+    vi.mocked(assertFriendAccess).mockRejectedValueOnce(new Error("Friend connection not found"));
 
-    await expect(
-      getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth()),
-    ).rejects.toThrow("Friend connection not found");
+    await expect(getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth())).rejects.toThrow(
+      "Friend connection not found",
+    );
   });
 
   it("handles mixed: some entities have data, some have null aggregates", async () => {

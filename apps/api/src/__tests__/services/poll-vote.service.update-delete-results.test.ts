@@ -369,27 +369,27 @@ describe("deletePollVote", () => {
     const { db } = mockDb();
     // chain.limit defaults to [] — vote not found
 
-    await expect(
-      deletePollVote(db, SYSTEM_ID, POLL_ID, VOTE_ID, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    await expect(deletePollVote(db, SYSTEM_ID, POLL_ID, VOTE_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 
   it("throws ALREADY_ARCHIVED when vote is already archived", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: VOTE_ID, archived: true }]);
 
-    await expect(
-      deletePollVote(db, SYSTEM_ID, POLL_ID, VOTE_ID, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "ALREADY_ARCHIVED" }));
+    await expect(deletePollVote(db, SYSTEM_ID, POLL_ID, VOTE_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 409, code: "ALREADY_ARCHIVED" }),
+    );
   });
 
   it("throws 404 on ownership failure", async () => {
     const { db } = mockDb();
     mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
-    await expect(
-      deletePollVote(db, SYSTEM_ID, POLL_ID, VOTE_ID, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    await expect(deletePollVote(db, SYSTEM_ID, POLL_ID, VOTE_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });
 
@@ -433,11 +433,16 @@ describe("getPollResults", () => {
 
   it("returns aggregated results for a poll with votes", async () => {
     const { db, chain } = mockDb();
-    mockPollResultsChain(chain, true, [
-      { optionId: "opt_a", count: 3 },
-      { optionId: "opt_b", count: 2 },
-      { optionId: null, count: 1 },
-    ], 1);
+    mockPollResultsChain(
+      chain,
+      true,
+      [
+        { optionId: "opt_a", count: 3 },
+        { optionId: "opt_b", count: 2 },
+        { optionId: null, count: 1 },
+      ],
+      1,
+    );
 
     const result = await getPollResults(db, SYSTEM_ID, POLL_ID, AUTH);
 
@@ -483,9 +488,7 @@ describe("getPollResults", () => {
     // Poll exists
     chain.limit.mockResolvedValueOnce([{ id: POLL_ID }]);
     // Option counts
-    chain.groupBy.mockResolvedValueOnce([
-      { optionId: "opt_a", count: 2 },
-    ]);
+    chain.groupBy.mockResolvedValueOnce([{ optionId: "opt_a", count: 2 }]);
     // Veto count query resolves to empty array — vetoRow is undefined, falls back to 0
     let whereCallCount = 0;
     chain.where = vi.fn((): unknown => {
@@ -547,11 +550,7 @@ describe("castVote — additional branch coverage", () => {
 
   it("allows multiple votes when allowMultipleVotes is true and under maxVotesPerMember", async () => {
     const { db, chain } = mockDb();
-    mockCastVoteChain(
-      chain,
-      [makePollRow({ allowMultipleVotes: true, maxVotesPerMember: 5 })],
-      3,
-    );
+    mockCastVoteChain(chain, [makePollRow({ allowMultipleVotes: true, maxVotesPerMember: 5 })], 3);
     chain.returning.mockResolvedValueOnce([makeVoteRow()]);
 
     const result = await castVote(db, SYSTEM_ID, POLL_ID, validPayload, AUTH, mockAudit);
@@ -561,11 +560,7 @@ describe("castVote — additional branch coverage", () => {
 
   it("throws TOO_MANY_VOTES when multiple votes allowed but limit reached", async () => {
     const { db, chain } = mockDb();
-    mockCastVoteChain(
-      chain,
-      [makePollRow({ allowMultipleVotes: true, maxVotesPerMember: 3 })],
-      3,
-    );
+    mockCastVoteChain(chain, [makePollRow({ allowMultipleVotes: true, maxVotesPerMember: 3 })], 3);
 
     await expect(castVote(db, SYSTEM_ID, POLL_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 409, code: "TOO_MANY_VOTES" }),
@@ -575,11 +570,7 @@ describe("castVote — additional branch coverage", () => {
   it("uses effectiveMax of 1 when allowMultipleVotes is false regardless of maxVotesPerMember", async () => {
     const { db, chain } = mockDb();
     // maxVotesPerMember is 5 but allowMultipleVotes is false, so effective max is 1
-    mockCastVoteChain(
-      chain,
-      [makePollRow({ allowMultipleVotes: false, maxVotesPerMember: 5 })],
-      1,
-    );
+    mockCastVoteChain(chain, [makePollRow({ allowMultipleVotes: false, maxVotesPerMember: 5 })], 1);
 
     await expect(castVote(db, SYSTEM_ID, POLL_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 409, code: "TOO_MANY_VOTES" }),

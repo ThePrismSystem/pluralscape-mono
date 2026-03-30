@@ -89,9 +89,8 @@ vi.mock("@pluralscape/db/pg", () => ({
 
 // ── Imports after mocks ───────────────────────────────────────────
 
-const { createApiKey, listApiKeys, getApiKey, revokeApiKey } = await import(
-  "../../services/api-key.service.js"
-);
+const { createApiKey, listApiKeys, getApiKey, revokeApiKey } =
+  await import("../../services/api-key.service.js");
 
 // ── Fixtures ──────────────────────────────────────────────────────
 
@@ -367,9 +366,7 @@ describe("listApiKeys", () => {
 
   it("detects hasMore when rows exceed limit", async () => {
     // Return limit+1 rows to trigger hasMore
-    const rows = Array.from({ length: 26 }, (_, i) =>
-      makeApiKeyRow({ id: `ak_key-${String(i)}` }),
-    );
+    const rows = Array.from({ length: 26 }, (_, i) => makeApiKeyRow({ id: `ak_key-${String(i)}` }));
     mockTx.limit.mockResolvedValueOnce(rows);
 
     const result = await listApiKeys({} as never, SYSTEM_ID, AUTH);

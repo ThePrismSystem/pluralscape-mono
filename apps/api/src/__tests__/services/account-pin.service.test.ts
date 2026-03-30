@@ -23,12 +23,10 @@ vi.mock("../../lib/pwhash-offload.js", () => ({
 
 vi.mock("../../lib/rls-context.js", () => ({
   withAccountTransaction: vi.fn(
-    (_db: unknown, _accountId: unknown, fn: (tx: unknown) => Promise<unknown>) =>
-      fn(mockTx),
+    (_db: unknown, _accountId: unknown, fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
   ),
   withAccountRead: vi.fn(
-    (_db: unknown, _accountId: unknown, fn: (tx: unknown) => Promise<unknown>) =>
-      fn(mockTx),
+    (_db: unknown, _accountId: unknown, fn: (tx: unknown) => Promise<unknown>) => fn(mockTx),
   ),
 }));
 
@@ -75,9 +73,8 @@ wireChain();
 // ── Import under test ────────────────────────────────────────────────
 
 const { hashPinOffload, verifyPinOffload } = await import("../../lib/pwhash-offload.js");
-const { setAccountPin, removeAccountPin, verifyAccountPin } = await import(
-  "../../services/account-pin.service.js"
-);
+const { setAccountPin, removeAccountPin, verifyAccountPin } =
+  await import("../../services/account-pin.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -111,9 +108,7 @@ describe("setAccountPin", () => {
   });
 
   it("throws VALIDATION_ERROR for invalid PIN format", async () => {
-    await expect(
-      setAccountPin({} as never, ACCOUNT_ID, { pin: "abc" }, mockAudit),
-    ).rejects.toThrow(
+    await expect(setAccountPin({} as never, ACCOUNT_ID, { pin: "abc" }, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
     );
   });
@@ -131,7 +126,11 @@ describe("setAccountPin", () => {
     await expect(
       setAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "No system found for account" }),
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "No system found for account",
+      }),
     );
   });
 
@@ -144,7 +143,11 @@ describe("setAccountPin", () => {
     await expect(
       setAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "System settings not found" }),
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "System settings not found",
+      }),
     );
   });
 });
@@ -176,9 +179,7 @@ describe("removeAccountPin", () => {
   it("throws VALIDATION_ERROR for invalid PIN format", async () => {
     await expect(
       removeAccountPin({} as never, ACCOUNT_ID, { pin: "short" }, mockAudit),
-    ).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws NOT_FOUND when no system found for account", async () => {
@@ -187,7 +188,11 @@ describe("removeAccountPin", () => {
     await expect(
       removeAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "No system found for account" }),
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "No system found for account",
+      }),
     );
   });
 
@@ -201,7 +206,11 @@ describe("removeAccountPin", () => {
     await expect(
       removeAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "System settings not found" }),
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "System settings not found",
+      }),
     );
   });
 
@@ -229,9 +238,7 @@ describe("removeAccountPin", () => {
 
     await expect(
       removeAccountPin({} as never, ACCOUNT_ID, { pin: "9999" }, mockAudit),
-    ).rejects.toThrow(
-      expect.objectContaining({ status: 401, code: "INVALID_PIN" }),
-    );
+    ).rejects.toThrow(expect.objectContaining({ status: 401, code: "INVALID_PIN" }));
   });
 });
 
@@ -263,9 +270,7 @@ describe("verifyAccountPin", () => {
   it("throws VALIDATION_ERROR for invalid PIN format", async () => {
     await expect(
       verifyAccountPin({} as never, ACCOUNT_ID, { pin: "toolong1234" }, mockAudit),
-    ).rejects.toThrow(
-      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
-    );
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws NOT_FOUND when no system found for account", async () => {
@@ -274,7 +279,11 @@ describe("verifyAccountPin", () => {
     await expect(
       verifyAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "No system found for account" }),
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "No system found for account",
+      }),
     );
   });
 
@@ -290,7 +299,11 @@ describe("verifyAccountPin", () => {
     await expect(
       verifyAccountPin({} as never, ACCOUNT_ID, { pin: VALID_PIN }, mockAudit),
     ).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND", message: "System settings not found" }),
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "System settings not found",
+      }),
     );
 
     // Verify anti-timing: verifyPinOffload was still called with the dummy hash
@@ -329,8 +342,6 @@ describe("verifyAccountPin", () => {
 
     await expect(
       verifyAccountPin({} as never, ACCOUNT_ID, { pin: "9999" }, mockAudit),
-    ).rejects.toThrow(
-      expect.objectContaining({ status: 401, code: "INVALID_PIN" }),
-    );
+    ).rejects.toThrow(expect.objectContaining({ status: 401, code: "INVALID_PIN" }));
   });
 });

@@ -39,12 +39,8 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const {
-  updateLifecycleEvent,
-  createLifecycleEvent,
-  listLifecycleEvents,
-  getLifecycleEvent,
-} = await import("../../services/lifecycle-event.service.js");
+const { updateLifecycleEvent, createLifecycleEvent, listLifecycleEvents, getLifecycleEvent } =
+  await import("../../services/lifecycle-event.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -183,9 +179,7 @@ describe("updateLifecycleEvent", () => {
   it("updates occurredAt when provided", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([makeLifecycleEventRow()]);
-    chain.returning.mockResolvedValueOnce([
-      makeLifecycleEventRow({ occurredAt: 500, version: 2 }),
-    ]);
+    chain.returning.mockResolvedValueOnce([makeLifecycleEventRow({ occurredAt: 500, version: 2 })]);
 
     const result = await updateLifecycleEvent(
       db,
@@ -293,9 +287,7 @@ describe("updateLifecycleEvent", () => {
   it("preserves current occurredAt when update does not include occurredAt", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([makeLifecycleEventRow({ occurredAt: 777 })]);
-    chain.returning.mockResolvedValueOnce([
-      makeLifecycleEventRow({ occurredAt: 777, version: 2 }),
-    ]);
+    chain.returning.mockResolvedValueOnce([makeLifecycleEventRow({ occurredAt: 777, version: 2 })]);
 
     const result = await updateLifecycleEvent(
       db,
@@ -312,9 +304,7 @@ describe("updateLifecycleEvent", () => {
   it("preserves current plaintextMetadata when not provided in update", async () => {
     const { db, chain } = mockDb();
     const existingMeta = { memberIds: ["mem_existing"] };
-    chain.limit.mockResolvedValueOnce([
-      makeLifecycleEventRow({ plaintextMetadata: existingMeta }),
-    ]);
+    chain.limit.mockResolvedValueOnce([makeLifecycleEventRow({ plaintextMetadata: existingMeta })]);
     chain.returning.mockResolvedValueOnce([
       makeLifecycleEventRow({ plaintextMetadata: existingMeta, version: 2 }),
     ]);
@@ -415,9 +405,9 @@ describe("listLifecycleEvents — cursor edge cases", () => {
   it("throws INVALID_CURSOR for malformed cursor string", async () => {
     const { db } = mockDb();
 
-    await expect(
-      listLifecycleEvents(db, SYSTEM_ID, AUTH, "not-valid-base64-json"),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "INVALID_CURSOR" }));
+    await expect(listLifecycleEvents(db, SYSTEM_ID, AUTH, "not-valid-base64-json")).rejects.toThrow(
+      expect.objectContaining({ status: 400, code: "INVALID_CURSOR" }),
+    );
   });
 
   it("throws INVALID_CURSOR for cursor with missing fields", async () => {
@@ -431,9 +421,9 @@ describe("listLifecycleEvents — cursor edge cases", () => {
 
   it("throws INVALID_CURSOR for cursor with wrong field types", async () => {
     const { db } = mockDb();
-    const badCursor = Buffer.from(
-      JSON.stringify({ occurredAt: "not-a-number", id: 123 }),
-    ).toString("base64");
+    const badCursor = Buffer.from(JSON.stringify({ occurredAt: "not-a-number", id: 123 })).toString(
+      "base64",
+    );
 
     await expect(listLifecycleEvents(db, SYSTEM_ID, AUTH, badCursor)).rejects.toThrow(
       expect.objectContaining({ status: 400, code: "INVALID_CURSOR" }),

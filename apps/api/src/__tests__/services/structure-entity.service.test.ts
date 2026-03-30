@@ -118,9 +118,7 @@ function makeEntityLinkRow(overrides: Record<string, unknown> = {}): Record<stri
   };
 }
 
-function makeEntityMemberLinkRow(
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
+function makeEntityMemberLinkRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "sem_test-member-link",
     systemId: SYSTEM_ID,
@@ -421,9 +419,9 @@ describe("deleteEntityType", () => {
     chain.where.mockReturnValueOnce(chain);
     chain.limit.mockResolvedValueOnce([]);
 
-    await expect(
-      deleteEntityType(db, SYSTEM_ID, "set_missing", AUTH, mockAudit),
-    ).rejects.toThrow("Structure entity type not found");
+    await expect(deleteEntityType(db, SYSTEM_ID, "set_missing", AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity type not found",
+    );
   });
 
   it("throws HAS_DEPENDENTS when entity type has entities", async () => {
@@ -746,13 +744,7 @@ describe("restoreStructureEntity", () => {
       makeStructureEntityRow({ archived: false, archivedAt: null, version: 2 }),
     ]);
 
-    const result = await restoreStructureEntity(
-      db,
-      SYSTEM_ID,
-      "sse_test-entity",
-      AUTH,
-      mockAudit,
-    );
+    const result = await restoreStructureEntity(db, SYSTEM_ID, "sse_test-entity", AUTH, mockAudit);
 
     expect(result.id).toBe("sse_test-entity");
     expect(result.archived).toBe(false);
@@ -956,9 +948,9 @@ describe("deleteEntityLink", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await expect(
-      deleteEntityLink(db, SYSTEM_ID, "sel_missing", AUTH, mockAudit),
-    ).rejects.toThrow("Structure entity link not found");
+    await expect(deleteEntityLink(db, SYSTEM_ID, "sel_missing", AUTH, mockAudit)).rejects.toThrow(
+      "Structure entity link not found",
+    );
   });
 });
 

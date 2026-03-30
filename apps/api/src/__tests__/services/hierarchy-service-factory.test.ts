@@ -338,10 +338,7 @@ describe("hierarchy-service-factory — list", () => {
   it("detects hasMore when more rows than limit", async () => {
     const service = makeService();
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([
-      makeTestRow({ id: "ent_a" }),
-      makeTestRow({ id: "ent_b" }),
-    ]);
+    chain.limit.mockResolvedValueOnce([makeTestRow({ id: "ent_a" }), makeTestRow({ id: "ent_b" })]);
 
     const result = await service.list(db, SYSTEM_ID, AUTH, undefined, 1);
 
@@ -525,13 +522,7 @@ describe("hierarchy-service-factory — remove", () => {
       chain,
       expect.objectContaining({ eventType: "entity.deleted" }),
     );
-    expect(checkDependents).toHaveBeenCalledWith(
-      chain,
-      ENTITY_ID,
-      SYSTEM_ID,
-      "Entity",
-      [],
-    );
+    expect(checkDependents).toHaveBeenCalledWith(chain, ENTITY_ID, SYSTEM_ID, "Entity", []);
   });
 
   it("throws NOT_FOUND when entity does not exist", async () => {
