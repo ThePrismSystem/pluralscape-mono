@@ -45,7 +45,9 @@ export const connectionManager = new ConnectionManager();
 
 /** Sync pub/sub instance for cross-instance broadcast. Nullable — set at startup. */
 let syncPubSub: ValkeyPubSub | null = null;
-let routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager, null);
+const routerCtxRef = {
+  current: createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager, null),
+};
 
 /**
  * Set the sync pub/sub instance (called at startup when Valkey is available).
@@ -53,7 +55,7 @@ let routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager, n
  */
 export function setSyncPubSub(pubsub: ValkeyPubSub): void {
   syncPubSub = pubsub;
-  routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager, syncPubSub);
+  routerCtxRef.current = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager, syncPubSub);
 }
 
 /** Get the current sync pub/sub instance (for shutdown). */
@@ -236,13 +238,15 @@ syncWsApp.get(
 
         const wasAwaitingAuth = state.phase === "awaiting-auth";
 
-        void routeMessage(evt.data, state, log, routerCtx)
+        void routeMessage(evt.data, state, log, routerCtxRef.current)
           .then(() => {
             // Start heartbeat after successful authentication transition
             if (wasAwaitingAuth) {
               const updated = connectionManager.get(connectionId);
               if (updated?.phase === "authenticated") {
-                startHeartbeat(connectionId, updated.ws, log);
+                startHeartbeat(connectionId, updated.ws, log, () => {
+                  connectionManager.remove(connectionId);
+                });
               }
             }
           })

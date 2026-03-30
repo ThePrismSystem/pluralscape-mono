@@ -31,6 +31,8 @@ interface HeartbeatState {
   pongTimeoutHandle: ReturnType<typeof setTimeout> | null;
   /** Reference to the WebSocket for sending pings and closing on timeout. */
   ws: WSContext;
+  /** Callback invoked when the connection is determined dead (ping failure or pong timeout). */
+  onDead: (() => void) | undefined;
 }
 
 /** Active heartbeat state keyed by connectionId. */
@@ -42,13 +44,19 @@ const heartbeats = new Map<string, HeartbeatState>();
  * Sends a Ping message every WS_HEARTBEAT_INTERVAL_MS. If no Pong is
  * received within WS_PONG_TIMEOUT_MS after a Ping, the connection is closed.
  */
-export function startHeartbeat(connectionId: string, ws: WSContext, log: AppLogger): void {
+export function startHeartbeat(
+  connectionId: string,
+  ws: WSContext,
+  log: AppLogger,
+  onDead?: () => void,
+): void {
   // Prevent duplicate heartbeat for same connection
   clearHeartbeat(connectionId);
 
   const state: HeartbeatState = {
     ws,
     pongTimeoutHandle: null,
+    onDead,
     intervalHandle: setInterval(() => {
       sendPing(connectionId, state, log);
     }, WS_HEARTBEAT_INTERVAL_MS),
@@ -66,6 +74,8 @@ function sendPing(connectionId: string, state: HeartbeatState, log: AppLogger): 
       connectionId,
       error: formatError(err),
     });
+    clearHeartbeat(connectionId);
+    state.onDead?.();
     return;
   }
 
@@ -82,6 +92,7 @@ function sendPing(connectionId: string, state: HeartbeatState, log: AppLogger): 
     }
     // Clean up heartbeat state since connection is being closed
     heartbeats.delete(connectionId);
+    state.onDead?.();
   }, WS_PONG_TIMEOUT_MS);
 }
 
