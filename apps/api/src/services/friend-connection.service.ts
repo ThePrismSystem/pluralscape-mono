@@ -61,6 +61,7 @@ interface ListFriendConnectionOpts {
   readonly cursor?: string;
   readonly limit?: number;
   readonly includeArchived?: boolean;
+  readonly status?: FriendConnectionStatus;
 }
 
 interface UpdateFriendVisibilityParams {
@@ -76,6 +77,14 @@ const BLOCKABLE_STATUSES: readonly FriendConnectionStatus[] = ["accepted", "pend
 /** Status values that allow transition to removed. */
 const REMOVABLE_STATUSES: readonly FriendConnectionStatus[] = ["accepted", "pending", "blocked"];
 
+/** Status values that allow transition to accepted. */
+const ACCEPTABLE_STATUSES: readonly FriendConnectionStatus[] = ["pending"];
+
+/** Status values that allow transition to removed via rejection. */
+const REJECTABLE_STATUSES: readonly FriendConnectionStatus[] = ["pending"];
+
+const AUDIT_FRIEND_ACCEPTED: AuditEventType = "friend-connection.accepted";
+const AUDIT_FRIEND_REJECTED: AuditEventType = "friend-connection.rejected";
 const AUDIT_FRIEND_BLOCKED: AuditEventType = "friend-connection.blocked";
 const AUDIT_FRIEND_REMOVED: AuditEventType = "friend-connection.removed";
 const AUDIT_VISIBILITY_UPDATED: AuditEventType = "friend-visibility.updated";
@@ -116,6 +125,10 @@ export async function listFriendConnections(
 
     if (!opts.includeArchived) {
       conditions.push(eq(friendConnections.archived, false));
+    }
+
+    if (opts.status) {
+      conditions.push(eq(friendConnections.status, opts.status));
     }
 
     if (opts.cursor) {
@@ -397,6 +410,83 @@ async function terminateConnection(
       ...result,
       pendingRotations: [...callerRotations, ...reverseRotations],
     };
+  });
+}
+
+// ── ACCEPT ─────────────────────────────────────────────────────────
+
+export async function acceptFriendConnection(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  connectionId: FriendConnectionId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<FriendConnectionResult> {
+  assertAccountOwnership(accountId, auth);
+
+  const timestamp = now();
+
+  return withCrossAccountTransaction(db, async (tx) => {
+    const { result, existing } = await transitionConnectionStatus(
+      tx,
+      accountId,
+      connectionId,
+      timestamp,
+      auth,
+      audit,
+      {
+        targetStatus: "accepted",
+        allowedStatuses: ACCEPTABLE_STATUSES,
+        auditEventType: AUDIT_FRIEND_ACCEPTED,
+        auditDetail: "Friend connection accepted",
+      },
+    );
+
+    await updateReverseConnection(tx, accountId, existing.friendAccountId, "accepted", timestamp);
+
+    for (const systemId of auth.ownedSystemIds) {
+      await dispatchWebhookEvent(tx, systemId, "friend.connected", {
+        connectionId,
+        friendAccountId: existing.friendAccountId as AccountId,
+      });
+    }
+
+    return result;
+  });
+}
+
+// ── REJECT ─────────────────────────────────────────────────────────
+
+export async function rejectFriendConnection(
+  db: PostgresJsDatabase,
+  accountId: AccountId,
+  connectionId: FriendConnectionId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<FriendConnectionResult> {
+  assertAccountOwnership(accountId, auth);
+
+  const timestamp = now();
+
+  return withCrossAccountTransaction(db, async (tx) => {
+    const { result, existing } = await transitionConnectionStatus(
+      tx,
+      accountId,
+      connectionId,
+      timestamp,
+      auth,
+      audit,
+      {
+        targetStatus: "removed",
+        allowedStatuses: REJECTABLE_STATUSES,
+        auditEventType: AUDIT_FRIEND_REJECTED,
+        auditDetail: "Friend connection rejected",
+      },
+    );
+
+    await updateReverseConnection(tx, accountId, existing.friendAccountId, "removed", timestamp);
+
+    return result;
   });
 }
 

@@ -218,6 +218,8 @@ describe("AuditEventType", () => {
         case "friend-code.redeemed":
         case "friend-code.archived":
         case "friend-connection.created":
+        case "friend-connection.accepted":
+        case "friend-connection.rejected":
         case "friend-connection.blocked":
         case "friend-connection.removed":
         case "friend-connection.archived":
@@ -229,6 +231,8 @@ describe("AuditEventType", () => {
         case "device-token.revoked":
         case "notification-config.updated":
         case "friend-notification-preference.updated":
+        case "api-key.created":
+        case "api-key.revoked":
           return type;
         default: {
           const _exhaustive: never = type;

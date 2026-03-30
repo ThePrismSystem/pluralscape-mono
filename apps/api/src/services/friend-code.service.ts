@@ -334,7 +334,7 @@ export async function redeemFriendCode(
         id: connectionIdAB,
         accountId: codeOwnerId,
         friendAccountId: redeemerId,
-        status: "accepted",
+        status: "pending",
         createdAt: timestamp,
         updatedAt: timestamp,
       })
@@ -346,7 +346,7 @@ export async function redeemFriendCode(
         id: connectionIdBA,
         accountId: redeemerId,
         friendAccountId: codeOwnerId,
-        status: "accepted",
+        status: "pending",
         createdAt: timestamp,
         updatedAt: timestamp,
       })

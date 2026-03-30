@@ -196,6 +196,8 @@ export type AuditEventType =
   | "friend-code.redeemed"
   | "friend-code.archived"
   | "friend-connection.created"
+  | "friend-connection.accepted"
+  | "friend-connection.rejected"
   | "friend-connection.blocked"
   | "friend-connection.removed"
   | "friend-connection.archived"
@@ -207,7 +209,10 @@ export type AuditEventType =
   | "device-token.registered"
   | "device-token.revoked"
   | "notification-config.updated"
-  | "friend-notification-preference.updated";
+  | "friend-notification-preference.updated"
+  // ── API Keys ──
+  | "api-key.created"
+  | "api-key.revoked";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =
