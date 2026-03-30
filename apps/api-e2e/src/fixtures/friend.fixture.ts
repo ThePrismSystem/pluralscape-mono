@@ -116,6 +116,12 @@ export const test = base.extend<FriendFixtures>({
     // connectionIds[0] is A's connection (code owner), connectionIds[1] is B's connection (redeemer)
     const [connectionIdA, connectionIdB] = redeemResult.connectionIds;
 
+    // 4. Account A accepts — transitions both sides to "accepted"
+    const acceptA = await request.post(`/v1/account/friends/${connectionIdA}/accept`, {
+      headers: accountA.headers,
+    });
+    expect(acceptA.ok()).toBe(true);
+
     await use({
       accountA,
       accountB,

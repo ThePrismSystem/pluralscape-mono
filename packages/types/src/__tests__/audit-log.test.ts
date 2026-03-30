@@ -51,15 +51,21 @@ describe("AuditEventType", () => {
         case "bucket.key_rotation.chunk_completed":
         case "bucket.key_rotation.completed":
         case "bucket.key_rotation.failed":
+        case "bucket.key_rotation.retried":
         case "device.security.jailbreak_warning_shown":
         case "auth.password-reset-via-recovery":
         case "auth.recovery-key-regenerated":
         case "auth.device-transfer-initiated":
+        case "auth.device-transfer-approved":
         case "auth.device-transfer-completed":
         case "auth.email-changed":
         case "system.created":
         case "system.profile-updated":
         case "system.deleted":
+        case "system.purged":
+        case "system.duplicated":
+        case "snapshot.created":
+        case "snapshot.deleted":
         case "group.created":
         case "group.updated":
         case "group.archived":
@@ -112,6 +118,7 @@ describe("AuditEventType", () => {
         case "relationship.restored":
         case "relationship.deleted":
         case "lifecycle-event.created":
+        case "lifecycle-event.updated":
         case "lifecycle-event.archived":
         case "lifecycle-event.restored":
         case "lifecycle-event.deleted":
@@ -161,6 +168,7 @@ describe("AuditEventType", () => {
         case "check-in-record.responded":
         case "check-in-record.dismissed":
         case "check-in-record.archived":
+        case "check-in-record.restored":
         case "check-in-record.deleted":
         case "webhook-config.created":
         case "webhook-config.updated":
@@ -200,6 +208,8 @@ describe("AuditEventType", () => {
         case "poll.deleted":
         case "poll-vote.cast":
         case "poll-vote.vetoed":
+        case "poll-vote.updated":
+        case "poll-vote.archived":
         case "acknowledgement.created":
         case "acknowledgement.confirmed":
         case "acknowledgement.archived":
@@ -218,6 +228,8 @@ describe("AuditEventType", () => {
         case "friend-code.redeemed":
         case "friend-code.archived":
         case "friend-connection.created":
+        case "friend-connection.accepted":
+        case "friend-connection.rejected":
         case "friend-connection.blocked":
         case "friend-connection.removed":
         case "friend-connection.archived":
@@ -226,9 +238,13 @@ describe("AuditEventType", () => {
         case "friend-bucket-assignment.assigned":
         case "friend-bucket-assignment.unassigned":
         case "device-token.registered":
+        case "device-token.updated":
         case "device-token.revoked":
+        case "device-token.deleted":
         case "notification-config.updated":
         case "friend-notification-preference.updated":
+        case "api-key.created":
+        case "api-key.revoked":
           return type;
         default: {
           const _exhaustive: never = type;

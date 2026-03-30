@@ -20,6 +20,7 @@ listRoute.get("/", async (c) => {
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
   const query = parseBucketQuery({
     includeArchived: c.req.query("includeArchived"),
+    archivedOnly: c.req.query("archivedOnly"),
   });
 
   const db = await getDb();
@@ -27,6 +28,7 @@ listRoute.get("/", async (c) => {
     cursor: c.req.query("cursor"),
     limit,
     includeArchived: query.includeArchived,
+    archivedOnly: query.archivedOnly,
   });
   return c.json(result);
 });

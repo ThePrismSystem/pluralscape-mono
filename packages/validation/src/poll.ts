@@ -50,6 +50,16 @@ export const CastVoteBodySchema = z
   })
   .readonly();
 
+// ── Update Vote ────────────────────────────────────────────────
+
+export const UpdatePollVoteBodySchema = z
+  .object({
+    optionId: z.string().min(1).nullable(),
+    isVeto: z.boolean().optional(),
+    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
+  })
+  .readonly();
+
 // ── Query ───────────────────────────────────────────────────────
 
 export const PollQuerySchema = z.object({

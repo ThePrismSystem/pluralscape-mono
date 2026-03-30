@@ -14,7 +14,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/field-value.service.js", () => ({
-  listFieldValues: vi.fn(),
+  listFieldValuesForOwner: vi.fn(),
 }));
 
 vi.mock("../../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -29,7 +29,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { listFieldValues } = await import("../../../../services/field-value.service.js");
+const { listFieldValuesForOwner } = await import("../../../../services/field-value.service.js");
 const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
@@ -60,7 +60,7 @@ const FIELD_VALUE_RESULT = {
 
 describe("GET /systems/:systemId/members/:memberId/fields", () => {
   beforeEach(() => {
-    vi.mocked(listFieldValues).mockReset();
+    vi.mocked(listFieldValuesForOwner).mockReset();
   });
 
   afterEach(() => {
@@ -68,7 +68,7 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
   });
 
   it("returns 200 with field value items in data envelope", async () => {
-    vi.mocked(listFieldValues).mockResolvedValueOnce([FIELD_VALUE_RESULT]);
+    vi.mocked(listFieldValuesForOwner).mockResolvedValueOnce([FIELD_VALUE_RESULT]);
 
     const app = createApp();
     const res = await app.request(FIELDS_PATH);
@@ -84,7 +84,7 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
   });
 
   it("returns 200 with empty items array in data envelope", async () => {
-    vi.mocked(listFieldValues).mockResolvedValueOnce([]);
+    vi.mocked(listFieldValuesForOwner).mockResolvedValueOnce([]);
 
     const app = createApp();
     const res = await app.request(FIELDS_PATH);
@@ -94,16 +94,16 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
     expect(body.data.items).toHaveLength(0);
   });
 
-  it("forwards systemId and memberId to service", async () => {
-    vi.mocked(listFieldValues).mockResolvedValueOnce([FIELD_VALUE_RESULT]);
+  it("forwards systemId and owner to service", async () => {
+    vi.mocked(listFieldValuesForOwner).mockResolvedValueOnce([FIELD_VALUE_RESULT]);
 
     const app = createApp();
     await app.request(FIELDS_PATH);
 
-    expect(vi.mocked(listFieldValues)).toHaveBeenCalledWith(
+    expect(vi.mocked(listFieldValuesForOwner)).toHaveBeenCalledWith(
       expect.anything(),
       SYS_ID,
-      MEM_ID,
+      { kind: "member", id: MEM_ID },
       MOCK_AUTH,
     );
   });
@@ -113,7 +113,7 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
   });
 
   it("re-throws unexpected errors as 500", async () => {
-    vi.mocked(listFieldValues).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.mocked(listFieldValuesForOwner).mockRejectedValueOnce(new Error("DB timeout"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();

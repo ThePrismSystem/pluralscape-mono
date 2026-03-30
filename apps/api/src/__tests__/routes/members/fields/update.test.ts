@@ -14,7 +14,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/field-value.service.js", () => ({
-  updateFieldValue: vi.fn(),
+  updateFieldValueForOwner: vi.fn(),
 }));
 
 vi.mock("../../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -30,7 +30,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../../lib/audit-writer.js");
-const { updateFieldValue } = await import("../../../../services/field-value.service.js");
+const { updateFieldValueForOwner } = await import("../../../../services/field-value.service.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ const FIELD_PATH = `/systems/${SYS_ID}/members/${MEM_ID}/fields/${FLD_DEF_ID}`;
 
 describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
   beforeEach(() => {
-    vi.mocked(updateFieldValue).mockReset();
+    vi.mocked(updateFieldValueForOwner).mockReset();
   });
 
   afterEach(() => {
@@ -70,7 +70,7 @@ describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
   });
 
   it("returns 200 with updated field value on success", async () => {
-    vi.mocked(updateFieldValue).mockResolvedValueOnce(FIELD_VALUE_RESULT);
+    vi.mocked(updateFieldValueForOwner).mockResolvedValueOnce(FIELD_VALUE_RESULT);
 
     const app = createApp();
     const res = await putJSON(app, FIELD_PATH, VALID_BODY);
@@ -82,16 +82,16 @@ describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
     expect(body.version).toBe(1);
   });
 
-  it("forwards systemId, memberId, fieldDefId, body, auth, and audit writer to service", async () => {
-    vi.mocked(updateFieldValue).mockResolvedValueOnce(FIELD_VALUE_RESULT);
+  it("forwards systemId, owner, fieldDefId, body, auth, and audit writer to service", async () => {
+    vi.mocked(updateFieldValueForOwner).mockResolvedValueOnce(FIELD_VALUE_RESULT);
 
     const app = createApp();
     await putJSON(app, FIELD_PATH, VALID_BODY);
 
-    expect(vi.mocked(updateFieldValue)).toHaveBeenCalledWith(
+    expect(vi.mocked(updateFieldValueForOwner)).toHaveBeenCalledWith(
       expect.anything(),
       SYS_ID,
-      MEM_ID,
+      { kind: "member", id: MEM_ID },
       FLD_DEF_ID,
       VALID_BODY,
       MOCK_AUTH,
@@ -115,7 +115,7 @@ describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
 
   it("returns 404 when field value not found", async () => {
     const { ApiHttpError } = await import("../../../../lib/api-error.js");
-    vi.mocked(updateFieldValue).mockRejectedValueOnce(
+    vi.mocked(updateFieldValueForOwner).mockRejectedValueOnce(
       new ApiHttpError(404, "NOT_FOUND", "Field value not found"),
     );
 
@@ -129,7 +129,7 @@ describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
 
   it("returns 409 on conflict", async () => {
     const { ApiHttpError } = await import("../../../../lib/api-error.js");
-    vi.mocked(updateFieldValue).mockRejectedValueOnce(
+    vi.mocked(updateFieldValueForOwner).mockRejectedValueOnce(
       new ApiHttpError(409, "CONFLICT", "Version conflict"),
     );
 
@@ -142,7 +142,7 @@ describe("PUT /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
   });
 
   it("re-throws unexpected errors as 500", async () => {
-    vi.mocked(updateFieldValue).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.mocked(updateFieldValueForOwner).mockRejectedValueOnce(new Error("DB timeout"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();

@@ -27,6 +27,7 @@ import type {
   EncryptedBlob,
   PaginatedResult,
   RelationshipId,
+  RelationshipType,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -39,7 +40,7 @@ export interface RelationshipResult {
   readonly systemId: SystemId;
   readonly sourceMemberId: string | null;
   readonly targetMemberId: string | null;
-  readonly type: string;
+  readonly type: RelationshipType;
   readonly bidirectional: boolean;
   readonly encryptedData: string;
   readonly version: number;
@@ -56,7 +57,7 @@ function toRelationshipResult(row: {
   systemId: string;
   sourceMemberId: string | null;
   targetMemberId: string | null;
-  type: string;
+  type: RelationshipType;
   bidirectional: boolean;
   encryptedData: EncryptedBlob;
   version: number;
@@ -169,6 +170,7 @@ export async function listRelationships(
   cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
   memberId?: string,
+  type?: RelationshipType,
 ): Promise<PaginatedResult<RelationshipResult>> {
   assertSystemOwnership(systemId, auth);
 
@@ -189,6 +191,10 @@ export async function listRelationships(
       if (memberFilter) {
         conditions.push(memberFilter);
       }
+    }
+
+    if (type) {
+      conditions.push(eq(relationships.type, type));
     }
 
     const rows = await tx

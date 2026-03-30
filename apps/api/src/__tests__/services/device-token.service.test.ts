@@ -17,6 +17,7 @@ const mockTx = {
   returning: vi.fn(),
   update: vi.fn(),
   set: vi.fn(),
+  delete: vi.fn(),
   orderBy: vi.fn(),
   onConflictDoUpdate: vi.fn(),
 };
@@ -32,6 +33,7 @@ function wireChain(): void {
   mockTx.returning.mockResolvedValue([]);
   mockTx.update.mockReturnValue(mockTx);
   mockTx.set.mockReturnValue(mockTx);
+  mockTx.delete.mockReturnValue(mockTx);
   mockTx.orderBy.mockReturnValue(mockTx);
 }
 
@@ -93,8 +95,13 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
-const { registerDeviceToken, revokeDeviceToken, listDeviceTokens } =
-  await import("../../services/device-token.service.js");
+const {
+  registerDeviceToken,
+  updateDeviceToken,
+  deleteDeviceToken,
+  revokeDeviceToken,
+  listDeviceTokens,
+} = await import("../../services/device-token.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -183,6 +190,128 @@ describe("device-token service", () => {
 
       await expect(
         registerDeviceToken({} as never, SYSTEM_ID, params, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404 }));
+    });
+  });
+
+  // ── updateDeviceToken ─────────────────────────────────────────────
+
+  describe("updateDeviceToken", () => {
+    it("updates token with all fields provided", async () => {
+      // Single UPDATE … RETURNING — no initial SELECT
+      mockTx.returning.mockResolvedValueOnce([
+        makeTokenRow({ platform: "android", token: "newtoken1234567890newtoken12789012" }),
+      ]);
+
+      const result = await updateDeviceToken(
+        {} as never,
+        SYSTEM_ID,
+        TOKEN_ID,
+        { platform: "android", token: "newtoken1234567890newtoken26789012" },
+        AUTH,
+        mockAudit,
+      );
+
+      expect(result.platform).toBe("android");
+      expect(result.token).toMatch(/\*\*\*/);
+      expect(mockAudit).toHaveBeenCalledWith(
+        mockTx,
+        expect.objectContaining({ eventType: "device-token.updated" }),
+      );
+    });
+
+    it("merges only provided fields (platform only)", async () => {
+      mockTx.returning.mockResolvedValueOnce([makeTokenRow({ platform: "android" })]);
+
+      const result = await updateDeviceToken(
+        {} as never,
+        SYSTEM_ID,
+        TOKEN_ID,
+        { platform: "android" },
+        AUTH,
+        mockAudit,
+      );
+
+      expect(result.platform).toBe("android");
+      expect(mockAudit).toHaveBeenCalled();
+    });
+
+    it("merges only provided fields (token only)", async () => {
+      const newToken = "replacement_token_value_1234567890";
+      mockTx.returning.mockResolvedValueOnce([makeTokenRow({ token: newToken })]);
+
+      const result = await updateDeviceToken(
+        {} as never,
+        SYSTEM_ID,
+        TOKEN_ID,
+        { token: newToken },
+        AUTH,
+        mockAudit,
+      );
+
+      expect(result.token).toMatch(/\*\*\*/);
+      expect(mockAudit).toHaveBeenCalled();
+    });
+
+    it("throws NOT_FOUND when token does not exist", async () => {
+      // UPDATE … RETURNING returns empty — token not found or revoked
+      mockTx.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        updateDeviceToken(
+          {} as never,
+          SYSTEM_ID,
+          TOKEN_ID,
+          { platform: "android" },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("rejects when ownership check fails", async () => {
+      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+
+      await expect(
+        updateDeviceToken(
+          {} as never,
+          SYSTEM_ID,
+          TOKEN_ID,
+          { platform: "android" },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toThrow(expect.objectContaining({ status: 404 }));
+    });
+  });
+
+  // ── deleteDeviceToken ────────────────────────────────────────────
+
+  describe("deleteDeviceToken", () => {
+    it("deletes token and writes audit", async () => {
+      mockTx.returning.mockResolvedValueOnce([{ id: TOKEN_ID }]);
+
+      await deleteDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit);
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        mockTx,
+        expect.objectContaining({ eventType: "device-token.deleted" }),
+      );
+    });
+
+    it("throws NOT_FOUND when token does not exist", async () => {
+      mockTx.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        deleteDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("rejects when ownership check fails", async () => {
+      mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+
+      await expect(
+        deleteDeviceToken({} as never, SYSTEM_ID, TOKEN_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404 }));
     });
   });

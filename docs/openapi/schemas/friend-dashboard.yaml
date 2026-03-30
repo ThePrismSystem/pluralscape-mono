@@ -1,3 +1,34 @@
+FriendDashboardSyncEntry:
+  type: object
+  required: [entityType, count, latestUpdatedAt]
+  properties:
+    entityType:
+      type: string
+      enum: [member, custom-front, structure-entity, fronting-session]
+      description: Entity type this entry covers
+    count:
+      type: integer
+      minimum: 0
+      description: Number of visible entities of this type
+    latestUpdatedAt:
+      type: integer
+      format: int64
+      description: Unix milliseconds of the most recently updated entity (0 if none)
+
+FriendDashboardSyncResponse:
+  type: object
+  required: [systemId, entries]
+  properties:
+    systemId:
+      type: string
+      pattern: "^sys_"
+      description: The friend's system ID
+    entries:
+      type: array
+      items:
+        $ref: "#/FriendDashboardSyncEntry"
+      description: Per-entity-type sync state entries
+
 FriendDashboardFrontingSession:
   type: object
   required: [id, memberId, customFrontId, structureEntityId, startTime, encryptedData]

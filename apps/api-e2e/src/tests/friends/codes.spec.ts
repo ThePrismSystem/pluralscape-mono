@@ -28,7 +28,9 @@ interface FriendCodeResponse {
 }
 
 interface FriendCodeListResponse {
-  readonly data: readonly FriendCodeResponse[];
+  readonly items: readonly FriendCodeResponse[];
+  readonly hasMore: boolean;
+  readonly nextCursor: string | null;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -63,10 +65,10 @@ test.describe("Friend codes", () => {
       expect(res.ok()).toBe(true);
 
       const body = (await res.json()) as FriendCodeListResponse;
-      const ids = body.data.map((c) => c.id);
+      const ids = body.items.map((c) => c.id);
       expect(ids).toContain(codeId);
 
-      const found = body.data.find((c) => c.id === codeId);
+      const found = body.items.find((c) => c.id === codeId);
       expect(found?.code).toBe(codeValue);
     });
 
@@ -85,7 +87,7 @@ test.describe("Friend codes", () => {
       expect(res.ok()).toBe(true);
 
       const body = (await res.json()) as FriendCodeListResponse;
-      const ids = body.data.map((c) => c.id);
+      const ids = body.items.map((c) => c.id);
       expect(ids).not.toContain(codeId);
     });
   });
@@ -239,14 +241,14 @@ test.describe("Friend codes", () => {
     const bodyA = (await listA.json()) as { items: { id: string; status: string }[] };
     const connA = bodyA.items.find((c) => c.id === result.connectionIds[0]);
     expect(connA).toBeTruthy();
-    expect(connA?.status).toBe("accepted");
+    expect(connA?.status).toBe("pending");
 
     const listB = await request.get("/v1/account/friends", { headers: headersB });
     expect(listB.ok()).toBe(true);
     const bodyB = (await listB.json()) as { items: { id: string; status: string }[] };
     const connB = bodyB.items.find((c) => c.id === result.connectionIds[1]);
     expect(connB).toBeTruthy();
-    expect(connB?.status).toBe("accepted");
+    expect(connB?.status).toBe("pending");
 
     // Redeeming the same code again should fail (code was auto-archived)
     const redeemAgain = await request.post("/v1/account/friend-codes/redeem", {

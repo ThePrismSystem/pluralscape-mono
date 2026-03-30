@@ -12,7 +12,7 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), and 6 (Privacy and Social) are complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-Milestone 7 is building the data portability layer: email notifications (Resend + SMTP adapters with 5 security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), and webhook event dispatch for identity and friend events. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
+Milestone 7 is building the data portability layer: email notifications (Resend + SMTP adapters with 5 security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), webhook event dispatch for identity and friend events, and API feature completeness (30+ new endpoints closing audit gaps across account management, friends, API keys, system operations, structure entities, communication, and infrastructure). See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 

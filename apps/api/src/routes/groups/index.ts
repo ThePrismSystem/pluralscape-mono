@@ -4,6 +4,7 @@ import { archiveRoute } from "./archive.js";
 import { copyRoute } from "./copy.js";
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
+import { groupFieldValueRoutes } from "./fields/index.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
 import { memberRoutes } from "./members/index.js";
@@ -31,4 +32,5 @@ groupRoutes.route("/", archiveRoute);
 groupRoutes.route("/", restoreRoute);
 
 // Sub-resource routes
+groupRoutes.route("/:groupId/fields", groupFieldValueRoutes);
 groupRoutes.route("/:groupId/members", memberRoutes);

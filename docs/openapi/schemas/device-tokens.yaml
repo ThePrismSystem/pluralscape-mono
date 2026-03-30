@@ -46,6 +46,18 @@ RegisterDeviceTokenRequest:
       maxLength: 512
       description: "Push token from APNs, FCM, or web-push"
 
+UpdateDeviceTokenRequest:
+  type: object
+  description: At least one of `platform` or `token` must be provided
+  properties:
+    platform:
+      $ref: "#/DeviceTokenPlatform"
+    token:
+      type: string
+      minLength: 1
+      maxLength: 512
+      description: "Updated push token from APNs, FCM, or web-push"
+
 DeviceTokenListResponse:
   type: object
   required: [data]

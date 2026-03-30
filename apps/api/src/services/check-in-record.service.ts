@@ -483,6 +483,58 @@ export async function archiveCheckInRecord(
   });
 }
 
+// ── RESTORE ────────────────────────────────────────────────────────
+
+export async function restoreCheckInRecord(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  recordId: CheckInRecordId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<CheckInRecordResult> {
+  assertSystemOwnership(systemId, auth);
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const updated = await tx
+      .update(checkInRecords)
+      .set({
+        archived: false,
+        archivedAt: null,
+      })
+      .where(
+        and(
+          eq(checkInRecords.id, recordId),
+          eq(checkInRecords.systemId, systemId),
+          eq(checkInRecords.archived, true),
+        ),
+      )
+      .returning();
+
+    const row = updated[0];
+    if (!row) {
+      const [existing] = await tx
+        .select({ id: checkInRecords.id })
+        .from(checkInRecords)
+        .where(and(eq(checkInRecords.id, recordId), eq(checkInRecords.systemId, systemId)))
+        .limit(1);
+
+      if (existing) {
+        throw new ApiHttpError(HTTP_CONFLICT, "NOT_ARCHIVED", "Check-in record is not archived");
+      }
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Check-in record not found");
+    }
+
+    await audit(tx, {
+      eventType: "check-in-record.restored",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Check-in record restored",
+      systemId,
+    });
+
+    return toCheckInRecordResult(row);
+  });
+}
+
 // ── DELETE ───────────────────────────────────────────────────────
 
 export async function deleteCheckInRecord(

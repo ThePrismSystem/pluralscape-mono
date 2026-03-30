@@ -15,6 +15,16 @@ export const RegisterDeviceTokenBodySchema = z
   })
   .readonly();
 
+export const UpdateDeviceTokenBodySchema = z
+  .object({
+    platform: z.enum(DEVICE_TOKEN_PLATFORM_VALUES).optional(),
+    token: z.string().min(1).max(MAX_DEVICE_TOKEN_LENGTH).optional(),
+  })
+  .readonly()
+  .refine((d) => d.platform !== undefined || d.token !== undefined, {
+    message: "At least one of platform or token must be provided",
+  });
+
 // ── Notification config schemas ──────────────────────────────────────
 
 export const UpdateNotificationConfigBodySchema = z

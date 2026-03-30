@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { authMiddleware } from "../../middleware/auth.js";
 import { acknowledgementRoutes } from "../acknowledgements/index.js";
 import { analyticsRoutes } from "../analytics/index.js";
+import { apiKeyRoutes } from "../api-keys/index.js";
 import { blobRoutes } from "../blobs/index.js";
 import { boardMessageRoutes } from "../board-messages/index.js";
 import { bucketRoutes } from "../buckets/index.js";
@@ -22,17 +23,21 @@ import { noteRoutes } from "../notes/index.js";
 import { notificationConfigRoutes } from "../notification-configs/index.js";
 import { pollRoutes } from "../polls/index.js";
 import { relationshipRoutes } from "../relationships/index.js";
+import { structureRoutes } from "../structure/index.js";
 import { timerConfigRoutes } from "../timer-configs/index.js";
 import { webhookConfigRoutes } from "../webhook-configs/index.js";
 import { webhookDeliveryRoutes } from "../webhook-deliveries/index.js";
 
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
+import { duplicateRoute } from "./duplicate.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
 import { nomenclatureRoutes } from "./nomenclature/index.js";
+import { purgeRoute } from "./purge.js";
 import { settingsRoutes } from "./settings/index.js";
 import { setupRoutes } from "./setup/index.js";
+import { snapshotRoutes } from "./snapshots/index.js";
 import { updateRoute } from "./update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -48,6 +53,8 @@ systemRoutes.route("/", getRoute);
 systemRoutes.route("/", updateRoute);
 systemRoutes.route("/", deleteRoute);
 systemRoutes.route("/", createRoute);
+systemRoutes.route("/", purgeRoute);
+systemRoutes.route("/", duplicateRoute);
 
 // Sub-resource routes
 systemRoutes.route("/:systemId/groups", groupRoutes);
@@ -77,3 +84,6 @@ systemRoutes.route("/:systemId/polls", pollRoutes);
 systemRoutes.route("/:systemId/acknowledgements", acknowledgementRoutes);
 systemRoutes.route("/:systemId/device-tokens", deviceTokenRoutes);
 systemRoutes.route("/:systemId/notification-configs", notificationConfigRoutes);
+systemRoutes.route("/:systemId/structure", structureRoutes);
+systemRoutes.route("/:systemId/api-keys", apiKeyRoutes);
+systemRoutes.route("/:systemId/snapshots", snapshotRoutes);

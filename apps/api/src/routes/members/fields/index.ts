@@ -1,11 +1,15 @@
+import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
-import { deleteRoute } from "./delete.js";
-import { listRoute } from "./list.js";
-import { setRoute } from "./set.js";
-import { updateRoute } from "./update.js";
+import { createFieldValueRoutes } from "../../fields/create-field-value-routes.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
+
+const { setRoute, listRoute, updateRoute, deleteRoute } = createFieldValueRoutes({
+  ownerKind: "member",
+  ownerParamName: "memberId",
+  ownerIdPrefix: ID_PREFIXES.member,
+});
 
 export const fieldValueRoutes = new Hono<AuthEnv>();
 

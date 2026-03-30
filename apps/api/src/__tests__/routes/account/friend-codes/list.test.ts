@@ -42,6 +42,20 @@ const MOCK_CODE = {
 
 // ── Tests ────────────────────────────────────────────────────────
 
+const MOCK_PAGINATED = {
+  items: [MOCK_CODE],
+  nextCursor: null,
+  hasMore: false,
+  totalCount: null,
+};
+
+const EMPTY_PAGE = {
+  items: [],
+  nextCursor: null,
+  hasMore: false,
+  totalCount: null,
+};
+
 describe("GET /account/friend-codes", () => {
   beforeEach(() => {
     vi.mocked(listFriendCodes).mockReset();
@@ -51,30 +65,30 @@ describe("GET /account/friend-codes", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with wrapped data array", async () => {
-    vi.mocked(listFriendCodes).mockResolvedValueOnce([MOCK_CODE]);
+  it("returns 200 with paginated result", async () => {
+    vi.mocked(listFriendCodes).mockResolvedValueOnce(MOCK_PAGINATED);
 
     const res = await createApp().request("/account/friend-codes");
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: (typeof MOCK_CODE)[] };
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0]?.id).toBe(MOCK_CODE.id);
-    expect(body.data[0]?.code).toBe("ABCD-1234");
+    const body = (await res.json()) as typeof MOCK_PAGINATED;
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]?.id).toBe(MOCK_CODE.id);
+    expect(body.items[0]?.code).toBe("ABCD-1234");
   });
 
-  it("returns empty array when no codes exist", async () => {
-    vi.mocked(listFriendCodes).mockResolvedValueOnce([]);
+  it("returns empty items when no codes exist", async () => {
+    vi.mocked(listFriendCodes).mockResolvedValueOnce(EMPTY_PAGE);
 
     const res = await createApp().request("/account/friend-codes");
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: never[] };
-    expect(body.data).toEqual([]);
+    const body = (await res.json()) as typeof EMPTY_PAGE;
+    expect(body.items).toEqual([]);
   });
 
   it("passes correct args to service", async () => {
-    vi.mocked(listFriendCodes).mockResolvedValueOnce([]);
+    vi.mocked(listFriendCodes).mockResolvedValueOnce(EMPTY_PAGE);
 
     await createApp().request("/account/friend-codes");
 
@@ -82,6 +96,8 @@ describe("GET /account/friend-codes", () => {
       {},
       "acct_test",
       MOCK_ACCOUNT_ONLY_AUTH,
+      undefined,
+      expect.any(Number),
     );
   });
 });

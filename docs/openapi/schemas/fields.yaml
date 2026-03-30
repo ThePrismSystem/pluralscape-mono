@@ -87,8 +87,7 @@ UpdateFieldValueRequest:
 
 FieldValueResponse:
   type: object
-  required:
-    [id, fieldDefinitionId, memberId, systemId, encryptedData, version, createdAt, updatedAt]
+  required: [id, fieldDefinitionId, systemId, encryptedData, version, createdAt, updatedAt]
   properties:
     id:
       type: string
@@ -97,7 +96,16 @@ FieldValueResponse:
       description: ID of the field definition this value belongs to
     memberId:
       type: string
-      description: ID of the member this value is set on
+      nullable: true
+      description: ID of the member this value is set on (null for group/entity values)
+    groupId:
+      type: string
+      nullable: true
+      description: ID of the group this value is set on (null for member/entity values)
+    structureEntityId:
+      type: string
+      nullable: true
+      description: ID of the structure entity this value is set on (null for member/group values)
     systemId:
       type: string
     encryptedData:

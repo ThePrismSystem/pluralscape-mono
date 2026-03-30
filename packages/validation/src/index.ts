@@ -1,3 +1,4 @@
+export { DeleteAccountBodySchema } from "./account.js";
 export { brandedString, brandedNumber } from "./branded.js";
 export {
   ChangeEmailSchema,
@@ -58,6 +59,7 @@ export {
 export { CreateRelationshipBodySchema, UpdateRelationshipBodySchema } from "./relationship.js";
 export {
   CreateLifecycleEventBodySchema,
+  UpdateLifecycleEventBodySchema,
   LIFECYCLE_EVENT_TYPES,
   validateLifecycleMetadata,
 } from "./lifecycle-event.js";
@@ -147,6 +149,7 @@ export {
   CreatePollBodySchema,
   UpdatePollBodySchema,
   CastVoteBodySchema,
+  UpdatePollVoteBodySchema,
   PollQuerySchema,
   PollVoteQuerySchema,
 } from "./poll.js";
@@ -157,6 +160,7 @@ export {
 } from "./acknowledgement.js";
 export {
   RegisterDeviceTokenBodySchema,
+  UpdateDeviceTokenBodySchema,
   UpdateNotificationConfigBodySchema,
   UpdateFriendNotificationPreferenceBodySchema,
 } from "./notification.js";
@@ -182,3 +186,6 @@ export {
   DEVICE_TOKEN_PLATFORM_VALUES,
   FRIEND_NOTIFICATION_EVENT_TYPE_VALUES,
 } from "./validation.constants.js";
+export { CreateApiKeyBodySchema } from "./api-key.js";
+export { PurgeSystemBodySchema } from "./system-purge.js";
+export { CreateSnapshotBodySchema, DuplicateSystemBodySchema } from "./snapshot.js";

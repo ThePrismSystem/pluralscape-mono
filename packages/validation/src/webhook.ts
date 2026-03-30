@@ -54,8 +54,23 @@ export const WebhookConfigQuerySchema = z.object({
 
 const webhookDeliveryStatusSchema = z.enum(["pending", "success", "failed"]);
 
+/**
+ * Coerces a string query param to a positive integer, returning undefined when omitted.
+ * Used for Unix-millisecond timestamp filters.
+ */
+const unixTimestampQueryParam = z
+  .string()
+  .optional()
+  .transform((v) => {
+    if (v === undefined) return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  });
+
 export const WebhookDeliveryQuerySchema = z.object({
   webhookId: brandedIdQueryParam("wh_").optional(),
   status: webhookDeliveryStatusSchema.optional(),
   eventType: webhookEventTypeSchema.optional(),
+  fromDate: unixTimestampQueryParam,
+  toDate: unixTimestampQueryParam,
 });

@@ -22,6 +22,7 @@ export const UpdateBucketBodySchema = z
 
 export const BucketQuerySchema = z.object({
   includeArchived: booleanQueryParam,
+  archivedOnly: booleanQueryParam,
 });
 
 // ── Content tags ─────────────────────────────────────────────────

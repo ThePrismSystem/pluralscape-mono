@@ -323,6 +323,133 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
+/systems/{systemId}/polls/{pollId}/results:
+  get:
+    operationId: getPollResults
+    tags: [Polls]
+    summary: Get poll results
+    description: |
+      Returns aggregated poll results: total votes, veto count, and
+      per-option vote counts. Only non-archived votes are counted.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+    responses:
+      "200":
+        description: Aggregated poll results
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollResultsResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/polls/{pollId}/votes/{voteId}:
+  put:
+    operationId: updatePollVote
+    tags: [Polls]
+    summary: Update a poll vote
+    description: |
+      Updates an existing vote on an open poll. The poll must still be open
+      (not closed or past `endsAt`). Returns 409 if the poll is closed or
+      the vote violates abstain/veto rules.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+      - name: voteId
+        in: path
+        required: true
+        description: Poll vote ID
+        schema:
+          type: string
+          pattern: ^pv_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/polls.yaml#/UpdatePollVoteRequest"
+    responses:
+      "200":
+        description: Vote updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/polls.yaml#/PollVoteResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deletePollVote
+    tags: [Polls]
+    summary: Delete (archive) a poll vote
+    description: |
+      Soft-archives a poll vote. Poll votes use an append-only CRDT strategy,
+      so hard deletes are not permitted. Returns 409 if the vote is already
+      archived.
+
+      Rate limit: 60 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: pollId
+        in: path
+        required: true
+        description: Poll ID
+        schema:
+          type: string
+          pattern: ^poll_
+      - name: voteId
+        in: path
+        required: true
+        description: Poll vote ID
+        schema:
+          type: string
+          pattern: ^pv_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
 /systems/{systemId}/polls/{pollId}/archive:
   post:
     operationId: archivePoll

@@ -58,6 +58,47 @@ CreateLifecycleEventRequest:
             type: string
           description: IDs of innerworld regions involved
 
+UpdateLifecycleEventRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    eventType:
+      $ref: "#/LifecycleEventType"
+    occurredAt:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Unix timestamp in milliseconds when the event occurred
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextLifecycleEvent (see ./plaintext.yaml#/PlaintextLifecycleEvent)"
+    plaintextMetadata:
+      type: object
+      description: Server-visible metadata for querying and relationship tracking
+      properties:
+        memberIds:
+          type: array
+          items:
+            type: string
+        structureIds:
+          type: array
+          items:
+            type: string
+        entityIds:
+          type: array
+          items:
+            type: string
+        regionIds:
+          type: array
+          items:
+            type: string
+    version:
+      type: integer
+      minimum: 1
+
 LifecycleEventResponse:
   allOf:
     - $ref: "./common.yaml#/EncryptedEntity"

@@ -2,11 +2,12 @@ import { randomBytes } from "node:crypto";
 
 import { friendCodes, friendConnections } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import {
   withAccountRead,
   withAccountTransaction,
@@ -28,9 +29,16 @@ import type {
   AuditEventType,
   FriendCodeId,
   FriendConnectionId,
+  PaginatedResult,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+/** Default page size for friend code listing. */
+const FRIEND_CODE_DEFAULT_LIMIT = 20;
+
+/** Maximum page size for friend code listing. */
+const FRIEND_CODE_MAX_LIMIT = 100;
 
 /** Audit event: a friend code was generated. */
 const AUDIT_FRIEND_CODE_GENERATED: AuditEventType = "friend-code.generated";
@@ -175,32 +183,42 @@ export async function generateFriendCode(
 // ── LIST ────────────────────────────────────────────────────────────
 
 /**
- * List all active, non-expired friend codes for the given account.
+ * List active, non-expired friend codes for the given account with cursor pagination.
+ * Uses descending ID order for stable, cursor-based paging.
  */
 export async function listFriendCodes(
   db: PostgresJsDatabase,
   accountId: AccountId,
   auth: AuthContext,
-): Promise<readonly FriendCodeResult[]> {
+  cursor?: string,
+  limit = FRIEND_CODE_DEFAULT_LIMIT,
+): Promise<PaginatedResult<FriendCodeResult>> {
   assertAccountOwnership(accountId, auth);
 
+  const effectiveLimit = Math.min(limit, FRIEND_CODE_MAX_LIMIT);
+
   return withAccountRead(db, accountId, async (tx) => {
+    const conditions = [
+      eq(friendCodes.accountId, accountId),
+      eq(friendCodes.archived, false),
+      or(
+        sql`${friendCodes.expiresAt} IS NULL`,
+        sql`${friendCodes.expiresAt} > ${new Date(Date.now()).toISOString()}::timestamptz`,
+      ),
+    ];
+
+    if (cursor) {
+      conditions.push(lt(friendCodes.id, cursor));
+    }
+
     const rows = await tx
       .select()
       .from(friendCodes)
-      .where(
-        and(
-          eq(friendCodes.accountId, accountId),
-          eq(friendCodes.archived, false),
-          or(
-            sql`${friendCodes.expiresAt} IS NULL`,
-            sql`${friendCodes.expiresAt} > ${new Date(Date.now()).toISOString()}::timestamptz`,
-          ),
-        ),
-      )
-      .orderBy(sql`${friendCodes.createdAt} DESC`);
+      .where(and(...conditions))
+      .orderBy(desc(friendCodes.id))
+      .limit(effectiveLimit + 1);
 
-    return rows.map(toFriendCodeResult);
+    return buildPaginatedResult(rows, effectiveLimit, toFriendCodeResult);
   });
 }
 
@@ -334,7 +352,7 @@ export async function redeemFriendCode(
         id: connectionIdAB,
         accountId: codeOwnerId,
         friendAccountId: redeemerId,
-        status: "accepted",
+        status: "pending",
         createdAt: timestamp,
         updatedAt: timestamp,
       })
@@ -346,7 +364,7 @@ export async function redeemFriendCode(
         id: connectionIdBA,
         accountId: redeemerId,
         friendAccountId: codeOwnerId,
-        status: "accepted",
+        status: "pending",
         createdAt: timestamp,
         updatedAt: timestamp,
       })

@@ -153,13 +153,18 @@ export function createHierarchyService<
     auth: AuthContext,
     cursor?: string,
     limit = DEFAULT_PAGE_LIMIT,
+    includeArchived = false,
   ): Promise<PaginatedResult<TResult>> {
     assertSystemOwnership(systemId, auth);
 
     const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
     return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
-      const conditions = [eq(columns.systemId, systemId), eq(columns.archived, false)];
+      const conditions = [eq(columns.systemId, systemId)];
+
+      if (!includeArchived) {
+        conditions.push(eq(columns.archived, false));
+      }
 
       if (cursor) {
         conditions.push(gt(columns.id, cursor));

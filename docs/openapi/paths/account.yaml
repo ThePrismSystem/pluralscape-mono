@@ -22,6 +22,255 @@
         $ref: "../openapi.yaml#/components/responses/NotFound"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteAccount
+    tags: [Account]
+    summary: Delete account
+    description: |
+      Permanently deletes the authenticated account and all associated data.
+      Requires the current password for confirmation. This action is
+      irreversible — all systems, members, sessions, keys, and dependent data
+      are cascade-deleted.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/DeleteAccountRequest"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/pin:
+  post:
+    operationId: setAccountPin
+    tags: [Account]
+    summary: Set account PIN
+    description: |
+      Sets a 4-6 digit PIN on the account's primary system settings.
+      Overwrites any existing PIN. The PIN is hashed server-side with Argon2id.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/PinRequest"
+    responses:
+      "200":
+        description: PIN set
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/ActionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: removeAccountPin
+    tags: [Account]
+    summary: Remove account PIN
+    description: |
+      Removes the PIN from the account's primary system settings.
+      Requires the current PIN for verification. Returns 404 if no PIN is set.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/PinRequest"
+    responses:
+      "200":
+        description: PIN removed
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/ActionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/pin/verify:
+  post:
+    operationId: verifyAccountPin
+    tags: [Account]
+    summary: Verify account PIN
+    description: |
+      Verifies the account PIN. Returns `{ verified: true }` on success.
+      Uses anti-timing measures — verification runs even when no PIN is set.
+      Returns 404 if no PIN is configured, 401 if the PIN is incorrect.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/PinRequest"
+    responses:
+      "200":
+        description: PIN verified
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/VerifyPinResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/device-transfer:
+  post:
+    operationId: initiateDeviceTransfer
+    tags: [Account]
+    summary: Initiate a device transfer
+    description: |
+      Creates a pending device transfer request. The source device supplies
+      the code salt (for Argon2id key derivation) and the encrypted key
+      material (master key encrypted under the transfer key). Both are
+      hex-encoded. The transfer expires after 5 minutes.
+
+      Rate limit: 5 req/hour (account-keyed)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/InitiateTransferRequest"
+    responses:
+      "201":
+        description: Transfer initiated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/InitiateTransferResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/device-transfer/{transferId}/approve:
+  post:
+    operationId: approveDeviceTransfer
+    tags: [Account]
+    summary: Approve a device transfer
+    description: |
+      Approves a pending device transfer. Only the session that initiated
+      the transfer may approve it. Returns 403 if called from a different
+      session, 404 if the transfer is not found or expired.
+
+      Rate limit: 5 req/hour (account-keyed)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: transferId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^dtr_"
+        description: Device transfer request ID
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Session mismatch — only the initiating session may approve
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/device-transfer/{transferId}/complete:
+  post:
+    operationId: completeDeviceTransfer
+    tags: [Account]
+    summary: Complete a device transfer
+    description: |
+      Completes a device transfer by verifying the transfer code and returning
+      the encrypted key material. The code is a 10-digit numeric string entered
+      on the new device. Rate-limited per transfer to prevent brute-forcing.
+
+      Rate limit: 5 attempts per transfer TTL
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: transferId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^dtr_"
+        description: Device transfer request ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/CompleteTransferRequest"
+    responses:
+      "200":
+        description: Transfer completed — encrypted key material returned
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/CompleteTransferResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+      "503":
+        description: Key derivation worker pool unavailable
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/ErrorResponse"
 
 /account/email:
   put:

@@ -10,13 +10,15 @@ import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-t
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/friend-connection.service.js", () => ({
-  listFriendConnections: vi.fn(),
-  getFriendConnection: vi.fn(),
-  blockFriendConnection: vi.fn(),
-  removeFriendConnection: vi.fn(),
-  updateFriendVisibility: vi.fn(),
+  acceptFriendConnection: vi.fn(),
   archiveFriendConnection: vi.fn(),
+  blockFriendConnection: vi.fn(),
+  getFriendConnection: vi.fn(),
+  listFriendConnections: vi.fn(),
+  rejectFriendConnection: vi.fn(),
+  removeFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
+  updateFriendVisibility: vi.fn(),
 }));
 
 vi.mock("../../../../lib/db.js", () => mockDbFactory());
@@ -85,7 +87,7 @@ describe("GET /account/friends", () => {
       {},
       "acct_test",
       MOCK_ACCOUNT_ONLY_AUTH,
-      { cursor: undefined, limit: undefined, includeArchived: false },
+      { cursor: undefined, limit: 25, includeArchived: false },
     );
   });
 });

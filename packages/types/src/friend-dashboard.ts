@@ -78,3 +78,26 @@ export interface FriendAccessContext {
   readonly connectionId: FriendConnectionId;
   readonly assignedBucketIds: readonly BucketId[];
 }
+
+/** Entity types that can appear in a friend dashboard sync entry. */
+export type FriendDashboardEntityType =
+  | "member"
+  | "custom-front"
+  | "structure-entity"
+  | "fronting-session";
+
+/** Per-entity-type sync state entry for incremental friend dashboard sync. */
+export interface FriendDashboardSyncEntry {
+  readonly entityType: FriendDashboardEntityType;
+  readonly count: number;
+  readonly latestUpdatedAt: UnixMillis;
+}
+
+/**
+ * Friend dashboard sync projection response.
+ * Returns per-entity-type counts and latest timestamps for incremental sync.
+ */
+export interface FriendDashboardSyncResponse {
+  readonly systemId: SystemId;
+  readonly entries: readonly FriendDashboardSyncEntry[];
+}

@@ -37,7 +37,15 @@
         content:
           application/json:
             schema:
-              $ref: "../openapi.yaml#/components/schemas/PaginatedResult"
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
 
@@ -180,6 +188,39 @@
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "409":
         description: Already responded or dismissed
+
+/systems/{systemId}/check-in-records/{recordId}/restore:
+  post:
+    operationId: restoreCheckInRecord
+    tags: [Check-In Records]
+    summary: Restore an archived check-in record
+    description: |
+      Removes the archived flag from a check-in record, making it visible in
+      default list responses again.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: recordId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Restored check-in record
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/timers.yaml#/CheckInRecordResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/check-in-records/{recordId}/archive:
   post:

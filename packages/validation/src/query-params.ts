@@ -36,12 +36,27 @@ export const LifecycleEventQuerySchema = z.object({
 
 // ── Relationship query schema ───────────────────────────────────
 
+/** Valid relationship type values for query filtering. */
+const RELATIONSHIP_TYPE_QUERY_VALUES = [
+  "split-from",
+  "fused-from",
+  "sibling",
+  "partner",
+  "parent-child",
+  "protector-of",
+  "caretaker-of",
+  "gatekeeper-of",
+  "source",
+  "custom",
+] as const;
+
 /**
  * Query parameters for the relationships list endpoint.
- * Validates memberId with branded ID prefix check.
+ * Validates memberId with branded ID prefix check and optional type filter.
  */
 export const RelationshipQuerySchema = z.object({
   memberId: brandedIdQueryParam("mem_").optional(),
+  type: z.enum(RELATIONSHIP_TYPE_QUERY_VALUES).optional(),
 });
 
 // ── Inner world entity query schema ─────────────────────────────

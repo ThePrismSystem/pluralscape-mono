@@ -137,3 +137,206 @@
         $ref: "../openapi.yaml#/components/responses/Conflict"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/duplicate:
+  post:
+    operationId: duplicateSystem
+    tags: [Systems]
+    summary: Duplicate a system from a snapshot
+    description: |
+      Creates a new system seeded with encrypted data from an existing snapshot.
+      Client-side re-encryption is expected for a full deep-copy. Only system
+      accounts can duplicate systems.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/systems.yaml#/DuplicateSystemRequest"
+    responses:
+      "201":
+        description: System duplicated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/systems.yaml#/DuplicateSystemResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Only system accounts can duplicate systems
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/purge:
+  post:
+    operationId: purgeSystem
+    tags: [Systems]
+    summary: Permanently purge a system
+    description: |
+      Hard-deletes a system and all dependent data via CASCADE. The system must
+      be archived (soft-deleted) first. Password confirmation is required to
+      prevent accidental purge.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/systems.yaml#/PurgeSystemRequest"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        description: System must be archived before purge
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/snapshots:
+  get:
+    operationId: listSnapshots
+    tags: [System Snapshots]
+    summary: List system snapshots
+    description: |
+      Returns a paginated list of snapshots for the specified system.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated snapshot list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/systems.yaml#/SnapshotResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createSnapshot
+    tags: [System Snapshots]
+    summary: Create a system snapshot
+    description: |
+      Creates an encrypted snapshot of the system's current state. Snapshots
+      can be triggered manually or on a schedule.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/systems.yaml#/CreateSnapshotRequest"
+    responses:
+      "201":
+        description: Snapshot created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/systems.yaml#/SnapshotResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/snapshots/{snapshotId}:
+  get:
+    operationId: getSnapshot
+    tags: [System Snapshots]
+    summary: Get a system snapshot
+    description: |
+      Returns a single snapshot by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: snapshotId
+        in: path
+        required: true
+        description: Snapshot ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Snapshot details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/systems.yaml#/SnapshotResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteSnapshot
+    tags: [System Snapshots]
+    summary: Delete a system snapshot
+    description: |
+      Permanently deletes a snapshot.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: snapshotId
+        in: path
+        required: true
+        description: Snapshot ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

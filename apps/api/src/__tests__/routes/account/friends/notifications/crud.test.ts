@@ -23,13 +23,15 @@ vi.mock("../../../../../services/friend-notification-preference.service.js", () 
 }));
 
 vi.mock("../../../../../services/friend-connection.service.js", () => ({
-  listFriendConnections: vi.fn(),
-  getFriendConnection: vi.fn(),
-  blockFriendConnection: vi.fn(),
-  removeFriendConnection: vi.fn(),
-  updateFriendVisibility: vi.fn(),
+  acceptFriendConnection: vi.fn(),
   archiveFriendConnection: vi.fn(),
+  blockFriendConnection: vi.fn(),
+  getFriendConnection: vi.fn(),
+  listFriendConnections: vi.fn(),
+  rejectFriendConnection: vi.fn(),
+  removeFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
+  updateFriendVisibility: vi.fn(),
 }));
 
 vi.mock("../../../../../services/friend-export.service.js", () => ({

@@ -164,6 +164,39 @@
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/members/{memberId}/photos/{photoId}:
+  get:
+    operationId: getMemberPhoto
+    tags: [Member Photos]
+    summary: Get a single member photo
+    description: Returns a single photo record by ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: photoId
+        in: path
+        required: true
+        description: Photo ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Photo details
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
   delete:
     operationId: deleteMemberPhoto
     tags: [Member Photos]

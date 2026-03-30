@@ -67,6 +67,7 @@ describe("GET /systems/:id/groups", () => {
       MOCK_AUTH,
       "grp_abc",
       10,
+      false,
     );
   });
 

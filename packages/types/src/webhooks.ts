@@ -77,6 +77,8 @@ export type WebhookEventType =
   // ── Communication: poll votes ──
   | "poll-vote.cast"
   | "poll-vote.vetoed"
+  | "poll-vote.updated"
+  | "poll-vote.archived"
   // ── Communication: acknowledgements ──
   | "acknowledgement.created"
   | "acknowledgement.confirmed"
@@ -222,6 +224,8 @@ export interface WebhookEventPayloadMap {
   // ── Communication: poll votes ──
   "poll-vote.cast": PollVoteEventPayload;
   "poll-vote.vetoed": PollVoteEventPayload;
+  "poll-vote.updated": PollVoteEventPayload;
+  "poll-vote.archived": PollVoteEventPayload;
   // ── Communication: acknowledgements ──
   "acknowledgement.created": AcknowledgementEventPayload;
   "acknowledgement.confirmed": AcknowledgementEventPayload;

@@ -14,7 +14,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/field-value.service.js", () => ({
-  deleteFieldValue: vi.fn(),
+  deleteFieldValueForOwner: vi.fn(),
 }));
 
 vi.mock("../../../../lib/audit-writer.js", () => mockAuditWriterFactory());
@@ -29,7 +29,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { deleteFieldValue } = await import("../../../../services/field-value.service.js");
+const { deleteFieldValueForOwner } = await import("../../../../services/field-value.service.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ const FIELD_PATH = `/systems/${SYS_ID}/members/${MEM_ID}/fields/${FLD_DEF_ID}`;
 
 describe("DELETE /systems/:systemId/members/:memberId/fields/:fieldDefId", () => {
   beforeEach(() => {
-    vi.mocked(deleteFieldValue).mockReset();
+    vi.mocked(deleteFieldValueForOwner).mockReset();
   });
 
   afterEach(() => {
@@ -54,7 +54,7 @@ describe("DELETE /systems/:systemId/members/:memberId/fields/:fieldDefId", () =>
   });
 
   it("returns 204 on success", async () => {
-    vi.mocked(deleteFieldValue).mockResolvedValueOnce(undefined);
+    vi.mocked(deleteFieldValueForOwner).mockResolvedValueOnce(undefined);
 
     const app = createApp();
     const res = await app.request(FIELD_PATH, { method: "DELETE" });
@@ -64,7 +64,7 @@ describe("DELETE /systems/:systemId/members/:memberId/fields/:fieldDefId", () =>
 
   it("returns 404 when field value not found", async () => {
     const { ApiHttpError } = await import("../../../../lib/api-error.js");
-    vi.mocked(deleteFieldValue).mockRejectedValueOnce(
+    vi.mocked(deleteFieldValueForOwner).mockRejectedValueOnce(
       new ApiHttpError(404, "NOT_FOUND", "Field value not found"),
     );
 
@@ -77,7 +77,7 @@ describe("DELETE /systems/:systemId/members/:memberId/fields/:fieldDefId", () =>
   });
 
   it("re-throws unexpected errors as 500", async () => {
-    vi.mocked(deleteFieldValue).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.mocked(deleteFieldValueForOwner).mockRejectedValueOnce(new Error("DB timeout"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();

@@ -17,11 +17,22 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - Webhook enhancements — secret rotation endpoint, test/ping endpoint, optional payload encryption via API key, HMAC signature verification guide
 - Webhook BullMQ handlers — job handlers for webhook delivery and cleanup (replacing queue-package handlers)
 - Webhook event dispatch — wired `dispatchWebhookEvent` for 13 identity and friend events (member, fronting, group, lifecycle, custom-front, bucket, friend)
+- API feature completeness — closed audit gaps across the REST API surface:
+  - Account management — account deletion endpoint, PIN management (set, remove, verify), device transfer approval step
+  - Friend network — friend request accept/reject flow, friend dashboard sync projection endpoint
+  - API key management — full CRUD (create, get, list, revoke) with scoped permissions
+  - System operations — system snapshots (create, get, list, delete), system duplication, permanent system purge
+  - Structure entities — custom field values for structure entities and groups, entity hierarchy endpoint
+  - Communication — poll vote update/delete/results endpoints, check-in record restore, lifecycle event update
+  - Infrastructure — device token update/delete, key rotation retry, single member photo GET, missing list filters and pagination across entities
+- CRDT sync document type coverage — verified all document types mapped to sync strategies
 
 ### Fixed
 
 - M7 audit remediation (high priority) — anti-enumeration timing for auth endpoints, ownership consolidation, strict typing replacements for loose `Record<string, unknown>` types
 - M7 audit remediation (medium + low) — webhook `as never` cast removal, email worker review findings, inconsistent zod imports, dependency updates
+- Regenerated database migrations — consolidated PG and SQLite migrations into single 0000 files with updated RLS migration
+- Pending friend flow — fixed friend code service tests and migration alignment for pending friend connections
 
 ## Milestone 6: Privacy and Social
 

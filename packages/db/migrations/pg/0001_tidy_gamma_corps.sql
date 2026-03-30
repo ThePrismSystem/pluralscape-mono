@@ -1,1 +1,0 @@
-CREATE INDEX "bucket_content_tags_system_entity_type_idx" ON "bucket_content_tags" USING btree ("system_id","entity_type");

@@ -1,7 +1,7 @@
 import { webhookDeliveries } from "@pluralscape/db/pg";
 import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { WebhookDeliveryQuerySchema } from "@pluralscape/validation";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt, lte } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -46,6 +46,8 @@ export interface WebhookDeliveryListOptions {
   readonly webhookId?: WebhookId;
   readonly status?: WebhookDeliveryStatus;
   readonly eventType?: WebhookEventType;
+  readonly fromDate?: number;
+  readonly toDate?: number;
 }
 
 // ── Shared select columns ────────────────────────────────────────────
@@ -116,6 +118,14 @@ export async function listWebhookDeliveries(
 
     if (opts.eventType) {
       conditions.push(eq(webhookDeliveries.eventType, opts.eventType));
+    }
+
+    if (opts.fromDate !== undefined) {
+      conditions.push(gte(webhookDeliveries.createdAt, opts.fromDate));
+    }
+
+    if (opts.toDate !== undefined) {
+      conditions.push(lte(webhookDeliveries.createdAt, opts.toDate));
     }
 
     if (opts.cursor) {

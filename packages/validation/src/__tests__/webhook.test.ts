@@ -132,4 +132,33 @@ describe("WebhookDeliveryQuerySchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts fromDate and toDate as numeric strings", () => {
+    const result = WebhookDeliveryQuerySchema.safeParse({
+      fromDate: "1700000000000",
+      toDate: "1700100000000",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fromDate).toBe(1_700_000_000_000);
+      expect(result.data.toDate).toBe(1_700_100_000_000);
+    }
+  });
+
+  it("treats omitted fromDate/toDate as undefined", () => {
+    const result = WebhookDeliveryQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fromDate).toBeUndefined();
+      expect(result.data.toDate).toBeUndefined();
+    }
+  });
+
+  it("treats non-numeric fromDate as undefined", () => {
+    const result = WebhookDeliveryQuerySchema.safeParse({ fromDate: "not-a-number" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.fromDate).toBeUndefined();
+    }
+  });
 });

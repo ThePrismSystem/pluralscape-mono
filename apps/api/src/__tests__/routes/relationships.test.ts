@@ -58,7 +58,7 @@ const MOCK_RELATIONSHIP = {
   systemId: SYS_ID as never,
   sourceMemberId: "mem_00000000-0000-0000-0000-000000000001",
   targetMemberId: "mem_00000000-0000-0000-0000-000000000002",
-  type: "partner",
+  type: "partner" as const,
   bidirectional: true,
   encryptedData: "dGVzdA==",
   version: 1,
@@ -150,6 +150,7 @@ describe("GET /systems/:id/relationships", () => {
       undefined,
       expect.any(Number),
       undefined,
+      undefined,
     );
   });
 
@@ -165,7 +166,32 @@ describe("GET /systems/:id/relationships", () => {
       undefined,
       expect.any(Number),
       memberId,
+      undefined,
     );
+  });
+
+  it("forwards valid type filter to service", async () => {
+    vi.mocked(listRelationships).mockResolvedValueOnce(MOCK_PAGINATED);
+    const app = createApp();
+    await app.request(`${BASE_URL}?type=partner`);
+    expect(vi.mocked(listRelationships)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      MOCK_AUTH,
+      undefined,
+      expect.any(Number),
+      undefined,
+      "partner",
+    );
+  });
+
+  it("returns 400 for invalid type value", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(`${BASE_URL}?type=invalid-type`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("returns 400 for memberId with wrong prefix", async () => {
