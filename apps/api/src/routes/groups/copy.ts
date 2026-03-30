@@ -7,6 +7,7 @@ import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { copyGroup } from "../../services/group.service.js";
 
@@ -15,6 +16,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const copyRoute = new Hono<AuthEnv>();
 
 copyRoute.use("*", createCategoryRateLimiter("write"));
+copyRoute.use("*", createIdempotencyMiddleware());
 
 copyRoute.post("/:groupId/copy", async (c) => {
   const body = await parseJsonBody(c);

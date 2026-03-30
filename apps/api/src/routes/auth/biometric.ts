@@ -6,6 +6,7 @@ import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { enrollBiometric, verifyBiometric } from "../../services/biometric.service.js";
 
@@ -16,7 +17,7 @@ export const biometricRoute = new Hono<AuthEnv>();
 biometricRoute.use("*", authMiddleware());
 biometricRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
-biometricRoute.post("/enroll", async (c) => {
+biometricRoute.post("/enroll", createIdempotencyMiddleware(), async (c) => {
   const body = await parseJsonBody(c);
 
   const auth = c.get("auth");

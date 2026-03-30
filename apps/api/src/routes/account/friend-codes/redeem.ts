@@ -7,6 +7,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
+import { createIdempotencyMiddleware } from "../../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { redeemFriendCode } from "../../../services/friend-code.service.js";
 
@@ -15,6 +16,7 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 export const redeemRoute = new Hono<AuthEnv>();
 
 redeemRoute.use("*", createCategoryRateLimiter("friendCodeRedeem"));
+redeemRoute.use("*", createIdempotencyMiddleware());
 
 redeemRoute.post("/redeem", async (c) => {
   const auth = c.get("auth");

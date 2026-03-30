@@ -7,12 +7,14 @@ import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { envelope } from "../../lib/response.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError, registerAccount } from "../../services/auth.service.js";
 
 export const registerRoute = new Hono();
 
 registerRoute.use("*", createCategoryRateLimiter("authHeavy"));
+registerRoute.use("*", createIdempotencyMiddleware());
 
 registerRoute.post("/", async (c) => {
   const body = await parseJsonBody(c);

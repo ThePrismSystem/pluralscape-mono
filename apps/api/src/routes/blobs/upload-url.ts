@@ -8,6 +8,7 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { getQuotaService, getStorageAdapter } from "../../lib/storage.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { createUploadUrl } from "../../services/blob.service.js";
 
@@ -16,6 +17,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const uploadUrlRoute = new Hono<AuthEnv>();
 
 uploadUrlRoute.use("*", createCategoryRateLimiter("blobUpload"));
+uploadUrlRoute.use("*", createIdempotencyMiddleware());
 
 uploadUrlRoute.post("/upload-url", async (c) => {
   const auth = c.get("auth");

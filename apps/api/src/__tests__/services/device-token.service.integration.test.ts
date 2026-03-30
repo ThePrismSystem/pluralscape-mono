@@ -144,7 +144,7 @@ describe("device-token.service (PGlite integration)", () => {
 
     await revokeDeviceToken(asDb(db), systemId, registered.id, auth, noopAudit);
 
-    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
+    const { data: tokens } = await listDeviceTokens(asDb(db), systemId, auth);
     expect(tokens.map((t) => t.id)).not.toContain(registered.id);
   });
 
@@ -218,7 +218,7 @@ describe("device-token.service (PGlite integration)", () => {
     // Revoke the second one
     await revokeDeviceToken(asDb(db), systemId, t2.id, auth, noopAudit);
 
-    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
+    const { data: tokens } = await listDeviceTokens(asDb(db), systemId, auth);
     const ids = tokens.map((t) => t.id);
 
     expect(ids).toContain(t1.id);
@@ -273,8 +273,8 @@ describe("device-token.service (PGlite integration)", () => {
     expect(row?.systemId).toBe(systemId);
 
     // Original account can still see the token in their list
-    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
-    expect(tokens.some((t) => t.id === original.id)).toBe(true);
+    const { data: listResult } = await listDeviceTokens(asDb(db), systemId, auth);
+    expect(listResult.some((t) => t.id === original.id)).toBe(true);
   });
 
   it("clears revokedAt on re-registration of revoked token", async () => {
@@ -298,8 +298,8 @@ describe("device-token.service (PGlite integration)", () => {
     );
 
     // Should appear in list (revokedAt cleared)
-    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
-    expect(tokens.map((t) => t.id)).toContain(reregistered.id);
+    const { data: reregTokens } = await listDeviceTokens(asDb(db), systemId, auth);
+    expect(reregTokens.map((t) => t.id)).toContain(reregistered.id);
   });
 
   // ── registration masks tokens ──────────────────────────────────────
@@ -340,7 +340,7 @@ describe("device-token.service (PGlite integration)", () => {
       noopAudit,
     );
 
-    const tokens = await listDeviceTokens(asDb(db), systemId, auth);
+    const { data: tokens } = await listDeviceTokens(asDb(db), systemId, auth);
     expect(tokens[0]?.token).toBe("***-testing");
     expect(tokens[0]?.token).not.toBe("a-very-long-token-string-for-testing");
   });

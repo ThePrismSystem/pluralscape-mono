@@ -9,6 +9,7 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { getQueue } from "../../lib/queue.js";
 import { envelope } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError } from "../../services/auth.service.js";
 import {
@@ -29,58 +30,63 @@ recoveryKeyRoutes.get("/status", createCategoryRateLimiter("authLight"), async (
   return c.json(envelope(result));
 });
 
-recoveryKeyRoutes.post("/regenerate", createCategoryRateLimiter("authHeavy"), async (c) => {
-  const auth = c.get("auth");
-  const db = await getDb();
+recoveryKeyRoutes.post(
+  "/regenerate",
+  createCategoryRateLimiter("authHeavy"),
+  createIdempotencyMiddleware(),
+  async (c) => {
+    const auth = c.get("auth");
+    const db = await getDb();
 
-  const body = await parseJsonBody(c);
+    const body = await parseJsonBody(c);
 
-  const audit = createAuditWriter(c, auth);
+    const audit = createAuditWriter(c, auth);
 
-  try {
-    const result = await regenerateRecoveryKeyBackup(db, auth.accountId, body, audit);
+    try {
+      const result = await regenerateRecoveryKeyBackup(db, auth.accountId, body, audit);
 
-    // Fire-and-forget: enqueue recovery-key-regenerated email notification
-    const queue = getQueue();
-    if (queue) {
-      queue
-        .enqueue({
-          type: "email-send",
-          systemId: null,
-          payload: {
-            accountId: auth.accountId,
-            template: "recovery-key-regenerated",
-            vars: {
-              timestamp: new Date().toISOString(),
-              deviceInfo: c.req.header("user-agent") ?? "Unknown device",
+      // Fire-and-forget: enqueue recovery-key-regenerated email notification
+      const queue = getQueue();
+      if (queue) {
+        queue
+          .enqueue({
+            type: "email-send",
+            systemId: null,
+            payload: {
+              accountId: auth.accountId,
+              template: "recovery-key-regenerated",
+              vars: {
+                timestamp: new Date().toISOString(),
+                deviceInfo: c.req.header("user-agent") ?? "Unknown device",
+              },
             },
-          },
-          idempotencyKey: `email:recovery-key-regen:${auth.accountId}:${String(Date.now())}`,
-        })
-        .catch((err: unknown) => {
-          logger.warn("[recovery-key] failed to enqueue email notification", {
-            accountId: auth.accountId,
-            error: err instanceof Error ? err.message : String(err),
+            idempotencyKey: `email:recovery-key-regen:${auth.accountId}:${String(Date.now())}`,
+          })
+          .catch((err: unknown) => {
+            logger.warn("[recovery-key] failed to enqueue email notification", {
+              accountId: auth.accountId,
+              error: err instanceof Error ? err.message : String(err),
+            });
           });
-        });
-    }
+      }
 
-    return c.json(envelope(result), HTTP_CREATED);
-  } catch (error: unknown) {
-    if (error instanceof NoActiveRecoveryKeyError) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", error.message);
+      return c.json(envelope(result), HTTP_CREATED);
+    } catch (error: unknown) {
+      if (error instanceof NoActiveRecoveryKeyError) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", error.message);
+      }
+      if (error instanceof ValidationError) {
+        throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
+      }
+      if (error instanceof Error && error.name === "ZodError") {
+        throw new ApiHttpError(
+          HTTP_BAD_REQUEST,
+          "VALIDATION_ERROR",
+          "Invalid recovery key input",
+          error,
+        );
+      }
+      throw error;
     }
-    if (error instanceof ValidationError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    if (error instanceof Error && error.name === "ZodError") {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Invalid recovery key input",
-        error,
-      );
-    }
-    throw error;
-  }
-});
+  },
+);

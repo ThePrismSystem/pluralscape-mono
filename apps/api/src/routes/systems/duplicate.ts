@@ -7,6 +7,7 @@ import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
+import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { duplicateSystem } from "../../services/system-duplicate.service.js";
 
@@ -15,6 +16,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const duplicateRoute = new Hono<AuthEnv>();
 
 duplicateRoute.use("*", createCategoryRateLimiter("write"));
+duplicateRoute.use("*", createIdempotencyMiddleware());
 
 duplicateRoute.post("/:id/duplicate", async (c) => {
   const auth = c.get("auth");
