@@ -19,9 +19,11 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 
 import { upgradeWebSocket, websocket } from "./bun-adapter.js";
 import { ConnectionManager } from "./connection-manager.js";
+import { clearHeartbeat, handlePong, startHeartbeat } from "./heartbeat.js";
 import { createRouterContext, routeMessage } from "./message-router.js";
 import { isAllowedOrigin } from "./origin-validation.js";
 import { serializeServerMessage } from "./serialization.js";
+import { ValkeyPubSub } from "./valkey-pubsub.js";
 import {
   WS_AUTH_TIMEOUT_MS,
   WS_CLOSE_POLICY_VIOLATION,
@@ -37,10 +39,27 @@ import { formatError, makeSyncError } from "./ws.utils.js";
 
 import type { AppLogger } from "../lib/logger.js";
 
-// ── Singleton connection manager ────────────────────────────────────
+// ── Singleton connection manager and sync pubsub ───────────────────
 
 export const connectionManager = new ConnectionManager();
-const routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager);
+
+/** Sync pub/sub instance for cross-instance broadcast. Nullable — set at startup. */
+let syncPubSub: ValkeyPubSub | null = null;
+let routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager, null);
+
+/**
+ * Set the sync pub/sub instance (called at startup when Valkey is available).
+ * Recreates the router context so all future messages use cross-instance broadcast.
+ */
+export function setSyncPubSub(pubsub: ValkeyPubSub): void {
+  syncPubSub = pubsub;
+  routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager, syncPubSub);
+}
+
+/** Get the current sync pub/sub instance (for shutdown). */
+export function getSyncPubSub(): ValkeyPubSub | null {
+  return syncPubSub;
+}
 
 // ── Public API for shutdown ─────────────────────────────────────────
 
@@ -209,16 +228,35 @@ syncWsApp.get(
           return;
         }
 
-        void routeMessage(evt.data, state, log, routerCtx).catch((err: unknown) => {
-          log.error("Unhandled error in routeMessage", {
-            connectionId,
-            error: formatError(err),
+        // Handle Pong messages from heartbeat before routing (not a protocol message)
+        if (evt.data === '{"type":"Pong"}') {
+          handlePong(connectionId);
+          return;
+        }
+
+        const wasAwaitingAuth = state.phase === "awaiting-auth";
+
+        void routeMessage(evt.data, state, log, routerCtx)
+          .then(() => {
+            // Start heartbeat after successful authentication transition
+            if (wasAwaitingAuth) {
+              const updated = connectionManager.get(connectionId);
+              if (updated?.phase === "authenticated") {
+                startHeartbeat(connectionId, updated.ws, log);
+              }
+            }
+          })
+          .catch((err: unknown) => {
+            log.error("Unhandled error in routeMessage", {
+              connectionId,
+              error: formatError(err),
+            });
           });
-        });
       },
 
       onClose() {
         clearTimeout(upgradeTimeout);
+        clearHeartbeat(connectionId);
         if (!opened) {
           // onOpen never fired — release reserved slot
           connectionManager.releaseUnauthSlot(clientIp);

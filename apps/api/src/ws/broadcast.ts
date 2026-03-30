@@ -1,16 +1,26 @@
 /**
  * Broadcast document updates to subscribed WebSocket connections.
  *
- * Local delivery only in Phase 1. Valkey pub/sub fan-out for
- * cross-instance delivery is added in Task 6 (api-5801).
+ * Supports both local-only delivery and cross-instance fan-out via
+ * Valkey pub/sub. When a ValkeyPubSub instance is provided,
+ * broadcastDocumentUpdateWithSync publishes the update to Valkey so
+ * other server instances can deliver to their local subscribers.
  */
 import { serializeServerMessage } from "./serialization.js";
-import { WS_CLOSE_UNEXPECTED } from "./ws.constants.js";
+import { VALKEY_CHANNEL_PREFIX_SYNC, WS_CLOSE_UNEXPECTED } from "./ws.constants.js";
 import { formatError } from "./ws.utils.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { DocumentUpdate } from "@pluralscape/sync";
+
+/** Minimal pub/sub interface for cross-instance broadcast (decoupled from ValkeyPubSub). */
+export interface SyncBroadcastPubSub {
+  /** Server ID for deduplication (skip self-published messages). */
+  readonly id: string;
+  /** Publish a message to a channel. Returns false if publish failed. */
+  publish(channel: string, message: string): Promise<boolean>;
+}
 
 /** Result of a broadcast operation. */
 export interface BroadcastResult {
@@ -92,4 +102,54 @@ export function broadcastDocumentUpdate(
   }
 
   return { delivered, failed: deadConnections.length, total: subscribers.size };
+}
+
+/** Wire-format payload published to Valkey for cross-instance fan-out. */
+interface ValkeyBroadcastMessage {
+  /** Originating server ID — recipients skip messages from themselves. */
+  readonly serverId: string;
+  /** The DocumentUpdate to deliver to local subscribers on other instances. */
+  readonly update: DocumentUpdate;
+}
+
+/**
+ * Broadcast a DocumentUpdate locally and publish to Valkey for cross-instance delivery.
+ *
+ * Performs local delivery first (synchronous, low-latency), then publishes
+ * to Valkey asynchronously. If pubsub is null (Valkey unavailable), falls
+ * back to local-only delivery gracefully.
+ */
+export async function broadcastDocumentUpdateWithSync(
+  update: DocumentUpdate,
+  excludeConnectionId: string,
+  manager: ConnectionManager,
+  log: AppLogger,
+  pubsub: SyncBroadcastPubSub | null,
+): Promise<BroadcastResult> {
+  // Phase 1: Local delivery (always runs)
+  const result = broadcastDocumentUpdate(update, excludeConnectionId, manager, log);
+
+  // Phase 2: Cross-instance fan-out via Valkey (best-effort)
+  if (pubsub) {
+    const channel = `${VALKEY_CHANNEL_PREFIX_SYNC}${update.docId}`;
+    const message: ValkeyBroadcastMessage = {
+      serverId: pubsub.id,
+      update,
+    };
+    try {
+      const published = await pubsub.publish(channel, JSON.stringify(message));
+      if (!published) {
+        log.debug("Valkey publish returned false for DocumentUpdate", {
+          docId: update.docId,
+        });
+      }
+    } catch (err) {
+      log.warn("Failed to publish DocumentUpdate to Valkey", {
+        docId: update.docId,
+        error: formatError(err),
+      });
+    }
+  }
+
+  return result;
 }
