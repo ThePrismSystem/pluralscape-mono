@@ -1,5 +1,7 @@
 import { z } from "zod/v4";
 
+import { brandedIdQueryParam } from "./branded-id.js";
+import { booleanQueryParam } from "./query-params.js";
 import { MAX_ENCRYPTED_MEMBER_DATA_SIZE } from "./validation.constants.js";
 
 export const CreateMemberBodySchema = z
@@ -23,3 +25,12 @@ export const DuplicateMemberBodySchema = z
     copyMemberships: z.boolean().default(false),
   })
   .readonly();
+
+/**
+ * Query parameters for the member list endpoint.
+ * Supports filtering by group membership and archived status.
+ */
+export const MemberListQuerySchema = z.object({
+  groupId: brandedIdQueryParam("grp_").optional(),
+  includeArchived: booleanQueryParam,
+});

@@ -18,7 +18,7 @@ import {
   DuplicateMemberBodySchema,
   UpdateMemberBodySchema,
 } from "@pluralscape/validation";
-import { and, count, eq, gt, or, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -145,6 +145,7 @@ export async function listMembers(
     cursor?: string;
     limit?: number;
     includeArchived?: boolean;
+    groupId?: GroupId;
   },
 ): Promise<PaginatedResult<MemberResult>> {
   assertSystemOwnership(systemId, auth);
@@ -160,6 +161,20 @@ export async function listMembers(
 
     if (opts?.cursor) {
       conditions.push(gt(members.id, opts.cursor));
+    }
+
+    // Filter to members belonging to a specific group via subquery
+    if (opts?.groupId) {
+      const memberIdsInGroup = tx
+        .select({ memberId: groupMemberships.memberId })
+        .from(groupMemberships)
+        .where(
+          and(
+            eq(groupMemberships.groupId, opts.groupId),
+            eq(groupMemberships.systemId, systemId),
+          ),
+        );
+      conditions.push(inArray(members.id, memberIdsInGroup));
     }
 
     const rows = await tx
