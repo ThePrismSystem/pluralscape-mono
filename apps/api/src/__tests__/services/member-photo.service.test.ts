@@ -312,6 +312,39 @@ describe("listMemberPhotos", () => {
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
+
+  it("returns hasMore true and nextCursor when more results exist", async () => {
+    const { db, chain } = mockDb();
+    // Default limit is 25; return 26 rows to trigger hasMore=true
+    const rows = Array.from({ length: 26 }, (_, i) =>
+      makePhotoRow({ id: `mp_photo-${String(i).padStart(3, "0")}`, sortOrder: i }),
+    );
+    chain.limit
+      .mockResolvedValueOnce([{ id: MEMBER_ID }]) // assertMemberActive
+      .mockResolvedValueOnce(rows); // list query
+    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
+
+    const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(25);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).not.toBeNull();
+  });
+
+  it("returns hasMore false and null nextCursor on last page", async () => {
+    const { db, chain } = mockDb();
+    const rows = [makePhotoRow(), makePhotoRow({ id: "mp_second", sortOrder: 1 })];
+    chain.limit
+      .mockResolvedValueOnce([{ id: MEMBER_ID }]) // assertMemberActive
+      .mockResolvedValueOnce(rows); // list query
+    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
+
+    const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(2);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
+  });
 });
 
 describe("reorderMemberPhotos", () => {
