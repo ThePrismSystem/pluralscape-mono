@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { archiveRoute } from "./archive.js";
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
+import { entityFieldValueRoutes } from "./fields/index.js";
 import { getRoute } from "./get.js";
 import { hierarchyRoute } from "./hierarchy.js";
 import { listRoute } from "./list.js";
@@ -21,3 +22,6 @@ entityRoutes.route("/", archiveRoute);
 entityRoutes.route("/", restoreRoute);
 entityRoutes.route("/", deleteRoute);
 entityRoutes.route("/", hierarchyRoute);
+
+// Sub-resource routes
+entityRoutes.route("/:entityId/fields", entityFieldValueRoutes);

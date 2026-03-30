@@ -7,7 +7,12 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
-import { assertFieldDefinitionActive, assertMemberActive } from "../lib/member-helpers.js";
+import {
+  assertFieldDefinitionActive,
+  assertGroupActive,
+  assertMemberActive,
+  assertStructureEntityActive,
+} from "../lib/member-helpers.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -28,6 +33,13 @@ import type {
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
+// ── Owner discriminated union ──────────────────────────────────────
+
+export type FieldValueOwner =
+  | { readonly kind: "member"; readonly id: MemberId }
+  | { readonly kind: "group"; readonly id: GroupId }
+  | { readonly kind: "structureEntity"; readonly id: SystemStructureEntityId };
+
 // ── Types ───────────────────────────────────────────────────────────
 
 export interface FieldValueResult {
@@ -43,7 +55,7 @@ export interface FieldValueResult {
   readonly updatedAt: UnixMillis;
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────
+// ── Internal helpers ───────────────────────────────────────────────
 
 function toFieldValueResult(row: {
   id: string;
@@ -92,12 +104,90 @@ function parseAndValidateValueBlob(base64: string): EncryptedBlob {
   }
 }
 
+/** Assert the owner entity is active and return the column assignments for the insert. */
+async function assertOwnerActiveAndGetColumns(
+  tx: PostgresJsDatabase,
+  systemId: SystemId,
+  owner: FieldValueOwner,
+): Promise<{
+  memberId: MemberId | undefined;
+  groupId: GroupId | undefined;
+  structureEntityId: SystemStructureEntityId | undefined;
+}> {
+  switch (owner.kind) {
+    case "member":
+      await assertMemberActive(tx, systemId, owner.id);
+      return { memberId: owner.id, groupId: undefined, structureEntityId: undefined };
+    case "group":
+      await assertGroupActive(tx, systemId, owner.id);
+      return { memberId: undefined, groupId: owner.id, structureEntityId: undefined };
+    case "structureEntity":
+      await assertStructureEntityActive(tx, systemId, owner.id);
+      return { memberId: undefined, groupId: undefined, structureEntityId: owner.id };
+    default: {
+      const _exhaustive: never = owner;
+      throw new Error(`Unknown owner kind: ${(_exhaustive as FieldValueOwner).kind}`);
+    }
+  }
+}
+
+/** Build the where-clause column condition for an owner. */
+function ownerWhereColumn(owner: FieldValueOwner) {
+  switch (owner.kind) {
+    case "member":
+      return eq(fieldValues.memberId, owner.id);
+    case "group":
+      return eq(fieldValues.groupId, owner.id);
+    case "structureEntity":
+      return eq(fieldValues.structureEntityId, owner.id);
+    default: {
+      const _exhaustive: never = owner;
+      throw new Error(`Unknown owner kind: ${(_exhaustive as FieldValueOwner).kind}`);
+    }
+  }
+}
+
+function ownerLabel(owner: FieldValueOwner): string {
+  switch (owner.kind) {
+    case "member":
+      return "member";
+    case "group":
+      return "group";
+    case "structureEntity":
+      return "structure entity";
+    default: {
+      const _exhaustive: never = owner;
+      throw new Error(`Unknown owner kind: ${(_exhaustive as FieldValueOwner).kind}`);
+    }
+  }
+}
+
 // ── SET (CREATE) ────────────────────────────────────────────────────
 
 export async function setFieldValue(
   db: PostgresJsDatabase,
   systemId: SystemId,
   memberId: MemberId,
+  fieldDefId: FieldDefinitionId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<FieldValueResult> {
+  return setFieldValueForOwner(
+    db,
+    systemId,
+    { kind: "member", id: memberId },
+    fieldDefId,
+    params,
+    auth,
+    audit,
+  );
+}
+
+export async function setFieldValueForOwner(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  owner: FieldValueOwner,
   fieldDefId: FieldDefinitionId,
   params: unknown,
   auth: AuthContext,
@@ -115,20 +205,20 @@ export async function setFieldValue(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    await assertMemberActive(tx, systemId, memberId);
+    const ownerCols = await assertOwnerActiveAndGetColumns(tx, systemId, owner);
     await assertFieldDefinitionActive(tx, systemId, fieldDefId);
-    // Check for existing value (unique constraint)
+
     const [existing] = await tx
       .select({ id: fieldValues.id })
       .from(fieldValues)
-      .where(and(eq(fieldValues.fieldDefinitionId, fieldDefId), eq(fieldValues.memberId, memberId)))
+      .where(and(eq(fieldValues.fieldDefinitionId, fieldDefId), ownerWhereColumn(owner)))
       .limit(1);
 
     if (existing) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "CONFLICT",
-        "Field value already exists for this member and field definition",
+        `Field value already exists for this ${ownerLabel(owner)} and field definition`,
       );
     }
 
@@ -137,7 +227,7 @@ export async function setFieldValue(
       .values({
         id: valueId,
         fieldDefinitionId: fieldDefId,
-        memberId,
+        ...ownerCols,
         systemId,
         encryptedData: blob,
         createdAt: timestamp,
@@ -168,15 +258,24 @@ export async function listFieldValues(
   memberId: MemberId,
   auth: AuthContext,
 ): Promise<FieldValueResult[]> {
+  return listFieldValuesForOwner(db, systemId, { kind: "member", id: memberId }, auth);
+}
+
+export async function listFieldValuesForOwner(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  owner: FieldValueOwner,
+  auth: AuthContext,
+): Promise<FieldValueResult[]> {
   assertSystemOwnership(systemId, auth);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
-    await assertMemberActive(tx, systemId, memberId);
+    await assertOwnerActiveAndGetColumns(tx, systemId, owner);
 
     const rows = await tx
       .select()
       .from(fieldValues)
-      .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
+      .where(and(ownerWhereColumn(owner), eq(fieldValues.systemId, systemId)));
 
     return rows.map(toFieldValueResult);
   });
@@ -193,6 +292,26 @@ export async function updateFieldValue(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldValueResult> {
+  return updateFieldValueForOwner(
+    db,
+    systemId,
+    { kind: "member", id: memberId },
+    fieldDefId,
+    params,
+    auth,
+    audit,
+  );
+}
+
+export async function updateFieldValueForOwner(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  owner: FieldValueOwner,
+  fieldDefId: FieldDefinitionId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<FieldValueResult> {
   assertSystemOwnership(systemId, auth);
 
   const parsed = UpdateFieldValueBodySchema.safeParse(params);
@@ -204,7 +323,7 @@ export async function updateFieldValue(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    await assertMemberActive(tx, systemId, memberId);
+    await assertOwnerActiveAndGetColumns(tx, systemId, owner);
     await assertFieldDefinitionActive(tx, systemId, fieldDefId);
 
     const updated = await tx
@@ -217,7 +336,7 @@ export async function updateFieldValue(
       .where(
         and(
           eq(fieldValues.fieldDefinitionId, fieldDefId),
-          eq(fieldValues.memberId, memberId),
+          ownerWhereColumn(owner),
           eq(fieldValues.systemId, systemId),
           eq(fieldValues.version, parsed.data.version),
         ),
@@ -231,7 +350,7 @@ export async function updateFieldValue(
         .where(
           and(
             eq(fieldValues.fieldDefinitionId, fieldDefId),
-            eq(fieldValues.memberId, memberId),
+            ownerWhereColumn(owner),
             eq(fieldValues.systemId, systemId),
           ),
         )
@@ -266,17 +385,35 @@ export async function deleteFieldValue(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
+  return deleteFieldValueForOwner(
+    db,
+    systemId,
+    { kind: "member", id: memberId },
+    fieldDefId,
+    auth,
+    audit,
+  );
+}
+
+export async function deleteFieldValueForOwner(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  owner: FieldValueOwner,
+  fieldDefId: FieldDefinitionId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
   assertSystemOwnership(systemId, auth);
 
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    await assertMemberActive(tx, systemId, memberId);
+    await assertOwnerActiveAndGetColumns(tx, systemId, owner);
 
     const deleted = await tx
       .delete(fieldValues)
       .where(
         and(
           eq(fieldValues.fieldDefinitionId, fieldDefId),
-          eq(fieldValues.memberId, memberId),
+          ownerWhereColumn(owner),
           eq(fieldValues.systemId, systemId),
         ),
       )
