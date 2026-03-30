@@ -26,8 +26,14 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 /** Audit event: a device token was registered. */
 const AUDIT_TOKEN_REGISTERED: AuditEventType = "device-token.registered";
 
+/** Audit event: a device token was updated. */
+const AUDIT_TOKEN_UPDATED: AuditEventType = "device-token.updated";
+
 /** Audit event: a device token was revoked. */
 const AUDIT_TOKEN_REVOKED: AuditEventType = "device-token.revoked";
+
+/** Audit event: a device token was deleted. */
+const AUDIT_TOKEN_DELETED: AuditEventType = "device-token.deleted";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -130,6 +136,99 @@ export async function registerDeviceToken(
     });
 
     return toDeviceTokenResult({ ...row, token: maskToken(row.token) });
+  });
+}
+
+/** Update a device token's platform or token value. Only non-revoked tokens can be updated. */
+export async function updateDeviceToken(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  tokenId: DeviceTokenId,
+  params: { readonly platform?: DeviceTokenPlatform; readonly token?: string },
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<DeviceTokenResult> {
+  assertSystemOwnership(systemId, auth);
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const timestamp = now();
+
+    // Read current row to merge optional fields
+    const [current] = await tx
+      .select()
+      .from(deviceTokens)
+      .where(
+        and(
+          eq(deviceTokens.id, tokenId),
+          eq(deviceTokens.systemId, systemId),
+          isNull(deviceTokens.revokedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!current) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Device token not found");
+    }
+
+    const [row] = await tx
+      .update(deviceTokens)
+      .set({
+        lastActiveAt: timestamp,
+        platform: params.platform ?? current.platform,
+        token: params.token ?? current.token,
+      })
+      .where(
+        and(
+          eq(deviceTokens.id, tokenId),
+          eq(deviceTokens.systemId, systemId),
+          isNull(deviceTokens.revokedAt),
+        ),
+      )
+      .returning();
+
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Device token not found");
+    }
+
+    await audit(tx, {
+      eventType: AUDIT_TOKEN_UPDATED,
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Device token updated",
+      accountId: auth.accountId,
+      systemId,
+    });
+
+    return toDeviceTokenResult({ ...row, token: maskToken(row.token) });
+  });
+}
+
+/** Delete a device token permanently. Returns 404 if not found. */
+export async function deleteDeviceToken(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  tokenId: DeviceTokenId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  assertSystemOwnership(systemId, auth);
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const deleted = await tx
+      .delete(deviceTokens)
+      .where(and(eq(deviceTokens.id, tokenId), eq(deviceTokens.systemId, systemId)))
+      .returning({ id: deviceTokens.id });
+
+    if (deleted.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Device token not found");
+    }
+
+    await audit(tx, {
+      eventType: AUDIT_TOKEN_DELETED,
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Device token deleted",
+      accountId: auth.accountId,
+      systemId,
+    });
   });
 }
 
