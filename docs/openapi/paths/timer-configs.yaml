@@ -25,7 +25,15 @@
         content:
           application/json:
             schema:
-              $ref: "../openapi.yaml#/components/schemas/PaginatedResult"
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/timers.yaml#/TimerConfigResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
 

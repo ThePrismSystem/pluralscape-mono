@@ -155,6 +155,10 @@ tags:
     description: Fronting analytics (duration breakdowns, co-fronting statistics)
   - name: Fronting Reports
     description: Immutable encrypted report snapshots
+  - name: Timer Configs
+    description: Recurring check-in timer configurations
+  - name: Check-In Records
+    description: Scheduled check-in instances with respond/dismiss lifecycle
 paths:
   /:
     get:
@@ -10603,6 +10607,221 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/timer-configs:
+    get:
+      operationId: listTimerConfigs
+      tags:
+        - Timer Configs
+      summary: List timer configurations
+      description: |
+        Returns a paginated list of timer configs for the specified system.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeArchived
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, include archived timer configs
+      responses:
+        "200":
+          description: Paginated list of timer configs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TimerConfigResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    post:
+      operationId: createTimerConfig
+      tags:
+        - Timer Configs
+      summary: Create a timer configuration
+      description: |
+        Creates a new timer config with optional scheduling parameters.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTimerConfigRequest"
+      responses:
+        "201":
+          description: Created timer config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimerConfigResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /systems/{systemId}/timer-configs/{timerId}:
+    get:
+      operationId: getTimerConfig
+      tags:
+        - Timer Configs
+      summary: Get a timer configuration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: timerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Timer config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimerConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      operationId: updateTimerConfig
+      tags:
+        - Timer Configs
+      summary: Update a timer configuration
+      description: |
+        Updates a timer config using optimistic concurrency control.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: timerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTimerConfigRequest"
+      responses:
+        "200":
+          description: Updated timer config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimerConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      operationId: deleteTimerConfig
+      tags:
+        - Timer Configs
+      summary: Delete a timer configuration
+      description: |
+        Permanently deletes a timer config. Returns 409 if non-archived
+        check-in records exist.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: timerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Has dependents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /systems/{systemId}/timer-configs/{timerId}/archive:
+    post:
+      operationId: archiveTimerConfig
+      tags:
+        - Timer Configs
+      summary: Archive a timer configuration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: timerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/timer-configs/{timerId}/restore:
+    post:
+      operationId: restoreTimerConfig
+      tags:
+        - Timer Configs
+      summary: Restore an archived timer configuration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: timerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Restored timer config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimerConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /systems/{systemId}/check-in-records:
     get:
       operationId: listCheckInRecords
@@ -12938,6 +13157,150 @@ components:
         depth:
           type: integer
           description: Depth in the hierarchy tree (0 = root)
+    TimerConfigResponse:
+      description: |
+        A timer configuration for recurring check-in reminders.
+        Extends EncryptedEntity with server-visible scheduling fields.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          properties:
+            enabled:
+              type: boolean
+              description: Whether the timer is actively scheduling check-ins
+            intervalMinutes:
+              type: integer
+              nullable: true
+              minimum: 1
+              description: Minutes between check-in records
+            wakingHoursOnly:
+              type: boolean
+              nullable: true
+              description: If true, only generate check-ins during waking hours
+            wakingStart:
+              type: string
+              nullable: true
+              pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+              description: Start of waking hours (HH:MM, required when wakingHoursOnly=true)
+            wakingEnd:
+              type: string
+              nullable: true
+              pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+              description: End of waking hours (HH:MM, required when wakingHoursOnly=true)
+    CreateTimerConfigRequest:
+      type: object
+      required:
+        - encryptedData
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted PlaintextTimerConfig
+        enabled:
+          type: boolean
+          default: true
+        intervalMinutes:
+          type: integer
+          minimum: 1
+        wakingHoursOnly:
+          type: boolean
+        wakingStart:
+          type: string
+          pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+        wakingEnd:
+          type: string
+          pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+    UpdateTimerConfigRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+        version:
+          type: integer
+          minimum: 1
+        enabled:
+          type: boolean
+        intervalMinutes:
+          type: integer
+          minimum: 1
+          nullable: true
+        wakingHoursOnly:
+          type: boolean
+        wakingStart:
+          type: string
+          nullable: true
+          pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+        wakingEnd:
+          type: string
+          nullable: true
+          pattern: ^(?:[01]\d|2[0-3]):[0-5]\d$
+    CheckInRecordResponse:
+      description: |
+        A check-in record created by the timer scheduler or manually.
+        Can be responded to or dismissed.
+      type: object
+      properties:
+        id:
+          type: string
+        systemId:
+          type: string
+        timerConfigId:
+          type: string
+        scheduledAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the check-in was scheduled
+        respondedByMemberId:
+          type: string
+          nullable: true
+        respondedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when the check-in was responded to
+        dismissed:
+          type: boolean
+        encryptedData:
+          type: string
+          nullable: true
+        archived:
+          type: boolean
+        archivedAt:
+          type: integer
+          format: int64
+          nullable: true
+    CreateCheckInRecordRequest:
+      type: object
+      required:
+        - timerConfigId
+        - scheduledAt
+      properties:
+        timerConfigId:
+          type: string
+          description: Timer config ID (tmr_ prefix)
+        scheduledAt:
+          type: integer
+          format: int64
+          minimum: 1
+        encryptedData:
+          type: string
+          contentEncoding: base64
+    RespondCheckInRecordRequest:
+      type: object
+      required:
+        - respondedByMemberId
+      properties:
+        respondedByMemberId:
+          type: string
+          description: Member ID who responded (mem_ prefix)
     LifecycleEventType:
       type: string
       enum:
@@ -16438,65 +16801,6 @@ components:
           minLength: 1
           maxLength: 87382
           description: Optional T1-encrypted confirmation data (replaces existing encryptedData)
-    CheckInRecordResponse:
-      description: |
-        A check-in record created by the timer scheduler or manually.
-        Can be responded to or dismissed.
-      type: object
-      properties:
-        id:
-          type: string
-        systemId:
-          type: string
-        timerConfigId:
-          type: string
-        scheduledAt:
-          type: integer
-          format: int64
-          description: Unix milliseconds when the check-in was scheduled
-        respondedByMemberId:
-          type: string
-          nullable: true
-        respondedAt:
-          type: integer
-          format: int64
-          nullable: true
-          description: Unix milliseconds when the check-in was responded to
-        dismissed:
-          type: boolean
-        encryptedData:
-          type: string
-          nullable: true
-        archived:
-          type: boolean
-        archivedAt:
-          type: integer
-          format: int64
-          nullable: true
-    CreateCheckInRecordRequest:
-      type: object
-      required:
-        - timerConfigId
-        - scheduledAt
-      properties:
-        timerConfigId:
-          type: string
-          description: Timer config ID (tmr_ prefix)
-        scheduledAt:
-          type: integer
-          format: int64
-          minimum: 1
-        encryptedData:
-          type: string
-          contentEncoding: base64
-    RespondCheckInRecordRequest:
-      type: object
-      required:
-        - respondedByMemberId
-      properties:
-        respondedByMemberId:
-          type: string
-          description: Member ID who responded (mem_ prefix)
   responses:
     NoContent:
       description: Success with no response body
@@ -16572,6 +16876,8 @@ x-tagGroups:
     tags:
       - Fronting Sessions
       - Fronting Comments
+      - Timer Configs
+      - Check-In Records
   - name: Analytics
     tags:
       - Analytics
