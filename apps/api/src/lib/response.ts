@@ -1,20 +1,4 @@
-import type { ActionResult } from "@pluralscape/types";
-
-/** Wrap a data payload in the standard { data } envelope. */
-export function wrapResult<T>(data: T): { readonly data: T } {
+/** Wrap a success payload in the standard { data } envelope. */
+export function envelope<T>(data: T): { readonly data: T } {
   return { data };
-}
-
-/** Wrap a mutation confirmation in the standard { data: { success: true, ...details } } envelope. */
-export function wrapAction(): { readonly data: ActionResult };
-export function wrapAction<T extends Record<string, unknown> & { success?: never }>(
-  details: T,
-): { readonly data: ActionResult & T };
-export function wrapAction<T extends Record<string, unknown> & { success?: never }>(
-  details?: T,
-): { readonly data: ActionResult & T } | { readonly data: ActionResult } {
-  if (details !== undefined) {
-    return { data: { success: true, ...details } };
-  }
-  return { data: { success: true } };
 }

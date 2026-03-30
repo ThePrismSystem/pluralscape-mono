@@ -236,7 +236,7 @@ describe("sessions route", () => {
   // ── POST /auth/sessions/revoke-all ─────────────────────────────
 
   describe("POST /auth/sessions/revoke-all", () => {
-    it("returns success with revokedCount in data envelope", async () => {
+    it("returns revokedCount in data envelope", async () => {
       vi.mocked(revokeAllSessions).mockResolvedValueOnce(3);
 
       const app = createApp();
@@ -246,9 +246,8 @@ describe("sessions route", () => {
 
       expect(res.status).toBe(200);
       const body = (await res.json()) as {
-        data: { success: true; revokedCount: number };
+        data: { revokedCount: number };
       };
-      expect(body.data.success).toBe(true);
       expect(body.data.revokedCount).toBe(3);
       expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledWith(
         {},

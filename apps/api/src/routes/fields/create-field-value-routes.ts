@@ -6,7 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
-import { wrapResult } from "../../lib/response.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
   deleteFieldValueForOwner,
@@ -94,7 +94,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
 
     const db = await getDb();
     const result = await listFieldValuesForOwner(db, systemId, owner, auth);
-    return c.json(wrapResult({ items: result }));
+    return c.json(envelope({ data: result }));
   });
 
   // ── UPDATE (PUT /:fieldDefId) ───────────────────────────────────
