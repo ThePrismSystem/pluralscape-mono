@@ -3,7 +3,10 @@
  * Domain: push notification device token management.
  */
 
-/** Maximum number of device tokens returned per list request. */
+/** Default page size for device token list requests. */
+export const DEFAULT_DEVICE_TOKEN_LIMIT = 25;
+
+/** Maximum page size for device token list requests. */
 export const MAX_DEVICE_TOKENS_PER_LIST = 100;
 
 /** Number of trailing characters to show in masked token strings. */

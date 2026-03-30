@@ -16,6 +16,9 @@ interface DeviceTokenResponse {
 
 interface DeviceTokenListResponse {
   readonly data: readonly DeviceTokenResponse[];
+  readonly nextCursor: string | null;
+  readonly hasMore: boolean;
+  readonly totalCount: number | null;
 }
 
 test.describe("Device tokens", () => {
@@ -44,8 +47,8 @@ test.describe("Device tokens", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const outer = (await res.json()) as { data: DeviceTokenListResponse };
-      const ids = outer.data.data.map((t) => t.id);
+      const body = (await res.json()) as DeviceTokenListResponse;
+      const ids = body.data.map((t) => t.id);
       expect(ids).toContain(tokenId);
     });
 
@@ -62,8 +65,8 @@ test.describe("Device tokens", () => {
       });
       expect(res.ok()).toBe(true);
 
-      const outer = (await res.json()) as { data: DeviceTokenListResponse };
-      const ids = outer.data.data.map((t) => t.id);
+      const body = (await res.json()) as DeviceTokenListResponse;
+      const ids = body.data.map((t) => t.id);
       expect(ids).not.toContain(tokenId);
     });
   });

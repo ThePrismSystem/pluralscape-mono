@@ -86,6 +86,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
     ...actual,
     and: vi.fn((...args: unknown[]) => args),
     eq: vi.fn((a: unknown, b: unknown) => [a, b]),
+    lt: vi.fn((a: unknown, b: unknown) => ["lt", a, b]),
     desc: vi.fn((a: unknown) => ["desc", a]),
     isNull: vi.fn((a: unknown) => ["isNull", a]),
   };
@@ -350,21 +351,38 @@ describe("device-token service", () => {
   // ── listDeviceTokens ──────────────────────────────────────────────
 
   describe("listDeviceTokens", () => {
-    it("returns list of masked tokens", async () => {
+    it("returns paginated result with masked tokens", async () => {
       mockTx.limit.mockResolvedValueOnce([makeTokenRow(), makeTokenRow({ id: "dt_other" })]);
 
       const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
+      expect(result.hasMore).toBe(false);
+      expect(result.nextCursor).toBeNull();
       // Tokens should be masked
-      expect(result[0]?.token).toMatch(/\*\*\*/);
+      expect(result.data[0]?.token).toMatch(/\*\*\*/);
     });
 
-    it("returns empty list when no tokens", async () => {
+    it("sets hasMore and nextCursor when more items exist", async () => {
+      // limit defaults to 25, so returning 26 rows signals hasMore
+      const rows = Array.from({ length: 26 }, (_, i) =>
+        makeTokenRow({ id: `dt_${String(i).padStart(4, "0")}` }),
+      );
+      mockTx.limit.mockResolvedValueOnce(rows);
+
+      const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
+
+      expect(result.data).toHaveLength(25);
+      expect(result.hasMore).toBe(true);
+      expect(result.nextCursor).not.toBeNull();
+    });
+
+    it("returns empty paginated result when no tokens", async () => {
       mockTx.limit.mockResolvedValueOnce([]);
 
       const result = await listDeviceTokens({} as never, SYSTEM_ID, AUTH);
-      expect(result).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
+      expect(result.hasMore).toBe(false);
     });
 
     it("rejects when ownership check fails", async () => {
