@@ -343,8 +343,8 @@ describe("POST .../comments/:commentId/restore", () => {
     const res = await app.request(`${COMMENT_URL}/restore`, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when archived comment not found", async () => {

@@ -36,7 +36,7 @@ sessionsRoute.get("/sessions", async (c) => {
   const limit = parsePaginationLimit(limitParam, DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT);
 
   const result = await listSessions(db, auth.accountId, parseCursor(cursor), limit);
-  return c.json(result);
+  return c.json(envelope(result));
 });
 
 // DELETE /auth/sessions/:id — revoke a specific session

@@ -101,11 +101,11 @@ describe("sessions route", () => {
       const res = await app.request("/auth/sessions");
 
       expect(res.status).toBe(200);
-      const body = (await res.json()) as typeof mockSessions;
-      expect(body.sessions).toHaveLength(2);
-      expect(body.nextCursor).not.toBeNull();
-      if (body.nextCursor) {
-        expect(fromCursor(body.nextCursor, PAGINATION.cursorTtlMs)).toBe("sess_2");
+      const body = (await res.json()) as { data: typeof mockSessions };
+      expect(body.data.sessions).toHaveLength(2);
+      expect(body.data.nextCursor).not.toBeNull();
+      if (body.data.nextCursor) {
+        expect(fromCursor(body.data.nextCursor, PAGINATION.cursorTtlMs)).toBe("sess_2");
       }
       expect(vi.mocked(listSessions)).toHaveBeenCalledWith({}, "acct_test", undefined, 25);
     });
