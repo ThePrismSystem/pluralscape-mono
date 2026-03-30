@@ -86,9 +86,9 @@ describe("PUT /account/friends/:connectionId/visibility", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_CONNECTION;
-    expect(body.id).toBe(CONNECTION_ID);
-    expect(body.encryptedData).toBe(VALID_BODY.encryptedData);
+    const body = (await res.json()) as { data: typeof MOCK_CONNECTION };
+    expect(body.data.id).toBe(CONNECTION_ID);
+    expect(body.data.encryptedData).toBe(VALID_BODY.encryptedData);
   });
 
   it("passes correct args to service", async () => {

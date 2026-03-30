@@ -7,6 +7,7 @@ import { getDb } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { getQueue } from "../../lib/queue.js";
+import { envelope } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError } from "../../services/auth.service.js";
@@ -25,7 +26,7 @@ recoveryKeyRoutes.get("/status", createCategoryRateLimiter("authLight"), async (
   const auth = c.get("auth");
   const db = await getDb();
   const result = await getRecoveryKeyStatus(db, auth.accountId);
-  return c.json(result);
+  return c.json(envelope(result));
 });
 
 recoveryKeyRoutes.post("/regenerate", createCategoryRateLimiter("authHeavy"), async (c) => {
@@ -64,7 +65,7 @@ recoveryKeyRoutes.post("/regenerate", createCategoryRateLimiter("authHeavy"), as
         });
     }
 
-    return c.json(result, HTTP_CREATED);
+    return c.json(envelope(result), HTTP_CREATED);
   } catch (error: unknown) {
     if (error instanceof NoActiveRecoveryKeyError) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", error.message);

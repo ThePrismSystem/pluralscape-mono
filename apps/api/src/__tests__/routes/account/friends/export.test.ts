@@ -84,9 +84,9 @@ describe("GET /account/friends/:connectionId/export/manifest", () => {
     const res = await createApp().request(`/account/friends/${CONNECTION_ID}/export/manifest`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as FriendExportManifestResponse;
-    expect(body.systemId).toBe("sys_target");
-    expect(body.entries).toHaveLength(1);
+    const body = (await res.json()) as { data: FriendExportManifestResponse };
+    expect(body.data.systemId).toBe("sys_target");
+    expect(body.data.entries).toHaveLength(1);
   });
 
   it("sets ETag header", async () => {

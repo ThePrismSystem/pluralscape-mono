@@ -95,24 +95,24 @@ test.describe("Friend dashboard", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as DashboardResponse;
+      const body = (await res.json()) as { data: DashboardResponse };
 
       // System ID present
-      expect(body.systemId).toBe(systemId);
+      expect(body.data.systemId).toBe(systemId);
 
       // memberCount is now bucket-filtered (only the tagged member counted)
-      expect(body.memberCount).toBe(1);
+      expect(body.data.memberCount).toBe(1);
 
       // Only the tagged member is visible
-      expect(body.visibleMembers).toHaveLength(1);
-      expect(body.visibleMembers[0]?.id).toBe(member1.id);
-      expect(typeof body.visibleMembers[0]?.encryptedData).toBe("string");
-      expect(body.visibleMembers[0]?.encryptedData.length).toBeGreaterThan(0);
+      expect(body.data.visibleMembers).toHaveLength(1);
+      expect(body.data.visibleMembers[0]?.id).toBe(member1.id);
+      expect(typeof body.data.visibleMembers[0]?.encryptedData).toBe("string");
+      expect(body.data.visibleMembers[0]?.encryptedData.length).toBeGreaterThan(0);
 
       // Key grants present
-      expect(body.keyGrants).toHaveLength(1);
-      expect(body.keyGrants[0]?.bucketId).toBe(bucket.id);
-      expect(body.keyGrants[0]?.keyVersion).toBe(INITIAL_KEY_VERSION);
+      expect(body.data.keyGrants).toHaveLength(1);
+      expect(body.data.keyGrants[0]?.bucketId).toBe(bucket.id);
+      expect(body.data.keyGrants[0]?.keyVersion).toBe(INITIAL_KEY_VERSION);
     });
   });
 
@@ -127,17 +127,17 @@ test.describe("Friend dashboard", () => {
       headers: accountB.headers,
     });
     expect(res.status()).toBe(HTTP_OK);
-    const body = (await res.json()) as DashboardResponse;
+    const body = (await res.json()) as { data: DashboardResponse };
 
     // memberCount is bucket-filtered (no visible members with no buckets assigned)
-    expect(body.memberCount).toBe(0);
+    expect(body.data.memberCount).toBe(0);
 
     // All filtered arrays are empty
-    expect(body.visibleMembers).toEqual([]);
-    expect(body.visibleCustomFronts).toEqual([]);
-    expect(body.visibleStructureEntities).toEqual([]);
-    expect(body.activeFronting.sessions).toEqual([]);
-    expect(body.keyGrants).toEqual([]);
+    expect(body.data.visibleMembers).toEqual([]);
+    expect(body.data.visibleCustomFronts).toEqual([]);
+    expect(body.data.visibleStructureEntities).toEqual([]);
+    expect(body.data.activeFronting.sessions).toEqual([]);
+    expect(body.data.keyGrants).toEqual([]);
   });
 
   test("returns 404 for non-existent connection", async ({
@@ -218,11 +218,11 @@ test.describe("Friend dashboard", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as DashboardResponse;
+      const body = (await res.json()) as { data: DashboardResponse };
 
-      expect(body.activeFronting.sessions).toHaveLength(1);
-      expect(body.activeFronting.sessions[0]?.memberId).toBe(member.id);
-      expect(body.activeFronting.isCofronting).toBe(false);
+      expect(body.data.activeFronting.sessions).toHaveLength(1);
+      expect(body.data.activeFronting.sessions[0]?.memberId).toBe(member.id);
+      expect(body.data.activeFronting.isCofronting).toBe(false);
     });
   });
 
@@ -259,10 +259,10 @@ test.describe("Friend dashboard", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as DashboardResponse;
+      const body = (await res.json()) as { data: DashboardResponse };
 
-      expect(body.visibleCustomFronts).toHaveLength(1);
-      expect(body.visibleCustomFronts[0]?.id).toBe(customFront.id);
+      expect(body.data.visibleCustomFronts).toHaveLength(1);
+      expect(body.data.visibleCustomFronts[0]?.id).toBe(customFront.id);
     });
   });
 
@@ -313,10 +313,10 @@ test.describe("Friend dashboard", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as DashboardResponse;
+      const body = (await res.json()) as { data: DashboardResponse };
 
-      expect(body.activeFronting.sessions).toHaveLength(2);
-      expect(body.activeFronting.isCofronting).toBe(true);
+      expect(body.data.activeFronting.sessions).toHaveLength(2);
+      expect(body.data.activeFronting.isCofronting).toBe(true);
     });
   });
 });

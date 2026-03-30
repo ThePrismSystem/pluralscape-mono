@@ -75,9 +75,9 @@ describe("POST /account/friends/:connectionId/restore", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_CONNECTION;
-    expect(body.id).toBe(CONNECTION_ID);
-    expect(body.status).toBe("accepted");
+    const body = (await res.json()) as { data: typeof MOCK_CONNECTION };
+    expect(body.data.id).toBe(CONNECTION_ID);
+    expect(body.data.status).toBe("accepted");
   });
 
   it("passes correct args to service", async () => {

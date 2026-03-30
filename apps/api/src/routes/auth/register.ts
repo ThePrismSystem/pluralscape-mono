@@ -6,6 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError, registerAccount } from "../../services/auth.service.js";
 
@@ -24,12 +25,12 @@ registerRoute.post("/", async (c) => {
   try {
     const result = await registerAccount(db, body, platform, audit);
     return c.json(
-      {
+      envelope({
         sessionToken: result.sessionToken,
         recoveryKey: result.recoveryKey,
         accountId: result.accountId,
         accountType: result.accountType,
-      },
+      }),
       HTTP_CREATED,
     );
   } catch (error) {

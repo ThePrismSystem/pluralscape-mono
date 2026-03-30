@@ -87,8 +87,8 @@ describe("POST /account/device-transfer (initiate)", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { transferId: string; expiresAt: number };
-    expect(body.transferId).toBe("dtr_test-id");
+    const body = (await res.json()) as { data: { transferId: string; expiresAt: number } };
+    expect(body.data.transferId).toBe("dtr_test-id");
   });
 
   it("returns 400 when codeSaltHex is missing", async () => {
@@ -219,8 +219,8 @@ describe("POST /account/device-transfer/:id/complete", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { encryptedKeyMaterialHex: string };
-    expect(body.encryptedKeyMaterialHex).toBe("cc".repeat(40));
+    const body = (await res.json()) as { data: { encryptedKeyMaterialHex: string } };
+    expect(body.data.encryptedKeyMaterialHex).toBe("cc".repeat(40));
   });
 
   it("returns 400 when code is missing", async () => {

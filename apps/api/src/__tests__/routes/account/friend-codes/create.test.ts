@@ -61,9 +61,9 @@ describe("POST /account/friend-codes", () => {
     const res = await createApp().request("/account/friend-codes", { method: "POST" });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as typeof MOCK_CODE;
-    expect(body.id).toBe(MOCK_CODE.id);
-    expect(body.code).toBe("ABCD-1234");
+    const body = (await res.json()) as { data: typeof MOCK_CODE };
+    expect(body.data.id).toBe(MOCK_CODE.id);
+    expect(body.data.code).toBe("ABCD-1234");
   });
 
   it("passes correct args to service", async () => {

@@ -68,9 +68,11 @@ describe("GET /auth/recovery-key/status", () => {
     const res = await app.request("/auth/recovery-key/status", { method: "GET" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { hasActiveKey: boolean; createdAt: number | null };
-    expect(body.hasActiveKey).toBe(true);
-    expect(body.createdAt).toBe(1000);
+    const body = (await res.json()) as {
+      data: { hasActiveKey: boolean; createdAt: number | null };
+    };
+    expect(body.data.hasActiveKey).toBe(true);
+    expect(body.data.createdAt).toBe(1000);
   });
 
   it("returns status without active key", async () => {
@@ -83,9 +85,11 @@ describe("GET /auth/recovery-key/status", () => {
     const res = await app.request("/auth/recovery-key/status", { method: "GET" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { hasActiveKey: boolean; createdAt: number | null };
-    expect(body.hasActiveKey).toBe(false);
-    expect(body.createdAt).toBeNull();
+    const body = (await res.json()) as {
+      data: { hasActiveKey: boolean; createdAt: number | null };
+    };
+    expect(body.data.hasActiveKey).toBe(false);
+    expect(body.data.createdAt).toBeNull();
   });
 
   it("passes account ID from auth context to service", async () => {
@@ -125,8 +129,8 @@ describe("POST /auth/recovery-key/regenerate", () => {
     });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { recoveryKey: string };
-    expect(body.recoveryKey).toBe(
+    const body = (await res.json()) as { data: { recoveryKey: string } };
+    expect(body.data.recoveryKey).toBe(
       "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
     );
   });

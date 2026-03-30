@@ -16,11 +16,15 @@ const HTTP_CREATED = 201;
 
 // ── Types ────────────────────────────────────────────────────────────
 
-interface RegisterResponse {
+interface RegisterData {
   sessionToken: string;
   recoveryKey: string;
   accountId: string;
   accountType: string;
+}
+
+interface RegisterResponse {
+  data: RegisterData;
 }
 
 interface AccountContext {
@@ -32,16 +36,20 @@ interface AccountContext {
 }
 
 interface FriendCodeResponse {
-  readonly id: string;
-  readonly accountId: string;
-  readonly code: string;
-  readonly createdAt: number;
-  readonly expiresAt: number | null;
-  readonly archived: boolean;
+  data: {
+    readonly id: string;
+    readonly accountId: string;
+    readonly code: string;
+    readonly createdAt: number;
+    readonly expiresAt: number | null;
+    readonly archived: boolean;
+  };
 }
 
 interface RedeemResponse {
-  readonly connectionIds: readonly [string, string];
+  data: {
+    readonly connectionIds: readonly [string, string];
+  };
 }
 
 interface FriendFixtureContext {
@@ -80,13 +88,13 @@ async function registerAccount(request: APIRequestContext): Promise<AccountConte
     throw new Error(`Registration failed (${String(res.status())}): ${body}`);
   }
 
-  const data = (await res.json()) as RegisterResponse;
+  const envelope = (await res.json()) as RegisterResponse;
   return {
-    accountId: data.accountId,
-    sessionToken: data.sessionToken,
+    accountId: envelope.data.accountId,
+    sessionToken: envelope.data.sessionToken,
     email,
     password,
-    headers: { Authorization: `Bearer ${data.sessionToken}` },
+    headers: { Authorization: `Bearer ${envelope.data.sessionToken}` },
   };
 }
 
@@ -103,18 +111,18 @@ export const test = base.extend<FriendFixtures>({
       headers: accountA.headers,
     });
     expect(codeRes.status()).toBe(HTTP_CREATED);
-    const friendCode = (await codeRes.json()) as FriendCodeResponse;
+    const friendCodeEnvelope = (await codeRes.json()) as FriendCodeResponse;
 
     // 3. Account B redeems the code
     const redeemRes = await request.post("/v1/account/friend-codes/redeem", {
       headers: accountB.headers,
-      data: { code: friendCode.code },
+      data: { code: friendCodeEnvelope.data.code },
     });
     expect(redeemRes.status()).toBe(HTTP_CREATED);
     const redeemResult = (await redeemRes.json()) as RedeemResponse;
 
     // connectionIds[0] is A's connection (code owner), connectionIds[1] is B's connection (redeemer)
-    const [connectionIdA, connectionIdB] = redeemResult.connectionIds;
+    const [connectionIdA, connectionIdB] = redeemResult.data.connectionIds;
 
     // 4. Account A accepts — transitions both sides to "accepted"
     const acceptA = await request.post(`/v1/account/friends/${connectionIdA}/accept`, {

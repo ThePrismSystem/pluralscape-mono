@@ -8,6 +8,7 @@ import { createAuditWriter } from "../../../../lib/audit-writer.js";
 import { getDb } from "../../../../lib/db.js";
 import { requireIdParam } from "../../../../lib/id-param.js";
 import { parseJsonBody } from "../../../../lib/parse-json-body.js";
+import { envelope } from "../../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../../middleware/rate-limit.js";
 import { updateFriendNotificationPreference } from "../../../../services/friend-notification-preference.service.js";
 
@@ -46,5 +47,5 @@ updateRoute.patch("/", async (c) => {
     auth,
     audit,
   );
-  return c.json(result);
+  return c.json(envelope(result));
 });

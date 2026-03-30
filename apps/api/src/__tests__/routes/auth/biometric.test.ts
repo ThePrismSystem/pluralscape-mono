@@ -57,8 +57,8 @@ describe("POST /biometric/enroll", () => {
     const res = await postJSON(app, "/biometric/enroll", VALID_ENROLL_BODY);
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("bt_test123");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("bt_test123");
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
@@ -106,8 +106,8 @@ describe("POST /biometric/verify", () => {
     const res = await postJSON(app, "/biometric/verify", VALID_VERIFY_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { verified: boolean };
-    expect(body.verified).toBe(true);
+    const body = (await res.json()) as { data: { verified: boolean } };
+    expect(body.data.verified).toBe(true);
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {

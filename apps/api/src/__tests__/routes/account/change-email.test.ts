@@ -67,8 +67,8 @@ describe("PUT /account/email", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
+    const body = (await res.json()) as { data: { ok: boolean } };
+    expect(body.data.ok).toBe(true);
   });
 
   it("returns 400 on ValidationError", async () => {

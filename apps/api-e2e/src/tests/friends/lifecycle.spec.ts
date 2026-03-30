@@ -90,10 +90,10 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(res.status()).toBe(HTTP_OK);
-    const body = (await res.json()) as FriendConnectionResponse;
-    expect(body.id).toBe(connectionIdA);
-    expect(body.status).toBe("accepted");
-    expect(body.version).toBeGreaterThanOrEqual(1);
+    const body = (await res.json()) as { data: FriendConnectionResponse };
+    expect(body.data.id).toBe(connectionIdA);
+    expect(body.data.status).toBe("accepted");
+    expect(body.data.version).toBeGreaterThanOrEqual(1);
   });
 
   test("bucket assignment: assign, list, unassign", async ({
@@ -115,10 +115,10 @@ test.describe("Friend lifecycle", () => {
         },
       });
       expect(res.status()).toBe(HTTP_CREATED);
-      const body = (await res.json()) as BucketAssignmentResponse;
-      expect(body.friendConnectionId).toBe(connectionIdA);
-      expect(body.bucketId).toBe(bucketId);
-      expect(body.friendAccountId).toBeTruthy();
+      const body = (await res.json()) as { data: BucketAssignmentResponse };
+      expect(body.data.friendConnectionId).toBe(connectionIdA);
+      expect(body.data.bucketId).toBe(bucketId);
+      expect(body.data.friendAccountId).toBeTruthy();
     });
 
     // ── List bucket assignments ──
@@ -165,8 +165,8 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(getRes.ok()).toBe(true);
-    const initial = (await getRes.json()) as FriendConnectionResponse;
-    const initialVersion = initial.version;
+    const initial = (await getRes.json()) as { data: FriendConnectionResponse };
+    const initialVersion = initial.data.version;
 
     // Update visibility with encrypted data
     const updateRes = await request.put(`/v1/account/friends/${connectionIdA}/visibility`, {
@@ -177,10 +177,10 @@ test.describe("Friend lifecycle", () => {
       },
     });
     expect(updateRes.ok()).toBe(true);
-    const updated = (await updateRes.json()) as FriendConnectionResponse;
-    expect(updated.id).toBe(connectionIdA);
-    expect(updated.version).toBe(initialVersion + 1);
-    expect(updated.encryptedData).toBeTruthy();
+    const updated = (await updateRes.json()) as { data: FriendConnectionResponse };
+    expect(updated.data.id).toBe(connectionIdA);
+    expect(updated.data.version).toBe(initialVersion + 1);
+    expect(updated.data.encryptedData).toBeTruthy();
   });
 
   test("block connection", async ({ request, friendAccounts: { accountA, connectionIdA } }) => {
@@ -188,9 +188,9 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(res.ok()).toBe(true);
-    const body = (await res.json()) as FriendConnectionResponse;
-    expect(body.id).toBe(connectionIdA);
-    expect(body.status).toBe("blocked");
+    const body = (await res.json()) as { data: FriendConnectionResponse };
+    expect(body.data.id).toBe(connectionIdA);
+    expect(body.data.status).toBe("blocked");
   });
 
   test("remove connection", async ({ request, friendAccounts: { accountA, connectionIdA } }) => {
@@ -198,9 +198,9 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(res.ok()).toBe(true);
-    const body = (await res.json()) as FriendConnectionResponse;
-    expect(body.id).toBe(connectionIdA);
-    expect(body.status).toBe("removed");
+    const body = (await res.json()) as { data: FriendConnectionResponse };
+    expect(body.data.id).toBe(connectionIdA);
+    expect(body.data.status).toBe("removed");
   });
 
   test("archive and restore connection", async ({
@@ -241,8 +241,8 @@ test.describe("Friend lifecycle", () => {
         headers: accountA.headers,
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as FriendConnectionResponse;
-      expect(body.id).toBe(connectionIdA);
+      const body = (await res.json()) as { data: FriendConnectionResponse };
+      expect(body.data.id).toBe(connectionIdA);
     });
 
     await test.step("restored connection back in default list", async () => {

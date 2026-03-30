@@ -86,9 +86,9 @@ describe("POST /account/friends/:connectionId/accept", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_ACCEPTED_CONNECTION;
-    expect(body.id).toBe(CONNECTION_ID);
-    expect(body.status).toBe("accepted");
+    const body = (await res.json()) as { data: typeof MOCK_ACCEPTED_CONNECTION };
+    expect(body.data.id).toBe(CONNECTION_ID);
+    expect(body.data.status).toBe("accepted");
   });
 
   it("passes correct args to service", async () => {
@@ -136,9 +136,9 @@ describe("POST /account/friends/:connectionId/reject", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_REJECTED_CONNECTION;
-    expect(body.id).toBe(CONNECTION_ID);
-    expect(body.status).toBe("removed");
+    const body = (await res.json()) as { data: typeof MOCK_REJECTED_CONNECTION };
+    expect(body.data.id).toBe(CONNECTION_ID);
+    expect(body.data.status).toBe("removed");
   });
 
   it("passes correct args to service", async () => {

@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { getFriendDashboardSync } from "../../../services/friend-dashboard-sync.service.js";
 
@@ -22,5 +23,5 @@ dashboardSyncRoute.get("/:connectionId/dashboard/sync", async (c) => {
 
   const db = await getDb();
   const result = await getFriendDashboardSync(db, connectionId, auth);
-  return c.json(result);
+  return c.json(envelope(result));
 });

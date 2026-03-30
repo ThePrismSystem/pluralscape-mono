@@ -67,9 +67,9 @@ describe("PUT /account/password", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean; revokedSessionCount: number };
-    expect(body.ok).toBe(true);
-    expect(body.revokedSessionCount).toBe(3);
+    const body = (await res.json()) as { data: { ok: boolean; revokedSessionCount: number } };
+    expect(body.data.ok).toBe(true);
+    expect(body.data.revokedSessionCount).toBe(3);
   });
 
   it("returns 400 on ValidationError", async () => {

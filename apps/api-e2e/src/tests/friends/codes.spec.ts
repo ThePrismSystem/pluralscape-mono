@@ -47,14 +47,14 @@ test.describe("Friend codes", () => {
       });
       expect(res.status()).toBe(HTTP_CREATED);
 
-      const body = (await res.json()) as FriendCodeResponse;
-      expect(body.id).toMatch(/^frc_/);
-      expect(body.code).toMatch(FRIEND_CODE_PATTERN);
-      expect(body.archived).toBe(false);
-      expect(body.createdAt).toBeGreaterThan(0);
+      const body = (await res.json()) as { data: FriendCodeResponse };
+      expect(body.data.id).toMatch(/^frc_/);
+      expect(body.data.code).toMatch(FRIEND_CODE_PATTERN);
+      expect(body.data.archived).toBe(false);
+      expect(body.data.createdAt).toBeGreaterThan(0);
 
-      codeId = body.id;
-      codeValue = body.code;
+      codeId = body.data.id;
+      codeValue = body.data.code;
     });
 
     // ── List ──
@@ -98,12 +98,12 @@ test.describe("Friend codes", () => {
       headers: authHeaders,
     });
     expect(genRes.status()).toBe(HTTP_CREATED);
-    const code = (await genRes.json()) as FriendCodeResponse;
+    const genBody = (await genRes.json()) as { data: FriendCodeResponse };
 
     // Attempt to redeem own code
     const redeemRes = await request.post("/v1/account/friend-codes/redeem", {
       headers: authHeaders,
-      data: { code: code.code },
+      data: { code: genBody.data.code },
     });
     expect(redeemRes.status()).toBe(HTTP_CONFLICT);
 
@@ -148,8 +148,10 @@ test.describe("Friend codes", () => {
       },
     });
     expect(regA.ok()).toBe(true);
-    const accountA = (await regA.json()) as { sessionToken: string; accountId: string };
-    const headersA = { Authorization: `Bearer ${accountA.sessionToken}` };
+    const accountAEnv = (await regA.json()) as {
+      data: { sessionToken: string; accountId: string };
+    };
+    const headersA = { Authorization: `Bearer ${accountAEnv.data.sessionToken}` };
 
     const regB = await request.post("/v1/auth/register", {
       data: {
@@ -159,19 +161,21 @@ test.describe("Friend codes", () => {
       },
     });
     expect(regB.ok()).toBe(true);
-    const accountB = (await regB.json()) as { sessionToken: string; accountId: string };
-    const headersB = { Authorization: `Bearer ${accountB.sessionToken}` };
+    const accountBEnv = (await regB.json()) as {
+      data: { sessionToken: string; accountId: string };
+    };
+    const headersB = { Authorization: `Bearer ${accountBEnv.data.sessionToken}` };
 
     // Account A generates a code, Account B redeems it (they become friends)
     const codeResA = await request.post("/v1/account/friend-codes", {
       headers: headersA,
     });
     expect(codeResA.status()).toBe(HTTP_CREATED);
-    const friendCodeA = (await codeResA.json()) as FriendCodeResponse;
+    const friendCodeAEnv = (await codeResA.json()) as { data: FriendCodeResponse };
 
     const redeemRes = await request.post("/v1/account/friend-codes/redeem", {
       headers: headersB,
-      data: { code: friendCodeA.code },
+      data: { code: friendCodeAEnv.data.code },
     });
     expect(redeemRes.status()).toBe(HTTP_CREATED);
 
@@ -180,11 +184,11 @@ test.describe("Friend codes", () => {
       headers: headersB,
     });
     expect(codeResB.status()).toBe(HTTP_CREATED);
-    const friendCodeB = (await codeResB.json()) as FriendCodeResponse;
+    const friendCodeBEnv = (await codeResB.json()) as { data: FriendCodeResponse };
 
     const duplicateRedeem = await request.post("/v1/account/friend-codes/redeem", {
       headers: headersA,
-      data: { code: friendCodeB.code },
+      data: { code: friendCodeBEnv.data.code },
     });
     expect(duplicateRedeem.status()).toBe(HTTP_CONFLICT);
   });
@@ -202,8 +206,10 @@ test.describe("Friend codes", () => {
       },
     });
     expect(regA.ok()).toBe(true);
-    const accountA = (await regA.json()) as { sessionToken: string; accountId: string };
-    const headersA = { Authorization: `Bearer ${accountA.sessionToken}` };
+    const accountAEnv = (await regA.json()) as {
+      data: { sessionToken: string; accountId: string };
+    };
+    const headersA = { Authorization: `Bearer ${accountAEnv.data.sessionToken}` };
 
     const regB = await request.post("/v1/auth/register", {
       data: {
@@ -213,47 +219,51 @@ test.describe("Friend codes", () => {
       },
     });
     expect(regB.ok()).toBe(true);
-    const accountB = (await regB.json()) as { sessionToken: string; accountId: string };
-    const headersB = { Authorization: `Bearer ${accountB.sessionToken}` };
+    const accountBEnv = (await regB.json()) as {
+      data: { sessionToken: string; accountId: string };
+    };
+    const headersB = { Authorization: `Bearer ${accountBEnv.data.sessionToken}` };
 
     // Account A generates a code
     const codeRes = await request.post("/v1/account/friend-codes", {
       headers: headersA,
     });
     expect(codeRes.status()).toBe(HTTP_CREATED);
-    const friendCode = (await codeRes.json()) as FriendCodeResponse;
+    const friendCodeEnv = (await codeRes.json()) as { data: FriendCodeResponse };
 
     // Account B redeems it
     const redeemRes = await request.post("/v1/account/friend-codes/redeem", {
       headers: headersB,
-      data: { code: friendCode.code },
+      data: { code: friendCodeEnv.data.code },
     });
     expect(redeemRes.status()).toBe(HTTP_CREATED);
 
-    const result = (await redeemRes.json()) as { connectionIds: readonly [string, string] };
-    expect(result.connectionIds).toHaveLength(2);
-    expect(result.connectionIds[0]).toMatch(/^fc_/);
-    expect(result.connectionIds[1]).toMatch(/^fc_/);
+    const result = (await redeemRes.json()) as {
+      data: { connectionIds: readonly [string, string] };
+    };
+    expect(result.data.connectionIds).toHaveLength(2);
+    expect(result.data.connectionIds[0]).toMatch(/^fc_/);
+    expect(result.data.connectionIds[1]).toMatch(/^fc_/);
 
     // Both accounts should see the connection in their list
     const listA = await request.get("/v1/account/friends", { headers: headersA });
     expect(listA.ok()).toBe(true);
     const bodyA = (await listA.json()) as { data: { id: string; status: string }[] };
-    const connA = bodyA.data.find((c) => c.id === result.connectionIds[0]);
+    const connA = bodyA.data.find((c) => c.id === result.data.connectionIds[0]);
     expect(connA).toBeTruthy();
     expect(connA?.status).toBe("pending");
 
     const listB = await request.get("/v1/account/friends", { headers: headersB });
     expect(listB.ok()).toBe(true);
     const bodyB = (await listB.json()) as { data: { id: string; status: string }[] };
-    const connB = bodyB.data.find((c) => c.id === result.connectionIds[1]);
+    const connB = bodyB.data.find((c) => c.id === result.data.connectionIds[1]);
     expect(connB).toBeTruthy();
     expect(connB?.status).toBe("pending");
 
     // Redeeming the same code again should fail (code was auto-archived)
     const redeemAgain = await request.post("/v1/account/friend-codes/redeem", {
       headers: headersB,
-      data: { code: friendCode.code },
+      data: { code: friendCodeEnv.data.code },
     });
     expect(redeemAgain.status()).toBe(404);
   });

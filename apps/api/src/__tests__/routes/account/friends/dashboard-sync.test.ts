@@ -87,10 +87,10 @@ describe("GET /account/friends/:connectionId/dashboard/sync", () => {
     const res = await createApp().request(`/account/friends/${CONNECTION_ID}/dashboard/sync`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as FriendDashboardSyncResponse;
-    expect(body.systemId).toBe("sys_target");
-    expect(body.entries).toHaveLength(4);
-    expect(body.entries[0]).toEqual({
+    const body = (await res.json()) as { data: FriendDashboardSyncResponse };
+    expect(body.data.systemId).toBe("sys_target");
+    expect(body.data.entries).toHaveLength(4);
+    expect(body.data.entries[0]).toEqual({
       entityType: "member",
       count: 5,
       latestUpdatedAt: 1000,

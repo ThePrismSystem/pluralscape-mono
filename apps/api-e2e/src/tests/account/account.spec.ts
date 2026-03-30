@@ -6,8 +6,8 @@ test.describe("Account endpoints", () => {
 
     expect(res.status()).toBe(200);
     const body = await res.json();
-    expect(body).toHaveProperty("accountId");
-    expect(body).toHaveProperty("accountType");
+    expect(body).toHaveProperty("data.accountId");
+    expect(body).toHaveProperty("data.accountType");
   });
 
   test("GET /v1/account without auth returns 401", async ({ request }) => {

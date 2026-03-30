@@ -116,14 +116,14 @@ test.describe("Friend data export", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ManifestResponse;
+      const body = (await res.json()) as { data: ManifestResponse };
 
-      expect(body.systemId).toBeTruthy();
-      expect(body.entries.length).toBeGreaterThan(0);
-      expect(body.etag).toBeTruthy();
+      expect(body.data.systemId).toBeTruthy();
+      expect(body.data.entries.length).toBeGreaterThan(0);
+      expect(body.data.etag).toBeTruthy();
 
       // All counts should be 0 with no bucket assignments
-      for (const entry of body.entries) {
+      for (const entry of body.data.entries) {
         expect(entry.count).toBe(0);
         expect(entry.lastUpdatedAt).toBeNull();
       }
@@ -152,16 +152,16 @@ test.describe("Friend data export", () => {
         headers: accountB.headers,
       });
       expect(res.status()).toBe(HTTP_OK);
-      const body = (await res.json()) as ManifestResponse;
+      const body = (await res.json()) as { data: ManifestResponse };
 
-      const memberEntry = body.entries.find((e) => e.entityType === "member");
+      const memberEntry = body.data.entries.find((e) => e.entityType === "member");
       expect(memberEntry).toBeDefined();
       expect(memberEntry?.count).toBe(1);
       expect(memberEntry?.lastUpdatedAt).toBeGreaterThan(0);
 
       // Key grants present
-      expect(body.keyGrants).toHaveLength(1);
-      expect(body.keyGrants[0]?.bucketId).toBe(bucket.id);
+      expect(body.data.keyGrants).toHaveLength(1);
+      expect(body.data.keyGrants[0]?.bucketId).toBe(bucket.id);
     });
 
     test("returns 304 when ETag matches", async ({
