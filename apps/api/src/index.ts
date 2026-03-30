@@ -27,7 +27,13 @@ import {
   SERVER_STOP_TIMEOUT_SECONDS,
   SHUTDOWN_TIMEOUT_SECONDS,
 } from "./server.constants.js";
-import { closeAllConnections, syncWsApp, websocket } from "./ws/index.js";
+import {
+  closeAllConnections,
+  getSyncPubSub,
+  setSyncPubSub,
+  syncWsApp,
+  websocket,
+} from "./ws/index.js";
 import {
   WS_CLOSE_GOING_AWAY,
   WS_IDLE_TIMEOUT_SECONDS,
@@ -84,7 +90,13 @@ const MS_PER_SECOND = 1_000;
 export async function shutdown(server: { stop(): Promise<void> | void } | null): Promise<void> {
   logger.info("Shutting down");
 
-  // Phase 1: Close all WebSocket connections gracefully
+  // Phase 1: Disconnect sync pub/sub before closing connections
+  const syncPubSub = getSyncPubSub();
+  if (syncPubSub) {
+    await syncPubSub.disconnect();
+  }
+
+  // Phase 2: Close all WebSocket connections gracefully
   closeAllConnections(WS_CLOSE_GOING_AWAY, "Server shutting down");
 
   if (server) {
@@ -185,6 +197,17 @@ async function start(): Promise<void> {
     if (connected) {
       setNotificationPubSub(notifyPubSub);
       logger.info("Notification SSE pub/sub connected");
+    }
+
+    // Initialize sync pub/sub for cross-instance WebSocket broadcast
+    const syncPubSub = new ValkeyPubSub(
+      "sync-" + crypto.randomUUID().slice(0, NOTIFY_SERVER_ID_SUFFIX_LENGTH),
+      logger,
+    );
+    const syncConnected = await syncPubSub.connect(valkeyUrl);
+    if (syncConnected) {
+      setSyncPubSub(syncPubSub);
+      logger.info("Sync WebSocket pub/sub connected");
     }
   }
 
