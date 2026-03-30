@@ -75,12 +75,12 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { data: { id: string; memberId: string; version: number }[] };
+      data: { id: string; memberId: string; version: number }[];
     };
-    expect(body.data.data).toHaveLength(1);
-    expect(body.data.data[0]?.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.data.data[0]?.memberId).toBe(MEM_ID);
-    expect(body.data.data[0]?.version).toBe(1);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.data[0]?.memberId).toBe(MEM_ID);
+    expect(body.data[0]?.version).toBe(1);
   });
 
   it("returns 200 with empty items array in data envelope", async () => {
@@ -90,8 +90,8 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
     const res = await app.request(FIELDS_PATH);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { data: unknown[] } };
-    expect(body.data.data).toHaveLength(0);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(0);
   });
 
   it("forwards systemId and owner to service", async () => {
