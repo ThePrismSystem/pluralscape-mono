@@ -3,7 +3,9 @@
   "extends": "../tooling/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "types": ["node"],
+    "typeRoots": ["../tooling/test-utils/node_modules/@types"]
   },
   "include": ["./**/*.ts"]
 }
