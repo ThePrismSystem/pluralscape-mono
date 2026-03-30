@@ -58,10 +58,12 @@ describe("POST /systems", () => {
     const res = await app.request("/systems", { method: "POST" });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string; encryptedData: null; version: number };
-    expect(body.id).toBe("sys_new");
-    expect(body.encryptedData).toBeNull();
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as {
+      data: { id: string; encryptedData: null; version: number };
+    };
+    expect(body.data.id).toBe("sys_new");
+    expect(body.data.encryptedData).toBeNull();
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards auth context and audit writer to service", async () => {

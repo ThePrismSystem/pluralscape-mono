@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { HTTP_CREATED } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { createSystem } from "../../services/system.service.js";
 
@@ -18,5 +19,5 @@ createRoute.post("/", async (c) => {
 
   const db = await getDb();
   const result = await createSystem(db, auth, audit);
-  return c.json(result, HTTP_CREATED);
+  return c.json(envelope(result), HTTP_CREATED);
 });

@@ -154,8 +154,8 @@ describe("POST /:id/pin/verify", () => {
     const res = await postJSON(app, `/${SYS_ID}/pin/verify`, { pin: "1234" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { verified: boolean };
-    expect(body.verified).toBe(true);
+    const body = (await res.json()) as { data: { verified: boolean } };
+    expect(body.data.verified).toBe(true);
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {

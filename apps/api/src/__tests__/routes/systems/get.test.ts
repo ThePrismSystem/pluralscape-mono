@@ -58,10 +58,12 @@ describe("GET /systems/:id", () => {
     const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000");
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; encryptedData: string; version: number };
-    expect(body.id).toBe("sys_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.encryptedData).toBe("dGVzdA==");
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as {
+      data: { id: string; encryptedData: string; version: number };
+    };
+    expect(body.data.id).toBe("sys_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.encryptedData).toBe("dGVzdA==");
+    expect(body.data.version).toBe(1);
   });
 
   it("forwards systemId and auth to service", async () => {
