@@ -31,6 +31,9 @@
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
   },
+  "optionalDependencies": {
+    "ioredis": "5.10.1"
+  },
   "devDependencies": {
     "@electric-sql/pglite": "^0.4.2",
     "@pluralscape/eslint-config": "workspace:*",
