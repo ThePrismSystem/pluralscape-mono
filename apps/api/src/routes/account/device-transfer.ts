@@ -5,6 +5,8 @@ import { Hono } from "hono";
 import {
   HTTP_BAD_REQUEST,
   HTTP_CREATED,
+  HTTP_FORBIDDEN,
+  HTTP_NO_CONTENT,
   HTTP_NOT_FOUND,
   HTTP_SERVICE_UNAVAILABLE,
   HTTP_UNAUTHORIZED,
@@ -19,7 +21,9 @@ import {
   TransferCodeError,
   TransferExpiredError,
   TransferNotFoundError,
+  TransferSessionMismatchError,
   TransferValidationError,
+  approveTransfer,
   completeTransfer,
   initiateTransfer,
 } from "../../services/device-transfer.service.js";
@@ -81,6 +85,38 @@ deviceTransferRoute.post("/", async (c) => {
   } catch (error: unknown) {
     if (error instanceof TransferValidationError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
+    }
+    throw error;
+  }
+});
+
+// Per-transfer rate limiter for approval
+deviceTransferRoute.use(
+  "/:id/approve",
+  createRateLimiter({
+    limit: TRANSFER_INITIATION_LIMIT,
+    windowMs: MS_PER_HOUR,
+    keyPrefix: "deviceTransfer:approve",
+    keyExtractor: extractAccountId,
+  }),
+);
+
+// POST /:id/approve — Approve a pending device transfer (source device only)
+deviceTransferRoute.post("/:id/approve", async (c) => {
+  const auth = c.get("auth");
+  const db = await getDb();
+  const audit = createAuditWriter(c, auth);
+  const transferId = c.req.param("id");
+
+  try {
+    await approveTransfer(db, transferId, auth.accountId, auth.sessionId, audit);
+    return c.body(null, HTTP_NO_CONTENT);
+  } catch (error: unknown) {
+    if (error instanceof TransferNotFoundError) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", error.message);
+    }
+    if (error instanceof TransferSessionMismatchError) {
+      throw new ApiHttpError(HTTP_FORBIDDEN, "FORBIDDEN", error.message);
     }
     throw error;
   }
