@@ -30,11 +30,14 @@ import { webhookDeliveryRoutes } from "../webhook-deliveries/index.js";
 
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
+import { duplicateRoute } from "./duplicate.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
 import { nomenclatureRoutes } from "./nomenclature/index.js";
+import { purgeRoute } from "./purge.js";
 import { settingsRoutes } from "./settings/index.js";
 import { setupRoutes } from "./setup/index.js";
+import { snapshotRoutes } from "./snapshots/index.js";
 import { updateRoute } from "./update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -50,6 +53,8 @@ systemRoutes.route("/", getRoute);
 systemRoutes.route("/", updateRoute);
 systemRoutes.route("/", deleteRoute);
 systemRoutes.route("/", createRoute);
+systemRoutes.route("/", purgeRoute);
+systemRoutes.route("/", duplicateRoute);
 
 // Sub-resource routes
 systemRoutes.route("/:systemId/groups", groupRoutes);
@@ -81,3 +86,4 @@ systemRoutes.route("/:systemId/device-tokens", deviceTokenRoutes);
 systemRoutes.route("/:systemId/notification-configs", notificationConfigRoutes);
 systemRoutes.route("/:systemId/structure", structureRoutes);
 systemRoutes.route("/:systemId/api-keys", apiKeyRoutes);
+systemRoutes.route("/:systemId/snapshots", snapshotRoutes);

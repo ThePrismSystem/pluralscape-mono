@@ -1,0 +1,130 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { mockDb } from "./helpers/mock-db.js";
+
+import type { AuditWriter } from "../lib/audit-writer.js";
+import type { AuthContext } from "../lib/auth-context.js";
+import type { AccountId, EncryptedBlob, SessionId, SystemId } from "@pluralscape/types";
+
+// ── Mocks ───────────────────────────────────────────────────────────
+
+vi.mock("../lib/rls-context.js", () => ({
+  withAccountTransaction: vi.fn(
+    <T>(_db: unknown, _accountId: unknown, fn: (tx: unknown) => Promise<T>): Promise<T> => fn(_db),
+  ),
+}));
+
+vi.mock("@pluralscape/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/types")>();
+  return {
+    ...actual,
+    createId: vi.fn((): string => "sys_00000000-0000-0000-0000-000000000099"),
+    now: vi.fn((): number => 1_700_000_000),
+  };
+});
+
+const { duplicateSystem } = await import("../services/system-duplicate.service.js");
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+const SYSTEM_ID = "sys_00000000-0000-0000-0000-000000000001" as SystemId;
+const ACCOUNT_ID = "acc_00000000-0000-0000-0000-000000000001" as AccountId;
+const SNAPSHOT_ID = "snap_00000000-0000-0000-0000-000000000001";
+const FAKE_BLOB: EncryptedBlob = {
+  tier: 1,
+  ciphertext: new Uint8Array([1, 2, 3]),
+  nonce: new Uint8Array(24),
+  algorithm: "xchacha20-poly1305",
+  keyVersion: null,
+  bucketId: null,
+};
+
+function stubAuth(overrides?: Partial<AuthContext>): AuthContext {
+  return {
+    accountId: ACCOUNT_ID,
+    systemId: SYSTEM_ID,
+    sessionId: "ses_00000000-0000-0000-0000-000000000001" as SessionId,
+    accountType: "system",
+    ownedSystemIds: new Set([SYSTEM_ID]),
+    auditLogIpTracking: false,
+    ...overrides,
+  };
+}
+
+function stubAudit(): AuditWriter {
+  return vi.fn().mockResolvedValue(undefined);
+}
+
+// ── Tests ───────────────────────────────────────────────────────────
+
+describe("duplicateSystem", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("throws FORBIDDEN for non-system account types", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      duplicateSystem(
+        db,
+        SYSTEM_ID,
+        { snapshotId: SNAPSHOT_ID },
+        stubAuth({ accountType: "viewer" }),
+        stubAudit(),
+      ),
+    ).rejects.toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
+  });
+
+  it("throws NOT_FOUND when source system does not exist", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await expect(
+      duplicateSystem(db, SYSTEM_ID, { snapshotId: SNAPSHOT_ID }, stubAuth(), stubAudit()),
+    ).rejects.toThrow(
+      expect.objectContaining({ code: "NOT_FOUND", message: "Source system not found" }),
+    );
+  });
+
+  it("throws NOT_FOUND when snapshot does not exist", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
+    chain.limit.mockResolvedValueOnce([]);
+
+    await expect(
+      duplicateSystem(db, SYSTEM_ID, { snapshotId: SNAPSHOT_ID }, stubAuth(), stubAudit()),
+    ).rejects.toThrow(
+      expect.objectContaining({ code: "NOT_FOUND", message: "Snapshot not found" }),
+    );
+  });
+
+  it("creates new system from snapshot and writes audit", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
+    chain.limit.mockResolvedValueOnce([{ id: SNAPSHOT_ID, encryptedData: FAKE_BLOB }]);
+
+    const audit = stubAudit();
+    const result = await duplicateSystem(
+      db,
+      SYSTEM_ID,
+      { snapshotId: SNAPSHOT_ID },
+      stubAuth(),
+      audit,
+    );
+
+    expect(result.id).toBe("sys_00000000-0000-0000-0000-000000000099");
+    expect(result.sourceSnapshotId).toBe(SNAPSHOT_ID);
+    expect(chain.insert).toHaveBeenCalled();
+    expect(audit).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ eventType: "system.duplicated" }),
+    );
+  });
+
+  it("rejects invalid body (missing snapshotId)", async () => {
+    const { db } = mockDb();
+
+    await expect(duplicateSystem(db, SYSTEM_ID, {}, stubAuth(), stubAudit())).rejects.toThrow();
+  });
+});
