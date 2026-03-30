@@ -287,11 +287,35 @@ components:
       $ref: "./schemas/account.yaml#/UpdateAccountSettingsRequest"
     UpdateAccountSettingsResponse:
       $ref: "./schemas/account.yaml#/UpdateAccountSettingsResponse"
+    DeleteAccountRequest:
+      $ref: "./schemas/account.yaml#/DeleteAccountRequest"
+    VerifyPinResponse:
+      $ref: "./schemas/account.yaml#/VerifyPinResponse"
+    ActionResponse:
+      $ref: "./schemas/account.yaml#/ActionResponse"
+    InitiateTransferRequest:
+      $ref: "./schemas/account.yaml#/InitiateTransferRequest"
+    InitiateTransferResponse:
+      $ref: "./schemas/account.yaml#/InitiateTransferResponse"
+    CompleteTransferRequest:
+      $ref: "./schemas/account.yaml#/CompleteTransferRequest"
+    CompleteTransferResponse:
+      $ref: "./schemas/account.yaml#/CompleteTransferResponse"
     # Systems
     SystemProfile:
       $ref: "./schemas/systems.yaml#/SystemProfile"
     UpdateSystemRequest:
       $ref: "./schemas/systems.yaml#/UpdateSystemRequest"
+    CreateSnapshotRequest:
+      $ref: "./schemas/systems.yaml#/CreateSnapshotRequest"
+    SnapshotResponse:
+      $ref: "./schemas/systems.yaml#/SnapshotResponse"
+    DuplicateSystemRequest:
+      $ref: "./schemas/systems.yaml#/DuplicateSystemRequest"
+    DuplicateSystemResponse:
+      $ref: "./schemas/systems.yaml#/DuplicateSystemResponse"
+    PurgeSystemRequest:
+      $ref: "./schemas/systems.yaml#/PurgeSystemRequest"
     # Members
     MemberResponse:
       $ref: "./schemas/members.yaml#/MemberResponse"
@@ -356,6 +380,8 @@ components:
       $ref: "./schemas/device-tokens.yaml#/RegisterDeviceTokenRequest"
     DeviceTokenListResponse:
       $ref: "./schemas/device-tokens.yaml#/DeviceTokenListResponse"
+    UpdateDeviceTokenRequest:
+      $ref: "./schemas/device-tokens.yaml#/UpdateDeviceTokenRequest"
     # Notification Configs
     NotificationEventType:
       $ref: "./schemas/notification-configs.yaml#/NotificationEventType"
@@ -401,11 +427,15 @@ components:
       $ref: "./schemas/structures.yaml#/CreateStructureEntityAssociationRequest"
     StructureEntityAssociationResponse:
       $ref: "./schemas/structures.yaml#/StructureEntityAssociationResponse"
+    HierarchyNode:
+      $ref: "./schemas/structures.yaml#/HierarchyNode"
     # Lifecycle Events
     LifecycleEventType:
       $ref: "./schemas/lifecycle-events.yaml#/LifecycleEventType"
     CreateLifecycleEventRequest:
       $ref: "./schemas/lifecycle-events.yaml#/CreateLifecycleEventRequest"
+    UpdateLifecycleEventRequest:
+      $ref: "./schemas/lifecycle-events.yaml#/UpdateLifecycleEventRequest"
     LifecycleEventResponse:
       $ref: "./schemas/lifecycle-events.yaml#/LifecycleEventResponse"
     # Innerworld
@@ -528,6 +558,10 @@ components:
       $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardStructureEntity"
     FriendDashboardKeyGrant:
       $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardKeyGrant"
+    FriendDashboardSyncEntry:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardSyncEntry"
+    FriendDashboardSyncResponse:
+      $ref: "./schemas/friend-dashboard.yaml#/FriendDashboardSyncResponse"
     # Friends
     FriendConnectionResponse:
       $ref: "./schemas/friends.yaml#/FriendConnectionResponse"
@@ -690,11 +724,25 @@ paths:
     $ref: "./paths/account.yaml#/~1account~1audit-log"
   /account/settings:
     $ref: "./paths/account.yaml#/~1account~1settings"
+  /account/pin:
+    $ref: "./paths/account.yaml#/~1account~1pin"
+  /account/pin/verify:
+    $ref: "./paths/account.yaml#/~1account~1pin~1verify"
+  /account/device-transfer:
+    $ref: "./paths/account.yaml#/~1account~1device-transfer"
+  /account/device-transfer/{transferId}/approve:
+    $ref: "./paths/account.yaml#/~1account~1device-transfer~1%7BtransferId%7D~1approve"
+  /account/device-transfer/{transferId}/complete:
+    $ref: "./paths/account.yaml#/~1account~1device-transfer~1%7BtransferId%7D~1complete"
   # Friends
   /account/friends:
     $ref: "./paths/friends.yaml#/~1account~1friends"
   /account/friends/{connectionId}:
     $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D"
+  /account/friends/{connectionId}/accept:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1accept"
+  /account/friends/{connectionId}/reject:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1reject"
   /account/friends/{connectionId}/block:
     $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1block"
   /account/friends/{connectionId}/remove:
@@ -713,6 +761,8 @@ paths:
     $ref: "./paths/friend-export.yaml#/~1account~1friends~1%7BconnectionId%7D~1export"
   /account/friends/{connectionId}/dashboard:
     $ref: "./paths/friend-dashboard.yaml#/~1account~1friends~1%7BconnectionId%7D~1dashboard"
+  /account/friends/{connectionId}/dashboard/sync:
+    $ref: "./paths/friend-dashboard.yaml#/~1account~1friends~1%7BconnectionId%7D~1dashboard~1sync"
   # Friend Codes
   /account/friend-codes:
     $ref: "./paths/friend-codes.yaml#/~1account~1friend-codes"
@@ -725,6 +775,14 @@ paths:
     $ref: "./paths/systems.yaml#/~1systems"
   /systems/{systemId}:
     $ref: "./paths/systems.yaml#/~1systems~1%7BsystemId%7D"
+  /systems/{systemId}/duplicate:
+    $ref: "./paths/systems.yaml#/~1systems~1%7BsystemId%7D~1duplicate"
+  /systems/{systemId}/purge:
+    $ref: "./paths/systems.yaml#/~1systems~1%7BsystemId%7D~1purge"
+  /systems/{systemId}/snapshots:
+    $ref: "./paths/systems.yaml#/~1systems~1%7BsystemId%7D~1snapshots"
+  /systems/{systemId}/snapshots/{snapshotId}:
+    $ref: "./paths/systems.yaml#/~1systems~1%7BsystemId%7D~1snapshots~1%7BsnapshotId%7D"
   # Settings
   /systems/{systemId}/settings:
     $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1settings"
@@ -806,6 +864,8 @@ paths:
   # Device Tokens
   /systems/{systemId}/device-tokens:
     $ref: "./paths/device-tokens.yaml#/~1systems~1%7BsystemId%7D~1device-tokens"
+  /systems/{systemId}/device-tokens/{tokenId}:
+    $ref: "./paths/device-tokens.yaml#/~1systems~1%7BsystemId%7D~1device-tokens~1%7BtokenId%7D"
   /systems/{systemId}/device-tokens/{tokenId}/revoke:
     $ref: "./paths/device-tokens.yaml#/~1systems~1%7BsystemId%7D~1device-tokens~1%7BtokenId%7D~1revoke"
   # Notification Configs
@@ -982,6 +1042,13 @@ paths:
     $ref: "./paths/webhook-deliveries.yaml#/~1systems~1%7BsystemId%7D~1webhook-deliveries"
   /systems/{systemId}/webhook-deliveries/{deliveryId}:
     $ref: "./paths/webhook-deliveries.yaml#/~1systems~1%7BsystemId%7D~1webhook-deliveries~1%7BdeliveryId%7D"
+  # API Keys
+  /systems/{systemId}/api-keys:
+    $ref: "./paths/api-keys.yaml#/~1systems~1%7BsystemId%7D~1api-keys"
+  /systems/{systemId}/api-keys/{apiKeyId}:
+    $ref: "./paths/api-keys.yaml#/~1systems~1%7BsystemId%7D~1api-keys~1%7BapiKeyId%7D"
+  /systems/{systemId}/api-keys/{apiKeyId}/revoke:
+    $ref: "./paths/api-keys.yaml#/~1systems~1%7BsystemId%7D~1api-keys~1%7BapiKeyId%7D~1revoke"
   # Channels
   /systems/{systemId}/channels:
     $ref: "./paths/channels.yaml#/~1systems~1%7BsystemId%7D~1channels"
@@ -1033,6 +1100,10 @@ paths:
     $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1close"
   /systems/{systemId}/polls/{pollId}/votes:
     $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1votes"
+  /systems/{systemId}/polls/{pollId}/votes/{voteId}:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1votes~1%7BvoteId%7D"
+  /systems/{systemId}/polls/{pollId}/results:
+    $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1results"
   /systems/{systemId}/polls/{pollId}/archive:
     $ref: "./paths/polls.yaml#/~1systems~1%7BsystemId%7D~1polls~1%7BpollId%7D~1archive"
   /systems/{systemId}/polls/{pollId}/restore:
@@ -1048,3 +1119,36 @@ paths:
     $ref: "./paths/acknowledgements.yaml#/~1systems~1%7BsystemId%7D~1acknowledgements~1%7BacknowledgementId%7D~1archive"
   /systems/{systemId}/acknowledgements/{acknowledgementId}/restore:
     $ref: "./paths/acknowledgements.yaml#/~1systems~1%7BsystemId%7D~1acknowledgements~1%7BacknowledgementId%7D~1restore"
+  # Timer Configs & Check-In Records
+  /systems/{systemId}/check-in-records:
+    $ref: "./paths/check-in-records.yaml#/~1systems~1%7BsystemId%7D~1check-in-records"
+  /systems/{systemId}/check-in-records/{recordId}:
+    $ref: "./paths/check-in-records.yaml#/~1systems~1%7BsystemId%7D~1check-in-records~1%7BrecordId%7D"
+  /systems/{systemId}/check-in-records/{recordId}/respond:
+    $ref: "./paths/check-in-records.yaml#/~1systems~1%7BsystemId%7D~1check-in-records~1%7BrecordId%7D~1respond"
+  /systems/{systemId}/check-in-records/{recordId}/dismiss:
+    $ref: "./paths/check-in-records.yaml#/~1systems~1%7BsystemId%7D~1check-in-records~1%7BrecordId%7D~1dismiss"
+  /systems/{systemId}/check-in-records/{recordId}/restore:
+    $ref: "./paths/check-in-records.yaml#/~1systems~1%7BsystemId%7D~1check-in-records~1%7BrecordId%7D~1restore"
+  /systems/{systemId}/check-in-records/{recordId}/archive:
+    $ref: "./paths/check-in-records.yaml#/~1systems~1%7BsystemId%7D~1check-in-records~1%7BrecordId%7D~1archive"
+  # Lifecycle Events (archive/restore)
+  /systems/{systemId}/lifecycle-events/{eventId}/archive:
+    $ref: "./paths/lifecycle-events.yaml#/~1systems~1%7BsystemId%7D~1lifecycle-events~1%7BeventId%7D~1archive"
+  /systems/{systemId}/lifecycle-events/{eventId}/restore:
+    $ref: "./paths/lifecycle-events.yaml#/~1systems~1%7BsystemId%7D~1lifecycle-events~1%7BeventId%7D~1restore"
+  # Key Rotation (retry)
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/retry:
+    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1retry"
+  # Group Fields
+  /systems/{systemId}/groups/{groupId}/fields:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1fields"
+  /systems/{systemId}/groups/{groupId}/fields/{fieldDefId}:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1fields~1%7BfieldDefId%7D"
+  # Structure Entity Hierarchy & Fields
+  /systems/{systemId}/structure-entities/{entityId}/hierarchy:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1hierarchy"
+  /systems/{systemId}/structure-entities/{entityId}/fields:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1fields"
+  /systems/{systemId}/structure-entities/{entityId}/fields/{fieldDefId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1fields~1%7BfieldDefId%7D"

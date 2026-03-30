@@ -142,6 +142,87 @@ UpdateAccountSettingsRequest:
       type: integer
       description: Optimistic concurrency version counter (must match current version)
 
+DeleteAccountRequest:
+  type: object
+  required: [password]
+  properties:
+    password:
+      type: string
+      minLength: 1
+      description: Current account password for confirmation
+
+PinRequest:
+  type: object
+  required: [pin]
+  properties:
+    pin:
+      type: string
+      pattern: "^\\d{4,6}$"
+      description: "4-6 digit PIN"
+
+VerifyPinResponse:
+  type: object
+  required: [verified]
+  properties:
+    verified:
+      type: boolean
+      enum: [true]
+
+ActionResponse:
+  type: object
+  required: [data]
+  properties:
+    data:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+
+InitiateTransferRequest:
+  type: object
+  required: [codeSaltHex, encryptedKeyMaterialHex]
+  properties:
+    codeSaltHex:
+      type: string
+      pattern: "^[0-9a-fA-F]+$"
+      description: Hex-encoded Argon2id salt for transfer code key derivation
+    encryptedKeyMaterialHex:
+      type: string
+      pattern: "^[0-9a-fA-F]+$"
+      description: Hex-encoded master key encrypted under the transfer key
+
+InitiateTransferResponse:
+  type: object
+  required: [transferId, expiresAt]
+  properties:
+    transferId:
+      type: string
+      pattern: "^dtr_"
+      description: Device transfer request ID
+    expiresAt:
+      type: integer
+      format: int64
+      description: Unix milliseconds when the transfer expires
+
+CompleteTransferRequest:
+  type: object
+  required: [code]
+  properties:
+    code:
+      type: string
+      pattern: "^\\d{10}$"
+      description: 10-digit transfer code
+
+CompleteTransferResponse:
+  type: object
+  required: [encryptedKeyMaterialHex]
+  properties:
+    encryptedKeyMaterialHex:
+      type: string
+      description: Hex-encoded master key encrypted under the transfer key
+
 UpdateAccountSettingsResponse:
   type: object
   required: [ok, auditLogIpTracking, version]

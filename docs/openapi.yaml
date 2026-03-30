@@ -562,6 +562,35 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteAccount
+      tags:
+        - Account
+      summary: Delete account
+      description: |
+        Permanently deletes the authenticated account and all associated data.
+        Requires the current password for confirmation. This action is
+        irreversible — all systems, members, sessions, keys, and dependent data
+        are cascade-deleted.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteAccountRequest"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /account/email:
     put:
       operationId: changeEmail
@@ -724,6 +753,228 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /account/pin:
+    post:
+      operationId: setAccountPin
+      tags:
+        - Account
+      summary: Set account PIN
+      description: |
+        Sets a 4-6 digit PIN on the account's primary system settings.
+        Overwrites any existing PIN. The PIN is hashed server-side with Argon2id.
+
+        Rate limit: 5 req/min (authHeavy)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/account_PinRequest"
+      responses:
+        "200":
+          description: PIN set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: removeAccountPin
+      tags:
+        - Account
+      summary: Remove account PIN
+      description: |
+        Removes the PIN from the account's primary system settings.
+        Requires the current PIN for verification. Returns 404 if no PIN is set.
+
+        Rate limit: 5 req/min (authHeavy)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/account_PinRequest"
+      responses:
+        "200":
+          description: PIN removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/pin/verify:
+    post:
+      operationId: verifyAccountPin
+      tags:
+        - Account
+      summary: Verify account PIN
+      description: |
+        Verifies the account PIN. Returns `{ verified: true }` on success.
+        Uses anti-timing measures — verification runs even when no PIN is set.
+        Returns 404 if no PIN is configured, 401 if the PIN is incorrect.
+
+        Rate limit: 5 req/min (authHeavy)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/account_PinRequest"
+      responses:
+        "200":
+          description: PIN verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyPinResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/device-transfer:
+    post:
+      operationId: initiateDeviceTransfer
+      tags:
+        - Account
+      summary: Initiate a device transfer
+      description: |
+        Creates a pending device transfer request. The source device supplies
+        the code salt (for Argon2id key derivation) and the encrypted key
+        material (master key encrypted under the transfer key). Both are
+        hex-encoded. The transfer expires after 5 minutes.
+
+        Rate limit: 5 req/hour (account-keyed)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InitiateTransferRequest"
+      responses:
+        "201":
+          description: Transfer initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InitiateTransferResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/device-transfer/{transferId}/approve:
+    post:
+      operationId: approveDeviceTransfer
+      tags:
+        - Account
+      summary: Approve a device transfer
+      description: |
+        Approves a pending device transfer. Only the session that initiated
+        the transfer may approve it. Returns 403 if called from a different
+        session, 404 if the transfer is not found or expired.
+
+        Rate limit: 5 req/hour (account-keyed)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: transferId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^dtr_
+          description: Device transfer request ID
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Session mismatch — only the initiating session may approve
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/device-transfer/{transferId}/complete:
+    post:
+      operationId: completeDeviceTransfer
+      tags:
+        - Account
+      summary: Complete a device transfer
+      description: |
+        Completes a device transfer by verifying the transfer code and returning
+        the encrypted key material. The code is a 10-digit numeric string entered
+        on the new device. Rate-limited per transfer to prevent brute-forcing.
+
+        Rate limit: 5 attempts per transfer TTL
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: transferId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^dtr_
+          description: Device transfer request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteTransferRequest"
+      responses:
+        "200":
+          description: Transfer completed — encrypted key material returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompleteTransferResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          description: Key derivation worker pool unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /account/friends:
     get:
       operationId: listFriendConnections
@@ -796,6 +1047,86 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/accept:
+    post:
+      operationId: acceptFriendConnection
+      tags:
+        - Friends
+      summary: Accept a friend request
+      description: |
+        Accepts a pending friend connection. Only connections with status
+        `pending` can be accepted. Accepting a connection:
+
+        1. Transitions both sides of the connection to `accepted` status
+        2. Dispatches a `friend.connected` webhook to the caller's owned systems
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "200":
+          description: Connection accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/reject:
+    post:
+      operationId: rejectFriendConnection
+      tags:
+        - Friends
+      summary: Reject a friend request
+      description: |
+        Rejects a pending friend connection. Only connections with status
+        `pending` can be rejected. Rejecting a connection transitions both
+        sides to `removed` status.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: Friend connection ID
+      responses:
+        "200":
+          description: Connection rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendConnectionResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
   /account/friends/{connectionId}/block:
@@ -1244,6 +1575,44 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /account/friends/{connectionId}/dashboard/sync:
+    get:
+      operationId: getFriendDashboardSync
+      tags:
+        - Friends
+      summary: Get friend dashboard sync projection
+      description: |
+        Returns per-entity-type counts and latest timestamps so the client
+        can determine which entity types need incremental sync. Covers
+        members, custom fronts, structure entities, and active fronting
+        sessions. Filtered by the caller's bucket access on the friend's system.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: connectionId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fc_
+          description: The friend connection ID (owned by the authenticated account)
+      responses:
+        "200":
+          description: Sync projection per entity type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendDashboardSyncResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /account/friend-codes:
     post:
       operationId: createFriendCode
@@ -1516,6 +1885,212 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/duplicate:
+    post:
+      operationId: duplicateSystem
+      tags:
+        - Systems
+      summary: Duplicate a system from a snapshot
+      description: |
+        Creates a new system seeded with encrypted data from an existing snapshot.
+        Client-side re-encryption is expected for a full deep-copy. Only system
+        accounts can duplicate systems.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DuplicateSystemRequest"
+      responses:
+        "201":
+          description: System duplicated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateSystemResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Only system accounts can duplicate systems
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/purge:
+    post:
+      operationId: purgeSystem
+      tags:
+        - Systems
+      summary: Permanently purge a system
+      description: |
+        Hard-deletes a system and all dependent data via CASCADE. The system must
+        be archived (soft-deleted) first. Password confirmation is required to
+        prevent accidental purge.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurgeSystemRequest"
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: System must be archived before purge
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/snapshots:
+    get:
+      operationId: listSnapshots
+      tags:
+        - System Snapshots
+      summary: List system snapshots
+      description: |
+        Returns a paginated list of snapshots for the specified system.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated snapshot list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SnapshotResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createSnapshot
+      tags:
+        - System Snapshots
+      summary: Create a system snapshot
+      description: |
+        Creates an encrypted snapshot of the system's current state. Snapshots
+        can be triggered manually or on a schedule.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSnapshotRequest"
+      responses:
+        "201":
+          description: Snapshot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SnapshotResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/snapshots/{snapshotId}:
+    get:
+      operationId: getSnapshot
+      tags:
+        - System Snapshots
+      summary: Get a system snapshot
+      description: |
+        Returns a single snapshot by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: snapshotId
+          in: path
+          required: true
+          description: Snapshot ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Snapshot details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SnapshotResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteSnapshot
+      tags:
+        - System Snapshots
+      summary: Delete a system snapshot
+      description: |
+        Permanently deletes a snapshot.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: snapshotId
+          in: path
+          required: true
+          description: Snapshot ID
+          schema:
+            type: string
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/settings:
@@ -2349,6 +2924,41 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/members/{memberId}/photos/{photoId}:
+    get:
+      operationId: getMemberPhoto
+      tags:
+        - Member Photos
+      summary: Get a single member photo
+      description: Returns a single photo record by ID. Rate limit 60 req/min (readDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/MemberId"
+        - name: photoId
+          in: path
+          required: true
+          description: Photo ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Photo details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/EncryptedEntity"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
     delete:
       operationId: deleteMemberPhoto
       tags:
@@ -3291,6 +3901,80 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /systems/{systemId}/device-tokens/{tokenId}:
+    put:
+      operationId: updateDeviceToken
+      tags:
+        - Device Tokens
+      summary: Update a device token
+      description: |
+        Updates a device token's platform or token value. At least one of
+        `platform` or `token` must be provided. Only non-revoked tokens
+        can be updated.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: tokenId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^dt_
+          description: Device token ID (prefixed with `dt_`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeviceTokenRequest"
+      responses:
+        "200":
+          description: Updated device token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceTokenResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteDeviceToken
+      tags:
+        - Device Tokens
+      summary: Delete a device token
+      description: |
+        Permanently deletes a device token. Returns 404 if the token is
+        not found.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: tokenId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^dt_
+          description: Device token ID (prefixed with `dt_`)
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/device-tokens/{tokenId}/revoke:
     post:
       operationId: revokeDeviceToken
@@ -4762,6 +5446,49 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateLifecycleEvent
+      tags:
+        - Lifecycle Events
+      summary: Update a lifecycle event
+      description: |
+        Updates an existing lifecycle event. All fields except version are optional;
+        only provided fields are changed. Returns 409 on version conflict.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: eventId
+          in: path
+          required: true
+          description: Lifecycle Event ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLifecycleEventRequest"
+      responses:
+        "200":
+          description: Lifecycle event updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecycleEventResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
     delete:
@@ -7690,6 +8417,151 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/api-keys:
+    get:
+      operationId: listApiKeys
+      tags:
+        - API Keys
+      summary: List API keys
+      description: |
+        Returns a paginated list of API keys for the specified system.
+        By default, revoked keys are excluded.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: includeRevoked
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, include revoked keys in the response
+      responses:
+        "200":
+          description: Paginated API key list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ApiKeyResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      operationId: createApiKey
+      tags:
+        - API Keys
+      summary: Create an API key
+      description: |
+        Creates a new API key and returns the plaintext token. The token is
+        only included in this response and cannot be retrieved again.
+
+        The response includes `Cache-Control: no-store` to prevent token caching.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyRequest"
+      responses:
+        "201":
+          description: API key created
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: no-store
+              description: Always `no-store` to prevent token caching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreateResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/api-keys/{apiKeyId}:
+    get:
+      operationId: getApiKey
+      tags:
+        - API Keys
+      summary: Get an API key
+      description: |
+        Returns a single API key by ID. The plaintext token is never included.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: apiKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: API key ID (ak_ prefix)
+      responses:
+        "200":
+          description: API key details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/api-keys/{apiKeyId}/revoke:
+    post:
+      operationId: revokeApiKey
+      tags:
+        - API Keys
+      summary: Revoke an API key
+      description: |
+        Revokes an API key. The operation is idempotent -- revoking an already
+        revoked key is a no-op and returns 204.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: apiKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: API key ID (ak_ prefix)
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /systems/{systemId}/channels:
     get:
       operationId: listChannels
@@ -9278,6 +10150,134 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls/{pollId}/votes/{voteId}:
+    put:
+      operationId: updatePollVote
+      tags:
+        - Polls
+      summary: Update a poll vote
+      description: |
+        Updates an existing vote on an open poll. The poll must still be open
+        (not closed or past `endsAt`). Returns 409 if the poll is closed or
+        the vote violates abstain/veto rules.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+        - name: voteId
+          in: path
+          required: true
+          description: Poll vote ID
+          schema:
+            type: string
+            pattern: ^pv_
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePollVoteRequest"
+      responses:
+        "200":
+          description: Vote updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollVoteResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deletePollVote
+      tags:
+        - Polls
+      summary: Delete (archive) a poll vote
+      description: |
+        Soft-archives a poll vote. Poll votes use an append-only CRDT strategy,
+        so hard deletes are not permitted. Returns 409 if the vote is already
+        archived.
+
+        Rate limit: 60 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+        - name: voteId
+          in: path
+          required: true
+          description: Poll vote ID
+          schema:
+            type: string
+            pattern: ^pv_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/polls/{pollId}/results:
+    get:
+      operationId: getPollResults
+      tags:
+        - Polls
+      summary: Get poll results
+      description: |
+        Returns aggregated poll results: total votes, veto count, and
+        per-option vote counts. Only non-archived votes are counted.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: pollId
+          in: path
+          required: true
+          description: Poll ID
+          schema:
+            type: string
+            pattern: ^poll_
+      responses:
+        "200":
+          description: Aggregated poll results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PollResultsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/polls/{pollId}/archive:
     post:
       operationId: archivePoll
@@ -9597,6 +10597,703 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AcknowledgementResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/check-in-records:
+    get:
+      operationId: listCheckInRecords
+      tags:
+        - Check-In Records
+      summary: List check-in records
+      description: |
+        Returns a paginated list of check-in records. Supports filtering
+        by timer config and pending status.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: timerConfigId
+          in: query
+          schema:
+            type: string
+          description: Filter by timer config ID
+        - name: pending
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, only return pending records (not responded, not dismissed, not archived)
+        - name: includeArchived
+          in: query
+          schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          description: If true, include archived records
+      responses:
+        "200":
+          description: Paginated list of check-in records
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/CheckInRecordResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+    post:
+      operationId: createCheckInRecord
+      tags:
+        - Check-In Records
+      summary: Create a check-in record
+      description: |
+        Creates a new check-in record for a timer config.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckInRecordRequest"
+      responses:
+        "201":
+          description: Created check-in record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInRecordResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+  /systems/{systemId}/check-in-records/{recordId}:
+    get:
+      operationId: getCheckInRecord
+      tags:
+        - Check-In Records
+      summary: Get a check-in record
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Check-in record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInRecordResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deleteCheckInRecord
+      tags:
+        - Check-In Records
+      summary: Delete a check-in record
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/check-in-records/{recordId}/respond:
+    post:
+      operationId: respondCheckInRecord
+      tags:
+        - Check-In Records
+      summary: Respond to a check-in record
+      description: |
+        Sets respondedByMemberId and respondedAt. Returns 409 if already
+        responded or dismissed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondCheckInRecordRequest"
+      responses:
+        "200":
+          description: Responded check-in record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInRecordResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "409":
+          description: Already responded or dismissed
+  /systems/{systemId}/check-in-records/{recordId}/dismiss:
+    post:
+      operationId: dismissCheckInRecord
+      tags:
+        - Check-In Records
+      summary: Dismiss a check-in record
+      description: |
+        Sets dismissed=true. Returns 409 if already responded or dismissed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dismissed check-in record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInRecordResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "409":
+          description: Already responded or dismissed
+  /systems/{systemId}/check-in-records/{recordId}/restore:
+    post:
+      operationId: restoreCheckInRecord
+      tags:
+        - Check-In Records
+      summary: Restore an archived check-in record
+      description: |
+        Removes the archived flag from a check-in record, making it visible in
+        default list responses again.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Restored check-in record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInRecordResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/check-in-records/{recordId}/archive:
+    post:
+      operationId: archiveCheckInRecord
+      tags:
+        - Check-In Records
+      summary: Archive a check-in record
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /systems/{systemId}/lifecycle-events/{eventId}/archive:
+    post:
+      operationId: archiveLifecycleEvent
+      tags:
+        - Lifecycle Events
+      summary: Archive a lifecycle event
+      description: |
+        Marks a lifecycle event as archived. Archived events are hidden from
+        default list responses but remain accessible. Archival is always permitted.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: eventId
+          in: path
+          required: true
+          description: Lifecycle Event ID (evt_ prefix)
+          schema:
+            type: string
+            pattern: ^evt_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/lifecycle-events/{eventId}/restore:
+    post:
+      operationId: restoreLifecycleEvent
+      tags:
+        - Lifecycle Events
+      summary: Restore an archived lifecycle event
+      description: |
+        Removes the archived flag from a lifecycle event, making it visible in
+        default list responses again.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: eventId
+          in: path
+          required: true
+          description: Lifecycle Event ID (evt_ prefix)
+          schema:
+            type: string
+            pattern: ^evt_
+      responses:
+        "200":
+          description: Restored lifecycle event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LifecycleEventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/retry:
+    post:
+      operationId: retryKeyRotation
+      tags:
+        - Key Rotation
+      summary: Retry a failed key rotation
+      description: |
+        Resets a failed key rotation back to the migrating state so the client
+        can re-attempt re-encryption of failed items. Only rotations in the
+        `failed` state can be retried.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: bucketId
+          in: path
+          required: true
+          description: Privacy Bucket ID
+          schema:
+            type: string
+        - name: rotationId
+          in: path
+          required: true
+          description: Rotation ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Rotation retried
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RotationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Rotation is not in the failed state
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/groups/{groupId}/fields:
+    get:
+      operationId: listGroupFieldValues
+      tags:
+        - Group Fields
+      summary: List field values for a group
+      description: Returns all custom field values set on the given group. Rate limit 60 req/min (readDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Field value list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FieldValueResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/groups/{groupId}/fields/{fieldDefId}:
+    post:
+      operationId: setGroupFieldValue
+      tags:
+        - Group Fields
+      summary: Set a field value on a group
+      description: Creates a new field value for the given field definition on a group. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/GroupId"
+        - name: fieldDefId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetFieldValueRequest"
+      responses:
+        "201":
+          description: Field value set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldValueResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateGroupFieldValue
+      tags:
+        - Group Fields
+      summary: Update a field value on a group
+      description: Updates an existing field value for the given field definition on a group. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/GroupId"
+        - name: fieldDefId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFieldValueRequest"
+      responses:
+        "200":
+          description: Field value updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldValueResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteGroupFieldValue
+      tags:
+        - Group Fields
+      summary: Delete a field value from a group
+      description: Removes a field value for the given field definition from a group. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/GroupId"
+        - name: fieldDefId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/structure-entities/{entityId}/hierarchy:
+    get:
+      operationId: getStructureEntityHierarchy
+      tags:
+        - Structure Entities
+      summary: Get entity hierarchy
+      description: |
+        Returns the recursive parent-child hierarchy for a structure entity,
+        including all ancestors and descendants with depth information.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Entity hierarchy
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - items
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HierarchyNode"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/structure-entities/{entityId}/fields:
+    get:
+      operationId: listStructureEntityFieldValues
+      tags:
+        - Structure Entity Fields
+      summary: List field values for a structure entity
+      description: Returns all custom field values set on the given structure entity. Rate limit 60 req/min (readDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Field value list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FieldValueResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/structure-entities/{entityId}/fields/{fieldDefId}:
+    post:
+      operationId: setStructureEntityFieldValue
+      tags:
+        - Structure Entity Fields
+      summary: Set a field value on a structure entity
+      description: Creates a new field value for the given field definition on a structure entity. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+        - name: fieldDefId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetFieldValueRequest"
+      responses:
+        "201":
+          description: Field value set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldValueResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateStructureEntityFieldValue
+      tags:
+        - Structure Entity Fields
+      summary: Update a field value on a structure entity
+      description: Updates an existing field value for the given field definition on a structure entity. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+        - name: fieldDefId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFieldValueRequest"
+      responses:
+        "200":
+          description: Field value updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldValueResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteStructureEntityFieldValue
+      tags:
+        - Structure Entity Fields
+      summary: Delete a field value from a structure entity
+      description: Removes a field value for the given field definition from a structure entity. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: entityId
+          in: path
+          required: true
+          description: Structure entity ID
+          schema:
+            type: string
+        - name: fieldDefId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -10169,6 +11866,83 @@ components:
           type: boolean
         version:
           type: integer
+    DeleteAccountRequest:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          minLength: 1
+          description: Current account password for confirmation
+    VerifyPinResponse:
+      type: object
+      required:
+        - verified
+      properties:
+        verified:
+          type: boolean
+          enum:
+            - true
+    ActionResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - success
+          properties:
+            success:
+              type: boolean
+              enum:
+                - true
+    InitiateTransferRequest:
+      type: object
+      required:
+        - codeSaltHex
+        - encryptedKeyMaterialHex
+      properties:
+        codeSaltHex:
+          type: string
+          pattern: ^[0-9a-fA-F]+$
+          description: Hex-encoded Argon2id salt for transfer code key derivation
+        encryptedKeyMaterialHex:
+          type: string
+          pattern: ^[0-9a-fA-F]+$
+          description: Hex-encoded master key encrypted under the transfer key
+    InitiateTransferResponse:
+      type: object
+      required:
+        - transferId
+        - expiresAt
+      properties:
+        transferId:
+          type: string
+          pattern: ^dtr_
+          description: Device transfer request ID
+        expiresAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the transfer expires
+    CompleteTransferRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          pattern: ^\d{10}$
+          description: 10-digit transfer code
+    CompleteTransferResponse:
+      type: object
+      required:
+        - encryptedKeyMaterialHex
+      properties:
+        encryptedKeyMaterialHex:
+          type: string
+          description: Hex-encoded master key encrypted under the transfer key
     SystemProfile:
       description: |
         The system (plural system) profile. Unlike most entities, a newly created
@@ -10199,6 +11973,73 @@ components:
         version:
           type: integer
           minimum: 1
+    CreateSnapshotRequest:
+      type: object
+      required:
+        - snapshotTrigger
+        - encryptedData
+      properties:
+        snapshotTrigger:
+          $ref: "#/components/schemas/SnapshotTrigger"
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted snapshot data
+    SnapshotResponse:
+      type: object
+      required:
+        - id
+        - systemId
+        - snapshotTrigger
+        - encryptedData
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Snapshot identifier
+        systemId:
+          type: string
+        snapshotTrigger:
+          $ref: "#/components/schemas/SnapshotTrigger"
+        encryptedData:
+          type: string
+          contentEncoding: base64
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+    DuplicateSystemRequest:
+      type: object
+      required:
+        - snapshotId
+      properties:
+        snapshotId:
+          type: string
+          minLength: 1
+          description: ID of the snapshot to seed the new system from
+    DuplicateSystemResponse:
+      type: object
+      required:
+        - id
+        - sourceSnapshotId
+      properties:
+        id:
+          type: string
+          description: New system ID
+        sourceSnapshotId:
+          type: string
+          description: Snapshot ID used to seed the new system
+    PurgeSystemRequest:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          minLength: 1
+          description: Account password for confirmation
     MemberResponse:
       description: A member (headmate) within a system. Extends EncryptedEntity with the server-visible `archived` field.
       allOf:
@@ -10392,7 +12233,6 @@ components:
       required:
         - id
         - fieldDefinitionId
-        - memberId
         - systemId
         - encryptedData
         - version
@@ -10406,7 +12246,16 @@ components:
           description: ID of the field definition this value belongs to
         memberId:
           type: string
-          description: ID of the member this value is set on
+          nullable: true
+          description: ID of the member this value is set on (null for group/entity values)
+        groupId:
+          type: string
+          nullable: true
+          description: ID of the group this value is set on (null for member/entity values)
+        structureEntityId:
+          type: string
+          nullable: true
+          description: ID of the structure entity this value is set on (null for member/group values)
         systemId:
           type: string
         encryptedData:
@@ -10672,6 +12521,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DeviceTokenResponse"
+    UpdateDeviceTokenRequest:
+      type: object
+      description: At least one of `platform` or `token` must be provided
+      properties:
+        platform:
+          $ref: "#/components/schemas/DeviceTokenPlatform"
+        token:
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: Updated push token from APNs, FCM, or web-push
     NotificationEventType:
       type: string
       enum:
@@ -11061,6 +12921,23 @@ components:
           type: integer
           format: int64
           description: Unix timestamp in milliseconds
+    HierarchyNode:
+      type: object
+      required:
+        - entityId
+        - parentEntityId
+        - depth
+      properties:
+        entityId:
+          type: string
+          description: Structure entity ID
+        parentEntityId:
+          type: string
+          nullable: true
+          description: Parent entity ID (null for root)
+        depth:
+          type: integer
+          description: Depth in the hierarchy tree (0 = root)
     LifecycleEventType:
       type: string
       enum:
@@ -11122,6 +12999,48 @@ components:
               items:
                 type: string
               description: IDs of innerworld regions involved
+    UpdateLifecycleEventRequest:
+      type: object
+      required:
+        - encryptedData
+        - version
+      properties:
+        eventType:
+          $ref: "#/components/schemas/LifecycleEventType"
+        occurredAt:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Unix timestamp in milliseconds when the event occurred
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted PlaintextLifecycleEvent (see ./plaintext.yaml#/PlaintextLifecycleEvent)
+        plaintextMetadata:
+          type: object
+          description: Server-visible metadata for querying and relationship tracking
+          properties:
+            memberIds:
+              type: array
+              items:
+                type: string
+            structureIds:
+              type: array
+              items:
+                type: string
+            entityIds:
+              type: array
+              items:
+                type: string
+            regionIds:
+              type: array
+              items:
+                type: string
+        version:
+          type: integer
+          minimum: 1
     LifecycleEventResponse:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
@@ -12317,6 +14236,44 @@ components:
         keyVersion:
           type: integer
           minimum: 1
+    FriendDashboardSyncEntry:
+      type: object
+      required:
+        - entityType
+        - count
+        - latestUpdatedAt
+      properties:
+        entityType:
+          type: string
+          enum:
+            - member
+            - custom-front
+            - structure-entity
+            - fronting-session
+          description: Entity type this entry covers
+        count:
+          type: integer
+          minimum: 0
+          description: Number of visible entities of this type
+        latestUpdatedAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds of the most recently updated entity (0 if none)
+    FriendDashboardSyncResponse:
+      type: object
+      required:
+        - systemId
+        - entries
+      properties:
+        systemId:
+          type: string
+          pattern: ^sys_
+          description: The friend's system ID
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/FriendDashboardSyncEntry"
+          description: Per-entity-type sync state entries
     FriendConnectionResponse:
       type: object
       required:
@@ -13411,6 +15368,15 @@ components:
         notes:
           type: string
           nullable: true
+    account_PinRequest:
+      type: object
+      required:
+        - pin
+      properties:
+        pin:
+          type: string
+          pattern: ^\d{4,6}$
+          description: 4-6 digit PIN
     PendingRotation:
       type: object
       required:
@@ -13427,6 +15393,13 @@ components:
           pattern: ^bkt_
           description: Bucket whose key should be rotated
           example: bkt_abc123def456
+    SnapshotTrigger:
+      type: string
+      enum:
+        - manual
+        - scheduled-daily
+        - scheduled-weekly
+      example: manual
     BucketExportManifestEntry:
       type: object
       required:
@@ -13747,6 +15720,145 @@ components:
         createdAt:
           type: integer
           format: int64
+    ApiKeyType:
+      type: string
+      enum:
+        - metadata
+        - crypto
+      description: |
+        Key type. `metadata` keys carry no encrypted key material.
+        `crypto` keys include `encryptedKeyMaterial` for payload encryption.
+    ApiKeyScope:
+      type: string
+      enum:
+        - read:members
+        - write:members
+        - read:fronting
+        - write:fronting
+        - read:groups
+        - write:groups
+        - read:system
+        - write:system
+        - read:webhooks
+        - write:webhooks
+        - read:audit-log
+        - read:blobs
+        - write:blobs
+        - read:notifications
+        - write:notifications
+        - full
+      description: Permission scope granted to this API key
+    ApiKeyResponse:
+      description: |
+        An API key. The plaintext `token` is only returned on creation and
+        cannot be retrieved again.
+      type: object
+      required:
+        - id
+        - systemId
+        - keyType
+        - scopes
+        - createdAt
+        - lastUsedAt
+        - revokedAt
+        - expiresAt
+        - scopedBucketIds
+      properties:
+        id:
+          type: string
+          pattern: ^ak_
+          description: API key ID (ak_ prefix)
+          example: ak_abc123def456
+        systemId:
+          type: string
+          pattern: ^sys_
+          description: System ID that owns this key
+          example: sys_abc123def456
+        keyType:
+          $ref: "#/components/schemas/ApiKeyType"
+        scopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiKeyScope"
+          description: Permission scopes granted to this key
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the key was created
+          example: 1710000000000
+        lastUsedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when the key was last used
+        revokedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when the key was revoked, null if active
+        expiresAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when the key expires, null if no expiry
+        scopedBucketIds:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Privacy bucket IDs this key is scoped to, null if unrestricted
+    CreateApiKeyRequest:
+      type: object
+      required:
+        - keyType
+        - scopes
+        - encryptedData
+      properties:
+        keyType:
+          $ref: "#/components/schemas/ApiKeyType"
+        scopes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiKeyScope"
+          minItems: 1
+          description: Permission scopes to grant. At least one required.
+        encryptedData:
+          type: string
+          minLength: 1
+          maxLength: 87382
+          description: |
+            Base64-encoded ciphertext blob containing the key's metadata,
+            encrypted client-side with the master key.
+        encryptedKeyMaterial:
+          type: string
+          minLength: 1
+          description: |
+            Base64-encoded encrypted key material. Required for `crypto` keys,
+            forbidden for `metadata` keys.
+        expiresAt:
+          type: integer
+          format: int64
+          description: Optional Unix timestamp (seconds) when the key should expire
+        scopedBucketIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Optional list of privacy bucket IDs to restrict this key to
+    ApiKeyCreateResponse:
+      description: |
+        Response from creating an API key. Includes the plaintext `token`
+        which is only exposed once. The client must store it securely.
+      allOf:
+        - $ref: "#/components/schemas/ApiKeyResponse"
+        - type: object
+          required:
+            - token
+          properties:
+            token:
+              type: string
+              description: Plaintext API key token (hex-encoded, 64 characters). Only returned on creation.
+              example: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
     ChannelResponse:
       description: |
         A chat channel or category. Discriminated on `type`: categories group
@@ -14227,6 +16339,62 @@ components:
           minLength: 1
           maxLength: 87382
           description: T1-encrypted vote data (optional comment, etc.)
+    UpdatePollVoteRequest:
+      type: object
+      required:
+        - optionId
+        - encryptedData
+      properties:
+        optionId:
+          type: string
+          nullable: true
+          description: Selected option ID (null for abstain)
+        isVeto:
+          type: boolean
+          description: Whether this vote is a veto (optional, keeps existing value if omitted)
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          minLength: 1
+          maxLength: 87382
+          description: T1-encrypted vote data
+    PollResultsOptionCount:
+      type: object
+      required:
+        - optionId
+        - count
+      properties:
+        optionId:
+          type: string
+          nullable: true
+          description: Option ID (null for abstain votes)
+        count:
+          type: integer
+          minimum: 0
+    PollResultsResponse:
+      type: object
+      required:
+        - pollId
+        - totalVotes
+        - vetoCount
+        - optionCounts
+      properties:
+        pollId:
+          type: string
+          pattern: ^poll_
+        totalVotes:
+          type: integer
+          minimum: 0
+          description: Total non-archived votes
+        vetoCount:
+          type: integer
+          minimum: 0
+          description: Number of veto votes
+        optionCounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PollResultsOptionCount"
+          description: Vote counts grouped by option
     AcknowledgementResponse:
       description: |
         A mandatory acknowledgement — a targeted alert that persists until a
@@ -14270,6 +16438,65 @@ components:
           minLength: 1
           maxLength: 87382
           description: Optional T1-encrypted confirmation data (replaces existing encryptedData)
+    CheckInRecordResponse:
+      description: |
+        A check-in record created by the timer scheduler or manually.
+        Can be responded to or dismissed.
+      type: object
+      properties:
+        id:
+          type: string
+        systemId:
+          type: string
+        timerConfigId:
+          type: string
+        scheduledAt:
+          type: integer
+          format: int64
+          description: Unix milliseconds when the check-in was scheduled
+        respondedByMemberId:
+          type: string
+          nullable: true
+        respondedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix milliseconds when the check-in was responded to
+        dismissed:
+          type: boolean
+        encryptedData:
+          type: string
+          nullable: true
+        archived:
+          type: boolean
+        archivedAt:
+          type: integer
+          format: int64
+          nullable: true
+    CreateCheckInRecordRequest:
+      type: object
+      required:
+        - timerConfigId
+        - scheduledAt
+      properties:
+        timerConfigId:
+          type: string
+          description: Timer config ID (tmr_ prefix)
+        scheduledAt:
+          type: integer
+          format: int64
+          minimum: 1
+        encryptedData:
+          type: string
+          contentEncoding: base64
+    RespondCheckInRecordRequest:
+      type: object
+      required:
+        - respondedByMemberId
+      properties:
+        respondedByMemberId:
+          type: string
+          description: Member ID who responded (mem_ prefix)
   responses:
     NoContent:
       description: Success with no response body

@@ -55,6 +55,79 @@
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
 
+/systems/{systemId}/device-tokens/{tokenId}:
+  put:
+    operationId: updateDeviceToken
+    tags: [Device Tokens]
+    summary: Update a device token
+    description: |
+      Updates a device token's platform or token value. At least one of
+      `platform` or `token` must be provided. Only non-revoked tokens
+      can be updated.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^dt_
+        description: "Device token ID (prefixed with `dt_`)"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/device-tokens.yaml#/UpdateDeviceTokenRequest"
+    responses:
+      "200":
+        description: Updated device token
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/device-tokens.yaml#/DeviceTokenResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteDeviceToken
+    tags: [Device Tokens]
+    summary: Delete a device token
+    description: |
+      Permanently deletes a device token. Returns 404 if the token is
+      not found.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: tokenId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^dt_
+        description: "Device token ID (prefixed with `dt_`)"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
 /systems/{systemId}/device-tokens/{tokenId}/revoke:
   post:
     operationId: revokeDeviceToken

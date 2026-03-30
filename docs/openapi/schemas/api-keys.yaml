@@ -1,0 +1,129 @@
+ApiKeyType:
+  type: string
+  enum: [metadata, crypto]
+  description: |
+    Key type. `metadata` keys carry no encrypted key material.
+    `crypto` keys include `encryptedKeyMaterial` for payload encryption.
+
+ApiKeyScope:
+  type: string
+  enum:
+    - "read:members"
+    - "write:members"
+    - "read:fronting"
+    - "write:fronting"
+    - "read:groups"
+    - "write:groups"
+    - "read:system"
+    - "write:system"
+    - "read:webhooks"
+    - "write:webhooks"
+    - "read:audit-log"
+    - "read:blobs"
+    - "write:blobs"
+    - "read:notifications"
+    - "write:notifications"
+    - "full"
+  description: Permission scope granted to this API key
+
+ApiKeyResponse:
+  description: |
+    An API key. The plaintext `token` is only returned on creation and
+    cannot be retrieved again.
+  type: object
+  required:
+    [id, systemId, keyType, scopes, createdAt, lastUsedAt, revokedAt, expiresAt, scopedBucketIds]
+  properties:
+    id:
+      type: string
+      pattern: ^ak_
+      description: "API key ID (ak_ prefix)"
+      example: "ak_abc123def456"
+    systemId:
+      type: string
+      pattern: ^sys_
+      description: "System ID that owns this key"
+      example: "sys_abc123def456"
+    keyType:
+      $ref: "#/ApiKeyType"
+    scopes:
+      type: array
+      items:
+        $ref: "#/ApiKeyScope"
+      description: "Permission scopes granted to this key"
+    createdAt:
+      type: integer
+      format: int64
+      description: "Unix milliseconds when the key was created"
+      example: 1710000000000
+    lastUsedAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: "Unix milliseconds when the key was last used"
+    revokedAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: "Unix milliseconds when the key was revoked, null if active"
+    expiresAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: "Unix milliseconds when the key expires, null if no expiry"
+    scopedBucketIds:
+      type: array
+      items:
+        type: string
+      nullable: true
+      description: "Privacy bucket IDs this key is scoped to, null if unrestricted"
+
+ApiKeyCreateResponse:
+  description: |
+    Response from creating an API key. Includes the plaintext `token`
+    which is only exposed once. The client must store it securely.
+  allOf:
+    - $ref: "#/ApiKeyResponse"
+    - type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: "Plaintext API key token (hex-encoded, 64 characters). Only returned on creation."
+          example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+
+CreateApiKeyRequest:
+  type: object
+  required: [keyType, scopes, encryptedData]
+  properties:
+    keyType:
+      $ref: "#/ApiKeyType"
+    scopes:
+      type: array
+      items:
+        $ref: "#/ApiKeyScope"
+      minItems: 1
+      description: "Permission scopes to grant. At least one required."
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: |
+        Base64-encoded ciphertext blob containing the key's metadata,
+        encrypted client-side with the master key.
+    encryptedKeyMaterial:
+      type: string
+      minLength: 1
+      description: |
+        Base64-encoded encrypted key material. Required for `crypto` keys,
+        forbidden for `metadata` keys.
+    expiresAt:
+      type: integer
+      format: int64
+      description: "Optional Unix timestamp (seconds) when the key should expire"
+    scopedBucketIds:
+      type: array
+      items:
+        type: string
+        minLength: 1
+      description: "Optional list of privacy bucket IDs to restrict this key to"

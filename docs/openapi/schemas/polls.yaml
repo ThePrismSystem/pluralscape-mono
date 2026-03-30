@@ -142,6 +142,57 @@ UpdatePollRequest:
       type: integer
       minimum: 1
 
+UpdatePollVoteRequest:
+  type: object
+  required: [optionId, encryptedData]
+  properties:
+    optionId:
+      type: string
+      nullable: true
+      description: Selected option ID (null for abstain)
+    isVeto:
+      type: boolean
+      description: Whether this vote is a veto (optional, keeps existing value if omitted)
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted vote data"
+
+PollResultsOptionCount:
+  type: object
+  required: [optionId, count]
+  properties:
+    optionId:
+      type: string
+      nullable: true
+      description: Option ID (null for abstain votes)
+    count:
+      type: integer
+      minimum: 0
+
+PollResultsResponse:
+  type: object
+  required: [pollId, totalVotes, vetoCount, optionCounts]
+  properties:
+    pollId:
+      type: string
+      pattern: ^poll_
+    totalVotes:
+      type: integer
+      minimum: 0
+      description: Total non-archived votes
+    vetoCount:
+      type: integer
+      minimum: 0
+      description: Number of veto votes
+    optionCounts:
+      type: array
+      items:
+        $ref: "#/PollResultsOptionCount"
+      description: Vote counts grouped by option
+
 CastVoteRequest:
   type: object
   required: [optionId, voter, encryptedData]

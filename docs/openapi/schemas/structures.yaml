@@ -181,6 +181,21 @@ CreateStructureEntityAssociationRequest:
       type: string
       description: ID of the target entity in the association
 
+HierarchyNode:
+  type: object
+  required: [entityId, parentEntityId, depth]
+  properties:
+    entityId:
+      type: string
+      description: Structure entity ID
+    parentEntityId:
+      type: string
+      nullable: true
+      description: Parent entity ID (null for root)
+    depth:
+      type: integer
+      description: Depth in the hierarchy tree (0 = root)
+
 StructureEntityAssociationResponse:
   type: object
   required: [id, systemId, sourceEntityId, targetEntityId, createdAt]

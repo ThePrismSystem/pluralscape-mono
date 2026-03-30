@@ -1,0 +1,141 @@
+/systems/{systemId}/api-keys:
+  get:
+    operationId: listApiKeys
+    tags: [API Keys]
+    summary: List API keys
+    description: |
+      Returns a paginated list of API keys for the specified system.
+      By default, revoked keys are excluded.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeRevoked
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, include revoked keys in the response
+    responses:
+      "200":
+        description: Paginated API key list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/api-keys.yaml#/ApiKeyResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+  post:
+    operationId: createApiKey
+    tags: [API Keys]
+    summary: Create an API key
+    description: |
+      Creates a new API key and returns the plaintext token. The token is
+      only included in this response and cannot be retrieved again.
+
+      The response includes `Cache-Control: no-store` to prevent token caching.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/api-keys.yaml#/CreateApiKeyRequest"
+    responses:
+      "201":
+        description: API key created
+        headers:
+          Cache-Control:
+            schema:
+              type: string
+              example: "no-store"
+            description: "Always `no-store` to prevent token caching"
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/api-keys.yaml#/ApiKeyCreateResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+/systems/{systemId}/api-keys/{apiKeyId}:
+  get:
+    operationId: getApiKey
+    tags: [API Keys]
+    summary: Get an API key
+    description: |
+      Returns a single API key by ID. The plaintext token is never included.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: apiKeyId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: API key ID (ak_ prefix)
+    responses:
+      "200":
+        description: API key details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/api-keys.yaml#/ApiKeyResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+
+/systems/{systemId}/api-keys/{apiKeyId}/revoke:
+  post:
+    operationId: revokeApiKey
+    tags: [API Keys]
+    summary: Revoke an API key
+    description: |
+      Revokes an API key. The operation is idempotent -- revoking an already
+      revoked key is a no-op and returns 204.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: apiKeyId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: API key ID (ak_ prefix)
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"

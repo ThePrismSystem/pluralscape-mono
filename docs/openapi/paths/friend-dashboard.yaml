@@ -38,3 +38,41 @@
         $ref: "../openapi.yaml#/components/responses/NotFound"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/friends/{connectionId}/dashboard/sync:
+  get:
+    operationId: getFriendDashboardSync
+    tags: [Friends]
+    summary: Get friend dashboard sync projection
+    description: |
+      Returns per-entity-type counts and latest timestamps so the client
+      can determine which entity types need incremental sync. Covers
+      members, custom fronts, structure entities, and active fronting
+      sessions. Filtered by the caller's bucket access on the friend's system.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: connectionId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: "^fc_"
+        description: The friend connection ID (owned by the authenticated account)
+    responses:
+      "200":
+        description: Sync projection per entity type
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/friend-dashboard.yaml#/FriendDashboardSyncResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

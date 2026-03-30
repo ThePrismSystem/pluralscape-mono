@@ -96,6 +96,48 @@
         $ref: "../openapi.yaml#/components/responses/NotFound"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateLifecycleEvent
+    tags: [Lifecycle Events]
+    summary: Update a lifecycle event
+    description: |
+      Updates an existing lifecycle event. All fields except version are optional;
+      only provided fields are changed. Returns 409 on version conflict.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: eventId
+        in: path
+        required: true
+        description: Lifecycle Event ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/lifecycle-events.yaml#/UpdateLifecycleEventRequest"
+    responses:
+      "200":
+        description: Lifecycle event updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/lifecycle-events.yaml#/LifecycleEventResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
   delete:
     operationId: deleteLifecycleEvent
     tags: [Lifecycle Events]

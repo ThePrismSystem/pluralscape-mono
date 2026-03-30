@@ -27,3 +27,69 @@ UpdateSystemRequest:
     version:
       type: integer
       minimum: 1
+
+SnapshotTrigger:
+  type: string
+  enum: [manual, scheduled-daily, scheduled-weekly]
+  example: manual
+
+CreateSnapshotRequest:
+  type: object
+  required: [snapshotTrigger, encryptedData]
+  properties:
+    snapshotTrigger:
+      $ref: "#/SnapshotTrigger"
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: T1-encrypted snapshot data
+
+SnapshotResponse:
+  type: object
+  required: [id, systemId, snapshotTrigger, encryptedData, createdAt]
+  properties:
+    id:
+      type: string
+      description: Snapshot identifier
+    systemId:
+      type: string
+    snapshotTrigger:
+      $ref: "#/SnapshotTrigger"
+    encryptedData:
+      type: string
+      contentEncoding: base64
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+
+DuplicateSystemRequest:
+  type: object
+  required: [snapshotId]
+  properties:
+    snapshotId:
+      type: string
+      minLength: 1
+      description: ID of the snapshot to seed the new system from
+
+DuplicateSystemResponse:
+  type: object
+  required: [id, sourceSnapshotId]
+  properties:
+    id:
+      type: string
+      description: New system ID
+    sourceSnapshotId:
+      type: string
+      description: Snapshot ID used to seed the new system
+
+PurgeSystemRequest:
+  type: object
+  required: [password]
+  properties:
+    password:
+      type: string
+      minLength: 1
+      description: Account password for confirmation

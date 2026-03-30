@@ -127,6 +127,49 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
+/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/retry:
+  post:
+    operationId: retryKeyRotation
+    tags: [Key Rotation]
+    summary: Retry a failed key rotation
+    description: |
+      Resets a failed key rotation back to the migrating state so the client
+      can re-attempt re-encryption of failed items. Only rotations in the
+      `failed` state can be retried.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        description: Privacy Bucket ID
+        schema:
+          type: string
+      - name: rotationId
+        in: path
+        required: true
+        description: Rotation ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Rotation retried
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/key-rotation.yaml#/RotationResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        description: Rotation is not in the failed state
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
 /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete-chunk:
   post:
     operationId: completeRotationChunk
