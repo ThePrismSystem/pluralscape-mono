@@ -1,11 +1,11 @@
 ---
 # api-ibn2
 title: API consistency normalization
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-29T02:59:27Z
-updated_at: 2026-03-29T03:03:12Z
+updated_at: 2026-03-30T11:08:49Z
 parent: api-e7gt
 blocked_by:
   - api-g475

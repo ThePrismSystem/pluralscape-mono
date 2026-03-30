@@ -50,8 +50,8 @@ export async function createAuthenticatedWsClient(
   if (!listRes.ok()) {
     throw new Error(`Failed to list systems: ${String(listRes.status())}`);
   }
-  const body = (await listRes.json()) as { items: Array<{ id: string }> };
-  const systemId = body.items[0]?.id ?? "";
+  const body = (await listRes.json()) as { data: Array<{ id: string }> };
+  const systemId = body.data[0]?.id ?? "";
   if (systemId === "") {
     throw new Error("No system found for account");
   }

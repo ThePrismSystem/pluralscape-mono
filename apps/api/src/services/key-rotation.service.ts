@@ -285,7 +285,7 @@ export async function claimRotationChunk(
 
     if (pendingItems.length === 0) {
       return {
-        items: [],
+        data: [],
         rotationState: rotation.state as RotationState,
       };
     }
@@ -324,7 +324,7 @@ export async function claimRotationChunk(
     }
 
     return {
-      items: claimedRows.map(toItemResult),
+      data: claimedRows.map(toItemResult),
       rotationState: currentState,
     };
   });

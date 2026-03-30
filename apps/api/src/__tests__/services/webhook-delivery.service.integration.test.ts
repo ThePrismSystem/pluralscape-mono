@@ -92,7 +92,7 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       await insertDelivery({ status: "success" });
 
       const result = await listWebhookDeliveries(asDb(db), systemId, auth);
-      expect(result.items.length).toBe(2);
+      expect(result.data.length).toBe(2);
     });
 
     it("filters by webhookId", async () => {
@@ -100,8 +100,8 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       const result = await listWebhookDeliveries(asDb(db), systemId, auth, {
         webhookId,
       });
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.webhookId).toBe(webhookId);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.webhookId).toBe(webhookId);
     });
 
     it("filters by status", async () => {
@@ -112,8 +112,8 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       const result = await listWebhookDeliveries(asDb(db), systemId, auth, {
         status: "pending",
       });
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.status).toBe("pending");
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.status).toBe("pending");
     });
 
     it("filters by eventType", async () => {
@@ -123,8 +123,8 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       const result = await listWebhookDeliveries(asDb(db), systemId, auth, {
         eventType: "fronting.ended",
       });
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.eventType).toBe("fronting.ended");
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.eventType).toBe("fronting.ended");
     });
 
     it("supports pagination", async () => {
@@ -134,15 +134,15 @@ describe("webhook-delivery.service (PGlite integration)", () => {
       const page1 = await listWebhookDeliveries(asDb(db), systemId, auth, {
         limit: 1,
       });
-      expect(page1.items.length).toBe(1);
+      expect(page1.data.length).toBe(1);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listWebhookDeliveries(asDb(db), systemId, auth, {
-        cursor: page1.items[0]?.id,
+        cursor: page1.data[0]?.id,
         limit: 1,
       });
-      expect(page2.items.length).toBe(1);
-      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
+      expect(page2.data.length).toBe(1);
+      expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
     });
   });
 

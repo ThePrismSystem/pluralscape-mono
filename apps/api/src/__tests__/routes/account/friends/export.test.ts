@@ -60,7 +60,7 @@ const MOCK_MANIFEST: FriendExportManifestResponse = {
 };
 
 const MOCK_PAGE = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,

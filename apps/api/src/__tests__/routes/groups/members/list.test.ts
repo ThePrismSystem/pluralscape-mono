@@ -25,7 +25,7 @@ const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const MEMBERS_URL =
   "/systems/sys_550e8400-e29b-41d4-a716-446655440000/groups/grp_660e8400-e29b-41d4-a716-446655440000/members";
-const EMPTY_PAGE = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 describe("GET /systems/:id/groups/:groupId/members", () => {
   beforeEach(() => {
@@ -43,7 +43,7 @@ describe("GET /systems/:id/groups/:groupId/members", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 
   it("applies the readDefault rate limit category", () => {

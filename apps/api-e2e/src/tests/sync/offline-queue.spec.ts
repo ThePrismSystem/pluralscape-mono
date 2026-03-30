@@ -18,8 +18,8 @@ test.describe("Sync offline queue E2E", () => {
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
-    const body = (await listRes.json()) as { items: Array<{ id: string }> };
-    const systemId = body.items[0]?.id ?? "";
+    const body = (await listRes.json()) as { data: Array<{ id: string }> };
+    const systemId = body.data[0]?.id ?? "";
 
     // Session 1: submit a change
     const ws1 = new SyncWsClient();
@@ -67,8 +67,8 @@ test.describe("Sync offline queue E2E", () => {
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
-    const body = (await listRes.json()) as { items: Array<{ id: string }> };
-    const systemId = body.items[0]?.id ?? "";
+    const body = (await listRes.json()) as { data: Array<{ id: string }> };
+    const systemId = body.data[0]?.id ?? "";
 
     const ws = new SyncWsClient();
     await ws.connect();

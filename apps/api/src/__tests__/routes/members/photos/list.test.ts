@@ -57,14 +57,14 @@ const PHOTO_RESULT = {
 };
 
 const PAGINATED_RESULT = {
-  items: [PHOTO_RESULT],
+  data: [PHOTO_RESULT],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
 };
 
 const EMPTY_PAGINATED_RESULT = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -91,9 +91,9 @@ describe("GET /systems/:systemId/members/:memberId/photos", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof PAGINATED_RESULT;
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.id).toBe(PHOTO_ID);
-    expect(body.items[0]?.memberId).toBe(MEM_ID);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.id).toBe(PHOTO_ID);
+    expect(body.data[0]?.memberId).toBe(MEM_ID);
     expect(body.hasMore).toBe(false);
     expect(body.nextCursor).toBeNull();
   });
@@ -106,7 +106,7 @@ describe("GET /systems/:systemId/members/:memberId/photos", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGINATED_RESULT;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 

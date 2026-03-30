@@ -64,10 +64,10 @@ test.describe("Fronting Comments CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("nextCursor");
       expect(body).toHaveProperty("hasMore");
-      const ids = (body.items as { id: string }[]).map((c) => c.id);
+      const ids = (body.data as { id: string }[]).map((c) => c.id);
       expect(ids).toContain(commentId);
     });
 

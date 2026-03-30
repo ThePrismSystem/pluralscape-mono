@@ -179,7 +179,7 @@ describe("POST /systems/:id/polls (create)", () => {
 describe("GET /systems/:id/polls (list)", () => {
   it("returns 200 with paginated result", async () => {
     vi.mocked(listPolls).mockResolvedValueOnce({
-      items: [MOCK_POLL],
+      data: [MOCK_POLL],
       nextCursor: null,
       hasMore: false,
       totalCount: null,
@@ -188,8 +188,8 @@ describe("GET /systems/:id/polls (list)", () => {
     const res = await createApp().request(BASE);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(1);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(1);
   });
 });
 
@@ -406,7 +406,7 @@ describe("POST /systems/:id/polls/:pollId/restore", () => {
 describe("GET /systems/:id/polls/:pollId/votes (list votes)", () => {
   it("returns 200 with paginated vote result", async () => {
     vi.mocked(listVotes).mockResolvedValueOnce({
-      items: [MOCK_VOTE],
+      data: [MOCK_VOTE],
       nextCursor: null,
       hasMore: false,
       totalCount: null,
@@ -415,8 +415,8 @@ describe("GET /systems/:id/polls/:pollId/votes (list votes)", () => {
     const res = await createApp().request(`${BASE}/${POLL_ID}/votes`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(1);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(1);
   });
 
   it("returns 404 when poll not found", async () => {

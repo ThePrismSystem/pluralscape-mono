@@ -163,7 +163,7 @@ describe("friend-export service", () => {
         LIMIT,
       );
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });
@@ -180,9 +180,9 @@ describe("friend-export service", () => {
         LIMIT,
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0]?.encryptedData).toBe("dGVzdA==");
-      expect(result.items[0]?.entityType).toBe(ENTITY_TYPE);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0]?.encryptedData).toBe("dGVzdA==");
+      expect(result.data[0]?.entityType).toBe(ENTITY_TYPE);
     });
 
     it("indicates hasMore when visible items exceed limit", async () => {
@@ -201,7 +201,7 @@ describe("friend-export service", () => {
       );
 
       expect(result.hasMore).toBe(true);
-      expect(result.items).toHaveLength(LIMIT);
+      expect(result.data).toHaveLength(LIMIT);
       expect(result.nextCursor).toBe("next-cursor");
     });
 
@@ -232,7 +232,7 @@ describe("friend-export service", () => {
 
       // Should have fetched twice and accumulated up to limit
       expect(mockQueryExportRows).toHaveBeenCalledTimes(2);
-      expect(result.items).toHaveLength(LIMIT);
+      expect(result.data).toHaveLength(LIMIT);
     });
 
     it("returns partial page when DB exhausted before filling limit", async () => {
@@ -247,7 +247,7 @@ describe("friend-export service", () => {
         LIMIT,
       );
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });

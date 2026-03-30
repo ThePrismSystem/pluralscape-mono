@@ -57,7 +57,7 @@ test.describe("Members CRUD", () => {
       const listRes = await request.get(membersUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const listed = await listRes.json();
-      expect(listed.items.length).toBeGreaterThanOrEqual(1);
+      expect(listed.data.length).toBeGreaterThanOrEqual(1);
     });
 
     await test.step("update with new encrypted data", async () => {

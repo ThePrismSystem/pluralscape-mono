@@ -55,9 +55,9 @@ test.describe("Custom Fronts CRUD", () => {
       const listRes = await request.get(customFrontsUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
     });
 
     await test.step("update with new encrypted data", async () => {

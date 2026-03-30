@@ -159,19 +159,19 @@ describe("member.service (PGlite integration)", () => {
       );
 
       const page1 = await listMembers(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeDefined();
 
       // listMembers accepts a raw ID as cursor (route layer decodes the opaque cursor)
-      const lastItemId = page1.items[page1.items.length - 1]?.id;
+      const lastItemId = page1.data[page1.data.length - 1]?.id;
       expect(lastItemId).toBeDefined();
 
       const page2 = await listMembers(asDb(db), systemId, auth, {
         cursor: lastItemId,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
     });
   });

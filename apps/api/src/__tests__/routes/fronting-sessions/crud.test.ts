@@ -70,7 +70,7 @@ const MOCK_SESSION = {
   updatedAt: 1000 as never,
 };
 
-const EMPTY_PAGE = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -125,7 +125,7 @@ describe("GET /systems/:id/fronting-sessions", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });
 

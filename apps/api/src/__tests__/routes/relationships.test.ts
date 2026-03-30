@@ -69,7 +69,7 @@ const MOCK_RELATIONSHIP = {
 };
 
 const MOCK_PAGINATED = {
-  items: [MOCK_RELATIONSHIP],
+  data: [MOCK_RELATIONSHIP],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -135,8 +135,8 @@ describe("GET /systems/:id/relationships", () => {
     const app = createApp();
     const res = await app.request(BASE_URL);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(1);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(1);
   });
 
   it("forwards systemId and auth to service", async () => {

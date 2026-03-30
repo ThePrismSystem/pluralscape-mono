@@ -16,7 +16,7 @@ interface BmResponse {
 }
 
 interface BmListResponse {
-  items: BmResponse[];
+  data: BmResponse[];
   nextCursor: string | null;
   hasMore: boolean;
   totalCount: number | null;
@@ -71,9 +71,9 @@ test.describe("Board Messages CRUD", () => {
       const res = await request.get(bmUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as BmListResponse;
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.some((item) => item.id === bmId)).toBe(true);
+      expect(body.data.some((item) => item.id === bmId)).toBe(true);
     });
 
     await test.step("update with new encrypted data", async () => {
@@ -115,14 +115,14 @@ test.describe("Board Messages CRUD", () => {
       const res = await request.get(bmUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as BmListResponse;
-      expect(body.items.every((item) => item.id !== bmId)).toBe(true);
+      expect(body.data.every((item) => item.id !== bmId)).toBe(true);
     });
 
     await test.step("archived returned with includeArchived=true", async () => {
       const res = await request.get(`${bmUrl}?includeArchived=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as BmListResponse;
-      expect(body.items.some((item) => item.id === bmId)).toBe(true);
+      expect(body.data.some((item) => item.id === bmId)).toBe(true);
     });
 
     await test.step("restore board message", async () => {
@@ -206,7 +206,7 @@ test.describe("Board Messages CRUD", () => {
     const pinnedRes = await request.get(`${bmUrl}?pinned=true`, { headers: authHeaders });
     expect(pinnedRes.status()).toBe(200);
     const pinnedBody = (await pinnedRes.json()) as BmListResponse;
-    for (const item of pinnedBody.items) {
+    for (const item of pinnedBody.data) {
       expect(item.pinned).toBe(true);
     }
   });

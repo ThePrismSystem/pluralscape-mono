@@ -187,7 +187,7 @@ describe("listRegions", () => {
 
     const result = await listRegions(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -199,7 +199,7 @@ describe("listRegions", () => {
 
     const result = await listRegions(db, SYSTEM_ID, AUTH, { limit: 1 });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     const { nextCursor } = result;
     expect(nextCursor).not.toBeNull();
@@ -215,8 +215,8 @@ describe("listRegions", () => {
 
     const result = await listRegions(db, SYSTEM_ID, AUTH, { includeArchived: true });
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.archived).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.archived).toBe(true);
   });
 
   it("applies cursor filter when provided", async () => {

@@ -127,7 +127,7 @@ export async function queryAuditLog(
     const lastItem = items[items.length - 1];
 
     return {
-      items: items.map(toEntryResult),
+      data: items.map(toEntryResult),
       nextCursor:
         hasMore && lastItem
           ? (encodeCursor({

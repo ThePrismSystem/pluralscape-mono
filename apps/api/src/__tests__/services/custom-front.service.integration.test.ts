@@ -145,14 +145,14 @@ describe("custom-front.service (PGlite integration)", () => {
       );
 
       const page1 = await listCustomFronts(asDb(db), systemId, auth, undefined, 2);
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
 
-      const page2 = await listCustomFronts(asDb(db), systemId, auth, page1.items[1]?.id, 2);
-      expect(page2.items).toHaveLength(1);
+      const page2 = await listCustomFronts(asDb(db), systemId, auth, page1.data[1]?.id, 2);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
-      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
-      expect(page2.items[0]?.id).not.toBe(page1.items[1]?.id);
+      expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
+      expect(page2.data[0]?.id).not.toBe(page1.data[1]?.id);
     });
   });
 

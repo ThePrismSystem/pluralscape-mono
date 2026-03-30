@@ -25,8 +25,8 @@ test.describe("WebSocket sync server", () => {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
     expect(listRes.ok()).toBe(true);
-    const body = (await listRes.json()) as { items: Array<{ id: string }> };
-    const systemId = body.items[0]?.id ?? "";
+    const body = (await listRes.json()) as { data: Array<{ id: string }> };
+    const systemId = body.data[0]?.id ?? "";
     expect(systemId).not.toBe("");
 
     // Connect and authenticate via WebSocket
@@ -81,8 +81,8 @@ test.describe("WebSocket sync server", () => {
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
-    const body = (await listRes.json()) as { items: Array<{ id: string }> };
-    const systemId = body.items[0]?.id ?? "";
+    const body = (await listRes.json()) as { data: Array<{ id: string }> };
+    const systemId = body.data[0]?.id ?? "";
 
     // Two connections for the same account
     const ws1 = new SyncWsClient();
@@ -121,8 +121,8 @@ test.describe("WebSocket sync server", () => {
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
-    const body = (await listRes.json()) as { items: Array<{ id: string }> };
-    const systemId = body.items[0]?.id ?? "";
+    const body = (await listRes.json()) as { data: Array<{ id: string }> };
+    const systemId = body.data[0]?.id ?? "";
 
     const ws = new SyncWsClient();
     await ws.connect();
@@ -200,8 +200,8 @@ test.describe("WebSocket sync server", () => {
     const listRes = await request.get("/v1/systems", {
       headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
     });
-    const body = (await listRes.json()) as { items: Array<{ id: string }> };
-    const systemId = body.items[0]?.id ?? "";
+    const body = (await listRes.json()) as { data: Array<{ id: string }> };
+    const systemId = body.data[0]?.id ?? "";
 
     const ws = new SyncWsClient();
     await ws.connect();

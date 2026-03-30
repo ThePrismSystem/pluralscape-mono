@@ -55,7 +55,7 @@ const MOCK_MANIFEST: BucketExportManifestResponse = {
 };
 
 const MOCK_PAGE: BucketExportPageResponse = {
-  items: [
+  data: [
     {
       id: "mem_550e8400-e29b-41d4-a716-446655440000" as ExportEntityId,
       entityType: "member",
@@ -146,8 +146,8 @@ describe("GET /systems/:systemId/buckets/:bucketId/export", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as BucketExportPageResponse;
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.entityType).toBe("member");
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.entityType).toBe("member");
   });
 
   it("returns 400 for missing entityType", async () => {

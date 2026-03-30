@@ -52,6 +52,6 @@ listRoute.get("/", async (c) => {
 
   return c.json({
     ...result,
-    items: result.items.map((item) => filterFields(item, fields)),
+    data: result.data.map((item) => filterFields(item, fields)),
   });
 });

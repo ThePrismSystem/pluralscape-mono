@@ -53,9 +53,9 @@ test.describe("Messages CRUD", () => {
       const res = await request.get(messagesUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
     });
 
     await test.step("update sets editedAt", async () => {
@@ -155,10 +155,10 @@ test.describe("Messages CRUD", () => {
     });
     expect(page1Res.status()).toBe(200);
     const page1 = await page1Res.json();
-    expect(page1.items).toHaveLength(2);
+    expect(page1.data).toHaveLength(2);
     expect(page1.hasMore).toBe(true);
     // Descending: newest first
-    const items = page1.items as Array<{ timestamp: number }>;
+    const items = page1.data as Array<{ timestamp: number }>;
     expect(items[0]?.timestamp).toBeGreaterThan(items[1]?.timestamp ?? 0);
 
     const page2Res = await request.get(
@@ -167,7 +167,7 @@ test.describe("Messages CRUD", () => {
     );
     expect(page2Res.status()).toBe(200);
     const page2 = await page2Res.json();
-    expect(page2.items).toHaveLength(1);
+    expect(page2.data).toHaveLength(1);
     expect(page2.hasMore).toBe(false);
   });
 

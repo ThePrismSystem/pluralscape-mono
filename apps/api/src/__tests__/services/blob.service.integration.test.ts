@@ -244,23 +244,23 @@ describe("blob.service (PGlite integration)", () => {
 
       // List all
       const result = await listBlobs(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
 
-      const ids = result.items.map((b) => b.id);
+      const ids = result.data.map((b) => b.id);
       expect(ids).toContain(blob1.id);
       expect(ids).toContain(blob2.id);
 
       // Paginate: limit 1
       const page1 = await listBlobs(asDb(db), systemId, auth, { limit: 1 });
-      expect(page1.items).toHaveLength(1);
+      expect(page1.data).toHaveLength(1);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listBlobs(asDb(db), systemId, auth, {
-        cursor: page1.items[0]?.id,
+        cursor: page1.data[0]?.id,
         limit: 1,
       });
-      expect(page2.items).toHaveLength(1);
-      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
+      expect(page2.data).toHaveLength(1);
+      expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
     });
   });
 
@@ -282,7 +282,7 @@ describe("blob.service (PGlite integration)", () => {
 
       // listBlobs should exclude archived
       const list = await listBlobs(asDb(db), systemId, auth);
-      expect(list.items).toHaveLength(0);
+      expect(list.data).toHaveLength(0);
     });
   });
 

@@ -57,12 +57,12 @@ test.describe("Groups CRUD", () => {
       const listRes = await request.get(groupsUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const listed = await listRes.json();
-      expect(listed).toHaveProperty("items");
+      expect(listed).toHaveProperty("data");
       expect(listed).toHaveProperty("nextCursor");
       expect(listed).toHaveProperty("hasMore");
-      expect(listed.items.length).toBeGreaterThanOrEqual(1);
+      expect(listed.data.length).toBeGreaterThanOrEqual(1);
 
-      const found = (listed.items as Array<{ id: string }>).some((g) => g.id === groupId);
+      const found = (listed.data as Array<{ id: string }>).some((g) => g.id === groupId);
       expect(found).toBe(true);
     });
 
@@ -201,7 +201,7 @@ test.describe("Groups CRUD", () => {
     const listRes = await request.get(groupsUrl, { headers: authHeaders });
     expect(listRes.status()).toBe(200);
     const listed = await listRes.json();
-    const items = listed.items as Array<{ id: string; sortOrder: number }>;
+    const items = listed.data as Array<{ id: string; sortOrder: number }>;
 
     const sortedIds = items
       .filter((g) => [groupA.id, groupB.id, groupC.id].includes(g.id))
@@ -238,10 +238,8 @@ test.describe("Groups CRUD", () => {
     await test.step("list group members includes added member", async () => {
       const listRes = await request.get(groupMembersUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
-      const body = (await listRes.json()) as {
-        items: Array<{ memberId: string }>;
-      };
-      const memberIds = body.items.map((m) => m.memberId);
+      const body = await listRes.json();
+      const memberIds = (body.data as Array<{ memberId: string }>).map((m) => m.memberId);
       expect(memberIds).toContain(addedMemberId);
     });
 
@@ -255,10 +253,8 @@ test.describe("Groups CRUD", () => {
     await test.step("list after removal excludes member", async () => {
       const listRes = await request.get(groupMembersUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
-      const body = (await listRes.json()) as {
-        items: Array<{ memberId: string }>;
-      };
-      const memberIds = body.items.map((m) => m.memberId);
+      const body = await listRes.json();
+      const memberIds = (body.data as Array<{ memberId: string }>).map((m) => m.memberId);
       expect(memberIds).not.toContain(addedMemberId);
     });
 

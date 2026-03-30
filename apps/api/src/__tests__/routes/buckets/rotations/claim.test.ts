@@ -42,7 +42,7 @@ const ROTATION_ID = "bkr_770e8400-e29b-41d4-a716-446655440000";
 const CLAIM_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/${ROTATION_ID}/claim`;
 
 const MOCK_CLAIM_RESPONSE = {
-  items: [
+  data: [
     {
       id: "bri_880e8400-e29b-41d4-a716-446655440000" as never,
       rotationId: ROTATION_ID as never,
@@ -81,13 +81,13 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/claim", () =
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof MOCK_CLAIM_RESPONSE;
-    expect(body.items).toHaveLength(1);
+    expect(body.data).toHaveLength(1);
     expect(body.rotationState).toBe("migrating");
-    expect((body.items[0] as Record<string, unknown>).id).toBe(
+    expect((body.data[0] as Record<string, unknown>).id).toBe(
       "bri_880e8400-e29b-41d4-a716-446655440000",
     );
-    expect((body.items[0] as Record<string, unknown>).status).toBe("claimed");
-    expect((body.items[0] as Record<string, unknown>).entityType).toBe("content_tag");
+    expect((body.data[0] as Record<string, unknown>).status).toBe("claimed");
+    expect((body.data[0] as Record<string, unknown>).entityType).toBe("content_tag");
   });
 
   it("returns 400 for malformed JSON body", async () => {

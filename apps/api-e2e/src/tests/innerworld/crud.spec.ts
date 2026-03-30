@@ -66,11 +66,11 @@ test.describe("Innerworld CRUD", () => {
       const listRes = await request.get(entitiesUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("nextCursor");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-      const found = (body.items as Array<{ id: string }>).some((e) => e.id === entityId);
+      const found = (body.data as Array<{ id: string }>).some((e) => e.id === entityId);
       expect(found).toBe(true);
     });
 
@@ -161,11 +161,11 @@ test.describe("Innerworld CRUD", () => {
       const listRes = await request.get(regionsUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const body = await listRes.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("nextCursor");
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
 
-      const found = (body.items as Array<{ id: string }>).some((r) => r.id === regionId);
+      const found = (body.data as Array<{ id: string }>).some((r) => r.id === regionId);
       expect(found).toBe(true);
     });
 

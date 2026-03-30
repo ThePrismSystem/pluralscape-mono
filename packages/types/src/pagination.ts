@@ -5,7 +5,7 @@ export type PaginationCursor = Brand<string, "PaginationCursor">;
 
 /** A page of results from a cursor-based paginated query. */
 export interface PaginatedResult<T> {
-  readonly items: readonly T[];
+  readonly data: readonly T[];
   readonly nextCursor: PaginationCursor | null;
   readonly hasMore: boolean;
   readonly totalCount: number | null;

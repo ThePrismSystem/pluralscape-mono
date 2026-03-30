@@ -37,7 +37,7 @@ const { accountRoutes } = await import("../../../../routes/account/index.js");
 const createApp = () => createRouteApp("/account", accountRoutes);
 
 const MOCK_PAGINATED_RESULT = {
-  items: [] as never[],
+  data: [] as never[],
   nextCursor: null,
   hasMore: false,
   totalCount: 0,
@@ -61,7 +61,7 @@ describe("GET /account/friends", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof MOCK_PAGINATED_RESULT;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 

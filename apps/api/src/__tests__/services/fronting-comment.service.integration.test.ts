@@ -205,8 +205,8 @@ describe("fronting-comment.service (PGlite integration)", () => {
       await archiveFrontingComment(asDb(db), systemId, sid, c1.id, auth, noopAudit);
 
       const result = await listFrontingComments(asDb(db), systemId, sid, auth);
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.id).toBe(c2.id);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.id).toBe(c2.id);
     });
 
     it("includes archived when includeArchived=true", async () => {
@@ -225,7 +225,7 @@ describe("fronting-comment.service (PGlite integration)", () => {
       const result = await listFrontingComments(asDb(db), systemId, sid, auth, {
         includeArchived: true,
       });
-      expect(result.items.length).toBe(2);
+      expect(result.data.length).toBe(2);
     });
 
     it("supports cursor pagination by ID desc", async () => {
@@ -234,15 +234,15 @@ describe("fronting-comment.service (PGlite integration)", () => {
       await createFrontingComment(asDb(db), systemId, sid, commentParams(), auth, noopAudit);
 
       const page1 = await listFrontingComments(asDb(db), systemId, sid, auth, { limit: 1 });
-      expect(page1.items.length).toBe(1);
+      expect(page1.data.length).toBe(1);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listFrontingComments(asDb(db), systemId, sid, auth, {
-        cursor: page1.items[0]?.id,
+        cursor: page1.data[0]?.id,
         limit: 1,
       });
-      expect(page2.items.length).toBe(1);
-      expect(page2.items[0]?.id).not.toBe(page1.items[0]?.id);
+      expect(page2.data.length).toBe(1);
+      expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
     });
   });
 

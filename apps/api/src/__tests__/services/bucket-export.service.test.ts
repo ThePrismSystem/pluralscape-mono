@@ -144,7 +144,7 @@ describe("bucket-export service", () => {
         LIMIT,
       );
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });
@@ -161,9 +161,9 @@ describe("bucket-export service", () => {
         LIMIT,
       );
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.entityType).toBe(ENTITY_TYPE);
-      expect(result.items[0]?.encryptedData).toBe("dGVzdA==");
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.entityType).toBe(ENTITY_TYPE);
+      expect(result.data[0]?.encryptedData).toBe("dGVzdA==");
     });
 
     it("indicates hasMore when rows exceed limit", async () => {
@@ -184,7 +184,7 @@ describe("bucket-export service", () => {
 
       expect(result.hasMore).toBe(true);
       expect(result.nextCursor).toBe("cursor-abc");
-      expect(result.items).toHaveLength(LIMIT);
+      expect(result.data).toHaveLength(LIMIT);
     });
 
     it("decodes cursor when provided", async () => {

@@ -48,7 +48,7 @@ interface ExportEntity {
 }
 
 interface ExportPageResponse {
-  readonly items: readonly ExportEntity[];
+  readonly data: readonly ExportEntity[];
   readonly nextCursor: string | null;
   readonly hasMore: boolean;
   readonly totalCount: number | null;
@@ -247,8 +247,8 @@ test.describe("Bucket export", () => {
         );
         expect(res.status()).toBe(HTTP_OK);
         const body = (await res.json()) as ExportPageResponse;
-        expect(body.items).toHaveLength(1);
-        expect(body.items[0]?.entityType).toBe(entityType);
+        expect(body.data).toHaveLength(1);
+        expect(body.data[0]?.entityType).toBe(entityType);
       }
     });
 
@@ -267,7 +267,7 @@ test.describe("Bucket export", () => {
       );
       expect(page1Res.status()).toBe(HTTP_OK);
       const page1 = (await page1Res.json()) as ExportPageResponse;
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
       expect(page1.nextCursor).toBeTruthy();
 
@@ -277,7 +277,7 @@ test.describe("Bucket export", () => {
       );
       expect(page2Res.status()).toBe(HTTP_OK);
       const page2 = (await page2Res.json()) as ExportPageResponse;
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
     });
 
@@ -291,7 +291,7 @@ test.describe("Bucket export", () => {
       );
       expect(res.status()).toBe(HTTP_OK);
       const body = (await res.json()) as ExportPageResponse;
-      expect(body.items).toHaveLength(0);
+      expect(body.data).toHaveLength(0);
       expect(body.hasMore).toBe(false);
       expect(body.nextCursor).toBeNull();
     });
@@ -356,9 +356,9 @@ test.describe("Bucket export", () => {
       );
       expect(res.status()).toBe(HTTP_OK);
       const body = (await res.json()) as ExportPageResponse;
-      expect(body.items).toHaveLength(2);
+      expect(body.data).toHaveLength(2);
 
-      const ids = body.items.map((i) => i.id).sort();
+      const ids = body.data.map((i) => i.id).sort();
       expect(ids).toEqual([m1.id, m2.id].sort());
     });
 
@@ -442,7 +442,7 @@ test.describe("Bucket export", () => {
         const res = await request.get(url, { headers: authHeaders });
         expect(res.status()).toBe(HTTP_OK);
         const body = (await res.json()) as ExportPageResponse;
-        collected.push(...body.items.map((i) => i.id));
+        collected.push(...body.data.map((i) => i.id));
         cursor = body.nextCursor;
         pageCount++;
       } while (cursor !== null && pageCount < 10);

@@ -69,9 +69,9 @@ test.describe("Channels CRUD", () => {
       const res = await request.get(channelsUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.length).toBeGreaterThanOrEqual(2);
+      expect(body.data.length).toBeGreaterThanOrEqual(2);
     });
 
     await test.step("list filtered by type=category", async () => {
@@ -80,7 +80,7 @@ test.describe("Channels CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      for (const item of body.items) {
+      for (const item of body.data) {
         expect(item.type).toBe("category");
       }
     });
@@ -91,8 +91,8 @@ test.describe("Channels CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.items.length).toBe(1);
-      expect(body.items[0].parentId).toBe(categoryId);
+      expect(body.data.length).toBe(1);
+      expect(body.data[0].parentId).toBe(categoryId);
     });
 
     await test.step("update with new encrypted data", async () => {

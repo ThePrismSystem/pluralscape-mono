@@ -282,7 +282,7 @@ describe("friend-export.service (PGlite integration)", () => {
 
     const page = await getFriendExportPage(asDb(db), friendConnectionId, friendAuth, "member", 10);
 
-    expect(page.items).toHaveLength(0);
+    expect(page.data).toHaveLength(0);
     expect(page.hasMore).toBe(false);
     expect(page.nextCursor).toBeNull();
   });
@@ -300,12 +300,12 @@ describe("friend-export.service (PGlite integration)", () => {
 
     const page = await getFriendExportPage(asDb(db), friendConnectionId, friendAuth, "member", 10);
 
-    expect(page.items).toHaveLength(1);
-    expect(page.items[0]?.id).toBe(visibleMember);
-    expect(page.items[0]?.entityType).toBe("member");
-    expect(page.items[0]?.encryptedData).toEqual(expect.any(String));
+    expect(page.data).toHaveLength(1);
+    expect(page.data[0]?.id).toBe(visibleMember);
+    expect(page.data[0]?.entityType).toBe("member");
+    expect(page.data[0]?.encryptedData).toEqual(expect.any(String));
     // Hidden member must not appear
-    const ids = page.items.map((i) => i.id);
+    const ids = page.data.map((i) => i.id);
     expect(ids).not.toContain(hiddenMember);
   });
 
@@ -325,7 +325,7 @@ describe("friend-export.service (PGlite integration)", () => {
     }
 
     const page1 = await getFriendExportPage(asDb(db), friendConnectionId, friendAuth, "member", 2);
-    expect(page1.items).toHaveLength(2);
+    expect(page1.data).toHaveLength(2);
     expect(page1.hasMore).toBe(true);
     expect(page1.nextCursor).not.toBeNull();
 
@@ -337,11 +337,11 @@ describe("friend-export.service (PGlite integration)", () => {
       2,
       page1.nextCursor ?? undefined,
     );
-    expect(page2.items).toHaveLength(2);
+    expect(page2.data).toHaveLength(2);
 
     // Pages must not overlap
-    const page1Ids = new Set(page1.items.map((i) => i.id));
-    for (const item of page2.items) {
+    const page1Ids = new Set(page1.data.map((i) => i.id));
+    for (const item of page2.data) {
       expect(page1Ids.has(item.id)).toBe(false);
     }
   });
@@ -364,7 +364,7 @@ describe("friend-export.service (PGlite integration)", () => {
     const page = await getFriendExportPage(asDb(db), friendConnectionId, friendAuth, "member", 3);
 
     // Should fill the page to the requested limit even though raw rows contain invisible ones
-    expect(page.items).toHaveLength(3);
+    expect(page.data).toHaveLength(3);
   });
 
   it("ordering is updatedAt ASC, id ASC", async () => {
@@ -382,10 +382,10 @@ describe("friend-export.service (PGlite integration)", () => {
 
     const page = await getFriendExportPage(asDb(db), friendConnectionId, friendAuth, "member", 10);
 
-    expect(page.items).toHaveLength(3);
-    expect(page.items[0]?.id).toBe(m1);
-    expect(page.items[1]?.id).toBe(m3);
-    expect(page.items[2]?.id).toBe(m2);
+    expect(page.data).toHaveLength(3);
+    expect(page.data[0]?.id).toBe(m1);
+    expect(page.data[1]?.id).toBe(m3);
+    expect(page.data[2]?.id).toBe(m2);
   });
 
   it("hasMore is true when more data exists, false when exhausted", async () => {
@@ -403,7 +403,7 @@ describe("friend-export.service (PGlite integration)", () => {
 
     // First page: batch fetches 6 of 8 rows, DB not exhausted → hasMore=true
     const page1 = await getFriendExportPage(asDb(db), friendConnectionId, friendAuth, "member", 2);
-    expect(page1.items).toHaveLength(2);
+    expect(page1.data).toHaveLength(2);
     expect(page1.hasMore).toBe(true);
     expect(page1.nextCursor).not.toBeNull();
 

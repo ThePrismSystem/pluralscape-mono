@@ -20,7 +20,7 @@ async function cleanupWebhookTest(
     { headers },
   );
   expect(deliveriesRes.status()).toBe(200);
-  const deliveries = (await deliveriesRes.json()).items as Array<{ id: string }>;
+  const deliveries = (await deliveriesRes.json()).data as Array<{ id: string }>;
   for (const d of deliveries) {
     const delRes = await request.delete(`/v1/systems/${systemId}/webhook-deliveries/${d.id}`, {
       headers,
@@ -83,7 +83,7 @@ test.describe("Communication Webhook Delivery", () => {
       );
       expect(res.status()).toBe(200);
       const body = await res.json();
-      const deliveries = body.items as Array<{
+      const deliveries = body.data as Array<{
         eventType: string;
         status: string;
         webhookId: string;
@@ -145,7 +145,7 @@ test.describe("Communication Webhook Delivery", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(200);
-      const deliveries = (await res.json()).items as Array<{
+      const deliveries = (await res.json()).data as Array<{
         eventType: string;
         webhookId: string;
         status: string;
@@ -204,7 +204,7 @@ test.describe("Communication Webhook Delivery", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(200);
-      const deliveries = (await res.json()).items as Array<{
+      const deliveries = (await res.json()).data as Array<{
         eventType: string;
         webhookId: string;
         status: string;
@@ -266,7 +266,7 @@ test.describe("Communication Webhook Delivery", () => {
         { headers: authHeaders },
       );
       expect(res.status()).toBe(200);
-      const deliveries = (await res.json()).items as Array<{
+      const deliveries = (await res.json()).data as Array<{
         eventType: string;
         webhookId: string;
       }>;

@@ -266,7 +266,7 @@ export async function listFrontingReports(
     const lastItem = hasMore && items.length > 0 ? items[items.length - 1] : null;
 
     return {
-      items,
+      data: items,
       nextCursor:
         hasMore && lastItem
           ? (encodeCursor({

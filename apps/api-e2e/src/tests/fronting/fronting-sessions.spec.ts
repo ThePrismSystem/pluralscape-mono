@@ -45,8 +45,8 @@ test.describe("Fronting Sessions", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
-      const ids = (body.items as { id: string }[]).map((s) => s.id);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
+      const ids = (body.data as { id: string }[]).map((s) => s.id);
       expect(ids).toContain(sessionId);
     });
 
@@ -56,7 +56,7 @@ test.describe("Fronting Sessions", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      const ids = (body.items as { id: string }[]).map((s) => s.id);
+      const ids = (body.data as { id: string }[]).map((s) => s.id);
       expect(ids).toContain(sessionId);
     });
 
@@ -175,7 +175,7 @@ test.describe("Fronting Sessions", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      const ids = (body.items as { id: string }[]).map((s) => s.id);
+      const ids = (body.data as { id: string }[]).map((s) => s.id);
       expect(ids).toContain(sessionAId);
       expect(ids).toContain(sessionBId);
     });
@@ -200,7 +200,7 @@ test.describe("Fronting Sessions", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      const ids = (body.items as { id: string }[]).map((s) => s.id);
+      const ids = (body.data as { id: string }[]).map((s) => s.id);
       expect(ids).not.toContain(sessionAId);
       expect(ids).toContain(sessionBId);
     });

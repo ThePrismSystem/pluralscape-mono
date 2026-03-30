@@ -266,8 +266,8 @@ describe("webhook-config service", () => {
 
       const result = await listWebhookConfigs(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.id).toBe(WH_ID);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.id).toBe(WH_ID);
       expect(result.hasMore).toBe(false);
     });
 
@@ -333,7 +333,7 @@ describe("webhook-config service", () => {
       const result = await listWebhookConfigs(db, SYSTEM_ID, AUTH);
 
       expect(result.hasMore).toBe(true);
-      expect(result.items).toHaveLength(25);
+      expect(result.data).toHaveLength(25);
       expect(result.nextCursor).not.toBeNull();
     });
 

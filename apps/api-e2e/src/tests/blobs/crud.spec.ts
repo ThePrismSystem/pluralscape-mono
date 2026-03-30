@@ -152,11 +152,11 @@ test.describe("Blobs CRUD", () => {
     const listRes = await request.get(blobsUrl, { headers: authHeaders });
     expect(listRes.status()).toBe(200);
     const body = (await listRes.json()) as {
-      items: Array<{ id: string }>;
+      data: Array<{ id: string }>;
       nextCursor: string | null;
       hasMore: boolean;
     };
-    expect(body.items.length).toBeGreaterThanOrEqual(2);
+    expect(body.data.length).toBeGreaterThanOrEqual(2);
     expect(body).toHaveProperty("nextCursor");
     expect(body).toHaveProperty("hasMore");
   });

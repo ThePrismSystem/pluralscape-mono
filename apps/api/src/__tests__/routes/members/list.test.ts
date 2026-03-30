@@ -48,7 +48,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const EMPTY_PAGE: PaginatedResult<MemberResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -73,13 +73,13 @@ describe("GET /systems/:systemId/members", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<MemberResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 
   it("returns 200 with paginated members", async () => {
     const page: PaginatedResult<MemberResult> = {
-      items: [
+      data: [
         {
           id: "mem_550e8400-e29b-41d4-a716-446655440000" as never,
           systemId: SYS_ID as never,
@@ -102,7 +102,7 @@ describe("GET /systems/:systemId/members", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<MemberResult>;
-    expect(body.items).toHaveLength(1);
+    expect(body.data).toHaveLength(1);
     expect(body.hasMore).toBe(true);
   });
 
@@ -215,7 +215,7 @@ describe("GET /systems/:systemId/members", () => {
 
   it("returns only requested fields when ?fields= is valid", async () => {
     const page: PaginatedResult<MemberResult> = {
-      items: [
+      data: [
         {
           id: "mem_550e8400-e29b-41d4-a716-446655440000" as never,
           systemId: SYS_ID as never,
@@ -238,11 +238,11 @@ describe("GET /systems/:systemId/members", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<Partial<MemberResult>>;
-    expect(body.items[0]).toEqual({
+    expect(body.data[0]).toEqual({
       id: "mem_550e8400-e29b-41d4-a716-446655440000",
       version: 1,
     });
-    expect(body.items[0]).not.toHaveProperty("encryptedData");
+    expect(body.data[0]).not.toHaveProperty("encryptedData");
   });
 
   it("returns 400 for invalid field name in ?fields=", async () => {
@@ -262,6 +262,6 @@ describe("GET /systems/:systemId/members", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<MemberResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });

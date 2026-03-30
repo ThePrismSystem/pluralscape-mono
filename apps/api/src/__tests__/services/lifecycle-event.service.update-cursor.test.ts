@@ -439,8 +439,8 @@ describe("listLifecycleEvents — cursor edge cases", () => {
 
     const result = await listLifecycleEvents(db, SYSTEM_ID, AUTH, undefined, 25, undefined, true);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.archived).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.archived).toBe(true);
   });
 
   it("clamps limit to MAX_PAGE_LIMIT", async () => {
@@ -449,7 +449,7 @@ describe("listLifecycleEvents — cursor edge cases", () => {
 
     const result = await listLifecycleEvents(db, SYSTEM_ID, AUTH, undefined, 999_999);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
 

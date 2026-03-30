@@ -21,7 +21,7 @@ interface PollResponse {
 }
 
 interface PollListResponse {
-  items: PollResponse[];
+  data: PollResponse[];
   nextCursor: string | null;
   hasMore: boolean;
   totalCount: number | null;
@@ -82,9 +82,9 @@ test.describe("Polls CRUD", () => {
       const res = await request.get(pollsUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as PollListResponse;
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.some((item) => item.id === pollId)).toBe(true);
+      expect(body.data.some((item) => item.id === pollId)).toBe(true);
     });
 
     await test.step("update poll", async () => {
@@ -132,14 +132,14 @@ test.describe("Polls CRUD", () => {
       const res = await request.get(pollsUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as PollListResponse;
-      expect(body.items.every((item) => item.id !== pollId)).toBe(true);
+      expect(body.data.every((item) => item.id !== pollId)).toBe(true);
     });
 
     await test.step("archived in list with includeArchived=true", async () => {
       const res = await request.get(`${pollsUrl}?includeArchived=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as PollListResponse;
-      expect(body.items.some((item) => item.id === pollId)).toBe(true);
+      expect(body.data.some((item) => item.id === pollId)).toBe(true);
     });
 
     await test.step("restore poll", async () => {
@@ -176,15 +176,15 @@ test.describe("Polls CRUD", () => {
     const openRes = await request.get(`${pollsUrl}?status=open`, { headers: authHeaders });
     expect(openRes.status()).toBe(200);
     const openBody = (await openRes.json()) as PollListResponse;
-    expect(openBody.items.some((item) => item.id === openPoll.id)).toBe(true);
-    expect(openBody.items.every((item) => item.id !== closedPoll.id)).toBe(true);
+    expect(openBody.data.some((item) => item.id === openPoll.id)).toBe(true);
+    expect(openBody.data.every((item) => item.id !== closedPoll.id)).toBe(true);
 
     // Filter by closed status
     const closedRes = await request.get(`${pollsUrl}?status=closed`, { headers: authHeaders });
     expect(closedRes.status()).toBe(200);
     const closedBody = (await closedRes.json()) as PollListResponse;
-    expect(closedBody.items.some((item) => item.id === closedPoll.id)).toBe(true);
-    expect(closedBody.items.every((item) => item.id !== openPoll.id)).toBe(true);
+    expect(closedBody.data.some((item) => item.id === closedPoll.id)).toBe(true);
+    expect(closedBody.data.every((item) => item.id !== openPoll.id)).toBe(true);
   });
 
   test("cross-system access returns 404", async ({ request, authHeaders }) => {

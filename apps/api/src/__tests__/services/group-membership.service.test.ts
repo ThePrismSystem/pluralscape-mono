@@ -155,8 +155,8 @@ describe("listGroupMembers", () => {
 
     const result = await listGroupMembers(db, SYSTEM_ID, GROUP_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.memberId).toBe(MEMBER_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.memberId).toBe(MEMBER_ID);
   });
 
   it("throws 404 when group not found", async () => {
@@ -183,8 +183,8 @@ describe("listMemberGroupMemberships", () => {
 
     const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.groupId).toBe(GROUP_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.groupId).toBe(GROUP_ID);
   });
 
   it("returns empty list when member has no memberships", async () => {
@@ -196,7 +196,7 @@ describe("listMemberGroupMemberships", () => {
 
     const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -222,7 +222,7 @@ describe("listMemberGroupMemberships", () => {
 
     const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH, undefined, 1);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     const { nextCursor } = result;
     expect(nextCursor).not.toBeNull();
@@ -240,8 +240,8 @@ describe("listMemberGroupMemberships", () => {
 
     const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH, "grp_group-2");
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.groupId).toBe("grp_group-3");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.groupId).toBe("grp_group-3");
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });

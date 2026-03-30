@@ -198,7 +198,7 @@ describe("listGroups", () => {
 
     const result = await listGroups(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -209,8 +209,8 @@ describe("listGroups", () => {
 
     const result = await listGroups(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(GROUP_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(GROUP_ID);
   });
 
   it("detects hasMore when more rows than limit", async () => {
@@ -220,7 +220,7 @@ describe("listGroups", () => {
 
     const result = await listGroups(db, SYSTEM_ID, AUTH, undefined, 1);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
   });
 

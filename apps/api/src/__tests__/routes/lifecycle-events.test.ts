@@ -67,7 +67,7 @@ const MOCK_EVENT = {
 };
 
 const MOCK_PAGINATED = {
-  items: [MOCK_EVENT],
+  data: [MOCK_EVENT],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -133,8 +133,8 @@ describe("GET /systems/:id/lifecycle-events", () => {
     const app = createApp();
     const res = await app.request(BASE_URL);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(1);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(1);
   });
 
   it("forwards systemId and auth to service", async () => {

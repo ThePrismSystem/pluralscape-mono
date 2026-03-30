@@ -120,7 +120,7 @@ describe("POST /systems/:id/notes (create)", () => {
 describe("GET /systems/:id/notes (list)", () => {
   it("returns 200 with paginated result", async () => {
     vi.mocked(listNotes).mockResolvedValueOnce({
-      items: [MOCK_RESULT],
+      data: [MOCK_RESULT],
       nextCursor: null,
       hasMore: false,
       totalCount: null,
@@ -129,8 +129,8 @@ describe("GET /systems/:id/notes (list)", () => {
     const res = await createApp().request(BASE);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(1);
+    const body = (await res.json()) as { data: unknown[] };
+    expect(body.data).toHaveLength(1);
   });
 });
 

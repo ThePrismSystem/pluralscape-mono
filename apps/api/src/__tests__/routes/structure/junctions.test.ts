@@ -100,7 +100,7 @@ const MOCK_LINK: EntityLinkResult = {
 };
 
 const EMPTY_LINK_PAGE: PaginatedResult<EntityLinkResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -156,7 +156,7 @@ describe("GET /systems/:systemId/structure/entity-links", () => {
     const res = await app.request(LINKS_BASE);
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<EntityLinkResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });
 
@@ -209,7 +209,7 @@ const MOCK_MEMBER_LINK: EntityMemberLinkResult = {
 };
 
 const EMPTY_ML_PAGE: PaginatedResult<EntityMemberLinkResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -251,7 +251,7 @@ describe("GET /systems/:systemId/structure/entity-member-links", () => {
     const res = await app.request(ML_BASE);
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<EntityMemberLinkResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });
 
@@ -303,7 +303,7 @@ const MOCK_ASSOC: EntityAssociationResult = {
 };
 
 const EMPTY_ASSOC_PAGE: PaginatedResult<EntityAssociationResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -344,7 +344,7 @@ describe("GET /systems/:systemId/structure/entity-associations", () => {
     const res = await app.request(ASSOC_BASE);
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<EntityAssociationResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });
 

@@ -49,7 +49,7 @@ const MOCK_REGION = {
   updatedAt: 1000 as never,
 };
 
-const EMPTY_PAGE = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -62,15 +62,15 @@ describe("GET /systems/:id/innerworld/regions", () => {
   });
 
   it("returns 200 with paginated list", async () => {
-    const page = { items: [MOCK_REGION], nextCursor: null, hasMore: false, totalCount: 1 };
+    const page = { data: [MOCK_REGION], nextCursor: null, hasMore: false, totalCount: 1 };
     vi.mocked(listRegions).mockResolvedValueOnce(page);
 
     const res = await createApp().request(BASE_URL);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof page;
-    expect(body.items).toHaveLength(1);
-    expect((body.items[0] as Record<string, unknown>).id).toBe(
+    expect(body.data).toHaveLength(1);
+    expect((body.data[0] as Record<string, unknown>).id).toBe(
       "iwr_660e8400-e29b-41d4-a716-446655440000",
     );
     expect(body.hasMore).toBe(false);
@@ -84,7 +84,7 @@ describe("GET /systems/:id/innerworld/regions", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 

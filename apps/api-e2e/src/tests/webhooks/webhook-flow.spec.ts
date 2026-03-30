@@ -47,8 +47,8 @@ test.describe("Webhook Config Flow", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
-      const ids = (body.items as { id: string }[]).map((w) => w.id);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
+      const ids = (body.data as { id: string }[]).map((w) => w.id);
       expect(ids).toContain(webhookId);
     });
 

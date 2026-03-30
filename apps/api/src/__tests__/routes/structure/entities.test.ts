@@ -93,7 +93,7 @@ const MOCK_ENTITY: StructureEntityResult = {
 };
 
 const EMPTY_PAGE: PaginatedResult<StructureEntityResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -164,7 +164,7 @@ describe("GET /systems/:systemId/structure/entities", () => {
     const res = await app.request(BASE);
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<StructureEntityResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 
   it("forwards entityTypeId filter to service", async () => {
@@ -337,9 +337,9 @@ describe("GET /systems/:systemId/structure/entities/:entityId/hierarchy", () => 
     const app = createApp();
     const res = await app.request(`${BASE}/${ENTITY_ID}/hierarchy`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: HierarchyNode[] };
-    expect(body.items).toHaveLength(1);
-    const first = body.items[0];
+    const body = (await res.json()) as { data: HierarchyNode[] };
+    expect(body.data).toHaveLength(1);
+    const first = body.data[0];
     expect(first).toBeDefined();
     expect(first?.entityId).toBe(ENTITY_ID);
   });

@@ -261,8 +261,8 @@ describe("key-rotation service", () => {
       );
 
       expect(result.rotationState).toBe(ROTATION_STATES.migrating);
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.status).toBe(ROTATION_ITEM_STATUSES.claimed);
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.status).toBe(ROTATION_ITEM_STATUSES.claimed);
     });
 
     it("returns empty items when no pending work", async () => {
@@ -281,7 +281,7 @@ describe("key-rotation service", () => {
         AUTH,
       );
 
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
       expect(result.rotationState).toBe(ROTATION_STATES.migrating);
     });
 
@@ -341,7 +341,7 @@ describe("key-rotation service", () => {
       expect(result.rotationState).toBe(ROTATION_STATES.migrating);
       // update called for stale reclaim, but NOT for state transition
       // (the state transition update is conditional on currentState === "initiated")
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
 
     it("calls assertSystemOwnership", async () => {

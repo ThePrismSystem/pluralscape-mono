@@ -179,8 +179,8 @@ describe("listLifecycleEvents", () => {
 
     const result = await listLifecycleEvents(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(EVENT_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(EVENT_ID);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
     expect(result.totalCount).toBeNull();
@@ -192,8 +192,8 @@ describe("listLifecycleEvents", () => {
 
     const result = await listLifecycleEvents(db, SYSTEM_ID, AUTH, undefined, 25, "split");
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.eventType).toBe("split");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.eventType).toBe("split");
     expect(chain.where).toHaveBeenCalled();
   });
 
@@ -220,7 +220,7 @@ describe("listLifecycleEvents", () => {
 
     const result = await listLifecycleEvents(db, SYSTEM_ID, AUTH, undefined, 1);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).not.toBeNull();
   });
@@ -230,7 +230,7 @@ describe("listLifecycleEvents", () => {
 
     const result = await listLifecycleEvents(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });

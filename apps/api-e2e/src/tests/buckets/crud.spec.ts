@@ -34,8 +34,8 @@ test.describe("Bucket CRUD", () => {
         headers: authHeaders,
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as { items: { id: string }[] };
-      const ids = body.items.map((b) => b.id);
+      const body = (await res.json()) as { data: { id: string }[] };
+      const ids = body.data.map((b) => b.id);
       expect(ids).toContain(bucketId);
     });
 
@@ -67,8 +67,8 @@ test.describe("Bucket CRUD", () => {
         headers: authHeaders,
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as { items: { id: string }[] };
-      const ids = body.items.map((b) => b.id);
+      const body = (await res.json()) as { data: { id: string }[] };
+      const ids = body.data.map((b) => b.id);
       expect(ids).not.toContain(bucketId);
     });
 
@@ -77,8 +77,8 @@ test.describe("Bucket CRUD", () => {
         headers: authHeaders,
       });
       expect(res.ok()).toBe(true);
-      const body = (await res.json()) as { items: { id: string }[] };
-      const ids = body.items.map((b) => b.id);
+      const body = (await res.json()) as { data: { id: string }[] };
+      const ids = body.data.map((b) => b.id);
       expect(ids).toContain(bucketId);
     });
 
@@ -182,11 +182,11 @@ test.describe("Bucket CRUD", () => {
     });
     expect(page1Res.ok()).toBe(true);
     const page1 = (await page1Res.json()) as {
-      items: { id: string }[];
+      data: { id: string }[];
       nextCursor: string | null;
       hasMore: boolean;
     };
-    expect(page1.items.length).toBe(2);
+    expect(page1.data.length).toBe(2);
     expect(page1.hasMore).toBe(true);
     expect(page1.nextCursor).toBeTruthy();
 
@@ -197,9 +197,9 @@ test.describe("Bucket CRUD", () => {
     );
     expect(page2Res.ok()).toBe(true);
     const page2 = (await page2Res.json()) as {
-      items: { id: string }[];
+      data: { id: string }[];
       hasMore: boolean;
     };
-    expect(page2.items.length).toBeGreaterThanOrEqual(1);
+    expect(page2.data.length).toBeGreaterThanOrEqual(1);
   });
 });

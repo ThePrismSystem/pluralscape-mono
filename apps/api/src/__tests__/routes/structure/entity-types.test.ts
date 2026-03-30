@@ -87,7 +87,7 @@ const MOCK_ENTITY_TYPE: EntityTypeResult = {
 };
 
 const EMPTY_PAGE: PaginatedResult<EntityTypeResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -172,7 +172,7 @@ describe("GET /systems/:systemId/structure/entity-types", () => {
     const res = await app.request(BASE);
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<EntityTypeResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 

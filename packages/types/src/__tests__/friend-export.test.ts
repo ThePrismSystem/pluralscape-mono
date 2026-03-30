@@ -63,9 +63,7 @@ describe("FriendExportEntity", () => {
 
 describe("FriendExportPageResponse", () => {
   it("has PaginatedResult fields", () => {
-    expectTypeOf<FriendExportPageResponse["items"]>().toEqualTypeOf<
-      readonly FriendExportEntity[]
-    >();
+    expectTypeOf<FriendExportPageResponse["data"]>().toEqualTypeOf<readonly FriendExportEntity[]>();
     expectTypeOf<FriendExportPageResponse["nextCursor"]>().toEqualTypeOf<PaginationCursor | null>();
     expectTypeOf<FriendExportPageResponse["hasMore"]>().toEqualTypeOf<boolean>();
     expectTypeOf<FriendExportPageResponse["totalCount"]>().toEqualTypeOf<number | null>();

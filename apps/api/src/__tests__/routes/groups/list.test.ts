@@ -33,7 +33,7 @@ const { systemRoutes } = await import("../../../routes/systems/index.js");
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const SYS_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/groups";
-const EMPTY_PAGE = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 describe("GET /systems/:id/groups", () => {
   beforeEach(() => {
@@ -52,7 +52,7 @@ describe("GET /systems/:id/groups", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 
   it("forwards systemId, auth, cursor, and limit to service", async () => {
@@ -89,7 +89,7 @@ describe("GET /systems/:id/groups", () => {
 
   it("returns only requested fields when ?fields= is valid", async () => {
     const page: PaginatedResult<GroupResult> = {
-      items: [
+      data: [
         {
           id: "grp_550e8400-e29b-41d4-a716-446655440000" as never,
           systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
@@ -114,8 +114,8 @@ describe("GET /systems/:id/groups", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<Partial<GroupResult>>;
-    expect(body.items[0]).toEqual({ id: "grp_550e8400-e29b-41d4-a716-446655440000", version: 1 });
-    expect(body.items[0]).not.toHaveProperty("sortOrder");
+    expect(body.data[0]).toEqual({ id: "grp_550e8400-e29b-41d4-a716-446655440000", version: 1 });
+    expect(body.data[0]).not.toHaveProperty("sortOrder");
   });
 
   it("returns 400 for invalid field name in ?fields=", async () => {
@@ -135,6 +135,6 @@ describe("GET /systems/:id/groups", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });

@@ -130,7 +130,7 @@ export async function getBucketExportPage(
     const maxUpdatedAt: UnixMillis | null = lastItem?.updatedAt ?? null;
 
     return {
-      items,
+      data: items,
       nextCursor,
       hasMore,
       totalCount: null,

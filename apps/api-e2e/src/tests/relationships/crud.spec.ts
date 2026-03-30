@@ -65,12 +65,12 @@ test.describe("Relationships CRUD", () => {
       const listRes = await request.get(relationshipsUrl, { headers: authHeaders });
       expect(listRes.status()).toBe(200);
       const listed = await listRes.json();
-      expect(listed).toHaveProperty("items");
+      expect(listed).toHaveProperty("data");
       expect(listed).toHaveProperty("nextCursor");
       expect(listed).toHaveProperty("hasMore");
-      expect(listed.items.length).toBeGreaterThanOrEqual(1);
+      expect(listed.data.length).toBeGreaterThanOrEqual(1);
 
-      const found = (listed.items as Array<{ id: string }>).find(
+      const found = (listed.data as Array<{ id: string }>).find(
         (item) => item.id === relationshipId,
       );
       expect(found).toBeTruthy();

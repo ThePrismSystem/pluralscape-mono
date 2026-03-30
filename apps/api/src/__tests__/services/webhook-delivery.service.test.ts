@@ -27,8 +27,8 @@ vi.mock("../../lib/pagination.js", () => ({
       mapper: (row: TRow) => TResult,
     ) => {
       const hasMore = rows.length > limit;
-      const items = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
-      return { items, nextCursor: hasMore ? "cursor_next" : null, hasMore, totalCount: null };
+      const data = (hasMore ? rows.slice(0, limit) : rows).map(mapper);
+      return { data, nextCursor: hasMore ? "cursor_next" : null, hasMore, totalCount: null };
     },
   ),
 }));
@@ -129,8 +129,8 @@ describe("webhook-delivery service", () => {
       const result = await listWebhookDeliveries(db, "sys_nf1" as SystemId, auth);
 
       expect(buildPaginatedResult).toHaveBeenCalledWith([row], 25, expect.any(Function));
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.id).toBe("wd_nofilt1");
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.id).toBe("wd_nofilt1");
     });
 
     it("passes webhookId filter when provided", async () => {
@@ -238,7 +238,7 @@ describe("webhook-delivery service", () => {
       const auth = makeAuth("acct_map1", "sys_map1");
       const result = await listWebhookDeliveries(db, "sys_map1" as SystemId, auth);
 
-      expect(result.items[0]).toEqual({
+      expect(result.data[0]).toEqual({
         id: "wd_map1",
         webhookId: "wh_map1",
         systemId: "sys_map1",
@@ -265,9 +265,9 @@ describe("webhook-delivery service", () => {
       const auth = makeAuth("acct_null1", "sys_null1");
       const result = await listWebhookDeliveries(db, "sys_null1" as SystemId, auth);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.lastAttemptAt).toBeNull();
-      expect(result.items[0]?.nextRetryAt).toBeNull();
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.lastAttemptAt).toBeNull();
+      expect(result.data[0]?.nextRetryAt).toBeNull();
     });
 
     it("throws when assertSystemOwnership rejects", async () => {

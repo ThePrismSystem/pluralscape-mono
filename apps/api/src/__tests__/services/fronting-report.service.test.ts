@@ -276,7 +276,7 @@ describe("listFrontingReports", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     const result = await listFrontingReports(db, SYSTEM_ID, AUTH);
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
 
@@ -286,7 +286,7 @@ describe("listFrontingReports", () => {
     chain.limit.mockResolvedValueOnce(rows);
 
     const result = await listFrontingReports(db, SYSTEM_ID, AUTH);
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
   });
 
   it("detects hasMore when more rows than limit", async () => {
@@ -299,7 +299,7 @@ describe("listFrontingReports", () => {
     chain.limit.mockResolvedValueOnce(rows);
 
     const result = await listFrontingReports(db, SYSTEM_ID, AUTH, { limit: 2 });
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).not.toBeNull();
   });

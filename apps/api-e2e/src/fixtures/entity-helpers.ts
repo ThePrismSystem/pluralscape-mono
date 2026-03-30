@@ -16,8 +16,8 @@ export async function getSystemId(
 ): Promise<string> {
   const res = await request.get("/v1/systems", { headers });
   expect(res.ok()).toBe(true);
-  const body = (await res.json()) as { items: Array<{ id: string }> };
-  const first = body.items[0] as { id: string } | undefined;
+  const body = (await res.json()) as { data: Array<{ id: string }> };
+  const first = body.data[0] as { id: string } | undefined;
   if (!first) throw new Error("No systems found for authenticated account");
   return first.id;
 }

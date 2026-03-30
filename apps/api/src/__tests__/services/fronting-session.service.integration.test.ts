@@ -236,10 +236,10 @@ describe("fronting-session.service (PGlite integration)", () => {
 
       const result = await listFrontingSessions(asDb(db), systemId, auth);
 
-      expect(result.items.length).toBe(2);
+      expect(result.data.length).toBe(2);
       // Verify descending order by string comparison
-      const first = result.items[0]?.id ?? "";
-      const second = result.items[1]?.id ?? "";
+      const first = result.data[0]?.id ?? "";
+      const second = result.data[1]?.id ?? "";
       expect(first > second).toBe(true);
     });
 
@@ -259,9 +259,9 @@ describe("fronting-session.service (PGlite integration)", () => {
         memberId: otherMemberId,
       });
 
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.id).toBe(filtered.id);
-      expect(result.items[0]?.memberId).toBe(otherMemberId);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.id).toBe(filtered.id);
+      expect(result.data[0]?.memberId).toBe(otherMemberId);
     });
 
     it("filters by customFrontId", async () => {
@@ -279,9 +279,9 @@ describe("fronting-session.service (PGlite integration)", () => {
         customFrontId: cfId as CustomFrontId,
       });
 
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.id).toBe(filtered.id);
-      expect(result.items[0]?.customFrontId).toBe(cfId);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.id).toBe(filtered.id);
+      expect(result.data[0]?.customFrontId).toBe(cfId);
     });
 
     it("filters activeOnly (no endTime)", async () => {
@@ -307,8 +307,8 @@ describe("fronting-session.service (PGlite integration)", () => {
         activeOnly: true,
       });
 
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.id).toBe(s2.id);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.id).toBe(s2.id);
     });
 
     it("excludes archived by default", async () => {
@@ -317,7 +317,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       await createFrontingSession(asDb(db), systemId, createParams(), auth, noopAudit);
 
       const result = await listFrontingSessions(asDb(db), systemId, auth);
-      expect(result.items.length).toBe(1);
+      expect(result.data.length).toBe(1);
     });
 
     it("includes archived when includeArchived=true", async () => {
@@ -328,7 +328,7 @@ describe("fronting-session.service (PGlite integration)", () => {
       const result = await listFrontingSessions(asDb(db), systemId, auth, {
         includeArchived: true,
       });
-      expect(result.items.length).toBe(2);
+      expect(result.data.length).toBe(2);
     });
 
     it("supports cursor pagination", async () => {
@@ -339,10 +339,10 @@ describe("fronting-session.service (PGlite integration)", () => {
         limit: 1,
       });
 
-      expect(page1.items.length).toBe(1);
+      expect(page1.data.length).toBe(1);
       expect(page1.hasMore).toBe(true);
 
-      const firstId = page1.items[0]?.id;
+      const firstId = page1.data[0]?.id;
       expect(firstId).toBeDefined();
 
       // Use the first page's item ID as cursor
@@ -351,8 +351,8 @@ describe("fronting-session.service (PGlite integration)", () => {
         limit: 1,
       });
 
-      expect(page2.items.length).toBe(1);
-      expect(page2.items[0]?.id).not.toBe(firstId);
+      expect(page2.data.length).toBe(1);
+      expect(page2.data[0]?.id).not.toBe(firstId);
       expect(page2.hasMore).toBe(false);
     });
 
@@ -385,8 +385,8 @@ describe("fronting-session.service (PGlite integration)", () => {
         startUntil: baseTime + 1,
       });
 
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.id).toBe(s2.id);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.id).toBe(s2.id);
     });
   });
 

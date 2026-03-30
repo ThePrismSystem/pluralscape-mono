@@ -214,7 +214,7 @@ describe("note service", () => {
 
       const result = await listNotes(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
     });
 
@@ -223,7 +223,7 @@ describe("note service", () => {
 
       const result = await listNotes(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toEqual([]);
+      expect(result.data).toEqual([]);
     });
 
     it("throws VALIDATION_ERROR when systemWide combined with author filters", async () => {
@@ -240,7 +240,7 @@ describe("note service", () => {
 
       const result = await listNotes(db, SYSTEM_ID, AUTH, { authorEntityType: "member" });
 
-      expect(result.items[0]?.authorEntityType).toBe("member");
+      expect(result.data[0]?.authorEntityType).toBe("member");
     });
 
     it("detects hasMore when more rows exist than limit", async () => {
@@ -251,7 +251,7 @@ describe("note service", () => {
       const result = await listNotes(db, SYSTEM_ID, AUTH, { limit: 1 });
 
       expect(result.hasMore).toBe(true);
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
   });
 

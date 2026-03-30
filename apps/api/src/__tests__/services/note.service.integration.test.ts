@@ -187,7 +187,7 @@ describe("note.service (PGlite integration)", () => {
       );
 
       const result = await listNotes(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.hasMore).toBe(false);
     });
 
@@ -203,17 +203,17 @@ describe("note.service (PGlite integration)", () => {
       }
 
       const page1 = await listNotes(asDb(db), systemId, auth, { limit: 2 });
-      expect(page1.items).toHaveLength(2);
+      expect(page1.data).toHaveLength(2);
       expect(page1.hasMore).toBe(true);
 
       const page2 = await listNotes(asDb(db), systemId, auth, {
         cursor: page1.nextCursor ?? undefined,
         limit: 2,
       });
-      expect(page2.items).toHaveLength(1);
+      expect(page2.data).toHaveLength(1);
       expect(page2.hasMore).toBe(false);
 
-      const allIds = [...page1.items.map((n) => n.id), ...page2.items.map((n) => n.id)];
+      const allIds = [...page1.data.map((n) => n.id), ...page2.data.map((n) => n.id)];
       expect(new Set(allIds).size).toBe(3);
     });
 
@@ -242,8 +242,8 @@ describe("note.service (PGlite integration)", () => {
       const result = await listNotes(asDb(db), systemId, auth, {
         authorEntityType: "member",
       });
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.authorEntityType).toBe("member");
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.authorEntityType).toBe("member");
     });
 
     it("filters by authorEntityId", async () => {
@@ -271,8 +271,8 @@ describe("note.service (PGlite integration)", () => {
       const result = await listNotes(asDb(db), systemId, auth, {
         authorEntityId: "mem_target",
       });
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.authorEntityId).toBe("mem_target");
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.authorEntityId).toBe("mem_target");
     });
 
     it("filters systemWide=true (null author only)", async () => {
@@ -295,8 +295,8 @@ describe("note.service (PGlite integration)", () => {
       );
 
       const result = await listNotes(asDb(db), systemId, auth, { systemWide: true });
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.authorEntityType).toBeNull();
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.authorEntityType).toBeNull();
     });
 
     it("includes archived when includeArchived=true", async () => {
@@ -311,12 +311,12 @@ describe("note.service (PGlite integration)", () => {
       await archiveNote(asDb(db), systemId, note.id, auth, noopAudit);
 
       const result = await listNotes(asDb(db), systemId, auth, { includeArchived: true });
-      expect(result.items.some((item) => item.id === note.id)).toBe(true);
+      expect(result.data.some((item) => item.id === note.id)).toBe(true);
     });
 
     it("returns empty list when no notes", async () => {
       const result = await listNotes(asDb(db), systemId, auth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
     });
@@ -333,7 +333,7 @@ describe("note.service (PGlite integration)", () => {
       }
 
       const result = await listNotes(asDb(db), systemId, auth, { limit: 3 });
-      expect(result.items).toHaveLength(3);
+      expect(result.data).toHaveLength(3);
       expect(result.hasMore).toBe(true);
     });
 
@@ -522,7 +522,7 @@ describe("note.service (PGlite integration)", () => {
       const otherAuth = makeAuth(accountId, otherSystemId);
 
       const result = await listNotes(asDb(db), otherSystemId, otherAuth);
-      expect(result.items).toHaveLength(0);
+      expect(result.data).toHaveLength(0);
     });
   });
 

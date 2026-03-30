@@ -31,7 +31,7 @@ const { accountRoutes } = await import("../../../routes/account/index.js");
 
 const createApp = () => createRouteApp("/account", accountRoutes);
 
-const EMPTY_PAGE = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+const EMPTY_PAGE = { data: [], nextCursor: null, hasMore: false, totalCount: null };
 
 const MOCK_ENTRY = {
   id: "al_550e8400-e29b-41d4-a716-446655440000" as never,
@@ -59,7 +59,7 @@ describe("GET /account/audit-log", () => {
 
   it("returns 200 with paginated audit log entries", async () => {
     const page = {
-      items: [MOCK_ENTRY],
+      data: [MOCK_ENTRY],
       nextCursor: "cursor_abc" as never,
       hasMore: true,
       totalCount: null,
@@ -70,10 +70,10 @@ describe("GET /account/audit-log", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof page;
-    expect(body.items).toHaveLength(1);
-    expect((body.items[0] as Record<string, unknown>).id).toBe(MOCK_ENTRY.id);
-    expect((body.items[0] as Record<string, unknown>).eventType).toBe("member.created");
-    expect((body.items[0] as Record<string, unknown>).detail).toBe("Created member");
+    expect(body.data).toHaveLength(1);
+    expect((body.data[0] as Record<string, unknown>).id).toBe(MOCK_ENTRY.id);
+    expect((body.data[0] as Record<string, unknown>).eventType).toBe("member.created");
+    expect((body.data[0] as Record<string, unknown>).detail).toBe("Created member");
     expect(body.hasMore).toBe(true);
     expect(body.nextCursor).toBe("cursor_abc");
   });
@@ -85,7 +85,7 @@ describe("GET /account/audit-log", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toHaveLength(0);
+    expect(body.data).toHaveLength(0);
     expect(body.hasMore).toBe(false);
     expect(body.nextCursor).toBeNull();
   });

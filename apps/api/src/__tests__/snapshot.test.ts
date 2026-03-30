@@ -216,7 +216,7 @@ describe("listSnapshots", () => {
 
     const result = await listSnapshots(db, SYSTEM_ID, stubAuth());
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
   });
 
@@ -226,7 +226,7 @@ describe("listSnapshots", () => {
 
     const result = await listSnapshots(db, SYSTEM_ID, stubAuth());
 
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
     expect(result.hasMore).toBe(false);
   });
 
@@ -241,7 +241,7 @@ describe("listSnapshots", () => {
 
     const result = await listSnapshots(db, SYSTEM_ID, stubAuth(), undefined, limit);
 
-    expect(result.items).toHaveLength(limit);
+    expect(result.data).toHaveLength(limit);
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).toBeTypeOf("string");
     expect(result.nextCursor).not.toBeNull();
@@ -256,7 +256,7 @@ describe("listSnapshots", () => {
     const fakeCursor = "some-decoded-cursor-id";
     const result = await listSnapshots(db, SYSTEM_ID, stubAuth(), fakeCursor, 10);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
     // The where clause should have been called (system filter + cursor filter)
     expect(chain.where).toHaveBeenCalled();
@@ -274,7 +274,7 @@ describe("listSnapshots", () => {
     const result = await listSnapshots(db, SYSTEM_ID, stubAuth(), undefined, overLimit);
 
     // Items capped to MAX_PAGE_LIMIT despite requesting more
-    expect(result.items).toHaveLength(MAX_PAGE_LIMIT);
+    expect(result.data).toHaveLength(MAX_PAGE_LIMIT);
     expect(result.hasMore).toBe(true);
     // chain.limit receives effectiveLimit + 1, which is MAX_PAGE_LIMIT + 1
     expect(chain.limit).toHaveBeenCalledWith(MAX_PAGE_LIMIT + 1);

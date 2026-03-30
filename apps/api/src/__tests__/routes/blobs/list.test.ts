@@ -48,7 +48,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const EMPTY_PAGE: PaginatedResult<BlobResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -73,13 +73,13 @@ describe("GET /systems/:systemId/blobs", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<BlobResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 
   it("returns 200 with paginated blobs", async () => {
     const page: PaginatedResult<BlobResult> = {
-      items: [
+      data: [
         {
           id: "blob_660e8400-e29b-41d4-a716-446655440000",
           systemId: SYS_ID,
@@ -102,7 +102,7 @@ describe("GET /systems/:systemId/blobs", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<BlobResult>;
-    expect(body.items).toHaveLength(1);
+    expect(body.data).toHaveLength(1);
     expect(body.hasMore).toBe(true);
   });
 

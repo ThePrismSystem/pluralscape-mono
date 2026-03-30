@@ -19,5 +19,5 @@ hierarchyRoute.get("/:entityId/hierarchy", async (c) => {
 
   const db = await getDb();
   const result = await getEntityHierarchy(db, systemId, entityId, auth);
-  return c.json({ items: result });
+  return c.json({ data: result });
 });

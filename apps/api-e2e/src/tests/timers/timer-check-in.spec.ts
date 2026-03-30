@@ -64,8 +64,8 @@ test.describe("Timer Config and Check-In Records", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.items.length).toBeGreaterThanOrEqual(1);
-      const ids = (body.items as { id: string }[]).map((r) => r.id);
+      expect(body.data.length).toBeGreaterThanOrEqual(1);
+      const ids = (body.data as { id: string }[]).map((r) => r.id);
       expect(ids).toContain(recordId);
     });
 

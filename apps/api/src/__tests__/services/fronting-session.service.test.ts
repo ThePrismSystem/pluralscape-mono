@@ -182,7 +182,7 @@ describe("listFrontingSessions", () => {
 
     const result = await listFrontingSessions(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
 
@@ -192,8 +192,8 @@ describe("listFrontingSessions", () => {
 
     const result = await listFrontingSessions(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(FS_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(FS_ID);
   });
 
   it("applies cursor when provided", async () => {

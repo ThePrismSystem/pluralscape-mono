@@ -56,13 +56,13 @@ export class RotationWorker {
         const claim = await apiClient.claimChunk(bucketId, rotationId, chunkSize);
 
         // No items left to process
-        if (claim.items.length === 0) {
+        if (claim.data.length === 0) {
           break;
         }
 
         // Process each item in the chunk
         const results = await processChunk(
-          claim.items,
+          claim.data,
           apiClient,
           oldKey,
           oldKeyVersion,

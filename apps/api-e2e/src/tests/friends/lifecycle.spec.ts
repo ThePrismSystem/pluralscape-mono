@@ -33,7 +33,7 @@ interface FriendConnectionResponse {
 }
 
 interface FriendConnectionListResponse {
-  readonly items: readonly FriendConnectionResponse[];
+  readonly data: readonly FriendConnectionResponse[];
   readonly hasMore: boolean;
   readonly nextCursor: string | null;
 }
@@ -65,7 +65,7 @@ test.describe("Friend lifecycle", () => {
     });
     expect(listA.ok()).toBe(true);
     const bodyA = (await listA.json()) as FriendConnectionListResponse;
-    const connA = bodyA.items.find((c) => c.id === connectionIdA);
+    const connA = bodyA.data.find((c) => c.id === connectionIdA);
     expect(connA).toBeTruthy();
     expect(connA?.status).toBe("accepted");
     expect(connA?.friendAccountId).toBe(accountB.accountId);
@@ -76,7 +76,7 @@ test.describe("Friend lifecycle", () => {
     });
     expect(listB.ok()).toBe(true);
     const bodyB = (await listB.json()) as FriendConnectionListResponse;
-    const connB = bodyB.items.find((c) => c.id === connectionIdB);
+    const connB = bodyB.data.find((c) => c.id === connectionIdB);
     expect(connB).toBeTruthy();
     expect(connB?.status).toBe("accepted");
     expect(connB?.friendAccountId).toBe(accountA.accountId);
@@ -221,7 +221,7 @@ test.describe("Friend lifecycle", () => {
       });
       expect(res.ok()).toBe(true);
       const body = (await res.json()) as FriendConnectionListResponse;
-      const ids = body.items.map((c) => c.id);
+      const ids = body.data.map((c) => c.id);
       expect(ids).not.toContain(connectionIdA);
     });
 
@@ -231,7 +231,7 @@ test.describe("Friend lifecycle", () => {
       });
       expect(res.ok()).toBe(true);
       const body = (await res.json()) as FriendConnectionListResponse;
-      const ids = body.items.map((c) => c.id);
+      const ids = body.data.map((c) => c.id);
       expect(ids).toContain(connectionIdA);
     });
 
@@ -251,7 +251,7 @@ test.describe("Friend lifecycle", () => {
       });
       expect(res.ok()).toBe(true);
       const body = (await res.json()) as FriendConnectionListResponse;
-      const ids = body.items.map((c) => c.id);
+      const ids = body.data.map((c) => c.id);
       expect(ids).toContain(connectionIdA);
     });
   });

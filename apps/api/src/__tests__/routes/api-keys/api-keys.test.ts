@@ -54,7 +54,7 @@ const MOCK_CREATE_RESULT: ApiKeyCreateResult = {
 };
 
 const MOCK_PAGINATED_RESULT: PaginatedResult<ApiKeyResult> = {
-  items: [MOCK_API_KEY_RESULT],
+  data: [MOCK_API_KEY_RESULT],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -132,8 +132,8 @@ describe("GET /systems/:systemId/api-keys", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<ApiKeyResult>;
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.id).toBe(AK_ID);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.id).toBe(AK_ID);
     expect(body.hasMore).toBe(false);
   });
 

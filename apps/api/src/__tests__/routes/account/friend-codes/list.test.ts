@@ -43,14 +43,14 @@ const MOCK_CODE = {
 // ── Tests ────────────────────────────────────────────────────────
 
 const MOCK_PAGINATED = {
-  items: [MOCK_CODE],
+  data: [MOCK_CODE],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
 };
 
 const EMPTY_PAGE = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -72,9 +72,9 @@ describe("GET /account/friend-codes", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof MOCK_PAGINATED;
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.id).toBe(MOCK_CODE.id);
-    expect(body.items[0]?.code).toBe("ABCD-1234");
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.id).toBe(MOCK_CODE.id);
+    expect(body.data[0]?.code).toBe("ABCD-1234");
   });
 
   it("returns empty items when no codes exist", async () => {
@@ -84,7 +84,7 @@ describe("GET /account/friend-codes", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 
   it("passes correct args to service", async () => {

@@ -208,7 +208,7 @@ describe("listEntityTypes", () => {
 
     const result = await listEntityTypes(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -222,7 +222,7 @@ describe("listEntityTypes", () => {
 
     const result = await listEntityTypes(db, SYSTEM_ID, AUTH, { includeArchived: true });
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
   });
 
   it("applies cursor filter", async () => {
@@ -231,8 +231,8 @@ describe("listEntityTypes", () => {
 
     const result = await listEntityTypes(db, SYSTEM_ID, AUTH, { cursor: "set_before-cursor" });
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe("set_after-cursor");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe("set_after-cursor");
   });
 
   it("applies custom limit and detects hasMore", async () => {
@@ -245,7 +245,7 @@ describe("listEntityTypes", () => {
 
     const result = await listEntityTypes(db, SYSTEM_ID, AUTH, { limit: 1 });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).not.toBeNull();
   });
@@ -256,7 +256,7 @@ describe("listEntityTypes", () => {
 
     const result = await listEntityTypes(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
     expect(result.hasMore).toBe(false);
   });
 });
@@ -568,7 +568,7 @@ describe("listStructureEntities", () => {
 
     const result = await listStructureEntities(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
   });
 
@@ -580,7 +580,7 @@ describe("listStructureEntities", () => {
       entityTypeId: "set_test-entity-type",
     });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(chain.where).toHaveBeenCalled();
   });
 
@@ -593,7 +593,7 @@ describe("listStructureEntities", () => {
 
     const result = await listStructureEntities(db, SYSTEM_ID, AUTH, { includeArchived: true });
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
   });
 
   it("applies cursor filter", async () => {
@@ -602,7 +602,7 @@ describe("listStructureEntities", () => {
 
     const result = await listStructureEntities(db, SYSTEM_ID, AUTH, { cursor: "sse_before" });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
   it("detects hasMore when rows exceed limit", async () => {
@@ -615,7 +615,7 @@ describe("listStructureEntities", () => {
 
     const result = await listStructureEntities(db, SYSTEM_ID, AUTH, { limit: 2 });
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.hasMore).toBe(true);
   });
 });
@@ -911,7 +911,7 @@ describe("listEntityLinks", () => {
 
     const result = await listEntityLinks(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
   });
 
@@ -921,8 +921,8 @@ describe("listEntityLinks", () => {
 
     const result = await listEntityLinks(db, SYSTEM_ID, AUTH, { cursor: "sel_before" });
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe("sel_after");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe("sel_after");
   });
 
   it("detects hasMore when rows exceed limit", async () => {
@@ -934,7 +934,7 @@ describe("listEntityLinks", () => {
 
     const result = await listEntityLinks(db, SYSTEM_ID, AUTH, { limit: 1 });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
   });
 });
@@ -1082,7 +1082,7 @@ describe("listEntityMemberLinks", () => {
 
     const result = await listEntityMemberLinks(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
   });
 
@@ -1092,8 +1092,8 @@ describe("listEntityMemberLinks", () => {
 
     const result = await listEntityMemberLinks(db, SYSTEM_ID, AUTH, { cursor: "sem_before" });
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe("sem_after");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe("sem_after");
   });
 
   it("detects hasMore when rows exceed limit", async () => {
@@ -1105,7 +1105,7 @@ describe("listEntityMemberLinks", () => {
 
     const result = await listEntityMemberLinks(db, SYSTEM_ID, AUTH, { limit: 1 });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
   });
 });
@@ -1199,7 +1199,7 @@ describe("listEntityAssociations", () => {
 
     const result = await listEntityAssociations(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(false);
   });
 
@@ -1209,8 +1209,8 @@ describe("listEntityAssociations", () => {
 
     const result = await listEntityAssociations(db, SYSTEM_ID, AUTH, { cursor: "sea_before" });
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe("sea_after");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe("sea_after");
   });
 
   it("detects hasMore when rows exceed limit", async () => {
@@ -1222,7 +1222,7 @@ describe("listEntityAssociations", () => {
 
     const result = await listEntityAssociations(db, SYSTEM_ID, AUTH, { limit: 1 });
 
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.hasMore).toBe(true);
   });
 });

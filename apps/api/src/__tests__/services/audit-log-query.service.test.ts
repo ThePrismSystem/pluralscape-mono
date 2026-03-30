@@ -52,8 +52,8 @@ describe("queryAuditLog", () => {
 
     const result = await queryAuditLog(db, ACCOUNT_ID, { ...BASE_PARAMS, limit: 5 });
 
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]?.id).toBe("al_entry-001");
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.id).toBe("al_entry-001");
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
     expect(result.totalCount).toBeNull();
@@ -75,7 +75,7 @@ describe("queryAuditLog", () => {
 
     const result = await queryAuditLog(db, ACCOUNT_ID, { ...BASE_PARAMS, limit: 5 });
 
-    const item = result.items[0];
+    const item = result.data[0];
     expect(item).toMatchObject({
       id: "al_mapped",
       eventType: "system.login",
@@ -93,7 +93,7 @@ describe("queryAuditLog", () => {
 
     const result = await queryAuditLog(db, ACCOUNT_ID, BASE_PARAMS);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -112,11 +112,11 @@ describe("queryAuditLog", () => {
 
     const result = await queryAuditLog(db, ACCOUNT_ID, { ...BASE_PARAMS, limit });
 
-    expect(result.items).toHaveLength(limit);
+    expect(result.data).toHaveLength(limit);
     expect(result.hasMore).toBe(true);
     expect(result.nextCursor).not.toBeNull();
     // Overflow row must not appear in items
-    expect(result.items.map((i) => i.id)).not.toContain("al_d");
+    expect(result.data.map((i) => i.id)).not.toContain("al_d");
   });
 
   it("encodes nextCursor from last item's timestamp and id", async () => {
@@ -233,7 +233,7 @@ describe("cursor roundtrip", () => {
       cursor: pageOne.nextCursor as string,
     });
 
-    expect(pageTwo.items[0]?.id).toBe("al_p2a");
+    expect(pageTwo.data[0]?.id).toBe("al_p2a");
     expect(pageTwo.hasMore).toBe(false);
     expect(pageTwo.nextCursor).toBeNull();
   });

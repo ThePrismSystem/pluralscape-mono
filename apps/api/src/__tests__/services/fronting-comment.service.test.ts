@@ -279,7 +279,7 @@ describe("listFrontingComments", () => {
 
     const result = await listFrontingComments(db, SYSTEM_ID, SESSION_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
     expect(result.nextCursor).toBeNull();
   });
@@ -291,8 +291,8 @@ describe("listFrontingComments", () => {
 
     const result = await listFrontingComments(db, SYSTEM_ID, SESSION_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(COMMENT_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(COMMENT_ID);
   });
 
   it("throws 404 when parent session not found", async () => {
@@ -382,7 +382,7 @@ describe("listFrontingComments", () => {
     const result = await listFrontingComments(db, SYSTEM_ID, SESSION_ID, AUTH);
 
     expect(result.hasMore).toBe(true);
-    expect(result.items).toHaveLength(25);
+    expect(result.data).toHaveLength(25);
     expect(result.nextCursor).not.toBeNull();
   });
 });

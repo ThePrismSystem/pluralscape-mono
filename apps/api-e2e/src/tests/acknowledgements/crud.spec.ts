@@ -16,7 +16,7 @@ interface AcknowledgementResponse {
 }
 
 interface AcknowledgementListResponse {
-  items: AcknowledgementResponse[];
+  data: AcknowledgementResponse[];
   nextCursor: string | null;
   hasMore: boolean;
   totalCount: number | null;
@@ -74,16 +74,16 @@ test.describe("Acknowledgements CRUD", () => {
       const res = await request.get(acksUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("data");
       expect(body).toHaveProperty("hasMore");
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("list pending (confirmed=false)", async () => {
       const res = await request.get(`${acksUrl}?confirmed=false`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("confirm acknowledgement", async () => {
@@ -115,14 +115,14 @@ test.describe("Acknowledgements CRUD", () => {
       const res = await request.get(`${acksUrl}?confirmed=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("not in pending list after confirm", async () => {
       const res = await request.get(`${acksUrl}?confirmed=false`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
+      expect(body.data.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
     });
 
     await test.step("archive acknowledgement", async () => {
@@ -134,14 +134,14 @@ test.describe("Acknowledgements CRUD", () => {
       const res = await request.get(acksUrl, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
+      expect(body.data.every((item: AcknowledgementResponse) => item.id !== ackId)).toBe(true);
     });
 
     await test.step("archived in list with includeArchived=true", async () => {
       const res = await request.get(`${acksUrl}?includeArchived=true`, { headers: authHeaders });
       expect(res.status()).toBe(200);
       const body = (await res.json()) as AcknowledgementListResponse;
-      expect(body.items.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
+      expect(body.data.some((item: AcknowledgementResponse) => item.id === ackId)).toBe(true);
     });
 
     await test.step("restore acknowledgement", async () => {

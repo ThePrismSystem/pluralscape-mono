@@ -48,7 +48,7 @@ const FLD_ID = "fld_550e8400-e29b-41d4-a716-446655440000";
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const EMPTY_PAGE: PaginatedResult<FieldDefinitionResult> = {
-  items: [],
+  data: [],
   nextCursor: null,
   hasMore: false,
   totalCount: null,
@@ -73,13 +73,13 @@ describe("GET /systems/:systemId/fields", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<FieldDefinitionResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
     expect(body.hasMore).toBe(false);
   });
 
   it("returns 200 with paginated field definitions", async () => {
     const page: PaginatedResult<FieldDefinitionResult> = {
-      items: [
+      data: [
         {
           id: FLD_ID as never,
           systemId: SYS_ID as never,
@@ -105,7 +105,7 @@ describe("GET /systems/:systemId/fields", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<FieldDefinitionResult>;
-    expect(body.items).toHaveLength(1);
+    expect(body.data).toHaveLength(1);
     expect(body.hasMore).toBe(true);
   });
 
@@ -182,7 +182,7 @@ describe("GET /systems/:systemId/fields", () => {
 
   it("returns only requested fields when ?fields= is valid", async () => {
     const page: PaginatedResult<FieldDefinitionResult> = {
-      items: [
+      data: [
         {
           id: FLD_ID as never,
           systemId: SYS_ID as never,
@@ -208,8 +208,8 @@ describe("GET /systems/:systemId/fields", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<Partial<FieldDefinitionResult>>;
-    expect(body.items[0]).toEqual({ id: FLD_ID, version: 1 });
-    expect(body.items[0]).not.toHaveProperty("fieldType");
+    expect(body.data[0]).toEqual({ id: FLD_ID, version: 1 });
+    expect(body.data[0]).not.toHaveProperty("fieldType");
   });
 
   it("returns 400 for invalid field name in ?fields=", async () => {
@@ -229,6 +229,6 @@ describe("GET /systems/:systemId/fields", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as PaginatedResult<FieldDefinitionResult>;
-    expect(body.items).toEqual([]);
+    expect(body.data).toEqual([]);
   });
 });

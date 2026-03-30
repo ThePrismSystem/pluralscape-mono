@@ -272,7 +272,7 @@ describe("listCheckInRecords", () => {
 
     const result = await listCheckInRecords(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
 
@@ -282,9 +282,9 @@ describe("listCheckInRecords", () => {
 
     const result = await listCheckInRecords(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.id).toBe(RECORD_ID);
-    expect(result.items[0]?.status).toBe("pending");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.id).toBe(RECORD_ID);
+    expect(result.data[0]?.status).toBe("pending");
   });
 
   it("returns responded records with correct status", async () => {
@@ -293,9 +293,9 @@ describe("listCheckInRecords", () => {
 
     const result = await listCheckInRecords(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.status).toBe("responded");
-    expect(result.items[0]?.respondedByMemberId).toBe(MEMBER_ID);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.status).toBe("responded");
+    expect(result.data[0]?.respondedByMemberId).toBe(MEMBER_ID);
   });
 
   it("returns dismissed records with correct status", async () => {
@@ -304,9 +304,9 @@ describe("listCheckInRecords", () => {
 
     const result = await listCheckInRecords(db, SYSTEM_ID, AUTH);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.status).toBe("dismissed");
-    expect(result.items[0]?.dismissed).toBe(true);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.status).toBe("dismissed");
+    expect(result.data[0]?.dismissed).toBe(true);
   });
 
   it("caps limit to MAX_PAGE_LIMIT", async () => {
@@ -377,7 +377,7 @@ describe("listCheckInRecords", () => {
     const result = await listCheckInRecords(db, SYSTEM_ID, AUTH);
 
     expect(result.hasMore).toBe(true);
-    expect(result.items).toHaveLength(25);
+    expect(result.data).toHaveLength(25);
     expect(result.nextCursor).not.toBeNull();
   });
 

@@ -303,8 +303,8 @@ describe("check-in-record.service (PGlite integration)", () => {
       const result = await listCheckInRecords(asDb(db), systemId, auth, {
         timerConfigId: timerId,
       });
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.id).toBe(created.id);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.id).toBe(created.id);
     });
 
     it("filters pending records", async () => {
@@ -334,8 +334,8 @@ describe("check-in-record.service (PGlite integration)", () => {
       const result = await listCheckInRecords(asDb(db), systemId, auth, {
         pending: true,
       });
-      expect(result.items.length).toBe(1);
-      expect(result.items[0]?.id).toBe(r2.id);
+      expect(result.data.length).toBe(1);
+      expect(result.data[0]?.id).toBe(r2.id);
     });
   });
 

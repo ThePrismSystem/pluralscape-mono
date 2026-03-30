@@ -300,7 +300,7 @@ describe("acknowledgement service", () => {
 
       const result = await listAcknowledgements(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.hasMore).toBe(false);
     });
 
@@ -309,7 +309,7 @@ describe("acknowledgement service", () => {
 
       const result = await listAcknowledgements(db, SYSTEM_ID, AUTH);
 
-      expect(result.items).toEqual([]);
+      expect(result.data).toEqual([]);
     });
 
     it("filters by confirmed status when provided", async () => {
@@ -318,7 +318,7 @@ describe("acknowledgement service", () => {
 
       const result = await listAcknowledgements(db, SYSTEM_ID, AUTH, { confirmed: true });
 
-      expect(result.items[0]?.confirmed).toBe(true);
+      expect(result.data[0]?.confirmed).toBe(true);
     });
 
     it("detects hasMore when more rows exist than limit", async () => {
@@ -329,7 +329,7 @@ describe("acknowledgement service", () => {
       const result = await listAcknowledgements(db, SYSTEM_ID, AUTH, { limit: 1 });
 
       expect(result.hasMore).toBe(true);
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
     });
   });
 

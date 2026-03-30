@@ -60,7 +60,7 @@ export interface LifecycleEventCursor {
 }
 
 export interface PaginatedLifecycleEvents {
-  readonly items: readonly LifecycleEventResult[];
+  readonly data: readonly LifecycleEventResult[];
   readonly nextCursor: string | null;
   readonly hasMore: boolean;
   readonly totalCount: null;
@@ -232,7 +232,7 @@ export async function listLifecycleEvents(
     const nextCursor = hasMore && lastItem ? encodeCursor(lastItem.occurredAt, lastItem.id) : null;
 
     return {
-      items,
+      data: items,
       nextCursor,
       hasMore,
       totalCount: null,
