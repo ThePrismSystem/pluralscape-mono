@@ -401,9 +401,10 @@ describe("deleteEntityType", () => {
 
   it("deletes entity type with no dependents", async () => {
     const { db, chain } = mockDb();
-    // Existence check: select().from().where().limit(1)
+    // Existence check: select().from().where().limit(1).for("update")
     chain.where.mockReturnValueOnce(chain); // mid-chain, flows to limit
-    chain.limit.mockResolvedValueOnce([{ id: "set_test-entity-type" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "set_test-entity-type" }]);
     // Entity count query: select().from().where() — terminal
     chain.where.mockResolvedValueOnce([{ count: 0 }]);
 
@@ -417,7 +418,8 @@ describe("deleteEntityType", () => {
     const { db, chain } = mockDb();
     // Existence check returns empty
     chain.where.mockReturnValueOnce(chain);
-    chain.limit.mockResolvedValueOnce([]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([]);
 
     await expect(deleteEntityType(db, SYSTEM_ID, "set_missing", AUTH, mockAudit)).rejects.toThrow(
       "Structure entity type not found",
@@ -428,7 +430,8 @@ describe("deleteEntityType", () => {
     const { db, chain } = mockDb();
     // Existence check
     chain.where.mockReturnValueOnce(chain);
-    chain.limit.mockResolvedValueOnce([{ id: "set_test-entity-type" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "set_test-entity-type" }]);
     // Entity count query — terminal where
     chain.where.mockResolvedValueOnce([{ count: 3 }]);
 
@@ -758,9 +761,10 @@ describe("deleteStructureEntity", () => {
 
   it("deletes entity with no dependents", async () => {
     const { db, chain } = mockDb();
-    // Existence check: select().from().where().limit(1)
+    // Existence check: select().from().where().limit(1).for("update")
     chain.where.mockReturnValueOnce(chain); // mid-chain, flows to limit
-    chain.limit.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
     // Three count queries in Promise.all — terminal where() calls
     chain.where
       .mockResolvedValueOnce([{ count: 0 }]) // entity links
@@ -776,7 +780,8 @@ describe("deleteStructureEntity", () => {
   it("throws NOT_FOUND when entity does not exist", async () => {
     const { db, chain } = mockDb();
     chain.where.mockReturnValueOnce(chain);
-    chain.limit.mockResolvedValueOnce([]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([]);
 
     await expect(
       deleteStructureEntity(db, SYSTEM_ID, "sse_missing", AUTH, mockAudit),
@@ -786,7 +791,8 @@ describe("deleteStructureEntity", () => {
   it("throws HAS_DEPENDENTS when entity has entity links", async () => {
     const { db, chain } = mockDb();
     chain.where.mockReturnValueOnce(chain);
-    chain.limit.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
     chain.where
       .mockResolvedValueOnce([{ count: 2 }]) // entity links
       .mockResolvedValueOnce([{ count: 0 }]) // member links
@@ -800,7 +806,8 @@ describe("deleteStructureEntity", () => {
   it("throws HAS_DEPENDENTS when entity has member links", async () => {
     const { db, chain } = mockDb();
     chain.where.mockReturnValueOnce(chain);
-    chain.limit.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
     chain.where
       .mockResolvedValueOnce([{ count: 0 }]) // entity links
       .mockResolvedValueOnce([{ count: 1 }]) // member links
@@ -814,7 +821,8 @@ describe("deleteStructureEntity", () => {
   it("throws HAS_DEPENDENTS when entity has associations", async () => {
     const { db, chain } = mockDb();
     chain.where.mockReturnValueOnce(chain);
-    chain.limit.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
     chain.where
       .mockResolvedValueOnce([{ count: 0 }]) // entity links
       .mockResolvedValueOnce([{ count: 0 }]) // member links
@@ -828,7 +836,8 @@ describe("deleteStructureEntity", () => {
   it("throws HAS_DEPENDENTS with multiple dependent types", async () => {
     const { db, chain } = mockDb();
     chain.where.mockReturnValueOnce(chain);
-    chain.limit.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sse_test-entity" }]);
     chain.where
       .mockResolvedValueOnce([{ count: 1 }]) // entity links
       .mockResolvedValueOnce([{ count: 2 }]) // member links
@@ -936,7 +945,8 @@ describe("deleteEntityLink", () => {
 
   it("deletes entity link when found", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: "sel_test-link" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sel_test-link" }]);
 
     await expect(
       deleteEntityLink(db, SYSTEM_ID, "sel_test-link", AUTH, mockAudit),
@@ -946,7 +956,8 @@ describe("deleteEntityLink", () => {
 
   it("throws NOT_FOUND when link does not exist", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([]);
 
     await expect(deleteEntityLink(db, SYSTEM_ID, "sel_missing", AUTH, mockAudit)).rejects.toThrow(
       "Structure entity link not found",
@@ -1050,7 +1061,8 @@ describe("deleteEntityMemberLink", () => {
 
   it("deletes entity member link when found", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: "sem_test-member-link" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sem_test-member-link" }]);
 
     await expect(
       deleteEntityMemberLink(db, SYSTEM_ID, "sem_test-member-link", AUTH, mockAudit),
@@ -1060,7 +1072,8 @@ describe("deleteEntityMemberLink", () => {
 
   it("throws NOT_FOUND when link does not exist", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([]);
 
     await expect(
       deleteEntityMemberLink(db, SYSTEM_ID, "sem_missing", AUTH, mockAudit),
@@ -1165,7 +1178,8 @@ describe("deleteEntityAssociation", () => {
 
   it("deletes entity association when found", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: "sea_test-assoc" }]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([{ id: "sea_test-assoc" }]);
 
     await expect(
       deleteEntityAssociation(db, SYSTEM_ID, "sea_test-assoc", AUTH, mockAudit),
@@ -1175,7 +1189,8 @@ describe("deleteEntityAssociation", () => {
 
   it("throws NOT_FOUND when association does not exist", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.limit.mockReturnValueOnce(chain);
+    chain.for.mockResolvedValueOnce([]);
 
     await expect(
       deleteEntityAssociation(db, SYSTEM_ID, "sea_missing", AUTH, mockAudit),

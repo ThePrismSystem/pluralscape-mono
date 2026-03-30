@@ -164,26 +164,6 @@ function ownerLabel(owner: FieldValueOwner): string {
 
 // ── SET (CREATE) ────────────────────────────────────────────────────
 
-export async function setFieldValue(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  memberId: MemberId,
-  fieldDefId: FieldDefinitionId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<FieldValueResult> {
-  return setFieldValueForOwner(
-    db,
-    systemId,
-    { kind: "member", id: memberId },
-    fieldDefId,
-    params,
-    auth,
-    audit,
-  );
-}
-
 export async function setFieldValueForOwner(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -252,15 +232,6 @@ export async function setFieldValueForOwner(
 
 // ── LIST ────────────────────────────────────────────────────────────
 
-export async function listFieldValues(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  memberId: MemberId,
-  auth: AuthContext,
-): Promise<FieldValueResult[]> {
-  return listFieldValuesForOwner(db, systemId, { kind: "member", id: memberId }, auth);
-}
-
 export async function listFieldValuesForOwner(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -282,26 +253,6 @@ export async function listFieldValuesForOwner(
 }
 
 // ── UPDATE ──────────────────────────────────────────────────────────
-
-export async function updateFieldValue(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  memberId: MemberId,
-  fieldDefId: FieldDefinitionId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<FieldValueResult> {
-  return updateFieldValueForOwner(
-    db,
-    systemId,
-    { kind: "member", id: memberId },
-    fieldDefId,
-    params,
-    auth,
-    audit,
-  );
-}
 
 export async function updateFieldValueForOwner(
   db: PostgresJsDatabase,
@@ -376,24 +327,6 @@ export async function updateFieldValueForOwner(
 }
 
 // ── DELETE (hard delete) ────────────────────────────────────────────
-
-export async function deleteFieldValue(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  memberId: MemberId,
-  fieldDefId: FieldDefinitionId,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  return deleteFieldValueForOwner(
-    db,
-    systemId,
-    { kind: "member", id: memberId },
-    fieldDefId,
-    auth,
-    audit,
-  );
-}
 
 export async function deleteFieldValueForOwner(
   db: PostgresJsDatabase,

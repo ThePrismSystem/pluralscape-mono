@@ -14,13 +14,9 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/field-value.service.js", () => ({
-  setFieldValue: vi.fn(),
   setFieldValueForOwner: vi.fn(),
-  listFieldValues: vi.fn(),
   listFieldValuesForOwner: vi.fn(),
-  updateFieldValue: vi.fn(),
   updateFieldValueForOwner: vi.fn(),
-  deleteFieldValue: vi.fn(),
   deleteFieldValueForOwner: vi.fn(),
 }));
 

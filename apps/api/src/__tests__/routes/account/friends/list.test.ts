@@ -85,7 +85,7 @@ describe("GET /account/friends", () => {
       {},
       "acct_test",
       MOCK_ACCOUNT_ONLY_AUTH,
-      { cursor: undefined, limit: undefined, includeArchived: false },
+      { cursor: undefined, limit: 25, includeArchived: false },
     );
   });
 });

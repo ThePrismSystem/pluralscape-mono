@@ -1,4 +1,4 @@
-import { systemSnapshots, systems } from "@pluralscape/db/pg";
+import { systemSnapshots } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateSnapshotBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
@@ -8,6 +8,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -64,6 +65,8 @@ export async function createSnapshot(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SnapshotResult> {
+  assertSystemOwnership(systemId, auth);
+
   const { parsed, blob } = parseAndValidateBlob(
     params,
     CreateSnapshotBodySchema,
@@ -74,23 +77,6 @@ export async function createSnapshot(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    // Verify system exists and is not archived
-    const [system] = await tx
-      .select({ id: systems.id })
-      .from(systems)
-      .where(
-        and(
-          eq(systems.id, systemId),
-          eq(systems.accountId, auth.accountId),
-          eq(systems.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!system) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-    }
-
     const [row] = await tx
       .insert(systemSnapshots)
       .values({
@@ -126,6 +112,8 @@ export async function listSnapshots(
   cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SnapshotResult>> {
+  assertSystemOwnership(systemId, auth);
+
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
@@ -154,6 +142,8 @@ export async function getSnapshot(
   snapshotId: SystemSnapshotId,
   auth: AuthContext,
 ): Promise<SnapshotResult> {
+  assertSystemOwnership(systemId, auth);
+
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
       .select()
@@ -178,6 +168,8 @@ export async function deleteSnapshot(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
+  assertSystemOwnership(systemId, auth);
+
   await withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [deleted] = await tx
       .delete(systemSnapshots)

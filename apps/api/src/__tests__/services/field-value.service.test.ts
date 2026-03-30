@@ -40,13 +40,9 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const {
-  setFieldValue,
   setFieldValueForOwner,
-  listFieldValues,
   listFieldValuesForOwner,
-  updateFieldValue,
   updateFieldValueForOwner,
-  deleteFieldValue,
   deleteFieldValueForOwner,
 } = await import("../../services/field-value.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
@@ -83,11 +79,13 @@ function makeFieldValueRow(overrides: Record<string, unknown> = {}): Record<stri
 
 // ── Tests ────────────────────────────────────────────────────────────
 
-describe("setFieldValue", () => {
+describe("setFieldValueForOwner (member path)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
   });
+
+  const MEMBER_OWNER = { kind: "member" as const, id: MEMBER_ID };
 
   it("creates a field value successfully", async () => {
     const { db, chain } = mockDb();
@@ -101,10 +99,10 @@ describe("setFieldValue", () => {
     // 4. insert returning
     chain.returning.mockResolvedValueOnce([row]);
 
-    const result = await setFieldValue(
+    const result = await setFieldValueForOwner(
       db,
       SYSTEM_ID,
-      MEMBER_ID,
+      MEMBER_OWNER,
       FIELD_DEF_ID,
       { encryptedData: VALID_BLOB_BASE64 },
       AUTH,
@@ -133,10 +131,10 @@ describe("setFieldValue", () => {
     chain.limit.mockResolvedValueOnce([{ id: "fv_existing" }]);
 
     await expect(
-      setFieldValue(
+      setFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
@@ -153,7 +151,7 @@ describe("setFieldValue", () => {
     chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
 
     await expect(
-      setFieldValue(db, SYSTEM_ID, MEMBER_ID, FIELD_DEF_ID, {}, AUTH, mockAudit),
+      setFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, {}, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
@@ -163,10 +161,10 @@ describe("setFieldValue", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      setFieldValue(
+      setFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
@@ -185,10 +183,10 @@ describe("setFieldValue", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      setFieldValue(
+      setFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
@@ -215,10 +213,10 @@ describe("setFieldValue", () => {
     chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
 
     await expect(
-      setFieldValue(
+      setFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
@@ -238,10 +236,10 @@ describe("setFieldValue", () => {
     chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
 
     await expect(
-      setFieldValue(
+      setFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
@@ -254,10 +252,10 @@ describe("setFieldValue", () => {
     mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
     await expect(
-      setFieldValue(
+      setFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
@@ -267,11 +265,13 @@ describe("setFieldValue", () => {
   });
 });
 
-describe("listFieldValues", () => {
+describe("listFieldValuesForOwner (member path)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
   });
+
+  const MEMBER_OWNER = { kind: "member" as const, id: MEMBER_ID };
 
   it("returns field values for a member", async () => {
     const { db, chain } = mockDb();
@@ -281,7 +281,7 @@ describe("listFieldValues", () => {
     // assertMemberActive's .where() chains to .limit(); list query's .where() is terminal
     chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce(rows);
 
-    const result = await listFieldValues(db, SYSTEM_ID, MEMBER_ID, AUTH);
+    const result = await listFieldValuesForOwner(db, SYSTEM_ID, MEMBER_OWNER, AUTH);
 
     expect(result).toHaveLength(2);
     expect(result[0]?.id).toBe("fv_test-value");
@@ -295,17 +295,19 @@ describe("listFieldValues", () => {
     // assertMemberActive's .where() chains to .limit(); list query's .where() is terminal
     chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([]);
 
-    const result = await listFieldValues(db, SYSTEM_ID, MEMBER_ID, AUTH);
+    const result = await listFieldValuesForOwner(db, SYSTEM_ID, MEMBER_OWNER, AUTH);
 
     expect(result).toEqual([]);
   });
 });
 
-describe("updateFieldValue", () => {
+describe("updateFieldValueForOwner (member path)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
   });
+
+  const MEMBER_OWNER = { kind: "member" as const, id: MEMBER_ID };
 
   it("updates a field value successfully", async () => {
     const { db, chain } = mockDb();
@@ -317,10 +319,10 @@ describe("updateFieldValue", () => {
     // update().set().where().returning() → returns updated row
     chain.returning.mockResolvedValueOnce([updatedRow]);
 
-    const result = await updateFieldValue(
+    const result = await updateFieldValueForOwner(
       db,
       SYSTEM_ID,
-      MEMBER_ID,
+      MEMBER_OWNER,
       FIELD_DEF_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1 },
       AUTH,
@@ -348,10 +350,10 @@ describe("updateFieldValue", () => {
     chain.limit.mockResolvedValueOnce([{ id: "fv_test-value" }]);
 
     await expect(
-      updateFieldValue(
+      updateFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
@@ -372,10 +374,10 @@ describe("updateFieldValue", () => {
     chain.limit.mockResolvedValueOnce([]);
 
     await expect(
-      updateFieldValue(
+      updateFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
@@ -392,10 +394,10 @@ describe("updateFieldValue", () => {
     chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
 
     await expect(
-      updateFieldValue(
+      updateFieldValueForOwner(
         db,
         SYSTEM_ID,
-        MEMBER_ID,
+        MEMBER_OWNER,
         FIELD_DEF_ID,
         { encryptedData: VALID_BLOB_BASE64 },
         AUTH,
@@ -405,11 +407,13 @@ describe("updateFieldValue", () => {
   });
 });
 
-describe("deleteFieldValue", () => {
+describe("deleteFieldValueForOwner (member path)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
   });
+
+  const MEMBER_OWNER = { kind: "member" as const, id: MEMBER_ID };
 
   it("deletes a field value successfully", async () => {
     const { db, chain } = mockDb();
@@ -418,7 +422,7 @@ describe("deleteFieldValue", () => {
     // delete().where().returning() → returns deleted row
     chain.returning.mockResolvedValueOnce([{ id: "fv_test-value" }]);
 
-    await deleteFieldValue(db, SYSTEM_ID, MEMBER_ID, FIELD_DEF_ID, AUTH, mockAudit);
+    await deleteFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, AUTH, mockAudit);
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
@@ -435,7 +439,7 @@ describe("deleteFieldValue", () => {
     chain.returning.mockResolvedValueOnce([]);
 
     await expect(
-      deleteFieldValue(db, SYSTEM_ID, MEMBER_ID, FIELD_DEF_ID, AUTH, mockAudit),
+      deleteFieldValueForOwner(db, SYSTEM_ID, MEMBER_OWNER, FIELD_DEF_ID, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

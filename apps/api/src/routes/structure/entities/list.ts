@@ -3,12 +3,11 @@ import { IncludeArchivedQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
-import { requireIdParam } from "../../../lib/id-param.js";
+import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
 import { listStructureEntities } from "../../../services/structure-entity.service.js";
-
-import { DEFAULT_ENTITY_LIMIT, MAX_ENTITY_LIMIT } from "./structure.constants.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 
@@ -22,8 +21,11 @@ listRoute.get("/", async (c) => {
   const { includeArchived } = IncludeArchivedQuerySchema.parse({
     includeArchived: c.req.query("includeArchived"),
   });
-  const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_ENTITY_LIMIT, MAX_ENTITY_LIMIT);
-  const entityTypeId = c.req.query("entityTypeId");
+  const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  const entityTypeIdParam = c.req.query("entityTypeId");
+  const entityTypeId = entityTypeIdParam
+    ? parseIdParam(entityTypeIdParam, ID_PREFIXES.structureEntityType)
+    : undefined;
 
   const db = await getDb();
   const result = await listStructureEntities(db, systemId, auth, {

@@ -137,8 +137,8 @@ export async function approveTransfer(
   sessionId: SessionId,
   audit: AuditWriter,
 ): Promise<void> {
-  const row = await withAccountTransaction(db, accountId, async (tx) => {
-    const [result] = await tx
+  await withAccountTransaction(db, accountId, async (tx) => {
+    const [row] = await tx
       .select({
         id: deviceTransferRequests.id,
         sourceSessionId: deviceTransferRequests.sourceSessionId,
@@ -153,18 +153,17 @@ export async function approveTransfer(
         ),
       )
       .limit(1);
-    return result ?? null;
-  });
 
-  if (!row) {
-    throw new TransferNotFoundError("Transfer request not found or expired");
-  }
+    if (!row) {
+      throw new TransferNotFoundError("Transfer request not found or expired");
+    }
 
-  if (row.sourceSessionId !== sessionId) {
-    throw new TransferSessionMismatchError("Only the initiating session may approve this transfer");
-  }
+    if (row.sourceSessionId !== sessionId) {
+      throw new TransferSessionMismatchError(
+        "Only the initiating session may approve this transfer",
+      );
+    }
 
-  await withAccountTransaction(db, accountId, async (tx) => {
     const [updated] = await tx
       .update(deviceTransferRequests)
       .set({ status: "approved" })

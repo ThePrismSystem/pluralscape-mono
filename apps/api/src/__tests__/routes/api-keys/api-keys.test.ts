@@ -26,6 +26,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 const { createApiKey, listApiKeys, getApiKey, revokeApiKey } =
   await import("../../../services/api-key.service.js");
+const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -181,6 +182,17 @@ describe("GET /systems/:systemId/api-keys/:apiKeyId", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns 404 when API key not found", async () => {
+    vi.mocked(getApiKey).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "API key not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/api-keys/${AK_ID}`);
+
+    expect(res.status).toBe(404);
+  });
 });
 
 // ── Tests: REVOKE ───────────────────────────────────────────────
@@ -222,5 +234,18 @@ describe("POST /systems/:systemId/api-keys/:apiKeyId/revoke", () => {
     });
 
     expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when API key not found", async () => {
+    vi.mocked(revokeApiKey).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "API key not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/api-keys/${AK_ID}/revoke`, {
+      method: "POST",
+    });
+
+    expect(res.status).toBe(404);
   });
 });

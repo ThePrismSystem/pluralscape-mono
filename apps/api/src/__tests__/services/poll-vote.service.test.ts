@@ -244,6 +244,28 @@ describe("poll-vote service", () => {
       ).rejects.toThrow(expect.objectContaining({ status: 409, code: "ABSTAIN_NOT_ALLOWED" }));
     });
 
+    it("casts an abstain vote successfully when allowAbstain is enabled", async () => {
+      const { db, chain } = mockDb();
+      mockCastVoteChain(chain, [makePollRow({ allowAbstain: true })], 0);
+      chain.returning.mockResolvedValueOnce([makeVoteRow({ optionId: null })]);
+
+      const result = await castVote(
+        db,
+        SYSTEM_ID,
+        POLL_ID,
+        { ...validPayload, optionId: null },
+        AUTH,
+        mockAudit,
+      );
+
+      expect(result.id).toBe(VOTE_ID);
+      expect(result.optionId).toBeNull();
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "poll-vote.cast" }),
+      );
+    });
+
     it("throws VETO_NOT_ALLOWED when isVeto is true and veto is disabled", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockReturnValueOnce(chain);

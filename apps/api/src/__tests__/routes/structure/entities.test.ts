@@ -13,7 +13,12 @@ import type {
   HierarchyNode,
   StructureEntityResult,
 } from "../../../services/structure-entity.service.js";
-import type { PaginatedResult } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  PaginatedResult,
+  SystemStructureEntityId,
+  SystemStructureEntityTypeId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -62,13 +67,14 @@ const {
   deleteStructureEntity,
   getEntityHierarchy,
 } = await import("../../../services/structure-entity.service.js");
+const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
-const ENTITY_ID = "ste_550e8400-e29b-41d4-a716-446655440000";
-const ET_ID = "stet_550e8400-e29b-41d4-a716-446655440000";
+const ENTITY_ID = "ste_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityId;
+const ET_ID = "stet_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityTypeId;
 const BASE = `/systems/${SYS_ID}/structure/entities`;
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
@@ -191,6 +197,17 @@ describe("GET /systems/:systemId/structure/entities/:entityId", () => {
     expect(body.id).toBe(ENTITY_ID);
   });
 
+  it("returns 404 when entity not found", async () => {
+    vi.mocked(getStructureEntity).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Structure entity not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${BASE}/${ENTITY_ID}`);
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
   it("returns 400 for invalid entity ID format", async () => {
     const app = createApp();
     const res = await app.request(`${BASE}/bad-id`);
@@ -268,6 +285,33 @@ describe("DELETE /systems/:systemId/structure/entities/:entityId", () => {
     const app = createApp();
     const res = await app.request(`${BASE}/${ENTITY_ID}`, { method: "DELETE" });
     expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when entity not found", async () => {
+    vi.mocked(deleteStructureEntity).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Structure entity not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${BASE}/${ENTITY_ID}`, { method: "DELETE" });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("returns 409 when entity has dependents", async () => {
+    vi.mocked(deleteStructureEntity).mockRejectedValueOnce(
+      new ApiHttpError(
+        409,
+        "HAS_DEPENDENTS",
+        "Structure entity has dependents. Remove all links and associations before deleting.",
+        { dependents: [{ type: "entityLinks", count: 2 }] },
+      ),
+    );
+    const app = createApp();
+    const res = await app.request(`${BASE}/${ENTITY_ID}`, { method: "DELETE" });
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("HAS_DEPENDENTS");
   });
 
   it("returns 400 for invalid entity ID", async () => {

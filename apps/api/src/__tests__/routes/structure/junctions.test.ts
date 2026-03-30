@@ -14,7 +14,15 @@ import type {
   EntityLinkResult,
   EntityMemberLinkResult,
 } from "../../../services/structure-entity.service.js";
-import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+import type {
+  ApiErrorResponse,
+  MemberId,
+  PaginatedResult,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+  SystemStructureEntityMemberLinkId,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -64,16 +72,17 @@ const {
   listEntityAssociations,
   deleteEntityAssociation,
 } = await import("../../../services/structure-entity.service.js");
+const { ApiHttpError } = await import("../../../lib/api-error.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
-const LINK_ID = "stel_550e8400-e29b-41d4-a716-446655440000";
-const ML_ID = "steml_550e8400-e29b-41d4-a716-446655440000";
-const ASSOC_ID = "stea_550e8400-e29b-41d4-a716-446655440000";
-const ENTITY_ID = "ste_550e8400-e29b-41d4-a716-446655440000";
-const MEMBER_ID = "mem_550e8400-e29b-41d4-a716-446655440000";
+const LINK_ID = "stel_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityLinkId;
+const ML_ID = "steml_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityMemberLinkId;
+const ASSOC_ID = "stea_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityAssociationId;
+const ENTITY_ID = "ste_550e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityId;
+const MEMBER_ID = "mem_550e8400-e29b-41d4-a716-446655440000" as MemberId;
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
 
@@ -166,6 +175,17 @@ describe("DELETE /systems/:systemId/structure/entity-links/:linkId", () => {
     expect(res.status).toBe(204);
   });
 
+  it("returns 404 when entity link not found", async () => {
+    vi.mocked(deleteEntityLink).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Structure entity link not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${LINKS_BASE}/${LINK_ID}`, { method: "DELETE" });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
   it("returns 400 for invalid link ID", async () => {
     const app = createApp();
     const res = await app.request(`${LINKS_BASE}/bad-id`, { method: "DELETE" });
@@ -250,6 +270,17 @@ describe("DELETE /systems/:systemId/structure/entity-member-links/:linkId", () =
     expect(res.status).toBe(204);
   });
 
+  it("returns 404 when entity member link not found", async () => {
+    vi.mocked(deleteEntityMemberLink).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Structure entity member link not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${ML_BASE}/${ML_ID}`, { method: "DELETE" });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
+
   it("returns 400 for invalid link ID", async () => {
     const app = createApp();
     const res = await app.request(`${ML_BASE}/bad-id`, { method: "DELETE" });
@@ -267,7 +298,7 @@ const MOCK_ASSOC: EntityAssociationResult = {
   id: ASSOC_ID,
   systemId: SYS_ID as never,
   sourceEntityId: ENTITY_ID,
-  targetEntityId: "ste_660e8400-e29b-41d4-a716-446655440000",
+  targetEntityId: "ste_660e8400-e29b-41d4-a716-446655440000" as SystemStructureEntityId,
   createdAt: 1000 as never,
 };
 
@@ -330,6 +361,17 @@ describe("DELETE /systems/:systemId/structure/entity-associations/:associationId
     const app = createApp();
     const res = await app.request(`${ASSOC_BASE}/${ASSOC_ID}`, { method: "DELETE" });
     expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when entity association not found", async () => {
+    vi.mocked(deleteEntityAssociation).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Structure entity association not found"),
+    );
+    const app = createApp();
+    const res = await app.request(`${ASSOC_BASE}/${ASSOC_ID}`, { method: "DELETE" });
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
   });
 
   it("returns 400 for invalid association ID", async () => {

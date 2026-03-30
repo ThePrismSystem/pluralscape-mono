@@ -6,9 +6,8 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
 import { listEntityTypes } from "../../../services/structure-entity.service.js";
-
-import { DEFAULT_ENTITY_TYPE_LIMIT, MAX_ENTITY_TYPE_LIMIT } from "./structure.constants.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 
@@ -22,11 +21,7 @@ listRoute.get("/", async (c) => {
   const { includeArchived } = IncludeArchivedQuerySchema.parse({
     includeArchived: c.req.query("includeArchived"),
   });
-  const limit = parsePaginationLimit(
-    c.req.query("limit"),
-    DEFAULT_ENTITY_TYPE_LIMIT,
-    MAX_ENTITY_TYPE_LIMIT,
-  );
+  const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   const db = await getDb();
   const result = await listEntityTypes(db, systemId, auth, {

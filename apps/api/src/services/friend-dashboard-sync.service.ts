@@ -6,13 +6,14 @@ import {
   systemStructureEntities,
 } from "@pluralscape/db/pg";
 import { toUnixMillis } from "@pluralscape/types";
-import { and, countDistinct, eq, inArray, isNull, max } from "drizzle-orm";
+import { and, countDistinct, eq, inArray, isNull, max, sql } from "drizzle-orm";
 
 import { assertFriendAccess } from "../lib/friend-access.js";
 import { withCrossAccountRead } from "../lib/rls-context.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  BucketContentEntityType,
   BucketId,
   FriendConnectionId,
   FriendDashboardSyncEntry,
@@ -20,122 +21,91 @@ import type {
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+// ── Bucket-filtered sync config ───────────────────────────────────
+
+/** Column references needed to build the bucket-filtered count + latest query. */
+interface BucketSyncTableConfig {
+  readonly table: PgTable;
+  readonly id: PgColumn;
+  readonly systemId: PgColumn;
+  readonly archived: PgColumn;
+  readonly updatedAt: PgColumn;
+  readonly entityType: BucketContentEntityType;
+}
+
+const MEMBER_SYNC_CONFIG: BucketSyncTableConfig = {
+  table: members,
+  id: members.id,
+  systemId: members.systemId,
+  archived: members.archived,
+  updatedAt: members.updatedAt,
+  entityType: "member",
+};
+
+const CUSTOM_FRONT_SYNC_CONFIG: BucketSyncTableConfig = {
+  table: customFronts,
+  id: customFronts.id,
+  systemId: customFronts.systemId,
+  archived: customFronts.archived,
+  updatedAt: customFronts.updatedAt,
+  entityType: "custom-front",
+};
+
+const STRUCTURE_ENTITY_SYNC_CONFIG: BucketSyncTableConfig = {
+  table: systemStructureEntities,
+  id: systemStructureEntities.id,
+  systemId: systemStructureEntities.systemId,
+  archived: systemStructureEntities.archived,
+  updatedAt: systemStructureEntities.updatedAt,
+  entityType: "structure-entity",
+};
 
 // ── Query helpers ──────────────────────────────────────────────────
 
 /**
- * Count and find the latest updatedAt for visible members filtered by bucket access.
+ * Generic bucket-filtered sync entry: counts distinct entities visible
+ * through the given buckets and finds their latest updatedAt timestamp.
+ *
+ * Uses typed sql fragments for aggregates because `max(PgColumn)` loses
+ * the concrete data type when the column is passed generically.
  */
-async function memberSyncEntry(
+async function bucketFilteredSyncEntry(
   tx: PostgresJsDatabase,
   systemId: SystemId,
   bucketIds: readonly BucketId[],
+  config: BucketSyncTableConfig,
 ): Promise<FriendDashboardSyncEntry> {
   if (bucketIds.length === 0) {
-    return { entityType: "member", count: 0, latestUpdatedAt: 0 as UnixMillis };
+    return { entityType: config.entityType, count: 0, latestUpdatedAt: 0 as UnixMillis };
   }
 
   const [result] = await tx
     .select({
-      count: countDistinct(members.id),
-      latest: max(members.updatedAt),
+      count: sql<number>`count(distinct ${config.id})`,
+      latest: sql<number | null>`max(${config.updatedAt})`,
     })
-    .from(members)
+    .from(config.table)
     .innerJoin(
       bucketContentTags,
       and(
-        eq(bucketContentTags.entityId, members.id),
-        eq(bucketContentTags.systemId, members.systemId),
-        eq(bucketContentTags.entityType, "member"),
+        eq(bucketContentTags.entityId, config.id),
+        eq(bucketContentTags.systemId, config.systemId),
+        eq(bucketContentTags.entityType, config.entityType),
       ),
     )
     .where(
       and(
-        eq(members.systemId, systemId),
-        eq(members.archived, false),
+        eq(config.systemId, systemId),
+        eq(config.archived, false),
         inArray(bucketContentTags.bucketId, bucketIds),
       ),
     );
 
   return {
-    entityType: "member",
-    count: result?.count ?? 0,
-    latestUpdatedAt: toUnixMillis(result?.latest ?? 0),
-  };
-}
-
-async function customFrontSyncEntry(
-  tx: PostgresJsDatabase,
-  systemId: SystemId,
-  bucketIds: readonly BucketId[],
-): Promise<FriendDashboardSyncEntry> {
-  if (bucketIds.length === 0) {
-    return { entityType: "custom-front", count: 0, latestUpdatedAt: 0 as UnixMillis };
-  }
-
-  const [result] = await tx
-    .select({
-      count: countDistinct(customFronts.id),
-      latest: max(customFronts.updatedAt),
-    })
-    .from(customFronts)
-    .innerJoin(
-      bucketContentTags,
-      and(
-        eq(bucketContentTags.entityId, customFronts.id),
-        eq(bucketContentTags.systemId, customFronts.systemId),
-        eq(bucketContentTags.entityType, "custom-front"),
-      ),
-    )
-    .where(
-      and(
-        eq(customFronts.systemId, systemId),
-        eq(customFronts.archived, false),
-        inArray(bucketContentTags.bucketId, bucketIds),
-      ),
-    );
-
-  return {
-    entityType: "custom-front",
-    count: result?.count ?? 0,
-    latestUpdatedAt: toUnixMillis(result?.latest ?? 0),
-  };
-}
-
-async function structureEntitySyncEntry(
-  tx: PostgresJsDatabase,
-  systemId: SystemId,
-  bucketIds: readonly BucketId[],
-): Promise<FriendDashboardSyncEntry> {
-  if (bucketIds.length === 0) {
-    return { entityType: "structure-entity", count: 0, latestUpdatedAt: 0 as UnixMillis };
-  }
-
-  const [result] = await tx
-    .select({
-      count: countDistinct(systemStructureEntities.id),
-      latest: max(systemStructureEntities.updatedAt),
-    })
-    .from(systemStructureEntities)
-    .innerJoin(
-      bucketContentTags,
-      and(
-        eq(bucketContentTags.entityId, systemStructureEntities.id),
-        eq(bucketContentTags.systemId, systemStructureEntities.systemId),
-        eq(bucketContentTags.entityType, "structure-entity"),
-      ),
-    )
-    .where(
-      and(
-        eq(systemStructureEntities.systemId, systemId),
-        eq(systemStructureEntities.archived, false),
-        inArray(bucketContentTags.bucketId, bucketIds),
-      ),
-    );
-
-  return {
-    entityType: "structure-entity",
+    entityType: config.entityType,
     count: result?.count ?? 0,
     latestUpdatedAt: toUnixMillis(result?.latest ?? 0),
   };
@@ -183,9 +153,24 @@ export async function getFriendDashboardSync(
     const access = await assertFriendAccess(tx, connectionId, auth);
 
     const entries = await Promise.all([
-      memberSyncEntry(tx, access.targetSystemId, access.assignedBucketIds),
-      customFrontSyncEntry(tx, access.targetSystemId, access.assignedBucketIds),
-      structureEntitySyncEntry(tx, access.targetSystemId, access.assignedBucketIds),
+      bucketFilteredSyncEntry(
+        tx,
+        access.targetSystemId,
+        access.assignedBucketIds,
+        MEMBER_SYNC_CONFIG,
+      ),
+      bucketFilteredSyncEntry(
+        tx,
+        access.targetSystemId,
+        access.assignedBucketIds,
+        CUSTOM_FRONT_SYNC_CONFIG,
+      ),
+      bucketFilteredSyncEntry(
+        tx,
+        access.targetSystemId,
+        access.assignedBucketIds,
+        STRUCTURE_ENTITY_SYNC_CONFIG,
+      ),
       frontingSessionSyncEntry(tx, access.targetSystemId),
     ]);
 

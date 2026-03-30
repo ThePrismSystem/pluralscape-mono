@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
+
 import { mockDb } from "./helpers/mock-db.js";
+import { mockOwnershipFailure } from "./helpers/mock-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -13,6 +16,10 @@ import type {
 } from "@pluralscape/types";
 
 // ── Mocks ───────────────────────────────────────────────────────────
+
+vi.mock("../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn(),
+}));
 
 vi.mock("../lib/rls-context.js", () => ({
   withTenantTransaction: vi.fn(
@@ -53,6 +60,7 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
   };
 });
 
+const { assertSystemOwnership } = await import("../lib/system-ownership.js");
 const { createSnapshot, getSnapshot, listSnapshots, deleteSnapshot } =
   await import("../services/snapshot.service.js");
 
@@ -106,13 +114,9 @@ describe("createSnapshot", () => {
     vi.clearAllMocks();
   });
 
-  it("throws NOT_FOUND when system does not exist", async () => {
-    const { db, chain } = mockDb();
-    mockParseAndValidateBlob.mockReturnValue({
-      parsed: { snapshotTrigger: "manual", encryptedData: "abc" },
-      blob: FAKE_BLOB,
-    });
-    chain.limit.mockResolvedValueOnce([]);
+  it("throws NOT_FOUND when system ownership check fails", async () => {
+    const { db } = mockDb();
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
 
     await expect(
       createSnapshot(
@@ -224,6 +228,66 @@ describe("listSnapshots", () => {
 
     expect(result.items).toHaveLength(0);
     expect(result.hasMore).toBe(false);
+  });
+
+  it("sets hasMore and nextCursor when results exceed limit", async () => {
+    const limit = 2;
+    // Service fetches limit+1 rows; extra row signals more pages
+    const rows = Array.from({ length: limit + 1 }, (_, i) =>
+      snapshotRow({ id: `snap_00000000-0000-0000-0000-00000000000${String(i + 1)}` }),
+    );
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await listSnapshots(db, SYSTEM_ID, stubAuth(), undefined, limit);
+
+    expect(result.items).toHaveLength(limit);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).toBeTypeOf("string");
+    expect(result.nextCursor).not.toBeNull();
+  });
+
+  it("respects cursor parameter for pagination", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([
+      snapshotRow({ id: "snap_00000000-0000-0000-0000-000000000005" }),
+    ]);
+
+    const fakeCursor = "some-decoded-cursor-id";
+    const result = await listSnapshots(db, SYSTEM_ID, stubAuth(), fakeCursor, 10);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.hasMore).toBe(false);
+    // The where clause should have been called (system filter + cursor filter)
+    expect(chain.where).toHaveBeenCalled();
+  });
+
+  it("caps limit at MAX_PAGE_LIMIT", async () => {
+    const overLimit = MAX_PAGE_LIMIT + 50;
+    // Service clamps to MAX_PAGE_LIMIT, then fetches MAX_PAGE_LIMIT+1 rows
+    const rows = Array.from({ length: MAX_PAGE_LIMIT + 1 }, (_, i) =>
+      snapshotRow({ id: `snap_00000000-0000-0000-0000-${String(i + 1).padStart(12, "0")}` }),
+    );
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await listSnapshots(db, SYSTEM_ID, stubAuth(), undefined, overLimit);
+
+    // Items capped to MAX_PAGE_LIMIT despite requesting more
+    expect(result.items).toHaveLength(MAX_PAGE_LIMIT);
+    expect(result.hasMore).toBe(true);
+    // chain.limit receives effectiveLimit + 1, which is MAX_PAGE_LIMIT + 1
+    expect(chain.limit).toHaveBeenCalledWith(MAX_PAGE_LIMIT + 1);
+  });
+
+  it("uses DEFAULT_PAGE_LIMIT when no limit provided", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await listSnapshots(db, SYSTEM_ID, stubAuth());
+
+    // chain.limit receives DEFAULT_PAGE_LIMIT + 1 (the +1 for hasMore detection)
+    expect(chain.limit).toHaveBeenCalledWith(DEFAULT_PAGE_LIMIT + 1);
   });
 });
 
