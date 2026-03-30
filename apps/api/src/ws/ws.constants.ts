@@ -86,3 +86,9 @@ export const WS_GRACEFUL_SHUTDOWN_TIMEOUT_MS = 10_000;
 
 /** Polling interval (ms) for checking connection drain during graceful shutdown. */
 export const WS_SHUTDOWN_DRAIN_POLL_MS = 50;
+
+/** Interval (ms) between application-level Ping messages sent to each connection. */
+export const WS_HEARTBEAT_INTERVAL_MS = 30_000;
+
+/** Timeout (ms) to wait for a Pong response before closing the connection. */
+export const WS_PONG_TIMEOUT_MS = 10_000;

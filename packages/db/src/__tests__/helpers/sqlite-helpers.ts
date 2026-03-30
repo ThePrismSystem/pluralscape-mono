@@ -1413,7 +1413,14 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB NOT NULL,
       format TEXT NOT NULL CHECK (format IN ('html', 'pdf')),
-      generated_at INTEGER NOT NULL
+      generated_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   frontingReportsIndexes: `

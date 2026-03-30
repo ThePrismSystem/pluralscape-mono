@@ -1,11 +1,16 @@
 import { frontingReports } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, toUnixMillis } from "@pluralscape/types";
-import { CreateFrontingReportBodySchema } from "@pluralscape/validation";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  CreateFrontingReportBodySchema,
+  UpdateFrontingReportBodySchema,
+} from "@pluralscape/validation";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
+import { assertOccUpdated } from "../lib/occ-update.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -18,6 +23,7 @@ import {
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  EncryptedBlob,
   FrontingReportId,
   PaginatedResult,
   ReportFormat,
@@ -34,6 +40,11 @@ export interface FrontingReportResult {
   readonly encryptedData: string;
   readonly format: ReportFormat;
   readonly generatedAt: UnixMillis;
+  readonly version: number;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
 }
 
 export interface FrontingReportListOptions {
@@ -78,18 +89,26 @@ function decodeCursor(cursor: string): CursorData {
 function toFrontingReportResult(row: {
   id: string;
   systemId: string;
-  encryptedData: { tier: number; algorithm: string; nonce: Uint8Array; ciphertext: Uint8Array };
+  encryptedData: EncryptedBlob;
   format: string;
   generatedAt: number;
+  version: number;
+  archived: boolean;
+  archivedAt: number | null;
+  createdAt: number;
+  updatedAt: number;
 }): FrontingReportResult {
   return {
     id: row.id as FrontingReportId,
     systemId: row.systemId as SystemId,
-    encryptedData: encryptedBlobToBase64(
-      row.encryptedData as Parameters<typeof encryptedBlobToBase64>[0],
-    ),
+    encryptedData: encryptedBlobToBase64(row.encryptedData),
     format: row.format as ReportFormat,
     generatedAt: toUnixMillis(row.generatedAt),
+    version: row.version,
+    archived: row.archived,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
   };
 }
 
@@ -111,6 +130,7 @@ export async function createFrontingReport(
   );
 
   const reportId = createId(ID_PREFIXES.frontingReport);
+  const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const [row] = await tx
@@ -121,6 +141,8 @@ export async function createFrontingReport(
         encryptedData: blob,
         format: parsed.format,
         generatedAt: parsed.generatedAt,
+        createdAt: timestamp,
+        updatedAt: timestamp,
       })
       .returning();
 
@@ -132,6 +154,75 @@ export async function createFrontingReport(
       eventType: "fronting-report.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "Fronting report created",
+      systemId,
+    });
+
+    return toFrontingReportResult(row);
+  });
+}
+
+// ── UPDATE ──────────────────────────────────────────────────────────
+
+export async function updateFrontingReport(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  reportId: FrontingReportId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<FrontingReportResult> {
+  assertSystemOwnership(systemId, auth);
+
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    UpdateFrontingReportBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
+
+  const version = parsed.version;
+  const timestamp = now();
+
+  return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const updated = await tx
+      .update(frontingReports)
+      .set({
+        encryptedData: blob,
+        updatedAt: timestamp,
+        version: sql`${frontingReports.version} + 1`,
+      })
+      .where(
+        and(
+          eq(frontingReports.id, reportId),
+          eq(frontingReports.systemId, systemId),
+          eq(frontingReports.version, version),
+          eq(frontingReports.archived, false),
+        ),
+      )
+      .returning();
+
+    const row = await assertOccUpdated(
+      updated,
+      async () => {
+        const [existing] = await tx
+          .select({ id: frontingReports.id })
+          .from(frontingReports)
+          .where(
+            and(
+              eq(frontingReports.id, reportId),
+              eq(frontingReports.systemId, systemId),
+              eq(frontingReports.archived, false),
+            ),
+          )
+          .limit(1);
+        return existing;
+      },
+      "Fronting report",
+    );
+
+    await audit(tx, {
+      eventType: "fronting-report.updated",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Fronting report updated",
       systemId,
     });
 
@@ -203,7 +294,13 @@ export async function getFrontingReport(
     const [row] = await tx
       .select()
       .from(frontingReports)
-      .where(and(eq(frontingReports.id, reportId), eq(frontingReports.systemId, systemId)))
+      .where(
+        and(
+          eq(frontingReports.id, reportId),
+          eq(frontingReports.systemId, systemId),
+          eq(frontingReports.archived, false),
+        ),
+      )
       .limit(1);
 
     if (!row) {
@@ -229,7 +326,13 @@ export async function deleteFrontingReport(
     const [existing] = await tx
       .select({ id: frontingReports.id })
       .from(frontingReports)
-      .where(and(eq(frontingReports.id, reportId), eq(frontingReports.systemId, systemId)))
+      .where(
+        and(
+          eq(frontingReports.id, reportId),
+          eq(frontingReports.systemId, systemId),
+          eq(frontingReports.archived, false),
+        ),
+      )
       .limit(1);
 
     if (!existing) {
@@ -247,4 +350,38 @@ export async function deleteFrontingReport(
       .delete(frontingReports)
       .where(and(eq(frontingReports.id, reportId), eq(frontingReports.systemId, systemId)));
   });
+}
+
+// ── ARCHIVE ─────────────────────────────────────────────────────────
+
+const FRONTING_REPORT_LIFECYCLE = {
+  table: frontingReports,
+  columns: frontingReports,
+  entityName: "Fronting report",
+  archiveEvent: "fronting-report.archived" as const,
+  restoreEvent: "fronting-report.restored" as const,
+};
+
+export async function archiveFrontingReport(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  reportId: FrontingReportId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  await archiveEntity(db, systemId, reportId, auth, audit, FRONTING_REPORT_LIFECYCLE);
+}
+
+// ── RESTORE ─────────────────────────────────────────────────────────
+
+export async function restoreFrontingReport(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  reportId: FrontingReportId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<FrontingReportResult> {
+  return restoreEntity(db, systemId, reportId, auth, audit, FRONTING_REPORT_LIFECYCLE, (row) =>
+    toFrontingReportResult(row as typeof frontingReports.$inferSelect),
+  );
 }

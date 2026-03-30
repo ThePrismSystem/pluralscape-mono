@@ -599,13 +599,12 @@ describe("Column existence", () => {
 //    tables that should be plaintext/simple records.
 // ---------------------------------------------------------------------------
 describe("DB-only column allowlist", () => {
-  it("frontingReports has encryptedData but no other DB-only columns", () => {
+  it("frontingReports has the expected DB-only columns: encryptedData, version, archived, archivedAt", () => {
     const cols = getTableColumns(pg.frontingReports);
     expect(cols).toHaveProperty("encryptedData");
-    for (const dbOnly of DB_ONLY_COLUMNS) {
-      if (dbOnly === "encryptedData") continue;
-      expect(cols, `frontingReports should not have ${dbOnly}`).not.toHaveProperty(dbOnly);
-    }
+    expect(cols).toHaveProperty("version");
+    expect(cols).toHaveProperty("archived");
+    expect(cols).toHaveProperty("archivedAt");
   });
 
   it("members has the expected DB-only columns: encryptedData, version, archived, archivedAt", () => {

@@ -123,6 +123,7 @@ describe("AuditEventType", () => {
         case "lifecycle-event.restored":
         case "lifecycle-event.deleted":
         case "structure-entity-link.created":
+        case "structure-entity-link.updated":
         case "structure-entity-link.deleted":
         case "structure-entity-member-link.added":
         case "structure-entity-member-link.removed":
@@ -158,6 +159,9 @@ describe("AuditEventType", () => {
         case "fronting-comment.restored":
         case "fronting-comment.deleted":
         case "fronting-report.created":
+        case "fronting-report.updated":
+        case "fronting-report.archived":
+        case "fronting-report.restored":
         case "fronting-report.deleted":
         case "timer-config.created":
         case "timer-config.updated":

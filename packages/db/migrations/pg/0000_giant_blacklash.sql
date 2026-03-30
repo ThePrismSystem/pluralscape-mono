@@ -413,7 +413,14 @@ CREATE TABLE "fronting_reports" (
 	"encrypted_data" "bytea" NOT NULL,
 	"format" varchar(50) NOT NULL,
 	"generated_at" timestamptz NOT NULL,
-	CONSTRAINT "fronting_reports_format_check" CHECK ("fronting_reports"."format" IS NULL OR "fronting_reports"."format" IN ('html', 'pdf'))
+	"created_at" timestamptz NOT NULL,
+	"updated_at" timestamptz NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
+	"archived" boolean DEFAULT false NOT NULL,
+	"archived_at" timestamptz,
+	CONSTRAINT "fronting_reports_format_check" CHECK ("fronting_reports"."format" IS NULL OR "fronting_reports"."format" IN ('html', 'pdf')),
+	CONSTRAINT "fronting_reports_version_check" CHECK ("fronting_reports"."version" >= 1),
+	CONSTRAINT "fronting_reports_archived_consistency_check" CHECK (("fronting_reports"."archived" = true) = ("fronting_reports"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "fronting_sessions" (

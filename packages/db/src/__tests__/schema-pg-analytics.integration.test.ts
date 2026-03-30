@@ -44,7 +44,7 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const ts = Date.now();
       const blob = testBlob();
 
       await db.insert(frontingReports).values({
@@ -52,7 +52,9 @@ describe("PG analytics schema", () => {
         systemId,
         encryptedData: blob,
         format: "html",
-        generatedAt: now,
+        generatedAt: ts,
+        createdAt: ts,
+        updatedAt: ts,
       });
 
       const rows = await db.select().from(frontingReports).where(eq(frontingReports.id, id));
@@ -60,21 +62,28 @@ describe("PG analytics schema", () => {
       expect(rows[0]?.systemId).toBe(systemId);
       expect(rows[0]?.encryptedData).toEqual(blob);
       expect(rows[0]?.format).toBe("html");
-      expect(rows[0]?.generatedAt).toBe(now);
+      expect(rows[0]?.generatedAt).toBe(ts);
+      expect(rows[0]?.version).toBe(1);
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+      expect(rows[0]?.createdAt).toBe(ts);
+      expect(rows[0]?.updatedAt).toBe(ts);
     });
 
     it("accepts pdf format", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const ts = Date.now();
 
       await db.insert(frontingReports).values({
         id,
         systemId,
         encryptedData: testBlob(),
         format: "pdf",
-        generatedAt: now,
+        generatedAt: ts,
+        createdAt: ts,
+        updatedAt: ts,
       });
 
       const rows = await db.select().from(frontingReports).where(eq(frontingReports.id, id));
@@ -84,7 +93,7 @@ describe("PG analytics schema", () => {
     it("rejects invalid format value", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const ts = Date.now();
 
       await expect(
         db.insert(frontingReports).values({
@@ -92,7 +101,9 @@ describe("PG analytics schema", () => {
           systemId,
           encryptedData: testBlob(),
           format: "docx" as "html",
-          generatedAt: now,
+          generatedAt: ts,
+          createdAt: ts,
+          updatedAt: ts,
         }),
       ).rejects.toThrow();
     });
@@ -101,14 +112,16 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const ts = Date.now();
 
       await db.insert(frontingReports).values({
         id,
         systemId,
         encryptedData: testBlob(),
         format: "html",
-        generatedAt: now,
+        generatedAt: ts,
+        createdAt: ts,
+        updatedAt: ts,
       });
 
       await db.delete(systems).where(eq(systems.id, systemId));
@@ -117,14 +130,16 @@ describe("PG analytics schema", () => {
     });
 
     it("rejects nonexistent systemId FK", async () => {
-      const now = Date.now();
+      const ts = Date.now();
       await expect(
         db.insert(frontingReports).values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
           encryptedData: testBlob(),
           format: "html",
-          generatedAt: now,
+          generatedAt: ts,
+          createdAt: ts,
+          updatedAt: ts,
         }),
       ).rejects.toThrow();
     });
@@ -133,13 +148,15 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const ts = Date.now();
       const values = {
         id,
         systemId,
         encryptedData: testBlob(),
         format: "html" as const,
-        generatedAt: now,
+        generatedAt: ts,
+        createdAt: ts,
+        updatedAt: ts,
       };
 
       await db.insert(frontingReports).values(values);
@@ -149,7 +166,7 @@ describe("PG analytics schema", () => {
     it("queries multiple reports by systemId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const now = Date.now();
+      const ts = Date.now();
 
       await db.insert(frontingReports).values([
         {
@@ -157,14 +174,18 @@ describe("PG analytics schema", () => {
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           format: "html",
-          generatedAt: now,
+          generatedAt: ts,
+          createdAt: ts,
+          updatedAt: ts,
         },
         {
           id: crypto.randomUUID(),
           systemId,
           encryptedData: testBlob(new Uint8Array([2])),
           format: "pdf",
-          generatedAt: now,
+          generatedAt: ts,
+          createdAt: ts,
+          updatedAt: ts,
         },
       ]);
 
@@ -179,7 +200,7 @@ describe("PG analytics schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
-      const now = Date.now();
+      const ts = Date.now();
       const blob = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(frontingReports).values({
@@ -187,11 +208,53 @@ describe("PG analytics schema", () => {
         systemId,
         encryptedData: blob,
         format: "html",
-        generatedAt: now,
+        generatedAt: ts,
+        createdAt: ts,
+        updatedAt: ts,
       });
 
       const rows = await db.select().from(frontingReports).where(eq(frontingReports.id, id));
       expect(rows[0]?.encryptedData).toEqual(blob);
+    });
+
+    it("enforces version >= 1 check constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const ts = Date.now();
+
+      await expect(
+        db.insert(frontingReports).values({
+          id: crypto.randomUUID(),
+          systemId,
+          encryptedData: testBlob(),
+          format: "html",
+          generatedAt: ts,
+          createdAt: ts,
+          updatedAt: ts,
+          version: 0,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("enforces archived consistency check", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const ts = Date.now();
+
+      // archived=true but archivedAt=null should fail
+      await expect(
+        db.insert(frontingReports).values({
+          id: crypto.randomUUID(),
+          systemId,
+          encryptedData: testBlob(),
+          format: "html",
+          generatedAt: ts,
+          createdAt: ts,
+          updatedAt: ts,
+          archived: true,
+          archivedAt: null,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

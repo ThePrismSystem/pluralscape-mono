@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { AnalyticsQuerySchema, CreateFrontingReportBodySchema } from "../analytics.js";
+import {
+  AnalyticsQuerySchema,
+  CreateFrontingReportBodySchema,
+  UpdateFrontingReportBodySchema,
+} from "../analytics.js";
 
 describe("AnalyticsQuerySchema", () => {
   it("accepts empty query (defaults to last-30-days)", () => {
@@ -139,6 +143,46 @@ describe("CreateFrontingReportBodySchema", () => {
       encryptedData: "dGVzdA==",
       format: "html",
       generatedAt: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("UpdateFrontingReportBodySchema", () => {
+  it("accepts valid payload", () => {
+    const result = UpdateFrontingReportBodySchema.safeParse({
+      encryptedData: "dXBkYXRlZA==",
+      version: 1,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing encryptedData", () => {
+    const result = UpdateFrontingReportBodySchema.safeParse({
+      version: 1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects missing version", () => {
+    const result = UpdateFrontingReportBodySchema.safeParse({
+      encryptedData: "dXBkYXRlZA==",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects version less than 1", () => {
+    const result = UpdateFrontingReportBodySchema.safeParse({
+      encryptedData: "dXBkYXRlZA==",
+      version: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty encryptedData", () => {
+    const result = UpdateFrontingReportBodySchema.safeParse({
+      encryptedData: "",
+      version: 1,
     });
     expect(result.success).toBe(false);
   });

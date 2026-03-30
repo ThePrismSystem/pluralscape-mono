@@ -543,8 +543,15 @@ CREATE TABLE `fronting_reports` (
 	`encrypted_data` blob NOT NULL,
 	`format` text NOT NULL,
 	`generated_at` integer NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`version` integer DEFAULT 1 NOT NULL,
+	`archived` integer DEFAULT false NOT NULL,
+	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "fronting_reports_format_check" CHECK("fronting_reports"."format" IS NULL OR "fronting_reports"."format" IN ('html', 'pdf'))
+	CONSTRAINT "fronting_reports_format_check" CHECK("fronting_reports"."format" IS NULL OR "fronting_reports"."format" IN ('html', 'pdf')),
+	CONSTRAINT "fronting_reports_version_check" CHECK("fronting_reports"."version" >= 1),
+	CONSTRAINT "fronting_reports_archived_consistency_check" CHECK(("fronting_reports"."archived" = true) = ("fronting_reports"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE INDEX `fronting_reports_system_id_idx` ON `fronting_reports` (`system_id`);--> statement-breakpoint

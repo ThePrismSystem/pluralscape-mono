@@ -196,6 +196,21 @@ describe("GET /systems/:systemId/members", () => {
     expect(res.status).toBe(500);
   });
 
+  it("forwards groupId to service when provided", async () => {
+    vi.mocked(listMembers).mockResolvedValueOnce(EMPTY_PAGE);
+    const groupId = "grp_550e8400-e29b-41d4-a716-446655440000";
+
+    const app = createApp();
+    await app.request(`/systems/${SYS_ID}/members?groupId=${groupId}`);
+
+    expect(vi.mocked(listMembers)).toHaveBeenCalledWith(expect.anything(), SYS_ID, MOCK_AUTH, {
+      cursor: undefined,
+      limit: 25,
+      includeArchived: false,
+      groupId,
+    });
+  });
+
   // ── Sparse fieldset tests ──────────────────────────────────────
 
   it("returns only requested fields when ?fields= is valid", async () => {

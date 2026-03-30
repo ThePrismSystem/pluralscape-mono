@@ -1,5 +1,5 @@
 {
-  "id": "3e133580-21dc-427f-a384-386c10a41128",
+  "id": "a96536db-432c-48a8-b39e-28b80fe64427",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4244,6 +4244,38 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -4281,6 +4313,14 @@
         "fronting_reports_format_check": {
           "name": "fronting_reports_format_check",
           "value": "\"fronting_reports\".\"format\" IS NULL OR \"fronting_reports\".\"format\" IN ('html', 'pdf')"
+        },
+        "fronting_reports_version_check": {
+          "name": "fronting_reports_version_check",
+          "value": "\"fronting_reports\".\"version\" >= 1"
+        },
+        "fronting_reports_archived_consistency_check": {
+          "name": "fronting_reports_archived_consistency_check",
+          "value": "(\"fronting_reports\".\"archived\" = true) = (\"fronting_reports\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false

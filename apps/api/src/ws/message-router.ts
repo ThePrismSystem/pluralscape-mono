@@ -11,7 +11,7 @@ import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../lib/db.js";
 
 import { handleAuthenticate } from "./auth-handler.js";
-import { broadcastDocumentUpdate } from "./broadcast.js";
+import { broadcastDocumentUpdateWithSync } from "./broadcast.js";
 import {
   handleDocumentLoad,
   handleFetchChanges,
@@ -34,6 +34,7 @@ import {
 } from "./ws.constants.js";
 import { formatError, makeSyncError } from "./ws.utils.js";
 
+import type { SyncBroadcastPubSub } from "./broadcast.js";
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
@@ -54,12 +55,15 @@ export interface RouterContext {
    */
   readonly documentOwnership: Map<string, SystemId>;
   readonly manager: ConnectionManager;
+  /** Valkey pub/sub for cross-instance broadcast. Null when Valkey is unavailable. */
+  readonly pubsub: SyncBroadcastPubSub | null;
 }
 
 /** Create a RouterContext with linked relay eviction → ownership + subscription cleanup. */
 export function createRouterContext(
   maxDocuments: number,
   manager: ConnectionManager,
+  pubsub: SyncBroadcastPubSub | null = null,
 ): RouterContext {
   const documentOwnership = new Map<string, SystemId>();
   const relay = new EncryptedRelay({
@@ -69,7 +73,7 @@ export function createRouterContext(
       manager.removeSubscriptionsForDoc(docId);
     },
   });
-  return { relay: relay.asService(), documentOwnership, manager };
+  return { relay: relay.asService(), documentOwnership, manager, pubsub };
 }
 
 // ── Type guards ──────────────────────────────────────────────────────
@@ -212,7 +216,7 @@ export async function routeMessage(
   log: AppLogger,
   ctx: RouterContext,
 ): Promise<void> {
-  const { relay, documentOwnership, manager } = ctx;
+  const { relay, documentOwnership, manager, pubsub } = ctx;
 
   // 1. Parse JSON
   let parsed: unknown;
@@ -565,7 +569,7 @@ export async function routeMessage(
         // Post-success: set ownership and broadcast to other subscribers
         try {
           documentOwnership.set(msg.docId, state.systemId);
-          broadcastDocumentUpdate(
+          const broadcastResult = await broadcastDocumentUpdateWithSync(
             {
               type: "DocumentUpdate",
               correlationId: null,
@@ -575,7 +579,14 @@ export async function routeMessage(
             state.connectionId,
             manager,
             log,
+            pubsub,
           );
+          if (broadcastResult.syncPublished === false) {
+            log.warn("Cross-instance sync publish failed for SubmitChangeRequest", {
+              connectionId: state.connectionId,
+              docId: msg.docId,
+            });
+          }
         } catch (err) {
           log.error("Post-submit side-effect failed for SubmitChangeRequest", {
             connectionId: state.connectionId,

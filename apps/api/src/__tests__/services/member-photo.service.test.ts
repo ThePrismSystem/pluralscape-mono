@@ -274,33 +274,33 @@ describe("listMemberPhotos", () => {
     mockAudit.mockClear();
   });
 
-  it("returns ordered photos for a member", async () => {
+  it("returns paginated photos for a member", async () => {
     const { db, chain } = mockDb();
     // assertMemberActive
-    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    chain.limit
+      .mockResolvedValueOnce([{ id: MEMBER_ID }]) // assertMemberActive
+      .mockResolvedValueOnce([makePhotoRow(), makePhotoRow({ id: "mp_second", sortOrder: 1 })]); // list query
     chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
-    // list query: .where() → chain, then .orderBy() is terminal
-    chain.orderBy.mockResolvedValueOnce([
-      makePhotoRow(),
-      makePhotoRow({ id: "mp_second", sortOrder: 1 }),
-    ]);
 
     const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result).toHaveLength(2);
-    expect(result[0]?.id).toBe(PHOTO_ID);
-    expect(result[1]?.id).toBe("mp_second");
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0]?.id).toBe(PHOTO_ID);
+    expect(result.items[1]?.id).toBe("mp_second");
+    expect(result.hasMore).toBe(false);
   });
 
   it("returns empty list when member has no photos", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    chain.limit
+      .mockResolvedValueOnce([{ id: MEMBER_ID }]) // assertMemberActive
+      .mockResolvedValueOnce([]); // list query
     chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
-    chain.orderBy.mockResolvedValueOnce([]);
 
     const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
 
-    expect(result).toEqual([]);
+    expect(result.items).toEqual([]);
+    expect(result.hasMore).toBe(false);
   });
 
   it("throws NOT_FOUND when member does not exist", async () => {
@@ -311,6 +311,39 @@ describe("listMemberPhotos", () => {
     await expect(listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
+  });
+
+  it("returns hasMore true and nextCursor when more results exist", async () => {
+    const { db, chain } = mockDb();
+    // Default limit is 25; return 26 rows to trigger hasMore=true
+    const rows = Array.from({ length: 26 }, (_, i) =>
+      makePhotoRow({ id: `mp_photo-${String(i).padStart(3, "0")}`, sortOrder: i }),
+    );
+    chain.limit
+      .mockResolvedValueOnce([{ id: MEMBER_ID }]) // assertMemberActive
+      .mockResolvedValueOnce(rows); // list query
+    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
+
+    const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(25);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).not.toBeNull();
+  });
+
+  it("returns hasMore false and null nextCursor on last page", async () => {
+    const { db, chain } = mockDb();
+    const rows = [makePhotoRow(), makePhotoRow({ id: "mp_second", sortOrder: 1 })];
+    chain.limit
+      .mockResolvedValueOnce([{ id: MEMBER_ID }]) // assertMemberActive
+      .mockResolvedValueOnce(rows); // list query
+    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
+
+    const result = await listMemberPhotos(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(2);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
   });
 });
 

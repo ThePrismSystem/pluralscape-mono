@@ -10,7 +10,7 @@ import {
   FrontingSessionQuerySchema,
   UpdateFrontingSessionBodySchema,
 } from "@pluralscape/validation";
-import { and, count, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -71,6 +71,8 @@ export interface FrontingSessionListOptions {
   readonly structureEntityId?: SystemStructureEntityId;
   readonly startFrom?: number;
   readonly startUntil?: number;
+  readonly endFrom?: number;
+  readonly endUntil?: number;
   readonly activeOnly?: boolean;
   readonly includeArchived?: boolean;
 }
@@ -196,12 +198,31 @@ export async function listFrontingSessions(
       conditions.push(eq(frontingSessions.structureEntityId, opts.structureEntityId));
     }
 
+    if (opts.activeOnly && (opts.endFrom !== undefined || opts.endUntil !== undefined)) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "VALIDATION_ERROR",
+        "Cannot combine activeOnly with endFrom or endUntil filters",
+      );
+    }
+
     if (opts.startFrom !== undefined) {
       conditions.push(gte(frontingSessions.startTime, opts.startFrom));
     }
 
     if (opts.startUntil !== undefined) {
       conditions.push(lte(frontingSessions.startTime, opts.startUntil));
+    }
+
+    // End-time filters exclude active sessions (null endTime) by requiring endTime IS NOT NULL
+    if (opts.endFrom !== undefined || opts.endUntil !== undefined) {
+      conditions.push(isNotNull(frontingSessions.endTime));
+    }
+    if (opts.endFrom !== undefined) {
+      conditions.push(gte(frontingSessions.endTime, opts.endFrom));
+    }
+    if (opts.endUntil !== undefined) {
+      conditions.push(lte(frontingSessions.endTime, opts.endUntil));
     }
 
     if (opts.activeOnly) {

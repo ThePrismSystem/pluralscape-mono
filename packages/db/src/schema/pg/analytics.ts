@@ -1,6 +1,13 @@
 import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { FRONTING_REPORT_FORMATS } from "../../helpers/enums.js";
@@ -20,10 +27,15 @@ export const frontingReports = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     format: varchar("format", { length: ENUM_MAX_LENGTH }).notNull().$type<ReportFormat>(),
     generatedAt: pgTimestamp("generated_at").notNull(),
+    ...timestamps(),
+    ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("fronting_reports_system_id_idx").on(t.systemId),
     check("fronting_reports_format_check", enumCheck(t.format, FRONTING_REPORT_FORMATS)),
+    versionCheckFor("fronting_reports", t.version),
+    archivableConsistencyCheckFor("fronting_reports", t.archived, t.archivedAt),
   ],
 );
 
