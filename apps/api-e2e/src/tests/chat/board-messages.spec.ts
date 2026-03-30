@@ -128,9 +128,9 @@ test.describe("Board Messages CRUD", () => {
     await test.step("restore board message", async () => {
       const res = await request.post(`${bmUrl}/${bmId}/restore`, { headers: authHeaders });
       expect(res.status()).toBe(200);
-      const body = (await res.json()) as BmResponse;
-      expect(body.archived).toBe(false);
-      bmVersion = body.version;
+      const body = (await res.json()) as { data: BmResponse };
+      expect(body.data.archived).toBe(false);
+      bmVersion = body.data.version;
     });
 
     await test.step("delete board message", async () => {

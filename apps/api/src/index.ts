@@ -16,7 +16,7 @@ import { initStorageAdapter } from "./lib/storage.js";
 import { accessLogMiddleware } from "./middleware/access-log.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
-import { setIdempotencyStore } from "./middleware/idempotency.js";
+import { getIdempotencyStore, setIdempotencyStore } from "./middleware/idempotency.js";
 import { BODY_SIZE_LIMIT_BYTES } from "./middleware/middleware.constants.js";
 import { createCategoryRateLimiter, setRateLimitStore } from "./middleware/rate-limit.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
@@ -96,6 +96,12 @@ export async function shutdown(server: { stop(): Promise<void> | void } | null):
   const syncPubSub = getSyncPubSub();
   if (syncPubSub) {
     await syncPubSub.disconnect();
+  }
+
+  // Phase 1b: Disconnect idempotency store
+  const idempotencyStore = getIdempotencyStore();
+  if (idempotencyStore?.disconnect) {
+    await idempotencyStore.disconnect();
   }
 
   // Phase 2: Close all WebSocket connections gracefully

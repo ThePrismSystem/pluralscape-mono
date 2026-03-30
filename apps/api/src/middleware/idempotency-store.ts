@@ -10,4 +10,5 @@ export interface IdempotencyStore {
   set(accountId: string, key: string, response: CachedResponse): Promise<void>;
   acquireLock(accountId: string, key: string): Promise<boolean>;
   releaseLock(accountId: string, key: string): Promise<void>;
+  disconnect?(): Promise<void>;
 }

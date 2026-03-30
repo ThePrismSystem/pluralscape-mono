@@ -140,10 +140,10 @@ test.describe("Friend lifecycle", () => {
       );
       expect(res.status()).toBe(HTTP_OK);
       const body = (await res.json()) as {
-        pendingRotation: { systemId: string; bucketId: string };
+        data: { pendingRotation: { systemId: string; bucketId: string } };
       };
-      expect(body.pendingRotation.systemId).toBe(systemId);
-      expect(body.pendingRotation.bucketId).toBe(bucketId);
+      expect(body.data.pendingRotation.systemId).toBe(systemId);
+      expect(body.data.pendingRotation.bucketId).toBe(bucketId);
     });
 
     await test.step("list is empty after unassign", async () => {

@@ -29,7 +29,7 @@ test.describe("Friend notification preferences", () => {
       headers: headersA,
     });
     expect(codeRes.status()).toBe(HTTP_CREATED);
-    const { code } = (await codeRes.json()) as { code: string };
+    const { data: { code } } = (await codeRes.json()) as { data: { code: string } };
 
     // Account B redeems it
     const redeemRes = await request.post("/v1/account/friend-codes/redeem", {
@@ -37,8 +37,8 @@ test.describe("Friend notification preferences", () => {
       data: { code },
     });
     expect(redeemRes.status()).toBe(HTTP_CREATED);
-    const { connectionIds } = (await redeemRes.json()) as {
-      connectionIds: readonly [string, string];
+    const { data: { connectionIds } } = (await redeemRes.json()) as {
+      data: { connectionIds: readonly [string, string] };
     };
 
     // Return account A's connection ID (first in the pair)
@@ -58,7 +58,7 @@ test.describe("Friend notification preferences", () => {
       },
     });
     expect(regRes.ok()).toBe(true);
-    const { sessionToken } = (await regRes.json()) as { sessionToken: string };
+    const { data: { sessionToken } } = (await regRes.json()) as { data: { sessionToken: string } };
     const headersB = { Authorization: `Bearer ${sessionToken}` };
 
     const connectionId = await createFriendConnection(request, authHeaders, headersB);

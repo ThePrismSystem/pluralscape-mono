@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
+import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { listFriendBucketAssignments } from "../../../services/bucket-assignment.service.js";
 
@@ -19,5 +20,5 @@ listRoute.get("/", async (c) => {
 
   const db = await getDb();
   const result = await listFriendBucketAssignments(db, systemId, bucketId, auth);
-  return c.json({ data: result });
+  return c.json(envelope(result));
 });

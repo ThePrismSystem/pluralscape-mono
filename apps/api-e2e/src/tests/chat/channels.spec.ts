@@ -128,7 +128,7 @@ test.describe("Channels CRUD", () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      expect(body.archived).toBe(false);
+      expect(body.data.archived).toBe(false);
     });
 
     await test.step("delete channel (no dependents)", async () => {

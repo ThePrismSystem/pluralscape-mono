@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logger.js";
 import {
   IDEMPOTENCY_CACHE_TTL_SEC,
   IDEMPOTENCY_KEY_PREFIX,
@@ -47,7 +48,13 @@ export class ValkeyIdempotencyStore implements IdempotencyStore {
   async get(accountId: string, key: string): Promise<CachedResponse | null> {
     const raw = await this.client.get(this.cacheKey(accountId, key));
     if (!raw) return null;
-    return JSON.parse(raw) as CachedResponse;
+    try {
+      return JSON.parse(raw) as CachedResponse;
+    } catch {
+      logger.warn("Corrupt idempotency cache entry, deleting", { accountId, key });
+      await this.client.del(this.cacheKey(accountId, key));
+      return null;
+    }
   }
 
   async set(accountId: string, key: string, response: CachedResponse): Promise<void> {

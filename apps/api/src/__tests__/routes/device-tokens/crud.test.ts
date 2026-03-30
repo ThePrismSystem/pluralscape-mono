@@ -177,6 +177,22 @@ describe("GET /systems/:systemId/device-tokens", () => {
       expect.objectContaining({ limit: 25 }),
     );
   });
+
+  it("passes cursor query param to service", async () => {
+    const { toCursor } = await import("../../../lib/pagination.js");
+    const cursor = toCursor("some-entity-id");
+
+    vi.mocked(listDeviceTokens).mockResolvedValueOnce(PAGINATED_EMPTY as never);
+
+    await createApp().request(`${BASE_URL}?cursor=${encodeURIComponent(cursor)}`);
+
+    expect(vi.mocked(listDeviceTokens)).toHaveBeenCalledWith(
+      {},
+      SYSTEM_ID,
+      MOCK_AUTH,
+      expect.objectContaining({ cursor: "some-entity-id" }),
+    );
+  });
 });
 
 describe("POST /systems/:systemId/device-tokens/:tokenId/revoke", () => {

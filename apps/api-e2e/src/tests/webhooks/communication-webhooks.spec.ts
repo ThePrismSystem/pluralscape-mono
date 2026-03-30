@@ -73,7 +73,7 @@ test.describe("Communication Webhook Delivery", () => {
       });
       expect(res.status()).toBe(201);
       const body = await res.json();
-      channelId = body.id as string;
+      channelId = body.data.id as string;
     });
 
     await test.step("verify delivery record created", async () => {
@@ -136,7 +136,7 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
-      pollId = (await res.json()).id as string;
+      pollId = (await res.json()).data.id as string;
     });
 
     await test.step("verify delivery record created", async () => {
@@ -195,7 +195,7 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
-      ackId = (await res.json()).id as string;
+      ackId = (await res.json()).data.id as string;
     });
 
     await test.step("verify delivery record created", async () => {
@@ -257,7 +257,7 @@ test.describe("Communication Webhook Delivery", () => {
         },
       });
       expect(res.status()).toBe(201);
-      pollId = (await res.json()).id as string;
+      pollId = (await res.json()).data.id as string;
     });
 
     await test.step("verify no delivery for unsubscribed event", async () => {

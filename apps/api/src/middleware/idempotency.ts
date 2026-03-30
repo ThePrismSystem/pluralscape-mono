@@ -1,5 +1,6 @@
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_INTERNAL_SERVER_ERROR } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { getContextLogger } from "../lib/logger.js";
 
 import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENCY_KEY_MAX_LENGTH } from "./idempotency.constants.js";
 import { MemoryIdempotencyStore } from "./stores/memory-idempotency-store.js";
@@ -11,6 +12,10 @@ let sharedStore: IdempotencyStore | undefined;
 
 export function setIdempotencyStore(store: IdempotencyStore): void {
   sharedStore = store;
+}
+
+export function getIdempotencyStore(): IdempotencyStore | undefined {
+  return sharedStore;
 }
 
 export function _resetIdempotencyStoreForTesting(): void {
@@ -33,7 +38,9 @@ export function createIdempotencyMiddleware(): MiddlewareHandler {
     }
 
     const store = sharedStore ?? fallbackStore;
-    const auth = c.get("auth") as { accountId: string };
+    const raw: unknown = c.get("auth");
+    const auth = raw as { accountId?: string } | undefined;
+    if (!auth?.accountId) return next();
     const accountId = auth.accountId;
 
     // Check cache
@@ -58,11 +65,22 @@ export function createIdempotencyMiddleware(): MiddlewareHandler {
     try {
       await next();
       const response = c.res;
+      // Don't cache server errors — they're transient and should be retryable
+      if (response.status >= HTTP_INTERNAL_SERVER_ERROR) return;
       const body = await response.clone().text();
-      await store.set(accountId, idempotencyKey, {
-        statusCode: response.status,
-        body,
-      });
+      try {
+        await store.set(accountId, idempotencyKey, {
+          statusCode: response.status,
+          body,
+        });
+      } catch (cacheErr: unknown) {
+        const log = getContextLogger(c);
+        log.warn("Failed to cache idempotency response", {
+          accountId,
+          idempotencyKey,
+          err: cacheErr instanceof Error ? cacheErr : new Error(String(cacheErr)),
+        });
+      }
     } finally {
       await store.releaseLock(accountId, idempotencyKey);
     }
