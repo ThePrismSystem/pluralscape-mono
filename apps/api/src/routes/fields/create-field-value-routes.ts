@@ -94,7 +94,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
 
     const db = await getDb();
     const result = await listFieldValuesForOwner(db, systemId, owner, auth);
-    return c.json(envelope({ data: result }));
+    return c.json({ data: result });
   });
 
   // ── UPDATE (PUT /:fieldDefId) ───────────────────────────────────

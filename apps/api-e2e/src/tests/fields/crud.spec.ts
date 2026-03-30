@@ -135,10 +135,8 @@ test.describe("Fields CRUD", () => {
       expect(res.status()).toBe(200);
       const body = await res.json();
       expect(body).toHaveProperty("data");
-      expect(body.data).toHaveProperty("items");
-      const ids = (body.data.items as { fieldDefinitionId: string }[]).map(
-        (v) => v.fieldDefinitionId,
-      );
+      expect(Array.isArray(body.data)).toBe(true);
+      const ids = (body.data as { fieldDefinitionId: string }[]).map((v) => v.fieldDefinitionId);
       expect(ids).toContain(fieldDef.id);
     });
 

@@ -1,10 +1,10 @@
 import { deviceTokens } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { and, desc, eq, isNull, lt } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
+import { buildCompositePaginatedResult, fromCompositeCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -275,19 +275,31 @@ export async function listDeviceTokens(
     const conditions = [eq(deviceTokens.systemId, systemId), isNull(deviceTokens.revokedAt)];
 
     if (opts?.cursor) {
-      conditions.push(lt(deviceTokens.id, opts.cursor));
+      const decoded = fromCompositeCursor(opts.cursor, "dt");
+      const cursorCondition = or(
+        lt(deviceTokens.createdAt, decoded.sortValue),
+        and(eq(deviceTokens.createdAt, decoded.sortValue), lt(deviceTokens.id, decoded.id)),
+      );
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
     }
 
     const rows = await tx
       .select()
       .from(deviceTokens)
       .where(and(...conditions))
-      .orderBy(desc(deviceTokens.id))
+      .orderBy(desc(deviceTokens.createdAt), desc(deviceTokens.id))
       .limit(limit + 1);
 
-    return buildPaginatedResult(rows, limit, (row) => {
-      const result = toDeviceTokenResult(row);
-      return { ...result, token: maskToken(result.token) };
-    });
+    return buildCompositePaginatedResult(
+      rows,
+      limit,
+      (row) => {
+        const result = toDeviceTokenResult(row);
+        return { ...result, token: maskToken(result.token) };
+      },
+      (item) => item.createdAt,
+    );
   });
 }
