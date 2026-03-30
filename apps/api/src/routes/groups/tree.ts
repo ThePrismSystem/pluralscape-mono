@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { getGroupTree } from "../../services/group.service.js";
 
@@ -18,5 +19,5 @@ treeRoute.get("/tree", async (c) => {
 
   const db = await getDb();
   const result = await getGroupTree(db, systemId, auth);
-  return c.json(result);
+  return c.json(envelope(result));
 });

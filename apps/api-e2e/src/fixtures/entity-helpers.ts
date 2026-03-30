@@ -36,8 +36,8 @@ export async function createMember(
     data: { encryptedData: encryptForApi({ name }) },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { id: string; version: number };
-  return { id: body.id, version: body.version };
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
 }
 
 /**
@@ -55,8 +55,8 @@ export async function createGroup(
     data: { encryptedData: encryptForApi({ name }), parentGroupId, sortOrder: 0 },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { id: string; version: number };
-  return { id: body.id, version: body.version };
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
 }
 
 /**

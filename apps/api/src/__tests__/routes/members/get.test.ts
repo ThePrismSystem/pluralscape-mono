@@ -67,9 +67,9 @@ describe("GET /systems/:systemId/members/:memberId", () => {
     const res = await app.request(`/systems/${SYS_ID}/members/${MEM_ID}`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; encryptedData: string };
-    expect(body.id).toBe(MEM_ID);
-    expect(body.encryptedData).toBe("dGVzdA==");
+    const body = (await res.json()) as { data: { id: string; encryptedData: string } };
+    expect(body.data.id).toBe(MEM_ID);
+    expect(body.data.encryptedData).toBe("dGVzdA==");
   });
 
   it("forwards systemId, memberId, and auth to service", async () => {

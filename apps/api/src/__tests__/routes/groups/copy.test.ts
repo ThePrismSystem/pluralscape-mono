@@ -74,8 +74,8 @@ describe("POST /systems/:id/groups/:groupId/copy", () => {
     const res = await postJSON(app, { copyMemberships: true });
 
     expect(res.status).toBe(201);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("grp_copy");
+    const body = (await res.json()) as { data: { id: string } };
+    expect(body.data.id).toBe("grp_copy");
   });
 
   it("returns 404 when source group not found", async () => {

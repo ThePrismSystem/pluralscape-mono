@@ -71,8 +71,8 @@ describe("PUT /systems/:id/groups/:groupId", () => {
     const res = await putJSON(app, VALID_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { version: number };
-    expect(body.version).toBe(2);
+    const body = (await res.json()) as { data: { version: number } };
+    expect(body.data.version).toBe(2);
   });
 
   it("forwards args to service", async () => {

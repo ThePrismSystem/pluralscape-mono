@@ -69,9 +69,9 @@ describe("POST /systems/:systemId/members/:memberId/restore", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string; archived: boolean };
-    expect(body.id).toBe(MEM_ID);
-    expect(body.archived).toBe(false);
+    const body = (await res.json()) as { data: { id: string; archived: boolean } };
+    expect(body.data.id).toBe(MEM_ID);
+    expect(body.data.archived).toBe(false);
   });
 
   it("forwards systemId, memberId, auth, and audit writer to service", async () => {

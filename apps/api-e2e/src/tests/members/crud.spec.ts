@@ -37,20 +37,22 @@ test.describe("Members CRUD", () => {
         data: { encryptedData },
       });
       expect(createRes.status()).toBe(201);
-      const member = await createRes.json();
-      expect(member).toHaveProperty("id");
-      memberId = member.id as string;
+      const body = (await createRes.json()) as { data: { id: string } };
+      expect(body.data).toHaveProperty("id");
+      memberId = body.data.id;
     });
 
     await test.step("read and verify encryption round-trip", async () => {
       const getRes = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
       expect(getRes.status()).toBe(200);
-      const fetched = await getRes.json();
-      expect(fetched.id).toBe(memberId);
+      const body = (await getRes.json()) as {
+        data: { id: string; encryptedData: string; version: number };
+      };
+      expect(body.data.id).toBe(memberId);
 
-      const decrypted = decryptFromApi(fetched.encryptedData as string);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(MEMBER_PROFILE);
-      memberVersion = fetched.version as number;
+      memberVersion = body.data.version;
     });
 
     await test.step("list includes created member", async () => {
@@ -72,8 +74,8 @@ test.describe("Members CRUD", () => {
       expect(updateRes.status()).toBe(200);
 
       const updatedGet = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
-      const updatedMember = await updatedGet.json();
-      const decryptedUpdate = decryptFromApi(updatedMember.encryptedData as string);
+      const updatedBody = (await updatedGet.json()) as { data: { encryptedData: string } };
+      const decryptedUpdate = decryptFromApi(updatedBody.data.encryptedData);
       expect(decryptedUpdate).toEqual(UPDATED_PROFILE);
     });
 

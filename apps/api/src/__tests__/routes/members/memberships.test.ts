@@ -70,12 +70,11 @@ describe("GET /systems/:systemId/members/:memberId/memberships", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      groups: { groupId: string }[];
-      structureEntities: unknown[];
+      data: { groups: { groupId: string }[]; structureEntities: unknown[] };
     };
-    expect(body.groups).toHaveLength(1);
-    expect(body.groups[0]?.groupId).toBe("grp_test");
-    expect(body.structureEntities).toEqual([]);
+    expect(body.data.groups).toHaveLength(1);
+    expect(body.data.groups[0]?.groupId).toBe("grp_test");
+    expect(body.data.structureEntities).toEqual([]);
   });
 
   it("returns 404 when member not found", async () => {

@@ -35,22 +35,24 @@ test.describe("Groups CRUD", () => {
         data: { encryptedData, parentGroupId: null, sortOrder: 0 },
       });
       expect(createRes.status()).toBe(201);
-      const group = await createRes.json();
-      expect(group).toHaveProperty("id");
-      expect(group).toHaveProperty("version");
-      groupId = group.id as string;
-      groupVersion = group.version as number;
+      const body = (await createRes.json()) as { data: { id: string; version: number } };
+      expect(body.data).toHaveProperty("id");
+      expect(body.data).toHaveProperty("version");
+      groupId = body.data.id;
+      groupVersion = body.data.version;
     });
 
     await test.step("get and verify encryption round-trip", async () => {
       const getRes = await request.get(`${groupsUrl}/${groupId}`, { headers: authHeaders });
       expect(getRes.status()).toBe(200);
-      const fetched = await getRes.json();
-      expect(fetched.id).toBe(groupId);
+      const body = (await getRes.json()) as {
+        data: { id: string; encryptedData: string; version: number };
+      };
+      expect(body.data.id).toBe(groupId);
 
-      const decrypted = decryptFromApi(fetched.encryptedData as string);
+      const decrypted = decryptFromApi(body.data.encryptedData);
       expect(decrypted).toEqual(GROUP_PROFILE);
-      groupVersion = fetched.version as number;
+      groupVersion = body.data.version;
     });
 
     await test.step("list includes created group", async () => {
@@ -78,10 +80,12 @@ test.describe("Groups CRUD", () => {
       expect(updateRes.status()).toBe(200);
 
       const updatedGet = await request.get(`${groupsUrl}/${groupId}`, { headers: authHeaders });
-      const updatedGroup = await updatedGet.json();
-      const decryptedUpdate = decryptFromApi(updatedGroup.encryptedData as string);
+      const updatedBody = (await updatedGet.json()) as {
+        data: { encryptedData: string; version: number };
+      };
+      const decryptedUpdate = decryptFromApi(updatedBody.data.encryptedData);
       expect(decryptedUpdate).toEqual(UPDATED_GROUP_PROFILE);
-      groupVersion = updatedGroup.version as number;
+      groupVersion = updatedBody.data.version;
     });
 
     await test.step("archive", async () => {
@@ -123,10 +127,13 @@ test.describe("Groups CRUD", () => {
 
     const treeRes = await request.get(`${groupsUrl}/tree`, { headers: authHeaders });
     expect(treeRes.status()).toBe(200);
-    const tree = (await treeRes.json()) as Array<{
-      id: string;
-      children?: Array<{ id: string }>;
-    }>;
+    const treeBody = (await treeRes.json()) as {
+      data: Array<{
+        id: string;
+        children?: Array<{ id: string }>;
+      }>;
+    };
+    const tree = treeBody.data;
 
     const parentNode = tree.find((node) => node.id === parent.id);
     expect(parentNode).toBeDefined();
@@ -158,10 +165,13 @@ test.describe("Groups CRUD", () => {
 
     const treeRes = await request.get(`${groupsUrl}/tree`, { headers: authHeaders });
     expect(treeRes.status()).toBe(200);
-    const tree = (await treeRes.json()) as Array<{
-      id: string;
-      children?: Array<{ id: string }>;
-    }>;
+    const treeBody = (await treeRes.json()) as {
+      data: Array<{
+        id: string;
+        children?: Array<{ id: string }>;
+      }>;
+    };
+    const tree = treeBody.data;
 
     const parentANode = tree.find((node) => node.id === parentA.id);
     const parentBNode = tree.find((node) => node.id === parentB.id);
