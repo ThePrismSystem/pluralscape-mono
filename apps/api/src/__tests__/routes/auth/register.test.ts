@@ -134,4 +134,20 @@ describe("POST /register", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
   });
+
+  describe("Cache-Control", () => {
+    it("sets Cache-Control: no-store on successful registration", async () => {
+      vi.mocked(registerAccount).mockResolvedValueOnce({
+        sessionToken: "tok_cc",
+        recoveryKey: "rk_cc",
+        accountId: "acct_cc",
+        accountType: "system",
+      });
+
+      const app = createApp();
+      const res = await postJSON(app, "/register", VALID_BODY);
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
+  });
 });

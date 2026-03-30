@@ -47,6 +47,37 @@ const { recoveryKeyRoutes } = await import("../../../routes/auth/recovery-key.js
 
 const createApp = () => createRouteApp("/auth/recovery-key", recoveryKeyRoutes);
 
+// ── Cache-Control ──────────────────────────────────────────────
+
+describe("Cache-Control", () => {
+  it("sets Cache-Control: no-store on GET /auth/recovery-key/status", async () => {
+    vi.mocked(getRecoveryKeyStatus).mockResolvedValueOnce({
+      hasActiveKey: true,
+      createdAt: toUnixMillis(1000),
+    });
+
+    const app = createApp();
+    const res = await app.request("/auth/recovery-key/status", { method: "GET" });
+
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("sets Cache-Control: no-store on POST /auth/recovery-key/regenerate", async () => {
+    vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
+      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+    });
+
+    const app = createApp();
+    const res = await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+    });
+
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+});
+
 // ── GET /auth/recovery-key/status ────────────────────────────────
 
 describe("GET /auth/recovery-key/status", () => {

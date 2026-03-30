@@ -26,6 +26,7 @@ registerRoute.post("/", async (c) => {
 
   try {
     const result = await registerAccount(db, body, platform, audit);
+    c.header("Cache-Control", "no-store");
     return c.json(
       envelope({
         sessionToken: result.sessionToken,

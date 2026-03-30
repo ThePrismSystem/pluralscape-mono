@@ -161,4 +161,30 @@ describe("POST /login", () => {
     // Fixed Retry-After: always the full window duration (900s = 15 min)
     expect(res.headers.get("Retry-After")).toBe("900");
   });
+
+  describe("Cache-Control", () => {
+    it("sets Cache-Control: no-store on successful login", async () => {
+      vi.mocked(loginAccount).mockResolvedValueOnce({
+        sessionToken: "tok_cc",
+        accountId: "acct_cc",
+        systemId: "sys_cc",
+        accountType: "system",
+      });
+
+      const app = createApp();
+      const res = await postJSON(app, "/login", VALID_CREDENTIALS);
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
+
+    it("sets Cache-Control: no-store on throttled response", async () => {
+      const { LoginThrottledError } = await import("../../../services/auth.service.js");
+      vi.mocked(loginAccount).mockRejectedValueOnce(new LoginThrottledError(Date.now() + 60_000));
+
+      const app = createApp();
+      const res = await postJSON(app, "/login", VALID_CREDENTIALS);
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
+  });
 });

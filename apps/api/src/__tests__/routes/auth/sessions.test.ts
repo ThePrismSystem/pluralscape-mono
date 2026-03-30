@@ -79,6 +79,19 @@ describe("sessions route", () => {
     vi.restoreAllMocks();
   });
 
+  // ── Cache-Control ──────────────────────────────────────────────
+
+  describe("Cache-Control", () => {
+    it("sets Cache-Control: no-store on GET /auth/sessions", async () => {
+      vi.mocked(listSessions).mockResolvedValueOnce({ sessions: [], nextCursor: null });
+
+      const app = createApp();
+      const res = await app.request("/auth/sessions");
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
+  });
+
   // ── GET /auth/sessions ──────────────────────────────────────────
 
   describe("GET /auth/sessions", () => {
