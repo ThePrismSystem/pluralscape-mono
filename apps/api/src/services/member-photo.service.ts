@@ -179,6 +179,39 @@ export async function createMemberPhoto(
   });
 }
 
+// ── GET ────────────────────────────────────────────────────────────
+
+export async function getMemberPhoto(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  memberId: MemberId,
+  photoId: MemberPhotoId,
+  auth: AuthContext,
+): Promise<MemberPhotoResult> {
+  assertSystemOwnership(systemId, auth);
+
+  return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(memberPhotos)
+      .where(
+        and(
+          eq(memberPhotos.id, photoId),
+          eq(memberPhotos.memberId, memberId),
+          eq(memberPhotos.systemId, systemId),
+          eq(memberPhotos.archived, false),
+        ),
+      )
+      .limit(1);
+
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Photo not found");
+    }
+
+    return toPhotoResult(row);
+  });
+}
+
 // ── LIST ────────────────────────────────────────────────────────────
 
 export async function listMemberPhotos(

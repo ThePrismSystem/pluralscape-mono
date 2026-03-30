@@ -36,6 +36,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 const { InvalidInputError } = await import("@pluralscape/crypto");
 const {
   createMemberPhoto,
+  getMemberPhoto,
   listMemberPhotos,
   reorderMemberPhotos,
   archiveMemberPhoto,
@@ -230,6 +231,40 @@ describe("createMemberPhoto", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+describe("getMemberPhoto", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns a single photo by id", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([makePhotoRow()]);
+
+    const result = await getMemberPhoto(db, SYSTEM_ID, MEMBER_ID, PHOTO_ID, AUTH);
+
+    expect(result.id).toBe(PHOTO_ID);
+    expect(result.memberId).toBe(MEMBER_ID);
+  });
+
+  it("throws NOT_FOUND when photo does not exist", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await expect(getMemberPhoto(db, SYSTEM_ID, MEMBER_ID, PHOTO_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("rejects cross-system access", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(getMemberPhoto(db, SYSTEM_ID, MEMBER_ID, PHOTO_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });
 
