@@ -197,6 +197,8 @@ async function start(): Promise<void> {
     if (connected) {
       setNotificationPubSub(notifyPubSub);
       logger.info("Notification SSE pub/sub connected");
+    } else {
+      logger.warn("Notification SSE pub/sub failed — cross-instance notifications disabled");
     }
 
     // Initialize sync pub/sub for cross-instance WebSocket broadcast
@@ -208,6 +210,8 @@ async function start(): Promise<void> {
     if (syncConnected) {
       setSyncPubSub(syncPubSub);
       logger.info("Sync WebSocket pub/sub connected");
+    } else {
+      logger.warn("Sync WebSocket pub/sub failed — cross-instance broadcast disabled");
     }
   }
 
