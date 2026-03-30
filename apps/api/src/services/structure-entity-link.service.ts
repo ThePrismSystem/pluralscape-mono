@@ -1,15 +1,15 @@
 import { systemStructureEntityLinks } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateStructureEntityLinkBodySchema } from "@pluralscape/validation";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
-import { DEFAULT_PAGE_LIMIT } from "../service.constants.js";
+import { DEFAULT_PAGE_LIMIT, MAX_ANCESTOR_DEPTH, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -71,18 +71,70 @@ export async function createEntityLink(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
   }
 
+  const { entityId, parentEntityId, sortOrder } = parsed.data;
+
+  if (entityId === parentEntityId) {
+    throw new ApiHttpError(HTTP_CONFLICT, "CYCLE_DETECTED", "Cannot link entity to itself");
+  }
+
   const linkId = createId(ID_PREFIXES.structureEntityLink);
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    if (parentEntityId !== null) {
+      const ancestorResult = await tx.execute<{ count: string }>(sql`
+        WITH RECURSIVE ancestors AS (
+          SELECT entity_id, parent_entity_id FROM system_structure_entity_links
+          WHERE entity_id = ${parentEntityId} AND system_id = ${systemId}
+          UNION ALL
+          SELECT l.entity_id, l.parent_entity_id FROM system_structure_entity_links l
+          INNER JOIN ancestors a ON l.entity_id = a.parent_entity_id
+          WHERE l.system_id = ${systemId}
+        )
+        SELECT COUNT(*) AS count FROM ancestors WHERE parent_entity_id = ${entityId}
+      `);
+
+      const cycleRow: { count: string } | undefined = ancestorResult[0];
+      const cycleCount = Number(cycleRow?.count ?? 0);
+      if (cycleCount > 0) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "CYCLE_DETECTED",
+          "Creating this link would form a cycle",
+        );
+      }
+
+      const depthResult = await tx.execute<{ count: string }>(sql`
+        WITH RECURSIVE ancestors AS (
+          SELECT entity_id, parent_entity_id FROM system_structure_entity_links
+          WHERE entity_id = ${parentEntityId} AND system_id = ${systemId}
+          UNION ALL
+          SELECT l.entity_id, l.parent_entity_id FROM system_structure_entity_links l
+          INNER JOIN ancestors a ON l.entity_id = a.parent_entity_id
+          WHERE l.system_id = ${systemId}
+        )
+        SELECT COUNT(*) AS count FROM ancestors
+      `);
+
+      const depthRow: { count: string } | undefined = depthResult[0];
+      const ancestorCount = Number(depthRow?.count ?? 0);
+      if (ancestorCount >= MAX_ANCESTOR_DEPTH) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "MAX_DEPTH_EXCEEDED",
+          "Maximum nesting depth exceeded",
+        );
+      }
+    }
+
     const [row] = await tx
       .insert(systemStructureEntityLinks)
       .values({
         id: linkId,
         systemId,
-        entityId: parsed.data.entityId,
-        parentEntityId: parsed.data.parentEntityId,
-        sortOrder: parsed.data.sortOrder,
+        entityId,
+        parentEntityId,
+        sortOrder,
         createdAt: timestamp,
       })
       .returning();
@@ -113,7 +165,7 @@ export async function listEntityLinks(
 ): Promise<PaginatedResult<EntityLinkResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const limit = opts?.limit ?? DEFAULT_PAGE_LIMIT;
+  const limit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [eq(systemStructureEntityLinks.systemId, systemId)];

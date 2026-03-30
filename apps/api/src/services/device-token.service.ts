@@ -153,29 +153,12 @@ export async function updateDeviceToken(
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     const timestamp = now();
 
-    // Read current row to merge optional fields
-    const [current] = await tx
-      .select()
-      .from(deviceTokens)
-      .where(
-        and(
-          eq(deviceTokens.id, tokenId),
-          eq(deviceTokens.systemId, systemId),
-          isNull(deviceTokens.revokedAt),
-        ),
-      )
-      .limit(1);
-
-    if (!current) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Device token not found");
-    }
-
     const [row] = await tx
       .update(deviceTokens)
       .set({
         lastActiveAt: timestamp,
-        platform: params.platform ?? current.platform,
-        token: params.token ?? current.token,
+        ...(params.platform !== undefined && { platform: params.platform }),
+        ...(params.token !== undefined && { token: params.token }),
       })
       .where(
         and(

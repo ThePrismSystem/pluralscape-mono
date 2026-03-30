@@ -198,9 +198,7 @@ describe("device-token service", () => {
 
   describe("updateDeviceToken", () => {
     it("updates token with all fields provided", async () => {
-      // select current row → found
-      mockTx.limit.mockResolvedValueOnce([makeTokenRow()]);
-      // update returning → updated row
+      // Single UPDATE … RETURNING — no initial SELECT
       mockTx.returning.mockResolvedValueOnce([
         makeTokenRow({ platform: "android", token: "newtoken1234567890newtoken12789012" }),
       ]);
@@ -223,7 +221,6 @@ describe("device-token service", () => {
     });
 
     it("merges only provided fields (platform only)", async () => {
-      mockTx.limit.mockResolvedValueOnce([makeTokenRow()]);
       mockTx.returning.mockResolvedValueOnce([makeTokenRow({ platform: "android" })]);
 
       const result = await updateDeviceToken(
@@ -241,7 +238,6 @@ describe("device-token service", () => {
 
     it("merges only provided fields (token only)", async () => {
       const newToken = "replacement_token_value_1234567890";
-      mockTx.limit.mockResolvedValueOnce([makeTokenRow()]);
       mockTx.returning.mockResolvedValueOnce([makeTokenRow({ token: newToken })]);
 
       const result = await updateDeviceToken(
@@ -257,25 +253,8 @@ describe("device-token service", () => {
       expect(mockAudit).toHaveBeenCalled();
     });
 
-    it("throws NOT_FOUND when current token does not exist", async () => {
-      mockTx.limit.mockResolvedValueOnce([]);
-
-      await expect(
-        updateDeviceToken(
-          {} as never,
-          SYSTEM_ID,
-          TOKEN_ID,
-          { platform: "android" },
-          AUTH,
-          mockAudit,
-        ),
-      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
-    });
-
-    it("throws NOT_FOUND when update returns empty (race condition)", async () => {
-      // select current row → found
-      mockTx.limit.mockResolvedValueOnce([makeTokenRow()]);
-      // update returning → empty (concurrent revocation)
+    it("throws NOT_FOUND when token does not exist", async () => {
+      // UPDATE … RETURNING returns empty — token not found or revoked
       mockTx.returning.mockResolvedValueOnce([]);
 
       await expect(

@@ -8,10 +8,11 @@ import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ───────────────────────────────────────────────────────────
 
-const mockVerifyPassword = vi.fn<(hash: string, password: string) => boolean>();
+const mockVerifyPassword = vi.fn<(hash: string, password: string) => Promise<boolean>>();
 
-vi.mock("@pluralscape/crypto", () => ({
-  verifyPassword: (hash: string, password: string): boolean => mockVerifyPassword(hash, password),
+vi.mock("../lib/pwhash-offload.js", () => ({
+  verifyPasswordOffload: (hash: string, password: string): Promise<boolean> =>
+    mockVerifyPassword(hash, password),
 }));
 
 vi.mock("../lib/rls-context.js", () => ({
@@ -84,7 +85,7 @@ describe("purgeSystem", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: true }]);
     chain.limit.mockResolvedValueOnce([{ passwordHash: "hashed" }]);
-    mockVerifyPassword.mockReturnValue(false);
+    mockVerifyPassword.mockReturnValue(Promise.resolve(false));
 
     await expect(
       purgeSystem(db, SYSTEM_ID, { password: "wrong" }, stubAuth(), stubAudit()),
@@ -109,7 +110,7 @@ describe("purgeSystem", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: true }]);
     chain.limit.mockResolvedValueOnce([{ passwordHash: "hashed" }]);
-    mockVerifyPassword.mockReturnValue(true);
+    mockVerifyPassword.mockReturnValue(Promise.resolve(true));
     chain.returning.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
 
     const audit = stubAudit();
@@ -123,7 +124,7 @@ describe("purgeSystem", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID, archived: true }]);
     chain.limit.mockResolvedValueOnce([{ passwordHash: "hashed" }]);
-    mockVerifyPassword.mockReturnValue(true);
+    mockVerifyPassword.mockReturnValue(Promise.resolve(true));
     chain.returning.mockResolvedValueOnce([]);
 
     await expect(

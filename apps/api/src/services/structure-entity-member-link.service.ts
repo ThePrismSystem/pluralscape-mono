@@ -9,7 +9,7 @@ import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
-import { DEFAULT_PAGE_LIMIT } from "../service.constants.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -114,7 +114,7 @@ export async function listEntityMemberLinks(
 ): Promise<PaginatedResult<EntityMemberLinkResult>> {
   assertSystemOwnership(systemId, auth);
 
-  const limit = opts?.limit ?? DEFAULT_PAGE_LIMIT;
+  const limit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   return withTenantRead(db, tenantCtx(systemId, auth), async (tx) => {
     const conditions = [eq(systemStructureEntityMemberLinks.systemId, systemId)];

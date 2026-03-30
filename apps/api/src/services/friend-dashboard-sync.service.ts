@@ -13,9 +13,9 @@ import { withCrossAccountRead } from "../lib/rls-context.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
-  BucketContentEntityType,
   BucketId,
   FriendConnectionId,
+  FriendDashboardEntityType,
   FriendDashboardSyncEntry,
   FriendDashboardSyncResponse,
   SystemId,
@@ -33,7 +33,7 @@ interface BucketSyncTableConfig {
   readonly systemId: PgColumn;
   readonly archived: PgColumn;
   readonly updatedAt: PgColumn;
-  readonly entityType: BucketContentEntityType;
+  readonly entityType: FriendDashboardEntityType;
 }
 
 const MEMBER_SYNC_CONFIG: BucketSyncTableConfig = {
@@ -114,18 +114,32 @@ async function bucketFilteredSyncEntry(
 async function frontingSessionSyncEntry(
   tx: PostgresJsDatabase,
   systemId: SystemId,
+  bucketIds: readonly BucketId[],
 ): Promise<FriendDashboardSyncEntry> {
+  if (bucketIds.length === 0) {
+    return { entityType: "fronting-session", count: 0, latestUpdatedAt: 0 as UnixMillis };
+  }
+
   const [result] = await tx
     .select({
       count: countDistinct(frontingSessions.id),
       latest: max(frontingSessions.updatedAt),
     })
     .from(frontingSessions)
+    .innerJoin(
+      bucketContentTags,
+      and(
+        eq(bucketContentTags.entityId, frontingSessions.memberId),
+        eq(bucketContentTags.systemId, frontingSessions.systemId),
+        eq(bucketContentTags.entityType, "member"),
+      ),
+    )
     .where(
       and(
         eq(frontingSessions.systemId, systemId),
         isNull(frontingSessions.endTime),
         eq(frontingSessions.archived, false),
+        inArray(bucketContentTags.bucketId, bucketIds),
       ),
     );
 
@@ -171,7 +185,7 @@ export async function getFriendDashboardSync(
         access.assignedBucketIds,
         STRUCTURE_ENTITY_SYNC_CONFIG,
       ),
-      frontingSessionSyncEntry(tx, access.targetSystemId),
+      frontingSessionSyncEntry(tx, access.targetSystemId, access.assignedBucketIds),
     ]);
 
     return {

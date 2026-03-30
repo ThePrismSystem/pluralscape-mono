@@ -6,8 +6,8 @@ import type { AccountId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
-vi.mock("@pluralscape/crypto", () => ({
-  verifyPassword: vi.fn(() => true),
+vi.mock("../../lib/pwhash-offload.js", () => ({
+  verifyPasswordOffload: vi.fn(() => Promise.resolve(true)),
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({
@@ -65,7 +65,7 @@ wireChain();
 
 // ── Import under test ────────────────────────────────────────────────
 
-const { verifyPassword } = await import("@pluralscape/crypto");
+const { verifyPasswordOffload } = await import("../../lib/pwhash-offload.js");
 const { deleteAccount } = await import("../../services/account-deletion.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ describe("deleteAccount", () => {
 
     await deleteAccount(makeMockDb() as never, { password: "correct-password" }, auth, mockAudit);
 
-    expect(verifyPassword).toHaveBeenCalledWith(VALID_HASH, "correct-password");
+    expect(verifyPasswordOffload).toHaveBeenCalledWith(VALID_HASH, "correct-password");
     expect(mockAudit).toHaveBeenCalledWith(
       mockTx,
       expect.objectContaining({
@@ -133,7 +133,7 @@ describe("deleteAccount", () => {
 
   it("throws VALIDATION_ERROR when password is incorrect", async () => {
     mockTx.limit.mockResolvedValueOnce([{ passwordHash: VALID_HASH }]);
-    vi.mocked(verifyPassword).mockReturnValueOnce(false);
+    vi.mocked(verifyPasswordOffload).mockResolvedValueOnce(false);
 
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
 
@@ -158,7 +158,7 @@ describe("deleteAccount", () => {
 
   it("does not write audit or delete rows when password verification fails", async () => {
     mockTx.limit.mockResolvedValueOnce([{ passwordHash: VALID_HASH }]);
-    vi.mocked(verifyPassword).mockReturnValueOnce(false);
+    vi.mocked(verifyPasswordOffload).mockResolvedValueOnce(false);
 
     const auth = makeTestAuth({ accountId: ACCOUNT_ID });
 

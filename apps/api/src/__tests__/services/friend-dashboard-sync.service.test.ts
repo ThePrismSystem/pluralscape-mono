@@ -158,14 +158,14 @@ describe("getFriendDashboardSync", () => {
       makeAccessContext({ assignedBucketIds: [] }),
     );
 
-    // Only frontingSessionSyncEntry runs a query (no bucket filter)
-    mockTx.where.mockResolvedValueOnce([{ count: 2, latest: 500 }]);
+    // All helpers (including frontingSessionSyncEntry) now take bucketIds
+    // and early-return when bucketIds is empty — no DB queries needed.
 
     const result = await getFriendDashboardSync({} as never, CONNECTION_ID, makeAuth());
 
     expect(result.entries).toHaveLength(4);
 
-    // Members, custom fronts, structure entities all hit the early return
+    // All entity types hit the early return with empty bucketIds
     expect(result.entries[0]).toEqual({
       entityType: "member",
       count: 0,
@@ -181,12 +181,10 @@ describe("getFriendDashboardSync", () => {
       count: 0,
       latestUpdatedAt: 0,
     });
-
-    // Fronting session always queries (no bucket filter)
     expect(result.entries[3]).toEqual({
       entityType: "fronting-session",
-      count: 2,
-      latestUpdatedAt: 500,
+      count: 0,
+      latestUpdatedAt: 0,
     });
   });
 

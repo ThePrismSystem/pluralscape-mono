@@ -1,4 +1,3 @@
-import { verifyPassword } from "@pluralscape/crypto";
 import { accounts, sessions } from "@pluralscape/db/pg";
 import { DeleteAccountBodySchema } from "@pluralscape/validation";
 import { eq } from "drizzle-orm";
@@ -6,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { assertAccountOwnership } from "../lib/account-ownership.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { verifyPasswordOffload } from "../lib/pwhash-offload.js";
 import { withAccountTransaction } from "../lib/rls-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -41,7 +41,7 @@ export async function deleteAccount(
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Account not found");
     }
 
-    const valid = verifyPassword(account.passwordHash, password);
+    const valid = await verifyPasswordOffload(account.passwordHash, password);
     if (!valid) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect password");
     }

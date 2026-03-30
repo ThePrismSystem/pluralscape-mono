@@ -1,7 +1,7 @@
 import { systemSnapshots } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { CreateSnapshotBodySchema } from "@pluralscape/validation";
-import { and, eq, gt } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -120,14 +120,14 @@ export async function listSnapshots(
     const conditions = [eq(systemSnapshots.systemId, systemId)];
 
     if (cursor) {
-      conditions.push(gt(systemSnapshots.id, cursor));
+      conditions.push(lt(systemSnapshots.id, cursor));
     }
 
     const rows = await tx
       .select()
       .from(systemSnapshots)
       .where(and(...conditions))
-      .orderBy(systemSnapshots.id)
+      .orderBy(desc(systemSnapshots.id))
       .limit(effectiveLimit + 1);
 
     return buildPaginatedResult(rows, effectiveLimit, toSnapshotResult);

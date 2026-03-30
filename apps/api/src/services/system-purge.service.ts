@@ -1,10 +1,10 @@
-import { verifyPassword } from "@pluralscape/crypto";
 import { accounts, systems } from "@pluralscape/db/pg";
 import { PurgeSystemBodySchema } from "@pluralscape/validation";
 import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { verifyPasswordOffload } from "../lib/pwhash-offload.js";
 import { withTenantTransaction } from "../lib/rls-context.js";
 import { tenantCtx } from "../lib/tenant-context.js";
 
@@ -63,7 +63,7 @@ export async function purgeSystem(
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Account not found");
     }
 
-    const valid = verifyPassword(account.passwordHash, password);
+    const valid = await verifyPasswordOffload(account.passwordHash, password);
     if (!valid) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Incorrect password");
     }

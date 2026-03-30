@@ -285,23 +285,6 @@ export async function updateLifecycleEvent(
   const version = parsed.version;
   const timestamp = now();
 
-  // Validate per-event-type metadata if provided
-  let metadata: PlaintextMetadata | undefined;
-  if (parsed.plaintextMetadata) {
-    const effectiveEventType = parsed.eventType ?? null;
-    if (effectiveEventType) {
-      const metaResult = validateLifecycleMetadata(effectiveEventType, parsed.plaintextMetadata);
-      if (!metaResult.success) {
-        throw new ApiHttpError(
-          HTTP_BAD_REQUEST,
-          "VALIDATION_ERROR",
-          `Invalid plaintext metadata for event type "${effectiveEventType}"`,
-        );
-      }
-    }
-    metadata = parsed.plaintextMetadata;
-  }
-
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
     // Read the current row to fill in optional fields not provided in the update
     const [current] = await tx
@@ -318,6 +301,21 @@ export async function updateLifecycleEvent(
 
     if (!current) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Lifecycle event not found");
+    }
+
+    // Validate per-event-type metadata if provided
+    let metadata: PlaintextMetadata | undefined;
+    if (parsed.plaintextMetadata) {
+      const effectiveEventType = parsed.eventType ?? current.eventType;
+      const metaResult = validateLifecycleMetadata(effectiveEventType, parsed.plaintextMetadata);
+      if (!metaResult.success) {
+        throw new ApiHttpError(
+          HTTP_BAD_REQUEST,
+          "VALIDATION_ERROR",
+          `Invalid plaintext metadata for event type "${effectiveEventType}"`,
+        );
+      }
+      metadata = parsed.plaintextMetadata;
     }
 
     const [row] = await tx

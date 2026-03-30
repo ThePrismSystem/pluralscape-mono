@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { hashPinOffload, verifyPinOffload } from "../lib/pwhash-offload.js";
-import { withAccountRead, withAccountTransaction } from "../lib/rls-context.js";
+import { withAccountTransaction } from "../lib/rls-context.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AccountId, SystemId } from "@pluralscape/types";
@@ -141,7 +141,7 @@ export async function verifyAccountPin(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  return withAccountRead(db, accountId, async (tx) => {
+  return withAccountTransaction(db, accountId, async (tx) => {
     const systemId = await resolveSystemId(tx, accountId);
 
     const [row] = await tx

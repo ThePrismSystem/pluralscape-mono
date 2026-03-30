@@ -17,7 +17,12 @@ import {
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 import type { FieldValueOwner } from "../../services/field-value.service.js";
-import type { IdPrefixBrandMap } from "@pluralscape/types";
+import type {
+  GroupId,
+  IdPrefixBrandMap,
+  MemberId,
+  SystemStructureEntityId,
+} from "@pluralscape/types";
 
 interface FieldValueRouteConfig {
   /** Discriminant passed to the service layer ("member" | "group" | "structureEntity") */
@@ -35,6 +40,21 @@ interface FieldValueRoutes {
   deleteRoute: Hono<AuthEnv>;
 }
 
+function toFieldValueOwner(kind: FieldValueOwner["kind"], id: string): FieldValueOwner {
+  switch (kind) {
+    case "member":
+      return { kind, id: id as MemberId };
+    case "group":
+      return { kind, id: id as GroupId };
+    case "structureEntity":
+      return { kind, id: id as SystemStructureEntityId };
+    default: {
+      const _exhaustive: never = kind;
+      throw new Error(`Unknown owner kind: ${String(_exhaustive)}`);
+    }
+  }
+}
+
 /**
  * Generates the four field-value CRUD routes (set, list, update, delete)
  * for a given owner type. Each owner (member, group, structureEntity) uses
@@ -45,9 +65,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
 
   const resolveOwner = (paramValue: string | undefined): FieldValueOwner => {
     const id = requireIdParam(paramValue, ownerParamName, ownerIdPrefix);
-    // The cast is safe: requireIdParam returns the branded id type matching ownerIdPrefix,
-    // and FieldValueOwner's id field accepts the union of all three branded types.
-    return { kind: ownerKind, id } as FieldValueOwner;
+    return toFieldValueOwner(ownerKind, id);
   };
 
   // ── SET (POST /:fieldDefId) ─────────────────────────────────────

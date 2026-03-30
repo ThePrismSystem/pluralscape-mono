@@ -1,6 +1,6 @@
 ---
 # api-ehwh
-title: 'Fix all PR #329 review issues'
+title: "Fix all PR #329 review issues"
 status: completed
 type: task
 priority: high
@@ -66,10 +66,10 @@ Address all 20 review items from PR #329 multi-model review: 3 critical, 4 impor
 
 - [x] Format, lint, typecheck, all tests pass
 
-
 ## Summary of Changes
 
 Addressed all 20 review items from PR #329:
+
 - **Critical**: TOCTOU fix in approveTransfer, assertSystemOwnership in snapshot service, friends list limit cap
 - **Important**: verifyPassword offloaded to worker thread, entityTypeId validation, FOR UPDATE on entity deletes
 - **Types**: Branded IDs in structure-entity result types, FriendDashboardSyncEntry.entityType

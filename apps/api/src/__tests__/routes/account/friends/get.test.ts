@@ -12,13 +12,15 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/friend-connection.service.js", () => ({
-  listFriendConnections: vi.fn(),
-  getFriendConnection: vi.fn(),
-  blockFriendConnection: vi.fn(),
-  removeFriendConnection: vi.fn(),
-  updateFriendVisibility: vi.fn(),
+  acceptFriendConnection: vi.fn(),
   archiveFriendConnection: vi.fn(),
+  blockFriendConnection: vi.fn(),
+  getFriendConnection: vi.fn(),
+  listFriendConnections: vi.fn(),
+  rejectFriendConnection: vi.fn(),
+  removeFriendConnection: vi.fn(),
   restoreFriendConnection: vi.fn(),
+  updateFriendVisibility: vi.fn(),
 }));
 
 vi.mock("../../../../lib/db.js", () => mockDbFactory());

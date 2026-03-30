@@ -220,7 +220,9 @@ describe("updateLifecycleEvent", () => {
   });
 
   it("throws VALIDATION_ERROR when plaintextMetadata is invalid for eventType", async () => {
-    const { db } = mockDb();
+    const { db, chain } = mockDb();
+    // DB read now happens before validation — provide a current row
+    chain.limit.mockResolvedValueOnce([makeLifecycleEventRow()]);
 
     await expect(
       updateLifecycleEvent(
@@ -239,7 +241,7 @@ describe("updateLifecycleEvent", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
-  it("skips metadata validation when eventType is not provided with plaintextMetadata", async () => {
+  it("validates metadata against current eventType when eventType is not provided", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([makeLifecycleEventRow()]);
     chain.returning.mockResolvedValueOnce([
@@ -249,7 +251,8 @@ describe("updateLifecycleEvent", () => {
       }),
     ]);
 
-    // No eventType means effectiveEventType is null — skips validation
+    // No eventType in payload — effectiveEventType falls back to current row's
+    // eventType ("discovery"), so metadata is validated against "discovery".
     const result = await updateLifecycleEvent(
       db,
       SYSTEM_ID,

@@ -174,6 +174,7 @@ export type {
   FriendDashboardKeyGrant,
   FriendDashboardResponse,
   FriendAccessContext,
+  FriendDashboardEntityType,
   FriendDashboardSyncEntry,
   FriendDashboardSyncResponse,
 } from "./friend-dashboard.js";

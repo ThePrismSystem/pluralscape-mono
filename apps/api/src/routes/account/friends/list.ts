@@ -10,7 +10,11 @@ import { listFriendConnections } from "../../../services/friend-connection.servi
 import type { AuthEnv } from "../../../lib/auth-context.js";
 import type { FriendConnectionStatus } from "@pluralscape/types";
 
-const VALID_STATUSES: ReadonlySet<string> = new Set(FRIEND_CONNECTION_STATUSES);
+const VALID_STATUSES = new Set<string>(FRIEND_CONNECTION_STATUSES);
+
+function isFriendConnectionStatus(s: string): s is FriendConnectionStatus {
+  return VALID_STATUSES.has(s);
+}
 
 export const listRoute = new Hono<AuthEnv>();
 
@@ -20,10 +24,7 @@ listRoute.get("/", async (c) => {
   const auth = c.get("auth");
 
   const statusParam = c.req.query("status");
-  const status =
-    statusParam && VALID_STATUSES.has(statusParam)
-      ? (statusParam as FriendConnectionStatus)
-      : undefined;
+  const status = statusParam && isFriendConnectionStatus(statusParam) ? statusParam : undefined;
 
   const db = await getDb();
   const result = await listFriendConnections(db, auth.accountId, auth, {

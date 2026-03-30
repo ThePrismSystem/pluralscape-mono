@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-29T02:59:38Z
-updated_at: 2026-03-29T03:03:12Z
+updated_at: 2026-03-30T05:24:20Z
 parent: api-e7gt
 blocked_by:
   - api-398w
@@ -70,3 +70,55 @@ Comprehensive E2E test coverage for the entire public REST API. Tests run in `ap
 - [ ] Coverage report shows complete API surface
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+## PR #329 Feature Completeness E2E Gaps
+
+The following 17 feature areas added in PR #329 have zero E2E coverage. Each needs at minimum success-path, auth rejection, and IDOR tests:
+
+### Account Management
+
+- **Account deletion/purge** — DELETE with password confirmation, verify cascade
+- **Account PIN** — set, verify, remove PIN; anti-timing attack behavior
+- **Device transfer approval** — approve step in device transfer flow
+
+### Social Features
+
+- **Friend accept/reject** — accept/reject pending friend requests, status transitions
+- **Friend dashboard sync** — projection endpoint with privacy bucket filtering
+- **Friend codes** — pagination format changes (existing tests updated but new flows untested)
+
+### API Keys
+
+- **API key CRUD** — create (crypto vs metadata types), list with pagination, get, revoke (idempotent)
+
+### Content Management
+
+- **Poll vote update/delete/results** — update votes, delete votes, consensus results with veto counts
+- **Check-in record restore** — restore archived check-in records
+- **Lifecycle event update** — cursor-based updates with metadata validation
+- **Member photo GET** — single photo retrieval endpoint
+- **Device token update/delete** — platform/token updates, deletion
+
+### System Features
+
+- **System snapshots** — CRUD (create, list, get, delete) with trigger types
+- **System duplication** — duplicate system with new name
+- **System permanent purge** — password-confirmed permanent deletion
+
+### Structure Entities (Innerworld)
+
+- **Entity CRUD** — create, list, get, update, archive, restore, delete, hierarchy
+- **Entity types** — create, list, get, update, archive, restore, delete
+- **Entity associations** — create, list, delete
+- **Entity links** — create, list, delete
+- **Entity member links** — create, list, delete
+- **Entity custom field values** — set/list for structure entities (reuses member field pattern)
+
+### Key Rotation
+
+- **Key rotation retry** — retry failed bucket rotation
+
+### Groups
+
+- **Group custom field values** — set/list for groups (reuses member field pattern)
+- **Group list filters** — type filter on group list endpoint
