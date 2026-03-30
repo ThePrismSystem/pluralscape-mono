@@ -48,7 +48,7 @@ describe("heartbeat", () => {
       vi.advanceTimersByTime(WS_HEARTBEAT_INTERVAL_MS);
 
       expect(ws.send).toHaveBeenCalledOnce();
-      const parsed = JSON.parse(ws.send.mock.calls[0][0] as string) as { type: string };
+      const parsed = JSON.parse(ws.send.mock.calls[0]?.[0] as string) as { type: string };
       expect(parsed.type).toBe("Ping");
 
       clearHeartbeat(connectionId);

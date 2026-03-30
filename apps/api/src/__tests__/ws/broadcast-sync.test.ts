@@ -106,10 +106,8 @@ describe("broadcastDocumentUpdateWithSync", () => {
     expect(publishMock).toHaveBeenCalledWith(expectedChannel, expect.any(String));
 
     // Verify published message contains serverId for dedup
-    const publishedPayload = JSON.parse(publishMock.mock.calls[0][1] as string) as Record<
-      string,
-      unknown
-    >;
+    const rawPayload = publishMock.mock.calls[0]?.[1] as string;
+    const publishedPayload = JSON.parse(rawPayload) as Record<string, unknown>;
     expect(publishedPayload).toHaveProperty("serverId", "server-A");
     expect(publishedPayload).toHaveProperty("update");
   });
@@ -177,7 +175,7 @@ describe("broadcastDocumentUpdateWithSync", () => {
 
     await broadcastDocumentUpdateWithSync(update, "nobody", manager, log, pubsub);
 
-    const payload = JSON.parse(publishMock.mock.calls[0][1] as string) as {
+    const payload = JSON.parse(publishMock.mock.calls[0]?.[1] as string) as {
       serverId: string;
       update: DocumentUpdate;
     };

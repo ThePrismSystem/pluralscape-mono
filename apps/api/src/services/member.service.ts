@@ -169,10 +169,7 @@ export async function listMembers(
         .select({ memberId: groupMemberships.memberId })
         .from(groupMemberships)
         .where(
-          and(
-            eq(groupMemberships.groupId, opts.groupId),
-            eq(groupMemberships.systemId, systemId),
-          ),
+          and(eq(groupMemberships.groupId, opts.groupId), eq(groupMemberships.systemId, systemId)),
         );
       conditions.push(inArray(members.id, memberIdsInGroup));
     }

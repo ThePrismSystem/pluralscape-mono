@@ -55,6 +55,8 @@ describe("SQLite analytics schema", () => {
           encryptedData: blob,
           format: "html",
           generatedAt: now,
+          createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -79,6 +81,8 @@ describe("SQLite analytics schema", () => {
           encryptedData: testBlob(),
           format: "pdf",
           generatedAt: now,
+          createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -100,6 +104,8 @@ describe("SQLite analytics schema", () => {
             encryptedData: testBlob(),
             format: "docx" as "html",
             generatedAt: now,
+            createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -118,6 +124,8 @@ describe("SQLite analytics schema", () => {
           encryptedData: testBlob(),
           format: "html",
           generatedAt: now,
+          createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -137,6 +145,8 @@ describe("SQLite analytics schema", () => {
             encryptedData: testBlob(),
             format: "html",
             generatedAt: now,
+            createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -153,6 +163,8 @@ describe("SQLite analytics schema", () => {
         encryptedData: testBlob(),
         format: "html" as const,
         generatedAt: now,
+        createdAt: now,
+        updatedAt: now,
       };
 
       db.insert(frontingReports).values(values).run();
@@ -172,6 +184,8 @@ describe("SQLite analytics schema", () => {
             encryptedData: testBlob(new Uint8Array([1])),
             format: "html",
             generatedAt: now,
+            createdAt: now,
+            updatedAt: now,
           },
           {
             id: crypto.randomUUID(),
@@ -179,6 +193,8 @@ describe("SQLite analytics schema", () => {
             encryptedData: testBlob(new Uint8Array([2])),
             format: "pdf",
             generatedAt: now,
+            createdAt: now,
+            updatedAt: now,
           },
         ])
         .run();
@@ -205,6 +221,8 @@ describe("SQLite analytics schema", () => {
           encryptedData: blob,
           format: "html",
           generatedAt: now,
+          createdAt: now,
+          updatedAt: now,
         })
         .run();
 

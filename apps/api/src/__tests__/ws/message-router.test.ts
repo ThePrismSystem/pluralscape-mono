@@ -753,6 +753,7 @@ describe("message-router", () => {
         relay: brokenRelay as never,
         documentOwnership: new Map<string, SystemId>(),
         manager,
+        pubsub: null,
       };
 
       const snapshot = {
@@ -796,6 +797,7 @@ describe("message-router", () => {
         relay: brokenRelay as never,
         documentOwnership: new Map<string, SystemId>(),
         manager,
+        pubsub: null,
       };
 
       await routeMessage(
@@ -829,6 +831,7 @@ describe("message-router", () => {
         relay: brokenRelay as never,
         documentOwnership: new Map<string, SystemId>(),
         manager,
+        pubsub: null,
       };
 
       await routeMessage(
@@ -861,6 +864,7 @@ describe("message-router", () => {
         relay: brokenRelay as never,
         documentOwnership: new Map<string, SystemId>(),
         manager,
+        pubsub: null,
       };
 
       const change = makeChangePayload("doc-change-err");
@@ -942,6 +946,7 @@ describe("message-router", () => {
         relay: brokenRelay as never,
         documentOwnership: new Map<string, SystemId>(),
         manager,
+        pubsub: null,
       };
 
       await routeMessage(
@@ -976,6 +981,7 @@ describe("message-router", () => {
         relay: brokenRelay as never,
         documentOwnership: new Map<string, SystemId>(),
         manager,
+        pubsub: null,
       };
 
       await routeMessage(
@@ -1009,6 +1015,7 @@ describe("message-router", () => {
         relay: brokenRelay as never,
         documentOwnership: new Map<string, SystemId>(),
         manager,
+        pubsub: null,
       };
 
       await routeMessage(
@@ -1225,6 +1232,7 @@ describe("message-router", () => {
         relay: ctx.relay,
         documentOwnership: throwingOwnership,
         manager,
+        pubsub: null,
       };
 
       const change = makeChangePayload("doc-onsuccess-err");
