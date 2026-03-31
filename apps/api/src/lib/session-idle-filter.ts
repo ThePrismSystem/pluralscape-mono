@@ -12,7 +12,7 @@ import type { SQL } from "drizzle-orm";
  * - If idleTimeoutMs is set: lastActive must be within idleTimeoutMs of currentTimeMs
  *
  * Sessions with null lastActive or null expiresAt always pass (no idle check possible).
- * Sessions whose absoluteTtl doesn't match any known config pass by default.
+ * Sessions whose absoluteTtl doesn't match any known config fail closed with web idle timeout.
  *
  * SQL correctness notes:
  * - pgTimestamp columns store timestamptz but map to/from UnixMillis in TypeScript.
@@ -44,15 +44,19 @@ export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
     }
   }
 
-  // Sessions with unknown absoluteTtl (not matching any config) — pass through.
-  // Build a NOT IN check for all known absoluteTtls.
+  // Sessions with unknown absoluteTtl — fail closed with web idle timeout (matches getIdleTimeout()).
+  // Build a NOT IN check for all known absoluteTtls, then apply the default idle window.
   const knownTtls = Object.values(SESSION_TIMEOUTS).map((c) => c.absoluteTtlMs);
+  const defaultIdleTimeoutMs = SESSION_TIMEOUTS.web.idleTimeoutMs;
+  const defaultThresholdMs = currentTimeMs - defaultIdleTimeoutMs;
   const unknownTtlCondition = and(
     not(isNull(sessions.expiresAt)),
+    not(isNull(sessions.lastActive)),
     sql`CAST(EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt})) * 1000 AS bigint) NOT IN (${sql.join(
       knownTtls.map((t) => sql`${t}`),
       sql`, `,
     )})`,
+    gte(sessions.lastActive, defaultThresholdMs),
   );
   if (!unknownTtlCondition)
     throw new Error("Invariant: and() returned undefined with non-empty args");

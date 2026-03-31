@@ -5,7 +5,9 @@ import {
   TransferCodeError,
   TransferExpiredError,
   TransferNotFoundError,
+  TransferSessionMismatchError,
   TransferValidationError,
+  approveTransfer,
   completeTransfer,
   initiateTransfer,
 } from "../../services/device-transfer.service.js";
@@ -155,6 +157,54 @@ describe("device-transfer.service", () => {
       expect(chain.transaction).toHaveBeenCalled();
       expect(chain.insert).toHaveBeenCalled();
       expect(mockAudit).toHaveBeenCalled();
+    });
+  });
+
+  describe("approveTransfer", () => {
+    it("approves a pending transfer when session matches", async () => {
+      const { db, chain } = mockDb();
+      // SELECT: find pending transfer
+      chain.limit.mockResolvedValueOnce([{ id: "dtr_test", sourceSessionId: SESSION_ID }]);
+      // UPDATE: set status to approved, returning
+      chain.returning.mockResolvedValueOnce([{ id: "dtr_test" }]);
+
+      await approveTransfer(db, "dtr_test", ACCOUNT_ID, SESSION_ID, mockAudit);
+
+      expect(chain.update).toHaveBeenCalled();
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "auth.device-transfer-approved" }),
+      );
+    });
+
+    it("throws TransferNotFoundError when transfer not found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        approveTransfer(db, "dtr_nonexistent", ACCOUNT_ID, SESSION_ID, mockAudit),
+      ).rejects.toThrow(TransferNotFoundError);
+    });
+
+    it("throws TransferSessionMismatchError when session does not match", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "dtr_test", sourceSessionId: "sess_other" }]);
+
+      await expect(
+        approveTransfer(db, "dtr_test", ACCOUNT_ID, SESSION_ID, mockAudit),
+      ).rejects.toThrow(TransferSessionMismatchError);
+    });
+
+    it("throws TransferNotFoundError on double-approval race", async () => {
+      const { db, chain } = mockDb();
+      // SELECT: find pending transfer
+      chain.limit.mockResolvedValueOnce([{ id: "dtr_test", sourceSessionId: SESSION_ID }]);
+      // UPDATE: returns empty (concurrent approval already changed status)
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        approveTransfer(db, "dtr_test", ACCOUNT_ID, SESSION_ID, mockAudit),
+      ).rejects.toThrow(TransferNotFoundError);
     });
   });
 

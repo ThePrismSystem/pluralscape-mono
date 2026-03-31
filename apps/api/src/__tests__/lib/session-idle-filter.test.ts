@@ -93,11 +93,16 @@ describe("buildIdleTimeoutFilter", () => {
     expect(joined).toContain("bigint");
   });
 
-  it("includes a NOT IN condition for unknown-TTL sessions", () => {
-    const result = buildIdleTimeoutFilter(1_000_000);
+  it("applies default idle timeout to unknown-TTL sessions (fail-closed)", () => {
+    const currentTimeMs = 1_000_000;
+    const result = buildIdleTimeoutFilter(currentTimeMs);
     const strings = collectStringChunks(result.queryChunks);
     const joined = strings.join("");
     expect(joined).toContain("NOT IN");
+
+    const defaultThreshold = currentTimeMs - SESSION_TIMEOUTS.web.idleTimeoutMs;
+    const params = collectParams(result.queryChunks);
+    expect(params).toContain(defaultThreshold);
   });
 
   it("computes correct boundary threshold values", () => {

@@ -24,7 +24,7 @@ import {
 import { registerAccount, ValidationError } from "../../services/auth.service.js";
 import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
 
-import type { AccountId, SessionId } from "@pluralscape/types";
+import type { AccountId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { accounts, authKeys, recoveryKeys, sessions, systems } = schema;
@@ -114,25 +114,19 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("succeeds with correct current password", async () => {
       const { accountId, password } = await registerTestAccount();
 
-      const sessionRows = await client.query<{ id: string }>(
-        "SELECT id FROM sessions WHERE account_id = $1 LIMIT 1",
-        [accountId],
-      );
-      const sessionId = sessionRows.rows[0]?.id as SessionId;
-
       const audit = spyAudit();
       const newPassword = `NewP@ss!${crypto.randomUUID()}`;
 
       const result = await changePassword(
         asDb(db),
         accountId,
-        sessionId,
         { currentPassword: password, newPassword },
         audit,
       );
 
       expect(result.ok).toBe(true);
       expect(typeof result.revokedSessionCount).toBe("number");
+      expect(result.sessionRevoked).toBe(true);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("auth.password-changed");
     });
@@ -140,17 +134,10 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
     it("throws ValidationError with wrong current password", async () => {
       const { accountId } = await registerTestAccount();
 
-      const sessionRows = await client.query<{ id: string }>(
-        "SELECT id FROM sessions WHERE account_id = $1 LIMIT 1",
-        [accountId],
-      );
-      const sessionId = sessionRows.rows[0]?.id as SessionId;
-
       await expect(
         changePassword(
           asDb(db),
           accountId,
-          sessionId,
           { currentPassword: "WrongPassword123!", newPassword: "AnotherP@ss1" },
           noopAudit,
         ),

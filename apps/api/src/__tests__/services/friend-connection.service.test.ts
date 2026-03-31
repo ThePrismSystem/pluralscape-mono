@@ -89,12 +89,16 @@ vi.mock("../../services/webhook-dispatcher.js", () => ({
 const {
   listFriendConnections,
   getFriendConnection,
+  acceptFriendConnection,
+  rejectFriendConnection,
   blockFriendConnection,
   removeFriendConnection,
   updateFriendVisibility,
   archiveFriendConnection,
   restoreFriendConnection,
 } = await import("../../services/friend-connection.service.js");
+
+const { dispatchWebhookEvent } = await import("../../services/webhook-dispatcher.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -126,6 +130,7 @@ describe("friend-connection service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    vi.mocked(dispatchWebhookEvent).mockClear();
   });
 
   // ── listFriendConnections ────────────────────────────────────────
@@ -198,6 +203,126 @@ describe("friend-connection service", () => {
       await expect(getFriendConnection(db, otherAccountId, CONNECTION_ID, AUTH)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
       );
+    });
+  });
+
+  // ── acceptFriendConnection ───────────────────────────────────────
+
+  describe("acceptFriendConnection", () => {
+    it("accepts a pending connection and dispatches webhook", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([
+        makeConnectionRow({ status: "accepted", version: 2 }),
+      ]);
+      // Wire: transitionConnectionStatus SELECT where, UPDATE where,
+      // updateReverseConnection UPDATE where
+      chain.where
+        .mockReturnValueOnce(chain) // #1 transitionConnectionStatus SELECT
+        .mockReturnValueOnce(chain) // #2 transitionConnectionStatus UPDATE
+        .mockReturnValueOnce(chain); // #3 updateReverseConnection UPDATE
+
+      const result = await acceptFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit);
+
+      expect(result.status).toBe("accepted");
+      expect(result.version).toBe(2);
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "friend-connection.accepted" }),
+      );
+      expect(dispatchWebhookEvent).toHaveBeenCalledWith(
+        chain,
+        expect.any(String),
+        "friend.connected",
+        expect.objectContaining({ connectionId: CONNECTION_ID }),
+      );
+    });
+
+    it("throws 404 when connection not found", async () => {
+      const { db } = mockDb();
+
+      await expect(
+        acceptFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("throws 409 when status is not pending", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "accepted" })]);
+
+      await expect(
+        acceptFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+    });
+
+    it("throws 404 when accountId does not match auth", async () => {
+      const { db } = mockDb();
+      const otherAccountId = "acc_other" as AccountId;
+
+      await expect(
+        acceptFriendConnection(db, otherAccountId, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("throws when UPDATE returned no rows after finding pending connection", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        acceptFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to accepted friend connection");
+    });
+  });
+
+  // ── rejectFriendConnection ──────────────────────────────────────
+
+  describe("rejectFriendConnection", () => {
+    it("rejects a pending connection without dispatching webhook", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([makeConnectionRow({ status: "removed", version: 2 })]);
+      chain.where
+        .mockReturnValueOnce(chain) // #1 transitionConnectionStatus SELECT
+        .mockReturnValueOnce(chain) // #2 transitionConnectionStatus UPDATE
+        .mockReturnValueOnce(chain); // #3 updateReverseConnection UPDATE
+
+      const result = await rejectFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit);
+
+      expect(result.status).toBe("removed");
+      expect(result.version).toBe(2);
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "friend-connection.rejected" }),
+      );
+      expect(dispatchWebhookEvent).not.toHaveBeenCalled();
+    });
+
+    it("throws 404 when connection not found", async () => {
+      const { db } = mockDb();
+
+      await expect(
+        rejectFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("throws 409 when status is not pending", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "accepted" })]);
+
+      await expect(
+        rejectFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+    });
+
+    it("throws when UPDATE returned no rows after finding pending connection", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        rejectFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to removed friend connection");
     });
   });
 

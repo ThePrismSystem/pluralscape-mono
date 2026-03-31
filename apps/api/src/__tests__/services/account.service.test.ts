@@ -4,7 +4,7 @@ import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { MockChain } from "../helpers/mock-db.js";
-import type { AccountId, SessionId } from "@pluralscape/types";
+import type { AccountId } from "@pluralscape/types";
 
 // ── Mock external dependencies ───────────────────────────────────────
 
@@ -308,7 +308,7 @@ describe("account service", () => {
       ]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
+        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -317,13 +317,7 @@ describe("account service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(
-          db,
-          "acct_missing" as AccountId,
-          "sess_1" as SessionId,
-          validParams,
-          mockAudit,
-        ),
+        changePassword(db, "acct_missing" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -334,7 +328,6 @@ describe("account service", () => {
         changePassword(
           db,
           "acct_123" as AccountId,
-          "sess_1" as SessionId,
           { currentPassword: "current", newPassword: "short" },
           mockAudit,
         ),
@@ -355,16 +348,10 @@ describe("account service", () => {
       chain.returning
         .mockResolvedValueOnce([{ id: "acct_123" }])
         // Second returning: session revocation
-        .mockResolvedValueOnce([{ id: "sess_2" }, { id: "sess_3" }]);
+        .mockResolvedValueOnce([{ id: "sess_1" }, { id: "sess_2" }, { id: "sess_3" }]);
 
-      const result = await changePassword(
-        db,
-        "acct_123" as AccountId,
-        "sess_1" as SessionId,
-        validParams,
-        mockAudit,
-      );
-      expect(result).toEqual({ ok: true, revokedSessionCount: 2 });
+      const result = await changePassword(db, "acct_123" as AccountId, validParams, mockAudit);
+      expect(result).toEqual({ ok: true, revokedSessionCount: 3, sessionRevoked: true });
       expect(mockMemzero).toHaveBeenCalledTimes(3);
     });
 
@@ -380,13 +367,7 @@ describe("account service", () => {
       ]);
       chain.returning.mockResolvedValueOnce([{ id: "acct_123" }]).mockResolvedValueOnce([]);
 
-      await changePassword(
-        db,
-        "acct_123" as AccountId,
-        "sess_1" as SessionId,
-        validParams,
-        mockAudit,
-      );
+      await changePassword(db, "acct_123" as AccountId, validParams, mockAudit);
       // Two transaction calls: withAccountRead (read) + withAccountTransaction (write)
       expect(chain.transaction).toHaveBeenCalledTimes(2);
     });
@@ -404,7 +385,7 @@ describe("account service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
+        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Account was modified concurrently");
     });
 
@@ -421,7 +402,7 @@ describe("account service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
+        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow();
 
       expect(mockMemzero).toHaveBeenCalledTimes(3);
@@ -439,7 +420,7 @@ describe("account service", () => {
       ]);
 
       await expect(
-        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
+        changePassword(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Account missing encrypted master key");
 
       expect(mockMemzero).toHaveBeenCalledTimes(0);
@@ -451,7 +432,6 @@ describe("account service", () => {
         changePassword(
           db,
           "acct_123" as AccountId,
-          "sess_1" as SessionId,
           { currentPassword: "", newPassword: "newpass123" },
           mockAudit,
         ),

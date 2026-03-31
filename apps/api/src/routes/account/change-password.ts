@@ -22,7 +22,7 @@ changePasswordRoute.put("/", async (c) => {
   const audit = createAuditWriter(c, auth);
 
   try {
-    const result = await changePassword(db, auth.accountId, auth.sessionId, body, audit);
+    const result = await changePassword(db, auth.accountId, body, audit);
     return c.json(envelope(result));
   } catch (error: unknown) {
     if (error instanceof ConcurrencyError) {

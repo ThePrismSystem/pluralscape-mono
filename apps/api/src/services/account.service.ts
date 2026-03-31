@@ -15,7 +15,7 @@ import {
   ChangePasswordSchema,
   UpdateAccountSettingsSchema,
 } from "@pluralscape/validation";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { hashEmail } from "../lib/email-hash.js";
 import {
@@ -32,7 +32,7 @@ import { isDuplicateEmailError, ValidationError } from "./auth.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt } from "@pluralscape/crypto";
-import type { AccountId, AccountType, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Get Account Info ──────────────────────────────────────────────
@@ -169,12 +169,12 @@ export async function changeEmail(
 export interface ChangePasswordResult {
   readonly ok: true;
   readonly revokedSessionCount: number;
+  readonly sessionRevoked: boolean;
 }
 
 export async function changePassword(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  sessionId: SessionId,
   params: unknown,
   audit: AuditWriter,
 ): Promise<ChangePasswordResult> {
@@ -255,29 +255,23 @@ export async function changePassword(
         throw new ConcurrencyError("Account was modified concurrently");
       }
 
-      // Revoke all sessions except current
+      // Revoke ALL sessions (forces re-auth on every device)
       const revoked = await tx
         .update(sessions)
         .set({ revoked: true })
-        .where(
-          and(
-            eq(sessions.accountId, accountId),
-            ne(sessions.id, sessionId),
-            eq(sessions.revoked, false),
-          ),
-        )
+        .where(and(eq(sessions.accountId, accountId), eq(sessions.revoked, false)))
         .returning({ id: sessions.id });
 
       await audit(tx, {
         eventType: "auth.password-changed",
         actor: { kind: "account", id: accountId },
-        detail: `Password changed, ${String(revoked.length)} sessions revoked`,
+        detail: `Password changed, all ${String(revoked.length)} sessions revoked`,
       });
 
       return revoked.length;
     });
 
-    return { ok: true, revokedSessionCount };
+    return { ok: true, revokedSessionCount, sessionRevoked: revokedSessionCount > 0 };
   } finally {
     if (oldKek) adapter.memzero(oldKek);
     if (masterKey) adapter.memzero(masterKey);

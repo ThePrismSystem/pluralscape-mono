@@ -19,8 +19,13 @@ vi.mock("../../lib/audit-log.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { initiateRotation, claimRotationChunk, completeRotationChunk, getRotationProgress } =
-  await import("../../services/key-rotation.service.js");
+const {
+  initiateRotation,
+  claimRotationChunk,
+  completeRotationChunk,
+  getRotationProgress,
+  retryRotation,
+} = await import("../../services/key-rotation.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -557,6 +562,72 @@ describe("key-rotation service", () => {
       );
 
       expect(chain.for).toHaveBeenCalledWith("update");
+    });
+  });
+
+  // ── retryRotation ────────────────────────────────────────────────
+
+  describe("retryRotation", () => {
+    it("resets failed items and transitions to migrating", async () => {
+      const { db, chain } = mockDb();
+      // FOR UPDATE lock: rotation in failed state
+      chain.limit.mockResolvedValueOnce([
+        makeRotationRow({
+          state: ROTATION_STATES.failed,
+          totalItems: 10,
+          completedItems: 5,
+          failedItems: 5,
+        }),
+      ]);
+      // Reset failed items returning
+      chain.returning
+        .mockResolvedValueOnce([{ id: "bri_1" }, { id: "bri_2" }, { id: "bri_3" }])
+        // Update rotation state returning
+        .mockResolvedValueOnce([
+          makeRotationRow({
+            state: ROTATION_STATES.migrating,
+            failedItems: 0,
+          }),
+        ]);
+
+      const result = await retryRotation(db, SYSTEM_ID, BUCKET_ID, ROTATION_ID, AUTH, mockAudit);
+
+      expect(result.state).toBe(ROTATION_STATES.migrating);
+      expect(result.failedItems).toBe(0);
+      expect(chain.for).toHaveBeenCalledWith("update");
+      expect(mockAudit).toHaveBeenCalledWith(
+        chain,
+        expect.objectContaining({ eventType: "bucket.key_rotation.retried" }),
+      );
+    });
+
+    it("throws NOT_FOUND when rotation does not exist", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        retryRotation(db, SYSTEM_ID, BUCKET_ID, ROTATION_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    });
+
+    it("throws CONFLICT when rotation state is not failed", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeRotationRow({ state: ROTATION_STATES.migrating })]);
+
+      await expect(
+        retryRotation(db, SYSTEM_ID, BUCKET_ID, ROTATION_ID, AUTH, mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+    });
+
+    it("throws on ownership failure", async () => {
+      const { db } = mockDb();
+      vi.mocked(assertSystemOwnership).mockImplementationOnce(() => {
+        throw new Error("System not found");
+      });
+
+      await expect(
+        retryRotation(db, SYSTEM_ID, BUCKET_ID, ROTATION_ID, AUTH, mockAudit),
+      ).rejects.toThrow("System not found");
     });
   });
 
