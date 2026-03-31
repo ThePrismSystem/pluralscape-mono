@@ -14,13 +14,17 @@ Returns per-entity-type counts and freshness timestamps so the client can determ
 
 ```json
 {
-  "systemId": "sys_...",
-  "entries": [
-    { "entityType": "member", "count": 5, "lastUpdatedAt": 1711612800000 },
-    { "entityType": "group", "count": 0, "lastUpdatedAt": null }
-  ],
-  "keyGrants": [{ "id": "kg_...", "bucketId": "bkt_...", "encryptedKey": "...", "keyVersion": 1 }],
-  "etag": "W/\"a1b2c3d4e5f67890\""
+  "data": {
+    "systemId": "sys_...",
+    "entries": [
+      { "entityType": "member", "count": 5, "lastUpdatedAt": 1711612800000 },
+      { "entityType": "group", "count": 0, "lastUpdatedAt": null }
+    ],
+    "keyGrants": [
+      { "id": "kg_...", "bucketId": "bkt_...", "encryptedKey": "...", "keyVersion": 1 }
+    ],
+    "etag": "W/\"a1b2c3d4e5f67890\""
+  }
 }
 ```
 
@@ -48,7 +52,7 @@ Returns a cursor-paginated page of bucket-visible encrypted entities for a singl
 
 ```json
 {
-  "items": [
+  "data": [
     {
       "id": "mem_...",
       "entityType": "member",

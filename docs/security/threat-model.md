@@ -2,7 +2,7 @@
 
 This document captures known security findings from internal audits, documents the mitigations in place, and identifies residual risks that must be addressed before production deployment. It covers deployment infrastructure, protocol-level concerns, and the device transfer flow.
 
-Throughout this document, severity labels (M2, M3, M4, L6) reference findings from the Pluralscape security audit series.
+Throughout this document, severity labels (M2, M3, M4, L6, M5, M6, M7) reference findings from the Pluralscape security audit series.
 
 ## Overview
 
@@ -155,6 +155,166 @@ With this change, capturing the QR code alone is insufficient to complete a tran
 
 This should be implemented before production. The change is backward-compatible: the `decodeQRPayload` function can accept payloads with or without the `code` field, falling back to requiring manual entry when the code is absent.
 
+---
+
+## Communication Security — M5
+
+### Proxy Messaging Trust Model
+
+**Finding**: The chat system is proxy-based — channels route messages through the server, and the server stores and relays ciphertext. An attacker who compromises the server can observe message metadata (sender, channel, timestamp, ciphertext length) but cannot read message content.
+
+**Current state**: Messages are stored server-side as E2E encrypted payloads (XChaCha20-Poly1305). The server acts as a relay only; it has no key material to decrypt messages. Channel membership is system-scoped: channels belong to a system, and all access is gated by `assertSystemOwnership` before any channel or message operation.
+
+**Defense-in-depth**: The zero-knowledge server model limits metadata exposure. An attacker with database access can observe that a system has channels with a certain number of messages, and approximate timing, but cannot read any message content. There is no cross-system channel access — channels cannot be shared between systems, eliminating the risk of a compromised system being used to eavesdrop on another system's communications.
+
+#### Deployment requirements
+
+No additional deployment controls beyond the baseline (TLS in transit, database authentication). The channel access control model is enforced at the application layer on every request.
+
+---
+
+### Channel Access Control
+
+**Finding**: Channel access is enforced by system ownership at the route layer, but the channel data model (channels, categories, messages) must correctly scope all queries to the owning system to prevent IDOR.
+
+**Current state**: All communication routes are nested under `/v1/systems/:systemId/`, which applies `assertSystemOwnership` before any handler logic. Channel and message queries include `system_id` predicates derived from the authenticated session, not from client-supplied parameters.
+
+**Residual risk**: None identified for the current route structure. The IDOR surface is constrained by the monolithic system-ownership check applied to all system-scoped routes.
+
+---
+
+## Privacy Engine — M6
+
+### Bucket Intersection Logic (Fail-Closed)
+
+**Finding**: The privacy bucket system uses intersection-based access control to determine friend visibility. The correctness of the intersection logic and the behavior on error are security-critical.
+
+**Current state**: Privacy buckets use a tag-intersection model: an entity is visible to a friend only if the entity's bucket tags and the friend's assigned buckets share at least one tag (intersection non-empty). The system is explicitly fail-closed: if a bucket assignment is missing, cannot be resolved, or errors during evaluation, the result is invisibility (the entity is not shown to the friend). This mirrors the architectural property documented in the Overview section.
+
+**Defense-in-depth**: The fail-closed default means misconfiguration or a partially migrated account produces over-restriction (entities invisible) rather than over-exposure (entities leaked). An error in the privacy evaluation path cannot cause data leakage.
+
+#### Mitigations
+
+- Bucket filtering is SQL-pushed (not post-hoc in application code), so the database enforces visibility at query time.
+- The M6 audit identified and fixed a member count leak: member count endpoints now apply the same bucket filtering as member list endpoints.
+
+---
+
+### Friend Network Access Control
+
+**Finding**: Friend-to-friend data access uses a bucket-scoped read model. The external dashboard endpoint exposes a read-only projection of a system's data filtered by the viewing friend's assigned buckets.
+
+**Current state**: The external dashboard endpoint (`/v1/systems/:systemId/dashboard`) is accessible to authenticated accounts who are confirmed friends of the target system. All data returned is filtered through the bucket visibility model — only entities in buckets the viewer has been assigned are included.
+
+**Residual risk**: The friend access model relies on the friend connection being properly validated (accepted, not blocked/removed) at query time. The friend connection state is checked on every request, not cached, so revocation takes effect immediately on the next request.
+
+---
+
+### Device Token Takeover Prevention
+
+**Finding (M6 audit)**: Device token registration must validate ownership to prevent a compromised or malicious client from registering push tokens for another account's devices.
+
+**Current state**: Device token registration requires an authenticated session. The token is bound to the authenticated account and system — a session cannot register tokens for a different account. Tokens are cleared when a device session is revoked (via the session revocation endpoint), preventing a revoked session from continuing to receive push notifications.
+
+**Defense-in-depth**: Ownership validation is enforced at registration and at the revocation boundary. A token that survives session revocation would only receive notifications that the owning system authorizes — the notification payload does not contain plaintext system data.
+
+---
+
+## Email Security — M7
+
+### Server-Side Email Encryption (ADR 029)
+
+**Finding**: Email addresses stored in the accounts table represent a privacy-sensitive identifier. Storing them in plaintext creates exposure risk if the database is compromised.
+
+**Current state**: Email addresses are stored encrypted using AES-256-GCM with a server-side key. A BLAKE2b hash of the email address is stored alongside the ciphertext to enable deterministic lookup (login, deduplication) without decrypting. The plaintext email address is never persisted; it is encrypted immediately on account creation and on any update.
+
+**Defense-in-depth**: An attacker with read-only access to the database cannot recover email addresses without the server-side encryption key. The BLAKE2b hash enables login lookups without decryption but is not reversible — the hash cannot be used to recover the plaintext email. The AES-256-GCM authentication tag provides tamper detection on the ciphertext.
+
+**Residual risk**: The server-side encryption key is a shared secret that, if compromised, exposes all stored email addresses. Key management for the email encryption key must follow the same security controls as other application secrets (secrets manager, rotation policy, never in version-controlled config).
+
+#### Deployment requirements
+
+1. **Key management**: The email encryption key must be stored in an environment variable or secrets manager. It must not appear in version-controlled configuration files.
+2. **Key rotation**: If the key is rotated, all stored email ciphertexts must be re-encrypted. A rotation procedure is needed before production.
+
+---
+
+## Webhook Security — M7
+
+### HMAC Payload Signing
+
+**Finding**: Webhook deliveries must be authenticated so that receiving endpoints can verify the payload originated from Pluralscape and was not tampered with in transit.
+
+**Current state**: All webhook deliveries are signed with HMAC-SHA256 using a per-webhook secret generated at webhook creation. The signature is included in the `X-Pluralscape-Signature` header. Receiving endpoints can verify the signature against the payload body using the shared secret.
+
+**Defense-in-depth**: HMAC-SHA256 provides both authenticity (only the holder of the secret can produce a valid signature) and integrity (any modification to the payload invalidates the signature). The secret is generated server-side with libsodium's CSPRNG and is never logged.
+
+---
+
+### Webhook Secret Rotation
+
+**Finding**: Webhook secrets may need to be rotated if they are compromised or as part of a regular rotation schedule. Rotation must not cause delivery failures for in-flight events.
+
+**Current state**: The secret rotation endpoint (ADR 027) supports a grace period: during rotation, the old secret and new secret are both valid for a configurable overlap window. This prevents a hard cutover that would invalidate signatures for deliveries already in transit. After the grace period, only the new secret is valid.
+
+**Residual risk**: During the grace period, a compromised old secret can still be used to forge valid signatures. The grace period should be as short as operationally feasible.
+
+---
+
+### Optional Payload Encryption
+
+**Finding**: Webhook payloads contain metadata about system events (member fronts, friend activity, etc.). A webhook receiver that processes payloads over a compromised connection could expose event metadata.
+
+**Current state**: Payload encryption is available as an opt-in feature, using the API key associated with the webhook configuration. When enabled, the payload body is encrypted before transmission, providing confidentiality in addition to HMAC integrity.
+
+**Residual risk**: Payload encryption is opt-in; most webhook receivers will use HMAC signing only. Receivers are responsible for ensuring their endpoint handles incoming webhooks over HTTPS.
+
+---
+
+### Delivery Worker and Retry
+
+**Finding**: Webhook delivery failures (network errors, non-2xx responses from receiver) must be retried reliably without creating unbounded retry storms.
+
+**Current state**: The webhook delivery worker uses exponential backoff with jitter for retries. Terminal delivery records (success or permanent failure after max retries) are auto-purged after 30 days by the cleanup job. This bounds storage growth from delivery history.
+
+---
+
+## Auth Hardening — M7
+
+### Anti-Enumeration (M7 Audit)
+
+**Finding (M7 audit — high priority)**: Auth endpoints must return constant-time, indistinguishable responses for valid and invalid inputs to prevent user enumeration by timing or response content.
+
+**Current state**: The following protections are implemented:
+
+- **Login**: Returns a generic "Invalid email or password" response regardless of whether the email exists. A dummy Argon2 computation is performed when the email is not found, equalizing response time with the successful-lookup-but-wrong-password path.
+- **Registration**: Returns a fake session response on duplicate email registration, indistinguishable from a successful registration to an external observer.
+- **Password reset**: Returns a generic "Invalid email or recovery key" response regardless of whether the account exists.
+
+**Defense-in-depth**: The combined use of constant-time string comparison and dummy KDF computations prevents both timing-based and response-based enumeration attacks.
+
+---
+
+### Session Idle Filter Fail-Closed Gap (M7 Audit — fixed)
+
+**Finding (M7 audit — low priority)**: The session idle filter returned `null` for unknown session types, which could cause the filter to skip idle enforcement for custom or future session types (fail-open).
+
+**Current state (fixed)**: The session idle filter now treats unknown session types as an error rather than silently permitting them. Unknown session types cause the request to be rejected, ensuring the filter is fail-closed. This was identified in the M7 audit and fixed inline.
+
+---
+
+### Password Change Session Revocation (M7 Audit — documented)
+
+**Finding (M7 audit — high priority, intentional)**: On password change, all sessions except the current session are revoked. A compromised device that holds a session initiated before the password change retains access until that session's absolute TTL expires or the session is explicitly revoked by the user.
+
+**Current state**: This is an intentional UX decision — revoking all other sessions on password change prevents the user from being locked out of all devices simultaneously if the password change was itself initiated from a compromised session. The behavior is documented here as a known residual risk.
+
+**Residual risk**: If an attacker has obtained a session token and the user changes their password without explicitly revoking all sessions, the attacker's session remains valid until TTL. Users who suspect a compromise should use the session management interface to explicitly revoke all sessions.
+
+**Recommendation**: Surface a "revoke all other sessions" option prominently during and after password change to make it easy for users who want the stronger security guarantee.
+
+---
+
 ## Out of Scope
 
 The following areas were assessed during the audit but are not covered by this document. They are governed by their respective ADRs.
@@ -188,6 +348,9 @@ Prioritized list of pre-production security tasks, ordered by severity and imple
 | M2      | Add HMAC-signed envelopes to Valkey pub/sub messages to prevent message injection by a Valkey-compromised attacker.                   | Medium |
 | M2      | Encrypt BullMQ job payloads containing metadata (account IDs, system IDs) at the application layer.                                   | Medium |
 | M4      | Evaluate switching to server Argon2id profile (4 iterations, 64 MiB) for transfer KDF, benchmarking impact on low-end mobile devices. | Low    |
+| M7      | Define and document email encryption key rotation procedure before production.                                                        | Medium |
+| M7      | Surface "revoke all other sessions" option prominently during and after password change.                                              | Low    |
+| M7      | Shorten webhook secret rotation grace period guidance in self-hosting docs.                                                           | Low    |
 
 ### References
 
@@ -196,6 +359,10 @@ Prioritized list of pre-production security tasks, ordered by severity and imple
 - ADR 010: Background Jobs (BullMQ with Valkey)
 - ADR 013: API Authentication with E2E Encryption
 - ADR 024: Device Transfer Code Entropy Trade-off
+- ADR 027: Webhook Secret Rotation Procedure
+- ADR 029: Server-Side Encrypted Email Storage
 - `packages/crypto/src/device-transfer.ts` (transfer protocol implementation, `TRANSFER_TIMEOUT_MS`)
 - `apps/api/src/ws/message-router.ts` (TOFU document ownership)
 - `apps/api/src/routes/account/device-transfer.constants.ts` (`MAX_TRANSFER_CODE_ATTEMPTS`, `TRANSFER_INITIATION_LIMIT`)
+- `apps/api/src/lib/session-auth.ts` (idle filter fail-closed fix)
+- `apps/api/src/services/account.service.ts` (password change session revocation)
