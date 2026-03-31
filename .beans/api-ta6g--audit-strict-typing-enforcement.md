@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-30T21:11:19Z
-updated_at: 2026-03-31T01:26:38Z
+updated_at: 2026-03-31T01:35:48Z
 parent: api-e7gt
 ---
 
@@ -13,7 +13,7 @@ Audit for proper strict typing: eliminate any remaining 'as any', loose type ass
 
 ## Summary of Changes
 
-Fixed 12 catch blocks with untyped error parameters across services, jobs, and lib files. Changed `catch (error)` to `catch (error: unknown)` for strict typing consistency.
+Fixed 48 catch blocks with untyped error parameters across services, jobs, and lib files. Changed `catch (error)` to `catch (error: unknown)` for strict typing consistency.
 
 All other typing patterns were already clean:
 

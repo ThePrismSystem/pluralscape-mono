@@ -48,7 +48,7 @@ export function broadcastDocumentUpdate(
   let serialized: string;
   try {
     serialized = serializeServerMessage(update);
-  } catch (err) {
+  } catch (err: unknown) {
     log.error("Failed to serialize DocumentUpdate for broadcast", {
       docId: update.docId,
       error: formatError(err),
@@ -68,7 +68,7 @@ export function broadcastDocumentUpdate(
     try {
       state.ws.send(serialized);
       delivered++;
-    } catch (err) {
+    } catch (err: unknown) {
       log.warn("Failed to deliver DocumentUpdate", {
         connectionId,
         docId: update.docId,
@@ -84,7 +84,7 @@ export function broadcastDocumentUpdate(
     if (state) {
       try {
         state.ws.close(WS_CLOSE_UNEXPECTED, "Send failed");
-      } catch (closeErr) {
+      } catch (closeErr: unknown) {
         log.debug("Failed to close dead WebSocket", {
           connectionId,
           error: formatError(closeErr),
@@ -155,7 +155,7 @@ export async function broadcastDocumentUpdateWithSync(
       return { ...result, syncPublished: false };
     }
     return { ...result, syncPublished: true };
-  } catch (err) {
+  } catch (err: unknown) {
     log.warn("Failed to publish DocumentUpdate to Valkey", {
       docId: update.docId,
       error: formatError(err),

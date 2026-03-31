@@ -41,7 +41,7 @@ passwordResetRoute.post("/recovery-key", async (c) => {
         accountId: result.accountId,
       }),
     );
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof ApiHttpError) throw error;
     if (
       error instanceof NoActiveRecoveryKeyError ||

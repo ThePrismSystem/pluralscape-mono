@@ -165,7 +165,7 @@ syncWsApp.get(
             log.warn("WebSocket auth timeout", { connectionId });
             try {
               ws.close(WS_CLOSE_POLICY_VIOLATION, "Authentication timeout");
-            } catch (err) {
+            } catch (err: unknown) {
               log.debug("Failed to close on auth timeout", {
                 connectionId,
                 error: formatError(err),

@@ -263,7 +263,7 @@ export class ConnectionManager {
       }
       try {
         state.ws.close(code, reason);
-      } catch (err) {
+      } catch (err: unknown) {
         log?.debug("Failed to close WebSocket", {
           connectionId: state.connectionId,
           error: formatError(err),

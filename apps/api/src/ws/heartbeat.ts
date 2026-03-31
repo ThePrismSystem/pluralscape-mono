@@ -69,7 +69,7 @@ export function startHeartbeat(
 function sendPing(connectionId: string, state: HeartbeatState, log: AppLogger): void {
   try {
     state.ws.send(PING_MESSAGE);
-  } catch (err) {
+  } catch (err: unknown) {
     log.warn("Heartbeat ping send failed", {
       connectionId,
       error: formatError(err),
@@ -84,7 +84,7 @@ function sendPing(connectionId: string, state: HeartbeatState, log: AppLogger): 
     log.warn("WebSocket heartbeat timeout — no Pong received", { connectionId });
     try {
       state.ws.close(WS_CLOSE_POLICY_VIOLATION, "Heartbeat timeout");
-    } catch (err) {
+    } catch (err: unknown) {
       log.debug("Failed to close on heartbeat timeout", {
         connectionId,
         error: formatError(err),
