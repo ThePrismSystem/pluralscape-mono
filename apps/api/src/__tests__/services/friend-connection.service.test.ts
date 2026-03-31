@@ -263,6 +263,16 @@ describe("friend-connection service", () => {
         acceptFriendConnection(db, otherAccountId, CONNECTION_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
     });
+
+    it("throws when UPDATE returned no rows after finding pending connection", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        acceptFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to accepted friend connection");
+    });
   });
 
   // ── rejectFriendConnection ──────────────────────────────────────
@@ -303,6 +313,16 @@ describe("friend-connection service", () => {
       await expect(
         rejectFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+    });
+
+    it("throws when UPDATE returned no rows after finding pending connection", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([makeConnectionRow({ status: "pending" })]);
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        rejectFriendConnection(db, ACCOUNT_ID, CONNECTION_ID, AUTH, mockAudit),
+      ).rejects.toThrow("Failed to removed friend connection");
     });
   });
 

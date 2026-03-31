@@ -107,6 +107,6 @@ export function getIdleTimeout(session: {
     }
   }
 
-  // Unknown session type — fail closed with shortest idle timeout
+  // Unknown session type — fail closed with shortest non-null idle timeout
   return SESSION_TIMEOUTS.web.idleTimeoutMs;
 }

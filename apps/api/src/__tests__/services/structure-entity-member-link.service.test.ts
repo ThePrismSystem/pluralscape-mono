@@ -178,6 +178,20 @@ describe("structure-entity-member-link service", () => {
       expect(result.data[0]?.id).toBe("seml_after");
     });
 
+    it("applies custom limit and detects hasMore", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        makeMemberLinkRow({ id: "seml_1" }),
+        makeMemberLinkRow({ id: "seml_2" }),
+      ]);
+
+      const result = await listEntityMemberLinks(db, SYSTEM_ID, AUTH, { limit: 1 });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.hasMore).toBe(true);
+      expect(result.nextCursor).not.toBeNull();
+    });
+
     it("throws 404 on ownership failure", async () => {
       const { db } = mockDb();
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));

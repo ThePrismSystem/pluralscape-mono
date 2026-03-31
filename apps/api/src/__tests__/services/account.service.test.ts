@@ -351,7 +351,7 @@ describe("account service", () => {
         .mockResolvedValueOnce([{ id: "sess_1" }, { id: "sess_2" }, { id: "sess_3" }]);
 
       const result = await changePassword(db, "acct_123" as AccountId, validParams, mockAudit);
-      expect(result).toEqual({ ok: true, revokedSessionCount: 3 });
+      expect(result).toEqual({ ok: true, revokedSessionCount: 3, sessionRevoked: true });
       expect(mockMemzero).toHaveBeenCalledTimes(3);
     });
 

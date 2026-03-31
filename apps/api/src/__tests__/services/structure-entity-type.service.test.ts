@@ -465,6 +465,20 @@ describe("structure-entity-type service", () => {
       ).rejects.toThrow("Structure entity type has 5 entity(s)");
     });
 
+    it("throws when count query returned no rows", async () => {
+      const { db, chain } = mockDb();
+      // Existence check succeeds
+      chain.where.mockReturnValueOnce(chain);
+      chain.limit.mockReturnValueOnce(chain);
+      chain.for.mockResolvedValueOnce([{ id: ENTITY_TYPE_ID }]);
+      // Count query returns empty array
+      chain.where.mockResolvedValueOnce([]);
+
+      await expect(
+        deleteEntityType(db, SYSTEM_ID, ENTITY_TYPE_ID, AUTH, mockAudit),
+      ).rejects.toThrow("Unexpected: count query returned no rows");
+    });
+
     it("throws 404 on ownership failure", async () => {
       const { db } = mockDb();
       mockOwnershipFailure(vi.mocked(assertSystemOwnership));

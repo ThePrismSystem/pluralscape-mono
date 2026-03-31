@@ -193,6 +193,20 @@ describe("structure-entity-link service", () => {
       );
     });
 
+    it("creates a link when depth is exactly at boundary (49)", async () => {
+      const { db, chain } = mockDb();
+      chain.execute
+        .mockResolvedValueOnce(undefined) // setTenantContext
+        .mockResolvedValueOnce([{ count: "0" }]) // cycle detection — no cycle
+        .mockResolvedValueOnce([{ count: "49" }]); // depth at boundary (under limit of 50)
+      chain.returning.mockResolvedValueOnce([makeLinkRow()]);
+
+      const result = await createEntityLink(db, SYSTEM_ID, validPayload, AUTH, mockAudit);
+
+      expect(result.id).toBe(LINK_ID);
+      expect(chain.insert).toHaveBeenCalled();
+    });
+
     it("throws VALIDATION_ERROR for invalid payload", async () => {
       const { db } = mockDb();
       const schema = vi.mocked(CreateStructureEntityLinkBodySchema);

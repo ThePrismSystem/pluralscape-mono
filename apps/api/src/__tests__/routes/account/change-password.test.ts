@@ -57,7 +57,11 @@ describe("PUT /account/password", () => {
   });
 
   it("returns ok with revokedSessionCount on success", async () => {
-    vi.mocked(changePassword).mockResolvedValueOnce({ ok: true, revokedSessionCount: 3 });
+    vi.mocked(changePassword).mockResolvedValueOnce({
+      ok: true,
+      revokedSessionCount: 3,
+      sessionRevoked: true,
+    });
 
     const app = createApp();
     const res = await app.request("/account/password", {
@@ -67,9 +71,12 @@ describe("PUT /account/password", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { ok: boolean; revokedSessionCount: number } };
+    const body = (await res.json()) as {
+      data: { ok: boolean; revokedSessionCount: number; sessionRevoked: boolean };
+    };
     expect(body.data.ok).toBe(true);
     expect(body.data.revokedSessionCount).toBe(3);
+    expect(body.data.sessionRevoked).toBe(true);
   });
 
   it("returns 400 on ValidationError", async () => {
@@ -88,7 +95,11 @@ describe("PUT /account/password", () => {
   });
 
   it("passes account ID to service", async () => {
-    vi.mocked(changePassword).mockResolvedValueOnce({ ok: true, revokedSessionCount: 0 });
+    vi.mocked(changePassword).mockResolvedValueOnce({
+      ok: true,
+      revokedSessionCount: 0,
+      sessionRevoked: false,
+    });
 
     const app = createApp();
     await app.request("/account/password", {

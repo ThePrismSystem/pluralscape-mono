@@ -169,6 +169,7 @@ export async function changeEmail(
 export interface ChangePasswordResult {
   readonly ok: true;
   readonly revokedSessionCount: number;
+  readonly sessionRevoked: boolean;
 }
 
 export async function changePassword(
@@ -270,7 +271,7 @@ export async function changePassword(
       return revoked.length;
     });
 
-    return { ok: true, revokedSessionCount };
+    return { ok: true, revokedSessionCount, sessionRevoked: revokedSessionCount > 0 };
   } finally {
     if (oldKek) adapter.memzero(oldKek);
     if (masterKey) adapter.memzero(masterKey);

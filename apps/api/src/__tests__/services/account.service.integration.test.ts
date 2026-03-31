@@ -126,6 +126,7 @@ describe("account.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       expect(result.ok).toBe(true);
       expect(typeof result.revokedSessionCount).toBe("number");
+      expect(result.sessionRevoked).toBe(true);
       expect(audit.calls).toHaveLength(1);
       expect(audit.calls[0]?.eventType).toBe("auth.password-changed");
     });
