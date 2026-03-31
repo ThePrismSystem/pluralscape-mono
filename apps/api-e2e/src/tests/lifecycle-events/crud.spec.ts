@@ -2,10 +2,7 @@ import { assertIdorRejected, assertRequiresAuth } from "../../fixtures/assertion
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createLifecycleEvent, getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_OK = 200;
-const HTTP_CREATED = 201;
-const HTTP_NO_CONTENT = 204;
+import { HTTP_CREATED, HTTP_NO_CONTENT, HTTP_OK } from "../../fixtures/http.constants.js";
 
 test.describe("Lifecycle events CRUD", () => {
   test.beforeAll(async () => {

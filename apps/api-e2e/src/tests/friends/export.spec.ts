@@ -7,23 +7,13 @@ import {
   getSystemId,
 } from "../../fixtures/entity-helpers.js";
 import { expect, test } from "../../fixtures/friend.fixture.js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** HTTP 200 OK. */
-const HTTP_OK = 200;
-
-/** HTTP 201 Created. */
-const HTTP_CREATED = 201;
-
-/** HTTP 304 Not Modified. */
-const HTTP_NOT_MODIFIED = 304;
-
-/** HTTP 400 Bad Request. */
-const HTTP_BAD_REQUEST = 400;
-
-/** HTTP 404 Not Found. */
-const HTTP_NOT_FOUND = 404;
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_CREATED,
+  HTTP_NOT_FOUND,
+  HTTP_NOT_MODIFIED,
+  HTTP_OK,
+} from "../../fixtures/http.constants.js";
 
 /** Dummy encrypted bucket key for assignment tests. */
 const DUMMY_ENCRYPTED_BUCKET_KEY = "dGVzdC1lbmNyeXB0ZWQta2V5";

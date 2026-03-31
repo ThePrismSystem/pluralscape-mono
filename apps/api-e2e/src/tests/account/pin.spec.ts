@@ -7,9 +7,7 @@ import {
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { ensureSystemSetup, getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_OK = 200;
-const HTTP_NO_CONTENT = 204;
+import { HTTP_NO_CONTENT, HTTP_OK } from "../../fixtures/http.constants.js";
 
 test.describe("System PIN management", () => {
   test.beforeAll(async () => {

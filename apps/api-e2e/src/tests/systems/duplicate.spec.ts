@@ -2,8 +2,7 @@ import { assertIdorRejected, assertRequiresAuth } from "../../fixtures/assertion
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createSnapshot, getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_CREATED = 201;
+import { HTTP_CREATED } from "../../fixtures/http.constants.js";
 
 test.describe("System duplication", () => {
   test.beforeAll(async () => {

@@ -7,17 +7,7 @@ import {
   getSystemId,
 } from "../../fixtures/entity-helpers.js";
 import { expect, test } from "../../fixtures/friend.fixture.js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** HTTP 200 OK status code. */
-const HTTP_OK = 200;
-
-/** HTTP 201 Created status code. */
-const HTTP_CREATED = 201;
-
-/** HTTP 404 Not Found status code. */
-const HTTP_NOT_FOUND = 404;
+import { HTTP_CREATED, HTTP_NOT_FOUND, HTTP_OK } from "../../fixtures/http.constants.js";
 
 /** Dummy encrypted bucket key for assignment tests. */
 const DUMMY_ENCRYPTED_BUCKET_KEY = "dGVzdC1lbmNyeXB0ZWQta2V5";

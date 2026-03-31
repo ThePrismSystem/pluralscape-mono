@@ -7,6 +7,7 @@
  */
 import { getSystemId } from "./entity-helpers.js";
 
+import type { AuthHeaders } from "./http.constants.js";
 import type { APIRequestContext } from "@playwright/test";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
@@ -23,7 +24,7 @@ export interface EndpointDescriptor {
    */
   resolve: (
     request: APIRequestContext,
-    headers: Record<string, string>,
+    headers: AuthHeaders,
   ) => Promise<{ url: string; body?: unknown }>;
 }
 
@@ -31,7 +32,7 @@ type Resolver = EndpointDescriptor["resolve"];
 
 /** Build a resolver for simple system-scoped list endpoints. */
 function systemList(resource: string): Resolver {
-  return async (request: APIRequestContext, headers: Record<string, string>) => {
+  return async (request: APIRequestContext, headers: AuthHeaders) => {
     const systemId = await getSystemId(request, headers);
     return { url: `/v1/systems/${systemId}/${resource}` };
   };
@@ -44,7 +45,7 @@ function staticUrl(url: string, body?: unknown): Resolver {
 
 /** Build a system-scoped resolver using a path suffix after the system ID. */
 function systemPath(suffix: string): Resolver {
-  return async (request: APIRequestContext, headers: Record<string, string>) => {
+  return async (request: APIRequestContext, headers: AuthHeaders) => {
     const systemId = await getSystemId(request, headers);
     return { url: `/v1/systems/${systemId}${suffix}` };
   };

@@ -3,17 +3,7 @@ import crypto from "node:crypto";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createBucket, getSystemId } from "../../fixtures/entity-helpers.js";
 import { expect, test } from "../../fixtures/friend.fixture.js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** HTTP 200 OK status code. */
-const HTTP_OK = 200;
-
-/** HTTP 201 Created status code. */
-const HTTP_CREATED = 201;
-
-/** HTTP 204 No Content status code. */
-const HTTP_NO_CONTENT = 204;
+import { HTTP_CREATED, HTTP_NO_CONTENT, HTTP_OK } from "../../fixtures/http.constants.js";
 
 /** Dummy encrypted bucket key for assignment tests. */
 const DUMMY_ENCRYPTED_BUCKET_KEY = "dGVzdC1lbmNyeXB0ZWQta2V5";

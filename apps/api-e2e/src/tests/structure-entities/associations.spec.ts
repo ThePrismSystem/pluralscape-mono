@@ -6,10 +6,7 @@ import {
   createStructureEntityType,
   getSystemId,
 } from "../../fixtures/entity-helpers.js";
-
-const HTTP_OK = 200;
-const HTTP_CREATED = 201;
-const HTTP_NO_CONTENT = 204;
+import { HTTP_CREATED, HTTP_NO_CONTENT, HTTP_OK } from "../../fixtures/http.constants.js";
 
 test.describe("Structure entity associations", () => {
   test.beforeAll(async () => {

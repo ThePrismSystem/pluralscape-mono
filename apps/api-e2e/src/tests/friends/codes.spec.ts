@@ -1,17 +1,7 @@
 import crypto from "node:crypto";
 
 import { expect, test } from "../../fixtures/auth.fixture.js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** HTTP 201 Created status code. */
-const HTTP_CREATED = 201;
-
-/** HTTP 204 No Content status code. */
-const HTTP_NO_CONTENT = 204;
-
-/** HTTP 409 Conflict status code. */
-const HTTP_CONFLICT = 409;
+import { HTTP_CONFLICT, HTTP_CREATED, HTTP_NO_CONTENT } from "../../fixtures/http.constants.js";
 
 /** Expected friend code format: XXXX-XXXX uppercase alphanumeric. */
 const FRIEND_CODE_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;

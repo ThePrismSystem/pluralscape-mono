@@ -7,23 +7,14 @@ import {
   createMember,
   getSystemId,
 } from "../../fixtures/entity-helpers.js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** HTTP 200 OK. */
-const HTTP_OK = 200;
-
-/** HTTP 201 Created. */
-const HTTP_CREATED = 201;
-
-/** HTTP 304 Not Modified. */
-const HTTP_NOT_MODIFIED = 304;
-
-/** HTTP 400 Bad Request. */
-const HTTP_BAD_REQUEST = 400;
-
-/** HTTP 404 Not Found. */
-const HTTP_NOT_FOUND = 404;
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_CREATED,
+  HTTP_NOT_FOUND,
+  HTTP_NOT_MODIFIED,
+  HTTP_OK,
+  asAuthHeaders,
+} from "../../fixtures/http.constants.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -197,7 +188,7 @@ test.describe("Bucket export", () => {
       const {
         data: { sessionToken: token1 },
       } = (await reg1.json()) as { data: { sessionToken: string } };
-      const headers1 = { Authorization: `Bearer ${token1}` };
+      const headers1 = asAuthHeaders({ Authorization: `Bearer ${token1}` });
 
       const reg2 = await request.post("/v1/auth/register", {
         data: {

@@ -6,9 +6,7 @@ import {
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_NO_CONTENT = 204;
-const HTTP_BAD_REQUEST = 400;
+import { HTTP_BAD_REQUEST, HTTP_NO_CONTENT } from "../../fixtures/http.constants.js";
 
 test.describe("System permanent purge", () => {
   test.beforeAll(async () => {

@@ -1,8 +1,7 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createGroup, getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_OK = 200;
+import { HTTP_OK } from "../../fixtures/http.constants.js";
 
 test.describe("Group list filters", () => {
   test.beforeAll(async () => {

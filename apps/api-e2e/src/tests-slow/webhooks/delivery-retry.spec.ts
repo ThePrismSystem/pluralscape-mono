@@ -1,9 +1,7 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_CREATED = 201;
-const HTTP_OK = 200;
+import { HTTP_CREATED, HTTP_OK } from "../../fixtures/http.constants.js";
 
 test.describe("Webhook delivery retry", () => {
   test.describe.configure({ timeout: 180_000 });

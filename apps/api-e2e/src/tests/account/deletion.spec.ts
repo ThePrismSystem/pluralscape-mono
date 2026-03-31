@@ -2,12 +2,13 @@ import crypto from "node:crypto";
 
 import { assertErrorShape, assertRequiresAuth } from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_NO_CONTENT,
+  HTTP_UNAUTHORIZED,
+} from "../../fixtures/http.constants.js";
 
 import type { APIRequestContext } from "@playwright/test";
-
-const HTTP_NO_CONTENT = 204;
-const HTTP_BAD_REQUEST = 400;
-const HTTP_UNAUTHORIZED = 401;
 
 /**
  * Register a "viewer" account which has no auto-created system.

@@ -1,9 +1,7 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
+import { HTTP_CREATED, HTTP_NOT_FOUND } from "../../fixtures/http.constants.js";
 
 import type { APIRequestContext } from "@playwright/test";
-
-const HTTP_CREATED = 201;
-const HTTP_NOT_FOUND = 404;
 
 interface FriendNotifPrefResponse {
   readonly id: string;

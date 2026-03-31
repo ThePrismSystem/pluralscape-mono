@@ -9,10 +9,9 @@ import crypto from "node:crypto";
 
 import { test as base, expect, type APIRequestContext } from "@playwright/test";
 
-// ── Constants ────────────────────────────────────────────────────────
+import { HTTP_CREATED, asAuthHeaders } from "./http.constants.js";
 
-/** HTTP 201 Created status code. */
-const HTTP_CREATED = 201;
+import type { AuthHeaders } from "./http.constants.js";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -32,7 +31,7 @@ interface AccountContext {
   readonly sessionToken: string;
   readonly email: string;
   readonly password: string;
-  readonly headers: Record<string, string>;
+  readonly headers: AuthHeaders;
 }
 
 interface FriendCodeResponse {
@@ -94,7 +93,7 @@ async function registerAccount(request: APIRequestContext): Promise<AccountConte
     sessionToken: envelope.data.sessionToken,
     email,
     password,
-    headers: { Authorization: `Bearer ${envelope.data.sessionToken}` },
+    headers: asAuthHeaders({ Authorization: `Bearer ${envelope.data.sessionToken}` }),
   };
 }
 
