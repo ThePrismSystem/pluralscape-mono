@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeParamStyle, diffRoutes } from "../reconcile-openapi.js";
+import { normalizeParamStyle, diffRoutes, parseSpecOperations } from "../reconcile-openapi.js";
 
 describe("normalizeParamStyle", () => {
   it("converts Express :param to OpenAPI {param}", () => {
@@ -63,5 +63,89 @@ describe("diffRoutes", () => {
     const result = diffRoutes(code, spec);
     expect(result.orphanedInSpec).toHaveLength(1);
     expect(result.undocumented).toHaveLength(1);
+  });
+});
+
+describe("parseSpecOperations", () => {
+  it("extracts method, path, and operationId from spec", () => {
+    const spec = {
+      paths: {
+        "/v1/systems/{systemId}/members": {
+          get: { operationId: "listMembers" },
+          post: {
+            operationId: "createMember",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["encryptedData"],
+                    properties: {
+                      encryptedData: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const ops = parseSpecOperations(spec);
+    expect(ops).toHaveLength(2);
+    expect(ops).toContainEqual({
+      method: "GET",
+      path: "/v1/systems/{systemId}/members",
+      operationId: "listMembers",
+      requestBodyShape: null,
+    });
+    expect(ops).toContainEqual({
+      method: "POST",
+      path: "/v1/systems/{systemId}/members",
+      operationId: "createMember",
+      requestBodyShape: {
+        encryptedData: { type: "string", required: true },
+      },
+    });
+  });
+
+  it("handles $ref in requestBody schema by returning null shape", () => {
+    const spec = {
+      paths: {
+        "/v1/auth/register": {
+          post: {
+            operationId: "register",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RegistrationRequest" },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const ops = parseSpecOperations(spec);
+    expect(ops[0]?.requestBodyShape).toBeNull();
+  });
+
+  it("skips non-HTTP method keys (summary, description, parameters)", () => {
+    const spec = {
+      paths: {
+        "/v1/health": {
+          summary: "Health check",
+          parameters: [],
+          get: { operationId: "healthCheck" },
+        },
+      },
+    };
+    const ops = parseSpecOperations(spec);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]?.method).toBe("GET");
+  });
+
+  it("returns empty array for empty paths", () => {
+    expect(parseSpecOperations({ paths: {} })).toEqual([]);
   });
 });
