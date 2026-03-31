@@ -22,6 +22,7 @@
     "codeql": "bash scripts/codeql/analyze.sh",
     "openapi:lint": "redocly lint docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml",
     "openapi:bundle": "redocly bundle docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml -o docs/openapi.yaml",
+    "openapi:check": "redocly bundle docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml -o docs/openapi.yaml && tsx scripts/reconcile-openapi.ts",
     "commitlint": "commitlint --from=origin/main --to=HEAD",
     "knip": "knip --exclude exports --exclude types",
     "prepare": "husky"
