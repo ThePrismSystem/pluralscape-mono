@@ -319,4 +319,16 @@ test.describe("Friend dashboard", () => {
       expect(body.data.activeFronting.isCofronting).toBe(true);
     });
   });
+
+  test("dashboard sync endpoint returns data", async ({
+    request,
+    friendAccounts: { accountB, connectionIdB },
+  }) => {
+    const res = await request.get(`/v1/account/friends/${connectionIdB}/dashboard/sync`, {
+      headers: accountB.headers,
+    });
+    expect(res.status()).toBe(HTTP_OK);
+    const body = await res.json();
+    expect(body).toHaveProperty("data");
+  });
 });
