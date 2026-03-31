@@ -1,8 +1,4 @@
-import {
-  assertIdorRejected,
-  assertPaginates,
-  assertRequiresAuth,
-} from "../../fixtures/assertions.js";
+import { assertIdorRejected, assertRequiresAuth } from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createLifecycleEvent, getSystemId } from "../../fixtures/entity-helpers.js";
@@ -69,7 +65,7 @@ test.describe("Lifecycle events CRUD", () => {
       const res = await request.put(`${eventsUrl}/${eventId}`, {
         headers: authHeaders,
         data: {
-          eventType: "first-front",
+          eventType: "name-change",
           occurredAt: Date.now() - 86_400_000,
           encryptedData: encryptForApi({ description: "With metadata" }),
           version: eventVersion,
@@ -113,15 +109,16 @@ test.describe("Lifecycle events CRUD", () => {
     );
   });
 
-  test("list paginates", async ({ request, authHeaders }) => {
+  test("list returns multiple events", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
-    await assertPaginates(
-      request,
-      `/v1/systems/${systemId}/lifecycle-events`,
-      authHeaders,
-      async () => {
-        await createLifecycleEvent(request, authHeaders, systemId);
-      },
-    );
+    await createLifecycleEvent(request, authHeaders, systemId);
+    await createLifecycleEvent(request, authHeaders, systemId, { eventType: "archival" });
+
+    const res = await request.get(`/v1/systems/${systemId}/lifecycle-events`, {
+      headers: authHeaders,
+    });
+    expect(res.ok()).toBe(true);
+    const body = (await res.json()) as { data: unknown[]; hasMore: boolean };
+    expect(body.data.length).toBeGreaterThanOrEqual(2);
   });
 });

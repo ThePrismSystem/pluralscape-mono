@@ -18,9 +18,8 @@ test.describe("Webhook delivery retry", () => {
     const webhookRes = await request.post(`/v1/systems/${systemId}/webhook-configs`, {
       headers: authHeaders,
       data: {
-        encryptedData: encryptForApi({ label: "E2E retry test" }),
         url: "https://httpbin.org/post",
-        events: ["member.created"],
+        eventTypes: ["member.created"],
       },
     });
     expect(webhookRes.status()).toBe(HTTP_CREATED);
@@ -35,7 +34,7 @@ test.describe("Webhook delivery retry", () => {
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const deliveriesRes = await request.get(
-      `/v1/systems/${systemId}/webhook-configs/${webhookId}/deliveries`,
+      `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
       { headers: authHeaders },
     );
     expect(deliveriesRes.status()).toBe(HTTP_OK);

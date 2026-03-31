@@ -5,14 +5,20 @@ import {
   assertValidationRejects,
 } from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
-import { getSystemId } from "../../fixtures/entity-helpers.js";
+import { ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
+import { ensureSystemSetup, getSystemId } from "../../fixtures/entity-helpers.js";
 
 const HTTP_OK = 200;
 const HTTP_NO_CONTENT = 204;
 
 test.describe("System PIN management", () => {
+  test.beforeAll(async () => {
+    await ensureCryptoReady();
+  });
+
   test("PIN lifecycle: set, verify, remove", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
+    await ensureSystemSetup(request, authHeaders, systemId);
     const pinUrl = `/v1/systems/${systemId}/settings/pin`;
 
     await test.step("set PIN", async () => {
@@ -41,7 +47,10 @@ test.describe("System PIN management", () => {
     });
 
     await test.step("remove PIN", async () => {
-      const res = await request.delete(pinUrl, { headers: authHeaders });
+      const res = await request.delete(pinUrl, {
+        headers: authHeaders,
+        data: { pin: "1234" },
+      });
       expect(res.status()).toBe(HTTP_NO_CONTENT);
     });
 

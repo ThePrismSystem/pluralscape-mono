@@ -358,7 +358,7 @@ export async function createApiKey(
   systemId: string,
   opts: { keyType?: "metadata" | "crypto"; scopes?: string[] } = {},
 ): Promise<{ id: string }> {
-  const { keyType = "metadata", scopes = ["read"] } = opts;
+  const { keyType = "metadata", scopes = ["read:members"] } = opts;
   const data: Record<string, unknown> = {
     keyType,
     scopes,
@@ -483,4 +483,37 @@ export async function createMemberPhoto(
   expect(res.status()).toBe(HTTP_CREATED);
   const body = (await res.json()) as { data: { id: string } };
   return { id: body.data.id };
+}
+
+/**
+ * Run the three-step setup wizard so system settings exist.
+ *
+ * The PIN endpoints require a `system_settings` row which is only
+ * created during the setup flow (nomenclature -> profile -> complete).
+ */
+export async function ensureSystemSetup(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+): Promise<void> {
+  const nomenclatureRes = await request.post(`/v1/systems/${systemId}/setup/nomenclature`, {
+    headers,
+    data: { encryptedData: encryptForApi({ terminology: "default" }) },
+  });
+  expect(nomenclatureRes.ok()).toBe(true);
+
+  const profileRes = await request.post(`/v1/systems/${systemId}/setup/profile`, {
+    headers,
+    data: { encryptedData: encryptForApi({ name: "E2E System" }) },
+  });
+  expect(profileRes.ok()).toBe(true);
+
+  const completeRes = await request.post(`/v1/systems/${systemId}/setup/complete`, {
+    headers,
+    data: {
+      encryptedData: encryptForApi({ settings: "default" }),
+      recoveryKeyBackupConfirmed: true,
+    },
+  });
+  expect(completeRes.ok()).toBe(true);
 }

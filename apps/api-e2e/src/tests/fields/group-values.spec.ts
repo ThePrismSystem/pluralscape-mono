@@ -18,12 +18,16 @@ test.describe("Group custom field values", () => {
     const field = await createFieldDefinition(request, authHeaders, systemId);
     const fieldsUrl = `/v1/systems/${systemId}/groups/${group.id}/fields`;
 
+    let fieldVersion: number;
+
     await test.step("set field value", async () => {
       const res = await request.post(`${fieldsUrl}/${field.id}`, {
         headers: authHeaders,
         data: { encryptedData: encryptForApi({ value: "test value" }) },
       });
       expect(res.status()).toBe(HTTP_CREATED);
+      const body = (await res.json()) as { data: { version: number } };
+      fieldVersion = body.data.version;
     });
 
     await test.step("list field values", async () => {
@@ -36,7 +40,10 @@ test.describe("Group custom field values", () => {
     await test.step("update field value", async () => {
       const res = await request.put(`${fieldsUrl}/${field.id}`, {
         headers: authHeaders,
-        data: { encryptedData: encryptForApi({ value: "updated value" }) },
+        data: {
+          encryptedData: encryptForApi({ value: "updated value" }),
+          version: fieldVersion,
+        },
       });
       expect(res.status()).toBe(HTTP_OK);
     });

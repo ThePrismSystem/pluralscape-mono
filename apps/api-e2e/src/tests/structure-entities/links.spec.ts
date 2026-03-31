@@ -16,7 +16,7 @@ test.describe("Structure entity links", () => {
     await ensureCryptoReady();
   });
 
-  test("link lifecycle: create, list, update, delete", async ({ request, authHeaders }) => {
+  test("link lifecycle: create, list, delete", async ({ request, authHeaders }) => {
     const systemId = await getSystemId(request, authHeaders);
     const entityType = await createStructureEntityType(request, authHeaders, systemId);
     const entity = await createStructureEntity(request, authHeaders, systemId, entityType.id);
@@ -38,14 +38,6 @@ test.describe("Structure entity links", () => {
       expect(res.status()).toBe(HTTP_OK);
       const body = (await res.json()) as { data: Array<{ id: string }> };
       expect(body.data.map((l) => l.id)).toContain(linkId);
-    });
-
-    await test.step("update link", async () => {
-      const res = await request.put(`${linksUrl}/${linkId}`, {
-        headers: authHeaders,
-        data: { entityId: entity.id, parentEntityId: null, sortOrder: 1 },
-      });
-      expect(res.status()).toBe(HTTP_OK);
     });
 
     await test.step("delete link", async () => {

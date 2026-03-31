@@ -115,14 +115,19 @@ test.describe("Structure entity CRUD", () => {
       parentEntityId: parent.id,
     });
 
+    // Hierarchy returns ancestor chain for the requested entity
     const res = await request.get(
-      `/v1/systems/${systemId}/structure/entities/${parent.id}/hierarchy`,
+      `/v1/systems/${systemId}/structure/entities/${child.id}/hierarchy`,
       { headers: authHeaders },
     );
     expect(res.status()).toBe(HTTP_OK);
-    const body = (await res.json()) as { data: { children?: Array<{ id: string }> } };
-    const childIds = (body.data.children ?? []).map((c) => c.id);
-    expect(childIds).toContain(child.id);
+    const body = (await res.json()) as {
+      data: Array<{ entityId: string; parentEntityId: string | null; depth: number }>;
+    };
+    const entityIds = body.data.map((node) => node.entityId);
+    expect(entityIds).toContain(child.id);
+    const childNode = body.data.find((node) => node.entityId === child.id);
+    expect(childNode?.parentEntityId).toBe(parent.id);
   });
 
   test("requires auth", async ({ request, authHeaders }) => {

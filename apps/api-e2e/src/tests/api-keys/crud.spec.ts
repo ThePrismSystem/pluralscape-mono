@@ -28,7 +28,7 @@ test.describe("API keys CRUD", () => {
         headers: authHeaders,
         data: {
           keyType: "metadata",
-          scopes: ["read"],
+          scopes: ["read:members"],
           encryptedData: encryptForApi({ label: "Test Metadata Key" }),
         },
       });
@@ -78,7 +78,7 @@ test.describe("API keys CRUD", () => {
         headers: authHeaders,
         data: {
           keyType: "crypto",
-          scopes: ["read", "write"],
+          scopes: ["read:members", "write:members"],
           encryptedData: encryptForApi({ label: "Test Crypto Key" }),
           encryptedKeyMaterial: "dGVzdC1lbmNyeXB0ZWQta2V5LW1hdGVyaWFs",
         },
@@ -91,7 +91,7 @@ test.describe("API keys CRUD", () => {
         headers: authHeaders,
         data: {
           keyType: "crypto",
-          scopes: ["read"],
+          scopes: ["read:members"],
           encryptedData: encryptForApi({ label: "Missing Material" }),
         },
       });
@@ -109,7 +109,7 @@ test.describe("API keys CRUD", () => {
       authHeaders,
       [
         {},
-        { keyType: "invalid", scopes: ["read"], encryptedData: "x" },
+        { keyType: "invalid", scopes: ["read:members"], encryptedData: "x" },
         { keyType: "metadata", scopes: [], encryptedData: "x" },
       ],
     );
