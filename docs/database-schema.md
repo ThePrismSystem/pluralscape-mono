@@ -26,9 +26,10 @@ erDiagram
         varchar account_type "default 'system'"
         varchar email_hash
         varchar email_salt
-        binary encrypted_email "AES-256-GCM, server-side key"
+        binary encrypted_email "server-side key (ADR 029), nullable"
         varchar password_hash
         varchar kdf_salt
+        binary encrypted_master_key "two-layer KEK/DEK, nullable"
         boolean audit_log_ip_tracking "default false"
     }
 
@@ -43,6 +44,7 @@ erDiagram
     sessions {
         varchar id PK
         varchar account_id FK
+        varchar token_hash "unique"
         blob encrypted_data "T1 - device info inside"
         boolean revoked
         timestamp last_active
@@ -63,6 +65,8 @@ erDiagram
         varchar target_session_id FK
         varchar status
         binary encrypted_key_material
+        binary code_salt
+        integer code_attempts "default 0"
         timestamp expires_at
     }
 
@@ -71,6 +75,7 @@ erDiagram
         varchar session_id FK
         varchar token_hash "unique"
         timestamp created_at
+        timestamp used_at "nullable"
     }
 
     accounts ||--o{ auth_keys : "has"
@@ -303,7 +308,8 @@ erDiagram
     notes {
         varchar id PK
         varchar system_id FK
-        varchar member_id FK "nullable"
+        varchar author_entity_type "nullable, polymorphic"
+        varchar author_entity_id "nullable, polymorphic"
         blob encrypted_data "T1"
     }
 
@@ -347,7 +353,6 @@ erDiagram
     systems ||--o{ messages : "scopes"
     systems ||--o{ board_messages : "has"
     systems ||--o{ notes : "has"
-    members ||--o{ notes : "linked to"
     systems ||--o{ polls : "has"
     members ||--o{ polls : "created_by"
     polls ||--o{ poll_votes : "receives"
@@ -355,6 +360,11 @@ erDiagram
     systems ||--o{ acknowledgements : "has"
     members ||--o{ acknowledgements : "created_by"
 ```
+
+**Notes:**
+
+- `notes.author_entity_type` and `notes.author_entity_id` form a polymorphic author reference — both must be null or both non-null (CHECK constraint). No FK constraint; referential integrity is enforced at the application layer.
+- `poll_votes.voter` is a NOT NULL jsonb column identifying the voting member (enforced by CHECK), not a traditional FK.
 
 ---
 
@@ -749,7 +759,7 @@ erDiagram
 
 ## 12. Sync
 
-CRDT-based offline sync infrastructure. `sync_documents` tracks Automerge document state per entity. `sync_queue` is the ordered change log. `sync_conflicts` records unresolved or resolved CRDT merges.
+CRDT-based offline sync infrastructure. `sync_documents` tracks per-entity document state. `sync_changes` is the ordered change log with encrypted payloads and cryptographic signatures. `sync_snapshots` stores compacted document state. `sync_conflicts` records resolved CRDT merges.
 
 ```mermaid
 erDiagram
@@ -758,42 +768,62 @@ erDiagram
     }
 
     sync_documents {
-        varchar id PK
+        varchar document_id PK
         varchar system_id FK
-        varchar entity_type
-        varchar entity_id
-        binary automerge_heads
-        integer version
-        timestamp last_synced_at
+        varchar doc_type
+        integer size_bytes "default 0"
+        integer snapshot_version "default 0"
+        integer last_seq "default 0"
+        boolean archived
+        varchar time_period "nullable"
+        varchar key_type "default 'derived'"
+        varchar bucket_id "nullable"
+        varchar channel_id "nullable"
     }
 
-    sync_queue {
+    sync_changes {
         varchar id PK
-        serial seq "globally unique, ordered"
-        varchar system_id FK
-        varchar entity_type
-        varchar entity_id
-        varchar operation
-        binary encrypted_change_data
-        timestamp synced_at
+        varchar document_id FK
+        integer seq
+        binary encrypted_payload
+        binary author_public_key
+        binary nonce
+        binary signature
+        timestamp created_at
+    }
+
+    sync_snapshots {
+        varchar document_id PK "FK to sync_documents"
+        integer snapshot_version
+        binary encrypted_payload
+        binary author_public_key
+        binary nonce
+        binary signature
+        timestamp created_at
     }
 
     sync_conflicts {
         varchar id PK
-        varchar system_id FK
+        varchar document_id FK
         varchar entity_type
         varchar entity_id
-        integer local_version
-        integer remote_version
-        varchar resolution "nullable"
-        text details "nullable"
-        timestamp resolved_at
+        varchar field_name "nullable"
+        varchar resolution
+        varchar summary
+        timestamp detected_at
+        timestamp created_at
     }
 
     systems ||--o{ sync_documents : "has"
-    systems ||--o{ sync_queue : "queues"
-    systems ||--o{ sync_conflicts : "has"
+    sync_documents ||--o{ sync_changes : "has"
+    sync_documents ||--o| sync_snapshots : "has"
+    sync_documents ||--o{ sync_conflicts : "has"
 ```
+
+**Notes:**
+
+- `sync_changes` has unique constraints on `(document_id, seq)` and `(document_id, author_public_key, nonce)` for deduplication.
+- `sync_documents.key_type` controls encryption: `derived` uses system-derived keys, `bucket` uses the referenced `bucket_id`'s key.
 
 ---
 
@@ -911,6 +941,7 @@ erDiagram
         timestamp occurred_at
         timestamp recorded_at
         blob encrypted_data "T1"
+        jsonb plaintext_metadata "nullable"
     }
 
     audit_log {
@@ -955,15 +986,16 @@ erDiagram
     blob_metadata {
         varchar id PK
         varchar system_id FK
-        varchar storage_key "S3 object key"
+        varchar storage_key "S3 object key, unique"
         varchar mime_type "nullable"
         bigint size_bytes
         integer encryption_tier "1=T1, 2=T2"
         varchar bucket_id FK "nullable - T2 blobs"
         varchar purpose
         varchar thumbnail_of_blob_id FK "nullable, self-ref"
-        varchar checksum
-        timestamp uploaded_at
+        varchar checksum "nullable, 64-char"
+        timestamp uploaded_at "nullable"
+        timestamp expires_at "nullable"
     }
 
     systems ||--o{ blob_metadata : "owns"
@@ -1022,7 +1054,8 @@ erDiagram
         integer attempt_count
         timestamp last_attempt_at "nullable"
         timestamp next_retry_at
-        blob encrypted_data "T1, nullable"
+        binary encrypted_data "nullable"
+        jsonb payload_data "nullable"
     }
 
     accounts ||--o{ api_keys : "owns"
@@ -1079,12 +1112,17 @@ erDiagram
         varchar id PK
     }
 
+    systems {
+        varchar id PK
+    }
+
     bucket_key_rotations {
         varchar id PK
         varchar bucket_id FK
+        varchar system_id FK
         integer from_key_version
         integer to_key_version
-        varchar state
+        varchar state "default 'initiated'"
         timestamp initiated_at
         timestamp completed_at
         integer total_items
@@ -1095,9 +1133,10 @@ erDiagram
     bucket_rotation_items {
         varchar id PK
         varchar rotation_id FK
+        varchar system_id FK
         varchar entity_type
         varchar entity_id
-        varchar status
+        varchar status "default 'pending'"
         varchar claimed_by "worker ID"
         timestamp claimed_at
         timestamp completed_at
@@ -1105,7 +1144,9 @@ erDiagram
     }
 
     buckets ||--o{ bucket_key_rotations : "has"
+    systems ||--o{ bucket_key_rotations : "scopes"
     bucket_key_rotations ||--o{ bucket_rotation_items : "contains"
+    systems ||--o{ bucket_rotation_items : "scopes"
 ```
 
 ---
@@ -1141,6 +1182,7 @@ erDiagram
     accounts ||--o{ auth_keys : "has"
     accounts ||--o{ api_keys : "owns"
     accounts ||--o{ friend_connections : "has"
+    accounts ||--o{ device_tokens : "registers"
     systems ||--o{ members : "contains"
     systems ||--o{ system_structure_entity_types : "defines"
     systems ||--o{ system_structure_entities : "contains"
@@ -1150,6 +1192,10 @@ erDiagram
     systems ||--o{ journal_entries : "has"
     systems ||--o{ system_snapshots : "snapshots"
     systems ||--o{ sync_documents : "syncs"
+    systems ||--o{ webhook_configs : "has"
+    systems ||--o{ notification_configs : "configures"
+    systems ||--o{ timer_configs : "has"
+    systems ||--o{ fronting_reports : "has"
     buckets ||--o{ key_grants : "grants"
     buckets ||--o{ bucket_content_tags : "tags"
     buckets ||--o{ bucket_key_rotations : "rotates"
@@ -1160,4 +1206,8 @@ erDiagram
     members ||--o{ fronting_sessions : "fronts in"
     system_structure_entities ||--o{ fronting_sessions : "fronts in"
     system_structure_entities ||--o{ field_values : "has"
+    webhook_configs ||--o{ webhook_deliveries : "generates"
+    api_keys ||--o{ webhook_configs : "signs"
+    sync_documents ||--o{ sync_changes : "has"
+    sync_documents ||--o| sync_snapshots : "has"
 ```
