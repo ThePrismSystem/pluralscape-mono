@@ -68,8 +68,27 @@ export interface SpecOperation {
   requestBodyShape: Record<string, FieldShape> | null;
 }
 
-function extractInlineShape(schema: Record<string, unknown>): Record<string, FieldShape> | null {
+/**
+ * Extract structural shape from an inline OpenAPI schema.
+ * Handles plain objects and allOf compositions (common in bundled specs).
+ * Returns null if any part uses $ref.
+ */
+export function extractInlineShape(
+  schema: Record<string, unknown>,
+): Record<string, FieldShape> | null {
   if ("$ref" in schema) return null;
+
+  // Handle allOf by merging all sub-schemas
+  if (Array.isArray(schema.allOf)) {
+    const merged: Record<string, FieldShape> = {};
+    for (const sub of schema.allOf as Record<string, unknown>[]) {
+      const subShape = extractInlineShape(sub);
+      if (subShape === null) return null;
+      Object.assign(merged, subShape);
+    }
+    return Object.keys(merged).length > 0 ? merged : null;
+  }
+
   if (
     schema.type !== "object" ||
     typeof schema.properties !== "object" ||

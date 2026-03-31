@@ -5,6 +5,7 @@ import {
   diffRoutes,
   parseSpecOperations,
   compareShapes,
+  extractInlineShape,
   formatHumanOutput,
   formatJsonOutput,
 } from "../reconcile-openapi.js";
@@ -243,6 +244,54 @@ describe("parseSpecOperations", () => {
 
   it("returns empty array for empty paths", () => {
     expect(parseSpecOperations({ paths: {} })).toEqual([]);
+  });
+});
+
+describe("extractInlineShape", () => {
+  it("extracts shape from simple object schema", () => {
+    const schema = {
+      type: "object",
+      required: ["encryptedData"],
+      properties: {
+        encryptedData: { type: "string" },
+        version: { type: "integer" },
+      },
+    };
+    const shape = extractInlineShape(schema);
+    expect(shape).toEqual({
+      encryptedData: { type: "string", required: true },
+      version: { type: "integer", required: false },
+    });
+  });
+
+  it("merges allOf into a single shape", () => {
+    const schema = {
+      allOf: [
+        {
+          type: "object",
+          required: ["a"],
+          properties: { a: { type: "string" } },
+        },
+        {
+          type: "object",
+          required: ["b"],
+          properties: { b: { type: "number" } },
+        },
+      ],
+    };
+    const shape = extractInlineShape(schema);
+    expect(shape).toEqual({
+      a: { type: "string", required: true },
+      b: { type: "number", required: true },
+    });
+  });
+
+  it("returns null for $ref schema", () => {
+    expect(extractInlineShape({ $ref: "#/components/schemas/Foo" })).toBeNull();
+  });
+
+  it("returns null for non-object schema", () => {
+    expect(extractInlineShape({ type: "string" })).toBeNull();
   });
 });
 
