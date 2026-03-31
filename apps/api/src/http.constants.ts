@@ -33,6 +33,9 @@ export const HTTP_CONFLICT = 409;
 /** HTTP 413 Content Too Large — request body exceeds size limit. */
 export const HTTP_CONTENT_TOO_LARGE = 413;
 
+/** HTTP 415 Unsupported Media Type — request Content-Type is not accepted. */
+export const HTTP_UNSUPPORTED_MEDIA_TYPE = 415;
+
 /** HTTP 429 Too Many Requests — rate limit exceeded. */
 export const HTTP_TOO_MANY_REQUESTS = 429;
 

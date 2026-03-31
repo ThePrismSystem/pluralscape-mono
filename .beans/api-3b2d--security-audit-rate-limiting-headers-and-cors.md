@@ -1,11 +1,11 @@
 ---
 # api-3b2d
-title: "Security audit: rate limiting, headers, and CORS"
-status: todo
+title: 'Security audit: rate limiting, headers, and CORS'
+status: completed
 type: task
 priority: high
 created_at: 2026-03-29T02:59:10Z
-updated_at: 2026-03-29T03:03:11Z
+updated_at: 2026-03-30T22:44:48Z
 parent: api-e7gt
 ---
 
@@ -51,15 +51,25 @@ Audit and tune rate limiting, security headers, and CORS configuration.
 
 ## Checklist
 
-- [ ] Map every endpoint to its rate limit tier
-- [ ] Identify endpoints with inappropriate rate limit tier
-- [ ] Tune rate limits per endpoint sensitivity
-- [ ] Verify rate limit bypass cannot activate in production
-- [ ] Audit all security headers
-- [ ] Add missing security headers
-- [ ] Audit CORS configuration for production safety
-- [ ] Audit TRUST_PROXY and X-Forwarded-For handling
-- [ ] Verify Cache-Control on sensitive endpoints
-- [ ] Fix all issues found
+- [x] Map every endpoint to its rate limit tier
+- [x] Identify endpoints with inappropriate rate limit tier
+- [x] Tune rate limits per endpoint sensitivity (all appropriate)
+- [x] Verify rate limit bypass cannot activate in production
+- [x] Audit all security headers
+- [x] Add missing security headers (Cache-Control: no-store)
+- [x] Audit CORS configuration for production safety
+- [x] Audit TRUST_PROXY and X-Forwarded-For handling
+- [x] Verify Cache-Control on sensitive endpoints
+- [x] Fix all issues found
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+
+## Summary of Changes
+
+Full audit completed. All 304 routes have appropriate rate limit tiers. DISABLE_RATE_LIMIT double-guarded against production use. Security headers complete (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy, Referrer-Policy). CORS safe with explicit origins. TRUST_PROXY handling correct with IP validation and SSRF protection.
+
+Fixes applied:
+- Cache-Control: no-store added to login, register, sessions, account/get, recovery-key endpoints
+
+Audit report: docs/local-audits/015-api-security-audit-2026-03-30.md

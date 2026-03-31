@@ -34,10 +34,12 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { loginAccount } = await import("../../../services/auth.service.js");
 const { loginRoute } = await import("../../../routes/auth/login.js");
+const { authRoutes } = await import("../../../routes/auth/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
 const createApp = () => createRouteApp("/login", loginRoute);
+const createAuthApp = () => createRouteApp("/auth", authRoutes);
 
 const VALID_CREDENTIALS = {
   email: "test@example.com",
@@ -160,5 +162,31 @@ describe("POST /login", () => {
     expect(body.error.message).toBe("Too many failed login attempts");
     // Fixed Retry-After: always the full window duration (900s = 15 min)
     expect(res.headers.get("Retry-After")).toBe("900");
+  });
+
+  describe("Cache-Control", () => {
+    it("sets Cache-Control: no-store on successful login", async () => {
+      vi.mocked(loginAccount).mockResolvedValueOnce({
+        sessionToken: "tok_cc",
+        accountId: "acct_cc",
+        systemId: "sys_cc",
+        accountType: "system",
+      });
+
+      const app = createAuthApp();
+      const res = await postJSON(app, "/auth/login", VALID_CREDENTIALS);
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
+
+    it("sets Cache-Control: no-store on throttled response", async () => {
+      const { LoginThrottledError } = await import("../../../services/auth.service.js");
+      vi.mocked(loginAccount).mockRejectedValueOnce(new LoginThrottledError(Date.now() + 60_000));
+
+      const app = createAuthApp();
+      const res = await postJSON(app, "/auth/login", VALID_CREDENTIALS);
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
   });
 });

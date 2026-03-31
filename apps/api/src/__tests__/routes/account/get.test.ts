@@ -75,4 +75,23 @@ describe("GET /account", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("NOT_FOUND");
   });
+
+  describe("Cache-Control", () => {
+    it("sets Cache-Control: no-store on successful response", async () => {
+      vi.mocked(getAccountInfo).mockResolvedValueOnce({
+        accountId: "acct_cc" as AccountId,
+        accountType: "system" as AccountType,
+        systemId: null,
+        auditLogIpTracking: false,
+        version: 1,
+        createdAt: toUnixMillis(1000),
+        updatedAt: toUnixMillis(1000),
+      });
+
+      const app = createApp();
+      const res = await app.request("/account");
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
+  });
 });

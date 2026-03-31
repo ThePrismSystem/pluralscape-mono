@@ -65,4 +65,20 @@ describe("FriendExportQuerySchema", () => {
       expect(result.data.cursor).toBe("abc123");
     }
   });
+
+  it("accepts cursor at MAX_CURSOR_LENGTH boundary (1024)", () => {
+    const result = FriendExportQuerySchema.safeParse({
+      entityType: "member",
+      cursor: "a".repeat(1024),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects cursor exceeding MAX_CURSOR_LENGTH", () => {
+    const result = FriendExportQuerySchema.safeParse({
+      entityType: "member",
+      cursor: "a".repeat(1025),
+    });
+    expect(result.success).toBe(false);
+  });
 });

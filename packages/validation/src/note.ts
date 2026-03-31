@@ -2,7 +2,7 @@ import { NOTE_AUTHOR_ENTITY_TYPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import { booleanQueryParam } from "./query-params.js";
-import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
+import { MAX_ENCRYPTED_DATA_SIZE, MAX_QUERY_PARAM_STRING_LENGTH } from "./validation.constants.js";
 
 // ── Create ──────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ export const NoteQuerySchema = z
   .object({
     includeArchived: booleanQueryParam,
     authorEntityType: z.enum(NOTE_AUTHOR_ENTITY_TYPES).optional(),
-    authorEntityId: z.string().optional(),
+    authorEntityId: z.string().max(MAX_QUERY_PARAM_STRING_LENGTH).optional(),
     systemWide: booleanQueryParam,
   })
   .refine((v) => v.authorEntityId === undefined || v.authorEntityType !== undefined, {

@@ -20,6 +20,12 @@ export const accountRoutes = new Hono<AuthEnv>();
 // All account routes require authentication
 accountRoutes.use("*", authMiddleware());
 
+// Prevent caching of all account responses (private data)
+accountRoutes.use("*", async (c, next) => {
+  c.header("Cache-Control", "no-store");
+  await next();
+});
+
 accountRoutes.route("/", getRoute);
 accountRoutes.route("/", deleteRoute);
 accountRoutes.route("/email", changeEmailRoute);

@@ -33,10 +33,12 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { registerAccount, ValidationError } = await import("../../../services/auth.service.js");
 const { registerRoute } = await import("../../../routes/auth/register.js");
+const { authRoutes } = await import("../../../routes/auth/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
 const createApp = () => createRouteApp("/register", registerRoute);
+const createAuthApp = () => createRouteApp("/auth", authRoutes);
 
 const VALID_BODY = {
   email: "test@example.com",
@@ -133,5 +135,21 @@ describe("POST /register", () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
+  });
+
+  describe("Cache-Control", () => {
+    it("sets Cache-Control: no-store on successful registration", async () => {
+      vi.mocked(registerAccount).mockResolvedValueOnce({
+        sessionToken: "tok_cc",
+        recoveryKey: "rk_cc",
+        accountId: "acct_cc",
+        accountType: "system",
+      });
+
+      const app = createAuthApp();
+      const res = await postJSON(app, "/auth/register", VALID_BODY);
+
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
   });
 });

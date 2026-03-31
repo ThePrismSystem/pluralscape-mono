@@ -1,52 +1,96 @@
+import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 
-import { ApiHttpError } from "../../lib/api-error.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
+import { errorHandler } from "../../middleware/error-handler.js";
 
-import type { Context } from "hono";
+import type { ApiErrorCode } from "@pluralscape/types";
 
-/** Build a minimal mock Hono context with a controllable json() method. */
-function fakeContext(jsonFn: () => Promise<unknown>): Context {
-  return {
-    req: { json: jsonFn },
-  } as Context;
+function createTestApp() {
+  const app = new Hono();
+  app.onError(errorHandler);
+  app.post("/test", async (c) => {
+    const body = await parseJsonBody(c);
+    return c.json({ received: body });
+  });
+  return app;
+}
+
+interface ErrorBody {
+  error: { code: ApiErrorCode; message: string };
 }
 
 describe("parseJsonBody", () => {
   it("returns parsed JSON body on success", async () => {
-    const body = { email: "test@example.com", password: "secret" };
-    const result = await parseJsonBody(fakeContext(() => Promise.resolve(body)));
-    expect(result).toEqual(body);
+    const app = createTestApp();
+    const res = await app.request("/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "test@example.com" }),
+    });
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { received: { email: string } };
+    expect(data.received).toEqual({ email: "test@example.com" });
   });
 
-  it("throws ApiHttpError 400 on malformed JSON", async () => {
-    const ctx = fakeContext(() => Promise.reject(new SyntaxError("Unexpected token")));
-
-    await expect(parseJsonBody(ctx)).rejects.toThrow(
-      expect.objectContaining({
-        status: 400,
-        code: "VALIDATION_ERROR",
-        message: "Invalid JSON body",
-      }),
-    );
+  it("accepts Content-Type with charset parameter", async () => {
+    const app = createTestApp();
+    const res = await app.request("/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ ok: true }),
+    });
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { received: { ok: boolean } };
+    expect(data.received).toEqual({ ok: true });
   });
 
-  it("thrown error is an instance of ApiHttpError", async () => {
-    const ctx = fakeContext(() => Promise.reject(new SyntaxError("Unexpected token")));
-    const error = await parseJsonBody(ctx).catch((e: unknown) => e);
-    expect(error).toBeInstanceOf(ApiHttpError);
+  it("rejects request with text/plain Content-Type with 415", async () => {
+    const app = createTestApp();
+    const res = await app.request("/test", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ name: "test" }),
+    });
+    expect(res.status).toBe(415);
+    const data = (await res.json()) as ErrorBody;
+    expect(data.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
+    expect(data.error.message).toBe("Content-Type must be application/json");
   });
 
-  it("preserves original error as cause in details", async () => {
-    const originalError = new SyntaxError("Unexpected token");
-    const ctx = fakeContext(() => Promise.reject(originalError));
-    try {
-      await parseJsonBody(ctx);
-      expect.unreachable("should have thrown");
-    } catch (thrown: unknown) {
-      expect(thrown).toBeInstanceOf(ApiHttpError);
-      const apiError = thrown as ApiHttpError;
-      expect(apiError.details).toEqual({ cause: originalError });
-    }
+  it("rejects request with missing Content-Type with 415", async () => {
+    const app = createTestApp();
+    const res = await app.request("/test", {
+      method: "POST",
+      body: JSON.stringify({ name: "test" }),
+    });
+    expect(res.status).toBe(415);
+    const data = (await res.json()) as ErrorBody;
+    expect(data.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
+  });
+
+  it("rejects invalid JSON body with 400", async () => {
+    const app = createTestApp();
+    const res = await app.request("/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "not json",
+    });
+    expect(res.status).toBe(400);
+    const data = (await res.json()) as ErrorBody;
+    expect(data.error.code).toBe("VALIDATION_ERROR");
+    expect(data.error.message).toBe("Invalid JSON body");
+  });
+
+  it("rejects application/jsonl with 415", async () => {
+    const app = createTestApp();
+    const res = await app.request("/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/jsonl" },
+      body: JSON.stringify({ name: "test" }),
+    });
+    expect(res.status).toBe(415);
+    const data = (await res.json()) as ErrorBody;
+    expect(data.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
   });
 });

@@ -195,6 +195,22 @@ describe("NoteQuerySchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects authorEntityId exceeding 256 characters", () => {
+    const result = NoteQuerySchema.safeParse({
+      authorEntityType: "member",
+      authorEntityId: "a".repeat(257),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts authorEntityId at the 256 character boundary", () => {
+    const result = NoteQuerySchema.safeParse({
+      authorEntityType: "member",
+      authorEntityId: "a".repeat(256),
+    });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects systemWide with authorEntityType", () => {
     const result = NoteQuerySchema.safeParse({
       systemWide: "true",

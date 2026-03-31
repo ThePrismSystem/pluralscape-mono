@@ -1,11 +1,11 @@
 ---
 # api-69ul
-title: "Security audit: input validation and error handling"
-status: todo
+title: 'Security audit: input validation and error handling'
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-29T02:58:57Z
-updated_at: 2026-03-29T03:03:11Z
+updated_at: 2026-03-30T22:44:48Z
 parent: api-e7gt
 ---
 
@@ -54,17 +54,28 @@ In-depth audit of input validation coverage and error handling safety across eve
 
 ## Checklist
 
-- [ ] Enumerate all endpoints and their validation schemas
-- [ ] Identify endpoints missing Zod validation
-- [ ] Verify path/query param validation on every endpoint
-- [ ] Verify string/array/numeric limits on all schemas
-- [ ] Verify Content-Type enforcement
-- [ ] Audit for raw SQL or template injection
-- [ ] Audit for path traversal in blob operations
-- [ ] Verify error response format consistency
-- [ ] Verify no information leakage in error responses
-- [ ] Verify body size and pagination limits
-- [ ] Audit regex patterns for ReDoS
-- [ ] Fix all issues found
+- [x] Enumerate all endpoints and their validation schemas
+- [x] Identify endpoints missing Zod validation
+- [x] Verify path/query param validation on every endpoint
+- [x] Verify string/array/numeric limits on all schemas
+- [x] Verify Content-Type enforcement
+- [x] Audit for raw SQL or template injection
+- [x] Audit for path traversal in blob operations
+- [x] Verify error response format consistency
+- [x] Verify no information leakage in error responses
+- [x] Verify body size and pagination limits
+- [x] Audit regex patterns for ReDoS
+- [x] Fix all issues found
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
+
+
+## Summary of Changes
+
+Full audit completed. All services use Zod validation. Path params consistently use requireIdParam(). No raw SQL or injection vectors. Error masking correct in production. Pagination enforced with HMAC cursor integrity.
+
+Fixes applied:
+- Content-Type enforcement added to parseJsonBody (415 UNSUPPORTED_MEDIA_TYPE)
+- Max-length constraints added to unconstrained query param strings (note.ts, audit-log-query.ts)
+
+Audit report: docs/local-audits/015-api-security-audit-2026-03-30.md
