@@ -302,7 +302,7 @@ test.describe("Bucket export", () => {
       const {
         data: { sessionToken: t1 },
       } = (await reg1.json()) as { data: { sessionToken: string } };
-      const h1 = { Authorization: `Bearer ${t1}` };
+      const h1 = asAuthHeaders({ Authorization: `Bearer ${t1}` });
 
       const reg2 = await request.post("/v1/auth/register", {
         data: {
@@ -314,7 +314,7 @@ test.describe("Bucket export", () => {
       const {
         data: { sessionToken: t2 },
       } = (await reg2.json()) as { data: { sessionToken: string } };
-      const h2 = { Authorization: `Bearer ${t2}` };
+      const h2 = asAuthHeaders({ Authorization: `Bearer ${t2}` });
 
       const sysId = await getSystemId(request, h1);
       const bucket = await createBucket(request, h1, sysId, "Non-Owner Export");
