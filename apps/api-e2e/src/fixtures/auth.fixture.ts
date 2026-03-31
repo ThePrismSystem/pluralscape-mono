@@ -2,7 +2,8 @@
  * Playwright fixtures for authenticated API requests.
  *
  * Each test using `registeredAccount` gets a freshly registered account
- * with a unique email and valid session token.
+ * with a unique email and valid session token. Tests needing IDOR
+ * verification also get `secondRegisteredAccount` / `secondAuthHeaders`.
  */
 import crypto from "node:crypto";
 
@@ -29,6 +30,10 @@ interface AuthFixtures {
   registeredAccount: AccountInfo;
   /** Pre-built Authorization header for the registered account. */
   authHeaders: Record<string, string>;
+  /** A second freshly registered account for IDOR / cross-account tests. */
+  secondRegisteredAccount: AccountInfo;
+  /** Pre-built Authorization header for the second account. */
+  secondAuthHeaders: Record<string, string>;
 }
 
 async function registerUniqueAccount(request: APIRequestContext): Promise<AccountInfo> {
@@ -60,6 +65,13 @@ export const test = base.extend<AuthFixtures>({
   },
   authHeaders: async ({ registeredAccount }, use) => {
     await use({ Authorization: `Bearer ${registeredAccount.sessionToken}` });
+  },
+  secondRegisteredAccount: async ({ request }, use) => {
+    const account = await registerUniqueAccount(request);
+    await use(account);
+  },
+  secondAuthHeaders: async ({ secondRegisteredAccount }, use) => {
+    await use({ Authorization: `Bearer ${secondRegisteredAccount.sessionToken}` });
   },
 });
 
