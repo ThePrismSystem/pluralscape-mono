@@ -1,6 +1,6 @@
 ---
 # api-3b2d
-title: 'Security audit: rate limiting, headers, and CORS'
+title: "Security audit: rate limiting, headers, and CORS"
 status: completed
 type: task
 priority: high
@@ -64,12 +64,12 @@ Audit and tune rate limiting, security headers, and CORS configuration.
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
 
-
 ## Summary of Changes
 
 Full audit completed. All 304 routes have appropriate rate limit tiers. DISABLE_RATE_LIMIT double-guarded against production use. Security headers complete (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Permissions-Policy, Referrer-Policy). CORS safe with explicit origins. TRUST_PROXY handling correct with IP validation and SSRF protection.
 
 Fixes applied:
+
 - Cache-Control: no-store added to login, register, sessions, account/get, recovery-key endpoints
 
 Audit report: docs/local-audits/015-api-security-audit-2026-03-30.md

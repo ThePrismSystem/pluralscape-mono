@@ -1,6 +1,6 @@
 ---
 # api-fg7s
-title: 'Password change: document or change session revocation behavior'
+title: "Password change: document or change session revocation behavior"
 status: todo
 type: task
 priority: normal
