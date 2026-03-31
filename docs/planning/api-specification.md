@@ -17,13 +17,29 @@ All rate limits use a **fixed-window** algorithm (matching the existing `createR
 | Auth (logout, session list)              | 20 req  | 60 s    | Less expensive but security-sensitive          |
 | Device transfer                          | 10 req  | 60 s    | 8-digit codes with 5 min TTL; limits guessing  |
 | Write operations (POST/PUT/PATCH/DELETE) | 60 req  | 60 s    | Prevents write amplification                   |
+| Read default (standard GET endpoints)    | 60 req  | 60 s    | General read access                            |
+| Read heavy (search, complex queries)     | 30 req  | 60 s    | More expensive read operations                 |
 | Blob upload / presigned URL              | 20 req  | 60 s    | Expensive server-side operations               |
 | Webhook management                       | 20 req  | 60 s    | Admin-only, infrequent                         |
 | Data export                              | 2 req   | 3600 s  | Extremely expensive                            |
 | Data import                              | 2 req   | 3600 s  | Equally expensive                              |
 | Account purge                            | 1 req   | 86400 s | Irreversible                                   |
+| Audit log query                          | 30 req  | 60 s    | Database-intensive range queries               |
 | Friend code generation                   | 10 req  | 60 s    | Prevents code flooding                         |
+| Friend code redeem                       | 5 req   | 60 s    | Prevents code brute-force on redeem            |
 | Public API (API key auth)                | 60 req  | 60 s    | Third-party consumers                          |
+| SSE stream establishment                 | 5 req   | 60 s    | Limits connection churn                        |
+
+### WebSocket message rate limits
+
+The sync WebSocket connection enforces separate per-connection message rate limits (independent of the HTTP categories above):
+
+| Category                                         | Limit   | Window |
+| ------------------------------------------------ | ------- | ------ |
+| Mutation messages (SubmitChange, SubmitSnapshot) | 100 msg | 10 s   |
+| Read messages (Fetch*, Manifest*)                | 200 msg | 10 s   |
+
+Exceeding either limit increments a strike counter. After **10 strikes** the connection is closed with `1008 Policy Violation`.
 
 ### Response headers
 
@@ -58,27 +74,51 @@ interface ApiErrorResponse {
 
 ### Error code catalog
 
-| Code                   | HTTP Status | Description                                                                   |
-| ---------------------- | ----------- | ----------------------------------------------------------------------------- |
-| `VALIDATION_ERROR`     | 400         | Request body or query parameter failed schema validation                      |
-| `INVALID_CURSOR`       | 400         | Pagination cursor is malformed or expired (>24 h)                             |
-| `INVALID_FRIEND_CODE`  | 400         | Friend code format is invalid                                                 |
-| `UNAUTHENTICATED`      | 401         | No valid session or API key provided                                          |
-| `SESSION_EXPIRED`      | 401         | Session exceeded absolute or idle TTL                                         |
-| `KEY_VERSION_STALE`    | 401         | Client is using an outdated encryption key version                            |
-| `FORBIDDEN`            | 403         | Authenticated but not authorized for this resource                            |
-| `SCOPE_INSUFFICIENT`   | 403         | API key lacks the required scope                                              |
-| `BUCKET_ACCESS_DENIED` | 403         | Privacy bucket access check failed                                            |
-| `NOT_FOUND`            | 404         | Resource does not exist or caller cannot access it                            |
-| `CONFLICT`             | 409         | Concurrent modification detected (ETag mismatch, duplicate key)               |
-| `HAS_DEPENDENTS`       | 409         | Entity has dependent entities; delete dependents first or use UI force-delete |
-| `ROTATION_IN_PROGRESS` | 409         | Bucket key rotation is active; write rejected                                 |
-| `FRIEND_CODE_EXPIRED`  | 410         | Friend code has passed its TTL                                                |
-| `BLOB_TOO_LARGE`       | 413         | File exceeds the per-purpose size limit                                       |
-| `QUOTA_EXCEEDED`       | 413         | System storage quota would be exceeded                                        |
-| `RATE_LIMITED`         | 429         | Rate limit exceeded for this category                                         |
-| `INTERNAL_ERROR`       | 500         | Unhandled server error (message masked in production)                         |
-| `SERVICE_UNAVAILABLE`  | 503         | Temporary overload or maintenance                                             |
+| Code                      | HTTP Status | Description                                                                   |
+| ------------------------- | ----------- | ----------------------------------------------------------------------------- |
+| `VALIDATION_ERROR`        | 400         | Request body or query parameter failed schema validation                      |
+| `INVALID_CURSOR`          | 400         | Pagination cursor is malformed or expired (>24 h)                             |
+| `INVALID_FRIEND_CODE`     | 400         | Friend code format is invalid                                                 |
+| `INVALID_TOKEN`           | 400         | Token is malformed or does not match expected format                          |
+| `INVALID_PIN`             | 400         | PIN does not match or fails validation                                        |
+| `INVALID_SUBJECT`         | 400         | Subject reference is invalid (e.g., unknown member/custom-front ID)           |
+| `INVALID_HIERARCHY`       | 400         | Proposed parent-child relationship violates structural rules                  |
+| `UNAUTHENTICATED`         | 401         | No valid session or API key provided                                          |
+| `SESSION_EXPIRED`         | 401         | Session exceeded absolute or idle TTL                                         |
+| `KEY_VERSION_STALE`       | 401         | Client is using an outdated encryption key version                            |
+| `FORBIDDEN`               | 403         | Authenticated but not authorized for this resource                            |
+| `SCOPE_INSUFFICIENT`      | 403         | API key lacks the required scope                                              |
+| `BUCKET_ACCESS_DENIED`    | 403         | Privacy bucket access check failed                                            |
+| `BIOMETRIC_DISABLED`      | 403         | Biometric authentication is not enabled for this account                      |
+| `NOT_FOUND`               | 404         | Resource does not exist or caller cannot access it                            |
+| `CONFLICT`                | 409         | Concurrent modification detected (ETag mismatch, duplicate key)               |
+| `IDEMPOTENCY_CONFLICT`    | 409         | Request with same idempotency key has a different body than the original      |
+| `HAS_DEPENDENTS`          | 409         | Entity has dependent entities; delete dependents first or use UI force-delete |
+| `ROTATION_IN_PROGRESS`    | 409         | Bucket key rotation is active; write rejected                                 |
+| `CONNECTION_NOT_ACCEPTED` | 409         | Friend connection request was rejected or is no longer pending                |
+| `ALREADY_ARCHIVED`        | 409         | Entity is already in archived state                                           |
+| `NOT_ARCHIVED`            | 409         | Entity is not archived; unarchive is not applicable                           |
+| `ALREADY_PINNED`          | 409         | Entity is already pinned                                                      |
+| `NOT_PINNED`              | 409         | Entity is not pinned; unpin is not applicable                                 |
+| `ALREADY_ENDED`           | 409         | Fronting session or timer has already ended                                   |
+| `ALREADY_RESPONDED`       | 409         | Check-in or poll response has already been submitted                          |
+| `ALREADY_DISMISSED`       | 409         | Notification or prompt has already been dismissed                             |
+| `POLL_CLOSED`             | 409         | Poll is closed and no longer accepting votes                                  |
+| `TOO_MANY_VOTES`          | 409         | Vote count exceeds the poll's allowed maximum                                 |
+| `ABSTAIN_NOT_ALLOWED`     | 409         | Poll does not permit abstain votes                                            |
+| `VETO_NOT_ALLOWED`        | 409         | Poll does not permit veto votes                                               |
+| `SESSION_ARCHIVED`        | 409         | Fronting session is archived; modification is not permitted                   |
+| `CYCLE_DETECTED`          | 409         | Operation would create a cycle in a hierarchical structure                    |
+| `MAX_DEPTH_EXCEEDED`      | 409         | Proposed hierarchy exceeds the 50-level nesting limit                         |
+| `PRECONDITION_FAILED`     | 412         | If-Match / If-None-Match precondition not satisfied                           |
+| `FRIEND_CODE_EXPIRED`     | 410         | Friend code has passed its TTL                                                |
+| `BLOB_TOO_LARGE`          | 413         | File exceeds the per-purpose size limit                                       |
+| `QUOTA_EXCEEDED`          | 413         | System storage quota would be exceeded                                        |
+| `UNSUPPORTED_MEDIA_TYPE`  | 415         | Content-Type is not accepted for this endpoint                                |
+| `RATE_LIMITED`            | 429         | Rate limit exceeded for this category                                         |
+| `LOGIN_THROTTLED`         | 429         | Account login attempts exceeded the per-account sliding window limit          |
+| `INTERNAL_ERROR`          | 500         | Unhandled server error (message masked in production)                         |
+| `SERVICE_UNAVAILABLE`     | 503         | Temporary overload or maintenance                                             |
 
 ### Privacy rule
 
@@ -121,18 +161,22 @@ All time-series endpoints (fronting history, audit logs, activity feeds) use cur
 
 The canonical retry policies are defined in `packages/queue/src/policies/default-policies.ts`. Key policies:
 
-| Job Type                                                                                                                                           | Max Retries | Backoff                   | Strategy    | Cap    |
-| -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------- | ----------- | ------ |
-| `webhook-deliver`                                                                                                                                  | 5           | 30 s base, 4x multiplier  | exponential | 2 h    |
-| `notification-send`                                                                                                                                | 3           | 5 s base (linear)         | linear      | 30 s   |
-| `sync-push` / `sync-pull`                                                                                                                          | 3           | 1 s base, 2x multiplier   | exponential | 30 s   |
-| `blob-upload`                                                                                                                                      | 3           | 2 s base, 4x multiplier   | exponential | 60 s   |
-| `export-generate` / `import-process`                                                                                                               | 3           | 1 s base, 4x multiplier   | exponential | 60 s   |
-| `account-purge`                                                                                                                                    | 3           | 60 s base, 5x multiplier  | exponential | 30 min |
-| `report-generate`                                                                                                                                  | 3           | 1 s base, 4x multiplier   | exponential | 60 s   |
-| Heavy maintenance (`blob-cleanup`, `analytics-compute`, `bucket-key-rotation`, `sync-queue-cleanup`, `audit-log-cleanup`, `partition-maintenance`) | 2           | 5 min base, 5x multiplier | exponential | 30 min |
+All policies include `jitterFraction: 0.2` (20% random jitter).
 
-**Jitter recommendation:** All policies should include `jitterFraction: 0.2` (20% random jitter). The field exists on the `RetryPolicy` type but is currently unused in the default policies. See follow-up bean for implementation.
+| Job Type                                                                                                                                                                       | Max Retries | Backoff                   | Strategy    | Cap    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------- | ------------------------- | ----------- | ------ |
+| `webhook-deliver`                                                                                                                                                              | 5           | 30 s base, 4x multiplier  | exponential | 2 h    |
+| `notification-send`                                                                                                                                                            | 3           | 5 s base (linear)         | linear      | 30 s   |
+| `sync-push` / `sync-pull`                                                                                                                                                      | 3           | 1 s base, 2x multiplier   | exponential | 30 s   |
+| `sync-compaction`                                                                                                                                                              | 3           | 1 s base, 2x multiplier   | exponential | 30 s   |
+| `blob-upload`                                                                                                                                                                  | 3           | 2 s base, 4x multiplier   | exponential | 60 s   |
+| `export-generate` / `import-process`                                                                                                                                           | 3           | 1 s base, 4x multiplier   | exponential | 60 s   |
+| `account-purge`                                                                                                                                                                | 3           | 60 s base, 5x multiplier  | exponential | 30 min |
+| `report-generate`                                                                                                                                                              | 3           | 1 s base, 4x multiplier   | exponential | 60 s   |
+| `device-transfer-cleanup`                                                                                                                                                      | 3           | 10 s base, 2x multiplier  | exponential | 60 s   |
+| `check-in-generate`                                                                                                                                                            | 3           | 5 s base, 2x multiplier   | exponential | 60 s   |
+| `email-send`                                                                                                                                                                   | 3           | 5 s base, 2x multiplier   | exponential | 60 s   |
+| Heavy maintenance (`blob-cleanup`, `analytics-compute`, `bucket-key-rotation`, `sync-queue-cleanup`, `audit-log-cleanup`, `partition-maintenance`, `webhook-delivery-cleanup`) | 2           | 5 min base, 5x multiplier | exponential | 30 min |
 
 ### Dead-letter queue (DLQ)
 

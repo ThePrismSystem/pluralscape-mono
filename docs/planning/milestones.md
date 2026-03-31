@@ -131,6 +131,8 @@ Epics:
 - ~~Webhook event dispatch~~ [COMPLETED] — wired `dispatchWebhookEvent` for 13 identity and friend events (member, fronting, group, lifecycle, custom-front, bucket, field-bucket-visibility, friend)
 - ~~M7 audit remediation~~ [COMPLETED] — high-priority (anti-enumeration timing, ownership consolidation, strict typing), medium+low (webhook cast removal, email worker fixes, zod imports, dependency updates)
 - ~~API feature completeness~~ [COMPLETED] — closed audit gaps across the REST API surface: account deletion/PIN/device transfer approval, friend accept/reject/dashboard sync, API key CRUD, system snapshots/duplication/purge, structure entity field values/hierarchy, poll vote update/delete/results, check-in restore, lifecycle event update, device token update/delete, key rotation retry, member photo GET, list filters and pagination; CRDT sync document type coverage verification; migration regeneration
+- ~~API code quality audit~~ [COMPLETED] — four-phase audit covering security (auth, validation, rate limiting), type safety (catch parameters, cast removal), code patterns (best practices), and refactoring/simplification; response envelope normalization and idempotency standardization
+- ~~Comprehensive E2E test expansion~~ [COMPLETED] — expanded Playwright suite to cover blobs, custom fronts, groups, fronting, polls, board messages, private notes, lifecycle events, webhooks, notifications, and timers
 - Public REST API audit (features.md section 9)
 - Email & webhook audit findings
 - Integration guides (features.md section 9)

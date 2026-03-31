@@ -198,17 +198,18 @@ The sync layer was identified as the single largest engineering risk in the arch
 
 ## 6. Implementation Reference
 
-All source code is in `packages/sync/src/`:
+The initial POC files listed below remain in `packages/sync/src/`, but the production codebase has grown substantially beyond the POC scope. The files below represent the core primitives validated by this POC; the full sync implementation now includes document types, factories, schemas, engine, offline queue, projections, partial replication, and more.
 
-| File                | Purpose                                               | Lines |
-| ------------------- | ----------------------------------------------------- | ----- |
-| `types.ts`          | Type definitions for envelopes and keys               | 25    |
-| `encrypted-sync.ts` | Encrypt/decrypt/sign/verify for changes and snapshots | 111   |
-| `relay.ts`          | In-memory append-only ciphertext relay                | 59    |
-| `sync-session.ts`   | Client session wrapping Automerge + encryption        | 108   |
-| `index.ts`          | Public API re-exports                                 | 20    |
+**POC core files (`packages/sync/src/`):**
 
-Tests are in `packages/sync/src/__tests__/`:
+| File                | Purpose                                               |
+| ------------------- | ----------------------------------------------------- |
+| `types.ts`          | Type definitions for envelopes and keys               |
+| `encrypted-sync.ts` | Encrypt/decrypt/sign/verify for changes and snapshots |
+| `relay.ts`          | In-memory append-only ciphertext relay                |
+| `sync-session.ts`   | Client session wrapping Automerge + encryption        |
+
+**POC test files (`packages/sync/src/__tests__/`):**
 
 | File                     | Tests | Coverage                                      |
 | ------------------------ | ----- | --------------------------------------------- |

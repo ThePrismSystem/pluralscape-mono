@@ -1,5 +1,20 @@
 # Roadmap
 
+## Milestone: Milestone 9: Self-Hosted ([ps-qcfr](.beans/ps-qcfr--milestone-9-self-hosted.md))
+
+> Two-tier self-hosted deployment (minimal single binary + full Docker Compose)
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SQLite schema codegen from PG (Phase B) ([db-k19k](.beans/db-k19k--sqlite-schema-codegen-from-pg-phase-b.md))
+
+## Milestone: Milestone 10: Polish and Launch ([ps-9u4w](.beans/ps-9u4w--milestone-10-polish-and-launch.md))
+
+> Security audit, performance, beta testing
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) OpenAPI reconciliation: constraint-aware and full deep comparison ([api-yxvn](.beans/api-yxvn--openapi-reconciliation-constraint-aware-and-full-d.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
+
 ## Milestone: Milestone 8: Client App ([ps-7j8n](.beans/ps-7j8n--milestone-8-client-app.md))
 
 > Full-featured cross-platform UI (web, iOS, Android via Expo)
@@ -15,13 +30,6 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Pass timestamp query param on message single-entity API calls ([client-ensq](.beans/client-ensq--pass-timestamp-query-param-on-message-single-entit.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
 
-## Milestone: Milestone 9: Self-Hosted ([ps-qcfr](.beans/ps-qcfr--milestone-9-self-hosted.md))
-
-> Two-tier self-hosted deployment (minimal single binary + full Docker Compose)
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SQLite schema codegen from PG (Phase B) ([db-k19k](.beans/db-k19k--sqlite-schema-codegen-from-pg-phase-b.md))
-
 ## Milestone: Milestone 7: Data Portability ([ps-n8uk](.beans/ps-n8uk--milestone-7-data-portability.md))
 
 > Import from SP/PK, export, API surface
@@ -36,30 +44,12 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SMTP adapter (Nodemailer) ([api-w1ia](.beans/api-w1ia--smtp-adapter-nodemailer.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) @pluralscape/email package — interface, errors, stub, contract tests ([api-zeh1](.beans/api-zeh1--pluralscapeemail-package-interface-errors-stub-con.md))
 
-### Epic: Public REST API audit ([api-e7gt](.beans/api-e7gt--public-rest-api.md))
-
-> Comprehensive, airtight audit of the public REST API before launch. Covers spec accuracy, code quality, feature completeness, in-depth security, API consistency, and E2E test coverage. Pre-release ...
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) E2E test coverage expansion ([api-2qy8](.beans/api-2qy8--e2e-test-coverage-expansion.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) OpenAPI spec reconciliation ([api-398w](.beans/api-398w--openapi-spec-reconciliation.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Security audit: rate limiting, headers, and CORS ([api-3b2d](.beans/api-3b2d--security-audit-rate-limiting-headers-and-cors.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Security audit: input validation and error handling ([api-69ul](.beans/api-69ul--security-audit-input-validation-and-error-handling.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) API consistency normalization ([api-ibn2](.beans/api-ibn2--api-consistency-normalization.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Security audit: authentication and authorization ([api-sojx](.beans/api-sojx--security-audit-authentication-and-authorization.md))
-
 ### Epic: User-configurable webhooks ([api-9wze](.beans/api-9wze--user-configurable-webhooks.md))
 
 > User-configurable webhook endpoints for all supported events (encrypted payloads)
 
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire identity webhook events (9 events) ([api-q642](.beans/api-q642--wire-identity-webhook-events-9-events.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire friend webhook events (4 events) ([api-smlf](.beans/api-smlf--wire-friend-webhook-events-4-events.md))
-
-## Milestone: Milestone 10: Polish and Launch ([ps-9u4w](.beans/ps-9u4w--milestone-10-polish-and-launch.md))
-
-> Security audit, performance, beta testing
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
 
 ## Milestone: Milestone 6: Privacy and Social ([ps-6itw](.beans/ps-6itw--milestone-6-privacy-and-social.md))
 
@@ -108,8 +98,8 @@
 
 - ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Account settings UI: audit log IP tracking opt-in ([mobile-zxe4](.beans/mobile-zxe4--account-settings-ui-audit-log-ip-tracking-opt-in.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-a2x5](.beans/api-a2x5--fix-friend-dashboard-review-issues.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix PR #333 review findings ([api-l879](.beans/api-l879--fix-pr-333-review-findings.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-wk6u](.beans/api-wk6u--fix-friend-dashboard-review-issues.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Update documentation for API feature completeness PR ([api-xq16](.beans/api-xq16--update-documentation-for-api-feature-completeness.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) M4 comprehensive audit ([ps-6u44](.beans/ps-6u44--m4-comprehensive-audit.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add structure entity service with HAS_DEPENDENTS checking ([api-l9ar](.beans/api-l9ar--add-structure-entity-service-with-has-dependents-c.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Structure-entity deletion must check note dependencies ([api-m3up](.beans/api-m3up--structure-entity-deletion-must-check-note-dependen.md))
