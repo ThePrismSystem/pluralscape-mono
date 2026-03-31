@@ -251,6 +251,13 @@ describe("POST /systems/:systemId/structure/entities/:entityId/archive", () => {
     const app = createApp();
     const res = await app.request(`${BASE}/${ENTITY_ID}/archive`, { method: "POST" });
     expect(res.status).toBe(204);
+    expect(archiveStructureEntity).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      ENTITY_ID,
+      expect.objectContaining({ accountId: expect.any(String) }),
+      expect.any(Function),
+    );
   });
 });
 
@@ -269,6 +276,13 @@ describe("POST /systems/:systemId/structure/entities/:entityId/restore", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: StructureEntityResult };
     expect(body.data.id).toBe(ENTITY_ID);
+    expect(restoreStructureEntity).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      ENTITY_ID,
+      expect.objectContaining({ accountId: expect.any(String) }),
+      expect.any(Function),
+    );
   });
 });
 
