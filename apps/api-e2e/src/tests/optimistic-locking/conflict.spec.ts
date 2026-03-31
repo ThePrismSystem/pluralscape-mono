@@ -72,6 +72,7 @@ test.describe("Optimistic locking conflict detection", () => {
         headers: authHeaders,
         data: {
           encryptedData: encryptForApi({ name: "Updated Once" }),
+          sortOrder: 0,
           version: entityType.version,
         },
       },
@@ -84,6 +85,7 @@ test.describe("Optimistic locking conflict detection", () => {
         headers: authHeaders,
         data: {
           encryptedData: encryptForApi({ name: "Updated Again" }),
+          sortOrder: 0,
           version: entityType.version,
         },
       },
