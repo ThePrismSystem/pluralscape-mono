@@ -361,6 +361,7 @@ export async function loginAccount(
       .from(sessions)
       .where(and(eq(sessions.accountId, account.id), eq(sessions.revoked, false), notExpired))
       .orderBy(asc(sessions.lastActive))
+      .for("update")
       .limit(1);
 
     if (oldest && oldest.total >= MAX_SESSIONS_PER_ACCOUNT) {
