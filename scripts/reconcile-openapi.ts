@@ -105,3 +105,62 @@ export function parseSpecOperations(spec: { paths: Record<string, unknown> }): S
 
   return operations;
 }
+
+export interface ShapeMismatch {
+  field: string;
+  issue: "missing_in_spec" | "extra_in_spec" | "type_mismatch" | "required_mismatch";
+  codeType: string | null;
+  specType: string | null;
+}
+
+/**
+ * Compare two structural shapes field-by-field.
+ * Reports missing fields, extra fields, type mismatches, and required/optional disagreements.
+ */
+export function compareShapes(
+  codeShape: Record<string, FieldShape>,
+  specShape: Record<string, FieldShape>,
+): ShapeMismatch[] {
+  const mismatches: ShapeMismatch[] = [];
+  const allFields = new Set([...Object.keys(codeShape), ...Object.keys(specShape)]);
+
+  for (const field of allFields) {
+    const codeField = codeShape[field];
+    const specField = specShape[field];
+
+    if (codeField && !specField) {
+      mismatches.push({
+        field,
+        issue: "missing_in_spec",
+        codeType: codeField.type,
+        specType: null,
+      });
+      continue;
+    }
+
+    if (!codeField && specField) {
+      mismatches.push({ field, issue: "extra_in_spec", codeType: null, specType: specField.type });
+      continue;
+    }
+
+    if (codeField && specField) {
+      if (codeField.type !== specField.type) {
+        mismatches.push({
+          field,
+          issue: "type_mismatch",
+          codeType: codeField.type,
+          specType: specField.type,
+        });
+      } else if (codeField.required !== specField.required) {
+        mismatches.push({
+          field,
+          issue: "required_mismatch",
+          codeType: codeField.type,
+          specType: specField.type,
+        });
+      }
+    }
+  }
+
+  return mismatches;
+}

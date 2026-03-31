@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeParamStyle, diffRoutes, parseSpecOperations } from "../reconcile-openapi.js";
+import {
+  normalizeParamStyle,
+  diffRoutes,
+  parseSpecOperations,
+  compareShapes,
+} from "../reconcile-openapi.js";
+
+import type { FieldShape } from "../reconcile-openapi.js";
 
 describe("normalizeParamStyle", () => {
   it("converts Express :param to OpenAPI {param}", () => {
@@ -147,5 +154,90 @@ describe("parseSpecOperations", () => {
 
   it("returns empty array for empty paths", () => {
     expect(parseSpecOperations({ paths: {} })).toEqual([]);
+  });
+});
+
+describe("compareShapes", () => {
+  it("returns no mismatches for identical shapes", () => {
+    const a: Record<string, FieldShape> = {
+      name: { type: "string", required: true },
+      age: { type: "number", required: false },
+    };
+    const b: Record<string, FieldShape> = {
+      name: { type: "string", required: true },
+      age: { type: "number", required: false },
+    };
+    const result = compareShapes(a, b);
+    expect(result).toEqual([]);
+  });
+
+  it("detects missing field in spec", () => {
+    const code: Record<string, FieldShape> = {
+      name: { type: "string", required: true },
+      bio: { type: "string", required: false },
+    };
+    const spec: Record<string, FieldShape> = {
+      name: { type: "string", required: true },
+    };
+    const result = compareShapes(code, spec);
+    expect(result).toContainEqual({
+      field: "bio",
+      issue: "missing_in_spec",
+      codeType: "string",
+      specType: null,
+    });
+  });
+
+  it("detects extra field in spec", () => {
+    const code: Record<string, FieldShape> = {
+      name: { type: "string", required: true },
+    };
+    const spec: Record<string, FieldShape> = {
+      name: { type: "string", required: true },
+      legacy: { type: "string", required: false },
+    };
+    const result = compareShapes(code, spec);
+    expect(result).toContainEqual({
+      field: "legacy",
+      issue: "extra_in_spec",
+      codeType: null,
+      specType: "string",
+    });
+  });
+
+  it("detects type mismatch", () => {
+    const code: Record<string, FieldShape> = {
+      count: { type: "string", required: true },
+    };
+    const spec: Record<string, FieldShape> = {
+      count: { type: "integer", required: true },
+    };
+    const result = compareShapes(code, spec);
+    expect(result).toContainEqual({
+      field: "count",
+      issue: "type_mismatch",
+      codeType: "string",
+      specType: "integer",
+    });
+  });
+
+  it("detects required/optional mismatch", () => {
+    const code: Record<string, FieldShape> = {
+      name: { type: "string", required: true },
+    };
+    const spec: Record<string, FieldShape> = {
+      name: { type: "string", required: false },
+    };
+    const result = compareShapes(code, spec);
+    expect(result).toContainEqual({
+      field: "name",
+      issue: "required_mismatch",
+      codeType: "string",
+      specType: "string",
+    });
+  });
+
+  it("returns empty for two empty shapes", () => {
+    expect(compareShapes({}, {})).toEqual([]);
   });
 });
