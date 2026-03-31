@@ -1,11 +1,11 @@
 ---
 # api-6zw8
 title: Add idle timeout for unknown session types
-status: todo
+status: in-progress
 type: bug
 priority: low
 created_at: 2026-03-30T22:35:49Z
-updated_at: 2026-03-30T23:33:51Z
+updated_at: 2026-03-31T06:42:27Z
 parent: api-e7gt
 ---
 

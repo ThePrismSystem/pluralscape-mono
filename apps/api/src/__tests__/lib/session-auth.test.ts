@@ -307,6 +307,27 @@ describe("validateSession", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("idle-expires sessions with unknown TTL using fail-closed default", async () => {
+    const createdAt = 1_000_000;
+    // TTL that doesn't match any known session type but is long enough to not expire absolutely
+    const unknownTtl = 999_999_999;
+    const session = makeSession({
+      createdAt,
+      expiresAt: createdAt + unknownTtl,
+      lastActive: createdAt + 100_000,
+    });
+    const db = createMockDb([{ session, accountType: "viewer" }], []);
+    // lastActive was at createdAt + 100_000; now is 604_800_001ms later (just past 7-day idle timeout)
+    mockNow.mockReturnValue(createdAt + 100_000 + 604_800_001);
+
+    const result = await validateSession(db as never, session.id);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe("SESSION_EXPIRED");
+    }
+  });
+
   it("returns multiple system IDs in ownedSystemIds", async () => {
     const session = makeSession();
     const db = createMockDb(
@@ -345,9 +366,9 @@ describe("getIdleTimeout", () => {
     expect(result).toBeNull();
   });
 
-  it("returns null for unknown TTL", () => {
+  it("returns fail-closed default idle timeout for unknown TTL", () => {
     const result = getIdleTimeout({ createdAt: 0, expiresAt: 999_999 });
-    expect(result).toBeNull();
+    expect(result).toBe(604_800_000);
   });
 
   it("returns same result regardless of createdAt when absoluteTtl matches", () => {

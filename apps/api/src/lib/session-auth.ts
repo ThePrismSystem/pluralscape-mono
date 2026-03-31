@@ -107,6 +107,6 @@ export function getIdleTimeout(session: {
     }
   }
 
-  // Device transfer or unknown — no idle timeout
-  return null;
+  // Unknown session type — fail closed with shortest idle timeout
+  return SESSION_TIMEOUTS.web.idleTimeoutMs;
 }
