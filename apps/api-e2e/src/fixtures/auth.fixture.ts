@@ -9,6 +9,7 @@ import crypto from "node:crypto";
 
 import { test as base, type APIRequestContext } from "@playwright/test";
 
+import { ensureCryptoReady } from "./crypto.fixture.js";
 import { asAuthHeaders } from "./http.constants.js";
 
 import type { AuthHeaders } from "./http.constants.js";
@@ -64,6 +65,7 @@ async function registerUniqueAccount(request: APIRequestContext): Promise<Accoun
 
 export const test = base.extend<AuthFixtures>({
   registeredAccount: async ({ request }, use) => {
+    await ensureCryptoReady();
     const account = await registerUniqueAccount(request);
     await use(account);
   },
