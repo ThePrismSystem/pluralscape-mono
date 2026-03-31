@@ -214,6 +214,8 @@ describe("redeemFriendCode", () => {
         expiresAt: pastTime,
       }),
     ]);
+    // tx.execute() for the DB clock query
+    chain.execute.mockResolvedValueOnce([{ db_now: Date.now() }]);
 
     await expect(redeemFriendCode(db, "ABCD-EFGH", AUTH, mockAudit)).rejects.toThrow("expired");
   });
