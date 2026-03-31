@@ -1,11 +1,11 @@
 ---
 # api-2qy8
 title: E2E test coverage expansion
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-29T02:59:38Z
-updated_at: 2026-03-30T05:24:20Z
+updated_at: 2026-03-31T10:40:07Z
 parent: api-e7gt
 blocked_by:
   - api-398w
@@ -56,18 +56,18 @@ Comprehensive E2E test coverage for the entire public REST API. Tests run in `ap
 
 ## Checklist
 
-- [ ] Inventory current E2E test coverage (endpoints covered vs. total)
-- [ ] Identify all uncovered endpoints
-- [ ] Write success-path E2E tests for uncovered endpoints
-- [ ] Write auth rejection tests for every protected endpoint
-- [ ] Write IDOR tests for every system-scoped endpoint
-- [ ] Write pagination tests for list endpoints
-- [ ] Write validation rejection tests for create/update endpoints
-- [ ] Write rate limit tests for sensitive endpoints
-- [ ] Write webhook lifecycle E2E tests
-- [ ] Write error response shape tests
-- [ ] All E2E tests pass
-- [ ] Coverage report shows complete API surface
+- [x] Inventory current E2E test coverage (endpoints covered vs. total)
+- [x] Identify all uncovered endpoints
+- [x] Write success-path E2E tests for uncovered endpoints
+- [x] Write auth rejection tests for every protected endpoint
+- [x] Write IDOR tests for every system-scoped endpoint
+- [x] Write pagination tests for list endpoints
+- [x] Write validation rejection tests for create/update endpoints
+- [x] Write rate limit tests for sensitive endpoints
+- [x] Write webhook lifecycle E2E tests
+- [x] Write error response shape tests
+- [x] All E2E tests pass
+- [x] Coverage report shows complete API surface
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
 
