@@ -305,9 +305,22 @@ export async function redeemFriendCode(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Friend code not found");
     }
 
-    // Check expiry
-    if (codeRow.expiresAt !== null && codeRow.expiresAt < Date.now()) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "FRIEND_CODE_EXPIRED", "Friend code has expired");
+    // Check expiry using the database clock for consistency within the transaction
+    if (codeRow.expiresAt !== null) {
+      const [notExpired] = await tx
+        .select({ valid: sql<boolean>`true` })
+        .from(friendCodes)
+        .where(
+          and(
+            eq(friendCodes.id, codeRow.id as FriendCodeId),
+            sql`${friendCodes.expiresAt} >= NOW()`,
+          ),
+        )
+        .limit(1);
+
+      if (!notExpired) {
+        throw new ApiHttpError(HTTP_BAD_REQUEST, "FRIEND_CODE_EXPIRED", "Friend code has expired");
+      }
     }
 
     const codeOwnerId = codeRow.accountId as AccountId;

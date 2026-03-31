@@ -18,3 +18,6 @@ export const IDEMPOTENCY_KEY_MAX_LENGTH = 64;
 
 /** Interval for periodic sweep of expired entries in the memory store (ms). */
 export const IDEMPOTENCY_MEMORY_SWEEP_INTERVAL_MS = 60_000;
+
+/** Maximum length of cache key logged in warnings (truncated with "…"). */
+export const IDEMPOTENCY_LOG_KEY_MAX_LENGTH = 20;

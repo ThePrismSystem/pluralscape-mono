@@ -217,10 +217,10 @@ describe("authMiddleware", () => {
     expect(res.status).toBe(401);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("UNAUTHENTICATED");
-    expect(body.error.message).toBe("Invalid or revoked session");
+    expect(body.error.message).toBe("Authentication required");
   });
 
-  it("returns 401 with SESSION_EXPIRED when session is expired", async () => {
+  it("returns 401 with generic UNAUTHENTICATED when session is expired", async () => {
     const mockDb = { update: mockDbUpdate };
     mockGetDb.mockResolvedValue(mockDb);
     mockValidateSession.mockResolvedValue({ ok: false, error: "SESSION_EXPIRED" });
@@ -232,8 +232,8 @@ describe("authMiddleware", () => {
 
     expect(res.status).toBe(401);
     const body = (await res.json()) as ApiErrorResponse;
-    expect(body.error.code).toBe("SESSION_EXPIRED");
-    expect(body.error.message).toBe("Session expired");
+    expect(body.error.code).toBe("UNAUTHENTICATED");
+    expect(body.error.message).toBe("Authentication required");
   });
 
   it("sets auth context and calls next() on valid session", async () => {

@@ -353,18 +353,31 @@ export async function loginAccount(
     // Enforce per-account session limit: evict oldest session if at capacity
     const currentTime = now();
     const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
-    const [oldest] = await tx
-      .select({
-        id: sessions.id,
-        total: sql<number>`count(*) over()`.as("total"),
-      })
+    const activeFilter = and(
+      eq(sessions.accountId, account.id),
+      eq(sessions.revoked, false),
+      notExpired,
+    );
+
+    // Count active sessions (no lock needed — avoids FOR UPDATE + window function conflict)
+    const [countResult] = await tx
+      .select({ total: sql<number>`count(*)::int` })
       .from(sessions)
-      .where(and(eq(sessions.accountId, account.id), eq(sessions.revoked, false), notExpired))
-      .orderBy(asc(sessions.lastActive))
+      .where(activeFilter)
       .limit(1);
 
-    if (oldest && oldest.total >= MAX_SESSIONS_PER_ACCOUNT) {
-      await tx.update(sessions).set({ revoked: true }).where(eq(sessions.id, oldest.id));
+    if (countResult && countResult.total >= MAX_SESSIONS_PER_ACCOUNT) {
+      const [oldest] = await tx
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(activeFilter)
+        .orderBy(asc(sessions.lastActive))
+        .for("update", { skipLocked: true })
+        .limit(1);
+
+      if (oldest) {
+        await tx.update(sessions).set({ revoked: true }).where(eq(sessions.id, oldest.id));
+      }
     }
 
     // System lookup inside the transaction so it uses the RLS context

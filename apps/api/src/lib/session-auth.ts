@@ -108,5 +108,11 @@ export function getIdleTimeout(session: {
   }
 
   // Unknown session type — fail closed with shortest non-null idle timeout
-  return SESSION_TIMEOUTS.web.idleTimeoutMs;
+  const allTimeouts = Object.values(SESSION_TIMEOUTS)
+    .map((c) => c.idleTimeoutMs)
+    .filter((ms) => ms !== null);
+  if (allTimeouts.length === 0) {
+    throw new Error("No idle timeouts configured in SESSION_TIMEOUTS");
+  }
+  return Math.min(...allTimeouts);
 }

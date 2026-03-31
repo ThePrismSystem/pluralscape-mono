@@ -43,10 +43,7 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
     const result = await validateSession(db, token);
 
     if (!result.ok) {
-      const code = result.error === "SESSION_EXPIRED" ? "SESSION_EXPIRED" : "UNAUTHENTICATED";
-      const message =
-        result.error === "SESSION_EXPIRED" ? "Session expired" : "Invalid or revoked session";
-      throw new ApiHttpError(HTTP_UNAUTHORIZED, code, message);
+      throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Authentication required");
     }
 
     // Throttle lastActive updates: only update if stale > LAST_ACTIVE_THROTTLE_MS

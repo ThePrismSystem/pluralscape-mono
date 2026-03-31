@@ -259,7 +259,7 @@ export function decodeQRPayload(data: string): DecodedQRPayload {
 }
 
 /**
- * Check whether a transfer code string has the correct format (8 decimal digits).
+ * Check whether a transfer code string has the correct format (10 decimal digits).
  */
 export function isValidTransferCode(code: string): boolean {
   return TRANSFER_CODE_PATTERN.test(code);

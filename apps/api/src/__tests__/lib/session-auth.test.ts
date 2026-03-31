@@ -1,3 +1,4 @@
+import { SESSION_TIMEOUTS } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mock drizzle-orm operators
@@ -366,13 +367,33 @@ describe("getIdleTimeout", () => {
     expect(result).toBeNull();
   });
 
-  it("returns fail-closed default idle timeout for unknown TTL", () => {
+  it("returns shortest non-null idle timeout for unknown TTL", () => {
+    // Shortest non-null idle timeout across all session types is web: 604_800_000 (7 days)
+    // This test verifies the fallback is computed dynamically, not hardcoded
     const result = getIdleTimeout({ createdAt: 0, expiresAt: 999_999 });
-    expect(result).toBe(604_800_000);
+    const allTimeouts = Object.values(SESSION_TIMEOUTS)
+      .map((c) => c.idleTimeoutMs)
+      .filter((ms) => ms !== null);
+    expect(result).toBe(Math.min(...allTimeouts));
   });
 
   it("returns same result regardless of createdAt when absoluteTtl matches", () => {
     const result = getIdleTimeout({ createdAt: 5_000_000, expiresAt: 5_000_000 + 2_592_000_000 });
     expect(result).toBe(604_800_000);
+  });
+
+  it("throws when all idle timeouts are null", () => {
+    const savedWeb = SESSION_TIMEOUTS.web.idleTimeoutMs;
+    const savedMobile = SESSION_TIMEOUTS.mobile.idleTimeoutMs;
+    Object.assign(SESSION_TIMEOUTS.web, { idleTimeoutMs: null });
+    Object.assign(SESSION_TIMEOUTS.mobile, { idleTimeoutMs: null });
+    try {
+      expect(() => getIdleTimeout({ createdAt: 0, expiresAt: 999_999 })).toThrow(
+        "No idle timeouts configured",
+      );
+    } finally {
+      Object.assign(SESSION_TIMEOUTS.web, { idleTimeoutMs: savedWeb });
+      Object.assign(SESSION_TIMEOUTS.mobile, { idleTimeoutMs: savedMobile });
+    }
   });
 });
