@@ -8,11 +8,11 @@ created_at: 2026-03-29T02:59:38Z
 updated_at: 2026-03-31T12:05:02Z
 parent: api-e7gt
 blocked_by:
-    - api-398w
-    - api-g475
-    - api-sojx
-    - api-69ul
-    - api-3b2d
+  - api-398w
+  - api-g475
+  - api-sojx
+  - api-69ul
+  - api-3b2d
 ---
 
 Write E2E tests for every uncovered endpoint and every gap identified by the audit beans.

@@ -8,7 +8,7 @@ created_at: 2026-03-08T12:15:48Z
 updated_at: 2026-03-31T12:05:04Z
 parent: ps-n8uk
 blocked_by:
-    - api-9wze
+  - api-9wze
 ---
 
 Comprehensive, airtight audit of the public REST API before launch. Covers spec accuracy, code quality, feature completeness, in-depth security, API consistency, and E2E test coverage. Pre-release — breaking changes are acceptable to fix issues found.
