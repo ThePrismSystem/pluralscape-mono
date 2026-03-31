@@ -145,6 +145,14 @@ describe("diffRoutes", () => {
     expect(result.undocumented).toEqual([]);
   });
 
+  it("matches routes with different param names", () => {
+    const code = [{ method: "POST" as const, path: "/v1/device-transfer/:id/approve" }];
+    const spec = [{ method: "POST" as const, path: "/v1/device-transfer/{transferId}/approve" }];
+    const result = diffRoutes(code, spec);
+    expect(result.orphanedInSpec).toEqual([]);
+    expect(result.undocumented).toEqual([]);
+  });
+
   it("method must match (same path different method is a mismatch)", () => {
     const code = [{ method: "POST" as const, path: "/v1/systems" }];
     const spec = [{ method: "GET" as const, path: "/v1/systems" }];

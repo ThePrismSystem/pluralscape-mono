@@ -18,8 +18,16 @@ export function normalizeParamStyle(path: string): string {
   return path.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, "{$1}");
 }
 
+/**
+ * Normalize all path parameter names to `{_}` for comparison.
+ * This handles cases where spec uses `{transferId}` but code uses `{id}`.
+ */
+function normalizeParamNames(path: string): string {
+  return path.replace(/\{[^}]+\}/g, "{_}");
+}
+
 function routeKeyString(method: string, path: string): string {
-  return `${method.toUpperCase()} ${normalizeParamStyle(path)}`;
+  return `${method.toUpperCase()} ${normalizeParamNames(normalizeParamStyle(path))}`;
 }
 
 export interface DiffResult {
@@ -249,7 +257,9 @@ if (import.meta.url === `file://${argv1}`) {
 
   const codeInventory = buildInventory(entryFile, "/v1", false);
   const codeRoutes = codeInventory.map((e) => ({ method: e.method, path: e.fullPath }));
-  const specRoutes = specOps.map((o) => ({ method: o.method, path: o.path }));
+  // Spec paths omit the /v1 prefix (it's in the server URL). Prepend it for comparison.
+  const API_BASE_PATH = "/v1";
+  const specRoutes = specOps.map((o) => ({ method: o.method, path: `${API_BASE_PATH}${o.path}` }));
 
   const diff = diffRoutes(codeRoutes, specRoutes);
 
