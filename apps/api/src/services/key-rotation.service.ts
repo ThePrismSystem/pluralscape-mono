@@ -379,31 +379,36 @@ export async function completeRotationChunk(
     let completedDelta = 0;
     let failedDelta = 0;
 
-    // Update each item's status
-    for (const item of parsed.data.items) {
-      if (item.status === ROTATION_ITEM_STATUSES.completed) {
-        await tx
-          .update(bucketRotationItems)
-          .set({ status: ROTATION_ITEM_STATUSES.completed, completedAt: timestamp })
-          .where(eq(bucketRotationItems.id, item.itemId));
-        completedDelta++;
-      } else {
-        // Increment attempts; mark permanently failed if max exceeded
-        const [updated] = await tx
-          .update(bucketRotationItems)
-          .set({
-            status: sql<RotationItemStatus>`CASE WHEN ${bucketRotationItems.attempts} + 1 >= ${KEY_ROTATION.maxItemAttempts} THEN 'failed' ELSE 'pending' END`,
-            attempts: sql`${bucketRotationItems.attempts} + 1`,
-            claimedBy: null,
-            claimedAt: null,
-          })
-          .where(eq(bucketRotationItems.id, item.itemId))
-          .returning();
+    // Batch update items by outcome to avoid N individual round-trips
+    const completedIds = parsed.data.items
+      .filter((item) => item.status === ROTATION_ITEM_STATUSES.completed)
+      .map((item) => item.itemId);
 
-        if (updated?.status === ROTATION_ITEM_STATUSES.failed) {
-          failedDelta++;
-        }
-      }
+    const pendingIds = parsed.data.items
+      .filter((item) => item.status !== ROTATION_ITEM_STATUSES.completed)
+      .map((item) => item.itemId);
+
+    if (completedIds.length > 0) {
+      await tx
+        .update(bucketRotationItems)
+        .set({ status: ROTATION_ITEM_STATUSES.completed, completedAt: timestamp })
+        .where(inArray(bucketRotationItems.id, completedIds));
+      completedDelta = completedIds.length;
+    }
+
+    if (pendingIds.length > 0) {
+      // Increment attempts; mark permanently failed if max exceeded
+      const updated = await tx
+        .update(bucketRotationItems)
+        .set({
+          status: sql<RotationItemStatus>`CASE WHEN ${bucketRotationItems.attempts} + 1 >= ${KEY_ROTATION.maxItemAttempts} THEN 'failed' ELSE 'pending' END`,
+          attempts: sql`${bucketRotationItems.attempts} + 1`,
+          claimedBy: null,
+          claimedAt: null,
+        })
+        .where(inArray(bucketRotationItems.id, pendingIds))
+        .returning();
+      failedDelta = updated.filter((r) => r.status === ROTATION_ITEM_STATUSES.failed).length;
     }
 
     // Update rotation counters
