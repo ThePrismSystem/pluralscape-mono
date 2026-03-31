@@ -304,3 +304,183 @@ export async function createBucket(
   const body = (await res.json()) as { data: { id: string; version: number } };
   return { id: body.data.id, version: body.data.version };
 }
+
+/**
+ * Create a structure entity type in the given system and return its ID and version.
+ */
+export async function createStructureEntityType(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  opts: { name?: string } = {},
+): Promise<{ id: string; version: number }> {
+  const { name = "E2E Test Entity Type" } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/structure/entity-types`, {
+    headers,
+    data: { encryptedData: encryptForApi({ name }), sortOrder: 0 },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create a structure entity in the given system and return its ID and version.
+ */
+export async function createStructureEntity(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  structureEntityTypeId: string,
+  opts: { name?: string; parentEntityId?: string | null } = {},
+): Promise<{ id: string; version: number }> {
+  const { name = "E2E Test Entity", parentEntityId = null } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/structure/entities`, {
+    headers,
+    data: {
+      structureEntityTypeId,
+      encryptedData: encryptForApi({ name }),
+      parentEntityId,
+      sortOrder: 0,
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create an API key in the given system and return its ID.
+ */
+export async function createApiKey(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  opts: { keyType?: "metadata" | "crypto"; scopes?: string[] } = {},
+): Promise<{ id: string }> {
+  const { keyType = "metadata", scopes = ["read"] } = opts;
+  const data: Record<string, unknown> = {
+    keyType,
+    scopes,
+    encryptedData: encryptForApi({ label: "E2E Test API Key" }),
+  };
+  if (keyType === "crypto") {
+    data.encryptedKeyMaterial = "dGVzdC1lbmNyeXB0ZWQta2V5LW1hdGVyaWFs";
+  }
+  const res = await request.post(`/v1/systems/${systemId}/api-keys`, {
+    headers,
+    data,
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string } };
+  return { id: body.data.id };
+}
+
+/**
+ * Create a system snapshot in the given system and return its ID.
+ */
+export async function createSnapshot(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  opts: { trigger?: "manual" | "scheduled-daily" | "scheduled-weekly" } = {},
+): Promise<{ id: string }> {
+  const { trigger = "manual" } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/snapshots`, {
+    headers,
+    data: {
+      snapshotTrigger: trigger,
+      encryptedData: encryptForApi({ note: "E2E test snapshot" }),
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string } };
+  return { id: body.data.id };
+}
+
+/**
+ * Create a timer config in the given system and return its ID and version.
+ */
+export async function createTimerConfig(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+): Promise<{ id: string; version: number }> {
+  const res = await request.post(`/v1/systems/${systemId}/timer-configs`, {
+    headers,
+    data: {
+      encryptedData: encryptForApi({ label: "E2E Test Timer" }),
+      intervalMinutes: 60,
+      enabled: true,
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create a check-in record in the given system and return its ID.
+ */
+export async function createCheckInRecord(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  timerConfigId: string,
+): Promise<{ id: string }> {
+  const res = await request.post(`/v1/systems/${systemId}/check-in-records`, {
+    headers,
+    data: {
+      timerConfigId,
+      scheduledAt: Date.now(),
+      encryptedData: encryptForApi({ note: "E2E test check-in" }),
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string } };
+  return { id: body.data.id };
+}
+
+/**
+ * Create a lifecycle event in the given system and return its ID and version.
+ */
+export async function createLifecycleEvent(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  opts: { eventType?: string } = {},
+): Promise<{ id: string; version: number }> {
+  const { eventType = "discovery" } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/lifecycle-events`, {
+    headers,
+    data: {
+      eventType,
+      occurredAt: Date.now(),
+      encryptedData: encryptForApi({ description: "E2E test event" }),
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string; version: number } };
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create a member photo and return its ID.
+ */
+export async function createMemberPhoto(
+  request: APIRequestContext,
+  headers: Record<string, string>,
+  systemId: string,
+  memberId: string,
+): Promise<{ id: string }> {
+  const res = await request.post(`/v1/systems/${systemId}/members/${memberId}/photos`, {
+    headers,
+    data: {
+      encryptedData: encryptForApi({ caption: "E2E test photo" }),
+      sortOrder: 0,
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = (await res.json()) as { data: { id: string } };
+  return { id: body.data.id };
+}
