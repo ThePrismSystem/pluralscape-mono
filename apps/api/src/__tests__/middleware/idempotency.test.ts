@@ -147,21 +147,34 @@ describe("idempotency middleware", () => {
     expect(cached).toBeNull();
   });
 
-  it("skips idempotency when auth is absent", async () => {
-    let noAuthCallCount = 0;
-    const noAuthApp = new Hono();
-    noAuthApp.use("*", requestIdMiddleware());
-    // No auth middleware — c.get("auth") will be undefined
-    noAuthApp.post("/open", createIdempotencyMiddleware(), (c) => {
-      noAuthCallCount++;
-      return c.json({ ok: true });
+  it("uses body hash as cache key when auth context is unavailable", async () => {
+    const store = new MemoryIdempotencyStore();
+    setIdempotencyStore(store);
+
+    let callCount = 0;
+    const app = new Hono();
+    // No auth context set — simulates unauthenticated endpoint
+    app.post("/register", createIdempotencyMiddleware(), (c) => {
+      callCount++;
+      return c.json({ data: { id: "new-account" } }, 201);
     });
 
-    const headers = { [IDEMPOTENCY_KEY_HEADER]: "same-key" };
-    await noAuthApp.request("/open", { method: "POST", headers });
-    await noAuthApp.request("/open", { method: "POST", headers });
+    const body = JSON.stringify({ email: "test@example.com", password: "secret" });
+    const headers = {
+      "Idempotency-Key": "reg-key-001",
+      "Content-Type": "application/json",
+    };
 
-    // Handler runs twice — idempotency was skipped
-    expect(noAuthCallCount).toBe(2);
+    // First request — handler executes
+    const res1 = await app.request("/register", { method: "POST", body, headers });
+    expect(res1.status).toBe(201);
+    expect(callCount).toBe(1);
+
+    // Second request with same body — handler should NOT execute (cached)
+    const res2 = await app.request("/register", { method: "POST", body, headers });
+    expect(res2.status).toBe(201);
+    expect(callCount).toBe(1);
+    const body2 = (await res2.json()) as { data: { id: string } };
+    expect(body2).toEqual({ data: { id: "new-account" } });
   });
 });
