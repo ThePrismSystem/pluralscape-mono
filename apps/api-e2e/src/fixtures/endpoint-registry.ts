@@ -5,17 +5,28 @@
  * iterate this registry to verify auth rejection, IDOR prevention, and
  * error shape across the entire API surface.
  */
-import { getSystemId } from "./entity-helpers.js";
+import { encryptForApi } from "./crypto.fixture.js";
+import {
+  createChannel,
+  createCustomFront,
+  createFieldDefinition,
+  createGroup,
+  createLifecycleEvent,
+  createMember,
+  createSnapshot,
+  createStructureEntity,
+  createStructureEntityType,
+  createTimerConfig,
+  getSystemId,
+} from "./entity-helpers.js";
 
-import type { AuthHeaders } from "./http.constants.js";
+import type { AuthHeaders, EndpointLabel, HttpMethod } from "./http.constants.js";
 import type { APIRequestContext } from "@playwright/test";
-
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface EndpointDescriptor {
   method: HttpMethod;
   /** Human-readable label for test names. */
-  label: string;
+  label: EndpointLabel;
   /** Whether this endpoint is system-scoped (IDOR testable). */
   systemScoped: boolean;
   /**
@@ -48,6 +59,39 @@ function systemPath(suffix: string): Resolver {
   return async (request: APIRequestContext, headers: AuthHeaders) => {
     const systemId = await getSystemId(request, headers);
     return { url: `/v1/systems/${systemId}${suffix}` };
+  };
+}
+
+function systemCreateThenPut(
+  resource: string,
+  createFn: (
+    request: APIRequestContext,
+    headers: AuthHeaders,
+    systemId: string,
+  ) => Promise<{ id: string; version: number }>,
+): Resolver {
+  return async (request: APIRequestContext, headers: AuthHeaders) => {
+    const systemId = await getSystemId(request, headers);
+    const entity = await createFn(request, headers, systemId);
+    return {
+      url: `/v1/systems/${systemId}/${resource}/${entity.id}`,
+      body: { encryptedData: encryptForApi({ name: "Updated" }), version: entity.version },
+    };
+  };
+}
+
+function systemCreateThenDelete(
+  resource: string,
+  createFn: (
+    request: APIRequestContext,
+    headers: AuthHeaders,
+    systemId: string,
+  ) => Promise<{ id: string }>,
+): Resolver {
+  return async (request: APIRequestContext, headers: AuthHeaders) => {
+    const systemId = await getSystemId(request, headers);
+    const entity = await createFn(request, headers, systemId);
+    return { url: `/v1/systems/${systemId}/${resource}/${entity.id}` };
   };
 }
 
@@ -275,6 +319,125 @@ export const PROTECTED_ENDPOINTS: EndpointDescriptor[] = [
     label: "GET /v1/systems/:id/innerworld/regions",
     systemScoped: true,
     resolve: systemPath("/innerworld/regions"),
+  },
+
+  // ── Account mutations ──────────────────────────────────────────────
+  {
+    method: "PUT",
+    label: "PUT /v1/account",
+    systemScoped: false,
+    resolve: staticUrl("/v1/account", { encryptedData: "x" }),
+  },
+
+  // ── System sub-resource mutations ──────────────────────────────────
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/members/:memberId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("members", createMember),
+  },
+  {
+    method: "DELETE",
+    label: "DELETE /v1/systems/:id/members/:memberId",
+    systemScoped: true,
+    resolve: systemCreateThenDelete("members", createMember),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/groups/:groupId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("groups", createGroup),
+  },
+  {
+    method: "DELETE",
+    label: "DELETE /v1/systems/:id/groups/:groupId",
+    systemScoped: true,
+    resolve: systemCreateThenDelete("groups", createGroup),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/custom-fronts/:customFrontId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("custom-fronts", createCustomFront),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/fields/:fieldId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("fields", createFieldDefinition),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/channels/:channelId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("channels", createChannel),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/timer-configs/:timerId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("timer-configs", createTimerConfig),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/lifecycle-events/:eventId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("lifecycle-events", createLifecycleEvent),
+  },
+  {
+    method: "DELETE",
+    label: "DELETE /v1/systems/:id/lifecycle-events/:eventId",
+    systemScoped: true,
+    resolve: systemCreateThenDelete("lifecycle-events", createLifecycleEvent),
+  },
+  {
+    method: "DELETE",
+    label: "DELETE /v1/systems/:id/snapshots/:snapshotId",
+    systemScoped: true,
+    resolve: systemCreateThenDelete("snapshots", createSnapshot),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/structure/entity-types/:entityTypeId",
+    systemScoped: true,
+    resolve: systemCreateThenPut("structure/entity-types", createStructureEntityType),
+  },
+  {
+    method: "DELETE",
+    label: "DELETE /v1/systems/:id/structure/entity-types/:entityTypeId",
+    systemScoped: true,
+    resolve: systemCreateThenDelete("structure/entity-types", createStructureEntityType),
+  },
+  {
+    method: "PUT",
+    label: "PUT /v1/systems/:id/structure/entities/:entityId",
+    systemScoped: true,
+    resolve: async (
+      request: APIRequestContext,
+      headers: AuthHeaders,
+    ): Promise<{ url: string; body?: unknown }> => {
+      const systemId = await getSystemId(request, headers);
+      const entityType = await createStructureEntityType(request, headers, systemId);
+      const entity = await createStructureEntity(request, headers, systemId, entityType.id);
+      return {
+        url: `/v1/systems/${systemId}/structure/entities/${entity.id}`,
+        body: { encryptedData: encryptForApi({ name: "Updated" }), version: entity.version },
+      };
+    },
+  },
+  {
+    method: "DELETE",
+    label: "DELETE /v1/systems/:id/structure/entities/:entityId",
+    systemScoped: true,
+    resolve: async (
+      request: APIRequestContext,
+      headers: AuthHeaders,
+    ): Promise<{ url: string; body?: unknown }> => {
+      const systemId = await getSystemId(request, headers);
+      const entityType = await createStructureEntityType(request, headers, systemId);
+      const entity = await createStructureEntity(request, headers, systemId, entityType.id);
+      return { url: `/v1/systems/${systemId}/structure/entities/${entity.id}` };
+    },
   },
 ];
 
