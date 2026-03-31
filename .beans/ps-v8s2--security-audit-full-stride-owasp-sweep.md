@@ -1,6 +1,6 @@
 ---
 # ps-v8s2
-title: 'Security Audit: Full STRIDE + OWASP sweep'
+title: "Security Audit: Full STRIDE + OWASP sweep"
 status: completed
 type: task
 priority: normal
