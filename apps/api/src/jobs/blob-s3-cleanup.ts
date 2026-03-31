@@ -43,7 +43,7 @@ export function createBlobS3CleanupHandler(
       try {
         await storageAdapter.delete(row.storageKey as StorageKey);
         deletedIds.push(row.id);
-      } catch (error) {
+      } catch (error: unknown) {
         // Skip and continue — the blob metadata stays and will be retried next run
         logger.warn("Failed to delete S3 object for blob", {
           blobId: row.id,

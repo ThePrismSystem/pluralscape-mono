@@ -119,7 +119,7 @@ export function fromCompositeCursor(cursor: string, entityLabel: string): Decode
   let raw: string;
   try {
     raw = fromCursor(cursor as PaginationCursor, PAGINATION.cursorTtlMs);
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof CursorInvalidError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
     }

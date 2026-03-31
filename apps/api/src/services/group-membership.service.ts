@@ -111,7 +111,7 @@ export async function addMember(
       });
 
       return toMembershipResult(row);
-    } catch (error) {
+    } catch (error: unknown) {
       throwOnUniqueViolation(error, "Already a member of this group");
     }
   });
