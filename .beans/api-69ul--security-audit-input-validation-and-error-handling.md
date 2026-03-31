@@ -1,6 +1,6 @@
 ---
 # api-69ul
-title: 'Security audit: input validation and error handling'
+title: "Security audit: input validation and error handling"
 status: completed
 type: task
 priority: critical
@@ -69,12 +69,12 @@ In-depth audit of input validation coverage and error handling safety across eve
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
 
-
 ## Summary of Changes
 
 Full audit completed. All services use Zod validation. Path params consistently use requireIdParam(). No raw SQL or injection vectors. Error masking correct in production. Pagination enforced with HMAC cursor integrity.
 
 Fixes applied:
+
 - Content-Type enforcement added to parseJsonBody (415 UNSUPPORTED_MEDIA_TYPE)
 - Max-length constraints added to unconstrained query param strings (note.ts, audit-log-query.ts)
 
