@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { errorHandler } from "../../middleware/error-handler.js";
 
+import type { ApiErrorCode } from "@pluralscape/types";
+
 function createTestApp() {
   const app = new Hono();
   app.onError(errorHandler);
@@ -15,7 +17,7 @@ function createTestApp() {
 }
 
 interface ErrorBody {
-  error: { code: string; message: string };
+  error: { code: ApiErrorCode; message: string };
 }
 
 describe("parseJsonBody", () => {
@@ -78,5 +80,17 @@ describe("parseJsonBody", () => {
     const data = (await res.json()) as ErrorBody;
     expect(data.error.code).toBe("VALIDATION_ERROR");
     expect(data.error.message).toBe("Invalid JSON body");
+  });
+
+  it("rejects application/jsonl with 415", async () => {
+    const app = createTestApp();
+    const res = await app.request("/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/jsonl" },
+      body: JSON.stringify({ name: "test" }),
+    });
+    expect(res.status).toBe(415);
+    const data = (await res.json()) as ErrorBody;
+    expect(data.error.code).toBe("UNSUPPORTED_MEDIA_TYPE");
   });
 });

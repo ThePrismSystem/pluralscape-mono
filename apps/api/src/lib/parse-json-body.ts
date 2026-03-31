@@ -6,7 +6,8 @@ import type { Context } from "hono";
 
 export async function parseJsonBody(c: Context): Promise<unknown> {
   const contentType = c.req.header("content-type");
-  if (!contentType?.startsWith("application/json")) {
+  const mediaType = contentType?.split(";")[0]?.trim();
+  if (mediaType !== "application/json") {
     throw new ApiHttpError(
       HTTP_UNSUPPORTED_MEDIA_TYPE,
       "UNSUPPORTED_MEDIA_TYPE",

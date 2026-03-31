@@ -4,6 +4,7 @@ import { booleanQueryParam } from "./query-params.js";
 import {
   FRIEND_CONNECTION_DEFAULT_LIMIT,
   FRIEND_CONNECTION_MAX_LIMIT,
+  MAX_CURSOR_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
 } from "./validation.constants.js";
 
@@ -30,7 +31,7 @@ export const UpdateFriendVisibilityBodySchema = z
   .readonly();
 
 export const FriendConnectionQuerySchema = z.object({
-  cursor: z.string().optional(),
+  cursor: z.string().max(MAX_CURSOR_LENGTH).optional(),
   limit: z.coerce
     .number()
     .int()

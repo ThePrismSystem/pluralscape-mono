@@ -21,6 +21,5 @@ getRoute.get("/", async (c) => {
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Account not found");
   }
 
-  c.header("Cache-Control", "no-store");
   return c.json(envelope(info));
 });

@@ -27,7 +27,6 @@ recoveryKeyRoutes.get("/status", createCategoryRateLimiter("authLight"), async (
   const auth = c.get("auth");
   const db = await getDb();
   const result = await getRecoveryKeyStatus(db, auth.accountId);
-  c.header("Cache-Control", "no-store");
   return c.json(envelope(result));
 });
 
@@ -71,7 +70,6 @@ recoveryKeyRoutes.post(
           });
       }
 
-      c.header("Cache-Control", "no-store");
       return c.json(envelope(result), HTTP_CREATED);
     } catch (error: unknown) {
       if (error instanceof NoActiveRecoveryKeyError) {

@@ -33,10 +33,12 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { registerAccount, ValidationError } = await import("../../../services/auth.service.js");
 const { registerRoute } = await import("../../../routes/auth/register.js");
+const { authRoutes } = await import("../../../routes/auth/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
 const createApp = () => createRouteApp("/register", registerRoute);
+const createAuthApp = () => createRouteApp("/auth", authRoutes);
 
 const VALID_BODY = {
   email: "test@example.com",
@@ -144,8 +146,8 @@ describe("POST /register", () => {
         accountType: "system",
       });
 
-      const app = createApp();
-      const res = await postJSON(app, "/register", VALID_BODY);
+      const app = createAuthApp();
+      const res = await postJSON(app, "/auth/register", VALID_BODY);
 
       expect(res.headers.get("Cache-Control")).toBe("no-store");
     });

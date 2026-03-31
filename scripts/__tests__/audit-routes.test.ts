@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 
-import { extractRouteMounts, parseRouteFile, resolveImportPath } from "../audit-routes.js";
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  buildInventory,
+  extractRouteMounts,
+  normalizePath,
+  parseRouteFile,
+  resolveImportPath,
+} from "../audit-routes.js";
+
+vi.mock("node:fs");
 
 describe("parseRouteFile", () => {
   it("extracts rate limit category from createCategoryRateLimiter call", () => {
@@ -10,7 +20,7 @@ export const createRoute = new Hono<AuthEnv>();
 createRoute.use("*", createCategoryRateLimiter("write"));
 createRoute.post("/", async (c) => {});
 `;
-    const result = parseRouteFile(source, "create.ts");
+    const result = parseRouteFile(source);
     expect(result.rateLimitCategory).toBe("write");
   });
 
@@ -19,7 +29,7 @@ createRoute.post("/", async (c) => {});
 export const createRoute = new Hono<AuthEnv>();
 createRoute.post("/", async (c) => {});
 `;
-    const result = parseRouteFile(source, "create.ts");
+    const result = parseRouteFile(source);
     expect(result.methods).toEqual([{ method: "POST", path: "/" }]);
   });
 
@@ -29,7 +39,7 @@ import { authMiddleware } from "../../middleware/auth.js";
 export const systemRoutes = new Hono<AuthEnv>();
 systemRoutes.use("*", authMiddleware());
 `;
-    const result = parseRouteFile(source, "index.ts");
+    const result = parseRouteFile(source);
     expect(result.hasAuth).toBe(true);
   });
 
@@ -40,7 +50,7 @@ createRoute.post("/", async (c) => {
   const body = await parseJsonBody(c);
 });
 `;
-    const result = parseRouteFile(source, "create.ts");
+    const result = parseRouteFile(source);
     expect(result.usesParseJsonBody).toBe(true);
   });
 
@@ -49,7 +59,7 @@ createRoute.post("/", async (c) => {
 import { MemberListQuerySchema } from "@pluralscape/validation";
 listRoute.get("/", async (c) => {});
 `;
-    const result = parseRouteFile(source, "list.ts");
+    const result = parseRouteFile(source);
     expect(result.validationSchemas).toEqual(["MemberListQuerySchema"]);
   });
 
@@ -59,7 +69,7 @@ import { Hono } from "hono";
 export const routes = new Hono();
 routes.route("/foo", fooRoute);
 `;
-    const result = parseRouteFile(source, "index.ts");
+    const result = parseRouteFile(source);
     expect(result.methods).toEqual([]);
     expect(result.rateLimitCategory).toBeNull();
   });
@@ -137,5 +147,109 @@ import { groupRoutes } from "../groups/index.js";
       "/home/user/project/apps/api/src/routes/systems/index.ts",
     );
     expect(result).toBeNull();
+  });
+});
+
+describe("normalizePath", () => {
+  it("collapses double slashes", () => {
+    expect(normalizePath("/v1//account")).toBe("/v1/account");
+  });
+
+  it("strips trailing slash", () => {
+    expect(normalizePath("/v1/account/")).toBe("/v1/account");
+  });
+
+  it("preserves root path", () => {
+    expect(normalizePath("/")).toBe("/");
+  });
+
+  it("handles multiple consecutive slashes", () => {
+    expect(normalizePath("/v1///account///get")).toBe("/v1/account/get");
+  });
+});
+
+describe("buildInventory", () => {
+  it("returns entries for a simple route file", () => {
+    const fakeSource = `
+import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+export const route = new Hono();
+route.use("*", createCategoryRateLimiter("write"));
+route.post("/", async (c) => {});
+`;
+    vi.mocked(readFileSync).mockReturnValue(fakeSource);
+    const entries = buildInventory("/fake/route.ts", "/v1/test", false);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      fullPath: "/v1/test",
+      method: "POST",
+      hasAuth: false,
+      rateLimitCategory: "write",
+      sourceFile: "/fake/route.ts",
+    });
+  });
+
+  it("inherits auth from parent", () => {
+    const fakeSource = `
+export const route = new Hono();
+route.get("/status", async (c) => {});
+`;
+    vi.mocked(readFileSync).mockReturnValue(fakeSource);
+    const entries = buildInventory("/fake/route.ts", "/v1/account", true);
+    expect(entries[0]?.hasAuth).toBe(true);
+  });
+
+  it("resolves recursive mounts", () => {
+    const indexSource = `
+import { childRoute } from "./child.js";
+export const routes = new Hono();
+routes.route("/child", childRoute);
+`;
+    const childSource = `
+export const childRoute = new Hono();
+childRoute.get("/", async (c) => {});
+`;
+    vi.mocked(readFileSync).mockImplementation((path: unknown) => {
+      if (String(path).includes("child")) return childSource;
+      return indexSource;
+    });
+
+    const entries = buildInventory("/fake/index.ts", "/v1", false);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.fullPath).toBe("/v1/child");
+  });
+
+  it("skips ENOENT errors for missing files", () => {
+    const indexSource = `
+import { missingRoute } from "./missing.js";
+export const routes = new Hono();
+routes.route("/missing", missingRoute);
+`;
+    vi.mocked(readFileSync).mockImplementation((path: unknown) => {
+      if (String(path).includes("missing")) {
+        const err = new Error("ENOENT") as NodeJS.ErrnoException;
+        err.code = "ENOENT";
+        throw err;
+      }
+      return indexSource;
+    });
+
+    const entries = buildInventory("/fake/index.ts", "/v1", false);
+    expect(entries).toHaveLength(0);
+  });
+
+  it("re-throws non-ENOENT errors", () => {
+    const indexSource = `
+import { badRoute } from "./bad.js";
+export const routes = new Hono();
+routes.route("/bad", badRoute);
+`;
+    vi.mocked(readFileSync).mockImplementation((path: unknown) => {
+      if (String(path).includes("bad")) {
+        throw new Error("Permission denied");
+      }
+      return indexSource;
+    });
+
+    expect(() => buildInventory("/fake/index.ts", "/v1", false)).toThrow("Permission denied");
   });
 });

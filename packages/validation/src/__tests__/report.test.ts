@@ -99,6 +99,22 @@ describe("GenerateReportBodySchema", () => {
     const result = GenerateReportBodySchema.safeParse({ reportType: "unknown" });
     expect(result.success).toBe(false);
   });
+
+  it("accepts locale at MAX_LOCALE_LENGTH boundary", () => {
+    const result = GenerateReportBodySchema.safeParse({
+      reportType: "meet-our-system",
+      locale: "a".repeat(255),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects locale exceeding MAX_LOCALE_LENGTH", () => {
+    const result = GenerateReportBodySchema.safeParse({
+      reportType: "meet-our-system",
+      locale: "a".repeat(256),
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ── BucketExportQuerySchema ───────────────────────────────────────
@@ -158,5 +174,21 @@ describe("BucketExportQuerySchema", () => {
     if (result.success) {
       expect(result.data.cursor).toBe("abc123");
     }
+  });
+
+  it("accepts cursor at MAX_CURSOR_LENGTH boundary", () => {
+    const result = BucketExportQuerySchema.safeParse({
+      entityType: "member",
+      cursor: "a".repeat(1024),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects cursor exceeding MAX_CURSOR_LENGTH", () => {
+    const result = BucketExportQuerySchema.safeParse({
+      entityType: "member",
+      cursor: "a".repeat(1025),
+    });
+    expect(result.success).toBe(false);
   });
 });

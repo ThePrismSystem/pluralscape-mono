@@ -34,10 +34,12 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { loginAccount } = await import("../../../services/auth.service.js");
 const { loginRoute } = await import("../../../routes/auth/login.js");
+const { authRoutes } = await import("../../../routes/auth/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
 const createApp = () => createRouteApp("/login", loginRoute);
+const createAuthApp = () => createRouteApp("/auth", authRoutes);
 
 const VALID_CREDENTIALS = {
   email: "test@example.com",
@@ -171,8 +173,8 @@ describe("POST /login", () => {
         accountType: "system",
       });
 
-      const app = createApp();
-      const res = await postJSON(app, "/login", VALID_CREDENTIALS);
+      const app = createAuthApp();
+      const res = await postJSON(app, "/auth/login", VALID_CREDENTIALS);
 
       expect(res.headers.get("Cache-Control")).toBe("no-store");
     });
@@ -181,8 +183,8 @@ describe("POST /login", () => {
       const { LoginThrottledError } = await import("../../../services/auth.service.js");
       vi.mocked(loginAccount).mockRejectedValueOnce(new LoginThrottledError(Date.now() + 60_000));
 
-      const app = createApp();
-      const res = await postJSON(app, "/login", VALID_CREDENTIALS);
+      const app = createAuthApp();
+      const res = await postJSON(app, "/auth/login", VALID_CREDENTIALS);
 
       expect(res.headers.get("Cache-Control")).toBe("no-store");
     });

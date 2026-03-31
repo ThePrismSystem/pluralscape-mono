@@ -36,7 +36,6 @@ sessionsRoute.get("/sessions", async (c) => {
   const limit = parsePaginationLimit(limitParam, DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT);
 
   const result = await listSessions(db, auth.accountId, parseCursor(cursor), limit);
-  c.header("Cache-Control", "no-store");
   return c.json(envelope(result));
 });
 

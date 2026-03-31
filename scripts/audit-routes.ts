@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+
 export interface RouteMethod {
-  method: string;
+  method: HttpMethod;
   path: string;
 }
 
@@ -20,7 +22,7 @@ const AUTH_MIDDLEWARE_PATTERN = /authMiddleware\(\)/;
 const PARSE_JSON_BODY_PATTERN = /parseJsonBody\(/;
 const VALIDATION_IMPORT_PATTERN = /import\s*\{([^}]+)\}\s*from\s*["']@pluralscape\/validation["']/;
 
-export function parseRouteFile(source: string, _filename: string): RouteFileInfo {
+export function parseRouteFile(source: string): RouteFileInfo {
   const methods: RouteMethod[] = [];
   let match: RegExpExecArray | null;
   const methodRegex = new RegExp(METHOD_PATTERN.source, METHOD_PATTERN.flags);
@@ -28,7 +30,7 @@ export function parseRouteFile(source: string, _filename: string): RouteFileInfo
     const rawMethod = match[1];
     const rawPath = match[2];
     if (rawMethod !== undefined && rawPath !== undefined) {
-      methods.push({ method: rawMethod.toUpperCase(), path: rawPath });
+      methods.push({ method: rawMethod.toUpperCase() as HttpMethod, path: rawPath });
     }
   }
 
@@ -89,17 +91,13 @@ export function resolveImportPath(
   return resolve(dir, resolved);
 }
 
-export interface RouteInventoryEntry {
+export interface RouteInventoryEntry extends Omit<RouteFileInfo, "methods"> {
   fullPath: string;
-  method: string;
-  hasAuth: boolean;
-  rateLimitCategory: string | null;
-  usesParseJsonBody: boolean;
-  validationSchemas: string[];
+  method: HttpMethod;
   sourceFile: string;
 }
 
-function normalizePath(p: string): string {
+export function normalizePath(p: string): string {
   return p.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
 }
 
@@ -109,7 +107,7 @@ export function buildInventory(
   inheritedAuth: boolean,
 ): RouteInventoryEntry[] {
   const source = readFileSync(entryFile, "utf-8");
-  const fileInfo = parseRouteFile(source, entryFile);
+  const fileInfo = parseRouteFile(source);
   const mounts = extractRouteMounts(source);
   const currentAuth = inheritedAuth || fileInfo.hasAuth;
   const entries: RouteInventoryEntry[] = [];
@@ -134,8 +132,11 @@ export function buildInventory(
     try {
       const childEntries = buildInventory(childPath, mountPath, currentAuth);
       entries.push(...childEntries);
-    } catch {
-      // File not found — skip
+    } catch (err: unknown) {
+      const isNotFound =
+        err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT";
+      if (isNotFound) continue;
+      throw err;
     }
   }
 

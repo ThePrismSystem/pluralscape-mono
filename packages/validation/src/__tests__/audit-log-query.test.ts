@@ -192,6 +192,11 @@ describe("AuditLogQuerySchema", () => {
     }
   });
 
+  it("accepts resource_type at the 256 character boundary", () => {
+    const result = AuditLogQuerySchema.safeParse({ resource_type: "a".repeat(256) });
+    expect(result.success).toBe(true);
+  });
+
   it("rejects cursor exceeding 1024 characters", () => {
     const result = AuditLogQuerySchema.safeParse({ cursor: "a".repeat(1025) });
     expect(result.success).toBe(false);

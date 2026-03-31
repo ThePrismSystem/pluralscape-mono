@@ -59,11 +59,13 @@ const { listSessions, logoutCurrentSession, revokeSession, revokeAllSessions } =
   await import("../../../services/auth.service.js");
 const { authMiddleware } = await import("../../../middleware/auth.js");
 const { sessionsRoute } = await import("../../../routes/auth/sessions.js");
+const { authRoutes } = await import("../../../routes/auth/index.js");
 const { MAX_SESSION_LIMIT } = await import("../../../routes/auth/auth.constants.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
 const createApp = () => createRouteApp("/auth", sessionsRoute);
+const createAuthApp = () => createRouteApp("/auth", authRoutes);
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -85,7 +87,7 @@ describe("sessions route", () => {
     it("sets Cache-Control: no-store on GET /auth/sessions", async () => {
       vi.mocked(listSessions).mockResolvedValueOnce({ sessions: [], nextCursor: null });
 
-      const app = createApp();
+      const app = createAuthApp();
       const res = await app.request("/auth/sessions");
 
       expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -96,8 +98,9 @@ describe("sessions route", () => {
 
   describe("GET /auth/sessions", () => {
     it("applies authMiddleware at the router level", () => {
-      // authMiddleware is applied once at router level via .use("*", ...)
-      expect(vi.mocked(authMiddleware)).toHaveBeenCalledOnce();
+      // authMiddleware is applied at router level via .use("*", ...)
+      // Called multiple times across auth sub-routes (sessions, recovery-key)
+      expect(vi.mocked(authMiddleware)).toHaveBeenCalled();
     });
 
     it("returns session list for authenticated user", async () => {

@@ -36,7 +36,6 @@ loginRoute.post("/", async (c) => {
   } catch (err: unknown) {
     if (err instanceof LoginThrottledError) {
       c.header("Retry-After", String(ACCOUNT_LOGIN_WINDOW_MS / MS_PER_SECOND));
-      c.header("Cache-Control", "no-store");
       const requestId = c.res.headers.get("X-Request-Id") ?? crypto.randomUUID();
       return c.json(
         {
@@ -53,7 +52,6 @@ loginRoute.post("/", async (c) => {
     throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", AUTH_GENERIC_LOGIN_ERROR);
   }
 
-  c.header("Cache-Control", "no-store");
   return c.json(
     envelope({
       sessionToken: result.sessionToken,
