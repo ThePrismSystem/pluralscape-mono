@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "playwright test",
+    "test": "playwright test --project=api",
+    "test:slow": "playwright test --project=api-slow",
+    "test:all": "playwright test",
     "test:report": "playwright show-report"
   },
   "devDependencies": {
