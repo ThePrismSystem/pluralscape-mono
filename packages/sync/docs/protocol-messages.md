@@ -25,6 +25,8 @@ interface SyncTransport {
   readonly state: TransportState;
   send(message: ClientMessage): Promise<void>;
   onMessage(handler: (message: ServerMessage) => void): void;
+  /** Optional handler for transport close events. */
+  onClose?(handler: () => void): void;
   close(): void;
 }
 ```
@@ -160,6 +162,11 @@ interface SubscribeResponse extends SyncMessageBase {
    * the client is already current (no missing changes, no newer snapshot).
    */
   readonly catchup: readonly DocumentCatchup[];
+  /**
+   * Document IDs dropped because the subscription cap was reached.
+   * Dropped documents are not actively subscribed and must be loaded on-demand.
+   */
+  readonly droppedDocIds: readonly string[];
 }
 
 interface DocumentCatchup {
@@ -395,6 +402,7 @@ type SyncErrorCode =
   | "MALFORMED_MESSAGE" // Message failed schema validation or size limit
   | "QUOTA_EXCEEDED" // Storage budget exceeded (see document-lifecycle.md §6)
   | "RATE_LIMITED" // Submitting changes too rapidly
+  | "INVALID_ENVELOPE" // Envelope signature verification failed; envelope dropped
   | "PROTOCOL_MISMATCH" // Client protocolVersion != SYNC_PROTOCOL_VERSION
   | "INTERNAL_ERROR"; // Server-side error; retry after backoff
 ```
@@ -413,6 +421,7 @@ type SyncErrorCode =
 | `MALFORMED_MESSAGE`    | Inspect message construction; do not retry unchanged                  |
 | `QUOTA_EXCEEDED`       | Surface to user; evict archived documents, then retry                 |
 | `RATE_LIMITED`         | Exponential backoff starting at 1 second                              |
+| `INVALID_ENVELOPE`     | Inspect change construction; verify signing key; do not retry as-is   |
 | `PROTOCOL_MISMATCH`    | Upgrade client; do not retry                                          |
 | `INTERNAL_ERROR`       | Exponential backoff starting at 5 seconds                             |
 

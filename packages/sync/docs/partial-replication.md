@@ -28,12 +28,13 @@ Default profile for primary owner devices.
 | `fronting`       | All periods (current + all historical) |
 | `chat`           | All channels, all periods              |
 | `journal`        | All periods                            |
+| `note`           | All periods                            |
 | `privacy-config` | All (exactly one per system)           |
 | `bucket`         | All owned buckets                      |
 
 ### Owner (Lite) — `owner-lite`
 
-For low-storage devices (e.g., Apple Watch, budget Android phones). Excludes historical data; defers journal to on-demand.
+For low-storage devices (e.g., Apple Watch, budget Android phones). Excludes historical data; defers journal and note to on-demand.
 
 | Document Type    | Documents Synced                          |
 | ---------------- | ----------------------------------------- |
@@ -41,6 +42,7 @@ For low-storage devices (e.g., Apple Watch, budget Android phones). Excludes his
 | `fronting`       | Current period only                       |
 | `chat`           | Active channels only, current period only |
 | `journal`        | None by default (on-demand load only)     |
+| `note`           | None by default (on-demand load only)     |
 | `privacy-config` | All (exactly one per system)              |
 | `bucket`         | All owned buckets                         |
 
@@ -95,7 +97,7 @@ interface SubscriptionSet {
   - `docType === "fronting"` AND is current time period (latest `timePeriod` by document type)
   - `docType === "chat"` AND `updatedAt >= now - activeChannelWindowDays * 86400000` AND is current time period
   - `docType === "bucket"` (always)
-- `available` = manifest entries not in `active` (historical fronting, journal, inactive chat)
+- `available` = manifest entries not in `active` (historical fronting, journal, note, inactive chat)
 - `evict` = locally-stored docIds not in `active` (may evict historical docs on storage pressure)
 
 **`friend`:**

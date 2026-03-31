@@ -45,26 +45,28 @@ Rationale:
 
 ### system-core Document Entities
 
-| Entity                         | Storage Type    | Mutable Fields After Creation                                                                                                                        | Notes                                                                   |
-| ------------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `system`                       | `singleton-lww` | name, displayName, description, avatarSource                                                                                                         | Profile data; LWW per field                                             |
-| `member`                       | `lww-map`       | name, pronouns, description, avatarSource, colors, saturationLevel, tags, suppressFriendFrontNotification, boardMessageNotificationOnFront, archived | All profile fields LWW                                                  |
-| `member-photo`                 | `lww-map`       | imageSource, sortOrder, caption, archived                                                                                                            | Photo metadata only; binary in blob storage                             |
-| `group`                        | `lww-map`       | name, description, parentGroupId, imageSource, color, emoji, sortOrder, archived                                                                     | Hierarchy via `parentGroupId`                                           |
-| `structure-entity-type`        | `lww-map`       | name, description, color, imageSource, emoji, sortOrder, archived                                                                                    | User-defined structure type definitions                                 |
-| `structure-entity`             | `lww-map`       | name, description, entityTypeId, color, imageSource, emoji, sortOrder, archived                                                                      | Instances of structure entity types                                     |
-| `structure-entity-link`        | `lww-map`       | sortOrder, parentEntityId, archived mutable; entityId immutable                                                                                      | Parent-child hierarchy; null parentEntityId = root                      |
-| `structure-entity-member-link` | `lww-map`       | sortOrder, parentEntityId, archived mutable; memberId immutable                                                                                      | Members placed under entities; null = root                              |
-| `structure-entity-association` | `lww-map`       | archived mutable; sourceEntityId, targetEntityId immutable                                                                                           | Many-to-many cross-type relationships                                   |
-| `relationship`                 | `lww-map`       | type, label, bidirectional, archived                                                                                                                 |                                                                         |
-| `custom-front`                 | `lww-map`       | name, description, color, emoji, archived                                                                                                            |                                                                         |
-| `field-definition`             | `lww-map`       | name, description, fieldType, options, required, sortOrder, scopes, archived                                                                         | `scopes` is JSON-serialized FieldDefinitionScope[]                      |
-| `field-value`                  | `lww-map`       | value, updatedAt                                                                                                                                     | Exactly one of memberId, structureEntityId, or groupId must be non-null |
-| `system-settings`              | `singleton-lww` | all fields                                                                                                                                           | LWW per field on the settings singleton                                 |
-| `innerworld-entity`            | `lww-map`       | positionX, positionY, visual, regionId, entity-specific fields, archived                                                                             | Flattened from discriminated union                                      |
-| `innerworld-region`            | `lww-map`       | name, description, parentRegionId, visual, boundaryData, accessType, gatekeeperMemberIds, archived                                                   |                                                                         |
-| `timer`                        | `lww-map`       | intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, promptText, enabled, archived                                                              |                                                                         |
-| `lifecycle-event`              | `append-only`   | (none — immutable)                                                                                                                                   | List in system-core document                                            |
+| Entity                         | Storage Type       | Mutable Fields After Creation                                                                                                                        | Notes                                                                                   |
+| ------------------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `system`                       | `singleton-lww`    | name, displayName, description, avatarSource                                                                                                         | Profile data; LWW per field                                                             |
+| `member`                       | `lww-map`          | name, pronouns, description, avatarSource, colors, saturationLevel, tags, suppressFriendFrontNotification, boardMessageNotificationOnFront, archived | All profile fields LWW                                                                  |
+| `member-photo`                 | `lww-map`          | imageSource, sortOrder, caption, archived                                                                                                            | Photo metadata only; binary in blob storage                                             |
+| `group`                        | `lww-map`          | name, description, parentGroupId, imageSource, color, emoji, sortOrder, archived                                                                     | Hierarchy via `parentGroupId`                                                           |
+| `structure-entity-type`        | `lww-map`          | name, description, color, imageSource, emoji, sortOrder, archived                                                                                    | User-defined structure type definitions                                                 |
+| `structure-entity`             | `lww-map`          | name, description, entityTypeId, color, imageSource, emoji, sortOrder, archived                                                                      | Instances of structure entity types                                                     |
+| `structure-entity-link`        | `lww-map`          | sortOrder, parentEntityId, archived mutable; entityId immutable                                                                                      | Parent-child hierarchy; null parentEntityId = root                                      |
+| `structure-entity-member-link` | `lww-map`          | sortOrder, parentEntityId, archived mutable; memberId immutable                                                                                      | Members placed under entities; null = root                                              |
+| `structure-entity-association` | `lww-map`          | archived mutable; sourceEntityId, targetEntityId immutable                                                                                           | Many-to-many cross-type relationships                                                   |
+| `relationship`                 | `lww-map`          | type, label, bidirectional, archived                                                                                                                 |                                                                                         |
+| `custom-front`                 | `lww-map`          | name, description, color, emoji, archived                                                                                                            |                                                                                         |
+| `field-definition`             | `lww-map`          | name, description, fieldType, options, required, sortOrder, scopes, archived                                                                         | `scopes` is JSON-serialized FieldDefinitionScope[]                                      |
+| `field-value`                  | `lww-map`          | value, updatedAt                                                                                                                                     | Exactly one of memberId, structureEntityId, or groupId must be non-null                 |
+| `system-settings`              | `singleton-lww`    | all fields                                                                                                                                           | LWW per field on the settings singleton                                                 |
+| `innerworld-entity`            | `lww-map`          | positionX, positionY, visual, regionId, entity-specific fields, archived                                                                             | Flattened from discriminated union                                                      |
+| `innerworld-region`            | `lww-map`          | name, description, parentRegionId, visual, boundaryData, accessType, gatekeeperMemberIds, archived                                                   |                                                                                         |
+| `timer`                        | `lww-map`          | intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, promptText, enabled, archived                                                              |                                                                                         |
+| `webhook-config`               | `lww-map`          | url, eventTypes, enabled, archived                                                                                                                   | Secret is server-authoritative — not synced via CRDT                                    |
+| `fronting-report`              | `lww-map`          | (none — immutable at API layer)                                                                                                                      | No update endpoint; immutability enforced at API layer, not CRDT layer                  |
+| `lifecycle-event`              | `append-lww` (map) | archived                                                                                                                                             | **V1 correction:** stored as map keyed by ID — `archived` is the only LWW-mutable field |
 
 #### Structure Entity Link Semantic Note
 
@@ -87,8 +89,7 @@ Junctions use compound keys (`{parentId}_{childId}`) mapped to `true`. Add-wins:
 | Entity             | Storage Type       | Mutable Fields After Creation                         | Notes                                                                                                                                                        |
 | ------------------ | ------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `fronting-session` | `append-lww` (map) | endTime, comment, positionality, archived             | Created on switch-in; `endTime` set on switch-out                                                                                                            |
-| `fronting-comment` | `lww-map`          | content, archived                                     | Comments on sessions                                                                                                                                         |
-| `switch`           | `append-only`      | (none — immutable)                                    | Records the moment control transfers                                                                                                                         |
+| `fronting-comment` | `lww-map`          | content, archived                                     | Comments on sessions; author fields (memberId, customFrontId, structureEntityId) immutable                                                                   |
 | `check-in-record`  | `append-lww` (map) | respondedByMemberId, respondedAt, dismissed, archived | **Topology correction:** was append-only in v1 spec; modeled as map because `respondedByMemberId`, `respondedAt`, and `dismissed` are mutated after creation |
 
 ---
@@ -113,19 +114,25 @@ Junctions use compound keys (`{parentId}_{childId}`) mapped to `true`. Add-wins:
 | --------------- | ------------------ | -------------------------------------------------------------------- | ------------------------------------ |
 | `journal-entry` | `append-lww` (map) | title, blocks, tags, linkedEntities, archived                        | Content can be edited after creation |
 | `wiki-page`     | `lww-map`          | title, slug, blocks, linkedFromPages, tags, linkedEntities, archived | Collaboratively editable             |
-| `note`          | `lww-map`          | title, content, backgroundColor, archived                            |                                      |
+
+### note Document Entities
+
+| Entity | Storage Type | Mutable Fields After Creation             | Notes                                                       |
+| ------ | ------------ | ----------------------------------------- | ----------------------------------------------------------- |
+| `note` | `lww-map`    | title, content, backgroundColor, archived | Notes have their own document type, separate from `journal` |
 
 ---
 
 ### privacy-config Document Entities
 
-| Entity                | Storage Type       | Mutable Fields After Creation                              | Notes                                                                 |
-| --------------------- | ------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------- |
-| `bucket` (definition) | `lww-map`          | name, description, archived                                |                                                                       |
-| `bucket-content-tag`  | `lww-map`          | (structural)                                               | Compound key `{entityType}_{entityId}_{bucketId}` → tag record        |
-| `friend-connection`   | `lww-map`          | status, assignedBuckets (nested map), visibility, archived | `assignedBuckets` is a nested `Record<string, true>` map for add-wins |
-| `friend-code`         | `lww-map`          | archived                                                   | Immutable except for soft-delete                                      |
-| `key-grant`           | `append-lww` (map) | revokedAt                                                  | Created once; `revokedAt` is the only mutable field                   |
+| Entity                    | Storage Type       | Mutable Fields After Creation                              | Notes                                                                                 |
+| ------------------------- | ------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `bucket` (definition)     | `lww-map`          | name, description, archived                                |                                                                                       |
+| `bucket-content-tag`      | `lww-map`          | (structural)                                               | Compound key `{entityType}_{entityId}_{bucketId}` → tag record                        |
+| `friend-connection`       | `lww-map`          | status, assignedBuckets (nested map), visibility, archived | `assignedBuckets` is a nested `Record<string, true>` map for add-wins                 |
+| `friend-code`             | `lww-map`          | archived                                                   | Immutable except for soft-delete                                                      |
+| `key-grant`               | `append-lww` (map) | revokedAt                                                  | Created once; `revokedAt` is the only mutable field                                   |
+| `field-bucket-visibility` | `junction-map`     | (none — add-wins)                                          | Compound key `{fieldDefinitionId}_{bucketId}`; controls custom field scope per bucket |
 
 ---
 
@@ -133,17 +140,18 @@ Junctions use compound keys (`{parentId}_{childId}`) mapped to `true`. Add-wins:
 
 Bucket documents contain projections (filtered copies) of entities from master-key documents. They use the same `Crdt*` types as the source documents, filtered by `BucketVisibilityScope`.
 
-| Scope             | Projected Entity Types                  |
-| ----------------- | --------------------------------------- |
-| `members`         | `CrdtMember`                            |
-| `member-photos`   | `CrdtMemberPhoto`                       |
-| `groups`          | `CrdtGroup`                             |
-| `custom-fronts`   | `CrdtCustomFront`                       |
-| `custom-fields`   | `CrdtFieldDefinition`, `CrdtFieldValue` |
-| `fronting-status` | `CrdtFrontingSession` (active only)     |
-| `notes`           | `CrdtNote`                              |
-| `journal-entries` | `CrdtJournalEntry`                      |
-| `chat`            | `CrdtChannel`, `CrdtChatMessage`        |
+| Scope                | Projected Entity Types                                                 |
+| -------------------- | ---------------------------------------------------------------------- |
+| `members`            | `CrdtMember`                                                           |
+| `member-photos`      | `CrdtMemberPhoto`                                                      |
+| `groups`             | `CrdtGroup`                                                            |
+| `custom-fronts`      | `CrdtCustomFront`                                                      |
+| `custom-fields`      | `CrdtFieldDefinition`, `CrdtFieldValue`                                |
+| `fronting-status`    | `CrdtFrontingSession` (active only)                                    |
+| `notes`              | `CrdtNote` (from `note` document)                                      |
+| `journal-entries`    | `CrdtJournalEntry`                                                     |
+| `chat`               | `CrdtChannel`, `CrdtChatMessage`                                       |
+| `dashboard-snapshot` | `CrdtDashboardSnapshot` (computed, not projected from a source entity) |
 
 ---
 
@@ -160,8 +168,8 @@ SystemCoreDocument {
   groups: Record<id, CrdtGroup>
   structureEntityTypes: Record<id, CrdtStructureEntityType>
   structureEntities: Record<id, CrdtStructureEntity>
-  structureEntityLinks: Record<id, CrdtStructureEntityLink>         // lww-map
-  structureEntityMemberLinks: Record<id, CrdtStructureEntityMemberLink> // lww-map
+  structureEntityLinks: Record<id, CrdtStructureEntityLink>               // lww-map
+  structureEntityMemberLinks: Record<id, CrdtStructureEntityMemberLink>   // lww-map
   structureEntityAssociations: Record<id, CrdtStructureEntityAssociation> // lww-map
   relationships: Record<id, CrdtRelationship>
   customFronts: Record<id, CrdtCustomFront>
@@ -170,7 +178,9 @@ SystemCoreDocument {
   innerWorldEntities: Record<id, CrdtInnerWorldEntity>
   innerWorldRegions: Record<id, CrdtInnerWorldRegion>
   timers: Record<id, CrdtTimer>
-  lifecycleEvents: CrdtLifecycleEvent[]               // append-only
+  webhookConfigs: Record<id, CrdtWebhookConfig>       // lww-map (secret excluded)
+  frontingReports: Record<id, CrdtFrontingReport>     // lww-map (immutable at API)
+  lifecycleEvents: Record<id, CrdtLifecycleEvent>     // append-lww (archived mutable)
   groupMemberships: Record<"gid_mid", true>            // junction add-wins
 }
 ```
@@ -210,6 +220,8 @@ JournalDocument {
 
 ### NoteDocument
 
+Notes are stored in a dedicated `note` document, separate from `journal`. This enables independent sync and growth management.
+
 ```
 NoteDocument {
   notes: Record<id, CrdtNote>                         // lww-map
@@ -220,11 +232,12 @@ NoteDocument {
 
 ```
 PrivacyConfigDocument {
-  buckets: Record<id, CrdtPrivacyBucket>              // lww-map
-  contentTags: Record<"type_eid_bid", CrdtBucketContentTag> // lww-map
-  friendConnections: Record<id, CrdtFriendConnection> // lww-map w/ nested assignedBuckets map
-  friendCodes: Record<id, CrdtFriendCode>             // lww-map
-  keyGrants: Record<id, CrdtKeyGrant>                 // append-lww
+  buckets: Record<id, CrdtPrivacyBucket>                          // lww-map
+  contentTags: Record<"type_eid_bid", CrdtBucketContentTag>       // lww-map
+  friendConnections: Record<id, CrdtFriendConnection>             // lww-map w/ nested assignedBuckets map
+  friendCodes: Record<id, CrdtFriendCode>                         // lww-map
+  keyGrants: Record<id, CrdtKeyGrant>                             // append-lww
+  fieldBucketVisibility?: Record<"fdid_bid", true>                // junction add-wins (optional — absent on pre-M4 docs)
 }
 ```
 
@@ -234,14 +247,15 @@ PrivacyConfigDocument {
 
 The table below summarizes the dominant merge profile for each document type. Individual entity strategies are detailed in the per-entity tables above.
 
-| Document type    | Dominant merge profile                   | Key characteristics                                                                                                                                                                                                         |
-| ---------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `system-core`    | LWW maps + junction add-wins             | All entity maps are LWW per field; `groupMemberships` is add-wins junction. Structure entity links/member-links/associations are LWW maps. Post-merge cycle detection required for group and innerworld-region hierarchies. |
-| `fronting`       | Append-lww maps                          | `sessions` and `checkInRecords` are append-lww. Time-split by month eliminates merge conflicts for historical periods.                                                                                                      |
-| `chat`           | Primarily append-only; LWW metadata      | `messages[]` and `votes[]` are append-only. Edit chains resolved at application layer via `editOf` links. Time-split by month. Board messages use append-lww for `pinned`/`sortOrder`.                                      |
-| `journal`        | Append-lww entries + LWW wiki/notes      | Journal entries mutable after creation (title, blocks, tags). Wiki pages and notes are fully LWW.                                                                                                                           |
-| `privacy-config` | LWW maps; security-critical revocation   | Key grants are append-lww; `revokedAt` is the only mutable field. Any revocation wins — idempotent from a security perspective. `assignedBuckets` nested map uses add-wins.                                                 |
-| `bucket`         | Read-only projections; owner writes only | Bucket documents are derived projections from master-key documents, filtered by `BucketVisibilityScope`. Friends never write to bucket documents — no merge conflicts from the friend side.                                 |
+| Document type    | Dominant merge profile                   | Key characteristics                                                                                                                                                                                                                                                |
+| ---------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `system-core`    | LWW maps + junction add-wins             | All entity maps are LWW per field; `groupMemberships` is add-wins junction. Structure entity links/member-links/associations are LWW maps. `lifecycleEvents` is append-lww (map). Post-merge cycle detection required for group and innerworld-region hierarchies. |
+| `fronting`       | Append-lww maps + LWW comments           | `sessions` and `checkInRecords` are append-lww. `comments` are LWW map. Time-split by quarter eliminates merge conflicts for historical periods.                                                                                                                   |
+| `chat`           | Primarily append-only; LWW metadata      | `messages[]` and `votes[]` are append-only. Edit chains resolved at application layer via `editOf` links. Time-split by month. Board messages use append-lww for `pinned`/`sortOrder`.                                                                             |
+| `journal`        | Append-lww entries + LWW wiki pages      | Journal entries mutable after creation (title, blocks, tags). Wiki pages are fully LWW. Notes are in the separate `note` document.                                                                                                                                 |
+| `note`           | LWW map                                  | Short-form notes; fully LWW per field. Time-split by year.                                                                                                                                                                                                         |
+| `privacy-config` | LWW maps; security-critical revocation   | Key grants are append-lww; `revokedAt` is the only mutable field. Any revocation wins — idempotent from a security perspective. `assignedBuckets` nested map uses add-wins. `fieldBucketVisibility` is add-wins junction.                                          |
+| `bucket`         | Read-only projections; owner writes only | Bucket documents are derived projections from master-key documents, filtered by `BucketVisibilityScope`. Includes a `dashboardSnapshot` field for friend offline access. Friends never write to bucket documents.                                                  |
 
 ---
 

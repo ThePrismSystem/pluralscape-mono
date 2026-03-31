@@ -31,24 +31,27 @@ Contains the structural definition of a system — entities that are bounded by 
 
 **Entities:**
 
-| Entity                     | CRDT Type              | Notes                                                      |
-| -------------------------- | ---------------------- | ---------------------------------------------------------- |
-| Member                     | LWW map                | name, pronouns, description, colors, etc.                  |
-| MemberPhoto                | LWW map                | photo reference metadata                                   |
-| Group                      | LWW map + ordered list | group hierarchy via parentGroupId                          |
-| StructureEntityType        | LWW map                | user-defined structure type definitions                    |
-| StructureEntity            | LWW map                | instances of structure entity types                        |
-| StructureEntityLink        | LWW map                | parent-child hierarchy; archived, sortOrder mutable        |
-| StructureEntityMemberLink  | LWW map                | members placed under entities; archived, sortOrder mutable |
-| StructureEntityAssociation | LWW map                | many-to-many cross-type; archived mutable                  |
-| Relationship               | LWW map                | links between members                                      |
-| CustomFront                | LWW map                | abstract cognitive states                                  |
-| FieldDefinition            | LWW map                | custom field schemas with scoped targets                   |
-| FieldValue                 | LWW map                | exactly one of memberId/structureEntityId/groupId          |
-| SystemSettings             | LWW map                | system-wide configuration                                  |
-| InnerWorldEntity           | LWW map                | innerworld entities                                        |
-| InnerWorldRegion           | LWW map                | innerworld regions                                         |
-| Timer                      | LWW map                | reminder/countdown timers                                  |
+| Entity                     | CRDT Type              | Notes                                                                          |
+| -------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
+| Member                     | LWW map                | name, pronouns, description, colors, etc.                                      |
+| MemberPhoto                | LWW map                | photo reference metadata                                                       |
+| Group                      | LWW map + ordered list | group hierarchy via parentGroupId                                              |
+| StructureEntityType        | LWW map                | user-defined structure type definitions                                        |
+| StructureEntity            | LWW map                | instances of structure entity types                                            |
+| StructureEntityLink        | LWW map                | parent-child hierarchy; archived, sortOrder mutable                            |
+| StructureEntityMemberLink  | LWW map                | members placed under entities; archived, sortOrder mutable                     |
+| StructureEntityAssociation | LWW map                | many-to-many cross-type; archived mutable                                      |
+| Relationship               | LWW map                | links between members                                                          |
+| CustomFront                | LWW map                | abstract cognitive states                                                      |
+| FieldDefinition            | LWW map                | custom field schemas with scoped targets                                       |
+| FieldValue                 | LWW map                | exactly one of memberId/structureEntityId/groupId                              |
+| SystemSettings             | LWW map                | system-wide configuration                                                      |
+| InnerWorldEntity           | LWW map                | innerworld entities                                                            |
+| InnerWorldRegion           | LWW map                | innerworld regions                                                             |
+| Timer                      | LWW map                | reminder/countdown timers                                                      |
+| WebhookConfig              | LWW map                | webhook URL, event types, enabled; secret is server-authoritative (not synced) |
+| FrontingReport             | LWW map (immutable)    | encrypted report data; immutability enforced at API layer — no update endpoint |
+| LifecycleEvent             | Append-LWW map         | archivable; archived is the only mutable field after creation                  |
 
 **Growth pattern:** Bounded by entity count. Even polyfragmented systems (500+ members) produce a document well within Automerge's efficient range.
 
@@ -66,7 +69,8 @@ Contains all fronting activity — the highest-frequency write path in the appli
 
 | Entity          | CRDT Type    | Notes                                                                                      |
 | --------------- | ------------ | ------------------------------------------------------------------------------------------ |
-| FrontingSession | Append + LWW | created on switch-in, endTime updated on switch-out                                        |
+| FrontingSession | Append + LWW | created on switch-in; endTime, comment, positionality, archived are mutable after creation |
+| FrontingComment | LWW map      | comments on sessions; author fields immutable after creation                               |
 | CheckInRecord   | Append + LWW | check-in record with mutable response fields (respondedByMemberId, respondedAt, dismissed) |
 
 **Growth pattern:** Append-only, unbounded. A system averaging 5 fronting sessions/day produces ~1,825 entries/year. High-frequency systems may produce 20+/day.
@@ -100,22 +104,39 @@ Each chat channel gets its own document, preventing a monolithic chat document a
 ### 3.4 `journal`
 
 **Encryption key:** Master key
-**Naming:** `journal-{systemId}`
-**CRDT strategy:** Append-only for entries, LWW for entry content, ordered list for wiki pages
+**Naming:** `journal-{systemId}` (splits to `journal-{systemId}-{YYYY}`)
+**CRDT strategy:** Append-lww map for entries, LWW map for wiki pages
 
-Contains long-form writing — journal entries and wiki/notes content.
+Contains long-form writing — journal entries and wiki pages. Notes are stored in the separate `note` document (section 3.4a).
 
 **Entities:**
 
-| Entity       | CRDT Type    | Notes                               |
-| ------------ | ------------ | ----------------------------------- |
-| JournalEntry | Append + LWW | created once, content may be edited |
-| WikiPage     | LWW map      | collaboratively editable pages      |
-| Note         | LWW map      | short-form notes                    |
+| Entity       | CRDT Type    | Notes                                                           |
+| ------------ | ------------ | --------------------------------------------------------------- |
+| JournalEntry | Append + LWW | created once; title, blocks, tags, linkedEntities may be edited |
+| WikiPage     | LWW map      | collaboratively editable pages                                  |
 
 **Growth pattern:** Append-only with potentially large individual entries. A system writing 500-word entries daily produces ~180 KB/year of raw text. Rich text with formatting metadata is larger.
 
-**Splitting:** Not time-split by default. If a journal document exceeds 10 MB, consider splitting by year. Most systems will not reach this threshold.
+**Splitting:** Time-split by year when document exceeds 10 MB. Naming: `journal-{systemId}-2026`.
+
+### 3.4a `note`
+
+**Encryption key:** Master key
+**Naming:** `note-{systemId}` (splits to `note-{systemId}-{YYYY}`)
+**CRDT strategy:** LWW map for notes
+
+Contains short-form private notes — member-bound, structure-entity-bound, or system-wide. Separated from `journal` to allow independent sync and growth management.
+
+**Entities:**
+
+| Entity | CRDT Type | Notes                                                             |
+| ------ | --------- | ----------------------------------------------------------------- |
+| Note   | LWW map   | title, content, backgroundColor, archived; author entity optional |
+
+**Growth pattern:** Bounded by note count and content length. Most systems will have a small number of notes.
+
+**Splitting:** Time-split by year when document exceeds the size threshold. Naming: `note-{systemId}-2026`.
 
 ### 3.5 `privacy-config`
 
@@ -127,13 +148,14 @@ Contains all privacy configuration — bucket definitions, content tags, friend 
 
 **Entities:**
 
-| Entity           | CRDT Type    | Notes                        |
-| ---------------- | ------------ | ---------------------------- |
-| PrivacyBucket    | LWW map      | bucket definitions           |
-| BucketContentTag | LWW map      | entity-to-bucket assignments |
-| FriendConnection | LWW map      | friend relationship state    |
-| FriendCode       | LWW map      | immutable friend codes       |
-| KeyGrant         | Append + LWW | key grants with revocation   |
+| Entity                | CRDT Type    | Notes                                                                                           |
+| --------------------- | ------------ | ----------------------------------------------------------------------------------------------- |
+| PrivacyBucket         | LWW map      | bucket definitions                                                                              |
+| BucketContentTag      | LWW map      | entity-to-bucket assignments; compound key `{entityType}_{entityId}_{bucketId}`                 |
+| FriendConnection      | LWW map      | friend relationship state; `assignedBuckets` is a nested add-wins map                           |
+| FriendCode            | LWW map      | immutable friend codes                                                                          |
+| KeyGrant              | Append + LWW | key grants with revocation; `revokedAt` is the only mutable field                               |
+| FieldBucketVisibility | Junction map | add-wins; compound key `{fieldDefinitionId}_{bucketId}`; controls custom field scope per bucket |
 
 **Growth pattern:** Low-frequency mutations. Typical systems have 1-5 buckets, 0-50 friends.
 
@@ -147,17 +169,20 @@ Bucket documents contain **projections** — filtered, re-encrypted copies of en
 
 **Contents:** Projections of entities whose `BucketContentTag` assignments include this bucket, filtered by the bucket's `BucketVisibilityScope` settings:
 
-| Scope             | Projected From                | Source Document  |
-| ----------------- | ----------------------------- | ---------------- |
-| `members`         | Member (filtered fields)      | system-core      |
-| `custom-fields`   | FieldDefinition, FieldValue   | system-core      |
-| `fronting-status` | FrontingSession (active only) | fronting         |
-| `custom-fronts`   | CustomFront                   | system-core      |
-| `notes`           | Note                          | journal          |
-| `chat`            | Channel, Message              | chat-{channelId} |
-| `journal-entries` | JournalEntry                  | journal          |
-| `member-photos`   | MemberPhoto                   | system-core      |
-| `groups`          | Group                         | system-core      |
+| Scope                | Projected From                | Source Document  |
+| -------------------- | ----------------------------- | ---------------- |
+| `members`            | Member (filtered fields)      | system-core      |
+| `member-photos`      | MemberPhoto                   | system-core      |
+| `groups`             | Group                         | system-core      |
+| `custom-fields`      | FieldDefinition, FieldValue   | system-core      |
+| `fronting-status`    | FrontingSession (active only) | fronting         |
+| `custom-fronts`      | CustomFront                   | system-core      |
+| `notes`              | Note                          | note             |
+| `chat`               | Channel, Message              | chat-{channelId} |
+| `journal-entries`    | JournalEntry                  | journal          |
+| `dashboard-snapshot` | DashboardSnapshot             | (computed)       |
+
+The `dashboardSnapshot` is a computed LWW field stored directly in the bucket document. It provides friend clients with an offline-accessible cache of aggregate system state (member count, co-fronting status, active session count). It is written by the owner at fan-out time, not projected from a source entity.
 
 **Write-time fan-out:** When a source entity is created or updated, the owner client:
 
@@ -174,42 +199,51 @@ Every entity type from `packages/types/src/ids.ts` is listed below with its docu
 
 ### Synced Entities
 
-| Entity Type                    | Document             | Key Type | CRDT Strategy                                                                           |
-| ------------------------------ | -------------------- | -------- | --------------------------------------------------------------------------------------- |
-| `system`                       | `system-core`        | Master   | LWW map                                                                                 |
-| `member`                       | `system-core`        | Master   | LWW map                                                                                 |
-| `member-photo`                 | `system-core`        | Master   | LWW map                                                                                 |
-| `group`                        | `system-core`        | Master   | LWW map + ordered list                                                                  |
-| `structure-entity-type`        | `system-core`        | Master   | LWW map                                                                                 |
-| `structure-entity`             | `system-core`        | Master   | LWW map                                                                                 |
-| `structure-entity-link`        | `system-core`        | Master   | LWW map (sortOrder, parentEntityId, archived mutable; entityId immutable)               |
-| `structure-entity-member-link` | `system-core`        | Master   | LWW map (sortOrder, parentEntityId, archived mutable; memberId immutable)               |
-| `structure-entity-association` | `system-core`        | Master   | LWW map (archived mutable; sourceEntityId, targetEntityId immutable)                    |
-| `relationship`                 | `system-core`        | Master   | LWW map                                                                                 |
-| `custom-front`                 | `system-core`        | Master   | LWW map                                                                                 |
-| `field-definition`             | `system-core`        | Master   | LWW map                                                                                 |
-| `field-value`                  | `system-core`        | Master   | LWW map                                                                                 |
-| `system-settings`              | `system-core`        | Master   | LWW map                                                                                 |
-| `innerworld-entity`            | `system-core`        | Master   | LWW map                                                                                 |
-| `innerworld-region`            | `system-core`        | Master   | LWW map                                                                                 |
-| `timer`                        | `system-core`        | Master   | LWW map                                                                                 |
-| `fronting-session`             | `fronting`           | Master   | Append + LWW                                                                            |
-| `check-in-record`              | `fronting`           | Master   | Append + LWW (map keyed by ID; respondedByMemberId, respondedAt, dismissed are mutable) |
-| `channel`                      | `chat-{channelId}`   | Master   | LWW map                                                                                 |
-| `message`                      | `chat-{channelId}`   | Master   | Append-only                                                                             |
-| `board-message`                | `chat-{channelId}`   | Master   | Append + LWW (map keyed by ID; pinned and sortOrder are mutable)                        |
-| `poll`                         | `chat-{channelId}`   | Master   | LWW map                                                                                 |
-| `poll-option`                  | `chat-{channelId}`   | Master   | LWW map                                                                                 |
-| `poll-vote`                    | `chat-{channelId}`   | Master   | Append-only                                                                             |
-| `acknowledgement`              | `chat-{channelId}`   | Master   | Append + LWW (map keyed by ID; confirmed, confirmedAt, archived are mutable)            |
-| `journal-entry`                | `journal`            | Master   | Append + LWW                                                                            |
-| `wiki-page`                    | `journal`            | Master   | LWW map                                                                                 |
-| `note`                         | `journal`            | Master   | LWW map                                                                                 |
-| `blob`                         | `journal` (ref only) | Master   | LWW map (metadata only — binary stored in S3/MinIO per ADR 009)                         |
-| `bucket` (definition)          | `privacy-config`     | Master   | LWW map                                                                                 |
-| `friend-connection`            | `privacy-config`     | Master   | LWW map                                                                                 |
-| `friend-code`                  | `privacy-config`     | Master   | LWW map                                                                                 |
-| `key-grant`                    | `privacy-config`     | Master   | Append + LWW                                                                            |
+The "Key Type" column uses the terminology from `DocumentKeyType`: `derived` = master key (derived from password); `bucket` = per-bucket key.
+
+| Entity Type                    | Document             | Key Type  | CRDT Strategy                                                                           |
+| ------------------------------ | -------------------- | --------- | --------------------------------------------------------------------------------------- |
+| `system`                       | `system-core`        | `derived` | Singleton LWW                                                                           |
+| `system-settings`              | `system-core`        | `derived` | Singleton LWW                                                                           |
+| `member`                       | `system-core`        | `derived` | LWW map                                                                                 |
+| `member-photo`                 | `system-core`        | `derived` | LWW map                                                                                 |
+| `group`                        | `system-core`        | `derived` | LWW map (sortOrder, parentGroupId mutable)                                              |
+| `structure-entity-type`        | `system-core`        | `derived` | LWW map                                                                                 |
+| `structure-entity`             | `system-core`        | `derived` | LWW map                                                                                 |
+| `structure-entity-link`        | `system-core`        | `derived` | LWW map (sortOrder, parentEntityId, archived mutable; entityId immutable)               |
+| `structure-entity-member-link` | `system-core`        | `derived` | LWW map (sortOrder, parentEntityId, archived mutable; memberId immutable)               |
+| `structure-entity-association` | `system-core`        | `derived` | LWW map (archived mutable; sourceEntityId, targetEntityId immutable)                    |
+| `relationship`                 | `system-core`        | `derived` | LWW map                                                                                 |
+| `custom-front`                 | `system-core`        | `derived` | LWW map                                                                                 |
+| `field-definition`             | `system-core`        | `derived` | LWW map                                                                                 |
+| `field-value`                  | `system-core`        | `derived` | LWW map                                                                                 |
+| `innerworld-entity`            | `system-core`        | `derived` | LWW map                                                                                 |
+| `innerworld-region`            | `system-core`        | `derived` | LWW map                                                                                 |
+| `timer`                        | `system-core`        | `derived` | LWW map                                                                                 |
+| `webhook-config`               | `system-core`        | `derived` | LWW map (secret excluded — server-authoritative only)                                   |
+| `fronting-report`              | `system-core`        | `derived` | LWW map (immutable after creation; enforced at API layer)                               |
+| `lifecycle-event`              | `system-core`        | `derived` | Append + LWW (map keyed by ID; archived is the only mutable field)                      |
+| `group-membership`             | `system-core`        | `derived` | Junction map (add-wins; compound key `{groupId}_{memberId}`)                            |
+| `fronting-session`             | `fronting`           | `derived` | Append + LWW                                                                            |
+| `fronting-comment`             | `fronting`           | `derived` | LWW map                                                                                 |
+| `check-in-record`              | `fronting`           | `derived` | Append + LWW (map keyed by ID; respondedByMemberId, respondedAt, dismissed are mutable) |
+| `channel`                      | `chat-{channelId}`   | `derived` | Singleton LWW                                                                           |
+| `message`                      | `chat-{channelId}`   | `derived` | Append-only                                                                             |
+| `board-message`                | `chat-{channelId}`   | `derived` | Append + LWW (map keyed by ID; pinned and sortOrder are mutable)                        |
+| `poll`                         | `chat-{channelId}`   | `derived` | LWW map                                                                                 |
+| `poll-option`                  | `chat-{channelId}`   | `derived` | LWW map                                                                                 |
+| `poll-vote`                    | `chat-{channelId}`   | `derived` | Append-only                                                                             |
+| `acknowledgement`              | `chat-{channelId}`   | `derived` | LWW map                                                                                 |
+| `journal-entry`                | `journal`            | `derived` | Append + LWW                                                                            |
+| `wiki-page`                    | `journal`            | `derived` | LWW map                                                                                 |
+| `note`                         | `note`               | `derived` | LWW map                                                                                 |
+| `blob`                         | `journal` (ref only) | `derived` | LWW map (metadata only — binary stored in S3/MinIO per ADR 009)                         |
+| `bucket` (definition)          | `privacy-config`     | `derived` | LWW map                                                                                 |
+| `bucket-content-tag`           | `privacy-config`     | `derived` | LWW map (compound key `{entityType}_{entityId}_{bucketId}`)                             |
+| `friend-connection`            | `privacy-config`     | `derived` | LWW map (nested `assignedBuckets` add-wins map)                                         |
+| `friend-code`                  | `privacy-config`     | `derived` | LWW map                                                                                 |
+| `key-grant`                    | `privacy-config`     | `derived` | Append + LWW                                                                            |
+| `field-bucket-visibility`      | `privacy-config`     | `derived` | Junction map (add-wins; compound key `{fieldDefinitionId}_{bucketId}`)                  |
 
 Blob metadata (MIME type, size, encryption info) lives in the `journal` document as a synced LWW map entry. The actual binary content is stored externally in S3/MinIO (see ADR 009). `BlobId` references appear as foreign keys across multiple documents: `system-core` (member photos), `chat-{channelId}` (message attachments), and `journal` (entry attachments).
 
@@ -245,10 +279,12 @@ These entity types are part of the sync machinery itself and are not stored as A
 
 Key assignments follow the two-tier model from ADR 006:
 
-| Key Type           | Documents                                                                  | Distribution                                                                                                            |
-| ------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Master Key**     | `system-core`, `fronting`, `chat-{channelId}`, `journal`, `privacy-config` | Derived from password via Argon2id. Available on all owner devices. Never shared.                                       |
-| **Per-Bucket Key** | `bucket-{bucketId}`                                                        | Random 256-bit symmetric key. Distributed to friends via asymmetric `crypto_box` (KeyGrant). Rotated on friend removal. |
+The implementation uses `DocumentKeyType`: `derived` = master key (derived from password via Argon2id); `bucket` = per-bucket symmetric key.
+
+| Key Type (`DocumentKeyType`) | Documents                                                                          | Distribution                                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `derived` (master key)       | `system-core`, `fronting`, `chat-{channelId}`, `journal`, `note`, `privacy-config` | Derived from password via Argon2id. Available on all owner devices. Never shared.                                       |
+| `bucket` (per-bucket key)    | `bucket-{bucketId}`                                                                | Random 256-bit symmetric key. Distributed to friends via asymmetric `crypto_box` (KeyGrant). Rotated on friend removal. |
 
 **Key-document invariant:** Every entity within a single Automerge document is encrypted with exactly one key. This is enforced by the document topology — master-key entities and bucket-key entities never share a document.
 
@@ -292,6 +328,7 @@ Estimates assume:
 | `fronting`          | System account is created                    |
 | `chat-{channelId}`  | A new chat channel is created                |
 | `journal`           | System account is created                    |
+| `note`              | System account is created                    |
 | `privacy-config`    | System account is created                    |
 | `bucket-{bucketId}` | A new privacy bucket is created              |
 
@@ -318,6 +355,7 @@ When a document exceeds the size threshold, it splits by time period:
 | `fronting`         | Quarter    | 5 MB      | `fronting-{systemId}-2026-Q1` |
 | `chat-{channelId}` | Month      | 5 MB      | `chat-{channelId}-2026-03`    |
 | `journal`          | Year       | 10 MB     | `journal-{systemId}-2026`     |
+| `note`             | Year       | (same)    | `note-{systemId}-2026`        |
 
 **Split mechanics:**
 
@@ -393,11 +431,11 @@ The manifest is **not** an Automerge document. It is server-maintained plaintext
 
 ## 9. Partial Replication Profiles
 
-| Client Profile   | Documents Synced                                                                                  | Notes                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| **Owner (full)** | All documents                                                                                     | Default for primary devices                                   |
-| **Owner (lite)** | `system-core`, `fronting` (current quarter), `privacy-config`, active `chat-{channelId}` channels | For low-storage devices; excludes journal and historical data |
-| **Friend**       | Only `bucket-{bucketId}` docs with active KeyGrant                                                | Friends never see master-key documents                        |
+| Client Profile   | Documents Synced                                                                                                     | Notes                                                                |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Owner (full)** | All documents                                                                                                        | Default for primary devices                                          |
+| **Owner (lite)** | `system-core`, `fronting` (current quarter), `privacy-config`, active `chat-{channelId}` channels, all `bucket` docs | For low-storage devices; excludes journal, note, and historical data |
+| **Friend**       | Only `bucket-{bucketId}` docs with active KeyGrant                                                                   | Friends never see master-key documents                               |
 
 **Owner devices** always sync all master-key documents. The "lite" profile is an optimization for devices with limited storage — it defers historical fronting and inactive chat channels but can request them on-demand.
 
