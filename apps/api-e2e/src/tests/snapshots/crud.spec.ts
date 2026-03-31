@@ -2,6 +2,7 @@ import {
   assertIdorRejected,
   assertPaginates,
   assertRequiresAuth,
+  assertValidationRejects,
 } from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
@@ -96,5 +97,16 @@ test.describe("System snapshots CRUD", () => {
     await assertPaginates(request, `/v1/systems/${systemId}/snapshots`, authHeaders, async () => {
       await createSnapshot(request, authHeaders, systemId);
     });
+  });
+
+  test("validation rejects bad input", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    await assertValidationRejects(
+      request,
+      "POST",
+      `/v1/systems/${systemId}/snapshots`,
+      authHeaders,
+      [{}, { snapshotTrigger: "invalid-trigger" }],
+    );
   });
 });

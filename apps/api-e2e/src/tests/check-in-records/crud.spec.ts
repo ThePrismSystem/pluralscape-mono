@@ -2,6 +2,7 @@ import {
   assertIdorRejected,
   assertPaginates,
   assertRequiresAuth,
+  assertValidationRejects,
 } from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
@@ -107,6 +108,21 @@ test.describe("Check-in records CRUD", () => {
       async () => {
         await createCheckInRecord(request, authHeaders, systemId, timerConfig.id);
       },
+    );
+  });
+
+  test("validation rejects bad input", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    await assertValidationRejects(
+      request,
+      "POST",
+      `/v1/systems/${systemId}/check-in-records`,
+      authHeaders,
+      [
+        {},
+        { scheduledAt: "not-a-number" },
+        { timerConfigId: "nonexistent", scheduledAt: Date.now() },
+      ],
     );
   });
 });

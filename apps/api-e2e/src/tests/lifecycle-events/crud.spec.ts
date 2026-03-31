@@ -1,4 +1,8 @@
-import { assertIdorRejected, assertRequiresAuth } from "../../fixtures/assertions.js";
+import {
+  assertIdorRejected,
+  assertRequiresAuth,
+  assertValidationRejects,
+} from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createLifecycleEvent, getSystemId } from "../../fixtures/entity-helpers.js";
@@ -117,5 +121,16 @@ test.describe("Lifecycle events CRUD", () => {
     expect(res.ok()).toBe(true);
     const body = (await res.json()) as { data: unknown[]; hasMore: boolean };
     expect(body.data.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("validation rejects bad input", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    await assertValidationRejects(
+      request,
+      "POST",
+      `/v1/systems/${systemId}/lifecycle-events`,
+      authHeaders,
+      [{}, { eventType: 123 }, { eventType: "discovery" }],
+    );
   });
 });

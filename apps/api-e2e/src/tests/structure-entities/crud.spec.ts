@@ -2,6 +2,7 @@ import {
   assertIdorRejected,
   assertPaginates,
   assertRequiresAuth,
+  assertValidationRejects,
 } from "../../fixtures/assertions.js";
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
@@ -152,6 +153,21 @@ test.describe("Structure entity CRUD", () => {
       async () => {
         await createStructureEntity(request, authHeaders, systemId, entityType.id);
       },
+    );
+  });
+
+  test("validation rejects bad input", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    await assertValidationRejects(
+      request,
+      "POST",
+      `/v1/systems/${systemId}/structure/entities`,
+      authHeaders,
+      [
+        {},
+        { encryptedData: "x" },
+        { structureEntityTypeId: "nonexistent", encryptedData: "x", sortOrder: 0 },
+      ],
     );
   });
 });
