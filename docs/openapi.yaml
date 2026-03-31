@@ -160,52 +160,6 @@ tags:
   - name: Check-In Records
     description: Scheduled check-in instances with respond/dismiss lifecycle
 paths:
-  /:
-    get:
-      operationId: getRoot
-      tags:
-        - Health
-      summary: Service info
-      description: Returns basic service information. No authentication required.
-      security: []
-      responses:
-        "200":
-          description: Service is running
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - status
-                  - service
-                properties:
-                  status:
-                    type: string
-                    example: ok
-                  service:
-                    type: string
-                    example: pluralscape-api
-  /health:
-    get:
-      operationId: getHealth
-      tags:
-        - Health
-      summary: Health check
-      description: Returns service health status. No authentication required.
-      security: []
-      responses:
-        "200":
-          description: Service is healthy
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - status
-                properties:
-                  status:
-                    type: string
-                    example: healthy
   /auth/register:
     post:
       operationId: register
@@ -1051,86 +1005,6 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /account/friends/{connectionId}/accept:
-    post:
-      operationId: acceptFriendConnection
-      tags:
-        - Friends
-      summary: Accept a friend request
-      description: |
-        Accepts a pending friend connection. Only connections with status
-        `pending` can be accepted. Accepting a connection:
-
-        1. Transitions both sides of the connection to `accepted` status
-        2. Dispatches a `friend.connected` webhook to the caller's owned systems
-
-        Rate limit: 60 req/min (write)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: connectionId
-          in: path
-          required: true
-          schema:
-            type: string
-            pattern: ^fc_
-          description: Friend connection ID
-      responses:
-        "200":
-          description: Connection accepted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FriendConnectionResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /account/friends/{connectionId}/reject:
-    post:
-      operationId: rejectFriendConnection
-      tags:
-        - Friends
-      summary: Reject a friend request
-      description: |
-        Rejects a pending friend connection. Only connections with status
-        `pending` can be rejected. Rejecting a connection transitions both
-        sides to `removed` status.
-
-        Rate limit: 60 req/min (write)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: connectionId
-          in: path
-          required: true
-          schema:
-            type: string
-            pattern: ^fc_
-          description: Friend connection ID
-      responses:
-        "200":
-          description: Connection rejected
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FriendConnectionResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
   /account/friends/{connectionId}/block:
@@ -2989,144 +2863,6 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/members/{memberId}/fields:
-    get:
-      operationId: listMemberFieldValues
-      tags:
-        - Member Fields
-      summary: List field values for a member
-      description: Returns all custom field values set on the given member. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/MemberId"
-      responses:
-        "200":
-          description: Field value list
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: object
-                    required:
-                      - items
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/FieldValueResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/members/{memberId}/fields/{fieldDefId}:
-    post:
-      operationId: setFieldValue
-      tags:
-        - Member Fields
-      summary: Set a field value on a member
-      description: Creates a new field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/MemberId"
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetFieldValueRequest"
-      responses:
-        "201":
-          description: Field value set
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FieldValueResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    put:
-      operationId: updateFieldValue
-      tags:
-        - Member Fields
-      summary: Update a field value on a member
-      description: Updates an existing field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/MemberId"
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateFieldValueRequest"
-      responses:
-        "200":
-          description: Field value updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FieldValueResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    delete:
-      operationId: deleteFieldValue
-      tags:
-        - Member Fields
-      summary: Delete a field value from a member
-      description: Removes a field value for the given field definition from a member. Rate limit 30 req/min (writeDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/MemberId"
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/groups:
     get:
       operationId: listGroups
@@ -3746,6 +3482,35 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
+    delete:
+      operationId: deleteCustomFront
+      tags:
+        - Custom Fronts
+      summary: Delete a custom front
+      description: |
+        Permanently deletes a custom front. This action is irreversible.
+
+        Rate limit: 30 req/min (writeDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: customFrontId
+          in: path
+          required: true
+          description: Custom front ID
+          schema:
+            type: string
+            pattern: ^cf_
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/custom-fronts/{customFrontId}/archive:
     post:
       operationId: archiveCustomFront
@@ -3811,37 +3576,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CustomFrontResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/custom-fronts/{customFrontId}/delete:
-    delete:
-      operationId: deleteCustomFront
-      tags:
-        - Custom Fronts
-      summary: Delete a custom front
-      description: |
-        Permanently deletes a custom front. This path uses the `/delete` suffix
-        to match the actual API implementation path. This action is irreversible.
-
-        Rate limit: 30 req/min (writeDefault)
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: customFrontId
-          in: path
-          required: true
-          description: Custom front ID
-          schema:
-            type: string
-            pattern: ^cf_
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -4074,78 +3808,6 @@ paths:
           $ref: "#/components/responses/ValidationError"
         "401":
           $ref: "#/components/responses/Unauthenticated"
-  /notifications/stream:
-    get:
-      operationId: streamNotifications
-      tags:
-        - Notifications
-      summary: Subscribe to real-time notifications (SSE)
-      description: |
-        Opens a Server-Sent Events stream for real-time notification delivery.
-
-        - Requires session auth (Bearer token)
-        - Subscribes to the account's Valkey pub/sub channel
-        - Sends heartbeat comments (`: heartbeat`) every 30 seconds to prevent proxy timeouts
-        - Supports reconnection via the `Last-Event-ID` header to replay missed events
-          from a ring buffer (up to 100 events, 5-minute window)
-        - If the replay window is exceeded, a `full-sync` event is sent instead
-        - Maximum 5 concurrent SSE connections per account
-
-        **Event types:**
-        - `notification` — a notification payload (default for untyped messages)
-        - `full-sync` — replay window exceeded; client should perform a full sync
-
-        Rate limit: 10 req/min (sseStream)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: Last-Event-ID
-          in: header
-          required: false
-          schema:
-            type: string
-          description: |
-            Last event ID received by the client. Used to replay missed events
-            on reconnection. If the ID falls outside the replay buffer window,
-            a `full-sync` event is sent instead.
-      responses:
-        "200":
-          description: SSE stream opened
-          content:
-            text/event-stream:
-              schema:
-                type: string
-                description: |
-                  Server-Sent Events stream. Each event follows the SSE format:
-
-                  ```
-                  event: notification
-                  data: {"systemId":"sys_...","eventType":"switch-reminder",...}
-                  id: 42
-
-                  ```
-
-                  Heartbeats are sent as SSE comments:
-
-                  ```
-                  : heartbeat
-
-                  ```
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          description: Too many concurrent SSE connections for this account
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: TOO_MANY_STREAMS
-                  message:
-                    type: string
-                    example: Maximum of 5 concurrent SSE connections per account exceeded
   /systems/{systemId}/fields:
     get:
       operationId: listFieldDefinitions
@@ -4358,6 +4020,138 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FieldDefinitionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fields/{fieldDefinitionId}/bucket-visibility:
+    get:
+      operationId: listFieldBucketVisibility
+      tags:
+        - Fields
+      summary: List bucket visibility for a field
+      description: Returns the list of privacy buckets a field definition is visible in. Rate limit 60 req/min (readDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: fieldDefinitionId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bucket visibility list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - bucketId
+                          properties:
+                            bucketId:
+                              type: string
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: setFieldBucketVisibility
+      tags:
+        - Fields
+      summary: Add bucket visibility for a field
+      description: Makes a field definition visible in a specific privacy bucket. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: fieldDefinitionId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bucketId
+              properties:
+                bucketId:
+                  type: string
+                  description: Privacy Bucket ID to grant visibility
+      responses:
+        "201":
+          description: Bucket visibility set
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - bucketId
+                    properties:
+                      bucketId:
+                        type: string
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fields/{fieldDefinitionId}/bucket-visibility/{bucketId}:
+    delete:
+      operationId: removeFieldBucketVisibility
+      tags:
+        - Fields
+      summary: Remove bucket visibility for a field
+      description: Removes a field definition's visibility in a specific privacy bucket. Rate limit 30 req/min (write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: fieldDefinitionId
+          in: path
+          required: true
+          description: Field Definition ID
+          schema:
+            type: string
+        - name: bucketId
+          in: path
+          required: true
+          description: Privacy Bucket ID
+          schema:
+            type: string
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -4612,7 +4406,7 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-types:
+  /systems/{systemId}/structure/entity-types:
     get:
       operationId: listStructureEntityTypes
       tags:
@@ -4674,7 +4468,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-types/{entityTypeId}:
+  /systems/{systemId}/structure/entity-types/{entityTypeId}:
     get:
       operationId: getStructureEntityType
       tags:
@@ -4768,7 +4562,7 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-types/{entityTypeId}/archive:
+  /systems/{systemId}/structure/entity-types/{entityTypeId}/archive:
     post:
       operationId: archiveStructureEntityType
       tags:
@@ -4798,7 +4592,7 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-types/{entityTypeId}/restore:
+  /systems/{systemId}/structure/entity-types/{entityTypeId}/restore:
     post:
       operationId: restoreStructureEntityType
       tags:
@@ -4828,7 +4622,7 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entities:
+  /systems/{systemId}/structure/entities:
     get:
       operationId: listStructureEntities
       tags:
@@ -4895,7 +4689,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entities/{entityId}:
+  /systems/{systemId}/structure/entities/{entityId}:
     get:
       operationId: getStructureEntity
       tags:
@@ -4989,7 +4783,7 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entities/{entityId}/archive:
+  /systems/{systemId}/structure/entities/{entityId}/archive:
     post:
       operationId: archiveStructureEntity
       tags:
@@ -5019,7 +4813,7 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entities/{entityId}/restore:
+  /systems/{systemId}/structure/entities/{entityId}/restore:
     post:
       operationId: restoreStructureEntity
       tags:
@@ -5049,7 +4843,7 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-links:
+  /systems/{systemId}/structure/entity-links:
     get:
       operationId: listStructureEntityLinks
       tags:
@@ -5123,7 +4917,44 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-links/{linkId}:
+  /systems/{systemId}/structure/entity-links/{linkId}:
+    put:
+      operationId: updateStructureEntityLink
+      tags:
+        - Structure Entity Links
+      summary: Update a structure entity link
+      description: Updates the metadata or relationship of a parent-child link between two structure entities. Rate limit 30 req/min (writeDefault).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: linkId
+          in: path
+          required: true
+          description: Entity link ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStructureEntityLinkRequest"
+      responses:
+        "200":
+          description: Entity link updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StructureEntityLinkResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
     delete:
       operationId: deleteStructureEntityLink
       tags:
@@ -5149,7 +4980,7 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-member-links:
+  /systems/{systemId}/structure/entity-member-links:
     get:
       operationId: listStructureEntityMemberLinks
       tags:
@@ -5223,7 +5054,7 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-member-links/{linkId}:
+  /systems/{systemId}/structure/entity-member-links/{linkId}:
     delete:
       operationId: deleteStructureEntityMemberLink
       tags:
@@ -5249,7 +5080,7 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-associations:
+  /systems/{systemId}/structure/entity-associations:
     get:
       operationId: listStructureEntityAssociations
       tags:
@@ -5323,7 +5154,7 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entity-associations/{associationId}:
+  /systems/{systemId}/structure/entity-associations/{associationId}:
     delete:
       operationId: deleteStructureEntityAssociation
       tags:
@@ -6951,13 +6782,13 @@ paths:
           $ref: "#/components/responses/Conflict"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/progress:
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}:
     get:
-      operationId: getRotationProgress
+      operationId: getRotation
       tags:
         - Key Rotation
-      summary: Get rotation progress
-      description: Returns the current status and progress of an in-flight key rotation. Rate limit 60 req/min (readDefault).
+      summary: Get a key rotation
+      description: Returns the current status and progress of a key rotation. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -6976,7 +6807,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Rotation progress
+          description: Rotation details
           content:
             application/json:
               schema:
@@ -7030,12 +6861,12 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete-chunk:
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete:
     post:
-      operationId: completeRotationChunk
+      operationId: completeRotation
       tags:
         - Key Rotation
-      summary: Report chunk completion
+      summary: Complete a key rotation
       description: |
         Reports the completion status of previously claimed rotation items.
         Each item is marked as completed or failed.
@@ -7948,6 +7779,8 @@ paths:
         - Fronting Reports
       summary: Get fronting report
       description: Retrieve a single fronting report by ID.
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
         - name: reportId
@@ -7964,18 +7797,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FrontingReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
         "404":
-          description: Report not found
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: updateFrontingReport
+      tags:
+        - Fronting Reports
+      summary: Update fronting report
+      description: Update an existing fronting report's encrypted payload.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fr_
+          description: Fronting report ID (prefixed with `fr_`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFrontingReportRequest"
+      responses:
+        "200":
+          description: Report updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/FrontingReportResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
     delete:
       operationId: deleteFrontingReport
       tags:
         - Fronting Reports
       summary: Delete fronting report
       description: Permanently delete a fronting report.
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
         - name: reportId
@@ -7987,13 +7860,75 @@ paths:
           description: Fronting report ID (prefixed with `fr_`)
       responses:
         "204":
-          description: Report deleted
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
         "404":
-          description: Report not found
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-reports/{reportId}/archive:
+    post:
+      operationId: archiveFrontingReport
+      tags:
+        - Fronting Reports
+      summary: Archive fronting report
+      description: Marks a fronting report as archived.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fr_
+          description: Fronting report ID (prefixed with `fr_`)
+      responses:
+        "200":
+          description: Report archived
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/FrontingReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/fronting-reports/{reportId}/restore:
+    post:
+      operationId: restoreFrontingReport
+      tags:
+        - Fronting Reports
+      summary: Restore fronting report
+      description: Removes the archived flag from a fronting report.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^fr_
+          description: Fronting report ID (prefixed with `fr_`)
+      responses:
+        "200":
+          description: Report restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontingReportResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/webhook-configs:
     get:
       operationId: listWebhookConfigs
@@ -11182,145 +11117,7 @@ paths:
           description: Rotation is not in the failed state
         "429":
           $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/groups/{groupId}/fields:
-    get:
-      operationId: listGroupFieldValues
-      tags:
-        - Group Fields
-      summary: List field values for a group
-      description: Returns all custom field values set on the given group. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/GroupId"
-      responses:
-        "200":
-          description: Field value list
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: object
-                    required:
-                      - items
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/FieldValueResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/groups/{groupId}/fields/{fieldDefId}:
-    post:
-      operationId: setGroupFieldValue
-      tags:
-        - Group Fields
-      summary: Set a field value on a group
-      description: Creates a new field value for the given field definition on a group. Rate limit 30 req/min (write).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/GroupId"
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetFieldValueRequest"
-      responses:
-        "201":
-          description: Field value set
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FieldValueResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    put:
-      operationId: updateGroupFieldValue
-      tags:
-        - Group Fields
-      summary: Update a field value on a group
-      description: Updates an existing field value for the given field definition on a group. Rate limit 30 req/min (write).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/GroupId"
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateFieldValueRequest"
-      responses:
-        "200":
-          description: Field value updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FieldValueResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    delete:
-      operationId: deleteGroupFieldValue
-      tags:
-        - Group Fields
-      summary: Delete a field value from a group
-      description: Removes a field value for the given field definition from a group. Rate limit 30 req/min (write).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - $ref: "#/components/parameters/GroupId"
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entities/{entityId}/hierarchy:
+  /systems/{systemId}/structure/entities/{entityId}/hierarchy:
     get:
       operationId: getStructureEntityHierarchy
       tags:
@@ -11355,164 +11152,6 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/HierarchyNode"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entities/{entityId}/fields:
-    get:
-      operationId: listStructureEntityFieldValues
-      tags:
-        - Structure Entity Fields
-      summary: List field values for a structure entity
-      description: Returns all custom field values set on the given structure entity. Rate limit 60 req/min (readDefault).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: entityId
-          in: path
-          required: true
-          description: Structure entity ID
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Field value list
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: object
-                    required:
-                      - items
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/FieldValueResponse"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-  /systems/{systemId}/structure-entities/{entityId}/fields/{fieldDefId}:
-    post:
-      operationId: setStructureEntityFieldValue
-      tags:
-        - Structure Entity Fields
-      summary: Set a field value on a structure entity
-      description: Creates a new field value for the given field definition on a structure entity. Rate limit 30 req/min (write).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: entityId
-          in: path
-          required: true
-          description: Structure entity ID
-          schema:
-            type: string
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SetFieldValueRequest"
-      responses:
-        "201":
-          description: Field value set
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FieldValueResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    put:
-      operationId: updateStructureEntityFieldValue
-      tags:
-        - Structure Entity Fields
-      summary: Update a field value on a structure entity
-      description: Updates an existing field value for the given field definition on a structure entity. Rate limit 30 req/min (write).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: entityId
-          in: path
-          required: true
-          description: Structure entity ID
-          schema:
-            type: string
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateFieldValueRequest"
-      responses:
-        "200":
-          description: Field value updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FieldValueResponse"
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthenticated"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "409":
-          $ref: "#/components/responses/Conflict"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-    delete:
-      operationId: deleteStructureEntityFieldValue
-      tags:
-        - Structure Entity Fields
-      summary: Delete a field value from a structure entity
-      description: Removes a field value for the given field definition from a structure entity. Rate limit 30 req/min (write).
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/SystemId"
-        - name: entityId
-          in: path
-          required: true
-          description: Structure entity ID
-          schema:
-            type: string
-        - name: fieldDefId
-          in: path
-          required: true
-          description: Field Definition ID
-          schema:
-            type: string
-      responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -15763,6 +15402,17 @@ components:
         - scheduled-daily
         - scheduled-weekly
       example: manual
+    UpdateStructureEntityLinkRequest:
+      type: object
+      properties:
+        parentEntityId:
+          type: string
+          nullable: true
+          description: ID of the parent entity, or null for a top-level link
+        sortOrder:
+          type: integer
+          minimum: 0
+          description: Display order among sibling links
     BucketExportManifestEntry:
       type: object
       required:

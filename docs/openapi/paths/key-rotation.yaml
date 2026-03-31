@@ -48,12 +48,12 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/progress:
+/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}:
   get:
-    operationId: getRotationProgress
+    operationId: getRotation
     tags: [Key Rotation]
-    summary: Get rotation progress
-    description: Returns the current status and progress of an in-flight key rotation. Rate limit 60 req/min (readDefault).
+    summary: Get a key rotation
+    description: Returns the current status and progress of a key rotation. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -72,7 +72,7 @@
           type: string
     responses:
       "200":
-        description: Rotation progress
+        description: Rotation details
         content:
           application/json:
             schema:
@@ -170,11 +170,11 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete-chunk:
+/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete:
   post:
-    operationId: completeRotationChunk
+    operationId: completeRotation
     tags: [Key Rotation]
-    summary: Report chunk completion
+    summary: Complete a key rotation
     description: |
       Reports the completion status of previously claimed rotation items.
       Each item is marked as completed or failed.

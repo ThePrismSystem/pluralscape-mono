@@ -77,6 +77,8 @@
     tags: [Fronting Reports]
     summary: Get fronting report
     description: Retrieve a single fronting report by ID.
+    security:
+      - bearerAuth: []
     parameters:
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - name: reportId
@@ -93,17 +95,56 @@
           application/json:
             schema:
               $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
-        description: Report not found
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateFrontingReport
+    tags: [Fronting Reports]
+    summary: Update fronting report
+    description: Update an existing fronting report's encrypted payload.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^fr_
+        description: Fronting report ID (prefixed with `fr_`)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/analytics.yaml#/CreateFrontingReportRequest"
+    responses:
+      "200":
+        description: Report updated
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/ErrorResponse"
+              $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
   delete:
     operationId: deleteFrontingReport
     tags: [Fronting Reports]
     summary: Delete fronting report
     description: Permanently delete a fronting report.
+    security:
+      - bearerAuth: []
     parameters:
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - name: reportId
@@ -115,10 +156,72 @@
         description: Fronting report ID (prefixed with `fr_`)
     responses:
       "204":
-        description: Report deleted
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
-        description: Report not found
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting-reports/{reportId}/archive:
+  post:
+    operationId: archiveFrontingReport
+    tags: [Fronting Reports]
+    summary: Archive fronting report
+    description: Marks a fronting report as archived.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^fr_
+        description: Fronting report ID (prefixed with `fr_`)
+    responses:
+      "200":
+        description: Report archived
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/ErrorResponse"
+              $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting-reports/{reportId}/restore:
+  post:
+    operationId: restoreFrontingReport
+    tags: [Fronting Reports]
+    summary: Restore fronting report
+    description: Removes the archived flag from a fronting report.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: reportId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^fr_
+        description: Fronting report ID (prefixed with `fr_`)
+    responses:
+      "200":
+        description: Report restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
