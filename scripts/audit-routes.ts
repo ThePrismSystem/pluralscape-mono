@@ -20,7 +20,55 @@ const METHOD_PATTERN = /\.(get|post|put|delete|patch)\(\s*["'](\/[^"']*?)["']/g;
 const RATE_LIMIT_PATTERN = /createCategoryRateLimiter\(\s*["']([^"']+)["']\s*\)/;
 const AUTH_MIDDLEWARE_PATTERN = /authMiddleware\(\)/;
 const PARSE_JSON_BODY_PATTERN = /parseJsonBody\(/;
-const VALIDATION_IMPORT_PATTERN = /import\s*\{([^}]+)\}\s*from\s*["']@pluralscape\/validation["']/;
+const VALIDATION_PKG_IMPORT_PATTERN =
+  /import\s*\{([^}]+)\}\s*from\s*["']@pluralscape\/validation["']/g;
+const LOCAL_SCHEMA_IMPORT_PATTERN = /import\s*\{([^}]+)\}\s*from\s*["'][^"']*\.schema[^"']*["']/g;
+const SCHEMA_USAGE_PATTERN = /(\w+Schema)\s*\.\s*(?:safe)?[Pp]arse\s*\(/g;
+
+function extractSchemaNames(source: string): string[] {
+  const schemas = new Set<string>();
+
+  let match: RegExpExecArray | null;
+
+  const pkgRegex = new RegExp(
+    VALIDATION_PKG_IMPORT_PATTERN.source,
+    VALIDATION_PKG_IMPORT_PATTERN.flags,
+  );
+  while ((match = pkgRegex.exec(source)) !== null) {
+    if (match[1] !== undefined) {
+      const imports = match[1]
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      for (const imp of imports) {
+        if (imp.endsWith("Schema")) schemas.add(imp);
+      }
+    }
+  }
+
+  const localRegex = new RegExp(
+    LOCAL_SCHEMA_IMPORT_PATTERN.source,
+    LOCAL_SCHEMA_IMPORT_PATTERN.flags,
+  );
+  while ((match = localRegex.exec(source)) !== null) {
+    if (match[1] !== undefined) {
+      const imports = match[1]
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      for (const imp of imports) {
+        if (imp.endsWith("Schema")) schemas.add(imp);
+      }
+    }
+  }
+
+  const usageRegex = new RegExp(SCHEMA_USAGE_PATTERN.source, SCHEMA_USAGE_PATTERN.flags);
+  while ((match = usageRegex.exec(source)) !== null) {
+    if (match[1] !== undefined) schemas.add(match[1]);
+  }
+
+  return [...schemas];
+}
 
 export function parseRouteFile(source: string): RouteFileInfo {
   const methods: RouteMethod[] = [];
@@ -39,16 +87,7 @@ export function parseRouteFile(source: string): RouteFileInfo {
 
   const hasAuth = AUTH_MIDDLEWARE_PATTERN.test(source);
   const usesParseJsonBody = PARSE_JSON_BODY_PATTERN.test(source);
-
-  const validationSchemas: string[] = [];
-  const validationMatch = VALIDATION_IMPORT_PATTERN.exec(source);
-  if (validationMatch?.[1] !== undefined) {
-    const imports = validationMatch[1]
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    validationSchemas.push(...imports.filter((s) => s.endsWith("Schema")));
-  }
+  const validationSchemas = extractSchemaNames(source);
 
   return { hasAuth, rateLimitCategory, usesParseJsonBody, validationSchemas, methods };
 }

@@ -63,6 +63,70 @@ listRoute.get("/", async (c) => {});
     expect(result.validationSchemas).toEqual(["MemberListQuerySchema"]);
   });
 
+  it("detects validation schema from local .schema file import", () => {
+    const source = `
+import { initiateTransferBodySchema } from "./device-transfer.schema.js";
+import { parseJsonBody } from "../../lib/parse-json-body.js";
+createRoute.post("/", async (c) => {
+  const body = await parseJsonBody(c);
+  const parsed = initiateTransferBodySchema.safeParse(body);
+});
+`;
+    const result = parseRouteFile(source);
+    expect(result.validationSchemas).toEqual(["initiateTransferBodySchema"]);
+  });
+
+  it("detects .parse() usage on imported schema", () => {
+    const source = `
+import { MemberListQuerySchema } from "@pluralscape/validation";
+listRoute.get("/", async (c) => {
+  const { includeArchived, groupId } = MemberListQuerySchema.parse({
+    includeArchived: c.req.query("includeArchived"),
+  });
+});
+`;
+    const result = parseRouteFile(source);
+    expect(result.validationSchemas).toEqual(["MemberListQuerySchema"]);
+  });
+
+  it("detects .safeParse() usage on imported schema", () => {
+    const source = `
+import { SetFieldBucketVisibilityBodySchema } from "@pluralscape/validation";
+setRoute.post("/", async (c) => {
+  const body = await parseJsonBody(c);
+  const parsed = SetFieldBucketVisibilityBodySchema.safeParse(body);
+});
+`;
+    const result = parseRouteFile(source);
+    expect(result.validationSchemas).toEqual(["SetFieldBucketVisibilityBodySchema"]);
+  });
+
+  it("detects multiple schemas from different sources", () => {
+    const source = `
+import { MemberListQuerySchema } from "@pluralscape/validation";
+import { localBodySchema } from "./local.schema.js";
+listRoute.get("/", async (c) => {
+  MemberListQuerySchema.parse(c.req.query());
+  localBodySchema.safeParse(body);
+});
+`;
+    const result = parseRouteFile(source);
+    expect(result.validationSchemas).toContain("MemberListQuerySchema");
+    expect(result.validationSchemas).toContain("localBodySchema");
+  });
+
+  it("does not flag route with no schema usage as having validation", () => {
+    const source = `
+import { parseJsonBody } from "../../lib/parse-json-body.js";
+createRoute.post("/", async (c) => {
+  const body = await parseJsonBody(c);
+  const result = await createMember(db, systemId, body, auth, audit);
+});
+`;
+    const result = parseRouteFile(source);
+    expect(result.validationSchemas).toEqual([]);
+  });
+
   it("returns empty results for file with no handlers", () => {
     const source = `
 import { Hono } from "hono";
