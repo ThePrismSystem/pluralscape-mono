@@ -137,33 +137,90 @@ Epics:
 - Email & webhook audit findings
 - Integration guides (features.md section 9)
 
-## Milestone 8: Client App
+## Milestone 8: App Foundation & Data Layer
 
-Goal: Full-featured cross-platform UI (web, iOS, Android via Expo), import/export, bridge
+Goal: App skeleton, navigation infrastructure, provider tree, and the complete data interaction layer — every React Query hook, auth flow, encryption pipeline, sync client, and offline queue needed to power the client app.
 
 Epics:
 
-- Navigation and app shell
-- Member management screens
-- Fronting UI
-- Chat UI
-- Board and notes UI
-- Privacy and friends UI
-- System structure UI
-- Journaling UI (features.md section 7)
-- Search UI (features.md section 8)
-- Settings screens
-- Fronting history report generation (features.md section 2)
-- Littles Safe Mode (features.md section 13)
-- Offline-first client integration (features.md section 15)
-- Web platform support
-- Simply Plural import (features.md section 10)
-- PluralKit import (features.md section 10)
-- Data export (features.md section 10)
-- PluralKit bridge (features.md section 9)
-- API key management UI (features.md section 9)
+- App shell & navigation
+- Provider tree & auth flow
+- Sync & offline client
+- Identity data hooks
+- Fronting data hooks
+- Communication data hooks
+- Social data hooks
+- Structure & journaling data hooks
+- Utility data hooks
+- Web platform data adapter
 
-## Milestone 9: Self-Hosted
+## Milestone 9: UI/UX Design
+
+Goal: Stitch-generated HTML mockups for every screen family, establishing visual language, interaction patterns, and layout decisions before React Native code is written.
+
+Epics:
+
+- Design system foundation
+- Onboarding & auth screens
+- Home & navigation design
+- Member management screens
+- Fronting screens
+- Communication screens
+- Privacy & social screens
+- System structure screens
+- Journaling screens
+- Search & settings screens
+
+## Milestone 10: UI/UX Buildout
+
+Goal: Translate Stitch HTML mockups into React Native/Expo components with placeholder data. Every screen navigable and visually complete, but not wired to real data.
+
+Epics:
+
+- Component library implementation
+- Onboarding & auth screens
+- Home & navigation buildout
+- Member management screens
+- Fronting screens
+- Communication screens
+- Privacy & social screens
+- System structure screens
+- Journaling screens
+- Search & settings screens
+- Platform adaptation
+
+## Milestone 11: Data Interpolation
+
+Goal: Wire every screen to its real data hooks from M8, replacing placeholder/mock data with live API data. Handle loading states, error states, and verify end-to-end flows.
+
+Epics:
+
+- Auth & onboarding wiring
+- Home & navigation wiring
+- Member management wiring
+- Fronting wiring
+- Communication wiring
+- Social wiring
+- System structure wiring
+- Journaling wiring
+- Search & settings wiring
+- Real-time & sync integration
+- End-to-end flow verification
+
+## Milestone 12: Ancillary Features
+
+Goal: Self-contained features with their own data logic and UI, built end-to-end as complete vertical slices.
+
+Epics:
+
+- Simply Plural import
+- PluralKit import
+- Data export
+- PluralKit bridge
+- Littles Safe Mode
+- Fronting history report generation
+
+## Milestone 13: Self-Hosted
 
 Goal: Two-tier self-hosted deployment (ADR 012)
 
@@ -176,7 +233,7 @@ Epics:
 - Capability matrix documentation
 - Self-hosted documentation
 
-## Milestone 10: Polish and Launch
+## Milestone 14: Polish and Launch
 
 Goal: Security audit, performance, beta testing
 
