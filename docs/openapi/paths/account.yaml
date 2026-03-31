@@ -70,12 +70,8 @@
           schema:
             $ref: "../schemas/account.yaml#/PinRequest"
     responses:
-      "200":
-        description: PIN set
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/account.yaml#/ActionResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -102,12 +98,8 @@
           schema:
             $ref: "../schemas/account.yaml#/PinRequest"
     responses:
-      "200":
-        description: PIN removed
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/account.yaml#/ActionResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":

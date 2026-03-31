@@ -1,4 +1,4 @@
-/systems/{systemId}/structure-entities:
+/systems/{systemId}/structure/entities:
   get:
     operationId: listStructureEntities
     tags: [Structure Entities]
@@ -63,7 +63,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entities/{entityId}:
+/systems/{systemId}/structure/entities/{entityId}:
   get:
     operationId: getStructureEntity
     tags: [Structure Entities]
@@ -155,7 +155,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entities/{entityId}/hierarchy:
+/systems/{systemId}/structure/entities/{entityId}/hierarchy:
   get:
     operationId: getStructureEntityHierarchy
     tags: [Structure Entities]
@@ -195,161 +195,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entities/{entityId}/fields:
-  get:
-    operationId: listStructureEntityFieldValues
-    tags: [Structure Entity Fields]
-    summary: List field values for a structure entity
-    description: Returns all custom field values set on the given structure entity. Rate limit 60 req/min (readDefault).
-    security:
-      - bearerAuth: []
-    parameters:
-      - $ref: "../openapi.yaml#/components/parameters/SystemId"
-      - name: entityId
-        in: path
-        required: true
-        description: Structure entity ID
-        schema:
-          type: string
-    responses:
-      "200":
-        description: Field value list
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [data]
-              properties:
-                data:
-                  type: object
-                  required: [items]
-                  properties:
-                    items:
-                      type: array
-                      items:
-                        $ref: "../schemas/fields.yaml#/FieldValueResponse"
-      "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
-      "429":
-        $ref: "../openapi.yaml#/components/responses/RateLimited"
-
-/systems/{systemId}/structure-entities/{entityId}/fields/{fieldDefId}:
-  post:
-    operationId: setStructureEntityFieldValue
-    tags: [Structure Entity Fields]
-    summary: Set a field value on a structure entity
-    description: Creates a new field value for the given field definition on a structure entity. Rate limit 30 req/min (write).
-    security:
-      - bearerAuth: []
-    parameters:
-      - $ref: "../openapi.yaml#/components/parameters/SystemId"
-      - name: entityId
-        in: path
-        required: true
-        description: Structure entity ID
-        schema:
-          type: string
-      - name: fieldDefId
-        in: path
-        required: true
-        description: Field Definition ID
-        schema:
-          type: string
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "../schemas/fields.yaml#/SetFieldValueRequest"
-    responses:
-      "201":
-        description: Field value set
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/fields.yaml#/FieldValueResponse"
-      "400":
-        $ref: "../openapi.yaml#/components/responses/ValidationError"
-      "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
-      "429":
-        $ref: "../openapi.yaml#/components/responses/RateLimited"
-  put:
-    operationId: updateStructureEntityFieldValue
-    tags: [Structure Entity Fields]
-    summary: Update a field value on a structure entity
-    description: Updates an existing field value for the given field definition on a structure entity. Rate limit 30 req/min (write).
-    security:
-      - bearerAuth: []
-    parameters:
-      - $ref: "../openapi.yaml#/components/parameters/SystemId"
-      - name: entityId
-        in: path
-        required: true
-        description: Structure entity ID
-        schema:
-          type: string
-      - name: fieldDefId
-        in: path
-        required: true
-        description: Field Definition ID
-        schema:
-          type: string
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "../schemas/fields.yaml#/UpdateFieldValueRequest"
-    responses:
-      "200":
-        description: Field value updated
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/fields.yaml#/FieldValueResponse"
-      "400":
-        $ref: "../openapi.yaml#/components/responses/ValidationError"
-      "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
-      "404":
-        $ref: "../openapi.yaml#/components/responses/NotFound"
-      "409":
-        $ref: "../openapi.yaml#/components/responses/Conflict"
-      "429":
-        $ref: "../openapi.yaml#/components/responses/RateLimited"
-  delete:
-    operationId: deleteStructureEntityFieldValue
-    tags: [Structure Entity Fields]
-    summary: Delete a field value from a structure entity
-    description: Removes a field value for the given field definition from a structure entity. Rate limit 30 req/min (write).
-    security:
-      - bearerAuth: []
-    parameters:
-      - $ref: "../openapi.yaml#/components/parameters/SystemId"
-      - name: entityId
-        in: path
-        required: true
-        description: Structure entity ID
-        schema:
-          type: string
-      - name: fieldDefId
-        in: path
-        required: true
-        description: Field Definition ID
-        schema:
-          type: string
-    responses:
-      "204":
-        $ref: "../openapi.yaml#/components/responses/NoContent"
-      "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
-      "404":
-        $ref: "../openapi.yaml#/components/responses/NotFound"
-      "429":
-        $ref: "../openapi.yaml#/components/responses/RateLimited"
-
-/systems/{systemId}/structure-entities/{entityId}/archive:
+/systems/{systemId}/structure/entities/{entityId}/archive:
   post:
     operationId: archiveStructureEntity
     tags: [Structure Entities]
@@ -366,12 +212,8 @@
         schema:
           type: string
     responses:
-      "200":
-        description: Structure entity archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/structures.yaml#/StructureEntityResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -379,7 +221,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entities/{entityId}/restore:
+/systems/{systemId}/structure/entities/{entityId}/restore:
   post:
     operationId: restoreStructureEntity
     tags: [Structure Entities]
@@ -409,7 +251,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-links:
+/systems/{systemId}/structure/entity-links:
   get:
     operationId: listStructureEntityLinks
     tags: [Structure Entity Links]
@@ -481,7 +323,43 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-links/{linkId}:
+/systems/{systemId}/structure/entity-links/{linkId}:
+  put:
+    operationId: updateStructureEntityLink
+    tags: [Structure Entity Links]
+    summary: Update a structure entity link
+    description: Updates the metadata or relationship of a parent-child link between two structure entities. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: linkId
+        in: path
+        required: true
+        description: Entity link ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/UpdateStructureEntityLinkRequest"
+    responses:
+      "200":
+        description: Entity link updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureEntityLinkResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
   delete:
     operationId: deleteStructureEntityLink
     tags: [Structure Entity Links]
@@ -507,7 +385,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-member-links:
+/systems/{systemId}/structure/entity-member-links:
   get:
     operationId: listStructureEntityMemberLinks
     tags: [Structure Entity Member Links]
@@ -579,7 +457,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-member-links/{linkId}:
+/systems/{systemId}/structure/entity-member-links/{linkId}:
   delete:
     operationId: deleteStructureEntityMemberLink
     tags: [Structure Entity Member Links]
@@ -605,7 +483,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-associations:
+/systems/{systemId}/structure/entity-associations:
   get:
     operationId: listStructureEntityAssociations
     tags: [Structure Entity Associations]
@@ -677,7 +555,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-associations/{associationId}:
+/systems/{systemId}/structure/entity-associations/{associationId}:
   delete:
     operationId: deleteStructureEntityAssociation
     tags: [Structure Entity Associations]

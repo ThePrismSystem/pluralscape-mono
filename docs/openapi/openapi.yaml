@@ -702,11 +702,6 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
 
 paths:
-  # Health
-  /:
-    $ref: "./paths/health.yaml#/~1"
-  /health:
-    $ref: "./paths/health.yaml#/~1health"
   # Auth
   /auth/register:
     $ref: "./paths/auth.yaml#/~1auth~1register"
@@ -756,10 +751,6 @@ paths:
     $ref: "./paths/friends.yaml#/~1account~1friends"
   /account/friends/{connectionId}:
     $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D"
-  /account/friends/{connectionId}/accept:
-    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1accept"
-  /account/friends/{connectionId}/reject:
-    $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1reject"
   /account/friends/{connectionId}/block:
     $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D~1block"
   /account/friends/{connectionId}/remove:
@@ -841,11 +832,6 @@ paths:
     $ref: "./paths/member-photos.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1photos~1%7BphotoId%7D~1restore"
   /systems/{systemId}/members/{memberId}/photos/{photoId}:
     $ref: "./paths/member-photos.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1photos~1%7BphotoId%7D"
-  # Member Fields
-  /systems/{systemId}/members/{memberId}/fields:
-    $ref: "./paths/member-fields.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1fields"
-  /systems/{systemId}/members/{memberId}/fields/{fieldDefId}:
-    $ref: "./paths/member-fields.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1fields~1%7BfieldDefId%7D"
   # Groups
   /systems/{systemId}/groups:
     $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups"
@@ -876,8 +862,6 @@ paths:
     $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1archive"
   /systems/{systemId}/custom-fronts/{customFrontId}/restore:
     $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1restore"
-  /systems/{systemId}/custom-fronts/{customFrontId}/delete:
-    $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1delete"
   # Device Tokens
   /systems/{systemId}/device-tokens:
     $ref: "./paths/device-tokens.yaml#/~1systems~1%7BsystemId%7D~1device-tokens"
@@ -890,9 +874,6 @@ paths:
     $ref: "./paths/notification-configs.yaml#/~1systems~1%7BsystemId%7D~1notification-configs"
   /systems/{systemId}/notification-configs/{eventType}:
     $ref: "./paths/notification-configs.yaml#/~1systems~1%7BsystemId%7D~1notification-configs~1%7BeventType%7D"
-  # Notifications
-  /notifications/stream:
-    $ref: "./paths/notifications.yaml#/~1notifications~1stream"
   # Field Definitions
   /systems/{systemId}/fields:
     $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields"
@@ -902,6 +883,11 @@ paths:
     $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields~1%7BfieldId%7D~1archive"
   /systems/{systemId}/fields/{fieldId}/restore:
     $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields~1%7BfieldId%7D~1restore"
+  # Field Bucket Visibility
+  /systems/{systemId}/fields/{fieldDefinitionId}/bucket-visibility:
+    $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields~1%7BfieldDefinitionId%7D~1bucket-visibility"
+  /systems/{systemId}/fields/{fieldDefinitionId}/bucket-visibility/{bucketId}:
+    $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields~1%7BfieldDefinitionId%7D~1bucket-visibility~1%7BbucketId%7D"
   # Relationships
   /systems/{systemId}/relationships:
     $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships"
@@ -912,38 +898,38 @@ paths:
   /systems/{systemId}/relationships/{relationshipId}/restore:
     $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships~1%7BrelationshipId%7D~1restore"
   # Structure Entity Types
-  /systems/{systemId}/structure-entity-types:
-    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types"
-  /systems/{systemId}/structure-entity-types/{entityTypeId}:
-    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types~1%7BentityTypeId%7D"
-  /systems/{systemId}/structure-entity-types/{entityTypeId}/archive:
-    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types~1%7BentityTypeId%7D~1archive"
-  /systems/{systemId}/structure-entity-types/{entityTypeId}/restore:
-    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-types~1%7BentityTypeId%7D~1restore"
+  /systems/{systemId}/structure/entity-types:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-types"
+  /systems/{systemId}/structure/entity-types/{entityTypeId}:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-types~1%7BentityTypeId%7D"
+  /systems/{systemId}/structure/entity-types/{entityTypeId}/archive:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-types~1%7BentityTypeId%7D~1archive"
+  /systems/{systemId}/structure/entity-types/{entityTypeId}/restore:
+    $ref: "./paths/structure-entity-types.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-types~1%7BentityTypeId%7D~1restore"
   # Structure Entities
-  /systems/{systemId}/structure-entities:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities"
-  /systems/{systemId}/structure-entities/{entityId}:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D"
-  /systems/{systemId}/structure-entities/{entityId}/archive:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1archive"
-  /systems/{systemId}/structure-entities/{entityId}/restore:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1restore"
+  /systems/{systemId}/structure/entities:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entities"
+  /systems/{systemId}/structure/entities/{entityId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entities~1%7BentityId%7D"
+  /systems/{systemId}/structure/entities/{entityId}/archive:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entities~1%7BentityId%7D~1archive"
+  /systems/{systemId}/structure/entities/{entityId}/restore:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entities~1%7BentityId%7D~1restore"
   # Structure Entity Links
-  /systems/{systemId}/structure-entity-links:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-links"
-  /systems/{systemId}/structure-entity-links/{linkId}:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-links~1%7BlinkId%7D"
+  /systems/{systemId}/structure/entity-links:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-links"
+  /systems/{systemId}/structure/entity-links/{linkId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-links~1%7BlinkId%7D"
   # Structure Entity Member Links
-  /systems/{systemId}/structure-entity-member-links:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-member-links"
-  /systems/{systemId}/structure-entity-member-links/{linkId}:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-member-links~1%7BlinkId%7D"
+  /systems/{systemId}/structure/entity-member-links:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-member-links"
+  /systems/{systemId}/structure/entity-member-links/{linkId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-member-links~1%7BlinkId%7D"
   # Structure Entity Associations
-  /systems/{systemId}/structure-entity-associations:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-associations"
-  /systems/{systemId}/structure-entity-associations/{associationId}:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entity-associations~1%7BassociationId%7D"
+  /systems/{systemId}/structure/entity-associations:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-associations"
+  /systems/{systemId}/structure/entity-associations/{associationId}:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entity-associations~1%7BassociationId%7D"
   # Lifecycle Events
   /systems/{systemId}/lifecycle-events:
     $ref: "./paths/lifecycle-events.yaml#/~1systems~1%7BsystemId%7D~1lifecycle-events"
@@ -1004,12 +990,12 @@ paths:
   # Key Rotation
   /systems/{systemId}/buckets/{bucketId}/rotations:
     $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations"
-  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/progress:
-    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1progress"
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}:
+    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D"
   /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/claim:
     $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1claim"
-  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete-chunk:
-    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1complete-chunk"
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete:
+    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1complete"
   # Fronting Sessions
   /systems/{systemId}/fronting-sessions:
     $ref: "./paths/fronting-sessions.yaml#/~1systems~1%7BsystemId%7D~1fronting-sessions"
@@ -1041,6 +1027,10 @@ paths:
     $ref: "./paths/fronting-reports.yaml#/~1systems~1%7BsystemId%7D~1fronting-reports"
   /systems/{systemId}/fronting-reports/{reportId}:
     $ref: "./paths/fronting-reports.yaml#/~1systems~1%7BsystemId%7D~1fronting-reports~1%7BreportId%7D"
+  /systems/{systemId}/fronting-reports/{reportId}/archive:
+    $ref: "./paths/fronting-reports.yaml#/~1systems~1%7BsystemId%7D~1fronting-reports~1%7BreportId%7D~1archive"
+  /systems/{systemId}/fronting-reports/{reportId}/restore:
+    $ref: "./paths/fronting-reports.yaml#/~1systems~1%7BsystemId%7D~1fronting-reports~1%7BreportId%7D~1restore"
   # Webhook Configs
   /systems/{systemId}/webhook-configs:
     $ref: "./paths/webhook-configs.yaml#/~1systems~1%7BsystemId%7D~1webhook-configs"
@@ -1166,15 +1156,6 @@ paths:
   # Key Rotation (retry)
   /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/retry:
     $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1retry"
-  # Group Fields
-  /systems/{systemId}/groups/{groupId}/fields:
-    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1fields"
-  /systems/{systemId}/groups/{groupId}/fields/{fieldDefId}:
-    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1fields~1%7BfieldDefId%7D"
-  # Structure Entity Hierarchy & Fields
-  /systems/{systemId}/structure-entities/{entityId}/hierarchy:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1hierarchy"
-  /systems/{systemId}/structure-entities/{entityId}/fields:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1fields"
-  /systems/{systemId}/structure-entities/{entityId}/fields/{fieldDefId}:
-    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure-entities~1%7BentityId%7D~1fields~1%7BfieldDefId%7D"
+  # Structure Entity Hierarchy
+  /systems/{systemId}/structure/entities/{entityId}/hierarchy:
+    $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entities~1%7BentityId%7D~1hierarchy"

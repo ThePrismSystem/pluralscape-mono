@@ -194,12 +194,8 @@
           type: string
           pattern: ^rel_
     responses:
-      "200":
-        description: Relationship archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/relationships.yaml#/RelationshipResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

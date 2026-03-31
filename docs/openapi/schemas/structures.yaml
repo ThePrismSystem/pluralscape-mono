@@ -104,6 +104,18 @@ CreateStructureEntityLinkRequest:
       minimum: 0
       description: Display order among sibling links
 
+UpdateStructureEntityLinkRequest:
+  type: object
+  properties:
+    parentEntityId:
+      type: string
+      nullable: true
+      description: ID of the parent entity, or null for a top-level link
+    sortOrder:
+      type: integer
+      minimum: 0
+      description: Display order among sibling links
+
 StructureEntityLinkResponse:
   type: object
   required: [id, systemId, entityId, sortOrder, createdAt]

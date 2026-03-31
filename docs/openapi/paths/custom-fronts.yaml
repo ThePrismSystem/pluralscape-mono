@@ -144,6 +144,34 @@
         $ref: "../openapi.yaml#/components/responses/Conflict"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteCustomFront
+    tags: [Custom Fronts]
+    summary: Delete a custom front
+    description: |
+      Permanently deletes a custom front. This action is irreversible.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        description: Custom front ID
+        schema:
+          type: string
+          pattern: ^cf_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/custom-fronts/{customFrontId}/archive:
   post:
@@ -168,12 +196,8 @@
           type: string
           pattern: ^cf_
     responses:
-      "200":
-        description: Custom front archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -209,37 +233,6 @@
           application/json:
             schema:
               $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
-      "401":
-        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
-      "404":
-        $ref: "../openapi.yaml#/components/responses/NotFound"
-      "429":
-        $ref: "../openapi.yaml#/components/responses/RateLimited"
-
-/systems/{systemId}/custom-fronts/{customFrontId}/delete:
-  delete:
-    operationId: deleteCustomFront
-    tags: [Custom Fronts]
-    summary: Delete a custom front
-    description: |
-      Permanently deletes a custom front. This path uses the `/delete` suffix
-      to match the actual API implementation path. This action is irreversible.
-
-      Rate limit: 30 req/min (writeDefault)
-    security:
-      - bearerAuth: []
-    parameters:
-      - $ref: "../openapi.yaml#/components/parameters/SystemId"
-      - name: customFrontId
-        in: path
-        required: true
-        description: Custom front ID
-        schema:
-          type: string
-          pattern: ^cf_
-    responses:
-      "204":
-        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

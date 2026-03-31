@@ -119,12 +119,8 @@
         schema:
           type: string
     responses:
-      "200":
-        description: Photo archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

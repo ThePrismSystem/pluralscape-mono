@@ -169,12 +169,8 @@
         schema:
           type: string
     responses:
-      "200":
-        description: Field archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -205,6 +201,131 @@
           application/json:
             schema:
               $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldDefinitionId}/bucket-visibility:
+  get:
+    operationId: listFieldBucketVisibility
+    tags: [Fields]
+    summary: List bucket visibility for a field
+    description: Returns the list of privacy buckets a field definition is visible in. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldDefinitionId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Bucket visibility list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        required: [bucketId]
+                        properties:
+                          bucketId:
+                            type: string
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: setFieldBucketVisibility
+    tags: [Fields]
+    summary: Add bucket visibility for a field
+    description: Makes a field definition visible in a specific privacy bucket. Rate limit 30 req/min (write).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldDefinitionId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [bucketId]
+            properties:
+              bucketId:
+                type: string
+                description: Privacy Bucket ID to grant visibility
+    responses:
+      "201":
+        description: Bucket visibility set
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  type: object
+                  required: [bucketId]
+                  properties:
+                    bucketId:
+                      type: string
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldDefinitionId}/bucket-visibility/{bucketId}:
+  delete:
+    operationId: removeFieldBucketVisibility
+    tags: [Fields]
+    summary: Remove bucket visibility for a field
+    description: Removes a field definition's visibility in a specific privacy bucket. Rate limit 30 req/min (write).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldDefinitionId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+      - name: bucketId
+        in: path
+        required: true
+        description: Privacy Bucket ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

@@ -1,4 +1,4 @@
-/systems/{systemId}/structure-entity-types:
+/systems/{systemId}/structure/entity-types:
   get:
     operationId: listStructureEntityTypes
     tags: [Structure Entity Types]
@@ -58,7 +58,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-types/{entityTypeId}:
+/systems/{systemId}/structure/entity-types/{entityTypeId}:
   get:
     operationId: getStructureEntityType
     tags: [Structure Entity Types]
@@ -150,7 +150,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-types/{entityTypeId}/archive:
+/systems/{systemId}/structure/entity-types/{entityTypeId}/archive:
   post:
     operationId: archiveStructureEntityType
     tags: [Structure Entity Types]
@@ -167,12 +167,8 @@
         schema:
           type: string
     responses:
-      "200":
-        description: Structure entity type archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -180,7 +176,7 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
-/systems/{systemId}/structure-entity-types/{entityTypeId}/restore:
+/systems/{systemId}/structure/entity-types/{entityTypeId}/restore:
   post:
     operationId: restoreStructureEntityType
     tags: [Structure Entity Types]
