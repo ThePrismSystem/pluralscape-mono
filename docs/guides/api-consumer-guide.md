@@ -445,27 +445,14 @@ revoke_friend --> [initiated] --> first chunk claimed --> [migrating]
 
 ### 3.7 Recovery Key
 
-The recovery key is the only way to regain access if the password is lost. There is no email-based reset because the server cannot verify identity without the password-derived key.
+The recovery key is the only way to regain access if the password is lost (see [section 2.5](#25-password-reset-via-recovery-key) for the API flow and [section 2.6](#26-recovery-key-management) for management endpoints).
 
-**Structure:**
+**Cryptographic details:**
 
-- 256 bits of random data.
-- Encoded as 52 unpadded base32 characters (A-Z, 2-7), displayed as 13 groups of 4 separated by dashes: `ABCD-EFGH-IJKL-MNOP-...`.
+- 256 bits of random data, encoded as 52 unpadded base32 characters (A-Z, 2-7) in 13 groups of 4 separated by dashes.
 - The raw bytes are used directly as a 256-bit AEAD key to encrypt the master key.
 - The encrypted master key blob is stored on the server in the `recovery_keys` table.
-
-**Recovery flow:**
-
-1. User provides email + recovery key + new password.
-2. Server looks up the account by email hash, retrieves the encrypted master key blob from `recovery_keys`.
-3. Server decodes the recovery key from base32, uses it as an AEAD key to decrypt the master key.
-4. Server derives a new password key (KEK) from the new password, re-wraps the master key.
-5. Server generates a new recovery key, encrypts the master key under it, replaces the old recovery key record.
-6. Server returns a new session token and the new recovery key.
-
-**The old recovery key is invalidated.** The user must store the new one.
-
-**Regeneration** (without password reset) is also available via `POST /v1/auth/recovery-key/regenerate`, which requires the current password and generates a fresh recovery key + encrypted master key blob.
+- On password reset, the server decodes the recovery key, decrypts the master key, re-wraps it under the new password-derived key, generates a new recovery key, and invalidates the old one.
 
 ---
 
@@ -631,29 +618,9 @@ X-RateLimit-Reset: 1711843260
 
 When the limit is exceeded, the server returns `429` with an additional `Retry-After` header (seconds until the window resets).
 
-**Rate limit categories:**
+**Rate limit categories:** There are 17 categories ranging from `authHeavy` (5 req/min for login, register, password reset) to `readDefault` (60 req/min for standard reads). Sensitive operations use stricter limits (`accountPurge`: 1/day, `dataExport`: 2/hour). See [`docs/api-limits.md`](../api-limits.md#rate-limits) for the complete table with all current values.
 
-| Category               | Limit | Window | Applied To                                    |
-| ---------------------- | ----- | ------ | --------------------------------------------- |
-| `global`               | 100   | 1 min  | All requests (outer layer)                    |
-| `authHeavy`            | 5     | 1 min  | Register, login, password reset               |
-| `authLight`            | 20    | 1 min  | Sessions, biometric, recovery key             |
-| `deviceTransfer`       | 10    | 1 min  | Device transfer endpoints                     |
-| `write`                | 60    | 1 min  | Create, update, delete, archive, restore      |
-| `readDefault`          | 60    | 1 min  | Standard reads and lists                      |
-| `readHeavy`            | 30    | 1 min  | Expensive reads (export manifests, analytics) |
-| `blobUpload`           | 20    | 1 min  | Upload URL generation                         |
-| `webhookManagement`    | 20    | 1 min  | Webhook config CRUD                           |
-| `dataExport`           | 2     | 1 hour | Full data export                              |
-| `dataImport`           | 2     | 1 hour | Full data import                              |
-| `accountPurge`         | 1     | 1 day  | Account purge                                 |
-| `auditQuery`           | 30    | 1 min  | Audit log queries                             |
-| `friendCodeGeneration` | 10    | 1 min  | Friend code creation                          |
-| `friendCodeRedeem`     | 5     | 1 min  | Friend code redemption                        |
-| `publicApi`            | 60    | 1 min  | Public-facing API key endpoints               |
-| `sseStream`            | 5     | 1 min  | SSE notification streams                      |
-
-Exact values are defined in `@pluralscape/types` (`RATE_LIMITS`). See `docs/planning/api-specification.md` for the full specification.
+Values are defined in `@pluralscape/types` (`RATE_LIMITS`).
 
 **Client retry guidance:** exponential backoff starting at 1 second, multiplier 2, max 60 seconds, max 3 attempts. Defined in `CLIENT_RETRY` in `@pluralscape/types`.
 
@@ -839,315 +806,23 @@ Pluralscape uses an encrypted CRDT sync protocol for offline-first data synchron
 
 The protocol is transport-agnostic. The primary transport is WebSocket; HTTP long-polling is a fallback. The wire format is JSON with binary fields (ciphertext, nonces, signatures, public keys) encoded as Base64url strings.
 
-### 6.1 WebSocket Connection
+### 6.1 WebSocket Sync
 
-**Endpoint:**
+**Endpoint:** `wss://{host}/v1/sync/ws` (subprotocol: `pluralscape-sync-v1`)
 
-```
-wss://{host}/v1/sync/ws
-```
+The client authenticates by sending an `AuthenticateRequest` with the session token, `systemId`, and a replication profile type (`owner-full`, `owner-lite`, or `friend`). The profile controls which documents the client receives:
 
-**Subprotocol:** `pluralscape-sync-v1` (declared during the WebSocket upgrade handshake).
+- **`owner-full`**: all documents (active + archived) -- primary devices
+- **`owner-lite`**: current-period documents + active channels -- low-storage devices
+- **`friend`**: only bucket documents with active KeyGrants -- friends viewing shared content
 
-**Authentication:** the client authenticates after the WebSocket connection is established by sending an `AuthenticateRequest` message containing the session token (the same `ps_sess_...` token used for REST). The token is sent inside the message payload, not as a query parameter or header. The server closes the connection if no `AuthenticateRequest` arrives within 10 seconds.
+After authentication, the client fetches the sync manifest, subscribes to documents with local sync positions, and receives catch-up changes. In steady state, the client submits encrypted changes and receives real-time updates from other devices.
 
-**Connection limits:**
+Connection limits, rate limits, and other constraints are documented in [`docs/api-limits.md`](../api-limits.md#websocket-sync-limits).
 
-| Constraint                               | Value      |
-| ---------------------------------------- | ---------- |
-| Max connections per account              | 10         |
-| Max unauthenticated connections (global) | 500        |
-| Max unauthenticated connections per IP   | 50         |
-| Max message size                         | 5 MB       |
-| Auth timeout                             | 10 seconds |
-| Idle timeout                             | 60 seconds |
+For the full protocol specification -- message types, envelope formats, manifest structure, subscription mechanics, offline queue, conflict resolution, and error codes -- see the **[Sync Protocol Reference](sync-protocol.md)**.
 
-**Heartbeat:** the server sends application-level Ping messages every 30 seconds. If no Pong is received within 10 seconds, the connection is closed. This detects silent disconnects that TCP keepalive might miss.
-
-### 6.2 Session Lifecycle
-
-The sync session follows a strict handshake sequence:
-
-```
-Client                                Server
-  |                                     |
-  |-- AuthenticateRequest ------------->|  session token + systemId + profileType
-  |<-- AuthenticateResponse ------------|  syncSessionId + serverTime
-  |                                     |
-  |-- ManifestRequest ----------------->|  request filtered document list
-  |<-- ManifestResponse ----------------|  manifest of all sync documents
-  |                                     |
-  |-- SubscribeRequest ---------------->|  local sync positions per document
-  |<-- SubscribeResponse ---------------|  catch-up changes + snapshots
-  |                                     |
-  |         --- steady state ---        |
-  |<-- DocumentUpdate ------------------|  server pushes new changes
-  |-- SubmitChangeRequest ------------->|  client submits encrypted change
-  |<-- ChangeAccepted ------------------|  server confirms with assigned seq
-  |<-- ManifestChanged -----------------|  manifest updated (new doc, grant)
-```
-
-**Ordering requirements:**
-
-1. `AuthenticateRequest` must be the first message. Anything else before authentication produces `SyncError { code: "AUTH_FAILED" }` and a connection close.
-2. `ManifestRequest` must precede `SubscribeRequest`.
-3. After the handshake, messages flow concurrently -- there is no strict turn-taking.
-
-**Protocol version:** `AuthenticateRequest` declares `protocolVersion: 1`. If the server does not support the client's version, it responds with `SyncError { code: "PROTOCOL_MISMATCH" }` and closes.
-
-### 6.3 Message Types
-
-Every message shares a common base:
-
-```json
-{
-  "type": "AuthenticateRequest",
-  "correlationId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-`correlationId` is a client-generated UUID that the server echoes on direct responses. Server-pushed messages (`DocumentUpdate`, `ManifestChanged`) set `correlationId` to `null`.
-
-**Client -> Server (9 message types):**
-
-| Type                    | Description                                                   |
-| ----------------------- | ------------------------------------------------------------- |
-| `AuthenticateRequest`   | Present session token, systemId, and replication profile type |
-| `ManifestRequest`       | Request the filtered sync manifest                            |
-| `SubscribeRequest`      | Subscribe to documents with local sync positions              |
-| `UnsubscribeRequest`    | Cancel real-time subscription for a document                  |
-| `FetchSnapshotRequest`  | Request the latest encrypted snapshot                         |
-| `FetchChangesRequest`   | Request changes since a given seq                             |
-| `SubmitChangeRequest`   | Submit a new encrypted change envelope                        |
-| `SubmitSnapshotRequest` | Submit a new encrypted snapshot (compaction)                  |
-| `DocumentLoadRequest`   | Load a non-subscribed document on demand                      |
-
-**Server -> Client (10 message types):**
-
-| Type                   | Description                                                           |
-| ---------------------- | --------------------------------------------------------------------- |
-| `AuthenticateResponse` | Session established; returns syncSessionId and serverTime             |
-| `ManifestResponse`     | Returns the filtered manifest                                         |
-| `SubscribeResponse`    | Confirms subscriptions with per-document catch-up data                |
-| `DocumentUpdate`       | Real-time push of new changes (server-initiated, correlationId: null) |
-| `SnapshotResponse`     | Returns requested snapshot                                            |
-| `ChangesResponse`      | Returns requested changes                                             |
-| `ChangeAccepted`       | Confirms change acceptance with server-assigned seq                   |
-| `SnapshotAccepted`     | Confirms snapshot acceptance                                          |
-| `ManifestChanged`      | Push notification that the manifest changed (server-initiated)        |
-| `SyncError`            | Error response for any failed request                                 |
-
-### 6.4 Replication Profiles
-
-The `AuthenticateRequest` declares a `profileType` that determines which documents the client receives:
-
-| Profile      | Receives                                    | Use Case                                       |
-| ------------ | ------------------------------------------- | ---------------------------------------------- |
-| `owner-full` | All documents (active + archived)           | Primary devices with no storage constraints    |
-| `owner-lite` | Current-period documents + active channels  | Low-storage devices (wearables, budget phones) |
-| `friend`     | Only bucket documents with active KeyGrants | Friends viewing shared content                 |
-
-**Owner-lite filtering:** system-core, privacy-config, and bucket documents are always included. Fronting documents include only the current time period. Chat channels are included only if updated within the active channel window (default: 30 days). Journal and note documents are excluded (available on demand). Historical documents for all types are available via `DocumentLoadRequest`.
-
-**Friend filtering:** the server filters the manifest before delivery, returning only bucket documents for which the friend has a non-revoked KeyGrant. Friends cannot access system-core, chat, journal, or other document types.
-
-### 6.5 Document Model
-
-The sync layer uses **Automerge CRDT** documents. Each document is identified by a string ID following a naming convention:
-
-| Document Type    | ID Format                       | Time-Split | Encryption Key          |
-| ---------------- | ------------------------------- | ---------- | ----------------------- |
-| `system-core`    | `system-core-{systemId}`        | None       | Derived from master key |
-| `fronting`       | `fronting-{systemId}[-YYYY-QN]` | Quarter    | Derived from master key |
-| `chat`           | `chat-{channelId}[-YYYY-MM]`    | Month      | Derived from master key |
-| `journal`        | `journal-{systemId}[-YYYY]`     | Year       | Derived from master key |
-| `note`           | `note-{systemId}[-YYYY]`        | Year       | Derived from master key |
-| `privacy-config` | `privacy-config-{systemId}`     | None       | Derived from master key |
-| `bucket`         | `bucket-{bucketId}`             | None       | Bucket key              |
-
-**Time-splitting:** documents that grow over time (fronting, chat, journal, note) are split into time-bounded segments when they exceed a size threshold. The split thresholds are: fronting 5 MiB, chat 5 MiB, journal 10 MiB, note 10 MiB.
-
-**Encrypted relay model:** the server never sees plaintext Automerge data. The client:
-
-1. Makes a local Automerge change.
-2. Extracts the binary change bytes.
-3. Encrypts them with the document's encryption key (XChaCha20-Poly1305).
-4. Signs the encrypted envelope with the Ed25519 signing key.
-5. Sends the `EncryptedChangeEnvelope` to the server.
-
-The server validates the signature, assigns a monotonically increasing `seq` number, stores the ciphertext, and relays to other subscribed clients. It never decrypts the content.
-
-**Encrypted change envelope:**
-
-```json
-{
-  "ciphertext": "<base64url>",
-  "nonce": "<base64url, 24 bytes>",
-  "signature": "<base64url, 64 bytes>",
-  "authorPublicKey": "<base64url, 32 bytes>",
-  "documentId": "system-core-sys_abc",
-  "seq": 42
-}
-```
-
-**Encrypted snapshot envelope** (for compaction):
-
-```json
-{
-  "ciphertext": "<base64url>",
-  "nonce": "<base64url>",
-  "signature": "<base64url>",
-  "authorPublicKey": "<base64url>",
-  "documentId": "system-core-sys_abc",
-  "snapshotVersion": 5
-}
-```
-
-### 6.6 Sync Manifest
-
-The manifest is a plaintext listing of all sync documents for a system. It contains only metadata -- no encrypted content:
-
-```json
-{
-  "systemId": "sys_abc",
-  "documents": [
-    {
-      "docId": "system-core-sys_abc",
-      "docType": "system-core",
-      "keyType": "derived",
-      "bucketId": null,
-      "channelId": null,
-      "timePeriod": null,
-      "createdAt": 1711843260000,
-      "updatedAt": 1711843260000,
-      "sizeBytes": 102400,
-      "snapshotVersion": 3,
-      "lastSeq": 42,
-      "archived": false
-    }
-  ]
-}
-```
-
-The client uses the manifest to determine which documents to subscribe to (via the replication profile filter), which documents are available for on-demand loading, and which local documents should be evicted (no longer in the manifest).
-
-When the server pushes a `ManifestChanged` message, the client must re-fetch the full manifest to get accurate state. The `hint` field on `ManifestChanged` is informational only.
-
-### 6.7 Subscription and Catch-Up
-
-After receiving the manifest, the client sends a `SubscribeRequest` declaring its local sync positions:
-
-```json
-{
-  "type": "SubscribeRequest",
-  "correlationId": "...",
-  "documents": [
-    {
-      "docId": "system-core-sys_abc",
-      "lastSyncedSeq": 38,
-      "lastSnapshotVersion": 2
-    }
-  ]
-}
-```
-
-The server computes catch-up data per document and responds with:
-
-```json
-{
-  "type": "SubscribeResponse",
-  "correlationId": "...",
-  "catchup": [
-    {
-      "docId": "system-core-sys_abc",
-      "changes": [
-        /* envelopes with seq 39..42 */
-      ],
-      "snapshot": null
-    }
-  ],
-  "droppedDocIds": []
-}
-```
-
-- `catchup` is omitted for documents where the client is already current.
-- `snapshot` is present only when the server holds a newer snapshot than the client's `lastSnapshotVersion`. The client should bootstrap from the snapshot, then apply the provided changes.
-- `droppedDocIds` lists document IDs dropped because the subscription cap (100 per request, 500 per connection) was reached. Dropped documents must be loaded on demand.
-
-**On-demand loading:** for documents not in the active subscription set (historical periods, lite-profile journals), the client sends `DocumentLoadRequest`. The server responds with `SnapshotResponse` + `ChangesResponse` for that document, subject to the same access checks as subscription.
-
-### 6.8 Steady-State Sync
-
-After the handshake, the change submission cycle is:
-
-1. Client creates a local Automerge change, encrypts it, sends `SubmitChangeRequest`.
-2. Server validates the envelope signature, assigns `seq`, stores the ciphertext.
-3. Server sends `ChangeAccepted { assignedSeq }` to the submitting client.
-4. Server broadcasts `DocumentUpdate` with the new envelope to all other subscribed clients.
-
-**Change deduplication:** the server deduplicates by `(docId, authorPublicKey, nonce)`. Submitting the same change twice is safe and idempotent.
-
-**Compaction:** when a document accumulates too many changes (default threshold: 200 changes or 1 MiB size increase), the client compacts by saving the full Automerge state as an encrypted snapshot and submitting it via `SubmitSnapshotRequest`. The server accepts only if `snapshotVersion` strictly exceeds the current value. Concurrent compaction from two devices: the higher version wins; the lower gets `VERSION_CONFLICT`.
-
-**Rate limiting on WebSocket:**
-
-| Category                                 | Limit | Window     |
-| ---------------------------------------- | ----- | ---------- |
-| Mutations (SubmitChange, SubmitSnapshot) | 100   | 10 seconds |
-| Reads (Fetch*, Manifest*)                | 200   | 10 seconds |
-
-After 10 consecutive rate limit strikes, the server closes the connection.
-
-### 6.9 Offline Queue
-
-When the client is disconnected, local changes are queued in an offline queue (SQLite-backed on mobile). On reconnect:
-
-1. The client re-authenticates, re-fetches the manifest, re-subscribes with current local seq positions.
-2. The offline queue is drained in batches (up to 500 entries per batch).
-3. Entries are grouped by document and replayed serially within each document to preserve causal ordering.
-4. Up to 3 documents are replayed concurrently.
-5. Each entry is retried up to 3 times with exponential backoff (500 ms base, 0.5-1.0x jitter).
-6. Non-retriable errors (4xx except 408/429) fail the entry immediately.
-7. If an entry fails, all causally-dependent entries for that document are skipped.
-8. Server-side nonce deduplication makes re-submission safe after crashes.
-
-The client should not clear the local queue until the server confirms acceptance (`ChangeAccepted`).
-
-### 6.10 Conflict Resolution
-
-Automerge handles structural merge automatically (concurrent edits to different fields merge cleanly). However, application-level invariants may be violated after a CRDT merge. The sync engine runs **post-merge validation** to detect and correct these:
-
-**Hierarchy cycle detection:** if concurrent edits to `parentGroupId` fields create a cycle in the group hierarchy, the validator breaks the cycle by setting one entity's parent to `null` (root). The correction is emitted as a new CRDT change and synced to all devices.
-
-**Sort order repair:** if concurrent edits produce duplicate or non-contiguous sort orders within a collection, the validator renormalizes sort orders to restore a consistent sequence.
-
-**Fronting session normalization:** concurrent edits that produce invalid fronting states (e.g., `endTime < startTime`) are corrected automatically.
-
-**Timer config normalization:** waking-hours constraints are validated and corrected if concurrent edits produce impossible time ranges.
-
-**Conflict notifications:** all auto-resolved conflicts generate ephemeral `ConflictNotification` records. These are not persisted to the CRDT document -- they are delivered to the client callback for UI display.
-
-**Correction envelopes:** all corrections are submitted as new encrypted changes, so they become part of the document's CRDT history and propagate to all devices.
-
-### 6.11 Error Codes
-
-| Code                   | Recovery                                          |
-| ---------------------- | ------------------------------------------------- |
-| `AUTH_FAILED`          | Re-authenticate; refresh session token            |
-| `AUTH_EXPIRED`         | Refresh session token, then reconnect             |
-| `PERMISSION_DENIED`    | Do not retry; check access permissions            |
-| `DOCUMENT_NOT_FOUND`   | Re-fetch manifest; document may have been removed |
-| `DOCUMENT_LOAD_DENIED` | Do not retry; verify KeyGrant status              |
-| `SNAPSHOT_NOT_FOUND`   | Fall back to full change replay                   |
-| `VERSION_CONFLICT`     | Re-fetch latest snapshot; discard local snapshot  |
-| `MALFORMED_MESSAGE`    | Fix message construction; do not retry unchanged  |
-| `QUOTA_EXCEEDED`       | Surface to user; evict archived documents         |
-| `RATE_LIMITED`         | Exponential backoff starting at 1 second          |
-| `INVALID_ENVELOPE`     | Check signing key and envelope construction       |
-| `PROTOCOL_MISMATCH`    | Upgrade client; do not retry                      |
-| `INTERNAL_ERROR`       | Exponential backoff starting at 5 seconds         |
-
-### 6.12 SSE Notification Stream
+### 6.2 SSE Notification Stream
 
 A separate Server-Sent Events (SSE) stream delivers real-time notifications outside the sync protocol (e.g., webhook delivery results, account-level events).
 
@@ -1159,12 +834,7 @@ GET /v1/notifications/stream
 
 **Authentication:** standard session auth via `Authorization: Bearer ps_sess_...` header.
 
-**Connection limits:**
-
-| Constraint                                 | Value                                           |
-| ------------------------------------------ | ----------------------------------------------- |
-| Max concurrent SSE connections per account | 5                                               |
-| Rate limit                                 | 5 connections per minute (`sseStream` category) |
+**Connection limits:** max 5 concurrent SSE connections per account, rate-limited to 5 per minute (`sseStream` category). See [`docs/api-limits.md`](../api-limits.md#sse-notification-stream-limits) for current values.
 
 **Heartbeat:** the server sends a `: heartbeat` comment every 30 seconds to prevent proxy timeouts. An immediate heartbeat is sent on connection to flush response headers. The Bun HTTP idle timeout is 60 seconds.
 
@@ -1206,7 +876,7 @@ POST   /v1/systems/:systemId/webhook-configs/:webhookId/restore     Restore
 DELETE /v1/systems/:systemId/webhook-configs/:webhookId      Delete
 ```
 
-**Rate limit:** `webhookManagement` category (20 per minute) for list/get/update/delete/archive/restore; `write` category (60 per minute) for create. Creation uses idempotency middleware.
+**Rate limit:** `readDefault` category (60 per minute) for list/get; `write` category (60 per minute) for create/update/delete/archive/restore/rotate-secret/test. Creation uses idempotency middleware.
 
 **Quota:** maximum 25 active (non-archived) webhook configs per system.
 
@@ -1341,120 +1011,28 @@ The test delivery goes through the same SSRF validation and HMAC signing as real
 
 Webhook payloads contain T3 (plaintext) metadata only -- entity IDs, timestamps, and structural data. The server never includes encrypted content in webhook payloads. The `systemId` is automatically injected into every payload by the dispatcher.
 
-**Identity events:**
+Event types follow the pattern `{domain}.{action}`. Each payload includes `systemId` (injected by the dispatcher) plus entity-specific IDs.
 
-| Event Type                 | Payload             | Fires When               |
-| -------------------------- | ------------------- | ------------------------ |
-| `member.created`           | `{ memberId }`      | New member created       |
-| `member.updated`           | `{ memberId }`      | Member fields updated    |
-| `member.archived`          | `{ memberId }`      | Member archived          |
-| `fronting.started`         | `{ sessionId }`     | Fronting session started |
-| `fronting.ended`           | `{ sessionId }`     | Fronting session ended   |
-| `group.created`            | `{ groupId }`       | New group created        |
-| `group.updated`            | `{ groupId }`       | Group fields updated     |
-| `lifecycle.event-recorded` | `{ eventId }`       | Lifecycle event recorded |
-| `custom-front.changed`     | `{ customFrontId }` | Custom front updated     |
+| Domain                    | Events                                                                                     | Payload includes                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `member`                  | `created`, `updated`, `archived`                                                           | `memberId`                                           |
+| `fronting`                | `started`, `ended`                                                                         | `sessionId`                                          |
+| `group`                   | `created`, `updated`                                                                       | `groupId`                                            |
+| `lifecycle`               | `event-recorded`                                                                           | `eventId`                                            |
+| `custom-front`            | `changed`                                                                                  | `customFrontId`                                      |
+| `channel`                 | `created`, `updated`, `archived`, `restored`, `deleted`                                    | `channelId`                                          |
+| `message`                 | `created`, `updated`, `archived`, `restored`, `deleted`                                    | `messageId`, `channelId`                             |
+| `board-message`           | `created`, `updated`, `pinned`, `unpinned`, `reordered`, `archived`, `restored`, `deleted` | `boardMessageId`                                     |
+| `note`                    | `created`, `updated`, `archived`, `restored`, `deleted`                                    | `noteId`                                             |
+| `poll`                    | `created`, `updated`, `closed`, `archived`, `restored`, `deleted`                          | `pollId`                                             |
+| `poll-vote`               | `cast`, `vetoed`, `updated`, `archived`                                                    | `pollId`, `voteId`                                   |
+| `acknowledgement`         | `created`, `confirmed`, `archived`, `restored`, `deleted`                                  | `acknowledgementId`                                  |
+| `bucket`                  | `created`, `updated`, `archived`, `restored`, `deleted`                                    | `bucketId`                                           |
+| `bucket-content-tag`      | `tagged`, `untagged`                                                                       | `bucketId`, `entityType`, `entityId`                 |
+| `field-bucket-visibility` | `set`, `removed`                                                                           | `fieldDefinitionId`, `bucketId`                      |
+| `friend`                  | `connected`, `removed`, `bucket-assigned`, `bucket-unassigned`                             | `connectionId`, plus `friendAccountId` or `bucketId` |
 
-**Communication -- channels:**
-
-| Event Type         | Payload         | Fires When       |
-| ------------------ | --------------- | ---------------- |
-| `channel.created`  | `{ channelId }` | Channel created  |
-| `channel.updated`  | `{ channelId }` | Channel updated  |
-| `channel.archived` | `{ channelId }` | Channel archived |
-| `channel.restored` | `{ channelId }` | Channel restored |
-| `channel.deleted`  | `{ channelId }` | Channel deleted  |
-
-**Communication -- messages:**
-
-| Event Type         | Payload                    | Fires When       |
-| ------------------ | -------------------------- | ---------------- |
-| `message.created`  | `{ messageId, channelId }` | Message created  |
-| `message.updated`  | `{ messageId, channelId }` | Message updated  |
-| `message.archived` | `{ messageId, channelId }` | Message archived |
-| `message.restored` | `{ messageId, channelId }` | Message restored |
-| `message.deleted`  | `{ messageId, channelId }` | Message deleted  |
-
-**Communication -- board messages:**
-
-| Event Type                | Payload              | Fires When              |
-| ------------------------- | -------------------- | ----------------------- |
-| `board-message.created`   | `{ boardMessageId }` | Board message created   |
-| `board-message.updated`   | `{ boardMessageId }` | Board message updated   |
-| `board-message.pinned`    | `{ boardMessageId }` | Board message pinned    |
-| `board-message.unpinned`  | `{ boardMessageId }` | Board message unpinned  |
-| `board-message.reordered` | `{ boardMessageId }` | Board message reordered |
-| `board-message.archived`  | `{ boardMessageId }` | Board message archived  |
-| `board-message.restored`  | `{ boardMessageId }` | Board message restored  |
-| `board-message.deleted`   | `{ boardMessageId }` | Board message deleted   |
-
-**Communication -- notes:**
-
-| Event Type      | Payload      | Fires When    |
-| --------------- | ------------ | ------------- |
-| `note.created`  | `{ noteId }` | Note created  |
-| `note.updated`  | `{ noteId }` | Note updated  |
-| `note.archived` | `{ noteId }` | Note archived |
-| `note.restored` | `{ noteId }` | Note restored |
-| `note.deleted`  | `{ noteId }` | Note deleted  |
-
-**Communication -- polls:**
-
-| Event Type      | Payload      | Fires When    |
-| --------------- | ------------ | ------------- |
-| `poll.created`  | `{ pollId }` | Poll created  |
-| `poll.updated`  | `{ pollId }` | Poll updated  |
-| `poll.closed`   | `{ pollId }` | Poll closed   |
-| `poll.archived` | `{ pollId }` | Poll archived |
-| `poll.restored` | `{ pollId }` | Poll restored |
-| `poll.deleted`  | `{ pollId }` | Poll deleted  |
-
-**Communication -- poll votes:**
-
-| Event Type           | Payload              | Fires When          |
-| -------------------- | -------------------- | ------------------- |
-| `poll-vote.cast`     | `{ pollId, voteId }` | Vote cast on a poll |
-| `poll-vote.vetoed`   | `{ pollId, voteId }` | Vote vetoed         |
-| `poll-vote.updated`  | `{ pollId, voteId }` | Vote updated        |
-| `poll-vote.archived` | `{ pollId, voteId }` | Vote archived       |
-
-**Communication -- acknowledgements:**
-
-| Event Type                  | Payload                 | Fires When                |
-| --------------------------- | ----------------------- | ------------------------- |
-| `acknowledgement.created`   | `{ acknowledgementId }` | Acknowledgement created   |
-| `acknowledgement.confirmed` | `{ acknowledgementId }` | Acknowledgement confirmed |
-| `acknowledgement.archived`  | `{ acknowledgementId }` | Acknowledgement archived  |
-| `acknowledgement.restored`  | `{ acknowledgementId }` | Acknowledgement restored  |
-| `acknowledgement.deleted`   | `{ acknowledgementId }` | Acknowledgement deleted   |
-
-**Privacy -- buckets:**
-
-| Event Type                    | Payload                              | Fires When                  |
-| ----------------------------- | ------------------------------------ | --------------------------- |
-| `bucket.created`              | `{ bucketId }`                       | Bucket created              |
-| `bucket.updated`              | `{ bucketId }`                       | Bucket updated              |
-| `bucket.archived`             | `{ bucketId }`                       | Bucket archived             |
-| `bucket.restored`             | `{ bucketId }`                       | Bucket restored             |
-| `bucket.deleted`              | `{ bucketId }`                       | Bucket deleted              |
-| `bucket-content-tag.tagged`   | `{ bucketId, entityType, entityId }` | Entity tagged into bucket   |
-| `bucket-content-tag.untagged` | `{ bucketId, entityType, entityId }` | Entity untagged from bucket |
-
-**Privacy -- field bucket visibility:**
-
-| Event Type                        | Payload                           | Fires When                           |
-| --------------------------------- | --------------------------------- | ------------------------------------ |
-| `field-bucket-visibility.set`     | `{ fieldDefinitionId, bucketId }` | Field made visible in bucket         |
-| `field-bucket-visibility.removed` | `{ fieldDefinitionId, bucketId }` | Field visibility removed from bucket |
-
-**Privacy -- friends:**
-
-| Event Type                 | Payload                             | Fires When                    |
-| -------------------------- | ----------------------------------- | ----------------------------- |
-| `friend.connected`         | `{ connectionId, friendAccountId }` | Friend connection established |
-| `friend.removed`           | `{ connectionId, friendAccountId }` | Friend removed                |
-| `friend.bucket-assigned`   | `{ connectionId, bucketId }`        | Bucket assigned to friend     |
-| `friend.bucket-unassigned` | `{ connectionId, bucketId }`        | Bucket unassigned from friend |
+The full set of event type strings is defined in `@pluralscape/types` (`WEBHOOK_EVENT_TYPES`).
 
 ### 7.7 Delivery Mechanics
 
@@ -1508,13 +1086,7 @@ DELETE /fronting-sessions/:sessionId/comments/:commentId
 
 **Co-fronting model:** multiple sessions can be active simultaneously. There is no "current fronter" singular concept -- the client queries active sessions and displays all of them. A session is active when `endedAt` is null.
 
-**Polymorphic subjects:** a fronting session references one of three subject types via nullable foreign keys:
-
-- `memberId` -- a system member
-- `customFrontId` -- an abstract cognitive state (e.g., "Dissociated", "Blurry")
-- `structureEntityId` -- a structure entity (system-defined entity type)
-
-Exactly one of these three fields is non-null per session.
+**Polymorphic subjects:** a fronting session references one of `memberId`, `customFrontId`, or `structureEntityId` (exactly one non-null). See [section 5.5](#55-polymorphic-subjects-in-fronting) for details and examples.
 
 **Switch alerts:** creating a fronting session automatically dispatches push notifications to eligible friends (fire-and-forget via the job queue). The client does not need to trigger this separately.
 
@@ -1669,7 +1241,7 @@ GET    /v1/account/friends/:connectionId/visibility Get visibility settings
 
 ```
 GET    /v1/account/friends/:connectionId/dashboard       Full dashboard snapshot
-GET    /v1/account/friends/:connectionId/dashboard-sync  Incremental sync (cursor-based)
+GET    /v1/account/friends/:connectionId/dashboard/sync   Incremental sync (cursor-based)
 ```
 
 The dashboard returns only data that the viewing friend has bucket access to see. The server enforces intersection logic -- the client receives pre-filtered results.

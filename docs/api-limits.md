@@ -122,7 +122,7 @@ an appropriate HTTP error when exceeded (typically 409 Conflict or 413 Content T
 
 ## Rate Limits
 
-| Category               | Limit       | Window     |
+| Category               | Limit       | Window     | Notes                                                            |
 | ---------------------- | ----------- | ---------- | ---------------------------------------------------------------- |
 | Global                 | 100 req     | 60s        |
 | Auth (heavy)           | 5 req       | 60s        |

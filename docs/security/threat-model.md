@@ -204,7 +204,7 @@ No additional deployment controls beyond the baseline (TLS in transit, database 
 
 **Finding**: Friend-to-friend data access uses a bucket-scoped read model. The external dashboard endpoint exposes a read-only projection of a system's data filtered by the viewing friend's assigned buckets.
 
-**Current state**: The external dashboard endpoint (`/v1/systems/:systemId/dashboard`) is accessible to authenticated accounts who are confirmed friends of the target system. All data returned is filtered through the bucket visibility model — only entities in buckets the viewer has been assigned are included.
+**Current state**: The external dashboard endpoint (`/v1/account/friends/:connectionId/dashboard`) is accessible to authenticated accounts who are confirmed friends of the target system. All data returned is filtered through the bucket visibility model — only entities in buckets the viewer has been assigned are included.
 
 **Residual risk**: The friend access model relies on the friend connection being properly validated (accepted, not blocked/removed) at query time. The friend connection state is checked on every request, not cached, so revocation takes effect immediately on the next request.
 
