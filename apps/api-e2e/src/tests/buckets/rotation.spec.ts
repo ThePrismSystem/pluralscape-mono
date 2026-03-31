@@ -101,4 +101,16 @@ test.describe("Bucket Key Rotation", () => {
     const body = await res.json();
     expect(body.error).toHaveProperty("code", "NOT_FOUND");
   });
+
+  test("retry on non-existent rotation returns 404", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const fakeBucketId = "bkt_00000000-0000-0000-0000-000000000003";
+    const fakeRotationId = "bkr_00000000-0000-0000-0000-000000000098";
+    const retryUrl = `/v1/systems/${systemId}/buckets/${fakeBucketId}/rotations/${fakeRotationId}/retry`;
+
+    const res = await request.post(retryUrl, { headers: authHeaders });
+    expect(res.status()).toBe(404);
+    const retryBody = await res.json();
+    expect(retryBody.error).toHaveProperty("code", "NOT_FOUND");
+  });
 });
