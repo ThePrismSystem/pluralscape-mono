@@ -26,13 +26,20 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
   - Communication — poll vote update/delete/results endpoints, check-in record restore, lifecycle event update
   - Infrastructure — device token update/delete, key rotation retry, single member photo GET, missing list filters and pagination across entities
 - CRDT sync document type coverage — verified all document types mapped to sync strategies
+- OpenAPI spec reconciliation — automated reconciliation script with CI drift check ensuring spec stays in sync with implementation
+- E2E tests expanded — 310 tests across 69 spec files (was 205 across 43)
 
 ### Fixed
 
 - M7 audit remediation (high priority) — anti-enumeration timing for auth endpoints, ownership consolidation, strict typing replacements for loose `Record<string, unknown>` types
 - M7 audit remediation (medium + low) — webhook `as never` cast removal, email worker review findings, inconsistent zod imports, dependency updates
+- API code quality audits — combined security audit (auth, validation, rate limiting), code patterns and best practices audit, refactoring and simplification audit, batch key-rotation item updates
 - Regenerated database migrations — consolidated PG and SQLite migrations into single 0000 files with updated RLS migration
 - Pending friend flow — fixed friend code service tests and migration alignment for pending friend connections
+
+### Changed
+
+- API response surface normalization — standardized response envelope and idempotency handling across all REST endpoints
 
 ## Milestone 6: Privacy and Social
 

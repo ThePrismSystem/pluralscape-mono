@@ -123,14 +123,13 @@ Zero warnings are tolerated. All ESLint warnings are treated as errors in CI, gi
 
 Test coverage is enforced in CI. The thresholds below are minimums — aim higher where practical.
 
-| Test Type   | Coverage Target | Tool       | What It Covers                                     |
-| ----------- | --------------- | ---------- | -------------------------------------------------- |
-| Unit        | 80% lines       | Vitest     | Pure functions, utilities, domain logic            |
-| Integration | 70% lines       | Vitest     | API routes, database queries, cross-module flows   |
-| E2E         | Critical paths  | Playwright | User-facing flows: auth, fronting, switching, sync |
+| Test Type   | Coverage Target              | Tool       | What It Covers                                     |
+| ----------- | ---------------------------- | ---------- | -------------------------------------------------- |
+| Unit        | 85% lines/functions/branches | Vitest     | Pure functions, utilities, domain logic            |
+| Integration | 85% lines/functions/branches | Vitest     | API routes, database queries, cross-module flows   |
+| E2E         | Critical paths               | Playwright | User-facing flows: auth, fronting, switching, sync |
 
-- **Unit tests** (80%): Every package in `packages/` and business logic in `apps/` must meet this threshold. Measured per-package.
-- **Integration tests** (70%): API endpoint handlers, database operations, and cross-package interactions. Measured per-app.
+- **Unit + Integration** (85% combined): Lines, functions, branches, and statements are all measured. Type-only files and barrel/index files are excluded from coverage. Measured across the combined unit + integration run.
 - **E2E tests**: No line-coverage metric — instead, all critical user journeys must have corresponding tests. Tracked via a test matrix in the test plan.
 
 Coverage is checked in CI on every PR. PRs that drop coverage below thresholds will not merge.
