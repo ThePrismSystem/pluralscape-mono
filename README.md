@@ -8,11 +8,11 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-6 complete, Milestone 7 (Data Portability) in progress.**
+**Active development — Milestones 0-7 largely complete, public REST API documentation and integration guides in progress.**
 
-Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), and 6 (Privacy and Social) are complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
+Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), 6 (Privacy and Social), and 7 (Data Portability) are substantially complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)) covering 155+ operations across 31 route domains.
 
-Milestone 7 is building the data portability layer: email notifications (Resend + SMTP adapters with 5 security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), webhook event dispatch for identity and friend events, and API feature completeness (30+ new endpoints closing audit gaps across account management, friends, API keys, system operations, structure entities, communication, and infrastructure). See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
+Milestone 7 delivered: email notifications (Resend + SMTP adapters with security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), webhook event dispatch for identity and friend events, API feature completeness (closing audit gaps across account management, friends, API keys, system operations, structure entities, communication, and infrastructure), multiple audit rounds, and comprehensive E2E test expansion. Remaining work includes public REST API audit completion and integration guides. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 
@@ -30,12 +30,12 @@ pnpm test:e2e          # E2E tests (Playwright)
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 95.54%   |
-| Branches   | 87.37%   |
-| Functions  | 96.22%   |
-| Lines      | 96.06%   |
+| Statements | 94.94%   |
+| Branches   | 88.13%   |
+| Functions  | 96.15%   |
+| Lines      | 95.30%   |
 
-E2E suite: 205 tests across 43 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, and report export. Run `pnpm test:coverage` for up-to-date numbers.
+E2E suite: 310 tests across 69 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, and notification configs. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 
