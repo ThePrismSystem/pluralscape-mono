@@ -87,7 +87,7 @@ describe("PUT /account/password", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
-  it("passes session ID and account ID to service", async () => {
+  it("passes account ID to service", async () => {
     vi.mocked(changePassword).mockResolvedValueOnce({ ok: true, revokedSessionCount: 0 });
 
     const app = createApp();
@@ -100,7 +100,6 @@ describe("PUT /account/password", () => {
     expect(vi.mocked(changePassword)).toHaveBeenCalledWith(
       {},
       "acct_test",
-      "sess_test",
       { currentPassword: "oldpass123", newPassword: "newpass123" },
       expect.any(Function),
     );
