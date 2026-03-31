@@ -1,4 +1,5 @@
 import {
+  assertEmptyList,
   assertIdorRejected,
   assertPaginates,
   assertRequiresAuth,
@@ -124,5 +125,10 @@ test.describe("Check-in records CRUD", () => {
         { timerConfigId: "nonexistent", scheduledAt: Date.now() },
       ],
     );
+  });
+
+  test("empty check-in-records list returns empty array", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    await assertEmptyList(request, `/v1/systems/${systemId}/check-in-records`, authHeaders);
   });
 });

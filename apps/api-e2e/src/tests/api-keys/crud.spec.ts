@@ -1,4 +1,5 @@
 import {
+  assertEmptyList,
   assertErrorShape,
   assertIdorRejected,
   assertPaginates,
@@ -127,5 +128,10 @@ test.describe("API keys CRUD", () => {
     await assertPaginates(request, `/v1/systems/${systemId}/api-keys`, authHeaders, async () => {
       await createApiKey(request, authHeaders, systemId);
     });
+  });
+
+  test("empty api-keys list returns empty array", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    await assertEmptyList(request, `/v1/systems/${systemId}/api-keys`, authHeaders);
   });
 });

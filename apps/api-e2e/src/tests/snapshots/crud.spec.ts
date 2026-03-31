@@ -1,4 +1,5 @@
 import {
+  assertEmptyList,
   assertIdorRejected,
   assertPaginates,
   assertRequiresAuth,
@@ -108,5 +109,10 @@ test.describe("System snapshots CRUD", () => {
       authHeaders,
       [{}, { snapshotTrigger: "invalid-trigger" }],
     );
+  });
+
+  test("empty snapshot list returns empty array", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    await assertEmptyList(request, `/v1/systems/${systemId}/snapshots`, authHeaders);
   });
 });
