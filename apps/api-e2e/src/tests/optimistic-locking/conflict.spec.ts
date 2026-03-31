@@ -36,7 +36,7 @@ test.describe("Optimistic locking conflict detection", () => {
     expect(secondUpdate.status()).toBe(HTTP_CONFLICT);
     await assertErrorShape(secondUpdate);
     const body = await parseJsonBody<{ error: { code: string } }>(secondUpdate);
-    expect(body.error.code).toBe("VERSION_CONFLICT");
+    expect(body.error.code).toBe("CONFLICT");
   });
 
   test("group update with stale version returns 409 CONFLICT", async ({ request, authHeaders }) => {
@@ -56,7 +56,7 @@ test.describe("Optimistic locking conflict detection", () => {
     expect(secondUpdate.status()).toBe(HTTP_CONFLICT);
     await assertErrorShape(secondUpdate);
     const body = await parseJsonBody<{ error: { code: string } }>(secondUpdate);
-    expect(body.error.code).toBe("VERSION_CONFLICT");
+    expect(body.error.code).toBe("CONFLICT");
   });
 
   test("structure entity type update with stale version returns 409 CONFLICT", async ({
@@ -91,6 +91,6 @@ test.describe("Optimistic locking conflict detection", () => {
     expect(secondUpdate.status()).toBe(HTTP_CONFLICT);
     await assertErrorShape(secondUpdate);
     const body = await parseJsonBody<{ error: { code: string } }>(secondUpdate);
-    expect(body.error.code).toBe("VERSION_CONFLICT");
+    expect(body.error.code).toBe("CONFLICT");
   });
 });
