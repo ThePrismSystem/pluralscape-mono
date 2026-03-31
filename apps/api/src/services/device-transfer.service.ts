@@ -84,7 +84,7 @@ export async function initiateTransfer(
     encryptedKeyMaterial = fromHex(input.encryptedKeyMaterialHex);
     // Validate the encrypted payload can be deserialized (nonce + ciphertext)
     deserializeEncryptedPayload(encryptedKeyMaterial);
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof TransferValidationError) throw error;
     throw new TransferValidationError("Invalid input format", { cause: error });
   }
@@ -257,7 +257,7 @@ export async function completeTransfer(
     const payload = deserializeEncryptedPayload(row.encryptedKeyMaterial);
     decryptFromTransfer(payload, raw);
     codeCorrect = true;
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof DecryptionFailedError) {
       // Decryption failed — wrong code, handled below
     } else if (error instanceof WorkerError) {

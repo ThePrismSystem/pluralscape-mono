@@ -148,7 +148,7 @@ async function start(): Promise<void> {
     // rather than waiting for the first blob operation to fail.
     try {
       await adapter.exists("__healthcheck__" as import("@pluralscape/types").StorageKey);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.warn("S3 blob storage probe failed — check credentials and bucket config", {
         error: sanitizeS3Error(error),
       });
@@ -198,7 +198,7 @@ async function start(): Promise<void> {
     try {
       const idempotencyStore = await ValkeyIdempotencyStore.create(valkeyUrl);
       setIdempotencyStore(idempotencyStore);
-    } catch (error) {
+    } catch (error: unknown) {
       logger.warn("Failed to create Valkey idempotency store, using in-memory fallback", {
         err: error instanceof Error ? error : new Error(String(error)),
       });

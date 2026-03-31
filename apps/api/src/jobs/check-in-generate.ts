@@ -150,7 +150,7 @@ export function createCheckInGenerateHandler(
               idempotencyKey,
             })
             .onConflictDoNothing();
-        } catch (error) {
+        } catch (error: unknown) {
           errorCount++;
           logger.warn("Failed to process timer config for check-in generation", {
             timerConfigId: config.id,

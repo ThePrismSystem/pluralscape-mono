@@ -1,6 +1,6 @@
 ---
 # api-sojx
-title: 'Security audit: authentication and authorization'
+title: "Security audit: authentication and authorization"
 status: completed
 type: task
 priority: critical
@@ -65,12 +65,12 @@ In-depth security audit of authentication and authorization across every endpoin
 
 \n\n## Development Approach\n\nAll code must be written test-first using strict TDD (Red -> Green -> Refactor). Use `/tdd` workflow.
 
-
 ## Summary of Changes
 
 Full audit completed. All auth middleware coverage verified (304 routes, 3 expected public). IDOR prevention confirmed via assertSystemOwnership() in all services. Session management robust (256-bit entropy, BLAKE2b hashing, absolute TTL + idle timeout). Anti-enumeration controls verified on all unauthenticated routes. Biometric and device transfer flows secure.
 
 Findings:
+
 - HIGH: Password change only revokes other sessions (follow-up: api-fg7s)
 - LOW: Idle timeout bypass for unknown session types (follow-up: api-6zw8)
 

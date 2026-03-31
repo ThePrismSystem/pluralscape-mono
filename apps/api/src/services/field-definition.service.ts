@@ -141,7 +141,7 @@ function parseAndValidateFieldBlob(base64: string): EncryptedBlob {
 
   try {
     return deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof InvalidInputError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }

@@ -58,7 +58,7 @@ export async function handleAuthenticate(
     }
 
     auth = result.auth;
-  } catch (err) {
+  } catch (err: unknown) {
     log.error("Auth infrastructure error", {
       connectionId: state.connectionId,
       error: formatError(err),

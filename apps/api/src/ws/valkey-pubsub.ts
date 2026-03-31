@@ -102,7 +102,7 @@ export class ValkeyPubSub {
         for (const handler of channelHandlers) {
           try {
             handler(message);
-          } catch (err) {
+          } catch (err: unknown) {
             this.logger.error("Valkey pub/sub handler error", {
               channel,
               error: formatError(err),
@@ -118,7 +118,7 @@ export class ValkeyPubSub {
 
       this.logger.info("Valkey pub/sub connected", { serverId: this.serverId });
       return true;
-    } catch (err) {
+    } catch (err: unknown) {
       this.logger.warn("Failed to connect Valkey pub/sub, using local-only delivery", {
         error: formatError(err),
       });
@@ -134,7 +134,7 @@ export class ValkeyPubSub {
     try {
       await this.publisher.publish(channel, message);
       return true;
-    } catch (err) {
+    } catch (err: unknown) {
       this.logger.warn("Valkey publish failed", {
         channel,
         error: formatError(err),
@@ -160,7 +160,7 @@ export class ValkeyPubSub {
         try {
           await this.subscriber.subscribe(channel);
           this.activeChannels.add(channel);
-        } catch (err) {
+        } catch (err: unknown) {
           // I8: Remove the handler we just added on subscribe failure
           channelHandlers.delete(handler);
           if (channelHandlers.size === 0) {
@@ -199,7 +199,7 @@ export class ValkeyPubSub {
         try {
           await this.subscriber.unsubscribe(channel);
           this.activeChannels.delete(channel);
-        } catch (err) {
+        } catch (err: unknown) {
           // Leave activeChannels intact so reconnect logic can retry
           this.logger.warn("Valkey unsubscribe failed", {
             channel,
@@ -256,14 +256,14 @@ export class ValkeyPubSub {
     this.activeChannels.clear();
     try {
       if (this.subscriber) await this.subscriber.disconnect();
-    } catch (err) {
+    } catch (err: unknown) {
       this.logger.debug("Valkey subscriber already disconnected", {
         error: formatError(err),
       });
     }
     try {
       if (this.publisher) await this.publisher.disconnect();
-    } catch (err) {
+    } catch (err: unknown) {
       this.logger.debug("Valkey publisher already disconnected", {
         error: formatError(err),
       });

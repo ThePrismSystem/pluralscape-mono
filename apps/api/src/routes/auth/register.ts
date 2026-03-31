@@ -35,7 +35,7 @@ registerRoute.post("/", async (c) => {
       }),
       HTTP_CREATED,
     );
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof ValidationError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }

@@ -122,7 +122,7 @@ function main(): void {
             throw new Error(`Unknown operation: ${(_exhaustive as WorkerRequest).op}`);
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         port.postMessage({ id: msg.id, ok: false, error: message });
       }

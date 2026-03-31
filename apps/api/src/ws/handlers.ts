@@ -112,7 +112,7 @@ export async function handleSubscribeRequest(
             };
           }
           return null;
-        } catch (err) {
+        } catch (err: unknown) {
           log.error("Failed to fetch catchup for document", {
             docId: entry.docId,
             error: err instanceof Error ? err.message : String(err),
@@ -208,7 +208,7 @@ export async function handleSubmitChange(
         { ...message.change, documentId: message.docId, seq: 0 },
         sodium,
       );
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof InvalidInputError) {
         return {
           type: "SyncError",
@@ -237,7 +237,7 @@ export async function handleSubmitChange(
       ...message.change,
       documentId: message.docId,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     if (err instanceof EnvelopeLimitExceededError) {
       return {
         type: "SyncError",
@@ -279,7 +279,7 @@ export async function handleSubmitSnapshot(
       docId: message.docId,
       snapshotVersion: message.snapshot.snapshotVersion,
     };
-  } catch (err) {
+  } catch (err: unknown) {
     if (err instanceof SnapshotVersionConflictError) {
       return {
         type: "SyncError",

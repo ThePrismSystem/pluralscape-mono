@@ -57,7 +57,7 @@ export async function createValkeyStore(url: string): Promise<ValkeyRateLimitSto
     // this ping a misconfigured URL would only surface on the first rate-limit check.
     await client.ping();
     return new ValkeyRateLimitStore(client);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.warn(
       "Failed to connect to Valkey for rate limiting, falling back to in-memory store",
       error instanceof Error ? { err: error } : { error: String(error) },

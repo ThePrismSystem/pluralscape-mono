@@ -98,7 +98,7 @@ function send(state: SyncConnectionState, msg: ServerMessage, log: AppLogger): b
   try {
     state.ws.send(serializeServerMessage(msg));
     return true;
-  } catch (err) {
+  } catch (err: unknown) {
     log.warn("WebSocket send failed", {
       connectionId: state.connectionId,
       messageType: msg.type,
@@ -184,7 +184,7 @@ async function checkAccess(
         owner = row.systemId as SystemId;
         ownership.set(docId, owner);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       log.error("Failed to query document ownership from DB — failing open", {
         docId,
         error: formatError(err),
@@ -358,7 +358,7 @@ export async function routeMessage(
       try {
         const response = await handleManifestRequest(msg, relay);
         if (!send(state, response, log)) return;
-      } catch (err) {
+      } catch (err: unknown) {
         log.error("handleManifestRequest threw", {
           connectionId: state.connectionId,
           error: formatError(err),
@@ -398,7 +398,7 @@ export async function routeMessage(
           for (const row of rows) {
             documentOwnership.set(row.documentId, row.systemId as SystemId);
           }
-        } catch (err) {
+        } catch (err: unknown) {
           log.error("Failed to batch-query document ownership from DB", {
             error: formatError(err),
           });
@@ -430,7 +430,7 @@ export async function routeMessage(
           log,
         );
         if (!send(state, response, log)) return;
-      } catch (err) {
+      } catch (err: unknown) {
         log.error("handleSubscribeRequest threw", {
           connectionId: state.connectionId,
           error: formatError(err),
@@ -478,7 +478,7 @@ export async function routeMessage(
       try {
         const response = await handleFetchSnapshot(msg, relay);
         send(state, response, log);
-      } catch (err) {
+      } catch (err: unknown) {
         log.error("handleFetchSnapshot threw", {
           connectionId: state.connectionId,
           docId: msg.docId,
@@ -520,7 +520,7 @@ export async function routeMessage(
       try {
         const response = await handleFetchChanges(msg, relay);
         send(state, response, log);
-      } catch (err) {
+      } catch (err: unknown) {
         log.error("handleFetchChanges threw", {
           connectionId: state.connectionId,
           docId: msg.docId,
@@ -587,14 +587,14 @@ export async function routeMessage(
               docId: msg.docId,
             });
           }
-        } catch (err) {
+        } catch (err: unknown) {
           log.error("Post-submit side-effect failed for SubmitChangeRequest", {
             connectionId: state.connectionId,
             docId: msg.docId,
             error: formatError(err),
           });
         }
-      } catch (err) {
+      } catch (err: unknown) {
         log.error("handleSubmitChange threw", {
           connectionId: state.connectionId,
           docId: msg.docId,
@@ -640,7 +640,7 @@ export async function routeMessage(
         if (response.type !== "SyncError") {
           documentOwnership.set(msg.docId, state.systemId);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         log.error("handleSubmitSnapshot threw", {
           connectionId: state.connectionId,
           docId: msg.docId,
@@ -684,7 +684,7 @@ export async function routeMessage(
         // I10: Check first send succeeded before sending second
         if (!send(state, snapshotResp, log)) return;
         send(state, changesResp, log);
-      } catch (err) {
+      } catch (err: unknown) {
         log.error("handleDocumentLoad threw", {
           connectionId: state.connectionId,
           docId: msg.docId,

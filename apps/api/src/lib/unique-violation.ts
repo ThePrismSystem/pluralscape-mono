@@ -19,7 +19,7 @@ export function isUniqueViolation(error: unknown): error is Error & { code: stri
  * Use inside a `catch` block to replace the repeated pattern:
  *
  * ```ts
- * } catch (error) {
+ * } catch (error: unknown) {
  *   throwOnUniqueViolation(error, "Link already exists");
  * }
  * ```
