@@ -1,18 +1,18 @@
 ---
 # api-2qy8
 title: E2E test coverage expansion
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-03-29T02:59:38Z
-updated_at: 2026-03-31T10:40:07Z
+updated_at: 2026-03-31T12:05:02Z
 parent: api-e7gt
 blocked_by:
-  - api-398w
-  - api-g475
-  - api-sojx
-  - api-69ul
-  - api-3b2d
+    - api-398w
+    - api-g475
+    - api-sojx
+    - api-69ul
+    - api-3b2d
 ---
 
 Write E2E tests for every uncovered endpoint and every gap identified by the audit beans.
@@ -122,3 +122,7 @@ The following 17 feature areas added in PR #329 have zero E2E coverage. Each nee
 
 - **Group custom field values** — set/list for groups (reuses member field pattern)
 - **Group list filters** — type filter on group list endpoint
+
+## Summary of Changes
+
+Comprehensive E2E test coverage expansion across the entire public REST API surface. Added tests for all 17 feature areas identified as gaps: account management (deletion, PIN, device transfer), social features (friend accept/reject, dashboard sync, friend codes), API keys, content management (polls, check-in restore, lifecycle events, member photos, device tokens), system features (snapshots, duplication, permanent purge), innerworld structure entities (CRUD, types, associations, links, member links, custom fields), key rotation retry, and group features (custom field values, list filters). Each area includes success-path, auth rejection, IDOR, pagination, and validation tests as applicable.
