@@ -169,12 +169,8 @@
         schema:
           type: string
     responses:
-      "200":
-        description: Region archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -381,12 +377,8 @@
         schema:
           type: string
     responses:
-      "200":
-        description: Entity archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

@@ -65,21 +65,8 @@
           schema:
             $ref: "../schemas/settings.yaml#/PinRequest"
     responses:
-      "200":
-        description: PIN set
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [data]
-              properties:
-                data:
-                  type: object
-                  required: [success]
-                  properties:
-                    success:
-                      type: boolean
-                      const: true
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -102,21 +89,8 @@
           schema:
             $ref: "../schemas/settings.yaml#/PinRequest"
     responses:
-      "200":
-        description: PIN removed
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [data]
-              properties:
-                data:
-                  type: object
-                  required: [success]
-                  properties:
-                    success:
-                      type: boolean
-                      const: true
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -247,21 +221,8 @@
           schema:
             $ref: "../schemas/settings.yaml#/SetupStepRequest"
     responses:
-      "200":
-        description: Step completed
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [data]
-              properties:
-                data:
-                  type: object
-                  required: [success]
-                  properties:
-                    success:
-                      type: boolean
-                      const: true
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -286,21 +247,8 @@
           schema:
             $ref: "../schemas/settings.yaml#/SetupStepRequest"
     responses:
-      "200":
-        description: Step completed
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [data]
-              properties:
-                data:
-                  type: object
-                  required: [success]
-                  properties:
-                    success:
-                      type: boolean
-                      const: true
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":

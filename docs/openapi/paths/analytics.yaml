@@ -47,6 +47,8 @@
           application/json:
             schema:
               $ref: "../schemas/common.yaml#/ErrorResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         description: System not found
         content:
@@ -100,6 +102,8 @@
           application/json:
             schema:
               $ref: "../schemas/common.yaml#/ErrorResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         description: System not found
         content:

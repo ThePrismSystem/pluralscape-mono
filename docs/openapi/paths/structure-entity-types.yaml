@@ -167,12 +167,8 @@
         schema:
           type: string
     responses:
-      "200":
-        description: Structure entity type archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/structures.yaml#/StructureEntityTypeResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

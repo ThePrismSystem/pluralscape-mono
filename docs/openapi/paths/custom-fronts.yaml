@@ -196,12 +196,8 @@
           type: string
           pattern: ^cf_
     responses:
-      "200":
-        description: Custom front archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

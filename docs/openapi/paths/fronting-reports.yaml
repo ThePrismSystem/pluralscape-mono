@@ -182,12 +182,8 @@
           pattern: ^fr_
         description: Fronting report ID (prefixed with `fr_`)
     responses:
-      "200":
-        description: Report archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/analytics.yaml#/FrontingReportResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

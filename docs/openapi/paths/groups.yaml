@@ -118,16 +118,8 @@
           schema:
             $ref: "../schemas/groups.yaml#/ReorderGroupsRequest"
     responses:
-      "200":
-        description: Groups reordered
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ok]
-              properties:
-                ok:
-                  type: boolean
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -318,12 +310,8 @@
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - $ref: "../openapi.yaml#/components/parameters/GroupId"
     responses:
-      "200":
-        description: Group archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

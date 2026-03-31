@@ -217,12 +217,8 @@
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - $ref: "../openapi.yaml#/components/parameters/MemberId"
     responses:
-      "200":
-        description: Member archived
-        content:
-          application/json:
-            schema:
-              $ref: "../schemas/members.yaml#/MemberResponse"
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":

@@ -731,12 +731,8 @@ paths:
             schema:
               $ref: "#/components/schemas/account_PinRequest"
       responses:
-        "200":
-          description: PIN set
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ActionResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -764,12 +760,8 @@ paths:
             schema:
               $ref: "#/components/schemas/account_PinRequest"
       responses:
-        "200":
-          description: PIN removed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ActionResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2040,23 +2032,8 @@ paths:
             schema:
               $ref: "#/components/schemas/PinRequest"
       responses:
-        "200":
-          description: PIN set
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: object
-                    required:
-                      - success
-                    properties:
-                      success:
-                        type: boolean
-                        const: true
+        "204":
+          $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2080,23 +2057,8 @@ paths:
             schema:
               $ref: "#/components/schemas/PinRequest"
       responses:
-        "200":
-          description: PIN removed
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: object
-                    required:
-                      - success
-                    properties:
-                      success:
-                        type: boolean
-                        const: true
+        "204":
+          $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2229,23 +2191,8 @@ paths:
             schema:
               $ref: "#/components/schemas/SetupStepRequest"
       responses:
-        "200":
-          description: Step completed
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: object
-                    required:
-                      - success
-                    properties:
-                      success:
-                        type: boolean
-                        const: true
+        "204":
+          $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2270,23 +2217,8 @@ paths:
             schema:
               $ref: "#/components/schemas/SetupStepRequest"
       responses:
-        "200":
-          description: Step completed
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - data
-                properties:
-                  data:
-                    type: object
-                    required:
-                      - success
-                    properties:
-                      success:
-                        type: boolean
-                        const: true
+        "204":
+          $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2552,12 +2484,8 @@ paths:
         - $ref: "#/components/parameters/SystemId"
         - $ref: "#/components/parameters/MemberId"
       responses:
-        "200":
-          description: Member archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MemberResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -2758,12 +2686,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Photo archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -2986,17 +2910,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ReorderGroupsRequest"
       responses:
-        "200":
-          description: Groups reordered
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - ok
-                properties:
-                  ok:
-                    type: boolean
+        "204":
+          $ref: "#/components/responses/NoContent"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -3189,12 +3104,8 @@ paths:
         - $ref: "#/components/parameters/SystemId"
         - $ref: "#/components/parameters/GroupId"
       responses:
-        "200":
-          description: Group archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GroupResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -3535,12 +3446,8 @@ paths:
             type: string
             pattern: ^cf_
       responses:
-        "200":
-          description: Custom front archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/CustomFrontResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -3984,12 +3891,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Field archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FieldDefinitionResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -4359,12 +4262,8 @@ paths:
             type: string
             pattern: ^rel_
       responses:
-        "200":
-          description: Relationship archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RelationshipResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -4580,12 +4479,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Structure entity type archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StructureEntityTypeResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -4801,12 +4696,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Structure entity archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/StructureEntityResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -5532,12 +5423,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Region archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegionResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -5748,12 +5635,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Entity archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EntityResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -7629,6 +7512,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
         "404":
           description: System not found
           content:
@@ -7688,6 +7573,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
         "404":
           description: System not found
           content:
@@ -7886,12 +7773,8 @@ paths:
             pattern: ^fr_
           description: Fronting report ID (prefixed with `fr_`)
       responses:
-        "200":
-          description: Report archived
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FrontingReportResponse"
+        "204":
+          $ref: "#/components/responses/NoContent"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
