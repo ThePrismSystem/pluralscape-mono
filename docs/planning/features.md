@@ -4,7 +4,7 @@ Actionable feature spec for Pluralscape, organized by domain.
 
 ## 1. Identity Management
 
-- **Member profiles** — name, pronouns, description, avatar, color, creation date
+- **Member profiles** — name, pronouns, description, avatar, color, creation date [API complete, client pending]
   - Description supports rich linking to other members, groups, and system structure entities
   - Touching a link shows a preview card with option to navigate to that entity
   - Multiple colors per member (for theming)
@@ -14,67 +14,85 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Tags: well-known tags (protector, gatekeeper, caretaker, little, age-slider, trauma-holder, host, persecutor, mediator, anp, memory-holder, symptom-holder, middle, introject, fictive, factive, non-human) or custom user-defined tags. Discriminated union with `kind` field.
   - Per-member notification settings: suppress friend front notification, auto-post board message on front
 - **Image editing** — built-in crop and resize when uploading avatars or gallery photos (no external tool needed)
-- **Custom fields** — up to 200 user-defined fields per member
+- **Custom fields** — up to 200 user-defined fields per member; bucket-visibility control per field definition [API complete, client pending]
+  - Field definitions support scoping to specific structure entity types via `field_definition_scopes`
 - **Group membership display** — member profiles show all groups they belong to, with links to view each group
 - **System structure membership display** — optional setting to show which structure entities a member belongs to on their profile, with links to those entities
-- **Groups/folders** — hierarchical organization with multi-group membership, drag-and-drop reorder
+- **Groups/folders** — hierarchical organization with multi-group membership, drag-and-drop reorder [API complete, client pending]
   - Groups have: image, description, color, emoji
-  - Move/copy entire folders between other folders
-- **Member duplication** — duplicate an existing member as a starting point for a new entry (copies name as "Copy of {name}", optionally copies photos, custom fields, group memberships, and structure memberships; records a `discovery` lifecycle event for the new member)
-- **Archival** — read-only preservation with instant restore
-- **Deletion** — permanent removal with confirmation and cascading cleanup
-- **Custom fronts** — abstract cognitive states logged like members (e.g., "Dissociated", "Blurry")
+  - Move/copy entire folders between other folders (move and copy endpoints implemented)
+  - Groups support their own custom fields via the fields sub-route
+- **Member duplication** — duplicate an existing member as a starting point for a new entry (copies name as "Copy of {name}", optionally copies photos, custom fields, group memberships, and structure memberships; records a `discovery` lifecycle event for the new member) [API complete, client pending]
+- **Archival** — read-only preservation with instant restore (all entity types support archive/restore)
+- **Deletion** — permanent removal with confirmation and cascading cleanup; 409 if dependents exist
+- **Custom fronts** — abstract cognitive states logged like members (e.g., "Dissociated", "Blurry") [API complete, client pending]
 
 ## 2. Fronting and Analytics
 
-- **Front logging** — single-tap switch, co-fronting as parallel timelines (not mutually exclusive)
+- **Front logging** — single-tap switch, co-fronting as parallel timelines (not mutually exclusive) [API complete, client pending]
   - Reliable offline-to-online transition
   - Non-compulsive UX: supports flexible/retroactive logging so users don't feel obligated to log immediately
   - Co-fronting vs co-conscious distinction (active control vs passive awareness)
   - Custom front status text per fronting session (max 50 chars, matches SP behavior)
-  - Fronting comments: multiple timestamped comments per fronting session (unlimited length), stored as separate `FrontingComment` entities linked to the session
+  - Fronting comments: multiple timestamped comments per fronting session (unlimited length), stored as separate `FrontingComment` entities linked to the session [API complete, client pending]
   - Sessions can link to a structure entity via `structureEntityId` (FK to `system_structure_entities`) — any user-defined entity type (e.g. subsystem, side system, layer) can be a fronting subject
   - Positionality: free-text field describing fronting position (e.g. close vs far, height, depth)
   - Outtrigger reason: optional free-text field describing what caused the switch/fronting change, stored in T1 encrypted blob
   - Outtrigger sentiment: classification of the outtrigger as negative, neutral, or positive
   - Fronting structure location display: when viewing who's fronting, show which structure entities the fronting members belong to (queries entity member links)
   - Structure entity fronting (structure entities can front independently via `structureEntityId` on fronting sessions)
-- **Historical editing** — retroactive entries, timestamp adjustment, comments on entries
+  - Active fronters endpoint: real-time snapshot of current fronting state
+- **Historical editing** — retroactive entries, timestamp adjustment, comments on entries [API complete, client pending]
 - **Timeline visualization** — multi-lane display, color-coded per member, co-fronting overlap visible
-- **Analytics** — cumulative duration, average session length, pie/bar charts, date range filters
-- **Fronting history report** — exportable report (HTML or PDF) of fronting data with date range filters; generated client-side (server cannot read encrypted data)
-- **Automated timers / dissociation check-ins** — configurable intervals, waking hours only
+- **Analytics** — cumulative duration, average session length, co-fronting breakdown; date range filters [API complete, client pending]
+- **Fronting history report** — user-defined report configurations (stored as `FrontingReport` entities, CRUD + archive/restore); report generation is client-side since the server cannot read encrypted data [API complete, client pending]
+- **Automated timers / dissociation check-ins** — configurable timer intervals (archive/restore supported); check-in records with respond, dismiss, archive/restore lifecycle [API complete, client pending]
 
 ## 3. Communication
 
-- **System chat** — proxy messaging, channels/categories, rich text, @mentions, rapid proxy switching
-- **Board messages** — persistent noticeboard, drag-and-drop reorder, immune to chat scroll
-- **Private notes** — member-bound or system-wide, rich text, custom background colors
-- **Polls** — multiple choice with consensus analytics
+- **System chat** — proxy messaging, channels/categories, rich text, @mentions, rapid proxy switching [API complete, client pending]
+  - Channels support archive/restore and full CRUD
+  - Messages support archive/restore and full CRUD
+- **Board messages** — persistent noticeboard, pin/unpin, drag-and-drop reorder, immune to chat scroll [API complete, client pending]
+- **Private notes** — member-bound or system-wide, rich text, custom background colors [API complete, client pending]
+- **Polls** — multiple choice with consensus analytics [API complete, client pending]
   - Poll kinds: standard or custom
   - Optional description, end date, abstain option, and veto option
   - Options can have color and emoji
   - Voters can be members or structure entities (polymorphic `EntityReference`)
   - Votes support optional comment and veto flag; null option = abstain
-- **Mandatory acknowledgement routing** — targeted alerts that persist until a specific member confirms
+  - Cast, update, and delete vote endpoints; list votes; poll results endpoint; explicit close endpoint
+- **Mandatory acknowledgement routing** — targeted alerts that persist until a specific member confirms [API complete, client pending]
+  - Acknowledgements support confirm action, archive/restore, and CRUD
 
 Note: polls and acknowledgements are cooperative guardrails within a system, not cryptographically enforced. Members share one account — the app facilitates trust-based internal coordination, not identity verification.
 
 ## 4. Privacy and Social
 
-- **Privacy buckets** — intersection-based tagging with fail-closed defaults (ADR 006)
+- **Privacy buckets** — intersection-based tagging with fail-closed defaults (ADR 006) [API complete, client pending]
   - Unmapped or errored privacy data defaults to maximum restriction (invisible to all)
   - Controls visibility at multiple levels: members, custom fields, fronting status, etc.
-  - Custom field visibility is per-bucket, applied globally across all members (not per-member granularity)
+  - Custom field visibility is per-bucket, applied globally across all members (not per-member granularity); managed via the field bucket-visibility sub-resource
+  - Bucket tagging: tag and untag entities to buckets via the bucket tags sub-resource
+  - Bucket key rotation: multi-step chunked rotation protocol (initiate → complete-chunk → claim → progress → retry) for re-keying shared bucket data [API complete, client pending]
+  - Bucket data export for friend sharing [API complete, client pending]
+  - Per-bucket friend assignment: assign and unassign friends to buckets [API complete, client pending]
 - **Non-system accounts** — accounts for non-systems (therapists, supportive friends) that can view system data via privacy buckets without owning a system entity. Account type is "system" (default) or "viewer". Friend connections, friend codes, and key grants operate at the account level rather than system level (ADR 021).
-- **Friend network** — friend codes, read-only external dashboard
+- **Friend network** — friend codes (create, list, archive, redeem); friend connections with accept/reject/remove/block actions [API complete, client pending]
+  - Friend dashboard: retrieve and sync a friend's shared data snapshot
+  - Friend dashboard export
+  - Per-friend visibility settings: granular toggles per friend connection (`FriendVisibilitySettings`) [API complete, client pending]
+  - Friend notification preferences per friend connection [API complete, client pending]
 - **Friend visibility** — friends can view based on their assigned privacy buckets:
   - Active fronters (including custom fronts and custom front status)
   - Member list and member profiles
   - Custom fields (controlled per-bucket — e.g., one friend sees a custom field, another does not)
   - Search within visible data (friend's client pulls bucket-permitted data locally for search)
-- **Per-friend visibility settings** — granular toggles per friend connection: show members, show groups, show structure, allow fronting notifications (`FriendVisibilitySettings`)
-- **Push notifications** — configurable switch alerts to friends
+- **Push notifications** — configurable switch alerts to friends; device token registration, revocation, and management [API complete, client pending]
+  - Notification streaming via SSE endpoint
+  - Per-system notification configuration (list and update)
+- **PIN code lock** — set, verify, and remove PIN via account PIN sub-resource [API complete, client pending]
+- **Security audit log** — login timestamps, IP addresses, failed attempts, data exports; accessible via account audit-log endpoint [API complete, client pending]
 
 ## 5. Inter-System Messaging (future)
 
@@ -88,18 +106,18 @@ Tracked as a potential future feature; may be deferred past initial launch.
 
 Nomenclature option: "Structure" / "Topology" / "Map" / custom
 
-- **Relationship data model** — member-to-member connections with typed, directed edges
+- **Relationship data model** — member-to-member connections with typed, directed edges [API complete, client pending]
   - Relationship types: split-from, fused-from, sibling, partner, parent-child, protector-of, caretaker-of, gatekeeper-of, source (for introjects), and custom user-defined types
   - Bidirectional flag per relationship (e.g., "sibling" is mutual, "protector-of" is directional)
-- **Generic structure entity model** for complex/polyfragmented systems:
-  - User-defined entity types per system (e.g. "Subsystem", "Side System", "Layer" — or any custom type)
-  - Recursive entity hierarchy (depth capped at 50 levels) — entities within entities within entities
+- **Generic structure entity model** for complex/polyfragmented systems [API complete, client pending]:
+  - User-defined entity types per system (e.g. "Subsystem", "Side System", "Layer" — or any custom type); full CRUD + archive/restore
+  - Recursive entity hierarchy (depth capped at 50 levels) — entities within entities within entities; hierarchy endpoint for tree traversal
   - Entity-to-entity directed associations for cross-type links (replacing fixed junction tables)
   - All entity type metadata (name, color, image source, emoji, architecture type, gatekeepers, etc.) stored in T1 encrypted data
-  - Members belong to entities at any level of nested structure via member links
+  - Members belong to entities at any level of nested structure via member links (create/delete/list)
   - Structure entities can front independently via `structureEntityId` on fronting sessions
-  - Custom fields can be scoped to specific entity types via `field_definition_scopes`
-- **Member lifecycle events** — append-only log tracking:
+  - Custom fields can be scoped to specific entity types via `field_definition_scopes`; structure entity fields sub-resource supported
+- **Member lifecycle events** — append-only log tracking [API complete, client pending]:
   - Split (one member divides into multiple)
   - Fusion (permanent combination into a new member)
   - Merge (temporary blurring between members) and unmerge
@@ -111,17 +129,20 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
   - Structure move (member moves between structure entities)
   - Innerworld move (entity moves between innerworld regions)
   - Each event links the involved members and resulting members
-- **System snapshots** — point-in-time captures of system structure state (ADR 022)
-  - Manual trigger and configurable schedule (daily/weekly/disabled)
+- **System snapshots** — point-in-time captures of system structure state (ADR 022) [API complete, client pending]
+  - Manual trigger (create endpoint); list and get snapshots; delete supported
   - Captures: members (text-only), structure entity types, structure entities, entity links, entity associations, relationships, member links, groups, innerworld state
   - View-only (no revert); T1 encrypted; stored in `system_snapshots` table
 - **Multi-system support** — multiple systems per account (already supported by schema: `systems.accountId` is a non-unique FK). System selection is a client concern; encryption keys are per-account (shared across systems). `SystemListItem` type for the system-switcher UI.
-- **System duplication** — duplicate the current system to a new system under the same account, choosing which elements to copy (members, photos, custom fields, groups, structure, relationships, fronting history, communication, journal, wiki, innerworld, settings). Application-layer deep copy with ID remapping.
-- **Innerworld mapping** — spatial positioning on 2D canvas
-  - Layers/regions with access rules (open vs gatekept)
+- **System duplication** — duplicate the current system to a new system under the same account, choosing which elements to copy [API complete, client pending]
+- **System setup wizard** — guided onboarding flow: status check, profile step, nomenclature step, complete [API complete, client pending]
+- **Configurable nomenclature** — per-system terminology overrides stored server-side; get and update nomenclature endpoints [API complete, client pending]
+- **Innerworld mapping** — spatial positioning on 2D canvas [API complete, client pending]
+  - Layers/regions with access rules (open vs gatekept); full CRUD + archive/restore on regions
   - Gatekeeper member assignment per region
-  - Entity types: member, landmark, structure entity — each with visual properties (color, shape, image source, external URL)
+  - Entity types: member, landmark, structure entity — each with visual properties (color, shape, image source, external URL); full CRUD + archive/restore on innerworld entities
   - Innerworld entities can link to their corresponding structure entity
+  - Canvas state persistence endpoint
 - **Visual structure editor** — pan/zoom canvas, drag-and-drop, connecting lines
   - Data model and relationship management UI are day-one requirements
   - Visual canvas is stretch goal but targeted for day-one
@@ -149,15 +170,22 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 
 ## 9. API and Integrations
 
-- **Public REST API** — 17+ endpoint categories (ADR 003)
+- **Public REST API** — 17+ endpoint categories (ADR 003) [API complete, client pending]
   - API uses canonical terms (`member`, `system`, `fronting`, `switch`) regardless of per-system nomenclature settings
   - Hybrid auth model with two key types (ADR 013):
     - **Metadata keys** — access tier 3 plaintext data only (timestamps, events, connection status). No crypto needed. For simple integrations like Discord bots.
     - **Crypto keys** — carry encrypted key material, enabling decryption of tier 1/2 data. User-controlled scoping (full access, specific buckets, fronting only, etc.). Created from an authenticated client session.
+  - API key management: create, get, list, revoke [API complete, client pending]
   - Key creation UI uses plain language, visual scope indicators, and confirmation prompts for high-access keys
-- **Custom webhooks** — user-configurable, triggered on events (switches, messages, member changes, etc.)
+- **Custom webhooks** — user-configurable, triggered on events (switches, messages, member changes, etc.) [API complete, client pending]
+  - Full CRUD + archive/restore on webhook configurations
+  - Secret rotation endpoint for re-keying webhook HMAC secrets
+  - Test delivery endpoint to validate webhook endpoint connectivity
+  - Webhook delivery log: list and get past delivery attempts; delete delivery records
   - Default: tier 3 metadata payloads (no crypto needed to consume)
   - Optional: encrypted tier 1/2 payloads for webhook endpoints with an assigned crypto key
+- **Email notifications** — system-level email delivery for account events (password changes, friend requests, etc.); managed via notification configuration API
+- **Device transfer** — encrypted device-to-device key transfer for multi-device key recovery (ADR 011) [API complete, client pending]
 - **PluralKit bridge** — bidirectional sync via PK token; runs client-side (requires app to be open) since the server cannot decrypt data
 - **Rate limiting** — intelligent backoff
 - **API documentation** — auto-generated from endpoint definitions
@@ -170,10 +198,11 @@ All report generation is client-side (the server cannot read encrypted data).
 
 - **Simply Plural import** — parse SP JSON export (raw MongoDB dump, no schema version): members, fronting history, custom fields, groups, notes, chat messages (decrypted), board messages, polls, timers, privacy buckets, friend data. Avatars imported separately (ZIP with 7-day expiry). IDs are MongoDB ObjectIds; timestamps are epoch milliseconds. Import runs client-side with progress indicator; large imports are chunked to avoid OOM on low-spec devices.
 - **PluralKit import** — parse PK JSON export (schema version 2): members, switches, groups. Uses 5-char human-readable IDs; timestamps are ISO 8601. Note: PK has no custom fields, notes, polls, chat, timers, or privacy buckets.
+- **Encrypted blob storage** — upload and download URLs for client-encrypted media via the blobs API; blob confirmation and lifecycle management [API complete, client pending]
 - **JSON/CSV export** — all user data, single-click
 - **Member report** — generated based on a chosen privacy bucket; includes all member data visible within that bucket, formatted for readability even with hundreds of members (HTML or PDF, potentially many pages)
 - **"Meet our system" report** — simplified, shareable overview for friends/family with user-chosen content (HTML or PDF)
-- **Data deletion** — full account purge, GDPR-compliant
+- **Account deletion / data purge** — full account purge via dedicated purge endpoint, GDPR-compliant [API complete, client pending]
 
 ## 11. Internationalization (i18n)
 
@@ -187,8 +216,8 @@ All report generation is client-side (the server cannot read encrypted data).
 
 Nomenclature is a **UI display-layer concern only**. The API, database schema, and internal code always use canonical terms (`member`, `system`, `fronting`, `switch`, etc.). The client applies the user's configured terminology at render time.
 
-- User-facing terminology is configurable in settings
-- Initial setup wizard prompts for nomenclature preferences on first use
+- User-facing terminology is configurable in settings; stored and retrieved via the systems nomenclature API [API complete, client pending]
+- Initial setup wizard prompts for nomenclature preferences on first use (nomenclature-step in setup flow)
 - Configurable terms with defaults and community alternatives:
   - **Collective**: "System" / "Collective" / "Household" / "Crew" / "Group" / custom
   - **Individual**: "Member" / "Alter" / "Headmate" / "Part" / "Insider" / custom (median systems may prefer "Facet" / "Aspect")
@@ -233,15 +262,16 @@ Data is categorized into three tiers based on sensitivity and server visibility:
 ### Key recovery (ADR 011)
 
 - **Recovery key** — generated at registration, user stores offline (printed or saved). Can re-derive encryption master key.
-- **Multi-device recovery** — if another device is logged in, new device receives keys via encrypted device-to-device transfer.
+- **Multi-device recovery** — if another device is logged in, new device receives keys via encrypted device-to-device transfer (device transfer API implemented).
 - **No social recovery** for v1 (complexity and trust concerns).
 - **Password reset without recovery key = new account with data loss.** UI must make this extremely clear during onboarding.
 
 ### Other security features
 
-- **PIN code / biometric lock** — app foreground trigger
-- **Security audit log** — login timestamps, IP addresses, failed attempts, data exports
+- **PIN code / biometric lock** — app foreground trigger; PIN set/verify/remove via account PIN API [API complete, client pending]
+- **Security audit log** — login timestamps, IP addresses, failed attempts, data exports; accessible via account audit-log endpoint [API complete, client pending]
 - **Fail-closed privacy** — errors/unmapped data default to maximum restriction
+- **Account management** — change email, change password, account settings update, and full account deletion endpoints [API complete, client pending]
 
 ## 15. Offline-First and Sync
 
@@ -260,6 +290,7 @@ Encrypted blob storage for avatars, photo galleries, import archives, and little
 - **Client-side thumbnailing** — thumbnails generated on-device and uploaded as separate encrypted blobs
 - **Self-hosted fallback** — local filesystem storage when no S3 is configured (minimal tier)
 - **Image editing** — built-in crop/resize before upload (no external tool required)
+- **Blob lifecycle API** — upload URL generation, download URL generation, confirm upload, delete, list, get metadata [API complete, client pending]
 
 ## 17. Background Jobs
 
