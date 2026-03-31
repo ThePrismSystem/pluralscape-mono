@@ -307,15 +307,18 @@ export async function redeemFriendCode(
 
     // Check expiry using the database clock for consistency within the transaction
     if (codeRow.expiresAt !== null) {
-      const rows = await tx.execute<{ db_now: number }>(
-        sql`SELECT EXTRACT(EPOCH FROM NOW()) * 1000 AS db_now`,
-      );
-      const firstRow = rows[0];
-      if (!firstRow) {
-        throw new Error("Failed to read database clock");
-      }
-      const dbNow = firstRow.db_now;
-      if (codeRow.expiresAt < dbNow) {
+      const [notExpired] = await tx
+        .select({ valid: sql<boolean>`true` })
+        .from(friendCodes)
+        .where(
+          and(
+            eq(friendCodes.id, codeRow.id as FriendCodeId),
+            sql`${friendCodes.expiresAt} >= NOW()`,
+          ),
+        )
+        .limit(1);
+
+      if (!notExpired) {
         throw new ApiHttpError(HTTP_BAD_REQUEST, "FRIEND_CODE_EXPIRED", "Friend code has expired");
       }
     }

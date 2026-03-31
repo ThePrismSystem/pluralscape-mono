@@ -208,14 +208,15 @@ describe("redeemFriendCode", () => {
     const { db, chain } = mockDb();
     const pastTime = Date.now() - 86_400_000;
     chain.for.mockReturnValue(chain);
-    chain.limit.mockResolvedValueOnce([
-      makeFriendCodeRow({
-        accountId: OTHER_ACCOUNT_ID,
-        expiresAt: pastTime,
-      }),
-    ]);
-    // tx.execute() for the DB clock query
-    chain.execute.mockResolvedValueOnce([{ db_now: Date.now() }]);
+    chain.limit
+      .mockResolvedValueOnce([
+        makeFriendCodeRow({
+          accountId: OTHER_ACCOUNT_ID,
+          expiresAt: pastTime,
+        }),
+      ])
+      // DB-clock expiry check returns no rows (code is expired)
+      .mockResolvedValueOnce([]);
 
     await expect(redeemFriendCode(db, "ABCD-EFGH", AUTH, mockAudit)).rejects.toThrow("expired");
   });

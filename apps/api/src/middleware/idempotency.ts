@@ -4,7 +4,11 @@ import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_INTERNAL_SERVER_ERROR } from "../
 import { ApiHttpError } from "../lib/api-error.js";
 import { getContextLogger } from "../lib/logger.js";
 
-import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENCY_KEY_MAX_LENGTH } from "./idempotency.constants.js";
+import {
+  IDEMPOTENCY_KEY_HEADER,
+  IDEMPOTENCY_KEY_MAX_LENGTH,
+  IDEMPOTENCY_LOG_KEY_MAX_LENGTH,
+} from "./idempotency.constants.js";
 import { MemoryIdempotencyStore } from "./stores/memory-idempotency-store.js";
 
 import type { IdempotencyStore } from "./idempotency-store.js";
@@ -85,7 +89,10 @@ export function createIdempotencyMiddleware(): MiddlewareHandler {
       } catch (cacheErr: unknown) {
         const log = getContextLogger(c);
         log.warn("Failed to cache idempotency response", {
-          cacheKey,
+          cacheKey:
+            cacheKey.length > IDEMPOTENCY_LOG_KEY_MAX_LENGTH
+              ? cacheKey.slice(0, IDEMPOTENCY_LOG_KEY_MAX_LENGTH) + "..."
+              : cacheKey,
           idempotencyKey,
           err: cacheErr instanceof Error ? cacheErr : new Error(String(cacheErr)),
         });

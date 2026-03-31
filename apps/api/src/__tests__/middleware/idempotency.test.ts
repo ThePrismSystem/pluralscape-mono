@@ -211,4 +211,77 @@ describe("idempotency middleware", () => {
     expect(res2.status).toBe(201);
     expect(callCount).toBe(2);
   });
+
+  it("uses consistent body hash for empty body on unauthenticated endpoints", async () => {
+    const store = new MemoryIdempotencyStore();
+    setIdempotencyStore(store);
+
+    let callCount = 0;
+    const app = new Hono();
+    app.post("/register", createIdempotencyMiddleware(), (c) => {
+      callCount++;
+      return c.json({ data: { ok: true } }, 201);
+    });
+
+    const headers = {
+      "Idempotency-Key": "empty-body-key",
+      "Content-Type": "application/json",
+    };
+
+    // First request with empty body
+    const res1 = await app.request("/register", { method: "POST", body: "", headers });
+    expect(res1.status).toBe(201);
+    expect(callCount).toBe(1);
+
+    // Second request with same empty body — should be cached
+    const res2 = await app.request("/register", { method: "POST", body: "", headers });
+    expect(res2.status).toBe(201);
+    expect(callCount).toBe(1);
+  });
+
+  it("authenticated user keys by accountId regardless of body content", async () => {
+    let callCount = 0;
+
+    const app = new Hono<AuthEnv>();
+    app.use("*", requestIdMiddleware());
+    app.use("*", (c, next) => {
+      c.set("auth", {
+        accountId: "acct-auth-test" as never,
+        systemId: null,
+        sessionId: "sess-auth" as never,
+        accountType: "system" as never,
+        ownedSystemIds: new Set(),
+        auditLogIpTracking: false,
+      });
+      return next();
+    });
+    app.post("/items", createIdempotencyMiddleware(), (c) => {
+      callCount++;
+      return c.json({ data: { id: "item-1" } }, 201);
+    });
+    app.onError(errorHandler);
+
+    const headers = {
+      [IDEMPOTENCY_KEY_HEADER]: "auth-key-1",
+      "Content-Type": "application/json",
+    };
+
+    // First request with body A
+    const res1 = await app.request("/items", {
+      method: "POST",
+      body: JSON.stringify({ name: "alpha" }),
+      headers,
+    });
+    expect(res1.status).toBe(201);
+    expect(callCount).toBe(1);
+
+    // Second request with DIFFERENT body but same key — still cached (keyed by accountId)
+    const res2 = await app.request("/items", {
+      method: "POST",
+      body: JSON.stringify({ name: "beta" }),
+      headers,
+    });
+    expect(res2.status).toBe(201);
+    expect(callCount).toBe(1);
+  });
 });

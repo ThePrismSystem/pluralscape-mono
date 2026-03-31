@@ -111,5 +111,8 @@ export function getIdleTimeout(session: {
   const allTimeouts = Object.values(SESSION_TIMEOUTS)
     .map((c) => c.idleTimeoutMs)
     .filter((ms) => ms !== null);
-  return allTimeouts.length > 0 ? Math.min(...allTimeouts) : 0;
+  if (allTimeouts.length === 0) {
+    throw new Error("No idle timeouts configured in SESSION_TIMEOUTS");
+  }
+  return Math.min(...allTimeouts);
 }

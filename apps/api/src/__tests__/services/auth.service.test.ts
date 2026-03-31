@@ -507,8 +507,8 @@ describe("auth service", () => {
             accountType: "system",
           },
         ])
-        // Second limit() call: session eviction check (inside withAccountTransaction)
-        .mockResolvedValueOnce([])
+        // Second limit() call: session count query (inside withAccountTransaction)
+        .mockResolvedValueOnce([{ total: 0 }])
         // Third limit() call: system lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
@@ -638,8 +638,8 @@ describe("auth service", () => {
             accountType: "system",
           },
         ])
-        // Session eviction check
-        .mockResolvedValueOnce([])
+        // Session count query
+        .mockResolvedValueOnce([{ total: 0 }])
         // System lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
       chain.returning.mockResolvedValueOnce([{ id: "sess_new" }]);
@@ -863,8 +863,8 @@ describe("auth service", () => {
             accountType: "caregiver",
           },
         ])
-        // Session window-function query returns total < MAX_SESSIONS_PER_ACCOUNT
-        .mockResolvedValueOnce([{ id: "sess_old", total: 10 }]);
+        // Session count query returns total < MAX_SESSIONS_PER_ACCOUNT
+        .mockResolvedValueOnce([{ total: 10 }]);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
@@ -891,8 +891,10 @@ describe("auth service", () => {
             accountType: "caregiver",
           },
         ])
-        // Session window-function query returns total === MAX_SESSIONS_PER_ACCOUNT
-        .mockResolvedValueOnce([{ id: "sess_oldest", total: MAX_SESSIONS_PER_ACCOUNT }]);
+        // Session count query returns total === MAX_SESSIONS_PER_ACCOUNT
+        .mockResolvedValueOnce([{ total: MAX_SESSIONS_PER_ACCOUNT }])
+        // Lock query returns oldest session to evict
+        .mockResolvedValueOnce([{ id: "sess_oldest" }]);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
@@ -914,8 +916,8 @@ describe("auth service", () => {
             accountType: "caregiver",
           },
         ])
-        // Session window-function query returns empty (no active sessions)
-        .mockResolvedValueOnce([]);
+        // Session count query returns zero active sessions
+        .mockResolvedValueOnce([{ total: 0 }]);
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 

@@ -381,4 +381,19 @@ describe("getIdleTimeout", () => {
     const result = getIdleTimeout({ createdAt: 5_000_000, expiresAt: 5_000_000 + 2_592_000_000 });
     expect(result).toBe(604_800_000);
   });
+
+  it("throws when all idle timeouts are null", () => {
+    const savedWeb = SESSION_TIMEOUTS.web.idleTimeoutMs;
+    const savedMobile = SESSION_TIMEOUTS.mobile.idleTimeoutMs;
+    Object.assign(SESSION_TIMEOUTS.web, { idleTimeoutMs: null });
+    Object.assign(SESSION_TIMEOUTS.mobile, { idleTimeoutMs: null });
+    try {
+      expect(() => getIdleTimeout({ createdAt: 0, expiresAt: 999_999 })).toThrow(
+        "No idle timeouts configured",
+      );
+    } finally {
+      Object.assign(SESSION_TIMEOUTS.web, { idleTimeoutMs: savedWeb });
+      Object.assign(SESSION_TIMEOUTS.mobile, { idleTimeoutMs: savedMobile });
+    }
+  });
 });
