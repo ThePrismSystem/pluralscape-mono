@@ -208,3 +208,9 @@ jobs:
         env:
           E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
         run: pnpm test:e2e
+
+      - name: Run slow E2E tests
+        env:
+          E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
+          E2E_WORKERS: "1"
+        run: pnpm test:e2e:slow

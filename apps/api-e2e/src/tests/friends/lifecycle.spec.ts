@@ -1,17 +1,9 @@
+import crypto from "node:crypto";
+
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { createBucket, getSystemId } from "../../fixtures/entity-helpers.js";
 import { expect, test } from "../../fixtures/friend.fixture.js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** HTTP 200 OK status code. */
-const HTTP_OK = 200;
-
-/** HTTP 201 Created status code. */
-const HTTP_CREATED = 201;
-
-/** HTTP 204 No Content status code. */
-const HTTP_NO_CONTENT = 204;
+import { HTTP_CREATED, HTTP_NO_CONTENT, HTTP_OK } from "../../fixtures/http.constants.js";
 
 /** Dummy encrypted bucket key for assignment tests. */
 const DUMMY_ENCRYPTED_BUCKET_KEY = "dGVzdC1lbmNyeXB0ZWQta2V5";
@@ -275,5 +267,53 @@ test.describe("Friend lifecycle", () => {
       headers: accountA.headers,
     });
     expect(res.status()).toBe(404);
+  });
+
+  test("reject a pending friend connection", async ({ request }) => {
+    const uuid1 = crypto.randomUUID();
+    const uuid2 = crypto.randomUUID();
+    const regA = await request.post("/v1/auth/register", {
+      data: {
+        email: `e2e-reject-a-${uuid1}@test.pluralscape.local`,
+        password: `E2E-Pass-${uuid1}`,
+        recoveryKeyBackupConfirmed: true,
+      },
+    });
+    const acctA = (await regA.json()) as { data: { sessionToken: string } };
+    const headersA = { Authorization: `Bearer ${acctA.data.sessionToken}` };
+
+    const regB = await request.post("/v1/auth/register", {
+      data: {
+        email: `e2e-reject-b-${uuid2}@test.pluralscape.local`,
+        password: `E2E-Pass-${uuid2}`,
+        recoveryKeyBackupConfirmed: true,
+      },
+    });
+    const acctB = (await regB.json()) as { data: { sessionToken: string } };
+    const headersB = { Authorization: `Bearer ${acctB.data.sessionToken}` };
+
+    const codeRes = await request.post("/v1/account/friend-codes", { headers: headersA });
+    const codeBody = (await codeRes.json()) as { data: { code: string } };
+    const redeemRes = await request.post("/v1/account/friend-codes/redeem", {
+      headers: headersB,
+      data: { code: codeBody.data.code },
+    });
+    const redeemBody = (await redeemRes.json()) as {
+      data: { connectionIds: [string, string] };
+    };
+    const [connIdA] = redeemBody.data.connectionIds;
+
+    const rejectRes = await request.post(`/v1/account/friends/${connIdA}/reject`, {
+      headers: headersA,
+    });
+    expect(rejectRes.ok()).toBe(true);
+
+    const listRes = await request.get("/v1/account/friends", { headers: headersA });
+    const listBody = (await listRes.json()) as {
+      data: Array<{ id: string; status: string }>;
+    };
+    const conn = listBody.data.find((c) => c.id === connIdA);
+    expect(conn).toBeDefined();
+    if (conn) expect(conn.status).toBe("removed");
   });
 });

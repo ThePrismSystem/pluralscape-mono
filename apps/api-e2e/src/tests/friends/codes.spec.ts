@@ -1,17 +1,7 @@
 import crypto from "node:crypto";
 
 import { expect, test } from "../../fixtures/auth.fixture.js";
-
-// ── Constants ────────────────────────────────────────────────────────
-
-/** HTTP 201 Created status code. */
-const HTTP_CREATED = 201;
-
-/** HTTP 204 No Content status code. */
-const HTTP_NO_CONTENT = 204;
-
-/** HTTP 409 Conflict status code. */
-const HTTP_CONFLICT = 409;
+import { HTTP_CONFLICT, HTTP_CREATED, HTTP_NO_CONTENT } from "../../fixtures/http.constants.js";
 
 /** Expected friend code format: XXXX-XXXX uppercase alphanumeric. */
 const FRIEND_CODE_PATTERN = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
@@ -266,5 +256,33 @@ test.describe("Friend codes", () => {
       data: { code: friendCodeEnv.data.code },
     });
     expect(redeemAgain.status()).toBe(404);
+  });
+
+  test("friend codes list paginates", async ({ request, authHeaders }) => {
+    for (let i = 0; i < 3; i++) {
+      const res = await request.post("/v1/account/friend-codes", { headers: authHeaders });
+      expect(res.status()).toBe(HTTP_CREATED);
+    }
+
+    const firstPage = await request.get("/v1/account/friend-codes?limit=2", {
+      headers: authHeaders,
+    });
+    expect(firstPage.ok()).toBe(true);
+    const body = (await firstPage.json()) as {
+      data: unknown[];
+      hasMore: boolean;
+      nextCursor: string | null;
+    };
+    expect(body.data.length).toBe(2);
+    expect(body.hasMore).toBe(true);
+    expect(body.nextCursor).toBeTruthy();
+
+    const secondPage = await request.get(
+      `/v1/account/friend-codes?limit=2&cursor=${body.nextCursor as string}`,
+      { headers: authHeaders },
+    );
+    expect(secondPage.ok()).toBe(true);
+    const body2 = (await secondPage.json()) as { data: unknown[] };
+    expect(body2.data.length).toBeGreaterThanOrEqual(1);
   });
 });

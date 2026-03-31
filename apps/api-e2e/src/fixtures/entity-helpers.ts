@@ -1,22 +1,21 @@
 import { expect } from "@playwright/test";
 
 import { encryptForApi } from "./crypto.fixture.js";
+import { HTTP_CREATED, parseJsonBody } from "./http.constants.js";
 
+import type { AuthHeaders } from "./http.constants.js";
 import type { APIRequestContext } from "@playwright/test";
-
-/** HTTP 201 Created status code. */
-const HTTP_CREATED = 201;
 
 /**
  * Fetch the first system ID for the authenticated account.
  */
 export async function getSystemId(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
 ): Promise<string> {
   const res = await request.get("/v1/systems", { headers });
   expect(res.ok()).toBe(true);
-  const body = (await res.json()) as { data: Array<{ id: string }> };
+  const body = await parseJsonBody<{ data: Array<{ id: string }> }>(res);
   const first = body.data[0] as { id: string } | undefined;
   if (!first) throw new Error("No systems found for authenticated account");
   return first.id;
@@ -27,7 +26,7 @@ export async function getSystemId(
  */
 export async function createMember(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   name = "E2E Test Member",
 ): Promise<{ id: string; version: number }> {
@@ -36,7 +35,7 @@ export async function createMember(
     data: { encryptedData: encryptForApi({ name }) },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -45,7 +44,7 @@ export async function createMember(
  */
 export async function createGroup(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   opts: { name?: string; parentGroupId?: string | null } = {},
 ): Promise<{ id: string; version: number }> {
@@ -55,7 +54,7 @@ export async function createGroup(
     data: { encryptedData: encryptForApi({ name }), parentGroupId, sortOrder: 0 },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -64,7 +63,7 @@ export async function createGroup(
  */
 export async function createCustomFront(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   label = "E2E Test Custom Front",
 ): Promise<{ id: string; version: number }> {
@@ -73,7 +72,7 @@ export async function createCustomFront(
     data: { encryptedData: encryptForApi({ label }) },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -82,7 +81,7 @@ export async function createCustomFront(
  */
 export async function createFieldDefinition(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   opts: { fieldType?: string; name?: string } = {},
 ): Promise<{ id: string; version: number }> {
@@ -97,7 +96,7 @@ export async function createFieldDefinition(
     },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -106,7 +105,7 @@ export async function createFieldDefinition(
  */
 export async function createFrontingSession(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   memberId: string,
 ): Promise<{ id: string; version: number }> {
@@ -119,7 +118,7 @@ export async function createFrontingSession(
     },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -128,7 +127,7 @@ export async function createFrontingSession(
  */
 export async function createRelationship(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   sourceMemberId: string,
   targetMemberId: string,
@@ -144,7 +143,7 @@ export async function createRelationship(
     },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -153,7 +152,7 @@ export async function createRelationship(
  */
 export async function createChannel(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   opts: { type?: "category" | "channel"; parentId?: string; name?: string } = {},
 ): Promise<{ id: string; version: number }> {
@@ -169,7 +168,7 @@ export async function createChannel(
     data,
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -178,7 +177,7 @@ export async function createChannel(
  */
 export async function createMessage(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   channelId: string,
   content = "E2E Test Message",
@@ -192,7 +191,9 @@ export async function createMessage(
     },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number; timestamp: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number; timestamp: number } }>(
+    res,
+  );
   return { id: body.data.id, version: body.data.version, timestamp: body.data.timestamp };
 }
 
@@ -201,7 +202,7 @@ export async function createMessage(
  */
 export async function createPoll(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   opts: {
     title?: string;
@@ -236,7 +237,7 @@ export async function createPoll(
     data,
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -245,7 +246,7 @@ export async function createPoll(
  */
 export async function createAcknowledgement(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   opts: {
     message?: string;
@@ -266,7 +267,7 @@ export async function createAcknowledgement(
     data,
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -275,7 +276,7 @@ export async function createAcknowledgement(
  */
 export async function createInnerworldRegion(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
 ): Promise<{ id: string; version: number }> {
   const res = await request.post(`/v1/systems/${systemId}/innerworld/regions`, {
@@ -283,7 +284,7 @@ export async function createInnerworldRegion(
     data: { encryptedData: encryptForApi({ name: "E2E Test Region" }), parentRegionId: null },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
 }
 
@@ -292,7 +293,7 @@ export async function createInnerworldRegion(
  */
 export async function createBucket(
   request: APIRequestContext,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   systemId: string,
   name = "E2E Test Bucket",
 ): Promise<{ id: string; version: number }> {
@@ -301,6 +302,219 @@ export async function createBucket(
     data: { encryptedData: encryptForApi({ name }) },
   });
   expect(res.status()).toBe(HTTP_CREATED);
-  const body = (await res.json()) as { data: { id: string; version: number } };
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
   return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create a structure entity type in the given system and return its ID and version.
+ */
+export async function createStructureEntityType(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+  opts: { name?: string } = {},
+): Promise<{ id: string; version: number }> {
+  const { name = "E2E Test Entity Type" } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/structure/entity-types`, {
+    headers,
+    data: { encryptedData: encryptForApi({ name }), sortOrder: 0 },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create a structure entity in the given system and return its ID and version.
+ */
+export async function createStructureEntity(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+  structureEntityTypeId: string,
+  opts: { name?: string; parentEntityId?: string | null } = {},
+): Promise<{ id: string; version: number }> {
+  const { name = "E2E Test Entity", parentEntityId = null } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/structure/entities`, {
+    headers,
+    data: {
+      structureEntityTypeId,
+      encryptedData: encryptForApi({ name }),
+      parentEntityId,
+      sortOrder: 0,
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create an API key in the given system and return its ID.
+ */
+export async function createApiKey(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+  opts: { keyType?: "metadata" | "crypto"; scopes?: string[] } = {},
+): Promise<{ id: string }> {
+  const { keyType = "metadata", scopes = ["read:members"] } = opts;
+  const data: Record<string, unknown> = {
+    keyType,
+    scopes,
+    encryptedData: encryptForApi({ label: "E2E Test API Key" }),
+  };
+  if (keyType === "crypto") {
+    data.encryptedKeyMaterial = "dGVzdC1lbmNyeXB0ZWQta2V5LW1hdGVyaWFs";
+  }
+  const res = await request.post(`/v1/systems/${systemId}/api-keys`, {
+    headers,
+    data,
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string } }>(res);
+  return { id: body.data.id };
+}
+
+/**
+ * Create a system snapshot in the given system and return its ID.
+ */
+export async function createSnapshot(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+  opts: { trigger?: "manual" | "scheduled-daily" | "scheduled-weekly" } = {},
+): Promise<{ id: string }> {
+  const { trigger = "manual" } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/snapshots`, {
+    headers,
+    data: {
+      snapshotTrigger: trigger,
+      encryptedData: encryptForApi({ note: "E2E test snapshot" }),
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string } }>(res);
+  return { id: body.data.id };
+}
+
+/**
+ * Create a timer config in the given system and return its ID and version.
+ */
+export async function createTimerConfig(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+): Promise<{ id: string; version: number }> {
+  const res = await request.post(`/v1/systems/${systemId}/timer-configs`, {
+    headers,
+    data: {
+      encryptedData: encryptForApi({ label: "E2E Test Timer" }),
+      intervalMinutes: 60,
+      enabled: true,
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create a check-in record in the given system and return its ID.
+ */
+export async function createCheckInRecord(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+  timerConfigId: string,
+): Promise<{ id: string }> {
+  const res = await request.post(`/v1/systems/${systemId}/check-in-records`, {
+    headers,
+    data: {
+      timerConfigId,
+      scheduledAt: Date.now(),
+      encryptedData: encryptForApi({ note: "E2E test check-in" }),
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string } }>(res);
+  return { id: body.data.id };
+}
+
+/**
+ * Create a lifecycle event in the given system and return its ID and version.
+ */
+export async function createLifecycleEvent(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+  opts: { eventType?: string } = {},
+): Promise<{ id: string; version: number }> {
+  const { eventType = "discovery" } = opts;
+  const res = await request.post(`/v1/systems/${systemId}/lifecycle-events`, {
+    headers,
+    data: {
+      eventType,
+      occurredAt: Date.now(),
+      encryptedData: encryptForApi({ description: "E2E test event" }),
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string; version: number } }>(res);
+  return { id: body.data.id, version: body.data.version };
+}
+
+/**
+ * Create a member photo and return its ID.
+ */
+export async function createMemberPhoto(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+  memberId: string,
+): Promise<{ id: string }> {
+  const res = await request.post(`/v1/systems/${systemId}/members/${memberId}/photos`, {
+    headers,
+    data: {
+      encryptedData: encryptForApi({ caption: "E2E test photo" }),
+      sortOrder: 0,
+    },
+  });
+  expect(res.status()).toBe(HTTP_CREATED);
+  const body = await parseJsonBody<{ data: { id: string } }>(res);
+  return { id: body.data.id };
+}
+
+/**
+ * Run the three-step setup wizard so system settings exist.
+ *
+ * The PIN endpoints require a `system_settings` row which is only
+ * created during the setup flow (nomenclature -> profile -> complete).
+ */
+export async function ensureSystemSetup(
+  request: APIRequestContext,
+  headers: AuthHeaders,
+  systemId: string,
+): Promise<void> {
+  const nomenclatureRes = await request.post(`/v1/systems/${systemId}/setup/nomenclature`, {
+    headers,
+    data: { encryptedData: encryptForApi({ terminology: "default" }) },
+  });
+  expect(nomenclatureRes.ok()).toBe(true);
+
+  const profileRes = await request.post(`/v1/systems/${systemId}/setup/profile`, {
+    headers,
+    data: { encryptedData: encryptForApi({ name: "E2E System" }) },
+  });
+  expect(profileRes.ok()).toBe(true);
+
+  const completeRes = await request.post(`/v1/systems/${systemId}/setup/complete`, {
+    headers,
+    data: {
+      encryptedData: encryptForApi({ settings: "default" }),
+      recoveryKeyBackupConfirmed: true,
+    },
+  });
+  expect(completeRes.ok()).toBe(true);
 }

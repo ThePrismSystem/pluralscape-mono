@@ -1,9 +1,6 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_CREATED = 201;
-const HTTP_NO_CONTENT = 204;
-const HTTP_BAD_REQUEST = 400;
+import { HTTP_BAD_REQUEST, HTTP_CREATED, HTTP_NO_CONTENT } from "../../fixtures/http.constants.js";
 
 interface DeviceTokenResponse {
   readonly id: string;
@@ -87,5 +84,43 @@ test.describe("Device tokens", () => {
       data: { platform: "ios", token: "" },
     });
     expect(res.status()).toBe(HTTP_BAD_REQUEST);
+  });
+
+  test("update a device token", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+
+    const createRes = await request.post(`/v1/systems/${systemId}/device-tokens`, {
+      headers: { ...authHeaders, "Content-Type": "application/json" },
+      data: { platform: "ios", token: "e2e-update-token-abc" },
+    });
+    expect(createRes.status()).toBe(HTTP_CREATED);
+    const tokenId = ((await createRes.json()) as { data: { id: string } }).data.id;
+
+    const updateRes = await request.put(`/v1/systems/${systemId}/device-tokens/${tokenId}`, {
+      headers: { ...authHeaders, "Content-Type": "application/json" },
+      data: { platform: "ios", token: "e2e-updated-token-xyz" },
+    });
+    expect(updateRes.ok()).toBe(true);
+  });
+
+  test("delete a device token", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+
+    const createRes = await request.post(`/v1/systems/${systemId}/device-tokens`, {
+      headers: { ...authHeaders, "Content-Type": "application/json" },
+      data: { platform: "android", token: "e2e-delete-token-def" },
+    });
+    const tokenId = ((await createRes.json()) as { data: { id: string } }).data.id;
+
+    const deleteRes = await request.delete(`/v1/systems/${systemId}/device-tokens/${tokenId}`, {
+      headers: authHeaders,
+    });
+    expect(deleteRes.status()).toBe(HTTP_NO_CONTENT);
+
+    const listRes = await request.get(`/v1/systems/${systemId}/device-tokens`, {
+      headers: authHeaders,
+    });
+    const body = (await listRes.json()) as { data: Array<{ id: string }> };
+    expect(body.data.map((t) => t.id)).not.toContain(tokenId);
   });
 });

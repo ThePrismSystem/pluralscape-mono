@@ -296,4 +296,85 @@ test.describe("Poll Voting", () => {
     const body = await res.json();
     expect((body as { error: { code: string } }).error.code).toBe("HAS_DEPENDENTS");
   });
+
+  test("update a vote", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const voter = `mem_${crypto.randomUUID()}`;
+    const option1 = `po_${crypto.randomUUID()}`;
+    const option2 = `po_${crypto.randomUUID()}`;
+    const poll = await createPoll(request, authHeaders, systemId);
+
+    const castRes = await request.post(`/v1/systems/${systemId}/polls/${poll.id}/votes`, {
+      headers: authHeaders,
+      data: {
+        voter: { entityType: "member", entityId: voter },
+        optionId: option1,
+        isVeto: false,
+        encryptedData: encryptForApi({ comment: null }),
+      },
+    });
+    expect(castRes.status()).toBe(201);
+    const voteId = ((await castRes.json()) as { data: { id: string } }).data.id;
+
+    const updateRes = await request.put(
+      `/v1/systems/${systemId}/polls/${poll.id}/votes/${voteId}`,
+      {
+        headers: authHeaders,
+        data: {
+          optionId: option2,
+          isVeto: false,
+          encryptedData: encryptForApi({ comment: null }),
+        },
+      },
+    );
+    expect(updateRes.ok()).toBe(true);
+  });
+
+  test("delete a vote", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const voter = `mem_${crypto.randomUUID()}`;
+    const option = `po_${crypto.randomUUID()}`;
+    const poll = await createPoll(request, authHeaders, systemId);
+
+    const castRes = await request.post(`/v1/systems/${systemId}/polls/${poll.id}/votes`, {
+      headers: authHeaders,
+      data: {
+        voter: { entityType: "member", entityId: voter },
+        optionId: option,
+        isVeto: false,
+        encryptedData: encryptForApi({ comment: null }),
+      },
+    });
+    const voteId = ((await castRes.json()) as { data: { id: string } }).data.id;
+
+    const deleteRes = await request.delete(
+      `/v1/systems/${systemId}/polls/${poll.id}/votes/${voteId}`,
+      { headers: authHeaders },
+    );
+    expect(deleteRes.status()).toBe(204);
+  });
+
+  test("get poll results", async ({ request, authHeaders }) => {
+    const systemId = await getSystemId(request, authHeaders);
+    const poll = await createPoll(request, authHeaders, systemId, { allowVeto: true });
+
+    const voter1 = `mem_${crypto.randomUUID()}`;
+    const option = `po_${crypto.randomUUID()}`;
+    await request.post(`/v1/systems/${systemId}/polls/${poll.id}/votes`, {
+      headers: authHeaders,
+      data: {
+        voter: { entityType: "member", entityId: voter1 },
+        optionId: option,
+        isVeto: false,
+        encryptedData: encryptForApi({ comment: null }),
+      },
+    });
+
+    const resultsRes = await request.get(`/v1/systems/${systemId}/polls/${poll.id}/results`, {
+      headers: authHeaders,
+    });
+    expect(resultsRes.ok()).toBe(true);
+    const resultsBody = await resultsRes.json();
+    expect(resultsBody).toHaveProperty("data");
+  });
 });

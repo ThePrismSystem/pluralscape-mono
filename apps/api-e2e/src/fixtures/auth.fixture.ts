@@ -2,11 +2,17 @@
  * Playwright fixtures for authenticated API requests.
  *
  * Each test using `registeredAccount` gets a freshly registered account
- * with a unique email and valid session token.
+ * with a unique email and valid session token. Tests needing IDOR
+ * verification also get `secondRegisteredAccount` / `secondAuthHeaders`.
  */
 import crypto from "node:crypto";
 
 import { test as base, type APIRequestContext } from "@playwright/test";
+
+import { ensureCryptoReady } from "./crypto.fixture.js";
+import { asAuthHeaders } from "./http.constants.js";
+
+import type { AuthHeaders } from "./http.constants.js";
 
 interface RegisterData {
   sessionToken: string;
@@ -28,7 +34,11 @@ interface AuthFixtures {
   /** A freshly registered account with session token. */
   registeredAccount: AccountInfo;
   /** Pre-built Authorization header for the registered account. */
-  authHeaders: Record<string, string>;
+  authHeaders: AuthHeaders;
+  /** A second freshly registered account for IDOR / cross-account tests. */
+  secondRegisteredAccount: AccountInfo;
+  /** Pre-built Authorization header for the second account. */
+  secondAuthHeaders: AuthHeaders;
 }
 
 async function registerUniqueAccount(request: APIRequestContext): Promise<AccountInfo> {
@@ -55,11 +65,19 @@ async function registerUniqueAccount(request: APIRequestContext): Promise<Accoun
 
 export const test = base.extend<AuthFixtures>({
   registeredAccount: async ({ request }, use) => {
+    await ensureCryptoReady();
     const account = await registerUniqueAccount(request);
     await use(account);
   },
   authHeaders: async ({ registeredAccount }, use) => {
-    await use({ Authorization: `Bearer ${registeredAccount.sessionToken}` });
+    await use(asAuthHeaders({ Authorization: `Bearer ${registeredAccount.sessionToken}` }));
+  },
+  secondRegisteredAccount: async ({ request }, use) => {
+    const account = await registerUniqueAccount(request);
+    await use(account);
+  },
+  secondAuthHeaders: async ({ secondRegisteredAccount }, use) => {
+    await use(asAuthHeaders({ Authorization: `Bearer ${secondRegisteredAccount.sessionToken}` }));
   },
 });
 

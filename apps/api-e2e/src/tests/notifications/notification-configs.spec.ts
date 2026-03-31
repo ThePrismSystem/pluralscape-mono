@@ -1,7 +1,6 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { getSystemId } from "../../fixtures/entity-helpers.js";
-
-const HTTP_BAD_REQUEST = 400;
+import { HTTP_BAD_REQUEST } from "../../fixtures/http.constants.js";
 
 interface NotificationConfigResponse {
   readonly id: string;
