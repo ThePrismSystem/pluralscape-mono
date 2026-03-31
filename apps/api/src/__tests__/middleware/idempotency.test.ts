@@ -177,4 +177,38 @@ describe("idempotency middleware", () => {
     const body2 = (await res2.json()) as { data: { id: string } };
     expect(body2).toEqual({ data: { id: "new-account" } });
   });
+
+  it("treats different bodies as separate operations when unauthenticated", async () => {
+    const store = new MemoryIdempotencyStore();
+    setIdempotencyStore(store);
+
+    let callCount = 0;
+    const app = new Hono();
+    app.post("/register", createIdempotencyMiddleware(), (c) => {
+      callCount++;
+      return c.json({ data: { call: callCount } }, 201);
+    });
+
+    const headers = {
+      "Idempotency-Key": "same-key",
+      "Content-Type": "application/json",
+    };
+
+    const res1 = await app.request("/register", {
+      method: "POST",
+      body: JSON.stringify({ email: "a@example.com" }),
+      headers,
+    });
+    expect(res1.status).toBe(201);
+    expect(callCount).toBe(1);
+
+    // Different body with same idempotency key — separate cache entry, handler runs again
+    const res2 = await app.request("/register", {
+      method: "POST",
+      body: JSON.stringify({ email: "b@example.com" }),
+      headers,
+    });
+    expect(res2.status).toBe(201);
+    expect(callCount).toBe(2);
+  });
 });
