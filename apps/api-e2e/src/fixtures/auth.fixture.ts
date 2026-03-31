@@ -9,6 +9,10 @@ import crypto from "node:crypto";
 
 import { test as base, type APIRequestContext } from "@playwright/test";
 
+import { asAuthHeaders } from "./http.constants.js";
+
+import type { AuthHeaders } from "./http.constants.js";
+
 interface RegisterData {
   sessionToken: string;
   recoveryKey: string;
@@ -29,11 +33,11 @@ interface AuthFixtures {
   /** A freshly registered account with session token. */
   registeredAccount: AccountInfo;
   /** Pre-built Authorization header for the registered account. */
-  authHeaders: Record<string, string>;
+  authHeaders: AuthHeaders;
   /** A second freshly registered account for IDOR / cross-account tests. */
   secondRegisteredAccount: AccountInfo;
   /** Pre-built Authorization header for the second account. */
-  secondAuthHeaders: Record<string, string>;
+  secondAuthHeaders: AuthHeaders;
 }
 
 async function registerUniqueAccount(request: APIRequestContext): Promise<AccountInfo> {
@@ -64,14 +68,14 @@ export const test = base.extend<AuthFixtures>({
     await use(account);
   },
   authHeaders: async ({ registeredAccount }, use) => {
-    await use({ Authorization: `Bearer ${registeredAccount.sessionToken}` });
+    await use(asAuthHeaders({ Authorization: `Bearer ${registeredAccount.sessionToken}` }));
   },
   secondRegisteredAccount: async ({ request }, use) => {
     const account = await registerUniqueAccount(request);
     await use(account);
   },
   secondAuthHeaders: async ({ secondRegisteredAccount }, use) => {
-    await use({ Authorization: `Bearer ${secondRegisteredAccount.sessionToken}` });
+    await use(asAuthHeaders({ Authorization: `Bearer ${secondRegisteredAccount.sessionToken}` }));
   },
 });
 

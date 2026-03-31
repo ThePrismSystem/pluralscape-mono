@@ -6,23 +6,27 @@
  */
 import { expect } from "@playwright/test";
 
+import {
+  DEFAULT_PAGINATION_ITEM_COUNT,
+  DEFAULT_PAGINATION_PAGE_SIZE,
+  HTTP_BAD_REQUEST,
+  HTTP_CONFLICT,
+  HTTP_NOT_FOUND,
+  HTTP_TOO_MANY_REQUESTS,
+  HTTP_UNAUTHORIZED,
+  HTTP_UNPROCESSABLE,
+  parseJsonBody,
+} from "./http.constants.js";
+
+import type { AuthHeaders, HttpMethod } from "./http.constants.js";
 import type { APIRequestContext, APIResponse } from "@playwright/test";
 
-// ── Constants ────────────────────────────────────────────────────────
-
-const HTTP_BAD_REQUEST = 400;
-const HTTP_UNAUTHORIZED = 401;
-const HTTP_NOT_FOUND = 404;
-const HTTP_CONFLICT = 409;
-const HTTP_UNPROCESSABLE = 422;
-const HTTP_TOO_MANY_REQUESTS = 429;
-
-/** Default number of items to create when testing pagination. */
-const DEFAULT_PAGINATION_ITEM_COUNT = 3;
-
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
-
 // ── Error Shape ─────────────────────────────────────────────────────
+
+interface ErrorEnvelope {
+  error: { code: string; message: string };
+  requestId: string;
+}
 
 /**
  * Verify a response has the standard error envelope shape:
@@ -36,9 +40,11 @@ export async function assertErrorShape(response: APIResponse): Promise<void> {
   expect(body).toHaveProperty("error.code");
   expect(body).toHaveProperty("error.message");
   expect(body).toHaveProperty("requestId");
-  expect(typeof (body as { error: { code: string } }).error.code).toBe("string");
-  expect(typeof (body as { error: { message: string } }).error.message).toBe("string");
-  expect(typeof (body as { requestId: string }).requestId).toBe("string");
+
+  const envelope = body as ErrorEnvelope;
+  expect(typeof envelope.error.code).toBe("string");
+  expect(typeof envelope.error.message).toBe("string");
+  expect(typeof envelope.requestId).toBe("string");
 
   // No information leakage
   const details = JSON.stringify(body);
@@ -126,13 +132,13 @@ export async function assertIdorRejected(
 export async function assertPaginates(
   request: APIRequestContext,
   listPath: string,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   createFn: () => Promise<void>,
   opts: { itemCount?: number; pageSize?: number } = {},
 ): Promise<void> {
-  const { itemCount = DEFAULT_PAGINATION_ITEM_COUNT, pageSize = 2 } = opts;
+  const { itemCount = DEFAULT_PAGINATION_ITEM_COUNT, pageSize = DEFAULT_PAGINATION_PAGE_SIZE } =
+    opts;
 
-  // Create items
   for (let i = 0; i < itemCount; i++) {
     await createFn();
   }
@@ -140,11 +146,11 @@ export async function assertPaginates(
   // First page
   const firstPage = await request.get(`${listPath}?limit=${String(pageSize)}`, { headers });
   expect(firstPage.ok()).toBe(true);
-  const firstBody = (await firstPage.json()) as {
-    data: unknown[];
+  const firstBody = await parseJsonBody<{
+    data: Array<{ id: string }>;
     hasMore: boolean;
     nextCursor: string | null;
-  };
+  }>(firstPage);
   expect(firstBody.data.length).toBe(pageSize);
   expect(firstBody.hasMore).toBe(true);
   expect(firstBody.nextCursor).toBeTruthy();
@@ -155,11 +161,32 @@ export async function assertPaginates(
     { headers },
   );
   expect(secondPage.ok()).toBe(true);
-  const secondBody = (await secondPage.json()) as {
-    data: unknown[];
+  const secondBody = await parseJsonBody<{
+    data: Array<{ id: string }>;
     hasMore: boolean;
-  };
+  }>(secondPage);
   expect(secondBody.data.length).toBeGreaterThanOrEqual(1);
+
+  // Verify pages contain unique items (no overlap)
+  const firstIds = firstBody.data.map((d) => d.id);
+  const secondIds = secondBody.data.map((d) => d.id);
+  const overlap = firstIds.filter((id) => secondIds.includes(id));
+  expect(overlap).toEqual([]);
+}
+
+/**
+ * Assert a list endpoint returns an empty result set.
+ */
+export async function assertEmptyList(
+  request: APIRequestContext,
+  listPath: string,
+  headers: AuthHeaders,
+): Promise<void> {
+  const res = await request.get(listPath, { headers });
+  expect(res.ok()).toBe(true);
+  const body = await parseJsonBody<{ data: unknown[]; hasMore: boolean }>(res);
+  expect(body.data).toEqual([]);
+  expect(body.hasMore).toBe(false);
 }
 
 // ── Validation Rejection ────────────────────────────────────────────
@@ -171,7 +198,7 @@ export async function assertValidationRejects(
   request: APIRequestContext,
   method: HttpMethod,
   path: string,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   badPayloads: unknown[],
 ): Promise<void> {
   for (const payload of badPayloads) {
@@ -197,15 +224,15 @@ export async function assertValidationRejects(
 export async function assertHasDependentsGuard(
   request: APIRequestContext,
   deletePath: string,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
 ): Promise<APIResponse> {
   const res = await request.delete(deletePath, {
     headers: { ...headers, "Content-Type": "application/json" },
   });
   expect(res.status()).toBe(HTTP_CONFLICT);
-  const body = (await res.json()) as { error: { code: string } };
-  expect(body.error.code).toBe("HAS_DEPENDENTS");
   await assertErrorShape(res);
+  const body = await parseJsonBody<{ error: { code: string } }>(res);
+  expect(body.error.code).toBe("HAS_DEPENDENTS");
   return res;
 }
 
@@ -219,7 +246,7 @@ export async function assertRateLimited(
   request: APIRequestContext,
   method: HttpMethod,
   path: string,
-  headers: Record<string, string>,
+  headers: AuthHeaders,
   opts: { burstCount: number; body?: unknown },
 ): Promise<APIResponse> {
   const reqOpts: { headers: Record<string, string>; data?: unknown } = {
@@ -254,6 +281,8 @@ async function makeRequest(
       return request.post(path, { headers: opts.headers, data: opts.data });
     case "PUT":
       return request.put(path, { headers: opts.headers, data: opts.data });
+    case "PATCH":
+      return request.patch(path, { headers: opts.headers, data: opts.data });
     case "DELETE":
       return request.delete(path, { headers: opts.headers, data: opts.data });
   }
