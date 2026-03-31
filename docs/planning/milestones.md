@@ -161,15 +161,15 @@ Goal: Stitch-generated HTML mockups for every screen family, establishing visual
 Epics:
 
 - Design system foundation
-- Onboarding & auth screens
+- Onboarding & auth screen designs
 - Home & navigation design
-- Member management screens
-- Fronting screens
-- Communication screens
-- Privacy & social screens
-- System structure screens
-- Journaling screens
-- Search & settings screens
+- Member management screen designs
+- Fronting screen designs
+- Communication screen designs
+- Privacy & social screen designs
+- System structure screen designs
+- Journaling screen designs
+- Search & settings screen designs
 
 ## Milestone 10: UI/UX Buildout
 
@@ -178,15 +178,15 @@ Goal: Translate Stitch HTML mockups into React Native/Expo components with place
 Epics:
 
 - Component library implementation
-- Onboarding & auth screens
+- Onboarding & auth screen buildout
 - Home & navigation buildout
-- Member management screens
-- Fronting screens
-- Communication screens
-- Privacy & social screens
-- System structure screens
-- Journaling screens
-- Search & settings screens
+- Member management screen buildout
+- Fronting screen buildout
+- Communication screen buildout
+- Privacy & social screen buildout
+- System structure screen buildout
+- Journaling screen buildout
+- Search & settings screen buildout
 - Platform adaptation
 
 ## Milestone 11: Data Interpolation
