@@ -109,4 +109,34 @@ test.describe("Device transfer endpoints", () => {
     // Transfer is expired, query returns no pending row → 404
     expect(finalRes.status()).toBe(404);
   });
+
+  test("full transfer flow: initiate and approve", async ({ request, authHeaders }) => {
+    const payload = generateTestTransferPayload();
+    const initRes = await request.post("/v1/account/device-transfer", {
+      headers: authHeaders,
+      data: payload,
+    });
+    expect(initRes.status()).toBe(201);
+    const initBody = (await initRes.json()) as {
+      data: { transferId: string };
+    };
+    const { transferId } = initBody.data;
+
+    const approveRes = await request.post(`/v1/account/device-transfer/${transferId}/approve`, {
+      headers: authHeaders,
+    });
+    expect(approveRes.status()).toBe(204);
+  });
+
+  test("approve without auth returns 401", async ({ request, authHeaders }) => {
+    const payload = generateTestTransferPayload();
+    const initRes = await request.post("/v1/account/device-transfer", {
+      headers: authHeaders,
+      data: payload,
+    });
+    const { transferId } = ((await initRes.json()) as { data: { transferId: string } }).data;
+
+    const res = await request.post(`/v1/account/device-transfer/${transferId}/approve`);
+    expect(res.status()).toBe(401);
+  });
 });
