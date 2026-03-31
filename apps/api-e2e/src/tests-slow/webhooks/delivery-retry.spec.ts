@@ -1,7 +1,7 @@
 import { expect, test } from "../../fixtures/auth.fixture.js";
 import { encryptForApi, ensureCryptoReady } from "../../fixtures/crypto.fixture.js";
 import { getSystemId } from "../../fixtures/entity-helpers.js";
-import { HTTP_CREATED, HTTP_OK } from "../../fixtures/http.constants.js";
+import { HTTP_CREATED, HTTP_OK, parseJsonBody, pollUntil } from "../../fixtures/http.constants.js";
 
 test.describe("Webhook delivery retry", () => {
   test.describe.configure({ timeout: 180_000 });
@@ -21,22 +21,30 @@ test.describe("Webhook delivery retry", () => {
       },
     });
     expect(webhookRes.status()).toBe(HTTP_CREATED);
-    const webhookId = ((await webhookRes.json()) as { data: { id: string } }).data.id;
+    const webhookId = (await parseJsonBody<{ data: { id: string } }>(webhookRes)).data.id;
 
     await request.post(`/v1/systems/${systemId}/members`, {
       headers: authHeaders,
       data: { encryptedData: encryptForApi({ name: "Webhook Test Member" }) },
     });
 
-    // Wait for delivery to process
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Poll for delivery instead of hard sleep
+    await pollUntil(async () => {
+      const res = await request.get(
+        `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
+        { headers: authHeaders },
+      );
+      if (res.status() !== HTTP_OK) return false;
+      const body = await parseJsonBody<{ data: unknown[] }>(res);
+      return body.data.length > 0;
+    });
 
     const deliveriesRes = await request.get(
       `/v1/systems/${systemId}/webhook-deliveries?webhookId=${webhookId}`,
       { headers: authHeaders },
     );
     expect(deliveriesRes.status()).toBe(HTTP_OK);
-    const body = (await deliveriesRes.json()) as { data: unknown[] };
-    expect(body).toHaveProperty("data");
+    const body = await parseJsonBody<{ data: unknown[] }>(deliveriesRes);
+    expect(body.data.length).toBeGreaterThan(0);
   });
 });

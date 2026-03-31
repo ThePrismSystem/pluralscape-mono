@@ -16,7 +16,7 @@
     "test:coverage": "vitest run --coverage",
     "test:unit:coverage": "vitest run --exclude '**/*.integration.{test,spec}.ts' --coverage",
     "test:watch": "vitest",
-    "test:e2e": "pnpm --filter @pluralscape/api-e2e exec playwright test",
+    "test:e2e": "pnpm --filter @pluralscape/api-e2e exec playwright test --project=api",
     "test:e2e:slow": "pnpm --filter @pluralscape/api-e2e exec playwright test --project=api-slow",
     "test:e2e:all": "pnpm --filter @pluralscape/api-e2e exec playwright test",
     "clean": "turbo clean",

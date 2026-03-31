@@ -313,8 +313,7 @@ test.describe("Friend lifecycle", () => {
       data: Array<{ id: string; status: string }>;
     };
     const conn = listBody.data.find((c) => c.id === connIdA);
-    if (conn) {
-      expect(conn.status).toBe("removed");
-    }
+    expect(conn).toBeDefined();
+    if (conn) expect(conn.status).toBe("removed");
   });
 });
