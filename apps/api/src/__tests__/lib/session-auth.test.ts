@@ -1,3 +1,4 @@
+import { SESSION_TIMEOUTS } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mock drizzle-orm operators
@@ -366,9 +367,14 @@ describe("getIdleTimeout", () => {
     expect(result).toBeNull();
   });
 
-  it("returns fail-closed default idle timeout for unknown TTL", () => {
+  it("returns shortest non-null idle timeout for unknown TTL", () => {
+    // Shortest non-null idle timeout across all session types is web: 604_800_000 (7 days)
+    // This test verifies the fallback is computed dynamically, not hardcoded
     const result = getIdleTimeout({ createdAt: 0, expiresAt: 999_999 });
-    expect(result).toBe(604_800_000);
+    const allTimeouts = Object.values(SESSION_TIMEOUTS)
+      .map((c) => c.idleTimeoutMs)
+      .filter((ms) => ms !== null);
+    expect(result).toBe(Math.min(...allTimeouts));
   });
 
   it("returns same result regardless of createdAt when absoluteTtl matches", () => {
