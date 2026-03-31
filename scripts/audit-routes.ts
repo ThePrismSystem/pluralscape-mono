@@ -23,47 +23,36 @@ const PARSE_JSON_BODY_PATTERN = /parseJsonBody\(/;
 const VALIDATION_PKG_IMPORT_PATTERN =
   /import\s*\{([^}]+)\}\s*from\s*["']@pluralscape\/validation["']/g;
 const LOCAL_SCHEMA_IMPORT_PATTERN = /import\s*\{([^}]+)\}\s*from\s*["'][^"']*\.schema[^"']*["']/g;
+// Matches any identifier ending in "Schema" followed by .parse()/.safeParse().
+// May false-positive on local variables not imported as schemas, but this is
+// acceptable since the audit is advisory and false negatives are worse.
 const SCHEMA_USAGE_PATTERN = /(\w+Schema)\s*\.\s*(?:safe)?[Pp]arse\s*\(/g;
+
+function execAllMatches(pattern: RegExp, source: string): RegExpExecArray[] {
+  const re = new RegExp(pattern.source, pattern.flags);
+  const results: RegExpExecArray[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(source)) !== null) results.push(match);
+  return results;
+}
 
 function extractSchemaNames(source: string): string[] {
   const schemas = new Set<string>();
 
-  let match: RegExpExecArray | null;
-
-  const pkgRegex = new RegExp(
-    VALIDATION_PKG_IMPORT_PATTERN.source,
-    VALIDATION_PKG_IMPORT_PATTERN.flags,
-  );
-  while ((match = pkgRegex.exec(source)) !== null) {
-    if (match[1] !== undefined) {
-      const imports = match[1]
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      for (const imp of imports) {
-        if (imp.endsWith("Schema")) schemas.add(imp);
+  for (const pattern of [VALIDATION_PKG_IMPORT_PATTERN, LOCAL_SCHEMA_IMPORT_PATTERN]) {
+    for (const match of execAllMatches(pattern, source)) {
+      if (match[1] !== undefined) {
+        for (const imp of match[1]
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)) {
+          if (imp.endsWith("Schema")) schemas.add(imp);
+        }
       }
     }
   }
 
-  const localRegex = new RegExp(
-    LOCAL_SCHEMA_IMPORT_PATTERN.source,
-    LOCAL_SCHEMA_IMPORT_PATTERN.flags,
-  );
-  while ((match = localRegex.exec(source)) !== null) {
-    if (match[1] !== undefined) {
-      const imports = match[1]
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      for (const imp of imports) {
-        if (imp.endsWith("Schema")) schemas.add(imp);
-      }
-    }
-  }
-
-  const usageRegex = new RegExp(SCHEMA_USAGE_PATTERN.source, SCHEMA_USAGE_PATTERN.flags);
-  while ((match = usageRegex.exec(source)) !== null) {
+  for (const match of execAllMatches(SCHEMA_USAGE_PATTERN, source)) {
     if (match[1] !== undefined) schemas.add(match[1]);
   }
 
@@ -72,9 +61,7 @@ function extractSchemaNames(source: string): string[] {
 
 export function parseRouteFile(source: string): RouteFileInfo {
   const methods: RouteMethod[] = [];
-  let match: RegExpExecArray | null;
-  const methodRegex = new RegExp(METHOD_PATTERN.source, METHOD_PATTERN.flags);
-  while ((match = methodRegex.exec(source)) !== null) {
+  for (const match of execAllMatches(METHOD_PATTERN, source)) {
     const rawMethod = match[1];
     const rawPath = match[2];
     if (rawMethod !== undefined && rawPath !== undefined) {
@@ -101,9 +88,7 @@ const ROUTE_MOUNT_PATTERN = /\.route\(\s*["']([^"']+)["']\s*,\s*(\w+)\s*\)/g;
 
 export function extractRouteMounts(source: string): RouteMount[] {
   const mounts: RouteMount[] = [];
-  const regex = new RegExp(ROUTE_MOUNT_PATTERN.source, ROUTE_MOUNT_PATTERN.flags);
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(source)) !== null) {
+  for (const match of execAllMatches(ROUTE_MOUNT_PATTERN, source)) {
     const path = match[1];
     const variableName = match[2];
     if (path !== undefined && variableName !== undefined) {

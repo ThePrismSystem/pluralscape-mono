@@ -3,10 +3,12 @@ import { dirname, resolve } from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { buildInventory } from "./audit-routes.js";
+import { type HttpMethod, buildInventory } from "./audit-routes.js";
+
+type OpenApiType = "string" | "number" | "integer" | "boolean" | "array" | "object" | "unknown";
 
 export interface RouteKey {
-  method: string;
+  method: HttpMethod;
   path: string;
 }
 
@@ -45,44 +47,63 @@ export function diffRoutes(codeRoutes: RouteKey[], specRoutes: RouteKey[]): Diff
 
   const orphanedInSpec = specRoutes
     .filter((r) => !codeSet.has(routeKeyString(r.method, r.path)))
-    .map((r) => ({ method: r.method.toUpperCase(), path: normalizeParamStyle(r.path) }));
+    .map((r) => ({
+      method: r.method.toUpperCase() as HttpMethod,
+      path: normalizeParamStyle(r.path),
+    }));
 
   const undocumented = codeRoutes
     .filter((r) => !specSet.has(routeKeyString(r.method, r.path)))
-    .map((r) => ({ method: r.method.toUpperCase(), path: normalizeParamStyle(r.path) }));
+    .map((r) => ({
+      method: r.method.toUpperCase() as HttpMethod,
+      path: normalizeParamStyle(r.path),
+    }));
 
   return { orphanedInSpec, undocumented };
 }
 
 const HTTP_METHODS = new Set(["get", "post", "put", "delete", "patch"]);
 
+/** Spec paths omit the version prefix (it's in the server URL) */
+const API_BASE_PATH = "/v1";
+
 export interface FieldShape {
-  type: string;
+  type: OpenApiType;
   required: boolean;
 }
 
+type ShapeMap = Record<string, FieldShape>;
+
 export interface SpecOperation {
-  method: string;
+  method: HttpMethod;
   path: string;
   operationId: string;
-  requestBodyShape: Record<string, FieldShape> | null;
+  requestBodyShape: ShapeMap | null;
 }
+
+const OPENAPI_TYPES = new Set<OpenApiType>([
+  "string",
+  "number",
+  "integer",
+  "boolean",
+  "array",
+  "object",
+]);
 
 /**
  * Extract structural shape from an inline OpenAPI schema.
  * Handles plain objects and allOf compositions (common in bundled specs).
  * Returns null if any part uses $ref.
  */
-export function extractInlineShape(
-  schema: Record<string, unknown>,
-): Record<string, FieldShape> | null {
+export function extractInlineShape(schema: Record<string, unknown>): ShapeMap | null {
   if ("$ref" in schema) return null;
 
   // Handle allOf by merging all sub-schemas
   if (Array.isArray(schema.allOf)) {
-    const merged: Record<string, FieldShape> = {};
-    for (const sub of schema.allOf as Record<string, unknown>[]) {
-      const subShape = extractInlineShape(sub);
+    const merged: ShapeMap = {};
+    for (const sub of schema.allOf) {
+      if (typeof sub !== "object" || sub === null) return null;
+      const subShape = extractInlineShape(sub as Record<string, unknown>);
       if (subShape === null) return null;
       Object.assign(merged, subShape);
     }
@@ -99,14 +120,34 @@ export function extractInlineShape(
 
   const requiredSet = new Set(Array.isArray(schema.required) ? (schema.required as string[]) : []);
   const properties = schema.properties as Record<string, Record<string, unknown>>;
-  const shape: Record<string, FieldShape> = {};
+  const shape: ShapeMap = {};
 
   for (const [name, prop] of Object.entries(properties)) {
-    const type = typeof prop.type === "string" ? prop.type : "unknown";
+    const rawType = typeof prop.type === "string" ? prop.type : "";
+    const type: OpenApiType = OPENAPI_TYPES.has(rawType as OpenApiType)
+      ? (rawType as OpenApiType)
+      : "unknown";
     shape[name] = { type, required: requiredSet.has(name) };
   }
 
   return shape;
+}
+
+function getJsonBodySchema(requestBody: unknown): Record<string, unknown> | undefined {
+  if (typeof requestBody !== "object" || requestBody === null) return undefined;
+  const rb = requestBody as Record<string, unknown>;
+  const content =
+    typeof rb.content === "object" && rb.content !== null
+      ? (rb.content as Record<string, unknown>)
+      : undefined;
+  if (!content) return undefined;
+  const jsonContent =
+    typeof content["application/json"] === "object" && content["application/json"] !== null
+      ? (content["application/json"] as Record<string, unknown>)
+      : undefined;
+  return typeof jsonContent?.schema === "object" && jsonContent.schema !== null
+    ? (jsonContent.schema as Record<string, unknown>)
+    : undefined;
 }
 
 export function parseSpecOperations(spec: { paths: Record<string, unknown> }): SpecOperation[] {
@@ -122,18 +163,18 @@ export function parseSpecOperations(spec: { paths: Record<string, unknown> }): S
       const op = operation as Record<string, unknown>;
       const operationId = typeof op.operationId === "string" ? op.operationId : "";
 
-      let requestBodyShape: Record<string, FieldShape> | null = null;
-      if (typeof op.requestBody === "object" && op.requestBody !== null) {
-        const rb = op.requestBody as Record<string, unknown>;
-        const content = rb.content as Record<string, unknown> | undefined;
-        const jsonContent = content?.["application/json"] as Record<string, unknown> | undefined;
-        const schema = jsonContent?.schema as Record<string, unknown> | undefined;
-        if (schema !== undefined) {
-          requestBodyShape = extractInlineShape(schema);
-        }
+      let requestBodyShape: ShapeMap | null = null;
+      const schema = getJsonBodySchema(op.requestBody);
+      if (schema) {
+        requestBodyShape = extractInlineShape(schema);
       }
 
-      operations.push({ method: method.toUpperCase(), path, operationId, requestBodyShape });
+      operations.push({
+        method: method.toUpperCase() as HttpMethod,
+        path,
+        operationId,
+        requestBodyShape,
+      });
     }
   }
 
@@ -151,10 +192,7 @@ export interface ShapeMismatch {
  * Compare two structural shapes field-by-field.
  * Reports missing fields, extra fields, type mismatches, and required/optional disagreements.
  */
-export function compareShapes(
-  codeShape: Record<string, FieldShape>,
-  specShape: Record<string, FieldShape>,
-): ShapeMismatch[] {
+export function compareShapes(codeShape: ShapeMap, specShape: ShapeMap): ShapeMismatch[] {
   const mismatches: ShapeMismatch[] = [];
   const allFields = new Set([...Object.keys(codeShape), ...Object.keys(specShape)]);
 
@@ -200,7 +238,7 @@ export function compareShapes(
 }
 
 export interface RouteShapeMismatch {
-  method: string;
+  method: HttpMethod;
   path: string;
   mismatches: ShapeMismatch[];
 }
@@ -276,8 +314,6 @@ if (import.meta.url === `file://${argv1}`) {
 
   const codeInventory = buildInventory(entryFile, "/v1", false);
   const codeRoutes = codeInventory.map((e) => ({ method: e.method, path: e.fullPath }));
-  // Spec paths omit the /v1 prefix (it's in the server URL). Prepend it for comparison.
-  const API_BASE_PATH = "/v1";
   const specRoutes = specOps.map((o) => ({ method: o.method, path: `${API_BASE_PATH}${o.path}` }));
 
   const diff = diffRoutes(codeRoutes, specRoutes);

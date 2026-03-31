@@ -10,7 +10,7 @@ import {
   formatJsonOutput,
 } from "../reconcile-openapi.js";
 
-import type { FieldShape, ReconciliationReport } from "../reconcile-openapi.js";
+import type { FieldShape, ReconciliationReport, RouteKey } from "../reconcile-openapi.js";
 
 describe("formatHumanOutput", () => {
   it("reports clean state when no discrepancies", () => {
@@ -89,6 +89,27 @@ describe("formatJsonOutput", () => {
     expect(json.undocumented).toHaveLength(0);
     expect(json.totalCodeRoutes).toBe(10);
   });
+
+  it("includes shapeMismatches in JSON output", () => {
+    const report: ReconciliationReport = {
+      orphanedInSpec: [],
+      undocumented: [],
+      shapeMismatches: [
+        {
+          method: "POST",
+          path: "/v1/members",
+          mismatches: [
+            { field: "bio", issue: "missing_in_spec", codeType: "string", specType: null },
+          ],
+        },
+      ],
+      totalCodeRoutes: 10,
+      totalSpecOperations: 10,
+    };
+    const json = JSON.parse(formatJsonOutput(report)) as ReconciliationReport;
+    expect(json.shapeMismatches).toHaveLength(1);
+    expect(json.shapeMismatches[0]?.mismatches[0]?.field).toBe("bio");
+  });
 });
 
 describe("normalizeParamStyle", () => {
@@ -123,7 +144,7 @@ describe("diffRoutes", () => {
   });
 
   it("detects orphaned spec entries", () => {
-    const code: { method: string; path: string }[] = [];
+    const code: RouteKey[] = [];
     const spec = [{ method: "GET" as const, path: "/v1/old-endpoint" }];
     const result = diffRoutes(code, spec);
     expect(result.orphanedInSpec).toEqual([{ method: "GET", path: "/v1/old-endpoint" }]);
@@ -132,7 +153,7 @@ describe("diffRoutes", () => {
 
   it("detects undocumented routes", () => {
     const code = [{ method: "POST" as const, path: "/v1/new-endpoint" }];
-    const spec: { method: string; path: string }[] = [];
+    const spec: RouteKey[] = [];
     const result = diffRoutes(code, spec);
     expect(result.orphanedInSpec).toEqual([]);
     expect(result.undocumented).toEqual([{ method: "POST", path: "/v1/new-endpoint" }]);
@@ -292,6 +313,25 @@ describe("extractInlineShape", () => {
 
   it("returns null for non-object schema", () => {
     expect(extractInlineShape({ type: "string" })).toBeNull();
+  });
+
+  it("returns null when allOf contains a $ref sub-schema", () => {
+    const schema = {
+      allOf: [
+        { type: "object", required: ["a"], properties: { a: { type: "string" } } },
+        { $ref: "#/components/schemas/Foo" },
+      ],
+    };
+    expect(extractInlineShape(schema)).toBeNull();
+  });
+
+  it("returns null for empty allOf", () => {
+    expect(extractInlineShape({ allOf: [] })).toBeNull();
+  });
+
+  it("returns null when allOf contains a non-object entry", () => {
+    const schema = { allOf: ["not-an-object"] };
+    expect(extractInlineShape(schema)).toBeNull();
   });
 });
 
