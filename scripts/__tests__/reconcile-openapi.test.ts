@@ -5,9 +5,90 @@ import {
   diffRoutes,
   parseSpecOperations,
   compareShapes,
+  formatHumanOutput,
+  formatJsonOutput,
 } from "../reconcile-openapi.js";
 
-import type { FieldShape } from "../reconcile-openapi.js";
+import type { FieldShape, ReconciliationReport } from "../reconcile-openapi.js";
+
+describe("formatHumanOutput", () => {
+  it("reports clean state when no discrepancies", () => {
+    const report: ReconciliationReport = {
+      orphanedInSpec: [],
+      undocumented: [],
+      shapeMismatches: [],
+      totalCodeRoutes: 304,
+      totalSpecOperations: 304,
+    };
+    const output = formatHumanOutput(report);
+    expect(output).toContain("No discrepancies found");
+    expect(output).toContain("304");
+  });
+
+  it("lists orphaned spec entries", () => {
+    const report: ReconciliationReport = {
+      orphanedInSpec: [{ method: "GET", path: "/v1/old" }],
+      undocumented: [],
+      shapeMismatches: [],
+      totalCodeRoutes: 10,
+      totalSpecOperations: 11,
+    };
+    const output = formatHumanOutput(report);
+    expect(output).toContain("Orphaned");
+    expect(output).toContain("GET /v1/old");
+  });
+
+  it("lists undocumented routes", () => {
+    const report: ReconciliationReport = {
+      orphanedInSpec: [],
+      undocumented: [{ method: "POST", path: "/v1/new" }],
+      shapeMismatches: [],
+      totalCodeRoutes: 11,
+      totalSpecOperations: 10,
+    };
+    const output = formatHumanOutput(report);
+    expect(output).toContain("Undocumented");
+    expect(output).toContain("POST /v1/new");
+  });
+
+  it("lists shape mismatches", () => {
+    const report: ReconciliationReport = {
+      orphanedInSpec: [],
+      undocumented: [],
+      shapeMismatches: [
+        {
+          method: "POST",
+          path: "/v1/members",
+          mismatches: [
+            { field: "bio", issue: "missing_in_spec", codeType: "string", specType: null },
+          ],
+        },
+      ],
+      totalCodeRoutes: 10,
+      totalSpecOperations: 10,
+    };
+    const output = formatHumanOutput(report);
+    expect(output).toContain("Schema");
+    expect(output).toContain("POST /v1/members");
+    expect(output).toContain("bio");
+  });
+});
+
+describe("formatJsonOutput", () => {
+  it("returns valid JSON with all fields", () => {
+    const report: ReconciliationReport = {
+      orphanedInSpec: [{ method: "GET", path: "/v1/old" }],
+      undocumented: [],
+      shapeMismatches: [],
+      totalCodeRoutes: 10,
+      totalSpecOperations: 11,
+    };
+    const json = JSON.parse(formatJsonOutput(report)) as ReconciliationReport;
+    expect(json.orphanedInSpec).toHaveLength(1);
+    expect(json.undocumented).toHaveLength(0);
+    expect(json.totalCodeRoutes).toBe(10);
+  });
+});
 
 describe("normalizeParamStyle", () => {
   it("converts Express :param to OpenAPI {param}", () => {

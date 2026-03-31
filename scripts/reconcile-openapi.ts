@@ -1,3 +1,10 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+
+import { parse as parseYaml } from "yaml";
+
+import { buildInventory } from "./audit-routes.js";
+
 export interface RouteKey {
   method: string;
   path: string;
@@ -163,4 +170,104 @@ export function compareShapes(
   }
 
   return mismatches;
+}
+
+export interface RouteShapeMismatch {
+  method: string;
+  path: string;
+  mismatches: ShapeMismatch[];
+}
+
+export interface ReconciliationReport {
+  orphanedInSpec: RouteKey[];
+  undocumented: RouteKey[];
+  shapeMismatches: RouteShapeMismatch[];
+  totalCodeRoutes: number;
+  totalSpecOperations: number;
+}
+
+export function formatHumanOutput(report: ReconciliationReport): string {
+  const lines: string[] = [];
+  const total =
+    report.orphanedInSpec.length + report.undocumented.length + report.shapeMismatches.length;
+
+  lines.push(`Routes in code: ${String(report.totalCodeRoutes)}`);
+  lines.push(`Operations in spec: ${String(report.totalSpecOperations)}`);
+  lines.push("");
+
+  if (total === 0) {
+    lines.push("No discrepancies found.");
+    return lines.join("\n");
+  }
+
+  if (report.orphanedInSpec.length > 0) {
+    lines.push(`Orphaned spec entries (${String(report.orphanedInSpec.length)}):`);
+    for (const r of report.orphanedInSpec) {
+      lines.push(`  ${r.method} ${r.path}`);
+    }
+    lines.push("");
+  }
+
+  if (report.undocumented.length > 0) {
+    lines.push(`Undocumented routes (${String(report.undocumented.length)}):`);
+    for (const r of report.undocumented) {
+      lines.push(`  ${r.method} ${r.path}`);
+    }
+    lines.push("");
+  }
+
+  if (report.shapeMismatches.length > 0) {
+    lines.push(`Schema mismatches (${String(report.shapeMismatches.length)}):`);
+    for (const sm of report.shapeMismatches) {
+      lines.push(`  ${sm.method} ${sm.path}:`);
+      for (const m of sm.mismatches) {
+        lines.push(
+          `    ${m.field}: ${m.issue} (code: ${m.codeType ?? "n/a"}, spec: ${m.specType ?? "n/a"})`,
+        );
+      }
+    }
+    lines.push("");
+  }
+
+  lines.push(`Total discrepancies: ${String(total)}`);
+  return lines.join("\n");
+}
+
+export function formatJsonOutput(report: ReconciliationReport): string {
+  return JSON.stringify(report, null, 2);
+}
+
+const argv1 = process.argv[1] ?? "";
+if (import.meta.url === `file://${argv1}`) {
+  const projectRoot = resolve(dirname(new URL(import.meta.url).pathname), "..");
+  const specPath = resolve(projectRoot, "docs/openapi.yaml");
+  const entryFile = resolve(projectRoot, "apps/api/src/routes/v1.ts");
+
+  const specYaml = readFileSync(specPath, "utf-8");
+  const spec = parseYaml(specYaml) as { paths: Record<string, unknown> };
+  const specOps = parseSpecOperations(spec);
+
+  const codeInventory = buildInventory(entryFile, "/v1", false);
+  const codeRoutes = codeInventory.map((e) => ({ method: e.method, path: e.fullPath }));
+  const specRoutes = specOps.map((o) => ({ method: o.method, path: o.path }));
+
+  const diff = diffRoutes(codeRoutes, specRoutes);
+
+  // Shape comparison placeholder — full Zod introspection deferred to M10
+  const shapeMismatches: RouteShapeMismatch[] = [];
+
+  const report: ReconciliationReport = {
+    ...diff,
+    shapeMismatches,
+    totalCodeRoutes: codeRoutes.length,
+    totalSpecOperations: specOps.length,
+  };
+
+  const isJson = process.argv.includes("--json");
+  console.log(isJson ? formatJsonOutput(report) : formatHumanOutput(report));
+
+  const hasDiscrepancies =
+    diff.orphanedInSpec.length > 0 || diff.undocumented.length > 0 || shapeMismatches.length > 0;
+
+  if (hasDiscrepancies) process.exit(1);
 }
