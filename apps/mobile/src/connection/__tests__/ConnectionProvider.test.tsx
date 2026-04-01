@@ -99,10 +99,10 @@ describe("ConnectionProvider", () => {
 
   it("exposes status and manager on context value", () => {
     const manager = makeManager();
-    let captured: ReturnType<typeof useConnection> | null = null;
+    const ref: { value: ReturnType<typeof useConnection> | null } = { value: null };
 
     function Consumer(): React.JSX.Element {
-      captured = useConnection();
+      ref.value = useConnection();
       return <span>ok</span>;
     }
 
@@ -112,10 +112,9 @@ describe("ConnectionProvider", () => {
       </ConnectionProvider>,
     );
 
-    expect(captured).not.toBeNull();
-    const ctx = captured as ReturnType<typeof useConnection>;
-    expect(ctx.manager).toBe(manager);
-    expect(ctx.status).toBeDefined();
+    expect(ref.value).not.toBeNull();
+    expect(ref.value?.manager).toBe(manager);
+    expect(ref.value?.status).toBeDefined();
   });
 
   it("reports disconnected status when unauthenticated (server snapshot)", () => {
