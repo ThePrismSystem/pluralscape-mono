@@ -41,15 +41,17 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
   function makeStatement<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
     return {
       run(...params: unknown[]): void {
-        // Params are not supported via exec(); write callers using run() with
-        // parameters must use string interpolation or migrate to the async API.
-        void params;
+        if (params.length > 0) {
+          throw new Error("OPFS driver: parameterized queries not yet implemented (see ps-0azs)");
+        }
         void sqlite3.exec(db, sql);
       },
 
       all(...params: unknown[]): TRow[] {
+        if (params.length > 0) {
+          throw new Error("OPFS driver: parameterized queries not yet implemented (see ps-0azs)");
+        }
         const rows: TRow[] = [];
-        void params;
         // The exec callback is invoked synchronously per row in the non-asyncify
         // wa-sqlite build with OPFSCoopSyncVFS (synchronous file access handles).
         void sqlite3.exec(db, sql, (row: (WaSqliteCompatibleType | null)[], columns: string[]) => {
