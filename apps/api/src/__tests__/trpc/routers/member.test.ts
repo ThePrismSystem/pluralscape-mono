@@ -266,6 +266,16 @@ describe("member router", () => {
       expect(vi.mocked(archiveMember).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(archiveMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(archiveMember).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Member not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.member.archive({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
   });
 
   // ── restore ───────────────────────────────────────────────────────
@@ -281,6 +291,16 @@ describe("member router", () => {
       expect(vi.mocked(restoreMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(MOCK_MEMBER_RESULT);
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(restoreMember).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Member not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.member.restore({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
   });
 
   // ── delete ────────────────────────────────────────────────────────
@@ -295,6 +315,16 @@ describe("member router", () => {
       expect(vi.mocked(deleteMember)).toHaveBeenCalledOnce();
       expect(vi.mocked(deleteMember).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(deleteMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(deleteMember).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Member not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.member.delete({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -315,6 +345,20 @@ describe("member router", () => {
       expect(vi.mocked(duplicateMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(MOCK_MEMBER_RESULT);
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(duplicateMember).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Member not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.member.duplicate({
+          systemId: SYSTEM_ID,
+          memberId: MEMBER_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
   });
 
   // ── listMemberships ───────────────────────────────────────────────
@@ -333,6 +377,16 @@ describe("member router", () => {
       expect(vi.mocked(listAllMemberMemberships).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(listAllMemberMemberships).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(mockResult);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(listAllMemberMemberships).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Member not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.member.listMemberships({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 });
