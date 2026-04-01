@@ -28,7 +28,8 @@ export function createCrdtQueryBridge(deps: { engine: DocumentSnapshotProvider }
         queryKey: opts.queryKey,
         queryFn: (): TData => {
           const doc = deps.engine.getDocumentSnapshot(opts.documentId);
-          if (!doc) throw new Error(`Document ${opts.documentId} not loaded in sync engine`);
+          if (doc === null || doc === undefined)
+            throw new Error(`Document ${opts.documentId} not loaded in sync engine`);
           return opts.project(doc);
         },
       };

@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useSyncExternalStore,
-} from "react";
+import { createContext, useContext, useEffect, useMemo, useSyncExternalStore } from "react";
 
 import { useAuth } from "../auth/index.js";
 
@@ -41,8 +34,8 @@ export function ConnectionProvider({
     }
   }, [manager, auth.snapshot]);
 
-  const subscribe = useCallback(
-    (listener: (state: ConnectionState) => void) => manager.subscribe(listener),
+  const subscribe = useMemo(
+    () => (listener: (state: ConnectionState) => void) => manager.subscribe(listener),
     [manager],
   );
 

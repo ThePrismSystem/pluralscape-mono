@@ -173,10 +173,23 @@ export function createIndexedDbStorageAdapter(
         tx.objectStore(STORE_SNAPSHOTS).getAllKeys() as IDBRequest<string[]>,
       );
       const changesIndex = tx.objectStore(STORE_CHANGES).index("byDoc");
-      const changeRecords = await idbRequest<ChangeRecord[]>(
-        changesIndex.getAll() as IDBRequest<ChangeRecord[]>,
-      );
-      const changeIds = changeRecords.map((r) => r.documentId);
+      const changeIds = await new Promise<string[]>((resolve, reject) => {
+        const ids: string[] = [];
+        const req = changesIndex.openKeyCursor(null, "nextunique");
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (cursor) {
+            const key = cursor.key;
+            if (typeof key === "string") ids.push(key);
+            cursor.continue();
+          } else {
+            resolve(ids);
+          }
+        };
+        req.onerror = () => {
+          reject(req.error instanceof Error ? req.error : new Error("IDB cursor error"));
+        };
+      });
 
       const all = new Set([...snapshotIds, ...changeIds]);
       return [...all] as SyncDocumentId[];

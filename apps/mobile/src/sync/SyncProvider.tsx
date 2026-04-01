@@ -13,8 +13,7 @@ const Ctx = createContext<SyncContextValue | null>(null);
 // Engine is always null in this scaffold — full wiring (WebSocket transport,
 // key resolver, replication profile) is assembled in a later task once the
 // relay transport layer is finalised.
-const DEFERRED_ENGINE: SyncEngine | null = null;
-const INITIAL_VALUE: SyncContextValue = { engine: DEFERRED_ENGINE, isBootstrapped: false };
+const INITIAL_VALUE: SyncContextValue = { engine: null, isBootstrapped: false };
 
 export function SyncProvider({ children }: { readonly children: ReactNode }): React.JSX.Element {
   return <Ctx.Provider value={INITIAL_VALUE}>{children}</Ctx.Provider>;
