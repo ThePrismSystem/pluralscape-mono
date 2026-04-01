@@ -180,6 +180,33 @@ describe("AuthProvider", () => {
     expect(machine.getSnapshot().state).toBe("unauthenticated");
   });
 
+  it("logout re-throws after clearToken failure but keeps state unauthenticated", async () => {
+    const machine = new AuthStateMachine();
+    const failingTokenStore: TokenStore = {
+      getToken: () => Promise.resolve(null),
+      setToken: () => Promise.resolve(),
+      clearToken: () => Promise.reject(new Error("storage unavailable")),
+    };
+
+    const captured: AuthContextValue[] = [];
+    function Consumer(): React.JSX.Element {
+      captured.push(useAuth());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <AuthProvider machine={machine} tokenStore={failingTokenStore}>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    const auth = captured[0] as AuthContextValue;
+    await auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys);
+
+    await expect(auth.logout()).rejects.toThrow("storage unavailable");
+    expect(machine.getSnapshot().state).toBe("unauthenticated");
+  });
+
   it("lock dispatches LOCK", async () => {
     const { machine, tokenStore } = await makeProviderDeps();
     const dispatchSpy = vi.spyOn(machine, "dispatch");
