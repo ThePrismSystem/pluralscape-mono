@@ -6,14 +6,18 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "eslint": "^10.0.3",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.0"
   },
   "scripts": {
+    "generate": "bun scripts/generate-types.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --max-warnings 0 .",
