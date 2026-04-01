@@ -26,7 +26,20 @@ export class ConnectionManager {
       maxBackoffMs: config.maxBackoffMs ?? 30_000,
     };
     this.stateMachine = new ConnectionStateMachine(machineConfig);
-    this.sseClient = new SseClient({ baseUrl: config.baseUrl });
+    this.sseClient = new SseClient(
+      { baseUrl: config.baseUrl },
+      {
+        onConnected: () => {
+          this.stateMachine.dispatch({ type: "CONNECTED" });
+        },
+        onDisconnected: () => {
+          this.handleConnectionLost();
+        },
+        onError: () => {
+          this.handleConnectionLost();
+        },
+      },
+    );
   }
 
   getSnapshot(): ConnectionState {
@@ -38,7 +51,7 @@ export class ConnectionManager {
   }
 
   onAuthStateChange(snapshot: AuthStateSnapshot): void {
-    if (snapshot.state === "unlocked" && snapshot.credentials !== null) {
+    if (snapshot.state === "unlocked") {
       const { sessionToken, systemId } = snapshot.credentials;
       this.connect(sessionToken, systemId);
     } else {
@@ -49,7 +62,6 @@ export class ConnectionManager {
   private connect(token: string, systemId: string): void {
     this.stateMachine.dispatch({ type: "CONNECT", token, systemId });
     this.sseClient.connect(token);
-    this.stateMachine.dispatch({ type: "CONNECTED" });
   }
 
   disconnect(): void {

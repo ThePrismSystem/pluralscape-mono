@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SseClient } from "../sse-client.js";
 
+import type { SseLifecycleCallbacks } from "../connection-types.js";
 import type { EventSourceMessage, FetchEventSourceInit } from "@microsoft/fetch-event-source";
 
 vi.mock("@microsoft/fetch-event-source", () => ({
@@ -11,13 +12,21 @@ vi.mock("@microsoft/fetch-event-source", () => ({
 
 const mockFetchEventSource = vi.mocked(fetchEventSource);
 
+function makeCallbacks(): SseLifecycleCallbacks {
+  return {
+    onConnected: vi.fn(),
+    onDisconnected: vi.fn(),
+    onError: vi.fn(),
+  };
+}
+
 beforeEach(() => {
   mockFetchEventSource.mockReset();
 });
 
 describe("SseClient", () => {
   it("connects to the notifications endpoint with Authorization header", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     client.connect("my-token");
 
     expect(mockFetchEventSource).toHaveBeenCalledOnce();
@@ -30,15 +39,15 @@ describe("SseClient", () => {
   });
 
   it("does not include token in the URL", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     client.connect("secret-token");
 
     const [url] = mockFetchEventSource.mock.calls[0] as [string, unknown];
     expect(url).not.toContain("secret-token");
   });
 
-  it("emits parsed JSON events to listeners", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+  it("emits parsed JSON events wrapped in SseEvent to listeners", () => {
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     const listener = vi.fn();
     client.onEvent(listener);
 
@@ -48,11 +57,11 @@ describe("SseClient", () => {
     });
 
     client.connect("tok");
-    expect(listener).toHaveBeenCalledWith({ type: "notification" });
+    expect(listener).toHaveBeenCalledWith({ type: "message", data: { type: "notification" } });
   });
 
-  it("emits raw string data when JSON parse fails", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+  it("drops malformed JSON instead of passing to listeners", () => {
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     const listener = vi.fn();
     client.onEvent(listener);
 
@@ -62,11 +71,11 @@ describe("SseClient", () => {
     });
 
     client.connect("tok");
-    expect(listener).toHaveBeenCalledWith("plain-text");
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("emits events to multiple listeners", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     const l1 = vi.fn();
     const l2 = vi.fn();
     client.onEvent(l1);
@@ -78,12 +87,12 @@ describe("SseClient", () => {
     });
 
     client.connect("tok");
-    expect(l1).toHaveBeenCalledWith("ping");
-    expect(l2).toHaveBeenCalledWith("ping");
+    expect(l1).toHaveBeenCalledWith({ type: "message", data: "ping" });
+    expect(l2).toHaveBeenCalledWith({ type: "message", data: "ping" });
   });
 
   it("unsubscribe stops receiving events", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     const listener = vi.fn();
     const off = client.onEvent(listener);
     off();
@@ -98,7 +107,7 @@ describe("SseClient", () => {
   });
 
   it("disconnect sets isConnected to false", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
 
     mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
       void opts.onopen?.(new Response());
@@ -112,14 +121,14 @@ describe("SseClient", () => {
   });
 
   it("does not call fetchEventSource if already connected", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     client.connect("tok");
     client.connect("tok2");
     expect(mockFetchEventSource).toHaveBeenCalledOnce();
   });
 
   it("passes an AbortSignal to fetchEventSource", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
     client.connect("tok");
 
     const [, options] = mockFetchEventSource.mock.calls[0] as [string, { signal: AbortSignal }];
@@ -127,7 +136,7 @@ describe("SseClient", () => {
   });
 
   it("includes Last-Event-ID header after reconnect when onclose clears controller", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" });
+    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
 
     mockFetchEventSource.mockImplementationOnce((_url: RequestInfo, opts: FetchEventSourceInit) => {
       const msg: EventSourceMessage = { id: "evt-42", data: '"data"', event: "", retry: undefined };
@@ -145,5 +154,66 @@ describe("SseClient", () => {
       { headers: Record<string, string> },
     ];
     expect(secondCall[1].headers["Last-Event-ID"]).toBe("evt-42");
+  });
+
+  it("invokes onConnected callback on open", () => {
+    const onConnected = vi.fn();
+    const client = new SseClient(
+      { baseUrl: "https://example.com" },
+      {
+        onConnected,
+        onDisconnected: vi.fn(),
+        onError: vi.fn(),
+      },
+    );
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      void opts.onopen?.(new Response());
+      return Promise.resolve();
+    });
+
+    client.connect("tok");
+    expect(onConnected).toHaveBeenCalledOnce();
+  });
+
+  it("invokes onError callback on error", () => {
+    const onError = vi.fn();
+    const client = new SseClient(
+      { baseUrl: "https://example.com" },
+      {
+        onConnected: vi.fn(),
+        onDisconnected: vi.fn(),
+        onError,
+      },
+    );
+    const error = new Error("connection failed");
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onerror?.(error);
+      return Promise.resolve();
+    });
+
+    client.connect("tok");
+    expect(onError).toHaveBeenCalledWith(error);
+  });
+
+  it("invokes onDisconnected callback on close", () => {
+    const onDisconnected = vi.fn();
+    const client = new SseClient(
+      { baseUrl: "https://example.com" },
+      {
+        onConnected: vi.fn(),
+        onDisconnected,
+        onError: vi.fn(),
+      },
+    );
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onclose?.();
+      return Promise.resolve();
+    });
+
+    client.connect("tok");
+    expect(onDisconnected).toHaveBeenCalledOnce();
   });
 });

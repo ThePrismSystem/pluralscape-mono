@@ -1,6 +1,6 @@
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 
-export type SseEventListener = (event: unknown) => void;
+import type { SseEventListener, SseLifecycleCallbacks } from "./connection-types.js";
 
 export interface SseClientConfig {
   readonly baseUrl: string;
@@ -10,13 +10,15 @@ const NOTIFICATIONS_PATH = "/api/v1/notifications/stream";
 
 export class SseClient {
   private readonly config: SseClientConfig;
+  private readonly callbacks: SseLifecycleCallbacks;
   private abortController: AbortController | null = null;
   private lastEventId: string | null = null;
   private readonly listeners = new Set<SseEventListener>();
   private connected = false;
 
-  constructor(config: SseClientConfig) {
+  constructor(config: SseClientConfig, callbacks: SseLifecycleCallbacks) {
     this.config = config;
+    this.callbacks = callbacks;
   }
 
   connect(token: string): void {
@@ -38,6 +40,7 @@ export class SseClient {
       signal,
       onopen: (): Promise<void> => {
         this.connected = true;
+        this.callbacks.onConnected();
         return Promise.resolve();
       },
       onmessage: (ev) => {
@@ -48,18 +51,21 @@ export class SseClient {
         try {
           parsed = JSON.parse(ev.data) as unknown;
         } catch {
-          parsed = ev.data;
+          return;
         }
+        const event = { type: "message" as const, data: parsed };
         for (const listener of this.listeners) {
-          listener(parsed);
+          listener(event);
         }
       },
       onclose: () => {
         this.connected = false;
         this.abortController = null;
+        this.callbacks.onDisconnected();
       },
-      onerror: () => {
+      onerror: (err: unknown) => {
         this.connected = false;
+        this.callbacks.onError(err);
       },
     });
   }
