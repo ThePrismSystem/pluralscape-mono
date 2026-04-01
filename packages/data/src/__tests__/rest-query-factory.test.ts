@@ -44,6 +44,22 @@ describe("createRestQueryFactory", () => {
     expect(result).toEqual(payload);
   });
 
+  it("queryFn passes init params to API client", async () => {
+    const apiClient = makeApiClient({ ok: true });
+    const factory = createRestQueryFactory({
+      apiClient,
+      getMasterKey: () => null,
+    });
+    const init = { params: { query: { limit: 10 } } };
+    const opts = factory.queryOptions({
+      queryKey: ["items"],
+      path: "/health" as never,
+      init: init as never,
+    });
+    await opts.queryFn();
+    expect(apiClient.GET).toHaveBeenCalledWith("/health", init);
+  });
+
   it("queryFn throws when API returns an error", async () => {
     const factory = createRestQueryFactory({
       apiClient: makeApiClient(undefined, { message: "Not found" }),
