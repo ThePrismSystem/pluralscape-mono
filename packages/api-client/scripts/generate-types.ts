@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,5 +7,5 @@ const specPath = resolve(__dirname, "../../../docs/openapi.yaml");
 const outputPath = resolve(__dirname, "../src/generated/api-types.ts");
 
 console.log(`Generating types from ${specPath}...`);
-execSync(`npx openapi-typescript ${specPath} -o ${outputPath}`, { stdio: "inherit" });
+execFileSync("npx", ["openapi-typescript", specPath, "-o", outputPath], { stdio: "inherit" });
 console.log(`Types written to ${outputPath}`);
