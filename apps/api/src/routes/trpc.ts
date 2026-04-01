@@ -2,6 +2,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { Hono } from "hono";
 
 import { getDb } from "../lib/db.js";
+import { logger } from "../lib/logger.js";
 import { validateSession } from "../lib/session-auth.js";
 import { appRouter, createTRPCContext } from "../trpc/index.js";
 
@@ -19,10 +20,15 @@ trpcRoute.use("*", async (c, next) => {
   if (authHeader) {
     const match = /^Bearer\s+(.+)$/i.exec(authHeader);
     if (match?.[1]) {
-      const db = await getDb();
-      const result = await validateSession(db, match[1]);
-      if (result.ok) {
-        c.set("auth", result.auth);
+      try {
+        const db = await getDb();
+        const result = await validateSession(db, match[1]);
+        if (result.ok) {
+          c.set("auth", result.auth);
+        }
+      } catch (err) {
+        logger.error("tRPC auth middleware: session validation failed", { err });
+        throw err;
       }
     }
   }
