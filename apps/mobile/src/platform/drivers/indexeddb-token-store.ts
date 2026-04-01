@@ -15,7 +15,15 @@ interface TokenRecord {
   value: string;
 }
 
-/** IndexedDB-backed token store for web auth persistence. */
+/**
+ * IndexedDB-backed token store for web auth persistence.
+ *
+ * Threat model: tokens are stored as plaintext strings in IndexedDB, which is
+ * accessible to any JS running on the same origin. An XSS vulnerability could
+ * read stored tokens. This is a known web platform limitation — there is no
+ * SecureStore equivalent on web. httpOnly cookies would be preferable if the
+ * API supports them.
+ */
 export function createIndexedDbTokenStore(): TokenStore {
   const dbPromise = openIdb(DB_NAME, DB_VERSION, (db) => {
     if (!db.objectStoreNames.contains(STORE_TOKENS)) {
