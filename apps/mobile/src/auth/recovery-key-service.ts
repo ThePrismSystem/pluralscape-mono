@@ -8,6 +8,7 @@ import {
 } from "@pluralscape/crypto";
 
 import type { KdfMasterKey, RecoveryKeyResult } from "@pluralscape/crypto";
+import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 export class RecoveryKeyService {
   generate(masterKey: KdfMasterKey): RecoveryKeyResult {
@@ -19,10 +20,13 @@ export class RecoveryKeyService {
     return recoverMasterKey(toRecoveryKeyDisplay(displayKey), payload);
   }
 
-  regenerate(masterKey: KdfMasterKey): { displayKey: string; serializedBackup: Uint8Array } {
+  regenerate(masterKey: KdfMasterKey): {
+    displayKey: RecoveryKeyDisplay;
+    serializedBackup: Uint8Array;
+  } {
     const result = regenerateRecoveryKey(masterKey);
     return {
-      displayKey: result.newRecoveryKey.displayKey as string,
+      displayKey: result.newRecoveryKey.displayKey,
       serializedBackup: result.serializedBackup,
     };
   }

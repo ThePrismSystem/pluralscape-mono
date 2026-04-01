@@ -11,14 +11,10 @@ const DB_NAME = "pluralscape-sync.db";
  * Each run/all/get call prepares, executes, and finalizes the statement in one shot to
  * prevent native statement handle leaks.
  */
-export async function createExpoSqliteDriver(): Promise<SqliteDriver> {
-  // expo-sqlite is synchronous (JSI); we use await Promise.resolve() to satisfy
-  // the @typescript-eslint/require-await rule while keeping the async signature.
-  await Promise.resolve();
-
+export function createExpoSqliteDriver(): Promise<SqliteDriver> {
   const db: SQLiteDatabase = openDatabaseSync(DB_NAME);
 
-  return {
+  const driver: SqliteDriver = {
     prepare<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
       return {
         run(...params: unknown[]): void {
@@ -67,4 +63,6 @@ export async function createExpoSqliteDriver(): Promise<SqliteDriver> {
       db.closeSync();
     },
   };
+
+  return Promise.resolve(driver);
 }

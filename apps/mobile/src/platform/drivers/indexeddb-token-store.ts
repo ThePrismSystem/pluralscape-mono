@@ -1,3 +1,5 @@
+import { idbRequest } from "./indexeddb-utils.js";
+
 const DB_NAME = "pluralscape-auth";
 const DB_VERSION = 1;
 const STORE_TOKENS = "tokens";
@@ -7,17 +9,6 @@ export interface TokenStore {
   getToken(): Promise<string | null>;
   setToken(token: string): Promise<void>;
   clearToken(): Promise<void>;
-}
-
-function idbRequest<T>(req: IDBRequest<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    req.onsuccess = () => {
-      resolve(req.result);
-    };
-    req.onerror = () => {
-      reject(new Error(req.error?.message ?? "IDBRequest failed"));
-    };
-  });
 }
 
 function openDb(): Promise<IDBDatabase> {
