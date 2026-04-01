@@ -11,23 +11,12 @@ const SystemIdInputSchema = z.object({
   systemId: brandedIdQueryParam("sys_"),
 });
 
-const enforceSystemAccess = middleware(async ({ ctx, getRawInput, next }) => {
-  // ctx.auth is guaranteed non-null by protectedProcedure upstream, but the
-  // base middleware type doesn't carry that narrowing. Guard defensively.
+const enforceSystemAccess = middleware(async ({ ctx, input, next }) => {
   if (!ctx.auth) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
   }
 
-  const rawInput = await getRawInput();
-  const parsed = SystemIdInputSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "systemId is required and must be a valid sys_<uuid> identifier",
-    });
-  }
-
-  const { systemId } = parsed.data;
+  const { systemId } = input as z.infer<typeof SystemIdInputSchema>;
 
   if (!ctx.auth.ownedSystemIds.has(systemId)) {
     throw new TRPCError({ code: "NOT_FOUND", message: "System not found" });
