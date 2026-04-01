@@ -3,8 +3,8 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Redirect, Slot } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { resources } from "../locales";
 import { AuthProvider, AuthStateMachine, createTokenStore, useAuth } from "../src/auth/index.js";
@@ -18,15 +18,60 @@ import type { TokenStore } from "../src/auth/index.js";
 import type { PlatformContext } from "../src/platform/index.js";
 import type { ReactNode } from "react";
 
-const CONNECTION_CONFIG = {
-  baseUrl: getApiBaseUrl(),
-  maxBackoffMs: 30_000,
-  baseBackoffMs: 1_000,
-};
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  retryButton: {
+    minWidth: 44,
+    minHeight: 44,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  lockTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  lockSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+});
 
 function LoadingSpinner(): React.JSX.Element {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+    <View style={styles.centered}>
       <ActivityIndicator size="large" />
     </View>
   );
@@ -40,30 +85,30 @@ function ErrorScreen({
   readonly onRetry: () => void;
 }): React.JSX.Element {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>
-        {"Initialization failed"}
-      </Text>
-      <Text style={{ fontSize: 14, color: "#666", marginBottom: 24, textAlign: "center" }}>
-        {error.message}
+    <View style={styles.errorContainer}>
+      <Text style={styles.errorTitle}>{"Initialization failed"}</Text>
+      <Text style={styles.errorMessage}>
+        {__DEV__ ? error.message : "An unexpected error occurred. Please try again."}
       </Text>
       <Pressable
         onPress={onRetry}
         accessibilityRole="button"
         accessibilityLabel="Retry initialization"
-        style={{
-          minWidth: 44,
-          minHeight: 44,
-          paddingHorizontal: 24,
-          paddingVertical: 12,
-          backgroundColor: "#007AFF",
-          borderRadius: 8,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        style={styles.retryButton}
       >
-        <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>{"Retry"}</Text>
+        <Text style={styles.retryButtonText}>{"Retry"}</Text>
       </Pressable>
+    </View>
+  );
+}
+
+function LockScreen(): React.JSX.Element {
+  return (
+    <View style={styles.centered}>
+      <Text style={styles.lockTitle}>{"App Locked"}</Text>
+      <Text style={styles.lockSubtitle}>
+        {"Unlock to continue. Biometric/PIN unlock coming soon."}
+      </Text>
     </View>
   );
 }
@@ -76,7 +121,7 @@ function AuthGate({ children }: { readonly children: ReactNode }): React.JSX.Ele
   }
 
   if (snapshot.state === "locked") {
-    return <LoadingSpinner />;
+    return <LockScreen />;
   }
 
   return <>{children}</>;
@@ -94,8 +139,17 @@ export default function RootLayout(): React.JSX.Element {
   const authMachineRef = useRef<AuthStateMachine | null>(null);
   authMachineRef.current ??= new AuthStateMachine();
 
+  const connectionConfig = useMemo(
+    () => ({
+      baseUrl: getApiBaseUrl(),
+      maxBackoffMs: 30_000,
+      baseBackoffMs: 1_000,
+    }),
+    [],
+  );
+
   const connectionManagerRef = useRef<ConnectionManager | null>(null);
-  connectionManagerRef.current ??= new ConnectionManager(CONNECTION_CONFIG);
+  connectionManagerRef.current ??= new ConnectionManager(connectionConfig);
 
   const initPlatform = useCallback(() => {
     setInitError(null);

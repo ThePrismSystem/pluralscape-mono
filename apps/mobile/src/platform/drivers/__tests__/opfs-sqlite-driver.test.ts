@@ -157,6 +157,17 @@ describe("createOpfsSqliteDriver", () => {
       driver.close();
       expect(mockClose).toHaveBeenCalledWith(1);
     });
+
+    it("surfaces close error on subsequent flush()", async () => {
+      mockClose.mockRejectedValueOnce(new Error("VFS lock stuck"));
+
+      driver.close();
+
+      // Allow the .catch handler to run
+      await new Promise((r) => setTimeout(r, 0));
+
+      await expect(driver.flush()).rejects.toThrow("VFS lock stuck");
+    });
   });
 
   describe("store-and-check error guard", () => {

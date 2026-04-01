@@ -19,6 +19,9 @@ vi.mock("react-native", () => ({
     React.createElement("span", null, children),
   Pressable: ({ children, onPress }: { children?: React.ReactNode; onPress?: () => void }) =>
     React.createElement("button", { onClick: onPress }, children),
+  StyleSheet: {
+    create: <T extends Record<string, unknown>>(styles: T): T => styles,
+  },
 }));
 
 vi.mock("expo-router", () => ({
