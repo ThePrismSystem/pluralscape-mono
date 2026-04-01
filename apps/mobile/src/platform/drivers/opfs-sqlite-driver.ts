@@ -13,7 +13,8 @@ const DB_NAME = "pluralscape-sync.db";
  * The SqliteDriver interface requires synchronous run/all/get/exec/transaction methods.
  * This driver bridges that gap by:
  *
- *   - exec() / run(): fire-and-forget via `void` — safe for DDL and write-only DML
+ *   - exec() / run(): store-and-check via trackExec — the Promise is cached and any
+ *     rejection is surfaced on the next operation or explicit flush()
  *   - all() / get(): use the exec row-accumulator pattern with synchronous callback —
  *     the callback is invoked per-row within the async iterator. Because
  *     OPFSCoopSyncVFS uses FileSystemSyncAccessHandle, the non-asyncify wa-sqlite
@@ -22,7 +23,7 @@ const DB_NAME = "pluralscape-sync.db";
  * Production deployments MUST run this driver inside a dedicated Web Worker where
  * Atomics.wait is available for blocking synchronous behaviour.
  */
-export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
+export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush(): Promise<void> }> {
   // Dynamic imports keep wa-sqlite out of native bundles
   const [{ default: SQLiteESMFactory }, SQLite, { OPFSCoopSyncVFS }] = await Promise.all([
     import("@journeyapps/wa-sqlite/dist/wa-sqlite.mjs"),
@@ -38,13 +39,36 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
 
   const db = await sqlite3.open_v2(DB_NAME);
 
+  let lastExecPromise: Promise<number> = Promise.resolve(0);
+  let lastError: Error | null = null;
+
+  function trackExec(
+    sql: string,
+    callback?: (row: (WaSqliteCompatibleType | null)[], columns: string[]) => void,
+  ): void {
+    checkLastError();
+    const promise = callback ? sqlite3.exec(db, sql, callback) : sqlite3.exec(db, sql);
+    lastExecPromise = promise;
+    promise.catch((err: unknown) => {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    });
+  }
+
+  function checkLastError(): void {
+    if (lastError !== null) {
+      const err = lastError;
+      lastError = null;
+      throw err;
+    }
+  }
+
   function makeStatement<TRow = Record<string, unknown>>(sql: string): SqliteStatement<TRow> {
     return {
       run(...params: unknown[]): void {
         if (params.length > 0) {
           throw new Error("OPFS driver: parameterized queries not yet implemented (see ps-0azs)");
         }
-        void sqlite3.exec(db, sql);
+        trackExec(sql);
       },
 
       all(...params: unknown[]): TRow[] {
@@ -54,7 +78,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
         const rows: TRow[] = [];
         // The exec callback is invoked synchronously per row in the non-asyncify
         // wa-sqlite build with OPFSCoopSyncVFS (synchronous file access handles).
-        void sqlite3.exec(db, sql, (row: (WaSqliteCompatibleType | null)[], columns: string[]) => {
+        trackExec(sql, (row: (WaSqliteCompatibleType | null)[], columns: string[]) => {
           const obj = Object.create(null) as Record<string, unknown>;
           for (let i = 0; i < columns.length; i++) {
             const col = columns[i];
@@ -79,23 +103,29 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver> {
     },
 
     exec(sql: string): void {
-      void sqlite3.exec(db, sql);
+      trackExec(sql);
     },
 
     transaction<T>(fn: () => T): T {
-      void sqlite3.exec(db, "BEGIN");
+      trackExec("BEGIN");
       try {
         const result = fn();
-        void sqlite3.exec(db, "COMMIT");
+        trackExec("COMMIT");
         return result;
       } catch (err) {
-        void sqlite3.exec(db, "ROLLBACK");
+        trackExec("ROLLBACK");
         throw err;
       }
     },
 
     close(): void {
+      checkLastError();
       void sqlite3.close(db);
+    },
+
+    async flush(): Promise<void> {
+      await lastExecPromise;
+      checkLastError();
     },
   };
 }
