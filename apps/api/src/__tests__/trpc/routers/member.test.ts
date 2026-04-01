@@ -259,7 +259,7 @@ describe("member router", () => {
 
   describe("member.listMemberships", () => {
     it("calls listAllMemberMemberships with correct systemId and memberId", async () => {
-      const mockResult = { memberships: [] };
+      const mockResult = { groups: [], structureEntities: [] };
       vi.mocked(listAllMemberMemberships).mockResolvedValue(mockResult);
       const caller = makeCaller();
       const result = await caller.member.listMemberships({
