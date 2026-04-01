@@ -96,4 +96,36 @@ describe("createIndexedDbOfflineQueueAdapter", () => {
     const entries = await adapter.drainUnsynced();
     expect(entries[0]?.envelope).not.toHaveProperty("seq");
   });
+
+  it("concurrent enqueue operations complete without data loss", async () => {
+    const adapter = freshAdapter();
+    const DOC_B = "doc-b" as SyncDocumentId;
+    const results = await Promise.all([
+      adapter.enqueue(DOC_A, makeEnvelope(DOC_A)),
+      adapter.enqueue(DOC_B, makeEnvelope(DOC_B)),
+      adapter.enqueue(DOC_A, makeEnvelope(DOC_A)),
+    ]);
+
+    expect(results).toHaveLength(3);
+    expect(new Set(results).size).toBe(3);
+
+    const entries = await adapter.drainUnsynced();
+    expect(entries).toHaveLength(3);
+  });
+
+  it("concurrent markSynced and drainUnsynced return consistent results", async () => {
+    const adapter = freshAdapter();
+    const id1 = await adapter.enqueue(DOC_A, makeEnvelope(DOC_A));
+    const id2 = await adapter.enqueue(DOC_A, makeEnvelope(DOC_A));
+    const id3 = await adapter.enqueue(DOC_A, makeEnvelope(DOC_A));
+
+    await Promise.all([
+      adapter.markSynced(id1, 1),
+      adapter.markSynced(id2, 2),
+      adapter.drainUnsynced(),
+    ]);
+
+    const afterEntries = await adapter.drainUnsynced();
+    expect(afterEntries.map((e) => e.id)).toEqual([id3]);
+  });
 });
