@@ -5,7 +5,7 @@ import { createCallerFactory, router } from "../../../trpc/trpc.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { TRPCContext } from "../../../trpc/context.js";
-import type { MemberId, SystemId } from "@pluralscape/types";
+import type { MemberId, SystemId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -72,8 +72,8 @@ const MOCK_MEMBER_RESULT = {
   systemId: SYSTEM_ID,
   encryptedData: "base64data==",
   version: 1,
-  createdAt: 1_700_000_000_000,
-  updatedAt: 1_700_000_000_000,
+  createdAt: 1_700_000_000_000 as UnixMillis,
+  updatedAt: 1_700_000_000_000 as UnixMillis,
   archived: false,
   archivedAt: null,
 };
@@ -134,7 +134,12 @@ describe("member router", () => {
 
   describe("member.list", () => {
     it("calls listMembers and returns result", async () => {
-      const mockResult = { items: [MOCK_MEMBER_RESULT], nextCursor: null };
+      const mockResult = {
+        data: [MOCK_MEMBER_RESULT],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      };
       vi.mocked(listMembers).mockResolvedValue(mockResult);
       const caller = makeCaller();
       const result = await caller.member.list({ systemId: SYSTEM_ID });
@@ -145,7 +150,12 @@ describe("member router", () => {
     });
 
     it("passes cursor, limit, groupId, and includeArchived as opts", async () => {
-      vi.mocked(listMembers).mockResolvedValue({ items: [], nextCursor: null });
+      vi.mocked(listMembers).mockResolvedValue({
+        data: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      });
       const caller = makeCaller();
       await caller.member.list({
         systemId: SYSTEM_ID,

@@ -188,7 +188,10 @@ describe("auth router", () => {
     });
 
     it("returns paginated sessions", async () => {
-      const mockResult = { sessions: [{ id: MOCK_SESSION_ID }], nextCursor: null };
+      const mockResult = {
+        sessions: [{ id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: null }],
+        nextCursor: null,
+      };
       vi.mocked(listSessions).mockResolvedValue(mockResult);
       const caller = makeCaller(MOCK_AUTH);
       const result = await caller.auth.listSessions({});
