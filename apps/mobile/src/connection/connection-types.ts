@@ -9,8 +9,10 @@ export type ConnectionState =
 
 export interface ConnectionConfig {
   readonly baseUrl: string;
-  readonly maxBackoffMs: number; // default 30_000
-  readonly baseBackoffMs: number; // default 1_000
+  /** @default 30_000 */
+  readonly maxBackoffMs: number;
+  /** @default 1_000 */
+  readonly baseBackoffMs: number;
 }
 
 export type ConnectionEvent =
