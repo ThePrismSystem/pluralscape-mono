@@ -20,6 +20,7 @@
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "expo-localization": "~55.0.8",
+    "expo-sqlite": "~16.0.10",
     "@tanstack/react-query": "^5.66.9",
     "@expo/metro-runtime": "~55.0.6",
     "expo": "~55.0.5",
