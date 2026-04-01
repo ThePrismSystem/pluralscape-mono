@@ -76,6 +76,19 @@ export default defineConfig({
           hookTimeout: 10000,
         },
       },
+      {
+        test: {
+          name: "mobile",
+          root: "apps/mobile",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.{ts,tsx}"],
+          exclude: ["**/*.integration.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 10000,
+          hookTimeout: 10000,
+        },
+      },
     ],
     coverage: {
       provider: "v8",
