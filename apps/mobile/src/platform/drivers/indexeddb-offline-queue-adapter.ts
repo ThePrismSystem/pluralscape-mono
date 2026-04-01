@@ -1,21 +1,11 @@
+import { idbRequest } from "./indexeddb-utils.js";
+
 import type { EncryptedChangeEnvelope } from "@pluralscape/sync";
 import type { OfflineQueueAdapter, OfflineQueueEntry } from "@pluralscape/sync/adapters";
 import type { SyncDocumentId } from "@pluralscape/types";
 
 const DB_VERSION = 1;
 const STORE_QUEUE = "queue";
-
-/** Wraps an IDBRequest into a Promise. */
-function idbRequest<T>(req: IDBRequest<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    req.onsuccess = () => {
-      resolve(req.result);
-    };
-    req.onerror = () => {
-      reject(new Error(req.error?.message ?? "IDBRequest failed"));
-    };
-  });
-}
 
 function openDb(dbName: string): Promise<IDBDatabase> {
   return new Promise<IDBDatabase>((resolve, reject) => {
@@ -144,9 +134,11 @@ export function createIndexedDbOfflineQueueAdapter(
     },
 
     close(): void {
-      void dbPromise.then((db) => {
-        db.close();
-      });
+      void dbPromise
+        .then((db) => {
+          db.close();
+        })
+        .catch(() => undefined);
     },
   };
 }
