@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import React from "react";
 import { renderToString } from "react-dom/server";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthStateMachine } from "../auth-state-machine.js";
 import { AuthProvider, useAuth } from "../AuthProvider.js";
@@ -122,5 +122,114 @@ describe("AuthProvider", () => {
     );
 
     expect(machine.getSnapshot().state).toBe("unauthenticated");
+  });
+
+  it("login dispatches LOGIN and persists token", async () => {
+    const { machine, tokenStore } = await makeProviderDeps();
+    const dispatchSpy = vi.spyOn(machine, "dispatch");
+    const setTokenSpy = vi.spyOn(tokenStore, "setToken");
+
+    const captured: AuthContextValue[] = [];
+    function Consumer(): React.JSX.Element {
+      captured.push(useAuth());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <AuthProvider machine={machine} tokenStore={tokenStore}>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    const auth = captured[0] as AuthContextValue;
+    await auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys);
+
+    expect(dispatchSpy).toHaveBeenCalledWith({
+      type: "LOGIN",
+      credentials: fakeCredentials,
+      masterKey: fakeMasterKey,
+      identityKeys: fakeIdentityKeys,
+    });
+    expect(setTokenSpy).toHaveBeenCalledWith("tok-abc");
+    expect(machine.getSnapshot().state).toBe("unlocked");
+  });
+
+  it("logout dispatches LOGOUT and clears token", async () => {
+    const { machine, tokenStore } = await makeProviderDeps();
+    const dispatchSpy = vi.spyOn(machine, "dispatch");
+    const clearTokenSpy = vi.spyOn(tokenStore, "clearToken");
+
+    const captured: AuthContextValue[] = [];
+    function Consumer(): React.JSX.Element {
+      captured.push(useAuth());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <AuthProvider machine={machine} tokenStore={tokenStore}>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    const auth = captured[0] as AuthContextValue;
+    await auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys);
+    await auth.logout();
+
+    expect(dispatchSpy).toHaveBeenCalledWith({ type: "LOGOUT" });
+    expect(clearTokenSpy).toHaveBeenCalledOnce();
+    expect(machine.getSnapshot().state).toBe("unauthenticated");
+  });
+
+  it("lock dispatches LOCK", async () => {
+    const { machine, tokenStore } = await makeProviderDeps();
+    const dispatchSpy = vi.spyOn(machine, "dispatch");
+
+    const captured: AuthContextValue[] = [];
+    function Consumer(): React.JSX.Element {
+      captured.push(useAuth());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <AuthProvider machine={machine} tokenStore={tokenStore}>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    const auth = captured[0] as AuthContextValue;
+    await auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys);
+    auth.lock();
+
+    expect(dispatchSpy).toHaveBeenCalledWith({ type: "LOCK" });
+    expect(machine.getSnapshot().state).toBe("locked");
+  });
+
+  it("unlock dispatches UNLOCK with masterKey and identityKeys", async () => {
+    const { machine, tokenStore } = await makeProviderDeps();
+    const dispatchSpy = vi.spyOn(machine, "dispatch");
+
+    const captured: AuthContextValue[] = [];
+    function Consumer(): React.JSX.Element {
+      captured.push(useAuth());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <AuthProvider machine={machine} tokenStore={tokenStore}>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    const auth = captured[0] as AuthContextValue;
+    await auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys);
+    auth.lock();
+    auth.unlock(fakeMasterKey, fakeIdentityKeys);
+
+    expect(dispatchSpy).toHaveBeenCalledWith({
+      type: "UNLOCK",
+      masterKey: fakeMasterKey,
+      identityKeys: fakeIdentityKeys,
+    });
+    expect(machine.getSnapshot().state).toBe("unlocked");
   });
 });
