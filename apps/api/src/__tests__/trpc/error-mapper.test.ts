@@ -99,4 +99,25 @@ describe("error-mapper middleware", () => {
       expect.objectContaining({ code: "UNAUTHORIZED", message: "Auth required" }),
     );
   });
+
+  it("maps ApiHttpError 413 to PAYLOAD_TOO_LARGE", async () => {
+    const caller = callerThatThrows(new ApiHttpError(413, "BLOB_TOO_LARGE", "File too large"));
+    await expect(caller.fail()).rejects.toThrow(
+      expect.objectContaining({ code: "PAYLOAD_TOO_LARGE", message: "File too large" }),
+    );
+  });
+
+  it("maps ApiHttpError with unmapped status to INTERNAL_SERVER_ERROR", async () => {
+    const caller = callerThatThrows(new ApiHttpError(500, "NOT_FOUND", "DB down"));
+    await expect(caller.fail()).rejects.toThrow(
+      expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }),
+    );
+  });
+
+  it("maps non-Error throwable to INTERNAL_SERVER_ERROR", async () => {
+    const caller = callerThatThrows("a raw string error");
+    await expect(caller.fail()).rejects.toThrow(
+      expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }),
+    );
+  });
 });
