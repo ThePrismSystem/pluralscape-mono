@@ -154,7 +154,7 @@ describe("AuthProvider", () => {
     expect(machine.getSnapshot().state).toBe("unlocked");
   });
 
-  it("logout dispatches LOGOUT and clears token", async () => {
+  it("logout clears token then dispatches LOGOUT", async () => {
     const { machine, tokenStore } = await makeProviderDeps();
     const dispatchSpy = vi.spyOn(machine, "dispatch");
     const clearTokenSpy = vi.spyOn(tokenStore, "clearToken");
@@ -175,12 +175,12 @@ describe("AuthProvider", () => {
     await auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys);
     await auth.logout();
 
-    expect(dispatchSpy).toHaveBeenCalledWith({ type: "LOGOUT" });
     expect(clearTokenSpy).toHaveBeenCalledOnce();
+    expect(dispatchSpy).toHaveBeenCalledWith({ type: "LOGOUT" });
     expect(machine.getSnapshot().state).toBe("unauthenticated");
   });
 
-  it("logout re-throws after clearToken failure but keeps state unauthenticated", async () => {
+  it("does not dispatch LOGOUT when clearToken fails", async () => {
     const machine = new AuthStateMachine();
     const failingTokenStore: TokenStore = {
       getToken: () => Promise.resolve(null),
@@ -204,7 +204,8 @@ describe("AuthProvider", () => {
     await auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys);
 
     await expect(auth.logout()).rejects.toThrow("storage unavailable");
-    expect(machine.getSnapshot().state).toBe("unauthenticated");
+    // State should remain unlocked — LOGOUT was NOT dispatched because clearToken failed
+    expect(machine.getSnapshot().state).toBe("unlocked");
   });
 
   it("lock dispatches LOCK", async () => {

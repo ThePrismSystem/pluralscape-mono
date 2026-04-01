@@ -62,8 +62,8 @@ export function AuthProvider({
   );
 
   const logout = useCallback(async (): Promise<void> => {
-    machine.dispatch({ type: "LOGOUT" });
     await tokenStore.clearToken();
+    machine.dispatch({ type: "LOGOUT" });
   }, [machine, tokenStore]);
 
   const lock = useCallback((): void => {
