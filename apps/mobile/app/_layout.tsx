@@ -1,9 +1,9 @@
 import { createAppQueryClient } from "@pluralscape/data";
-import { DEFAULT_LOCALE } from "@pluralscape/i18n";
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Redirect, Slot } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { resources } from "../locales";
@@ -13,6 +13,7 @@ import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
 import { SyncProvider } from "../src/sync/index.js";
 
+import type { TokenStore } from "../src/auth/index.js";
 import type { PlatformContext } from "../src/platform/index.js";
 
 const CONNECTION_CONFIG = {
@@ -46,6 +47,7 @@ function AuthGate(): React.JSX.Element {
 
 export default function RootLayout(): React.JSX.Element {
   const [platform, setPlatform] = useState<PlatformContext | null>(null);
+  const [tokenStore, setTokenStore] = useState<TokenStore | null>(null);
   const [locale, setLocale] = useState(DEFAULT_LOCALE);
 
   useEffect(() => {
@@ -53,15 +55,15 @@ export default function RootLayout(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
-    const detected = detectLocale();
-    setLocale(detected);
+    const detected = detectLocale(SUPPORTED_LOCALES);
+    setLocale(detected as typeof DEFAULT_LOCALE);
     applyLayoutDirection(detected);
   }, []);
 
-  const tokenStore = useMemo(
-    () => (platform !== null ? createTokenStore(platform) : null),
-    [platform],
-  );
+  useEffect(() => {
+    if (platform === null) return;
+    void createTokenStore(platform.capabilities).then(setTokenStore);
+  }, [platform]);
 
   if (platform === null || tokenStore === null) {
     return (

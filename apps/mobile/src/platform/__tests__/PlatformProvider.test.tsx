@@ -50,10 +50,10 @@ const stubContext: PlatformContext = {
 
 describe("PlatformProvider", () => {
   it("provides platform context to children", () => {
-    let captured: PlatformContext | null = null;
+    const result: { value: PlatformContext | null } = { value: null };
 
     function Consumer(): React.JSX.Element {
-      captured = usePlatform();
+      result.value = usePlatform();
       return <span>ok</span>;
     }
 
@@ -63,8 +63,8 @@ describe("PlatformProvider", () => {
       </PlatformProvider>,
     );
 
-    expect(captured).toBe(stubContext);
-    expect(captured?.capabilities.storageBackend).toBe("indexeddb");
+    expect(result.value).toBe(stubContext);
+    expect(result.value?.capabilities.storageBackend).toBe("indexeddb");
   });
 
   it("throws when used outside provider", () => {

@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SseClient } from "../sse-client.js";
 
-import type { MockInstance } from "vitest";
+import type { EventSourceMessage, FetchEventSourceInit } from "@microsoft/fetch-event-source";
 
 vi.mock("@microsoft/fetch-event-source", () => ({
   fetchEventSource: vi.fn(),
 }));
 
-const mockFetchEventSource = fetchEventSource as MockInstance;
+const mockFetchEventSource = vi.mocked(fetchEventSource);
 
 beforeEach(() => {
   mockFetchEventSource.mockReset();
@@ -42,11 +42,10 @@ describe("SseClient", () => {
     const listener = vi.fn();
     client.onEvent(listener);
 
-    mockFetchEventSource.mockImplementation(
-      (_url: string, opts: { onmessage: (ev: { id: string; data: string }) => void }) => {
-        opts.onmessage({ id: "1", data: '{"type":"notification"}' });
-      },
-    );
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onmessage?.({ id: "1", data: '{"type":"notification"}', event: "", retry: undefined });
+      return Promise.resolve();
+    });
 
     client.connect("tok");
     expect(listener).toHaveBeenCalledWith({ type: "notification" });
@@ -57,11 +56,10 @@ describe("SseClient", () => {
     const listener = vi.fn();
     client.onEvent(listener);
 
-    mockFetchEventSource.mockImplementation(
-      (_url: string, opts: { onmessage: (ev: { id: string; data: string }) => void }) => {
-        opts.onmessage({ id: "2", data: "plain-text" });
-      },
-    );
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onmessage?.({ id: "2", data: "plain-text", event: "", retry: undefined });
+      return Promise.resolve();
+    });
 
     client.connect("tok");
     expect(listener).toHaveBeenCalledWith("plain-text");
@@ -74,11 +72,10 @@ describe("SseClient", () => {
     client.onEvent(l1);
     client.onEvent(l2);
 
-    mockFetchEventSource.mockImplementation(
-      (_url: string, opts: { onmessage: (ev: { id: string; data: string }) => void }) => {
-        opts.onmessage({ id: "3", data: '"ping"' });
-      },
-    );
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onmessage?.({ id: "3", data: '"ping"', event: "", retry: undefined });
+      return Promise.resolve();
+    });
 
     client.connect("tok");
     expect(l1).toHaveBeenCalledWith("ping");
@@ -91,11 +88,10 @@ describe("SseClient", () => {
     const off = client.onEvent(listener);
     off();
 
-    mockFetchEventSource.mockImplementation(
-      (_url: string, opts: { onmessage: (ev: { id: string; data: string }) => void }) => {
-        opts.onmessage({ id: "4", data: '"hello"' });
-      },
-    );
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onmessage?.({ id: "4", data: '"hello"', event: "", retry: undefined });
+      return Promise.resolve();
+    });
 
     client.connect("tok");
     expect(listener).not.toHaveBeenCalled();
@@ -103,12 +99,11 @@ describe("SseClient", () => {
 
   it("disconnect sets isConnected to false", () => {
     const client = new SseClient({ baseUrl: "https://example.com" });
-    // Simulate onopen being called synchronously
-    mockFetchEventSource.mockImplementation(
-      (_url: string, opts: { onopen: () => Promise<void> }) => {
-        void opts.onopen();
-      },
-    );
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      void opts.onopen?.(new Response());
+      return Promise.resolve();
+    });
 
     client.connect("tok");
     expect(client.isConnected).toBe(true);
@@ -134,23 +129,15 @@ describe("SseClient", () => {
   it("includes Last-Event-ID header after reconnect when onclose clears controller", () => {
     const client = new SseClient({ baseUrl: "https://example.com" });
 
-    // First connect: simulate message then close
-    mockFetchEventSource.mockImplementationOnce(
-      (
-        _url: string,
-        opts: {
-          onmessage: (ev: { id: string; data: string }) => void;
-          onclose: () => void;
-        },
-      ) => {
-        opts.onmessage({ id: "evt-42", data: '"data"' });
-        opts.onclose();
-      },
-    );
+    mockFetchEventSource.mockImplementationOnce((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      const msg: EventSourceMessage = { id: "evt-42", data: '"data"', event: "", retry: undefined };
+      opts.onmessage?.(msg);
+      opts.onclose?.();
+      return Promise.resolve();
+    });
 
     client.connect("tok");
 
-    // Now reconnect — should send Last-Event-ID
     client.connect("tok");
     expect(mockFetchEventSource).toHaveBeenCalledTimes(2);
     const secondCall = mockFetchEventSource.mock.calls[1] as [
