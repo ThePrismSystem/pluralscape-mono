@@ -57,7 +57,7 @@ describe("M8 Foundation Integration Smoke Test", () => {
     expect(auth.getSnapshot().state).toBe("unlocked");
 
     // Connection responds to auth
-    conn.dispatch({ type: "CONNECT", token: creds.sessionToken, systemId: "sys_1" });
+    conn.dispatch({ type: "CONNECT", token: creds.sessionToken, systemId: "sys_1" as SystemId });
     expect(conn.getSnapshot()).toBe("connecting");
 
     conn.dispatch({ type: "CONNECTED" });
