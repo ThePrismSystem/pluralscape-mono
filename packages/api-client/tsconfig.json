@@ -2,7 +2,9 @@
   "extends": "@pluralscape/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src", "../../types"]
 }
