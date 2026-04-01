@@ -9,6 +9,9 @@
     "web": {
       "bundler": "metro",
       "output": "single"
+    },
+    "extra": {
+      "apiBaseUrl": "http://localhost:3000"
     }
   }
 }

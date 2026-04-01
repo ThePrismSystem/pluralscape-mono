@@ -57,6 +57,12 @@ docs/local-audits/
 # Superpowers specs and plans (local working docs)
 docs/superpowers/
 
+# Git worktrees (local workspaces)
+.worktrees/
+
+# Superpowers (per-contributor)
+.superpowers/
+
 # Agent config (per-contributor)
 CLAUDE.md
 .claude/

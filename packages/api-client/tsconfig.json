@@ -1,7 +1,8 @@
 {
   "extends": "@pluralscape/tsconfig/base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
   "include": ["src", "../../types"]
 }

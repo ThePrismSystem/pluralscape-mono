@@ -1,0 +1,23 @@
+{
+  "name": "@pluralscape/data",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pluralscape/api-client": "workspace:*",
+    "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/sync": "workspace:*",
+    "@pluralscape/types": "workspace:*",
+    "@tanstack/react-query": "^5.66.9"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0"
+  }
+}
