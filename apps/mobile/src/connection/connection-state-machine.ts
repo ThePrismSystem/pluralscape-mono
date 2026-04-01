@@ -18,7 +18,6 @@ const BACKOFF_MULTIPLIER = 2;
  */
 export class ConnectionStateMachine {
   private state: ConnectionState = "disconnected";
-  private cachedSnapshot: ConnectionState = this.state;
   private readonly listeners = new Set<ConnectionListener>();
   private retryCount = 0;
   private readonly config: ConnectionConfig;
@@ -32,7 +31,7 @@ export class ConnectionStateMachine {
   }
 
   getSnapshot(): ConnectionState {
-    return this.cachedSnapshot;
+    return this.state;
   }
 
   subscribe(listener: ConnectionListener): () => void {
@@ -103,9 +102,8 @@ export class ConnectionStateMachine {
     }
 
     if (this.state !== prev) {
-      this.cachedSnapshot = this.state;
       for (const listener of this.listeners) {
-        listener(this.cachedSnapshot);
+        listener(this.state);
       }
     }
   }
