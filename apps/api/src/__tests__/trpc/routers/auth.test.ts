@@ -118,6 +118,18 @@ describe("auth router", () => {
       const caller = makeCaller(null);
       await expect(caller.auth.register(registrationInput)).resolves.toEqual(registrationResult);
     });
+
+    it("rejects invalid email format", async () => {
+      const caller = makeCaller();
+      await expect(
+        caller.auth.register({ ...registrationInput, email: "not-an-email" }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects empty password", async () => {
+      const caller = makeCaller();
+      await expect(caller.auth.register({ ...registrationInput, password: "" })).rejects.toThrow();
+    });
   });
 
   // ── login ─────────────────────────────────────────────────────────
@@ -206,6 +218,11 @@ describe("auth router", () => {
 
       expect(vi.mocked(listSessions).mock.calls[0]?.[2]).toBe("cur_abc");
       expect(vi.mocked(listSessions).mock.calls[0]?.[3]).toBe(10);
+    });
+
+    it("rejects limit exceeding maximum", async () => {
+      const caller = makeCaller(MOCK_AUTH);
+      await expect(caller.auth.listSessions({ limit: 200 })).rejects.toThrow();
     });
   });
 

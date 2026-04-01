@@ -114,6 +114,16 @@ describe("member router", () => {
         caller.member.create({ systemId: foreignSystemId, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+
+    it("rejects invalid systemId format", async () => {
+      const caller = makeCaller();
+      await expect(
+        caller.member.create({
+          systemId: "not-a-system-id" as SystemId,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   // ── get ───────────────────────────────────────────────────────────
@@ -128,6 +138,16 @@ describe("member router", () => {
       expect(vi.mocked(getMember).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(getMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(MOCK_MEMBER_RESULT);
+    });
+
+    it("rejects invalid memberId format", async () => {
+      const caller = makeCaller();
+      await expect(
+        caller.member.get({
+          systemId: SYSTEM_ID,
+          memberId: "not-a-member-id" as MemberId,
+        }),
+      ).rejects.toThrow();
     });
   });
 
