@@ -82,7 +82,7 @@ export default defineConfig({
           name: "mobile",
           root: "apps/mobile",
           environment: "node",
-          include: ["src/**/*.{test,spec}.{ts,tsx}"],
+          include: ["src/**/*.{test,spec}.{ts,tsx}", "app/**/*.{test,spec}.{ts,tsx}"],
           exclude: ["**/*.integration.{test,spec}.ts"],
           globals: false,
           restoreMocks: true,
