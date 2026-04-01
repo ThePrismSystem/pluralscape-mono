@@ -12,7 +12,6 @@ import { applyLayoutDirection } from "../rtl.js";
 
 import type { Locale } from "@pluralscape/types";
 
-
 const mockAllowRTL = vi.mocked(I18nManager.allowRTL);
 const mockForceRTL = vi.mocked(I18nManager.forceRTL);
 
