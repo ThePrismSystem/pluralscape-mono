@@ -89,7 +89,10 @@ export class ConnectionManager {
       const delayMs = this.stateMachine.getBackoffMs();
       this.backoffTimer = setTimeout(() => {
         this.backoffTimer = null;
-        if (state === "backoff") {
+        // Re-read state — may have changed during backoff (e.g., explicit disconnect)
+        const currentState = this.stateMachine.getSnapshot();
+        if (currentState === "disconnected") return;
+        if (currentState === "backoff") {
           this.stateMachine.dispatch({ type: "BACKOFF_COMPLETE" });
         }
         this.reconnect();

@@ -234,4 +234,44 @@ describe("ConnectionManager", () => {
 
     vi.useRealTimers();
   });
+
+  it("does not reconnect after disconnect during backoff delay", () => {
+    vi.useFakeTimers();
+
+    // Start connected
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      void opts.onopen?.(new Response());
+      return Promise.resolve();
+    });
+
+    const manager = makeManager();
+    manager.onAuthStateChange(unlockedSnapshot);
+    expect(manager.getSnapshot()).toBe("connected");
+
+    // Trigger connection lost to enter backoff/reconnecting
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      try {
+        opts.onerror?.(new Error("lost"));
+      } catch {
+        // onerror throws to prevent fetchEventSource retry
+      }
+      return Promise.resolve();
+    });
+
+    // Disconnect and reconnect to trigger connection lost
+    manager.disconnect();
+    manager.onAuthStateChange(unlockedSnapshot);
+    // Now connecting — trigger error to enter backoff
+    expect(manager.getSnapshot()).toBe("backoff");
+
+    // Disconnect during backoff
+    manager.disconnect();
+    expect(manager.getSnapshot()).toBe("disconnected");
+
+    // Advance past backoff delay — should NOT reconnect
+    vi.advanceTimersByTime(10_000);
+    expect(manager.getSnapshot()).toBe("disconnected");
+
+    vi.useRealTimers();
+  });
 });
