@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 import { useAuth } from "../auth/index.js";
 
@@ -29,13 +36,18 @@ export function ConnectionProvider({
     manager.onAuthStateChange(auth.snapshot);
   }, [manager, auth.snapshot]);
 
+  const subscribe = useCallback(
+    (listener: (state: ConnectionState) => void) => manager.subscribe(listener),
+    [manager],
+  );
+
   const status = useSyncExternalStore(
-    (listener) => manager.subscribe(listener),
+    subscribe,
     () => manager.getSnapshot(),
     () => DISCONNECTED,
   );
 
-  const value: ConnectionContextValue = { status, manager };
+  const value = useMemo<ConnectionContextValue>(() => ({ status, manager }), [status, manager]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

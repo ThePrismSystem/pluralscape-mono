@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
 import { AuthStateMachine } from "./auth-state-machine.js";
 
@@ -39,8 +39,10 @@ export function AuthProvider({
   readonly tokenStore: TokenStore;
   readonly children: ReactNode;
 }): React.JSX.Element {
+  const subscribe = useCallback((listener: () => void) => machine.subscribe(listener), [machine]);
+
   const snapshot = useSyncExternalStore(
-    (listener) => machine.subscribe(listener),
+    subscribe,
     () => machine.getSnapshot(),
     () => UNAUTHENTICATED_SNAPSHOT,
   );
@@ -78,16 +80,19 @@ export function AuthProvider({
     [machine],
   );
 
-  const value: AuthContextValue = {
-    state: snapshot.state,
-    session: snapshot.session,
-    credentials: snapshot.credentials,
-    snapshot,
-    login,
-    logout,
-    lock,
-    unlock,
-  };
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      state: snapshot.state,
+      session: snapshot.session,
+      credentials: snapshot.credentials,
+      snapshot,
+      login,
+      logout,
+      lock,
+      unlock,
+    }),
+    [snapshot, login, logout, lock, unlock],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
