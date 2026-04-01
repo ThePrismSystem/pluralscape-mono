@@ -254,7 +254,8 @@ describe("SseClient", () => {
 
     client.connect("tok");
     expect(onError).toHaveBeenCalledWith(expect.any(Error));
-    expect(onError.mock.calls[0][0].message).toContain("Malformed SSE JSON payload");
+    const errorArg = onError.mock.calls[0]?.[0] as Error;
+    expect(errorArg.message).toContain("Malformed SSE JSON payload");
   });
 
   it("invokes onDisconnected callback on close", () => {
