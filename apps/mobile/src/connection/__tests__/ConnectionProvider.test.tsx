@@ -23,9 +23,6 @@ vi.mock("@microsoft/fetch-event-source", () => ({
 
 // Default to unauthenticated — individual tests override via spy.
 let mockAuthValue: AuthContextValue = {
-  state: "unauthenticated",
-  session: null,
-  credentials: null,
   snapshot: { state: "unauthenticated", session: null, credentials: null },
   login: vi.fn(),
   logout: vi.fn(),
@@ -72,9 +69,6 @@ function makeManager(): ConnectionManager {
 beforeEach(() => {
   vi.clearAllMocks();
   mockAuthValue = {
-    state: "unauthenticated",
-    session: null,
-    credentials: null,
     snapshot: { state: "unauthenticated", session: null, credentials: null },
     login: vi.fn(),
     logout: vi.fn(),
@@ -141,9 +135,6 @@ describe("ConnectionProvider", () => {
   it("calls manager.onAuthStateChange with the unlocked snapshot when auth state changes", () => {
     // Set up the auth mock to return an unlocked snapshot.
     mockAuthValue = {
-      state: "unlocked",
-      session: unlockedSnapshot.session,
-      credentials: fakeCredentials,
       snapshot: unlockedSnapshot,
       login: vi.fn(),
       logout: vi.fn(),

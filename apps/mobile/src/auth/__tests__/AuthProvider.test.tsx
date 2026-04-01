@@ -73,9 +73,9 @@ describe("AuthProvider", () => {
 
     expect(snapshots).toHaveLength(1);
     const captured = snapshots[0] as AuthContextValue;
-    expect(captured.state).toBe("unauthenticated");
-    expect(captured.session).toBeNull();
-    expect(captured.credentials).toBeNull();
+    expect(captured.snapshot.state).toBe("unauthenticated");
+    expect(captured.snapshot.session).toBeNull();
+    expect(captured.snapshot.credentials).toBeNull();
     expect(captured.snapshot).toEqual({
       state: "unauthenticated",
       session: null,

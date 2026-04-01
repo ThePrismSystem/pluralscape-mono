@@ -69,13 +69,13 @@ function ErrorScreen({
 }
 
 function AuthGate({ children }: { readonly children: ReactNode }): React.JSX.Element {
-  const { state } = useAuth();
+  const { snapshot } = useAuth();
 
-  if (state === "unauthenticated") {
+  if (snapshot.state === "unauthenticated") {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (state === "locked") {
+  if (snapshot.state === "locked") {
     return <LoadingSpinner />;
   }
 

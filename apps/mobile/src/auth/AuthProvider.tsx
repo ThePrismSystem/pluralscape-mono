@@ -2,15 +2,12 @@ import { createContext, useCallback, useContext, useMemo, useSyncExternalStore }
 
 import { AuthStateMachine } from "./auth-state-machine.js";
 
-import type { AuthCredentials, AuthSession, AuthState, AuthStateSnapshot } from "./auth-types.js";
+import type { AuthCredentials, AuthSession, AuthStateSnapshot } from "./auth-types.js";
 import type { TokenStore } from "./token-store.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { ReactNode } from "react";
 
 export interface AuthContextValue {
-  readonly state: AuthState;
-  readonly session: AuthSession | null;
-  readonly credentials: AuthCredentials | null;
   readonly snapshot: AuthStateSnapshot;
   login(
     credentials: AuthCredentials,
@@ -82,9 +79,6 @@ export function AuthProvider({
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      state: snapshot.state,
-      session: snapshot.session,
-      credentials: snapshot.credentials,
       snapshot,
       login,
       logout,

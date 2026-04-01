@@ -12,9 +12,6 @@ import type { PlatformContext } from "../../platform/types.js";
 
 vi.mock("../../auth/index.js", () => ({
   useAuth: (): AuthContextValue => ({
-    state: "unauthenticated",
-    session: null,
-    credentials: null,
     snapshot: { state: "unauthenticated", session: null, credentials: null },
     login: vi.fn(),
     logout: vi.fn(),
