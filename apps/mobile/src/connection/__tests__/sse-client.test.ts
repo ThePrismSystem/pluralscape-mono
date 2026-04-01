@@ -61,7 +61,11 @@ describe("SseClient", () => {
   });
 
   it("drops malformed JSON instead of passing to listeners", () => {
-    const client = new SseClient({ baseUrl: "https://example.com" }, makeCallbacks());
+    const onError = vi.fn();
+    const client = new SseClient(
+      { baseUrl: "https://example.com" },
+      { onConnected: vi.fn(), onDisconnected: vi.fn(), onError },
+    );
     const listener = vi.fn();
     client.onEvent(listener);
 
@@ -72,6 +76,7 @@ describe("SseClient", () => {
 
     client.connect("tok");
     expect(listener).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
   });
 
   it("emits events to multiple listeners", () => {
@@ -189,12 +194,67 @@ describe("SseClient", () => {
     const error = new Error("connection failed");
 
     mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
-      opts.onerror?.(error);
+      try {
+        opts.onerror?.(error);
+      } catch {
+        // Expected throw
+      }
       return Promise.resolve();
     });
 
     client.connect("tok");
     expect(onError).toHaveBeenCalledWith(error);
+  });
+
+  it("onerror throws to prevent fetchEventSource built-in retry", () => {
+    const callbacks = makeCallbacks();
+    const client = new SseClient({ baseUrl: "https://example.com" }, callbacks);
+    const error = new Error("connection failed");
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      expect(() => opts.onerror?.(error)).toThrow(error);
+      return Promise.resolve();
+    });
+
+    client.connect("tok");
+  });
+
+  it("onerror cleans up abortController so connect is not blocked", () => {
+    const callbacks = makeCallbacks();
+    const client = new SseClient({ baseUrl: "https://example.com" }, callbacks);
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      try {
+        opts.onerror?.(new Error("fail"));
+      } catch {
+        // Expected throw
+      }
+      return Promise.resolve();
+    });
+
+    client.connect("tok");
+    expect(client.isConnected).toBe(false);
+
+    mockFetchEventSource.mockImplementation(() => Promise.resolve());
+    client.connect("tok2");
+    expect(mockFetchEventSource).toHaveBeenCalledTimes(2);
+  });
+
+  it("propagates malformed JSON to onError callback", () => {
+    const onError = vi.fn();
+    const client = new SseClient(
+      { baseUrl: "https://example.com" },
+      { onConnected: vi.fn(), onDisconnected: vi.fn(), onError },
+    );
+
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onmessage?.({ id: "5", data: "not-json{", event: "", retry: undefined });
+      return Promise.resolve();
+    });
+
+    client.connect("tok");
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+    expect(onError.mock.calls[0][0].message).toContain("Malformed SSE JSON payload");
   });
 
   it("invokes onDisconnected callback on close", () => {

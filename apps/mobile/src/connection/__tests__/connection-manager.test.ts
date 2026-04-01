@@ -160,7 +160,11 @@ describe("ConnectionManager", () => {
     const sseError = new Error("SSE failed");
     mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
       void opts.onopen?.(new Response());
-      opts.onerror?.(sseError);
+      try {
+        opts.onerror?.(sseError);
+      } catch {
+        // Expected throw — onerror throws to prevent fetchEventSource built-in retry
+      }
       return Promise.resolve();
     });
 
@@ -187,7 +191,11 @@ describe("ConnectionManager", () => {
 
     // Simulate connection lost — schedules backoff then reconnect
     expect(sseCallbacks).toBeDefined();
-    sseCallbacks?.onerror?.(new Error("connection dropped"));
+    try {
+      sseCallbacks?.onerror?.(new Error("connection dropped"));
+    } catch {
+      // Expected throw — onerror throws to prevent fetchEventSource built-in retry
+    }
     expect(manager.getSnapshot()).toBe("reconnecting");
 
     // Advance past backoff delay to trigger reconnect (baseBackoffMs * 2^retryCount = 1000 * 2^1)
@@ -202,7 +210,11 @@ describe("ConnectionManager", () => {
 
     // First connection attempt fails immediately
     mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
-      opts.onerror?.(new Error("refused"));
+      try {
+        opts.onerror?.(new Error("refused"));
+      } catch {
+        // Expected throw — onerror throws to prevent fetchEventSource built-in retry
+      }
       return Promise.resolve();
     });
 

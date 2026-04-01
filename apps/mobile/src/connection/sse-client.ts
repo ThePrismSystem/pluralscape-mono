@@ -51,7 +51,7 @@ export class SseClient {
         try {
           parsed = JSON.parse(ev.data) as unknown;
         } catch {
-          // Malformed JSON payload — drop silently
+          this.callbacks.onError(new Error("Malformed SSE JSON payload"));
           return;
         }
         const event = { type: "message" as const, data: parsed };
@@ -65,8 +65,9 @@ export class SseClient {
         this.callbacks.onDisconnected();
       },
       onerror: (err: unknown) => {
-        this.connected = false;
+        this.disconnect();
         this.callbacks.onError(err);
+        throw err;
       },
     });
   }
