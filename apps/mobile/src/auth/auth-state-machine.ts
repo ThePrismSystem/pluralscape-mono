@@ -69,12 +69,14 @@ export class AuthStateMachine {
 
     switch (event.type) {
       case "LOGIN":
-        this.internal = {
-          kind: "unlocked",
-          credentials: event.credentials,
-          masterKey: event.masterKey,
-          identityKeys: event.identityKeys,
-        };
+        if (prev.kind === "unauthenticated") {
+          this.internal = {
+            kind: "unlocked",
+            credentials: event.credentials,
+            masterKey: event.masterKey,
+            identityKeys: event.identityKeys,
+          };
+        }
         break;
 
       case "LOCK":

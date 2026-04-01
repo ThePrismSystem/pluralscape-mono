@@ -174,6 +174,57 @@ describe("AuthStateMachine", () => {
     expect(after.state).toBe("unauthenticated");
   });
 
+  it("ignores LOGIN when already unlocked (no state change)", () => {
+    const machine = new AuthStateMachine();
+    machine.dispatch({
+      type: "LOGIN",
+      credentials: fakeCredentials,
+      masterKey: fakeMasterKey,
+      identityKeys: fakeIdentityKeys,
+    });
+    const before = machine.getSnapshot();
+    machine.dispatch({
+      type: "LOGIN",
+      credentials: {
+        sessionToken: "tok-other",
+        accountId: "acct_other" as AccountId,
+        systemId: "sys_other" as SystemId,
+        salt: new Uint8Array(16) as PwhashSalt,
+      },
+      masterKey: fakeMasterKey,
+      identityKeys: fakeIdentityKeys,
+    });
+    const after = machine.getSnapshot();
+    expect(after).toBe(before);
+    expect(after.credentials?.sessionToken).toBe("tok-abc");
+  });
+
+  it("ignores LOGIN when locked (no state change)", () => {
+    const machine = new AuthStateMachine();
+    machine.dispatch({
+      type: "LOGIN",
+      credentials: fakeCredentials,
+      masterKey: fakeMasterKey,
+      identityKeys: fakeIdentityKeys,
+    });
+    machine.dispatch({ type: "LOCK" });
+    const before = machine.getSnapshot();
+    machine.dispatch({
+      type: "LOGIN",
+      credentials: {
+        sessionToken: "tok-other",
+        accountId: "acct_other" as AccountId,
+        systemId: "sys_other" as SystemId,
+        salt: new Uint8Array(16) as PwhashSalt,
+      },
+      masterKey: fakeMasterKey,
+      identityKeys: fakeIdentityKeys,
+    });
+    const after = machine.getSnapshot();
+    expect(after).toBe(before);
+    expect(after.state).toBe("locked");
+  });
+
   it("snapshot is referentially stable when no state change occurs", () => {
     const machine = new AuthStateMachine();
     const s1 = machine.getSnapshot();
