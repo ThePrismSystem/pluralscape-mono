@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockExec = vi.fn<
-  [number, string, ((row: unknown[], columns: string[]) => void)?],
-  Promise<number>
->();
-const mockClose = vi.fn<[number], Promise<number>>();
-const mockOpenV2 = vi.fn<[string, number?, string?], Promise<number>>();
-const mockVfsRegister = vi.fn<[object, boolean?], number>();
+const mockExec = vi.fn<WaSqliteAPI["exec"]>();
+const mockClose = vi.fn<WaSqliteAPI["close"]>();
+const mockOpenV2 = vi.fn<WaSqliteAPI["open_v2"]>();
+const mockVfsRegister = vi.fn<WaSqliteAPI["vfs_register"]>();
 
 const mockSqlite3: WaSqliteAPI = {
   exec: mockExec,
@@ -74,7 +71,11 @@ describe("createOpfsSqliteDriver", () => {
   describe("prepare().all()", () => {
     it("accumulates rows from the exec callback", () => {
       mockExec.mockImplementation(
-        (_db: number, _sql: string, callback?: (row: unknown[], columns: string[]) => void) => {
+        (
+          _db: number,
+          _sql: string,
+          callback?: (row: (WaSqliteCompatibleType | null)[], columns: string[]) => void,
+        ) => {
           callback?.(["Alice", 30], ["name", "age"]);
           callback?.(["Bob", 25], ["name", "age"]);
           return Promise.resolve(0);
@@ -104,7 +105,11 @@ describe("createOpfsSqliteDriver", () => {
   describe("prepare().get()", () => {
     it("returns the first row", () => {
       mockExec.mockImplementation(
-        (_db: number, _sql: string, callback?: (row: unknown[], columns: string[]) => void) => {
+        (
+          _db: number,
+          _sql: string,
+          callback?: (row: (WaSqliteCompatibleType | null)[], columns: string[]) => void,
+        ) => {
           callback?.(["Alice", 30], ["name", "age"]);
           callback?.(["Bob", 25], ["name", "age"]);
           return Promise.resolve(0);
