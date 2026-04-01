@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiHttpError } from "../../../lib/api-error.js";
 import { createCallerFactory, router } from "../../../trpc/trpc.js";
 
 import type { AuditWriter } from "../../../lib/audit-writer.js";
@@ -127,6 +128,45 @@ describe("member router", () => {
       expect(vi.mocked(getMember).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(getMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(MOCK_MEMBER_RESULT);
+    });
+  });
+
+  // ── error paths ─────────────────────────────────────────────────
+
+  describe("error mapping", () => {
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(getMember).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Member not found"),
+      );
+      const caller = makeCaller();
+      await expect(caller.member.get({ systemId: SYSTEM_ID, memberId: MEMBER_ID })).rejects.toThrow(
+        expect.objectContaining({ code: "NOT_FOUND" }),
+      );
+    });
+
+    it("surfaces ApiHttpError(409) as CONFLICT", async () => {
+      vi.mocked(updateMember).mockRejectedValue(
+        new ApiHttpError(409, "CONFLICT", "Version mismatch"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.member.update({
+          systemId: SYSTEM_ID,
+          memberId: MEMBER_ID,
+          encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=",
+          version: 1,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
+    });
+
+    it("surfaces ApiHttpError(400) as BAD_REQUEST", async () => {
+      vi.mocked(createMember).mockRejectedValue(
+        new ApiHttpError(400, "VALIDATION_ERROR", "Invalid data"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.member.create({ systemId: SYSTEM_ID, encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=" }),
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
