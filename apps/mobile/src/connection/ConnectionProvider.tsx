@@ -26,12 +26,8 @@ export function ConnectionProvider({
   const auth = useAuth();
 
   useEffect(() => {
-    manager.onAuthStateChange({
-      state: auth.state,
-      session: auth.session,
-      credentials: auth.credentials,
-    });
-  }, [manager, auth.state, auth.session, auth.credentials]);
+    manager.onAuthStateChange(auth.snapshot);
+  }, [manager, auth.snapshot]);
 
   const status = useSyncExternalStore(
     (listener) => manager.subscribe(listener),

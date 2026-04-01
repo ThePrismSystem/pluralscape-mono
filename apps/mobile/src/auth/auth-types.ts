@@ -16,11 +16,14 @@ export interface AuthSession {
   readonly identityKeys: { readonly sign: SignKeypair; readonly box: BoxKeypair };
 }
 
-export interface AuthStateSnapshot {
-  readonly state: AuthState;
-  readonly session: AuthSession | null;
-  readonly credentials: AuthCredentials | null;
-}
+export type AuthStateSnapshot =
+  | { readonly state: "unauthenticated"; readonly session: null; readonly credentials: null }
+  | { readonly state: "locked"; readonly session: null; readonly credentials: AuthCredentials }
+  | {
+      readonly state: "unlocked";
+      readonly session: AuthSession;
+      readonly credentials: AuthCredentials;
+    };
 
 export type AuthEvent =
   | {

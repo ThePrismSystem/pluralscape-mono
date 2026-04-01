@@ -15,6 +15,7 @@ vi.mock("../../auth/index.js", () => ({
     state: "unauthenticated",
     session: null,
     credentials: null,
+    snapshot: { state: "unauthenticated", session: null, credentials: null },
     login: vi.fn(),
     logout: vi.fn(),
     lock: vi.fn(),

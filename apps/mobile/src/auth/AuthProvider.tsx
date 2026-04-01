@@ -11,6 +11,7 @@ export interface AuthContextValue {
   readonly state: AuthState;
   readonly session: AuthSession | null;
   readonly credentials: AuthCredentials | null;
+  readonly snapshot: AuthStateSnapshot;
   login(
     credentials: AuthCredentials,
     masterKey: KdfMasterKey,
@@ -50,15 +51,20 @@ export function AuthProvider({
       masterKey: KdfMasterKey,
       identityKeys: AuthSession["identityKeys"],
     ): Promise<void> => {
-      await tokenStore.setToken(credentials.sessionToken);
       machine.dispatch({ type: "LOGIN", credentials, masterKey, identityKeys });
+      try {
+        await tokenStore.setToken(credentials.sessionToken);
+      } catch (err: unknown) {
+        machine.dispatch({ type: "LOGOUT" });
+        throw err;
+      }
     },
     [machine, tokenStore],
   );
 
   const logout = useCallback(async (): Promise<void> => {
-    await tokenStore.clearToken();
     machine.dispatch({ type: "LOGOUT" });
+    await tokenStore.clearToken();
   }, [machine, tokenStore]);
 
   const lock = useCallback((): void => {
@@ -76,6 +82,7 @@ export function AuthProvider({
     state: snapshot.state,
     session: snapshot.session,
     credentials: snapshot.credentials,
+    snapshot,
     login,
     logout,
     lock,

@@ -9,8 +9,38 @@ import { AuthStateMachine } from "../auth-state-machine.js";
 import { AuthProvider, useAuth } from "../AuthProvider.js";
 import { createTokenStore } from "../token-store.js";
 
+import type { AuthCredentials, AuthSession } from "../auth-types.js";
 import type { AuthContextValue } from "../AuthProvider.js";
 import type { TokenStore } from "../token-store.js";
+import type {
+  BoxPublicKey,
+  BoxSecretKey,
+  KdfMasterKey,
+  PwhashSalt,
+  SignPublicKey,
+  SignSecretKey,
+} from "@pluralscape/crypto";
+import type { AccountId, SystemId } from "@pluralscape/types";
+
+const fakeCredentials: AuthCredentials = {
+  sessionToken: "tok-abc",
+  accountId: "acct_123" as AccountId,
+  systemId: "sys_456" as SystemId,
+  salt: new Uint8Array(16) as PwhashSalt,
+};
+
+const fakeMasterKey = new Uint8Array(32) as KdfMasterKey;
+
+const fakeIdentityKeys: AuthSession["identityKeys"] = {
+  sign: {
+    publicKey: new Uint8Array(32) as SignPublicKey,
+    secretKey: new Uint8Array(64) as SignSecretKey,
+  },
+  box: {
+    publicKey: new Uint8Array(32) as BoxPublicKey,
+    secretKey: new Uint8Array(32) as BoxSecretKey,
+  },
+};
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
@@ -46,6 +76,11 @@ describe("AuthProvider", () => {
     expect(captured.state).toBe("unauthenticated");
     expect(captured.session).toBeNull();
     expect(captured.credentials).toBeNull();
+    expect(captured.snapshot).toEqual({
+      state: "unauthenticated",
+      session: null,
+      credentials: null,
+    });
   });
 
   it("throws when useAuth is used outside AuthProvider", () => {
@@ -57,5 +92,35 @@ describe("AuthProvider", () => {
     expect(() => {
       renderToString(<BadConsumer />);
     }).toThrow("useAuth must be used within AuthProvider");
+  });
+
+  it("rolls back to unauthenticated if token store fails during login", async () => {
+    const machine = new AuthStateMachine();
+    const failingTokenStore: TokenStore = {
+      getToken: () => Promise.resolve(null),
+      setToken: () => Promise.reject(new Error("disk full")),
+      clearToken: () => Promise.resolve(),
+    };
+
+    const captured: AuthContextValue[] = [];
+
+    function Consumer(): React.JSX.Element {
+      captured.push(useAuth());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <AuthProvider machine={machine} tokenStore={failingTokenStore}>
+        <Consumer />
+      </AuthProvider>,
+    );
+
+    const auth = captured[0] as AuthContextValue;
+
+    await expect(auth.login(fakeCredentials, fakeMasterKey, fakeIdentityKeys)).rejects.toThrow(
+      "disk full",
+    );
+
+    expect(machine.getSnapshot().state).toBe("unauthenticated");
   });
 });

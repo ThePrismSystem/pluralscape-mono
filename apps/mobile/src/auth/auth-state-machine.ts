@@ -33,6 +33,11 @@ function buildSnapshot(internal: InternalState): AuthStateSnapshot {
       };
       return { state: "unlocked", session, credentials: internal.credentials };
     }
+
+    default: {
+      const _exhaustive: never = internal;
+      throw new Error(`Unhandled state: ${(_exhaustive as InternalState).kind}`);
+    }
   }
 }
 
@@ -92,6 +97,11 @@ export class AuthStateMachine {
       case "LOGOUT":
         this.internal = { kind: "unauthenticated" };
         break;
+
+      default: {
+        const _exhaustive: never = event;
+        throw new Error(`Unhandled event: ${(_exhaustive as AuthEvent).type}`);
+      }
     }
 
     if (this.internal !== prev) {

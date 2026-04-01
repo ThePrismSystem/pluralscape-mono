@@ -95,6 +95,11 @@ export class ConnectionStateMachine {
           this.state = "connecting";
         }
         break;
+
+      default: {
+        const _exhaustive: never = event;
+        throw new Error(`Unhandled event: ${(_exhaustive as ConnectionEvent).type}`);
+      }
     }
 
     if (this.state !== prev) {
