@@ -266,6 +266,20 @@ describe("ConnectionManager", () => {
     vi.useRealTimers();
   });
 
+  it("connect returns true when connection is initiated", () => {
+    const manager = makeManager();
+    const result = manager.connect("tok", "sys_1" as SystemId);
+    expect(result).toBe(true);
+  });
+
+  it("connect returns false when already connecting", () => {
+    mockFetchEventSource.mockImplementation(() => Promise.resolve());
+    const manager = makeManager();
+    manager.connect("tok", "sys_1" as SystemId);
+    const result = manager.connect("tok2", "sys_2" as SystemId);
+    expect(result).toBe(false);
+  });
+
   it("ignores duplicate connect when already connecting", () => {
     mockFetchEventSource.mockImplementation(() => Promise.resolve());
     const manager = makeManager();

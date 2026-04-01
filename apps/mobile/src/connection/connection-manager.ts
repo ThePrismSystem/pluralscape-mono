@@ -50,12 +50,13 @@ export class ConnectionManager {
     return this.stateMachine.subscribe(listener);
   }
 
-  connect(token: string, systemId: SystemId): void {
-    if (this.stateMachine.getSnapshot() !== "disconnected") return;
+  connect(token: string, systemId: SystemId): boolean {
+    if (this.stateMachine.getSnapshot() !== "disconnected") return false;
     this.lastToken = token;
     this.lastSystemId = systemId;
     this.stateMachine.dispatch({ type: "CONNECT", token, systemId });
     this.sseClient.connect(token);
+    return true;
   }
 
   disconnect(): void {
