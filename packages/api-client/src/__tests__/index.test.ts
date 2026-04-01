@@ -29,11 +29,7 @@ describe("createApiClient", () => {
       },
     });
 
-    try {
-      await client.GET("/api/v1/health" as never);
-    } catch {
-      // Expected "intercepted" error
-    }
+    await expect(client.GET("/api/v1/health" as never)).rejects.toThrow("intercepted");
 
     expect(capturedHeaders?.get("Authorization")).toBe("Bearer ps_sess_token42");
   });
@@ -53,11 +49,7 @@ describe("createApiClient", () => {
       },
     });
 
-    try {
-      await client.GET("/api/v1/health" as never);
-    } catch {
-      // Expected "intercepted" error
-    }
+    await expect(client.GET("/api/v1/health" as never)).rejects.toThrow("intercepted");
 
     expect(capturedHeaders?.get("Authorization")).toBeNull();
   });
