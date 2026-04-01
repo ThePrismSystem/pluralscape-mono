@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock expo-sqlite since it's not available in vitest
 const mockFinalizeSync = vi.fn();
 
-const mockGetFirstSync = vi.fn(() => null);
-const mockGetAllSync = vi.fn(() => []);
+const mockGetFirstSync = vi.fn<() => Record<string, unknown> | null>(() => null);
+const mockGetAllSync = vi.fn<() => Record<string, unknown>[]>(() => []);
 const mockExecuteSync = vi.fn(() => ({
   getAllSync: mockGetAllSync,
   getFirstSync: mockGetFirstSync,
