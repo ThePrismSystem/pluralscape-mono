@@ -166,11 +166,12 @@ describe("auth router", () => {
       );
     });
 
-    it("calls logoutCurrentSession with session and account IDs", async () => {
+    it("calls logoutCurrentSession and returns success", async () => {
       vi.mocked(logoutCurrentSession).mockResolvedValue(undefined);
       const caller = makeCaller(MOCK_AUTH);
-      await caller.auth.logout();
+      const result = await caller.auth.logout();
 
+      expect(result).toEqual({ success: true });
       expect(vi.mocked(logoutCurrentSession)).toHaveBeenCalledOnce();
       expect(vi.mocked(logoutCurrentSession).mock.calls[0]?.[1]).toBe(MOCK_SESSION_ID);
       expect(vi.mocked(logoutCurrentSession).mock.calls[0]?.[2]).toBe(MOCK_ACCOUNT_ID);

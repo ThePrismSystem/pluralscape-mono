@@ -35,14 +35,14 @@ function mapError(error: unknown): TRPCError {
 
     return new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
-      message: error.message,
+      message: "Internal server error",
       cause: error,
     });
   }
 
   return new TRPCError({
     code: "INTERNAL_SERVER_ERROR",
-    message: "Unknown error",
+    message: "Internal server error",
     cause: error,
   });
 }

@@ -31,8 +31,8 @@ export const authRouter = router({
   register: errorMapProcedure
     .input(
       z.object({
-        email: z.string(),
-        password: z.string(),
+        email: z.email(),
+        password: z.string().min(1),
         recoveryKeyBackupConfirmed: z.boolean(),
         accountType: z.string().optional(),
         platform: PlatformSchema,
@@ -51,8 +51,8 @@ export const authRouter = router({
   login: errorMapProcedure
     .input(
       z.object({
-        email: z.string(),
-        password: z.string(),
+        email: z.email(),
+        password: z.string().min(1),
         platform: PlatformSchema,
       }),
     )
@@ -85,6 +85,7 @@ export const authRouter = router({
   logout: protectedProcedure.mutation(async ({ ctx }) => {
     const audit = ctx.createAudit(ctx.auth);
     await logoutCurrentSession(ctx.db, ctx.auth.sessionId, ctx.auth.accountId, audit);
+    return { success: true as const };
   }),
 
   /** List active sessions for the authenticated account. */
