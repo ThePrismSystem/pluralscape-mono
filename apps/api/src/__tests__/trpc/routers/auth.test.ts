@@ -44,8 +44,8 @@ const {
 const { authRouter } = await import("../../../trpc/routers/auth.js");
 
 const MOCK_ACCOUNT_ID = "acct_test001" as AccountId;
-const MOCK_SESSION_ID = "sess_test001" as SessionId;
-const MOCK_OTHER_SESSION_ID = "sess_test002" as SessionId;
+const MOCK_SESSION_ID = "sess_550e8400-e29b-41d4-a716-446655440001" as SessionId;
+const MOCK_OTHER_SESSION_ID = "sess_660e8400-e29b-41d4-a716-446655440002" as SessionId;
 const MOCK_SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
 
 const MOCK_AUTH: AuthContext = {
@@ -249,6 +249,13 @@ describe("auth router", () => {
       const caller = makeCaller(MOCK_AUTH);
       const result = await caller.auth.revokeSession({ sessionId: MOCK_OTHER_SESSION_ID });
       expect(result).toEqual({ revoked: true });
+    });
+
+    it("rejects invalid sessionId format", async () => {
+      const caller = makeCaller(MOCK_AUTH);
+      await expect(
+        caller.auth.revokeSession({ sessionId: "not-valid" as SessionId }),
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 

@@ -3,7 +3,7 @@ import { getDb } from "../lib/db.js";
 import { extractRequestMeta } from "../lib/request-meta.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AuthContext } from "../lib/auth-context.js";
+import type { AuthContext, AuthEnv } from "../lib/auth-context.js";
 import type { RequestMeta } from "../lib/request-meta.js";
 import type { SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -33,8 +33,10 @@ export interface SystemTRPCContext extends TRPCContext {
  * rate limiting) has already run, so `c.get("auth")` is populated for
  * authenticated requests.
  */
-export async function createTRPCContext(c: Context): Promise<TRPCContext> {
+export async function createTRPCContext(c: Context<AuthEnv>): Promise<TRPCContext> {
   const db = await getDb();
+  // Auth is optional for tRPC — public procedures run without auth.
+  // AuthEnv types auth as required, so the undefined cast is necessary.
   const auth: AuthContext | null = (c.get("auth") as AuthContext | undefined) ?? null;
 
   return {

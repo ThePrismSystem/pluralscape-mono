@@ -1,3 +1,4 @@
+import { brandedIdQueryParam } from "@pluralscape/validation";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
@@ -112,7 +113,7 @@ export const authRouter = router({
    * Throws NOT_FOUND if the session does not exist or is already revoked.
    */
   revokeSession: protectedProcedure
-    .input(z.object({ sessionId: z.string() }))
+    .input(z.object({ sessionId: brandedIdQueryParam("sess_") }))
     .mutation(async ({ input, ctx }) => {
       if (input.sessionId === ctx.auth.sessionId) {
         throw new TRPCError({
