@@ -1,4 +1,4 @@
-import { idbRequest } from "./indexeddb-utils.js";
+import { idbRequest, openIdb } from "./indexeddb-utils.js";
 
 import type { EncryptedChangeEnvelope } from "@pluralscape/sync";
 import type { OfflineQueueAdapter, OfflineQueueEntry } from "@pluralscape/sync/adapters";
@@ -6,26 +6,6 @@ import type { SyncDocumentId } from "@pluralscape/types";
 
 const DB_VERSION = 1;
 const STORE_QUEUE = "queue";
-
-function openDb(dbName: string): Promise<IDBDatabase> {
-  return new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(dbName, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_QUEUE)) {
-        const store = db.createObjectStore(STORE_QUEUE, { keyPath: "id" });
-        store.createIndex("byEnqueuedAt", "enqueuedAt");
-        store.createIndex("bySyncedAt", "syncedAt");
-      }
-    };
-    req.onsuccess = () => {
-      resolve(req.result);
-    };
-    req.onerror = () => {
-      reject(new Error(req.error?.message ?? "Failed to open IndexedDB"));
-    };
-  });
-}
 
 interface QueueRecord {
   id: string;
@@ -73,7 +53,13 @@ function monotonicNow(): number {
 export function createIndexedDbOfflineQueueAdapter(
   dbName = "pluralscape-offline-queue",
 ): OfflineQueueAdapter {
-  const dbPromise = openDb(dbName);
+  const dbPromise = openIdb(dbName, DB_VERSION, (db) => {
+    if (!db.objectStoreNames.contains(STORE_QUEUE)) {
+      const store = db.createObjectStore(STORE_QUEUE, { keyPath: "id" });
+      store.createIndex("byEnqueuedAt", "enqueuedAt");
+      store.createIndex("bySyncedAt", "syncedAt");
+    }
+  });
 
   return {
     async enqueue(

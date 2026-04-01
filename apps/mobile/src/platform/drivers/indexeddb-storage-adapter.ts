@@ -1,4 +1,4 @@
-import { idbRequest } from "./indexeddb-utils.js";
+import { idbRequest, openIdb } from "./indexeddb-utils.js";
 
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "@pluralscape/sync";
 import type { SyncStorageAdapter } from "@pluralscape/sync/adapters";
@@ -7,30 +7,6 @@ import type { SyncDocumentId } from "@pluralscape/types";
 const DB_VERSION = 1;
 const STORE_SNAPSHOTS = "snapshots";
 const STORE_CHANGES = "changes";
-
-function openDb(dbName: string): Promise<IDBDatabase> {
-  return new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(dbName, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_SNAPSHOTS)) {
-        db.createObjectStore(STORE_SNAPSHOTS, { keyPath: "documentId" });
-      }
-      if (!db.objectStoreNames.contains(STORE_CHANGES)) {
-        const changesStore = db.createObjectStore(STORE_CHANGES, {
-          keyPath: ["documentId", "seq"],
-        });
-        changesStore.createIndex("byDoc", "documentId");
-      }
-    };
-    req.onsuccess = () => {
-      resolve(req.result);
-    };
-    req.onerror = () => {
-      reject(new Error(req.error?.message ?? "Failed to open IndexedDB"));
-    };
-  });
-}
 
 interface SnapshotRecord {
   documentId: string;
@@ -76,7 +52,17 @@ function recordToChange(r: ChangeRecord): EncryptedChangeEnvelope {
 export function createIndexedDbStorageAdapter(
   dbName = "pluralscape-sync-storage",
 ): SyncStorageAdapter {
-  const dbPromise = openDb(dbName);
+  const dbPromise = openIdb(dbName, DB_VERSION, (db) => {
+    if (!db.objectStoreNames.contains(STORE_SNAPSHOTS)) {
+      db.createObjectStore(STORE_SNAPSHOTS, { keyPath: "documentId" });
+    }
+    if (!db.objectStoreNames.contains(STORE_CHANGES)) {
+      const changesStore = db.createObjectStore(STORE_CHANGES, {
+        keyPath: ["documentId", "seq"],
+      });
+      changesStore.createIndex("byDoc", "documentId");
+    }
+  });
 
   return {
     async loadSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {

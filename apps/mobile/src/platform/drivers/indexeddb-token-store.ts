@@ -1,4 +1,4 @@
-import { idbRequest } from "./indexeddb-utils.js";
+import { idbRequest, openIdb } from "./indexeddb-utils.js";
 
 const DB_NAME = "pluralscape-auth";
 const DB_VERSION = 1;
@@ -11,31 +11,17 @@ export interface TokenStore {
   clearToken(): Promise<void>;
 }
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_TOKENS)) {
-        db.createObjectStore(STORE_TOKENS);
-      }
-    };
-    req.onsuccess = () => {
-      resolve(req.result);
-    };
-    req.onerror = () => {
-      reject(new Error(req.error?.message ?? "Failed to open IndexedDB"));
-    };
-  });
-}
-
 interface TokenRecord {
   value: string;
 }
 
 /** IndexedDB-backed token store for web auth persistence. */
 export function createIndexedDbTokenStore(): TokenStore {
-  const dbPromise = openDb();
+  const dbPromise = openIdb(DB_NAME, DB_VERSION, (db) => {
+    if (!db.objectStoreNames.contains(STORE_TOKENS)) {
+      db.createObjectStore(STORE_TOKENS);
+    }
+  });
 
   return {
     async getToken(): Promise<string | null> {
