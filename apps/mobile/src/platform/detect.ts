@@ -11,6 +11,7 @@ function hasOpfsSupport(): boolean {
   try {
     return typeof navigator !== "undefined" && typeof navigator.storage.getDirectory === "function";
   } catch {
+    // navigator.storage may throw in restrictive contexts
     return false;
   }
 }
@@ -63,7 +64,7 @@ async function detectNative(): Promise<PlatformContext> {
       nativeMemzero = { memzero: mod.nativeMemzeroFn };
     }
   } catch {
-    // Native memzero module not available — fallback to buffer.fill(0)
+    // Native memzero module not available — adapter uses JS fallback
   }
 
   const crypto = new ReactNativeSodiumAdapter(nativeMemzero);
