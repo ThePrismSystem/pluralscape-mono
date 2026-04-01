@@ -34,3 +34,6 @@ export interface SseLifecycleCallbacks {
 }
 
 export type SseEventListener = (event: SseEvent) => void;
+
+export const DEFAULT_BASE_BACKOFF_MS = 1_000;
+export const DEFAULT_MAX_BACKOFF_MS = 30_000;

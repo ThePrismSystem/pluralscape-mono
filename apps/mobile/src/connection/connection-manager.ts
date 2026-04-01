@@ -1,7 +1,7 @@
 import { ConnectionStateMachine } from "./connection-state-machine.js";
 import { SseClient } from "./sse-client.js";
 
-import type { ConnectionConfig, ConnectionState } from "./connection-types.js";
+import type { ConnectionState } from "./connection-types.js";
 import type { AuthStateSnapshot } from "../auth/auth-types.js";
 import type { SystemId } from "@pluralscape/types";
 
@@ -19,12 +19,7 @@ export class ConnectionManager {
   private lastSystemId: SystemId | null = null;
 
   constructor(config: ConnectionManagerConfig) {
-    const machineConfig: ConnectionConfig = {
-      baseUrl: config.baseUrl,
-      baseBackoffMs: config.baseBackoffMs ?? 1_000,
-      maxBackoffMs: config.maxBackoffMs ?? 30_000,
-    };
-    this.stateMachine = new ConnectionStateMachine(machineConfig);
+    this.stateMachine = new ConnectionStateMachine(config);
     this.sseClient = new SseClient(
       { baseUrl: config.baseUrl },
       {

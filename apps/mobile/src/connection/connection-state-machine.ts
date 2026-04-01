@@ -1,3 +1,5 @@
+import { DEFAULT_BASE_BACKOFF_MS, DEFAULT_MAX_BACKOFF_MS } from "./connection-types.js";
+
 import type {
   ConnectionConfig,
   ConnectionEvent,
@@ -5,8 +7,6 @@ import type {
   ConnectionState,
 } from "./connection-types.js";
 
-const DEFAULT_BASE_BACKOFF_MS = 1_000;
-const DEFAULT_MAX_BACKOFF_MS = 30_000;
 const BACKOFF_MULTIPLIER = 2;
 
 /**
