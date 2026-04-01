@@ -11,10 +11,10 @@ parent: ps-7j8n
 
 CRDT sync engine integration, WebSocket client, SSE notification client, offline queue with replay
 
-
 ## Summary of Changes
 
 Sync and offline client infrastructure in feat/m8-app-foundation (PR #352):
+
 - ConnectionStateMachine with exponential backoff (1s-30s cap)
 - SSE notification client using @microsoft/fetch-event-source (auth via headers)
 - Unified ConnectionManager for WS + SSE with ConnectionProvider

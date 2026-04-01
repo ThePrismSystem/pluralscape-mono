@@ -11,10 +11,10 @@ parent: ps-7j8n
 
 Platform-specific data layer concerns for web vs native
 
-
 ## Summary of Changes
 
 Web platform data adapter implemented in feat/m8-app-foundation (PR #352):
+
 - PlatformCapabilities types and detectPlatform() with capability probing
 - ExpoSqliteDriver wrapper (mobile) with prepare-execute-finalize pattern
 - OpfsSqliteDriver via @journeyapps/wa-sqlite + OPFS (web, modern browsers)

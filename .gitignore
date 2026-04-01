@@ -60,6 +60,9 @@ docs/superpowers/
 # Git worktrees (local workspaces)
 .worktrees/
 
+# Superpowers (per-contributor)
+.superpowers/
+
 # Agent config (per-contributor)
 CLAUDE.md
 .claude/
