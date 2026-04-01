@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@pluralscape/api-client": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/i18n": "workspace:*",
@@ -26,6 +27,7 @@
     "expo-localization": "~55.0.8",
     "expo-modules-core": "~55.0.15",
     "expo-router": "~55.0.4",
+    "expo-secure-store": "~14.0.1",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~55.0.4",
     "react": "^19.2.4",
