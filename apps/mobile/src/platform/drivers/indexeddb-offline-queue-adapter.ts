@@ -124,7 +124,11 @@ export function createIndexedDbOfflineQueueAdapter(
         .then((db) => {
           db.close();
         })
-        .catch(() => undefined);
+        .catch(() => {
+          // Close errors during teardown are non-recoverable — the DB handle
+          // is being discarded regardless. Logging requires a Logger not yet
+          // available in the mobile app.
+        });
     },
   };
 }

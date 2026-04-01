@@ -1,9 +1,5 @@
 import { createContext, useContext } from "react";
 
-import { useAuth } from "../auth/index.js";
-import { useConnection } from "../connection/index.js";
-import { usePlatform } from "../platform/index.js";
-
 import type { SyncEngine } from "@pluralscape/sync";
 import type { ReactNode } from "react";
 
@@ -20,9 +16,10 @@ const Ctx = createContext<SyncContextValue | null>(null);
 const DEFERRED_ENGINE: SyncEngine | null = null;
 
 export function SyncProvider({ children }: { readonly children: ReactNode }): React.JSX.Element {
-  useAuth();
-  useConnection();
-  usePlatform();
+  // Future wiring will use these hooks:
+  // - useAuth() — to get the master key for encrypting/decrypting sync payloads
+  // - useConnection() — to get connection status and SSE event stream
+  // - usePlatform() — to get the storage driver for local persistence
 
   const value: SyncContextValue = { engine: DEFERRED_ENGINE, isBootstrapped: false };
 

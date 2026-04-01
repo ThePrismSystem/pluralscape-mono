@@ -62,8 +62,8 @@ async function detectNative(): Promise<PlatformContext> {
     if (mod.nativeMemzeroFn) {
       nativeMemzero = { memzero: mod.nativeMemzeroFn };
     }
-  } catch (err: unknown) {
-    void err; // Module not available — fallback to buffer.fill(0)
+  } catch {
+    // Native memzero module not available — fallback to buffer.fill(0)
   }
 
   const crypto = new ReactNativeSodiumAdapter(nativeMemzero);
