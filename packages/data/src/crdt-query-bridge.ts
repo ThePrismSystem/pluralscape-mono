@@ -16,8 +16,8 @@ export interface CrdtDocumentQueryOpts<TData> {
 
 export interface CrdtQueryBridge {
   documentQueryOptions<TData>(opts: CrdtDocumentQueryOpts<TData>): {
-    queryKey: QueryKey;
-    queryFn: () => TData;
+    readonly queryKey: QueryKey;
+    readonly queryFn: () => TData;
   };
 }
 
