@@ -6,6 +6,7 @@ const PACKAGES = [
   "crypto",
   "sync",
   "api-client",
+  "data",
   "queue",
   "storage",
   "validation",
