@@ -1,27 +1,24 @@
 import {
   configureSodium,
+  deserializeRecoveryBackup,
   generateMasterKey,
+  generateRecoveryKey,
   initSodium,
   isValidRecoveryKeyFormat,
+  recoverMasterKey,
+  regenerateRecoveryKey,
   serializeRecoveryBackup,
+  toRecoveryKeyDisplay,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, describe, expect, it } from "vitest";
-
-import {
-  deserializeRecoveryBackup,
-  generateRecoveryKey,
-  recoverMasterKey,
-  regenerateRecoveryKey,
-  toRecoveryKeyDisplay,
-} from "../recovery-key-service.js";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
   await initSodium();
 });
 
-describe("recovery-key-service re-exports", () => {
+describe("recovery-key functions from @pluralscape/crypto", () => {
   it("generates a recovery key with correct display format", () => {
     const masterKey = generateMasterKey();
     const result = generateRecoveryKey(masterKey);
