@@ -19,7 +19,7 @@ import {
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
-import type { MemberId } from "@pluralscape/types";
+import type { GroupId, MemberId } from "@pluralscape/types";
 
 /** Maximum items per page for member list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -58,7 +58,7 @@ export const memberRouter = router({
       return listMembers(ctx.db, ctx.systemId, ctx.auth, {
         cursor: input.cursor,
         limit: input.limit,
-        groupId: input.groupId,
+        groupId: input.groupId as GroupId | undefined,
         includeArchived: input.includeArchived,
       });
     }),
