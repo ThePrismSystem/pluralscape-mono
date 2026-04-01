@@ -8,27 +8,35 @@ vi.mock("expo-localization", () => ({
 
 import { detectLocale } from "../detect-locale.js";
 
-import type { Locale } from "expo-localization";
+import type { Locale } from "@pluralscape/types";
+import type { Locale as ExpoLocale } from "expo-localization";
+
+function asLocales(...tags: string[]): Locale[] {
+  return tags as Locale[];
+}
 
 const mockGetLocales = vi.mocked(getLocales);
 
-function makeLocale(overrides: Partial<Locale> & { languageTag: string }): Locale {
-  return {
-    languageCode: null,
-    languageScriptCode: null,
-    regionCode: null,
-    languageRegionCode: null,
-    currencyCode: null,
-    currencySymbol: null,
-    languageCurrencyCode: null,
-    languageCurrencySymbol: null,
-    decimalSeparator: ".",
-    digitGroupingSeparator: ",",
-    measurementSystem: null,
-    textDirection: "ltr",
-    temperatureUnit: null,
-    ...overrides,
-  };
+function makeLocale(overrides: Partial<ExpoLocale> & { languageTag: string }): ExpoLocale {
+  return Object.assign<ExpoLocale, Partial<ExpoLocale>>(
+    {
+      languageTag: "",
+      languageCode: null,
+      languageScriptCode: null,
+      regionCode: null,
+      languageRegionCode: null,
+      currencyCode: null,
+      currencySymbol: null,
+      languageCurrencyCode: null,
+      languageCurrencySymbol: null,
+      decimalSeparator: ".",
+      digitGroupingSeparator: ",",
+      measurementSystem: null,
+      textDirection: "ltr",
+      temperatureUnit: null,
+    },
+    overrides,
+  );
 }
 
 describe("detectLocale", () => {
@@ -43,7 +51,7 @@ describe("detectLocale", () => {
         temperatureUnit: "fahrenheit",
       }),
     ]);
-    expect(detectLocale(["en-US", "fr"])).toBe("en-US");
+    expect(detectLocale(asLocales("en-US", "fr"))).toBe("en-US");
   });
 
   it("returns a match on languageCode when full tag is not supported", () => {
@@ -54,7 +62,7 @@ describe("detectLocale", () => {
         regionCode: "AU",
       }),
     ]);
-    expect(detectLocale(["en", "fr"])).toBe("en");
+    expect(detectLocale(asLocales("en", "fr"))).toBe("en");
   });
 
   it("falls back to DEFAULT_LOCALE when no device locale is supported", () => {
@@ -65,7 +73,7 @@ describe("detectLocale", () => {
         regionCode: "JP",
       }),
     ]);
-    expect(detectLocale(["en", "fr"])).toBe(DEFAULT_LOCALE);
+    expect(detectLocale(asLocales("en", "fr"))).toBe(DEFAULT_LOCALE);
   });
 
   it("falls back to DEFAULT_LOCALE when no device locales match any supported locale", () => {
@@ -89,6 +97,6 @@ describe("detectLocale", () => {
         regionCode: "FR",
       }),
     ]);
-    expect(detectLocale(["fr", "de"])).toBe("de");
+    expect(detectLocale(asLocales("fr", "de"))).toBe("de");
   });
 });

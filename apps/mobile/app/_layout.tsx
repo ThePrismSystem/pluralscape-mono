@@ -3,11 +3,12 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Redirect, Slot } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { resources } from "../locales";
 import { AuthProvider, AuthStateMachine, createTokenStore, useAuth } from "../src/auth/index.js";
+import { getApiBaseUrl } from "../src/config.js";
 import { ConnectionManager, ConnectionProvider } from "../src/connection/index.js";
 import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
@@ -18,7 +19,7 @@ import type { PlatformContext } from "../src/platform/index.js";
 import type { ReactNode } from "react";
 
 const CONNECTION_CONFIG = {
-  baseUrl: "http://localhost:3000",
+  baseUrl: getApiBaseUrl(),
   maxBackoffMs: 30_000,
   baseBackoffMs: 1_000,
 };
@@ -27,6 +28,42 @@ function LoadingSpinner(): React.JSX.Element {
   return (
     <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <ActivityIndicator size="large" />
+    </View>
+  );
+}
+
+function ErrorScreen({
+  error,
+  onRetry,
+}: {
+  readonly error: Error;
+  readonly onRetry: () => void;
+}): React.JSX.Element {
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>
+        {"Initialization failed"}
+      </Text>
+      <Text style={{ fontSize: 14, color: "#666", marginBottom: 24, textAlign: "center" }}>
+        {error.message}
+      </Text>
+      <Pressable
+        onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel="Retry initialization"
+        style={{
+          minWidth: 44,
+          minHeight: 44,
+          paddingHorizontal: 24,
+          paddingVertical: 12,
+          backgroundColor: "#007AFF",
+          borderRadius: 8,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>{"Retry"}</Text>
+      </Pressable>
     </View>
   );
 }
@@ -48,6 +85,7 @@ function AuthGate({ children }: { readonly children: ReactNode }): React.JSX.Ele
 export default function RootLayout(): React.JSX.Element {
   const [platform, setPlatform] = useState<PlatformContext | null>(null);
   const [tokenStore, setTokenStore] = useState<TokenStore | null>(null);
+  const [initError, setInitError] = useState<Error | null>(null);
   const [locale, setLocale] = useState(DEFAULT_LOCALE);
 
   const queryClientRef = useRef<ReturnType<typeof createAppQueryClient> | null>(null);
@@ -59,15 +97,25 @@ export default function RootLayout(): React.JSX.Element {
   const connectionManagerRef = useRef<ConnectionManager | null>(null);
   connectionManagerRef.current ??= new ConnectionManager(CONNECTION_CONFIG);
 
-  useEffect(() => {
+  const initPlatform = useCallback(() => {
+    setInitError(null);
+    setPlatform(null);
+    setTokenStore(null);
+
     void detectPlatform()
       .then(setPlatform)
-      .catch(() => undefined);
+      .catch((err: unknown) => {
+        setInitError(err instanceof Error ? err : new Error(String(err)));
+      });
   }, []);
 
   useEffect(() => {
+    initPlatform();
+  }, [initPlatform]);
+
+  useEffect(() => {
     const detected = detectLocale(SUPPORTED_LOCALES);
-    setLocale(detected as typeof DEFAULT_LOCALE);
+    setLocale(detected);
     applyLayoutDirection(detected);
   }, []);
 
@@ -75,8 +123,14 @@ export default function RootLayout(): React.JSX.Element {
     if (platform === null) return;
     void createTokenStore(platform.capabilities)
       .then(setTokenStore)
-      .catch(() => undefined);
+      .catch((err: unknown) => {
+        setInitError(err instanceof Error ? err : new Error(String(err)));
+      });
   }, [platform]);
+
+  if (initError !== null) {
+    return <ErrorScreen error={initError} onRetry={initPlatform} />;
+  }
 
   if (platform === null || tokenStore === null) {
     return <LoadingSpinner />;
