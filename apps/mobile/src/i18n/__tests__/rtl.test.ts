@@ -10,34 +10,37 @@ vi.mock("react-native", () => ({
 
 import { applyLayoutDirection } from "../rtl.js";
 
+import type { Locale } from "@pluralscape/types";
+
+
 const mockAllowRTL = vi.mocked(I18nManager.allowRTL);
 const mockForceRTL = vi.mocked(I18nManager.forceRTL);
 
 describe("applyLayoutDirection", () => {
   it("calls forceRTL(true) for Arabic", () => {
-    applyLayoutDirection("ar");
+    applyLayoutDirection("ar" as Locale);
     expect(mockAllowRTL).toHaveBeenCalledWith(true);
     expect(mockForceRTL).toHaveBeenCalledWith(true);
   });
 
   it("calls forceRTL(false) for English", () => {
-    applyLayoutDirection("en");
+    applyLayoutDirection("en" as Locale);
     expect(mockAllowRTL).toHaveBeenCalledWith(true);
     expect(mockForceRTL).toHaveBeenCalledWith(false);
   });
 
   it("calls forceRTL(true) for Hebrew", () => {
-    applyLayoutDirection("he");
+    applyLayoutDirection("he" as Locale);
     expect(mockForceRTL).toHaveBeenCalledWith(true);
   });
 
   it("calls forceRTL(true) for Arabic with region tag", () => {
-    applyLayoutDirection("ar-SA");
+    applyLayoutDirection("ar-SA" as Locale);
     expect(mockForceRTL).toHaveBeenCalledWith(true);
   });
 
   it("calls forceRTL(false) for French", () => {
-    applyLayoutDirection("fr");
+    applyLayoutDirection("fr" as Locale);
     expect(mockForceRTL).toHaveBeenCalledWith(false);
   });
 });
