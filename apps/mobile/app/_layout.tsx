@@ -3,7 +3,7 @@ import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Redirect, Slot } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 import { resources } from "../locales";
@@ -15,19 +15,23 @@ import { SyncProvider } from "../src/sync/index.js";
 
 import type { TokenStore } from "../src/auth/index.js";
 import type { PlatformContext } from "../src/platform/index.js";
+import type { ReactNode } from "react";
 
 const CONNECTION_CONFIG = {
   baseUrl: "http://localhost:3000",
-  wsUrl: "ws://localhost:3000/v1/sync/ws",
   maxBackoffMs: 30_000,
   baseBackoffMs: 1_000,
 };
 
-const queryClient = createAppQueryClient();
-const authMachine = new AuthStateMachine();
-const connectionManager = new ConnectionManager(CONNECTION_CONFIG);
+function LoadingSpinner(): React.JSX.Element {
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+      <ActivityIndicator size="large" />
+    </View>
+  );
+}
 
-function AuthGate(): React.JSX.Element {
+function AuthGate({ children }: { readonly children: ReactNode }): React.JSX.Element {
   const { state } = useAuth();
 
   if (state === "unauthenticated") {
@@ -35,14 +39,10 @@ function AuthGate(): React.JSX.Element {
   }
 
   if (state === "locked") {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <LoadingSpinner />;
   }
 
-  return <Redirect href="/(app)/(tabs)" />;
+  return <>{children}</>;
 }
 
 export default function RootLayout(): React.JSX.Element {
@@ -50,8 +50,19 @@ export default function RootLayout(): React.JSX.Element {
   const [tokenStore, setTokenStore] = useState<TokenStore | null>(null);
   const [locale, setLocale] = useState(DEFAULT_LOCALE);
 
+  const queryClientRef = useRef<ReturnType<typeof createAppQueryClient> | null>(null);
+  queryClientRef.current ??= createAppQueryClient();
+
+  const authMachineRef = useRef<AuthStateMachine | null>(null);
+  authMachineRef.current ??= new AuthStateMachine();
+
+  const connectionManagerRef = useRef<ConnectionManager | null>(null);
+  connectionManagerRef.current ??= new ConnectionManager(CONNECTION_CONFIG);
+
   useEffect(() => {
-    void detectPlatform().then(setPlatform);
+    void detectPlatform()
+      .then(setPlatform)
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -62,15 +73,13 @@ export default function RootLayout(): React.JSX.Element {
 
   useEffect(() => {
     if (platform === null) return;
-    void createTokenStore(platform.capabilities).then(setTokenStore);
+    void createTokenStore(platform.capabilities)
+      .then(setTokenStore)
+      .catch(() => undefined);
   }, [platform]);
 
   if (platform === null || tokenStore === null) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
@@ -82,12 +91,13 @@ export default function RootLayout(): React.JSX.Element {
           resources,
         }}
       >
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider machine={authMachine} tokenStore={tokenStore}>
-            <ConnectionProvider manager={connectionManager}>
+        <QueryClientProvider client={queryClientRef.current}>
+          <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
+            <ConnectionProvider manager={connectionManagerRef.current}>
               <SyncProvider>
-                <Slot />
-                <AuthGate />
+                <AuthGate>
+                  <Slot />
+                </AuthGate>
               </SyncProvider>
             </ConnectionProvider>
           </AuthProvider>
