@@ -40,7 +40,8 @@ export async function createTRPCContext(c: Context): Promise<TRPCContext> {
   return {
     db,
     auth,
-    createAudit: (authOverride) => createAuditWriter(c, authOverride ?? auth),
+    createAudit: (authOverride) =>
+      createAuditWriter(c, authOverride !== undefined ? authOverride : auth),
     requestMeta: extractRequestMeta(c),
   };
 }
