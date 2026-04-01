@@ -5,7 +5,7 @@ import { createCallerFactory, router } from "../../../trpc/trpc.js";
 import type { AuditWriter } from "../../../lib/audit-writer.js";
 import type { AuthContext } from "../../../lib/auth-context.js";
 import type { TRPCContext } from "../../../trpc/context.js";
-import type { MemberId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { AccountId, MemberId, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -42,9 +42,9 @@ const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as never,
+  accountId: "acct_test001" as AccountId,
   systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as never,
+  sessionId: "sess_test001" as SessionId,
   accountType: "system",
   ownedSystemIds: new Set([SYSTEM_ID]),
   auditLogIpTracking: false,
