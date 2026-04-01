@@ -167,7 +167,59 @@ describe("ConnectionManager", () => {
     const manager = makeManager();
     manager.onAuthStateChange(unlockedSnapshot);
     // After onopen -> connected, then onerror -> handleConnectionLost
-    // connected -> CONNECTION_LOST -> reconnecting
+    // connected -> CONNECTION_LOST -> reconnecting (backoff timer scheduled)
     expect(manager.getSnapshot()).toBe("reconnecting");
+  });
+
+  it("completes the reconnect cycle after connection lost from connected", () => {
+    vi.useFakeTimers();
+
+    let sseCallbacks: FetchEventSourceInit | undefined;
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      sseCallbacks = opts;
+      void opts.onopen?.(new Response());
+      return Promise.resolve();
+    });
+
+    const manager = makeManager();
+    manager.onAuthStateChange(unlockedSnapshot);
+    expect(manager.getSnapshot()).toBe("connected");
+
+    // Simulate connection lost — schedules backoff then reconnect
+    expect(sseCallbacks).toBeDefined();
+    sseCallbacks?.onerror?.(new Error("connection dropped"));
+    expect(manager.getSnapshot()).toBe("reconnecting");
+
+    // Advance past backoff delay to trigger reconnect (baseBackoffMs * 2^retryCount = 1000 * 2^1)
+    vi.advanceTimersByTime(2_000);
+    expect(manager.getSnapshot()).toBe("connected");
+
+    vi.useRealTimers();
+  });
+
+  it("completes the backoff-then-reconnect cycle from connecting state", () => {
+    vi.useFakeTimers();
+
+    // First connection attempt fails immediately
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      opts.onerror?.(new Error("refused"));
+      return Promise.resolve();
+    });
+
+    const manager = makeManager();
+    manager.onAuthStateChange(unlockedSnapshot);
+    // connecting -> CONNECTION_LOST -> backoff
+    expect(manager.getSnapshot()).toBe("backoff");
+
+    // After backoff, should reconnect
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      void opts.onopen?.(new Response());
+      return Promise.resolve();
+    });
+
+    vi.advanceTimersByTime(2_000); // baseBackoffMs * 2^retryCount = 1000 * 2^1
+    expect(manager.getSnapshot()).toBe("connected");
+
+    vi.useRealTimers();
   });
 });

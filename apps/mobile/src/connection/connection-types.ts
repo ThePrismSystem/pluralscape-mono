@@ -1,3 +1,5 @@
+import type { SystemId } from "@pluralscape/types";
+
 export type ConnectionState =
   | "disconnected"
   | "connecting"
@@ -12,7 +14,7 @@ export interface ConnectionConfig {
 }
 
 export type ConnectionEvent =
-  | { type: "CONNECT"; token: string; systemId: string }
+  | { type: "CONNECT"; token: string; systemId: SystemId }
   | { type: "CONNECTED" }
   | { type: "DISCONNECT" }
   | { type: "CONNECTION_LOST" }

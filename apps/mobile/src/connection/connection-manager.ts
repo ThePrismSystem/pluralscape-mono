@@ -3,6 +3,7 @@ import { SseClient } from "./sse-client.js";
 
 import type { ConnectionConfig, ConnectionState } from "./connection-types.js";
 import type { AuthStateSnapshot } from "../auth/auth-types.js";
+import type { SystemId } from "@pluralscape/types";
 
 export interface ConnectionManagerConfig {
   readonly baseUrl: string;
@@ -10,14 +11,12 @@ export interface ConnectionManagerConfig {
   readonly baseBackoffMs?: number;
 }
 
-/**
- * Owns both the WebSocket and SSE connections.
- * Responds to auth state changes: connects on UNLOCKED, disconnects on LOCKED/UNAUTHENTICATED.
- */
 export class ConnectionManager {
   private readonly stateMachine: ConnectionStateMachine;
   private readonly sseClient: SseClient;
   private backoffTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastToken: string | null = null;
+  private lastSystemId: SystemId | null = null;
 
   constructor(config: ConnectionManagerConfig) {
     const machineConfig: ConnectionConfig = {
@@ -59,7 +58,9 @@ export class ConnectionManager {
     }
   }
 
-  private connect(token: string, systemId: string): void {
+  private connect(token: string, systemId: SystemId): void {
+    this.lastToken = token;
+    this.lastSystemId = systemId;
     this.stateMachine.dispatch({ type: "CONNECT", token, systemId });
     this.sseClient.connect(token);
   }
@@ -68,6 +69,8 @@ export class ConnectionManager {
     this.clearBackoffTimer();
     this.sseClient.disconnect();
     this.stateMachine.dispatch({ type: "DISCONNECT" });
+    this.lastToken = null;
+    this.lastSystemId = null;
   }
 
   private clearBackoffTimer(): void {
@@ -77,17 +80,26 @@ export class ConnectionManager {
     }
   }
 
-  handleConnectionLost(): void {
+  private handleConnectionLost(): void {
     this.sseClient.disconnect();
     this.stateMachine.dispatch({ type: "CONNECTION_LOST" });
 
     const state = this.stateMachine.getSnapshot();
-    if (state === "backoff") {
+    if (state === "backoff" || state === "reconnecting") {
       const delayMs = this.stateMachine.getBackoffMs();
       this.backoffTimer = setTimeout(() => {
         this.backoffTimer = null;
-        this.stateMachine.dispatch({ type: "BACKOFF_COMPLETE" });
+        if (state === "backoff") {
+          this.stateMachine.dispatch({ type: "BACKOFF_COMPLETE" });
+        }
+        this.reconnect();
       }, delayMs);
     }
+  }
+
+  private reconnect(): void {
+    if (this.lastToken === null || this.lastSystemId === null) return;
+    this.stateMachine.dispatch({ type: "RETRY" });
+    this.sseClient.connect(this.lastToken);
   }
 }

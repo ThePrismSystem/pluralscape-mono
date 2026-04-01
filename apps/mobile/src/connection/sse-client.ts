@@ -51,6 +51,7 @@ export class SseClient {
         try {
           parsed = JSON.parse(ev.data) as unknown;
         } catch {
+          // Malformed JSON payload — drop silently
           return;
         }
         const event = { type: "message" as const, data: parsed };
