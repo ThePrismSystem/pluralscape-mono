@@ -2,8 +2,13 @@ import type { ApiClient } from "@pluralscape/api-client";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { QueryKey } from "@tanstack/react-query";
 
+/** Narrow interface — only the GET method is required, so tests can stub it easily. */
+export interface ApiClientLike {
+  readonly GET: ApiClient["GET"];
+}
+
 export interface RestQueryFactoryDeps {
-  readonly apiClient: ApiClient;
+  readonly apiClient: ApiClientLike;
   readonly getMasterKey: () => KdfMasterKey | null;
 }
 
@@ -42,9 +47,11 @@ export function createRestQueryFactory(deps: RestQueryFactoryDeps): RestQueryFac
       return {
         queryKey: opts.queryKey,
         queryFn: async (): Promise<TData> => {
-          const result = await deps.apiClient.GET(opts.path, {
-            params: opts.params as never,
-          });
+          const init = opts.params !== undefined ? { params: opts.params } : undefined;
+          const result = await deps.apiClient.GET(
+            opts.path,
+            init as Parameters<ApiClient["GET"]>[1],
+          );
           const data = unwrap(result, String(opts.path));
           if (opts.decrypt !== undefined) {
             const masterKey = deps.getMasterKey();

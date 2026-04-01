@@ -2,18 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createRestQueryFactory } from "../rest-query-factory.js";
 
-import type { ApiClient } from "@pluralscape/api-client";
+import type { ApiClientLike } from "../rest-query-factory.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 
-// Build a minimal ApiClient stub typed so that GET returns a resolved FetchResponse.
-// We cast to `ApiClient` via a single `as` from the same general shape to avoid
-// the forbidden double-cast pattern.
-function makeApiClient(data: unknown): ApiClient;
-function makeApiClient(data: undefined, error: unknown): ApiClient;
-function makeApiClient(data: unknown, error?: unknown): ApiClient {
+// Build a minimal ApiClientLike stub that satisfies the narrowed interface.
+function makeApiClient(data: unknown): ApiClientLike;
+function makeApiClient(data: undefined, error: unknown): ApiClientLike;
+function makeApiClient(data: unknown, error?: unknown): ApiClientLike {
   const response =
     data !== undefined ? { data, response: new Response() } : { error, response: new Response() };
-  return { GET: vi.fn().mockResolvedValue(response) } as ApiClient;
+  return { GET: vi.fn().mockResolvedValue(response) } as ApiClientLike;
 }
 
 describe("createRestQueryFactory", () => {
