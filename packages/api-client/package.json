@@ -4,12 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./trpc": "./src/trpc.ts"
   },
   "dependencies": {
+    "@trpc/client": "11.16.0",
+    "@trpc/react-query": "11.16.0",
     "openapi-fetch": "^0.17.0"
   },
   "devDependencies": {
+    "@pluralscape/api": "workspace:^",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "eslint": "^10.0.3",
