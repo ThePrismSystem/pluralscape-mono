@@ -96,7 +96,7 @@ describe("createRestQueryFactory", () => {
     const opts = factory.queryOptions({
       queryKey: ["item"],
       path: "/health" as never,
-      decrypt: (raw) => raw,
+      decrypt: (raw: unknown) => raw,
     });
     await expect(opts.queryFn()).rejects.toThrow("Master key not available for decryption");
   });

@@ -20,11 +20,17 @@ type GetPath = {
 /** The init object for a specific GET path (optional when no required params). */
 type GetInit<P extends GetPath> = MaybeOptionalInit<paths[P], "get">;
 
-export interface RestQueryOpts<P extends GetPath, TData = unknown> {
+export interface RestQueryOptsWithDecrypt<P extends GetPath, TData> {
   readonly queryKey: QueryKey;
   readonly path: P;
   readonly init?: GetInit<P>;
-  readonly decrypt?: (raw: unknown, masterKey: KdfMasterKey) => TData;
+  readonly decrypt: (raw: unknown, masterKey: KdfMasterKey) => TData;
+}
+
+export interface RestQueryOptsPlain<P extends GetPath> {
+  readonly queryKey: QueryKey;
+  readonly path: P;
+  readonly init?: GetInit<P>;
 }
 
 export interface RestQueryResult<TData> {
@@ -33,9 +39,10 @@ export interface RestQueryResult<TData> {
 }
 
 export interface RestQueryFactory {
-  queryOptions<P extends GetPath, TData = unknown>(
-    opts: RestQueryOpts<P, TData>,
+  queryOptions<P extends GetPath, TData>(
+    opts: RestQueryOptsWithDecrypt<P, TData>,
   ): RestQueryResult<TData>;
+  queryOptions<P extends GetPath>(opts: RestQueryOptsPlain<P>): RestQueryResult<unknown>;
 }
 
 /**
@@ -53,14 +60,28 @@ function unwrap(result: { data?: unknown; error?: unknown }, path: string): unkn
   return result.data;
 }
 
+/**
+ * Shared shape used only inside the implementation — erases the generic union.
+ * `init` is `unknown` so that `GetInit<P>` (a conditional type) assigns to it
+ * without a cast; `path` stays as `GetPath` so the string union assigns cleanly.
+ */
+interface OptsErased {
+  readonly queryKey: QueryKey;
+  readonly path: GetPath;
+  readonly init?: unknown;
+  readonly decrypt?: (raw: unknown, masterKey: KdfMasterKey) => unknown;
+}
+
 export function createRestQueryFactory(deps: RestQueryFactoryDeps): RestQueryFactory {
   return {
-    queryOptions<P extends GetPath, TData = unknown>(
-      opts: RestQueryOpts<P, TData>,
-    ): RestQueryResult<TData> {
+    queryOptions<P extends GetPath, TData>(
+      opts: RestQueryOptsWithDecrypt<P, TData> | RestQueryOptsPlain<P>,
+    ): RestQueryResult<unknown> {
+      // Both union members satisfy OptsErased — no cast needed.
+      const erased: OptsErased = opts;
       return {
-        queryKey: opts.queryKey,
-        queryFn: async (): Promise<TData> => {
+        queryKey: erased.queryKey,
+        queryFn: async (): Promise<unknown> => {
           // openapi-fetch's GET is generic over Path and Init, so TS cannot
           // resolve the conditional rest param when P is still generic. The
           // public API constrains P to valid GET paths and init to matching
@@ -69,14 +90,17 @@ export function createRestQueryFactory(deps: RestQueryFactoryDeps): RestQueryFac
             url: string,
             init?: Record<string, unknown>,
           ) => Promise<{ data?: unknown; error?: unknown }>;
-          const result = await (deps.apiClient.GET as ErasedGet)(opts.path, opts.init);
-          const data = unwrap(result, opts.path);
-          if (opts.decrypt !== undefined) {
+          const result = await (deps.apiClient.GET as ErasedGet)(
+            erased.path,
+            erased.init as Record<string, unknown> | undefined,
+          );
+          const data = unwrap(result, erased.path);
+          if (erased.decrypt !== undefined) {
             const masterKey = deps.getMasterKey();
             if (masterKey === null) throw new Error("Master key not available for decryption");
-            return opts.decrypt(data, masterKey);
+            return erased.decrypt(data, masterKey);
           }
-          return data as TData;
+          return data;
         },
       };
     },
