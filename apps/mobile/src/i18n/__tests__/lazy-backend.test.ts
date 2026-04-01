@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createLazyBackend } from "../lazy-backend.js";
-import { resolveNomenclatureFromSettings } from "../nomenclature-wiring.js";
 
 describe("createLazyBackend", () => {
   it("returns a plugin with type 'backend'", () => {
@@ -57,36 +56,5 @@ describe("createLazyBackend", () => {
         resolve();
       });
     });
-  });
-});
-
-describe("resolveNomenclatureFromSettings", () => {
-  it("returns empty object when settings is null", () => {
-    expect(resolveNomenclatureFromSettings(null)).toEqual({});
-  });
-
-  it("returns empty object when no nomenclature keys are set", () => {
-    expect(resolveNomenclatureFromSettings({})).toEqual({});
-  });
-
-  it("maps systemNomenclature to system key", () => {
-    expect(resolveNomenclatureFromSettings({ systemNomenclature: "Collective" })).toEqual({
-      system: "Collective",
-    });
-  });
-
-  it("maps memberNomenclature to member key", () => {
-    expect(resolveNomenclatureFromSettings({ memberNomenclature: "Headmate" })).toEqual({
-      member: "Headmate",
-    });
-  });
-
-  it("maps both keys when both are provided", () => {
-    expect(
-      resolveNomenclatureFromSettings({
-        systemNomenclature: "Collective",
-        memberNomenclature: "Headmate",
-      }),
-    ).toEqual({ system: "Collective", member: "Headmate" });
   });
 });
