@@ -2,6 +2,7 @@ import {
   CreateMemberBodySchema,
   DuplicateMemberBodySchema,
   UpdateMemberBodySchema,
+  brandedIdQueryParam,
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
@@ -19,13 +20,11 @@ import {
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
-import type { GroupId, MemberId } from "@pluralscape/types";
-
 /** Maximum items per page for member list queries. */
 const MAX_LIST_LIMIT = 100;
 
 const MemberIdSchema = z.object({
-  memberId: z.string().startsWith("mem_"),
+  memberId: brandedIdQueryParam("mem_"),
 });
 
 export const memberRouter = router({
@@ -42,7 +41,7 @@ export const memberRouter = router({
   }),
 
   get: systemProcedure.input(MemberIdSchema).query(async ({ ctx, input }) => {
-    return getMember(ctx.db, ctx.systemId, input.memberId as MemberId, ctx.auth);
+    return getMember(ctx.db, ctx.systemId, input.memberId, ctx.auth);
   }),
 
   list: systemProcedure
@@ -50,7 +49,7 @@ export const memberRouter = router({
       z.object({
         cursor: z.string().optional(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
-        groupId: z.string().startsWith("grp_").optional(),
+        groupId: brandedIdQueryParam("grp_").optional(),
         includeArchived: z.boolean().default(false),
       }),
     )
@@ -58,7 +57,7 @@ export const memberRouter = router({
       return listMembers(ctx.db, ctx.systemId, ctx.auth, {
         cursor: input.cursor,
         limit: input.limit,
-        groupId: input.groupId as GroupId | undefined,
+        groupId: input.groupId,
         includeArchived: input.includeArchived,
       });
     }),
@@ -70,7 +69,7 @@ export const memberRouter = router({
       return updateMember(
         ctx.db,
         ctx.systemId,
-        input.memberId as MemberId,
+        input.memberId,
         { encryptedData: input.encryptedData, version: input.version },
         ctx.auth,
         audit,
@@ -84,7 +83,7 @@ export const memberRouter = router({
       return duplicateMember(
         ctx.db,
         ctx.systemId,
-        input.memberId as MemberId,
+        input.memberId,
         {
           encryptedData: input.encryptedData,
           copyPhotos: input.copyPhotos,
@@ -98,20 +97,22 @@ export const memberRouter = router({
 
   archive: systemProcedure.input(MemberIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    await archiveMember(ctx.db, ctx.systemId, input.memberId as MemberId, ctx.auth, audit);
+    await archiveMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
+    return { success: true as const };
   }),
 
   restore: systemProcedure.input(MemberIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    return restoreMember(ctx.db, ctx.systemId, input.memberId as MemberId, ctx.auth, audit);
+    return restoreMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
   }),
 
   delete: systemProcedure.input(MemberIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    await deleteMember(ctx.db, ctx.systemId, input.memberId as MemberId, ctx.auth, audit);
+    await deleteMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
+    return { success: true as const };
   }),
 
   listMemberships: systemProcedure.input(MemberIdSchema).query(async ({ ctx, input }) => {
-    return listAllMemberMemberships(ctx.db, ctx.systemId, input.memberId as MemberId, ctx.auth);
+    return listAllMemberMemberships(ctx.db, ctx.systemId, input.memberId, ctx.auth);
   }),
 });

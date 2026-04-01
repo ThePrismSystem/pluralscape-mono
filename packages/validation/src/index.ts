@@ -1,5 +1,6 @@
 export { DeleteAccountBodySchema } from "./account.js";
 export { brandedString, brandedNumber } from "./branded.js";
+export { brandedIdQueryParam } from "./branded-id.js";
 export {
   ChangeEmailSchema,
   ChangePasswordSchema,

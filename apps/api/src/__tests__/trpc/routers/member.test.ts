@@ -161,14 +161,14 @@ describe("member router", () => {
         systemId: SYSTEM_ID,
         cursor: "cur_abc",
         limit: 10,
-        groupId: "grp_testtest-tttt-tttt-tttt-testtesttest",
+        groupId: "grp_11111111-2222-3333-4444-555555555555",
         includeArchived: true,
       });
 
       const opts = vi.mocked(listMembers).mock.calls[0]?.[3];
       expect(opts?.cursor).toBe("cur_abc");
       expect(opts?.limit).toBe(10);
-      expect(opts?.groupId).toBe("grp_testtest-tttt-tttt-tttt-testtesttest");
+      expect(opts?.groupId).toBe("grp_11111111-2222-3333-4444-555555555555");
       expect(opts?.includeArchived).toBe(true);
     });
   });
@@ -199,8 +199,9 @@ describe("member router", () => {
     it("calls archiveMember with correct systemId and memberId", async () => {
       vi.mocked(archiveMember).mockResolvedValue(undefined);
       const caller = makeCaller();
-      await caller.member.archive({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
+      const result = await caller.member.archive({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
 
+      expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveMember)).toHaveBeenCalledOnce();
       expect(vi.mocked(archiveMember).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(archiveMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
@@ -228,8 +229,9 @@ describe("member router", () => {
     it("calls deleteMember with correct systemId and memberId", async () => {
       vi.mocked(deleteMember).mockResolvedValue(undefined);
       const caller = makeCaller();
-      await caller.member.delete({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
+      const result = await caller.member.delete({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
 
+      expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteMember)).toHaveBeenCalledOnce();
       expect(vi.mocked(deleteMember).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(deleteMember).mock.calls[0]?.[2]).toBe(MEMBER_ID);
