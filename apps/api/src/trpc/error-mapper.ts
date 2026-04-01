@@ -62,15 +62,17 @@ const errorMapper = middleware(async ({ next }) => {
     return result;
   }
 
-  // result.error is a TRPCError produced by getTRPCErrorFromUnknown; the original
-  // service-layer error is in result.error.cause. If it was already mapped
-  // (e.g. thrown TRPCError passes through), cause is undefined/the same TRPCError.
+  // If the error is a TRPCError with a specific (non-default) code, it was
+  // explicitly thrown by a procedure or middleware — trust it as-is.
+  // Only re-map errors with INTERNAL_SERVER_ERROR, which is tRPC's default
+  // wrapper for unknown errors that need our custom mapping.
+  if (result.error.code !== "INTERNAL_SERVER_ERROR") {
+    return result;
+  }
+
   const originalCause = result.error.cause ?? result.error;
   const mapped = mapError(originalCause);
 
-  // If the inner TRPCError was already correctly mapped (came from a thrown
-  // TRPCError in user code or another middleware), its code won't be
-  // INTERNAL_SERVER_ERROR from wrapping — trust the existing code.
   if (mapped === result.error) {
     return result;
   }
