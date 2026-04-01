@@ -36,6 +36,25 @@ function recordToEntry(r: QueueRecord): OfflineQueueEntry {
   };
 }
 
+function entryToQueueRecord(
+  id: string,
+  documentId: SyncDocumentId,
+  envelope: Omit<EncryptedChangeEnvelope, "seq">,
+  enqueuedAt: number,
+): QueueRecord {
+  return {
+    id,
+    documentId,
+    ciphertext: envelope.ciphertext,
+    nonce: envelope.nonce as Uint8Array,
+    signature: envelope.signature as Uint8Array,
+    authorPublicKey: envelope.authorPublicKey as Uint8Array,
+    enqueuedAt,
+    syncedAt: null,
+    serverSeq: null,
+  };
+}
+
 /** Generates a unique ID for queue entries. */
 function generateId(): string {
   return `oq_${crypto.randomUUID()}`;
@@ -71,18 +90,7 @@ export function createIndexedDbOfflineQueueAdapter(
       const now = monotonicNow();
       const tx = db.transaction(STORE_QUEUE, "readwrite");
       const store = tx.objectStore(STORE_QUEUE);
-      const record: QueueRecord = {
-        id,
-        documentId,
-        ciphertext: envelope.ciphertext,
-        nonce: envelope.nonce as Uint8Array,
-        signature: envelope.signature as Uint8Array,
-        authorPublicKey: envelope.authorPublicKey as Uint8Array,
-        enqueuedAt: now,
-        syncedAt: null,
-        serverSeq: null,
-      };
-      await idbRequest(store.add(record));
+      await idbRequest(store.add(entryToQueueRecord(id, documentId, envelope, now)));
       return id;
     },
 

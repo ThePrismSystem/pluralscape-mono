@@ -48,6 +48,31 @@ function recordToChange(r: ChangeRecord): EncryptedChangeEnvelope {
   };
 }
 
+function snapshotToRecord(
+  documentId: SyncDocumentId,
+  snapshot: EncryptedSnapshotEnvelope,
+): SnapshotRecord {
+  return {
+    documentId,
+    snapshotVersion: snapshot.snapshotVersion,
+    ciphertext: snapshot.ciphertext,
+    nonce: snapshot.nonce as Uint8Array,
+    signature: snapshot.signature as Uint8Array,
+    authorPublicKey: snapshot.authorPublicKey as Uint8Array,
+  };
+}
+
+function changeToRecord(documentId: SyncDocumentId, change: EncryptedChangeEnvelope): ChangeRecord {
+  return {
+    documentId,
+    seq: change.seq,
+    ciphertext: change.ciphertext,
+    nonce: change.nonce as Uint8Array,
+    signature: change.signature as Uint8Array,
+    authorPublicKey: change.authorPublicKey as Uint8Array,
+  };
+}
+
 /** IndexedDB-backed SyncStorageAdapter for web fallback (browsers without OPFS). */
 export function createIndexedDbStorageAdapter(
   dbName = "pluralscape-sync-storage",
@@ -82,15 +107,7 @@ export function createIndexedDbStorageAdapter(
       const db = await dbPromise;
       const tx = db.transaction(STORE_SNAPSHOTS, "readwrite");
       const store = tx.objectStore(STORE_SNAPSHOTS);
-      const record: SnapshotRecord = {
-        documentId,
-        snapshotVersion: snapshot.snapshotVersion,
-        ciphertext: snapshot.ciphertext,
-        nonce: snapshot.nonce as Uint8Array,
-        signature: snapshot.signature as Uint8Array,
-        authorPublicKey: snapshot.authorPublicKey as Uint8Array,
-      };
-      await idbRequest(store.put(record));
+      await idbRequest(store.put(snapshotToRecord(documentId, snapshot)));
     },
 
     async loadChangesSince(
@@ -114,15 +131,7 @@ export function createIndexedDbStorageAdapter(
       const db = await dbPromise;
       const tx = db.transaction(STORE_CHANGES, "readwrite");
       const store = tx.objectStore(STORE_CHANGES);
-      const record: ChangeRecord = {
-        documentId,
-        seq: change.seq,
-        ciphertext: change.ciphertext,
-        nonce: change.nonce as Uint8Array,
-        signature: change.signature as Uint8Array,
-        authorPublicKey: change.authorPublicKey as Uint8Array,
-      };
-      await idbRequest(store.put(record));
+      await idbRequest(store.put(changeToRecord(documentId, change)));
     },
 
     async appendChanges(
@@ -134,17 +143,7 @@ export function createIndexedDbStorageAdapter(
       const tx = db.transaction(STORE_CHANGES, "readwrite");
       const store = tx.objectStore(STORE_CHANGES);
       await Promise.all(
-        changes.map((change) => {
-          const record: ChangeRecord = {
-            documentId,
-            seq: change.seq,
-            ciphertext: change.ciphertext,
-            nonce: change.nonce as Uint8Array,
-            signature: change.signature as Uint8Array,
-            authorPublicKey: change.authorPublicKey as Uint8Array,
-          };
-          return idbRequest(store.put(record));
-        }),
+        changes.map((change) => idbRequest(store.put(changeToRecord(documentId, change)))),
       );
     },
 
