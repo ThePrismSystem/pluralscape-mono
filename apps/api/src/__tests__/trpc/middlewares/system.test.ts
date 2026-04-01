@@ -58,10 +58,7 @@ describe("systemProcedure", () => {
 
   it("rejects requests with missing systemId", async () => {
     const caller = createCaller(makeContext(MOCK_AUTH));
-    await expect(
-      // @ts-expect-error -- intentionally omitting systemId
-      caller.echo({ value: "test" }),
-    ).rejects.toThrow();
+    await expect(caller.echo({ value: "test" } as never)).rejects.toThrow();
   });
 
   it("passes valid systemId into context", async () => {
