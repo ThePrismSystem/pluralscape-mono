@@ -33,7 +33,12 @@ export function ConnectionProvider({
   const auth = useAuth();
 
   useEffect(() => {
-    manager.onAuthStateChange(auth.snapshot);
+    if (auth.snapshot.state === "unlocked") {
+      const { sessionToken, systemId } = auth.snapshot.credentials;
+      manager.connect(sessionToken, systemId);
+    } else {
+      manager.disconnect();
+    }
   }, [manager, auth.snapshot]);
 
   const subscribe = useCallback(

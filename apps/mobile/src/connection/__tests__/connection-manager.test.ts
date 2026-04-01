@@ -3,17 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionManager } from "../connection-manager.js";
 
-import type { AuthStateSnapshot } from "../../auth/auth-types.js";
 import type { FetchEventSourceInit } from "@microsoft/fetch-event-source";
-import type {
-  BoxPublicKey,
-  BoxSecretKey,
-  KdfMasterKey,
-  PwhashSalt,
-  SignPublicKey,
-  SignSecretKey,
-} from "@pluralscape/crypto";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 
 vi.mock("@microsoft/fetch-event-source", () => ({
   fetchEventSource: vi.fn(),
@@ -25,44 +16,6 @@ function makeManager(): ConnectionManager {
   return new ConnectionManager({ baseUrl: "https://example.com" });
 }
 
-const fakeCredentials = {
-  sessionToken: "tok",
-  accountId: "acct_1" as AccountId,
-  systemId: "sys_1" as SystemId,
-  salt: new Uint8Array(16) as PwhashSalt,
-};
-
-const unauthenticated: AuthStateSnapshot = {
-  state: "unauthenticated",
-  session: null,
-  credentials: null,
-};
-
-const lockedSnapshot: AuthStateSnapshot = {
-  state: "locked",
-  session: null,
-  credentials: fakeCredentials,
-};
-
-const unlockedSnapshot: AuthStateSnapshot = {
-  state: "unlocked",
-  session: {
-    credentials: fakeCredentials,
-    masterKey: new Uint8Array(32) as KdfMasterKey,
-    identityKeys: {
-      sign: {
-        publicKey: new Uint8Array(32) as SignPublicKey,
-        secretKey: new Uint8Array(64) as SignSecretKey,
-      },
-      box: {
-        publicKey: new Uint8Array(32) as BoxPublicKey,
-        secretKey: new Uint8Array(32) as BoxSecretKey,
-      },
-    },
-  },
-  credentials: fakeCredentials,
-};
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -73,21 +26,9 @@ describe("ConnectionManager", () => {
     expect(manager.getSnapshot()).toBe("disconnected");
   });
 
-  it("stays disconnected when unauthenticated auth state arrives", () => {
+  it("transitions to connecting (not connected) when connect is called", () => {
     const manager = makeManager();
-    manager.onAuthStateChange(unauthenticated);
-    expect(manager.getSnapshot()).toBe("disconnected");
-  });
-
-  it("stays disconnected when locked auth state arrives", () => {
-    const manager = makeManager();
-    manager.onAuthStateChange(lockedSnapshot);
-    expect(manager.getSnapshot()).toBe("disconnected");
-  });
-
-  it("transitions to connecting (not connected) when unlocked auth state arrives", () => {
-    const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     expect(manager.getSnapshot()).toBe("connecting");
   });
 
@@ -98,32 +39,32 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     expect(manager.getSnapshot()).toBe("connected");
   });
 
-  it("disconnects when locked after being connected", () => {
+  it("disconnects when disconnect is called after being connected", () => {
     mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
       void opts.onopen?.(new Response());
       return Promise.resolve();
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     expect(manager.getSnapshot()).toBe("connected");
-    manager.onAuthStateChange(lockedSnapshot);
+    manager.disconnect();
     expect(manager.getSnapshot()).toBe("disconnected");
   });
 
-  it("disconnects when unauthenticated after being connected", () => {
+  it("disconnects when disconnect is called after being connected (unauthenticated path)", () => {
     mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
       void opts.onopen?.(new Response());
       return Promise.resolve();
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
-    manager.onAuthStateChange(unauthenticated);
+    manager.connect("tok", "sys_1" as SystemId);
+    manager.disconnect();
     expect(manager.getSnapshot()).toBe("disconnected");
   });
 
@@ -131,7 +72,7 @@ describe("ConnectionManager", () => {
     const manager = makeManager();
     const listener = vi.fn();
     manager.subscribe(listener);
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     expect(listener).toHaveBeenCalled();
   });
 
@@ -140,7 +81,7 @@ describe("ConnectionManager", () => {
     const listener = vi.fn();
     const unsub = manager.subscribe(listener);
     unsub();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -151,7 +92,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     manager.disconnect();
     expect(manager.getSnapshot()).toBe("disconnected");
   });
@@ -169,7 +110,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     // After onopen -> connected, then onerror -> handleConnectionLost
     // connected -> CONNECTION_LOST -> reconnecting (backoff timer scheduled)
     expect(manager.getSnapshot()).toBe("reconnecting");
@@ -186,7 +127,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     expect(manager.getSnapshot()).toBe("connected");
 
     // Simulate connection lost — schedules backoff then reconnect
@@ -219,7 +160,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     // connecting -> CONNECTION_LOST -> backoff
     expect(manager.getSnapshot()).toBe("backoff");
 
@@ -245,7 +186,7 @@ describe("ConnectionManager", () => {
     });
 
     const manager = makeManager();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     expect(manager.getSnapshot()).toBe("connected");
 
     // Trigger connection lost to enter backoff/reconnecting
@@ -260,7 +201,7 @@ describe("ConnectionManager", () => {
 
     // Disconnect and reconnect to trigger connection lost
     manager.disconnect();
-    manager.onAuthStateChange(unlockedSnapshot);
+    manager.connect("tok", "sys_1" as SystemId);
     // Now connecting — trigger error to enter backoff
     expect(manager.getSnapshot()).toBe("backoff");
 
@@ -273,5 +214,86 @@ describe("ConnectionManager", () => {
     expect(manager.getSnapshot()).toBe("disconnected");
 
     vi.useRealTimers();
+  });
+
+  it("exposes the last error via getLastError()", () => {
+    const sseError = new Error("SSE failed");
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      void opts.onopen?.(new Response());
+      try {
+        opts.onerror?.(sseError);
+      } catch {
+        // Expected throw
+      }
+      return Promise.resolve();
+    });
+
+    const manager = makeManager();
+    manager.connect("tok", "sys_1" as SystemId);
+    expect(manager.getLastError()).toBe(sseError);
+  });
+
+  it("clears lastError on successful reconnect", () => {
+    vi.useFakeTimers();
+    const sseError = new Error("SSE failed");
+
+    // First: connect successfully then lose connection
+    let sseCallbacks: FetchEventSourceInit | undefined;
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      sseCallbacks = opts;
+      void opts.onopen?.(new Response());
+      return Promise.resolve();
+    });
+
+    const manager = makeManager();
+    manager.connect("tok", "sys_1" as SystemId);
+    expect(manager.getSnapshot()).toBe("connected");
+    expect(manager.getLastError()).toBeNull();
+
+    // Trigger error
+    try {
+      sseCallbacks?.onerror?.(sseError);
+    } catch {
+      // Expected throw
+    }
+    expect(manager.getLastError()).toBe(sseError);
+
+    // Reconnect succeeds after backoff
+    vi.advanceTimersByTime(2_000);
+    expect(manager.getSnapshot()).toBe("connected");
+    expect(manager.getLastError()).toBeNull();
+
+    vi.useRealTimers();
+  });
+
+  it("ignores duplicate connect when already connecting", () => {
+    mockFetchEventSource.mockImplementation(() => Promise.resolve());
+    const manager = makeManager();
+    manager.connect("tok", "sys_1" as SystemId);
+    expect(manager.getSnapshot()).toBe("connecting");
+    expect(mockFetchEventSource).toHaveBeenCalledTimes(1);
+
+    manager.connect("tok2", "sys_2" as SystemId);
+    expect(mockFetchEventSource).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears lastError on disconnect", () => {
+    const sseError = new Error("SSE failed");
+    mockFetchEventSource.mockImplementation((_url: RequestInfo, opts: FetchEventSourceInit) => {
+      void opts.onopen?.(new Response());
+      try {
+        opts.onerror?.(sseError);
+      } catch {
+        // Expected throw
+      }
+      return Promise.resolve();
+    });
+
+    const manager = makeManager();
+    manager.connect("tok", "sys_1" as SystemId);
+    expect(manager.getLastError()).toBe(sseError);
+
+    manager.disconnect();
+    expect(manager.getLastError()).toBeNull();
   });
 });

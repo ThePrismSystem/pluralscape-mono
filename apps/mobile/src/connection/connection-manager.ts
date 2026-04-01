@@ -2,7 +2,6 @@ import { ConnectionStateMachine } from "./connection-state-machine.js";
 import { SseClient } from "./sse-client.js";
 
 import type { ConnectionState } from "./connection-types.js";
-import type { AuthStateSnapshot } from "../auth/auth-types.js";
 import type { SystemId } from "@pluralscape/types";
 
 export interface ConnectionManagerConfig {
@@ -17,6 +16,7 @@ export class ConnectionManager {
   private backoffTimer: ReturnType<typeof setTimeout> | null = null;
   private lastToken: string | null = null;
   private lastSystemId: SystemId | null = null;
+  private lastError: unknown = null;
 
   constructor(config: ConnectionManagerConfig) {
     this.stateMachine = new ConnectionStateMachine(config);
@@ -24,12 +24,14 @@ export class ConnectionManager {
       { baseUrl: config.baseUrl },
       {
         onConnected: () => {
+          this.lastError = null;
           this.stateMachine.dispatch({ type: "CONNECTED" });
         },
         onDisconnected: () => {
           this.handleConnectionLost();
         },
-        onError: () => {
+        onError: (err: unknown) => {
+          this.lastError = err;
           this.handleConnectionLost();
         },
       },
@@ -40,20 +42,16 @@ export class ConnectionManager {
     return this.stateMachine.getSnapshot();
   }
 
+  getLastError(): unknown {
+    return this.lastError;
+  }
+
   subscribe(listener: (state: ConnectionState) => void): () => void {
     return this.stateMachine.subscribe(listener);
   }
 
-  onAuthStateChange(snapshot: AuthStateSnapshot): void {
-    if (snapshot.state === "unlocked") {
-      const { sessionToken, systemId } = snapshot.credentials;
-      this.connect(sessionToken, systemId);
-    } else {
-      this.disconnect();
-    }
-  }
-
-  private connect(token: string, systemId: SystemId): void {
+  connect(token: string, systemId: SystemId): void {
+    if (this.stateMachine.getSnapshot() !== "disconnected") return;
     this.lastToken = token;
     this.lastSystemId = systemId;
     this.stateMachine.dispatch({ type: "CONNECT", token, systemId });
@@ -66,6 +64,7 @@ export class ConnectionManager {
     this.stateMachine.dispatch({ type: "DISCONNECT" });
     this.lastToken = null;
     this.lastSystemId = null;
+    this.lastError = null;
   }
 
   private clearBackoffTimer(): void {
