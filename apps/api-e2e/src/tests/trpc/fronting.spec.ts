@@ -30,8 +30,8 @@ test.describe("tRPC frontingSession router", () => {
       const result = await trpc.frontingSession.create.mutate({
         systemId,
         memberId,
-        customFrontId: null,
-        structureEntityId: null,
+        customFrontId: undefined,
+        structureEntityId: undefined,
         startTime: Date.now(),
         encryptedData: encryptForApi({ note: "tRPC E2E fronting session" }),
       });
