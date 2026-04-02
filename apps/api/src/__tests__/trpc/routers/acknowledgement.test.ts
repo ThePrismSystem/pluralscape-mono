@@ -236,8 +236,14 @@ describe("acknowledgement router", () => {
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
-      const params = vi.mocked(confirmAcknowledgement).mock.calls[0]?.[3];
-      expect(params?.encryptedData).toBe(VALID_ENCRYPTED_DATA);
+      expect(vi.mocked(confirmAcknowledgement)).toHaveBeenCalledWith(
+        expect.anything(),
+        SYSTEM_ID,
+        ACK_ID,
+        { encryptedData: VALID_ENCRYPTED_DATA },
+        expect.anything(),
+        expect.anything(),
+      );
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
