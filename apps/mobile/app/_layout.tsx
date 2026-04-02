@@ -191,6 +191,8 @@ export default function RootLayout(): React.JSX.Element {
     return <LoadingSpinner />;
   }
 
+  const getToken = useCallback(() => tokenStore.getToken(), [tokenStore]);
+
   return (
     <PlatformProvider context={platform}>
       <I18nProvider
@@ -203,7 +205,7 @@ export default function RootLayout(): React.JSX.Element {
         <QueryClientProvider client={queryClientRef.current}>
           <TRPCProvider
             queryClient={queryClientRef.current}
-            getToken={tokenStore.getToken.bind(tokenStore)}
+            getToken={getToken}
             onUnauthorized={() => authMachineRef.current?.dispatch({ type: "LOGOUT" })}
           >
             <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
