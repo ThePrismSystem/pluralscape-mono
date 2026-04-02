@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  MemberId,
-  MemberPhotoId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { MemberId, MemberPhotoId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -49,36 +39,11 @@ const {
 
 const { memberPhotoRouter } = await import("../../../trpc/routers/member-photo.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ memberPhoto: memberPhotoRouter });
+
 const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
 const PHOTO_ID = "mp_11111111-2222-3333-4444-555555555555" as MemberPhotoId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ memberPhoto: memberPhotoRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_PHOTO_RESULT = {
   id: PHOTO_ID,
@@ -103,7 +68,7 @@ describe("memberPhoto router", () => {
   describe("memberPhoto.create", () => {
     it("calls createMemberPhoto with correct systemId, memberId, and returns result", async () => {
       vi.mocked(createMemberPhoto).mockResolvedValue(MOCK_PHOTO_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.memberPhoto.create({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -117,7 +82,7 @@ describe("memberPhoto router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.memberPhoto.create({
           systemId: SYSTEM_ID,
@@ -128,7 +93,7 @@ describe("memberPhoto router", () => {
     });
 
     it("rejects invalid memberId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.memberPhoto.create({
           systemId: SYSTEM_ID,
@@ -144,7 +109,7 @@ describe("memberPhoto router", () => {
   describe("memberPhoto.get", () => {
     it("calls getMemberPhoto with correct systemId, memberId, and photoId", async () => {
       vi.mocked(getMemberPhoto).mockResolvedValue(MOCK_PHOTO_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.memberPhoto.get({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -159,7 +124,7 @@ describe("memberPhoto router", () => {
     });
 
     it("rejects invalid photoId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.memberPhoto.get({
           systemId: SYSTEM_ID,
@@ -173,7 +138,7 @@ describe("memberPhoto router", () => {
       vi.mocked(getMemberPhoto).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Photo not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.memberPhoto.get({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -191,7 +156,7 @@ describe("memberPhoto router", () => {
         totalCount: null,
       };
       vi.mocked(listMemberPhotos).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.memberPhoto.list({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
 
       expect(vi.mocked(listMemberPhotos)).toHaveBeenCalledOnce();
@@ -207,7 +172,7 @@ describe("memberPhoto router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.memberPhoto.list({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -226,7 +191,7 @@ describe("memberPhoto router", () => {
   describe("memberPhoto.archive", () => {
     it("calls archiveMemberPhoto with correct args and returns success", async () => {
       vi.mocked(archiveMemberPhoto).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.memberPhoto.archive({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -244,7 +209,7 @@ describe("memberPhoto router", () => {
       vi.mocked(archiveMemberPhoto).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Photo not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.memberPhoto.archive({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -256,7 +221,7 @@ describe("memberPhoto router", () => {
   describe("memberPhoto.restore", () => {
     it("calls restoreMemberPhoto and returns the result", async () => {
       vi.mocked(restoreMemberPhoto).mockResolvedValue(MOCK_PHOTO_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.memberPhoto.restore({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -274,7 +239,7 @@ describe("memberPhoto router", () => {
       vi.mocked(restoreMemberPhoto).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Photo not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.memberPhoto.restore({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -286,7 +251,7 @@ describe("memberPhoto router", () => {
   describe("memberPhoto.delete", () => {
     it("calls deleteMemberPhoto with correct args and returns success", async () => {
       vi.mocked(deleteMemberPhoto).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.memberPhoto.delete({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -304,7 +269,7 @@ describe("memberPhoto router", () => {
       vi.mocked(deleteMemberPhoto).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Photo not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.memberPhoto.delete({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -317,7 +282,7 @@ describe("memberPhoto router", () => {
     it("calls reorderMemberPhotos with correct args and returns result", async () => {
       const mockOrdered = [MOCK_PHOTO_RESULT];
       vi.mocked(reorderMemberPhotos).mockResolvedValue(mockOrdered);
-      const caller = makeCaller();
+      const caller = createCaller();
       const order = [{ id: PHOTO_ID, sortOrder: 0 }];
       const result = await caller.memberPhoto.reorder({
         systemId: SYSTEM_ID,
@@ -335,7 +300,7 @@ describe("memberPhoto router", () => {
       vi.mocked(reorderMemberPhotos).mockRejectedValue(
         new ApiHttpError(400, "VALIDATION_ERROR", "Invalid reorder"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.memberPhoto.reorder({
           systemId: SYSTEM_ID,

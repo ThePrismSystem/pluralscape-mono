@@ -1,17 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, MOCK_AUTH, noopAuditWriter, makeCallerFactory } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  BiometricTokenId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { BiometricTokenId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -55,35 +46,7 @@ const { queryAuditLog } = await import("../../../services/audit-log-query.servic
 
 const { accountRouter } = await import("../../../trpc/routers/account.js");
 
-const MOCK_ACCOUNT_ID = "acct_test001" as AccountId;
-const MOCK_SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
-const MOCK_SESSION_ID = "sess_550e8400-e29b-41d4-a716-446655440001" as SessionId;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: MOCK_ACCOUNT_ID,
-  systemId: MOCK_SYSTEM_ID,
-  sessionId: MOCK_SESSION_ID,
-  accountType: "system",
-  ownedSystemIds: new Set([MOCK_SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ account: accountRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
+const createCaller = makeCallerFactory({ account: accountRouter });
 
 const MOCK_TIMESTAMP = 1_700_000_000_000 as UnixMillis;
 
@@ -96,9 +59,9 @@ describe("account router", () => {
 
   describe("account.getInfo", () => {
     const mockAccountInfo = {
-      accountId: MOCK_ACCOUNT_ID,
+      accountId: MOCK_AUTH.accountId,
       accountType: "system" as const,
-      systemId: MOCK_SYSTEM_ID,
+      systemId: SYSTEM_ID,
       auditLogIpTracking: false,
       version: 1,
       createdAt: MOCK_TIMESTAMP,
@@ -107,22 +70,25 @@ describe("account router", () => {
 
     it("returns account info for authenticated caller", async () => {
       vi.mocked(getAccountInfo).mockResolvedValue(mockAccountInfo);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.getInfo();
       expect(result).toEqual(mockAccountInfo);
-      expect(vi.mocked(getAccountInfo)).toHaveBeenCalledWith(expect.anything(), MOCK_ACCOUNT_ID);
+      expect(vi.mocked(getAccountInfo)).toHaveBeenCalledWith(
+        expect.anything(),
+        MOCK_AUTH.accountId,
+      );
     });
 
     it("throws NOT_FOUND when account does not exist", async () => {
       vi.mocked(getAccountInfo).mockResolvedValue(null);
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.account.getInfo()).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.getInfo()).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -139,26 +105,26 @@ describe("account router", () => {
 
     it("calls changeEmail and returns ok", async () => {
       vi.mocked(changeEmail).mockResolvedValue({ ok: true });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.changeEmail(input);
       expect(result).toEqual({ ok: true });
       expect(vi.mocked(changeEmail)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         input,
         noopAuditWriter,
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.changeEmail(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
 
     it("rejects invalid email format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.account.changeEmail({ ...input, email: "not-an-email" }),
       ).rejects.toThrow();
@@ -181,19 +147,19 @@ describe("account router", () => {
 
     it("calls changePassword and returns result", async () => {
       vi.mocked(changePassword).mockResolvedValue(changePasswordResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.changePassword(input);
       expect(result).toEqual(changePasswordResult);
       expect(vi.mocked(changePassword)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         input,
         noopAuditWriter,
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.changePassword(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -208,19 +174,19 @@ describe("account router", () => {
 
     it("calls updateAccountSettings and returns result", async () => {
       vi.mocked(updateAccountSettings).mockResolvedValue(settingsResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.updateSettings(input);
       expect(result).toEqual(settingsResult);
       expect(vi.mocked(updateAccountSettings)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         input,
         noopAuditWriter,
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.updateSettings(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -234,19 +200,19 @@ describe("account router", () => {
 
     it("calls setAccountPin and returns ok", async () => {
       vi.mocked(setAccountPin).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.setPin(input);
       expect(result).toEqual({ ok: true });
       expect(vi.mocked(setAccountPin)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         input,
         noopAuditWriter,
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.setPin(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -260,19 +226,19 @@ describe("account router", () => {
 
     it("calls removeAccountPin and returns ok", async () => {
       vi.mocked(removeAccountPin).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.removePin(input);
       expect(result).toEqual({ ok: true });
       expect(vi.mocked(removeAccountPin)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         input,
         noopAuditWriter,
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.removePin(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -286,19 +252,19 @@ describe("account router", () => {
 
     it("calls verifyAccountPin and returns verified", async () => {
       vi.mocked(verifyAccountPin).mockResolvedValue({ verified: true });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.verifyPin(input);
       expect(result).toEqual({ verified: true });
       expect(vi.mocked(verifyAccountPin)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         input,
         noopAuditWriter,
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.verifyPin(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -313,7 +279,7 @@ describe("account router", () => {
     it("calls enrollBiometric with auth context and returns id", async () => {
       const mockId = "btok_abc123" as BiometricTokenId;
       vi.mocked(enrollBiometric).mockResolvedValue({ id: mockId });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.enrollBiometric(input);
       expect(result).toEqual({ id: mockId });
       expect(vi.mocked(enrollBiometric)).toHaveBeenCalledWith(
@@ -325,7 +291,7 @@ describe("account router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.enrollBiometric(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -339,7 +305,7 @@ describe("account router", () => {
 
     it("calls verifyBiometric with auth context and returns verified", async () => {
       vi.mocked(verifyBiometric).mockResolvedValue({ verified: true });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.verifyBiometric(input);
       expect(result).toEqual({ verified: true });
       expect(vi.mocked(verifyBiometric)).toHaveBeenCalledWith(
@@ -351,7 +317,7 @@ describe("account router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.verifyBiometric(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -364,24 +330,24 @@ describe("account router", () => {
     it("returns active key status", async () => {
       const mockStatus = { hasActiveKey: true as const, createdAt: MOCK_TIMESTAMP };
       vi.mocked(getRecoveryKeyStatus).mockResolvedValue(mockStatus);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.getRecoveryKeyStatus();
       expect(result).toEqual(mockStatus);
       expect(vi.mocked(getRecoveryKeyStatus)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
       );
     });
 
     it("returns no-key status", async () => {
       vi.mocked(getRecoveryKeyStatus).mockResolvedValue({ hasActiveKey: false, createdAt: null });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.getRecoveryKeyStatus();
       expect(result).toEqual({ hasActiveKey: false, createdAt: null });
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.getRecoveryKeyStatus()).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -395,19 +361,19 @@ describe("account router", () => {
 
     it("calls regenerateRecoveryKeyBackup and returns recovery key", async () => {
       vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValue({ recoveryKey: "AAAA-BBBB-CCCC" });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.regenerateRecoveryKey(input);
       expect(result).toEqual({ recoveryKey: "AAAA-BBBB-CCCC" });
       expect(vi.mocked(regenerateRecoveryKeyBackup)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         input,
         noopAuditWriter,
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.regenerateRecoveryKey(input)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -426,19 +392,19 @@ describe("account router", () => {
 
     it("returns paginated audit log", async () => {
       vi.mocked(queryAuditLog).mockResolvedValue(mockAuditResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.account.queryAuditLog({ limit: 25 });
       expect(result).toEqual(mockAuditResult);
       expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
         expect.anything(),
-        MOCK_ACCOUNT_ID,
+        MOCK_AUTH.accountId,
         expect.objectContaining({ limit: 25 }),
       );
     });
 
     it("passes event_type and resource_type filters", async () => {
       vi.mocked(queryAuditLog).mockResolvedValue(mockAuditResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.account.queryAuditLog({
         event_type: "auth.login",
         resource_type: "auth",
@@ -452,14 +418,14 @@ describe("account router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.account.queryAuditLog({ limit: 25 })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
 
     it("rejects limit exceeding maximum", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.account.queryAuditLog({ limit: 500 })).rejects.toThrow();
     });
   });

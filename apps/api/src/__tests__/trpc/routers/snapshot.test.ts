@@ -1,18 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  SessionId,
-  SystemId,
-  SystemSnapshotId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { SystemSnapshotId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -29,34 +20,9 @@ const { createSnapshot, getSnapshot, listSnapshots } =
 
 const { snapshotRouter } = await import("../../../trpc/routers/snapshot.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ snapshot: snapshotRouter });
+
 const SNAPSHOT_ID = "snap_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemSnapshotId;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ snapshot: snapshotRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_SNAPSHOT_RESULT = {
   id: SNAPSHOT_ID,
@@ -82,7 +48,7 @@ describe("snapshot router", () => {
   describe("snapshot.create", () => {
     it("calls createSnapshot with correct systemId and returns result", async () => {
       vi.mocked(createSnapshot).mockResolvedValue(MOCK_SNAPSHOT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.snapshot.create(VALID_CREATE_INPUT);
 
       expect(vi.mocked(createSnapshot)).toHaveBeenCalledOnce();
@@ -91,7 +57,7 @@ describe("snapshot router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.snapshot.create(VALID_CREATE_INPUT)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -99,7 +65,7 @@ describe("snapshot router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.snapshot.create({ ...VALID_CREATE_INPUT, systemId: foreignSystemId }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -109,7 +75,7 @@ describe("snapshot router", () => {
       vi.mocked(createSnapshot).mockRejectedValue(
         new ApiHttpError(400, "VALIDATION_ERROR", "Invalid payload"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.snapshot.create(VALID_CREATE_INPUT)).rejects.toThrow(
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
@@ -121,7 +87,7 @@ describe("snapshot router", () => {
   describe("snapshot.get", () => {
     it("calls getSnapshot with correct systemId and snapshotId", async () => {
       vi.mocked(getSnapshot).mockResolvedValue(MOCK_SNAPSHOT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.snapshot.get({ systemId: SYSTEM_ID, snapshotId: SNAPSHOT_ID });
 
       expect(vi.mocked(getSnapshot)).toHaveBeenCalledOnce();
@@ -131,7 +97,7 @@ describe("snapshot router", () => {
     });
 
     it("rejects invalid snapshotId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.snapshot.get({
           systemId: SYSTEM_ID,
@@ -144,7 +110,7 @@ describe("snapshot router", () => {
       vi.mocked(getSnapshot).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Snapshot not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.snapshot.get({ systemId: SYSTEM_ID, snapshotId: SNAPSHOT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -162,7 +128,7 @@ describe("snapshot router", () => {
         totalCount: null,
       };
       vi.mocked(listSnapshots).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.snapshot.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listSnapshots)).toHaveBeenCalledOnce();
@@ -177,7 +143,7 @@ describe("snapshot router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.snapshot.list({ systemId: SYSTEM_ID, cursor: "snap_cursor", limit: 10 });
 
       expect(vi.mocked(listSnapshots).mock.calls[0]?.[3]).toBe("snap_cursor");

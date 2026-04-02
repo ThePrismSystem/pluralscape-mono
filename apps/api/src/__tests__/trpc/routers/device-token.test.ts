@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type { AccountId, DeviceTokenId, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { DeviceTokenId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -24,34 +21,9 @@ const { registerDeviceToken, listDeviceTokens, revokeDeviceToken, deleteDeviceTo
 
 const { deviceTokenRouter } = await import("../../../trpc/routers/device-token.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ deviceToken: deviceTokenRouter });
+
 const TOKEN_ID = "dt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as DeviceTokenId;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ deviceToken: deviceTokenRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_TOKEN_RESULT = {
   id: TOKEN_ID,
@@ -72,7 +44,7 @@ describe("deviceToken router", () => {
   describe("deviceToken.register", () => {
     it("calls registerDeviceToken with correct systemId and params", async () => {
       vi.mocked(registerDeviceToken).mockResolvedValue(MOCK_TOKEN_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.deviceToken.register({
         systemId: SYSTEM_ID,
         platform: "ios",
@@ -85,7 +57,7 @@ describe("deviceToken router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.deviceToken.register({
           systemId: SYSTEM_ID,
@@ -97,7 +69,7 @@ describe("deviceToken router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.deviceToken.register({
           systemId: foreignSystemId,
@@ -119,7 +91,7 @@ describe("deviceToken router", () => {
         totalCount: null,
       };
       vi.mocked(listDeviceTokens).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.deviceToken.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listDeviceTokens)).toHaveBeenCalledOnce();
@@ -134,7 +106,7 @@ describe("deviceToken router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.deviceToken.list({ systemId: SYSTEM_ID, cursor: "cursor_xyz", limit: 5 });
 
       const opts = vi.mocked(listDeviceTokens).mock.calls[0]?.[3];
@@ -148,7 +120,7 @@ describe("deviceToken router", () => {
   describe("deviceToken.revoke", () => {
     it("calls revokeDeviceToken and returns success", async () => {
       vi.mocked(revokeDeviceToken).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.deviceToken.revoke({ systemId: SYSTEM_ID, tokenId: TOKEN_ID });
 
       expect(result).toEqual({ success: true });
@@ -158,7 +130,7 @@ describe("deviceToken router", () => {
     });
 
     it("rejects invalid tokenId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.deviceToken.revoke({
           systemId: SYSTEM_ID,
@@ -171,7 +143,7 @@ describe("deviceToken router", () => {
       vi.mocked(revokeDeviceToken).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Device token not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.deviceToken.revoke({ systemId: SYSTEM_ID, tokenId: TOKEN_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -183,7 +155,7 @@ describe("deviceToken router", () => {
   describe("deviceToken.delete", () => {
     it("calls deleteDeviceToken and returns success", async () => {
       vi.mocked(deleteDeviceToken).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.deviceToken.delete({ systemId: SYSTEM_ID, tokenId: TOKEN_ID });
 
       expect(result).toEqual({ success: true });
@@ -196,7 +168,7 @@ describe("deviceToken router", () => {
       vi.mocked(deleteDeviceToken).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Device token not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.deviceToken.delete({ systemId: SYSTEM_ID, tokenId: TOKEN_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));

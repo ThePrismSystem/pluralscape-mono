@@ -1,16 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
 import type {
-  AccountId,
   MemberId,
-  SessionId,
-  SystemId,
   SystemStructureEntityAssociationId,
   SystemStructureEntityId,
   SystemStructureEntityLinkId,
@@ -89,9 +83,10 @@ const { createEntityAssociation, listEntityAssociations, deleteEntityAssociation
 
 const { structureRouter } = await import("../../../trpc/routers/structure.js");
 
+const createCaller = makeCallerFactory({ structure: structureRouter });
+
 // ── IDs ──────────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
 const ENTITY_TYPE_ID = "stet_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityTypeId;
 const ENTITY_ID = "ste_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityId;
 const LINK_ID = "stel_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemStructureEntityLinkId;
@@ -103,32 +98,6 @@ const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
 
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const NOW = 1_700_000_000_000 as UnixMillis;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ structure: structureRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 // ── Mock results ─────────────────────────────────────────────────────
 
@@ -193,7 +162,7 @@ describe("structure router", () => {
   describe("structure.createType", () => {
     it("calls createEntityType with correct systemId and returns result", async () => {
       vi.mocked(createEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.createType({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -206,7 +175,7 @@ describe("structure router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.structure.createType({
           systemId: SYSTEM_ID,
@@ -218,7 +187,7 @@ describe("structure router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.createType({
           systemId: foreignSystemId,
@@ -234,7 +203,7 @@ describe("structure router", () => {
   describe("structure.getType", () => {
     it("calls getEntityType with correct systemId and entityTypeId", async () => {
       vi.mocked(getEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.getType({
         systemId: SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
@@ -247,7 +216,7 @@ describe("structure router", () => {
     });
 
     it("rejects invalid entityTypeId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.getType({
           systemId: SYSTEM_ID,
@@ -260,7 +229,7 @@ describe("structure router", () => {
       vi.mocked(getEntityType).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Entity type not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.getType({ systemId: SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -278,7 +247,7 @@ describe("structure router", () => {
         totalCount: null,
       };
       vi.mocked(listEntityTypes).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.listTypes({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listEntityTypes)).toHaveBeenCalledOnce();
@@ -292,7 +261,7 @@ describe("structure router", () => {
   describe("structure.updateType", () => {
     it("calls updateEntityType with correct args and returns result", async () => {
       vi.mocked(updateEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.updateType({
         systemId: SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
@@ -310,7 +279,7 @@ describe("structure router", () => {
       vi.mocked(updateEntityType).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.updateType({
           systemId: SYSTEM_ID,
@@ -328,7 +297,7 @@ describe("structure router", () => {
   describe("structure.archiveType", () => {
     it("calls archiveEntityType and returns success", async () => {
       vi.mocked(archiveEntityType).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.archiveType({
         systemId: SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
@@ -344,7 +313,7 @@ describe("structure router", () => {
   describe("structure.restoreType", () => {
     it("calls restoreEntityType and returns result", async () => {
       vi.mocked(restoreEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.restoreType({
         systemId: SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
@@ -360,7 +329,7 @@ describe("structure router", () => {
   describe("structure.createEntity", () => {
     it("calls createStructureEntity with correct systemId and returns result", async () => {
       vi.mocked(createStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.createEntity({
         systemId: SYSTEM_ID,
         structureEntityTypeId: ENTITY_TYPE_ID,
@@ -375,7 +344,7 @@ describe("structure router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.structure.createEntity({
           systemId: SYSTEM_ID,
@@ -393,7 +362,7 @@ describe("structure router", () => {
   describe("structure.getEntity", () => {
     it("calls getStructureEntity with correct systemId and entityId", async () => {
       vi.mocked(getStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.getEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -406,7 +375,7 @@ describe("structure router", () => {
     });
 
     it("rejects invalid entityId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.getEntity({
           systemId: SYSTEM_ID,
@@ -419,7 +388,7 @@ describe("structure router", () => {
       vi.mocked(getStructureEntity).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Entity not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.getEntity({ systemId: SYSTEM_ID, entityId: ENTITY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -437,7 +406,7 @@ describe("structure router", () => {
         totalCount: null,
       };
       vi.mocked(listStructureEntities).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.listEntities({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listStructureEntities)).toHaveBeenCalledOnce();
@@ -448,7 +417,7 @@ describe("structure router", () => {
     it("passes entityTypeId filter to service", async () => {
       const mockResult = { data: [], nextCursor: null, hasMore: false, totalCount: null };
       vi.mocked(listStructureEntities).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.structure.listEntities({
         systemId: SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
@@ -465,7 +434,7 @@ describe("structure router", () => {
   describe("structure.updateEntity", () => {
     it("calls updateStructureEntity with correct args and returns result", async () => {
       vi.mocked(updateStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.updateEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -486,7 +455,7 @@ describe("structure router", () => {
   describe("structure.archiveEntity", () => {
     it("calls archiveStructureEntity and returns success", async () => {
       vi.mocked(archiveStructureEntity).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.archiveEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -502,7 +471,7 @@ describe("structure router", () => {
   describe("structure.restoreEntity", () => {
     it("calls restoreStructureEntity and returns result", async () => {
       vi.mocked(restoreStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.restoreEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -518,7 +487,7 @@ describe("structure router", () => {
   describe("structure.createLink", () => {
     it("calls createEntityLink with correct systemId and returns result", async () => {
       vi.mocked(createEntityLink).mockResolvedValue(MOCK_LINK_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.createLink({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -532,7 +501,7 @@ describe("structure router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.structure.createLink({
           systemId: SYSTEM_ID,
@@ -555,7 +524,7 @@ describe("structure router", () => {
         totalCount: null,
       };
       vi.mocked(listEntityLinks).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.listLinks({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listEntityLinks)).toHaveBeenCalledOnce();
@@ -569,7 +538,7 @@ describe("structure router", () => {
   describe("structure.updateLink", () => {
     it("calls updateEntityLink with correct args and returns result", async () => {
       vi.mocked(updateEntityLink).mockResolvedValue(MOCK_LINK_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.updateLink({
         systemId: SYSTEM_ID,
         linkId: LINK_ID,
@@ -585,7 +554,7 @@ describe("structure router", () => {
       vi.mocked(updateEntityLink).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Link not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.updateLink({ systemId: SYSTEM_ID, linkId: LINK_ID, sortOrder: 1 }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -597,7 +566,7 @@ describe("structure router", () => {
   describe("structure.deleteLink", () => {
     it("calls deleteEntityLink and returns success", async () => {
       vi.mocked(deleteEntityLink).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.deleteLink({ systemId: SYSTEM_ID, linkId: LINK_ID });
 
       expect(vi.mocked(deleteEntityLink)).toHaveBeenCalledOnce();
@@ -605,7 +574,7 @@ describe("structure router", () => {
     });
 
     it("rejects invalid linkId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.deleteLink({
           systemId: SYSTEM_ID,
@@ -620,7 +589,7 @@ describe("structure router", () => {
   describe("structure.createMemberLink", () => {
     it("calls createEntityMemberLink with correct systemId and returns result", async () => {
       vi.mocked(createEntityMemberLink).mockResolvedValue(MOCK_MEMBER_LINK_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.createMemberLink({
         systemId: SYSTEM_ID,
         parentEntityId: ENTITY_ID,
@@ -645,7 +614,7 @@ describe("structure router", () => {
         totalCount: null,
       };
       vi.mocked(listEntityMemberLinks).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.listMemberLinks({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listEntityMemberLinks)).toHaveBeenCalledOnce();
@@ -659,7 +628,7 @@ describe("structure router", () => {
   describe("structure.deleteMemberLink", () => {
     it("calls deleteEntityMemberLink and returns success", async () => {
       vi.mocked(deleteEntityMemberLink).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.deleteMemberLink({
         systemId: SYSTEM_ID,
         memberLinkId: MEMBER_LINK_ID,
@@ -670,7 +639,7 @@ describe("structure router", () => {
     });
 
     it("rejects invalid memberLinkId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.deleteMemberLink({
           systemId: SYSTEM_ID,
@@ -685,7 +654,7 @@ describe("structure router", () => {
   describe("structure.createAssociation", () => {
     it("calls createEntityAssociation with correct systemId and returns result", async () => {
       vi.mocked(createEntityAssociation).mockResolvedValue(MOCK_ASSOCIATION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.createAssociation({
         systemId: SYSTEM_ID,
         sourceEntityId: ENTITY_ID,
@@ -698,7 +667,7 @@ describe("structure router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.structure.createAssociation({
           systemId: SYSTEM_ID,
@@ -720,7 +689,7 @@ describe("structure router", () => {
         totalCount: null,
       };
       vi.mocked(listEntityAssociations).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.listAssociations({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listEntityAssociations)).toHaveBeenCalledOnce();
@@ -734,7 +703,7 @@ describe("structure router", () => {
   describe("structure.deleteAssociation", () => {
     it("calls deleteEntityAssociation and returns success", async () => {
       vi.mocked(deleteEntityAssociation).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.structure.deleteAssociation({
         systemId: SYSTEM_ID,
         associationId: ASSOCIATION_ID,
@@ -745,7 +714,7 @@ describe("structure router", () => {
     });
 
     it("rejects invalid associationId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.structure.deleteAssociation({
           systemId: SYSTEM_ID,

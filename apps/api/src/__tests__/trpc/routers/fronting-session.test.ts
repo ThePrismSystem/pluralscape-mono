@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  FrontingSessionId,
-  MemberId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { FrontingSessionId, MemberId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -45,37 +35,12 @@ const {
 
 const { frontingSessionRouter } = await import("../../../trpc/routers/fronting-session.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ frontingSession: frontingSessionRouter });
+
 const SESSION_ID = "fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingSessionId;
 const MEMBER_ID = "mem_11111111-2222-3333-4444-555555555555" as MemberId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const START_TIME = 1_700_000_000_000;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ frontingSession: frontingSessionRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_SESSION_RESULT = {
   id: SESSION_ID,
@@ -103,7 +68,7 @@ describe("frontingSession router", () => {
   describe("frontingSession.create", () => {
     it("calls createFrontingSession with correct systemId and returns result", async () => {
       vi.mocked(createFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -119,7 +84,7 @@ describe("frontingSession router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.frontingSession.create({
           systemId: SYSTEM_ID,
@@ -133,7 +98,7 @@ describe("frontingSession router", () => {
     });
 
     it("rejects input missing both memberId and customFrontId (no subject)", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       const createWithUnknownInput = caller.frontingSession.create as (
         input: Record<string, unknown>,
       ) => Promise<unknown>;
@@ -152,7 +117,7 @@ describe("frontingSession router", () => {
   describe("frontingSession.get", () => {
     it("calls getFrontingSession with correct systemId and sessionId", async () => {
       vi.mocked(getFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.get({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -165,7 +130,7 @@ describe("frontingSession router", () => {
     });
 
     it("rejects invalid sessionId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingSession.get({
           systemId: SYSTEM_ID,
@@ -178,7 +143,7 @@ describe("frontingSession router", () => {
       vi.mocked(getFrontingSession).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Fronting session not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingSession.get({ systemId: SYSTEM_ID, sessionId: SESSION_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -196,7 +161,7 @@ describe("frontingSession router", () => {
         totalCount: null,
       };
       vi.mocked(listFrontingSessions).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listFrontingSessions)).toHaveBeenCalledOnce();
@@ -211,7 +176,7 @@ describe("frontingSession router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.frontingSession.list({
         systemId: SYSTEM_ID,
         activeOnly: true,
@@ -234,7 +199,7 @@ describe("frontingSession router", () => {
   describe("frontingSession.update", () => {
     it("calls updateFrontingSession with correct args and returns result", async () => {
       vi.mocked(updateFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.update({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -252,7 +217,7 @@ describe("frontingSession router", () => {
       vi.mocked(updateFrontingSession).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingSession.update({
           systemId: SYSTEM_ID,
@@ -273,7 +238,7 @@ describe("frontingSession router", () => {
         endTime: (START_TIME + 3_600_000) as UnixMillis,
       };
       vi.mocked(endFrontingSession).mockResolvedValue(endedSession);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.end({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -291,7 +256,7 @@ describe("frontingSession router", () => {
       vi.mocked(endFrontingSession).mockRejectedValue(
         new ApiHttpError(400, "ALREADY_ENDED", "Session already ended"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingSession.end({
           systemId: SYSTEM_ID,
@@ -308,7 +273,7 @@ describe("frontingSession router", () => {
   describe("frontingSession.archive", () => {
     it("calls archiveFrontingSession and returns success", async () => {
       vi.mocked(archiveFrontingSession).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.archive({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -324,7 +289,7 @@ describe("frontingSession router", () => {
       vi.mocked(archiveFrontingSession).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Fronting session not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingSession.archive({ systemId: SYSTEM_ID, sessionId: SESSION_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -336,7 +301,7 @@ describe("frontingSession router", () => {
   describe("frontingSession.restore", () => {
     it("calls restoreFrontingSession and returns the result", async () => {
       vi.mocked(restoreFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.restore({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -354,7 +319,7 @@ describe("frontingSession router", () => {
   describe("frontingSession.delete", () => {
     it("calls deleteFrontingSession with correct args and returns success", async () => {
       vi.mocked(deleteFrontingSession).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.delete({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -370,7 +335,7 @@ describe("frontingSession router", () => {
       vi.mocked(deleteFrontingSession).mockRejectedValue(
         new ApiHttpError(409, "HAS_DEPENDENTS", "Session has comments"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingSession.delete({ systemId: SYSTEM_ID, sessionId: SESSION_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
@@ -387,7 +352,7 @@ describe("frontingSession router", () => {
         entityMemberMap: {},
       };
       vi.mocked(getActiveFronting).mockResolvedValue(mockActive);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingSession.getActive({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(getActiveFronting)).toHaveBeenCalledOnce();
@@ -396,7 +361,7 @@ describe("frontingSession router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.frontingSession.getActive({ systemId: SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );

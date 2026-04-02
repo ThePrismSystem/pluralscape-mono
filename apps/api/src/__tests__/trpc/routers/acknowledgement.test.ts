@@ -1,18 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  AcknowledgementId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { AcknowledgementId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -40,35 +31,10 @@ const {
 
 const { acknowledgementRouter } = await import("../../../trpc/routers/acknowledgement.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ acknowledgement: acknowledgementRouter });
+
 const ACK_ID = "ack_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as AcknowledgementId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JhY2s=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ acknowledgement: acknowledgementRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_ACK_RESULT = {
   id: ACK_ID,
@@ -93,7 +59,7 @@ describe("acknowledgement router", () => {
   describe("acknowledgement.create", () => {
     it("calls createAcknowledgement with correct systemId and returns result", async () => {
       vi.mocked(createAcknowledgement).mockResolvedValue(MOCK_ACK_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.acknowledgement.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -106,7 +72,7 @@ describe("acknowledgement router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.acknowledgement.create({
           systemId: SYSTEM_ID,
@@ -118,7 +84,7 @@ describe("acknowledgement router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.acknowledgement.create({
           systemId: foreignSystemId,
@@ -134,7 +100,7 @@ describe("acknowledgement router", () => {
   describe("acknowledgement.get", () => {
     it("calls getAcknowledgement with correct systemId and ackId", async () => {
       vi.mocked(getAcknowledgement).mockResolvedValue(MOCK_ACK_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.acknowledgement.get({ systemId: SYSTEM_ID, ackId: ACK_ID });
 
       expect(vi.mocked(getAcknowledgement)).toHaveBeenCalledOnce();
@@ -144,7 +110,7 @@ describe("acknowledgement router", () => {
     });
 
     it("rejects invalid ackId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.acknowledgement.get({
           systemId: SYSTEM_ID,
@@ -157,7 +123,7 @@ describe("acknowledgement router", () => {
       vi.mocked(getAcknowledgement).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Acknowledgement not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.acknowledgement.get({ systemId: SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -175,7 +141,7 @@ describe("acknowledgement router", () => {
         totalCount: null,
       };
       vi.mocked(listAcknowledgements).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.acknowledgement.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listAcknowledgements)).toHaveBeenCalledOnce();
@@ -190,7 +156,7 @@ describe("acknowledgement router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.acknowledgement.list({
         systemId: SYSTEM_ID,
         cursor: "cur_abc",
@@ -215,7 +181,7 @@ describe("acknowledgement router", () => {
         ...MOCK_ACK_RESULT,
         confirmed: true,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.acknowledgement.confirm({
         systemId: SYSTEM_ID,
         ackId: ACK_ID,
@@ -232,7 +198,7 @@ describe("acknowledgement router", () => {
         ...MOCK_ACK_RESULT,
         confirmed: true,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.acknowledgement.confirm({
         systemId: SYSTEM_ID,
         ackId: ACK_ID,
@@ -253,7 +219,7 @@ describe("acknowledgement router", () => {
       vi.mocked(confirmAcknowledgement).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Acknowledgement not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.acknowledgement.confirm({ systemId: SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -265,7 +231,7 @@ describe("acknowledgement router", () => {
   describe("acknowledgement.archive", () => {
     it("calls archiveAcknowledgement and returns success", async () => {
       vi.mocked(archiveAcknowledgement).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.acknowledgement.archive({ systemId: SYSTEM_ID, ackId: ACK_ID });
 
       expect(result).toEqual({ success: true });
@@ -278,7 +244,7 @@ describe("acknowledgement router", () => {
       vi.mocked(archiveAcknowledgement).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Acknowledgement not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.acknowledgement.archive({ systemId: SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -290,7 +256,7 @@ describe("acknowledgement router", () => {
   describe("acknowledgement.restore", () => {
     it("calls restoreAcknowledgement and returns the result", async () => {
       vi.mocked(restoreAcknowledgement).mockResolvedValue(MOCK_ACK_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.acknowledgement.restore({ systemId: SYSTEM_ID, ackId: ACK_ID });
 
       expect(vi.mocked(restoreAcknowledgement)).toHaveBeenCalledOnce();
@@ -303,7 +269,7 @@ describe("acknowledgement router", () => {
       vi.mocked(restoreAcknowledgement).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Acknowledgement not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.acknowledgement.restore({ systemId: SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -315,7 +281,7 @@ describe("acknowledgement router", () => {
   describe("acknowledgement.delete", () => {
     it("calls deleteAcknowledgement and returns success", async () => {
       vi.mocked(deleteAcknowledgement).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.acknowledgement.delete({ systemId: SYSTEM_ID, ackId: ACK_ID });
 
       expect(result).toEqual({ success: true });
@@ -328,7 +294,7 @@ describe("acknowledgement router", () => {
       vi.mocked(deleteAcknowledgement).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Acknowledgement not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.acknowledgement.delete({ systemId: SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));

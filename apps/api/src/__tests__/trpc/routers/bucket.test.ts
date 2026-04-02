@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  BucketId,
-  FriendConnectionId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { AccountId, BucketId, FriendConnectionId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -67,36 +57,11 @@ const { getBucketExportManifest, getBucketExportPage } =
 
 const { bucketRouter } = await import("../../../trpc/routers/bucket.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ bucket: bucketRouter });
+
 const BUCKET_ID = "bkt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BucketId;
 const CONNECTION_ID = "fc_11111111-2222-3333-4444-555555555555" as FriendConnectionId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JidWNrZXQ=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ bucket: bucketRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_BUCKET_RESULT = {
   id: BUCKET_ID,
@@ -126,7 +91,7 @@ describe("bucket router", () => {
   describe("bucket.create", () => {
     it("calls createBucket with correct systemId and returns result", async () => {
       vi.mocked(createBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -138,7 +103,7 @@ describe("bucket router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.bucket.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
@@ -146,7 +111,7 @@ describe("bucket router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.bucket.create({ systemId: foreignSystemId, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -158,7 +123,7 @@ describe("bucket router", () => {
   describe("bucket.get", () => {
     it("calls getBucket with correct systemId and bucketId", async () => {
       vi.mocked(getBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.get({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(vi.mocked(getBucket)).toHaveBeenCalledOnce();
@@ -168,7 +133,7 @@ describe("bucket router", () => {
     });
 
     it("rejects invalid bucketId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.bucket.get({ systemId: SYSTEM_ID, bucketId: "not-a-bucket-id" as BucketId }),
       ).rejects.toThrow();
@@ -178,7 +143,7 @@ describe("bucket router", () => {
       vi.mocked(getBucket).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.bucket.get({ systemId: SYSTEM_ID, bucketId: BUCKET_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -190,7 +155,7 @@ describe("bucket router", () => {
   describe("bucket.list", () => {
     it("calls listBuckets and returns result", async () => {
       vi.mocked(listBuckets).mockResolvedValue(MOCK_PAGINATED);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listBuckets)).toHaveBeenCalledOnce();
@@ -205,7 +170,7 @@ describe("bucket router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.bucket.list({
         systemId: SYSTEM_ID,
         cursor: "cur_abc",
@@ -225,7 +190,7 @@ describe("bucket router", () => {
   describe("bucket.update", () => {
     it("calls updateBucket with correct systemId and bucketId", async () => {
       vi.mocked(updateBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.update({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -243,7 +208,7 @@ describe("bucket router", () => {
       vi.mocked(updateBucket).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.bucket.update({
           systemId: SYSTEM_ID,
@@ -260,7 +225,7 @@ describe("bucket router", () => {
   describe("bucket.archive", () => {
     it("calls archiveBucket and returns success", async () => {
       vi.mocked(archiveBucket).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.archive({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(result).toEqual({ success: true });
@@ -273,7 +238,7 @@ describe("bucket router", () => {
       vi.mocked(archiveBucket).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.bucket.archive({ systemId: SYSTEM_ID, bucketId: BUCKET_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -285,7 +250,7 @@ describe("bucket router", () => {
   describe("bucket.restore", () => {
     it("calls restoreBucket and returns result", async () => {
       vi.mocked(restoreBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.restore({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(vi.mocked(restoreBucket)).toHaveBeenCalledOnce();
@@ -300,7 +265,7 @@ describe("bucket router", () => {
   describe("bucket.delete", () => {
     it("calls deleteBucket and returns success", async () => {
       vi.mocked(deleteBucket).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.delete({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(result).toEqual({ success: true });
@@ -313,7 +278,7 @@ describe("bucket router", () => {
       vi.mocked(deleteBucket).mockRejectedValue(
         new ApiHttpError(409, "HAS_DEPENDENTS", "Bucket has dependents"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.bucket.delete({ systemId: SYSTEM_ID, bucketId: BUCKET_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
@@ -327,7 +292,7 @@ describe("bucket router", () => {
       vi.mocked(createBucket).mockRejectedValue(
         new ApiHttpError(400, "QUOTA_EXCEEDED", "Max buckets reached"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.bucket.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -344,7 +309,7 @@ describe("bucket router", () => {
         friendAccountId: "acct_friend001" as AccountId,
       };
       vi.mocked(assignBucketToFriend).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.assignFriend({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -366,7 +331,7 @@ describe("bucket router", () => {
     it("calls unassignBucketFromFriend and returns result", async () => {
       const mockResult = { pendingRotation: { systemId: SYSTEM_ID, bucketId: BUCKET_ID } };
       vi.mocked(unassignBucketFromFriend).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.unassignFriend({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -393,7 +358,7 @@ describe("bucket router", () => {
         },
       ];
       vi.mocked(listFriendBucketAssignments).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.listFriendAssignments({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -416,7 +381,7 @@ describe("bucket router", () => {
         bucketId: BUCKET_ID,
       };
       vi.mocked(tagContent).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.tagContent({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -436,7 +401,7 @@ describe("bucket router", () => {
   describe("bucket.untagContent", () => {
     it("calls untagContent with correct args and returns success", async () => {
       vi.mocked(untagContent).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.untagContent({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -461,7 +426,7 @@ describe("bucket router", () => {
         { entityType: "member" as const, entityId: "mem_test001", bucketId: BUCKET_ID },
       ];
       vi.mocked(listTagsByBucket).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.listTags({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(vi.mocked(listTagsByBucket)).toHaveBeenCalledOnce();
@@ -482,7 +447,7 @@ describe("bucket router", () => {
         etag: "etag_abc",
       };
       vi.mocked(getBucketExportManifest).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.exportManifest({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -507,7 +472,7 @@ describe("bucket router", () => {
         etag: "etag_abc",
       };
       vi.mocked(getBucketExportPage).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.bucket.exportPage({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,
@@ -531,7 +496,7 @@ describe("bucket router", () => {
         totalCount: null,
         etag: "etag_abc",
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.bucket.exportPage({
         systemId: SYSTEM_ID,
         bucketId: BUCKET_ID,

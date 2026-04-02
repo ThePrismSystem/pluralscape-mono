@@ -1,18 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  BoardMessageId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { BoardMessageId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -42,35 +33,10 @@ const {
 
 const { boardMessageRouter } = await import("../../../trpc/routers/board-message.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ boardMessage: boardMessageRouter });
+
 const BOARD_MESSAGE_ID = "bm_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BoardMessageId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3Jib2FyZA==";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ boardMessage: boardMessageRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_BOARD_MESSAGE_RESULT = {
   id: BOARD_MESSAGE_ID,
@@ -95,7 +61,7 @@ describe("board-message router", () => {
   describe("boardMessage.create", () => {
     it("calls createBoardMessage with correct systemId and returns result", async () => {
       vi.mocked(createBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -108,7 +74,7 @@ describe("board-message router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.boardMessage.create({
           systemId: SYSTEM_ID,
@@ -120,7 +86,7 @@ describe("board-message router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.create({
           systemId: foreignSystemId,
@@ -136,7 +102,7 @@ describe("board-message router", () => {
   describe("boardMessage.get", () => {
     it("calls getBoardMessage with correct systemId and boardMessageId", async () => {
       vi.mocked(getBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.get({
         systemId: SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
@@ -149,7 +115,7 @@ describe("board-message router", () => {
     });
 
     it("rejects invalid boardMessageId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.get({
           systemId: SYSTEM_ID,
@@ -162,7 +128,7 @@ describe("board-message router", () => {
       vi.mocked(getBoardMessage).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.get({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -180,7 +146,7 @@ describe("board-message router", () => {
         totalCount: null,
       };
       vi.mocked(listBoardMessages).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listBoardMessages)).toHaveBeenCalledOnce();
@@ -195,7 +161,7 @@ describe("board-message router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.boardMessage.list({
         systemId: SYSTEM_ID,
         cursor: "cur_abc",
@@ -215,7 +181,7 @@ describe("board-message router", () => {
   describe("boardMessage.update", () => {
     it("calls updateBoardMessage with correct systemId and boardMessageId", async () => {
       vi.mocked(updateBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.update({
         systemId: SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
@@ -233,7 +199,7 @@ describe("board-message router", () => {
       vi.mocked(updateBoardMessage).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.update({
           systemId: SYSTEM_ID,
@@ -250,7 +216,7 @@ describe("board-message router", () => {
   describe("boardMessage.archive", () => {
     it("calls archiveBoardMessage and returns success", async () => {
       vi.mocked(archiveBoardMessage).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.archive({
         systemId: SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
@@ -266,7 +232,7 @@ describe("board-message router", () => {
       vi.mocked(archiveBoardMessage).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.archive({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -278,7 +244,7 @@ describe("board-message router", () => {
   describe("boardMessage.restore", () => {
     it("calls restoreBoardMessage and returns the board message result", async () => {
       vi.mocked(restoreBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.restore({
         systemId: SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
@@ -294,7 +260,7 @@ describe("board-message router", () => {
       vi.mocked(restoreBoardMessage).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.restore({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -306,7 +272,7 @@ describe("board-message router", () => {
   describe("boardMessage.delete", () => {
     it("calls deleteBoardMessage and returns success", async () => {
       vi.mocked(deleteBoardMessage).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.delete({
         systemId: SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
@@ -322,7 +288,7 @@ describe("board-message router", () => {
       vi.mocked(deleteBoardMessage).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.delete({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -334,7 +300,7 @@ describe("board-message router", () => {
   describe("boardMessage.reorder", () => {
     it("calls reorderBoardMessages and returns success", async () => {
       vi.mocked(reorderBoardMessages).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.boardMessage.reorder({
         systemId: SYSTEM_ID,
         operations: [{ boardMessageId: BOARD_MESSAGE_ID, sortOrder: 1 }],
@@ -349,7 +315,7 @@ describe("board-message router", () => {
       vi.mocked(reorderBoardMessages).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Board message(s) not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.reorder({
           systemId: SYSTEM_ID,
@@ -359,7 +325,7 @@ describe("board-message router", () => {
     });
 
     it("rejects an empty operations array", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.boardMessage.reorder({
           systemId: SYSTEM_ID,

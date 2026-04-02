@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  ChannelId,
-  MessageId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { ChannelId, MessageId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -33,37 +23,12 @@ const { createMessage, getMessage, listMessages, updateMessage, archiveMessage, 
 
 const { messageRouter } = await import("../../../trpc/routers/message.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ message: messageRouter });
+
 const CHANNEL_ID = "ch_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ChannelId;
 const MESSAGE_ID = "msg_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MessageId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZXNzYWdl";
 const VALID_TIMESTAMP = 1_700_000_000_000 as UnixMillis;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ message: messageRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_MESSAGE_RESULT = {
   id: MESSAGE_ID,
@@ -90,7 +55,7 @@ describe("message router", () => {
   describe("message.create", () => {
     it("calls createMessage with correct systemId, channelId, and returns result", async () => {
       vi.mocked(createMessage).mockResolvedValue(MOCK_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.message.create({
         systemId: SYSTEM_ID,
         channelId: CHANNEL_ID,
@@ -106,7 +71,7 @@ describe("message router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.message.create({
           systemId: SYSTEM_ID,
@@ -120,7 +85,7 @@ describe("message router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.message.create({
           systemId: foreignSystemId,
@@ -133,7 +98,7 @@ describe("message router", () => {
     });
 
     it("rejects invalid channelId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.message.create({
           systemId: SYSTEM_ID,
@@ -151,7 +116,7 @@ describe("message router", () => {
   describe("message.get", () => {
     it("calls getMessage with correct systemId and messageId", async () => {
       vi.mocked(getMessage).mockResolvedValue(MOCK_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.message.get({
         systemId: SYSTEM_ID,
         channelId: CHANNEL_ID,
@@ -165,7 +130,7 @@ describe("message router", () => {
     });
 
     it("rejects invalid messageId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.message.get({
           systemId: SYSTEM_ID,
@@ -179,7 +144,7 @@ describe("message router", () => {
       vi.mocked(getMessage).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Message not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.message.get({ systemId: SYSTEM_ID, channelId: CHANNEL_ID, messageId: MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -197,7 +162,7 @@ describe("message router", () => {
         totalCount: null,
       };
       vi.mocked(listMessages).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.message.list({ systemId: SYSTEM_ID, channelId: CHANNEL_ID });
 
       expect(vi.mocked(listMessages)).toHaveBeenCalledOnce();
@@ -213,7 +178,7 @@ describe("message router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.message.list({
         systemId: SYSTEM_ID,
         channelId: CHANNEL_ID,
@@ -234,7 +199,7 @@ describe("message router", () => {
   describe("message.update", () => {
     it("calls updateMessage with correct systemId and messageId", async () => {
       vi.mocked(updateMessage).mockResolvedValue(MOCK_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.message.update({
         systemId: SYSTEM_ID,
         channelId: CHANNEL_ID,
@@ -253,7 +218,7 @@ describe("message router", () => {
       vi.mocked(updateMessage).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.message.update({
           systemId: SYSTEM_ID,
@@ -271,7 +236,7 @@ describe("message router", () => {
   describe("message.archive", () => {
     it("calls archiveMessage and returns success", async () => {
       vi.mocked(archiveMessage).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.message.archive({
         systemId: SYSTEM_ID,
         channelId: CHANNEL_ID,
@@ -288,7 +253,7 @@ describe("message router", () => {
       vi.mocked(archiveMessage).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Message not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.message.archive({
           systemId: SYSTEM_ID,
@@ -304,7 +269,7 @@ describe("message router", () => {
   describe("message.restore", () => {
     it("calls restoreMessage and returns the message result", async () => {
       vi.mocked(restoreMessage).mockResolvedValue(MOCK_MESSAGE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.message.restore({
         systemId: SYSTEM_ID,
         channelId: CHANNEL_ID,
@@ -321,7 +286,7 @@ describe("message router", () => {
       vi.mocked(restoreMessage).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Message not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.message.restore({
           systemId: SYSTEM_ID,

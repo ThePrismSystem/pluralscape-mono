@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type { AccountId, ApiKeyId, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { ApiKeyId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -23,34 +20,9 @@ const { createApiKey, listApiKeys, revokeApiKey } =
 
 const { apiKeyRouter } = await import("../../../trpc/routers/api-key.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ apiKey: apiKeyRouter });
+
 const API_KEY_ID = "ak_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ApiKeyId;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ apiKey: apiKeyRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_API_KEY_RESULT = {
   id: API_KEY_ID,
@@ -88,7 +60,7 @@ describe("apiKey router", () => {
   describe("apiKey.create", () => {
     it("calls createApiKey with correct systemId and returns result", async () => {
       vi.mocked(createApiKey).mockResolvedValue(MOCK_CREATE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.apiKey.create(VALID_CREATE_INPUT);
 
       expect(vi.mocked(createApiKey)).toHaveBeenCalledOnce();
@@ -97,7 +69,7 @@ describe("apiKey router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.apiKey.create(VALID_CREATE_INPUT)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -105,7 +77,7 @@ describe("apiKey router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.apiKey.create({ ...VALID_CREATE_INPUT, systemId: foreignSystemId }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -115,7 +87,7 @@ describe("apiKey router", () => {
       vi.mocked(createApiKey).mockRejectedValue(
         new ApiHttpError(400, "VALIDATION_ERROR", "Invalid payload"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.apiKey.create(VALID_CREATE_INPUT)).rejects.toThrow(
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
@@ -133,7 +105,7 @@ describe("apiKey router", () => {
         totalCount: null,
       };
       vi.mocked(listApiKeys).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.apiKey.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listApiKeys)).toHaveBeenCalledOnce();
@@ -148,7 +120,7 @@ describe("apiKey router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.apiKey.list({
         systemId: SYSTEM_ID,
         cursor: "ak_cursor",
@@ -168,7 +140,7 @@ describe("apiKey router", () => {
   describe("apiKey.revoke", () => {
     it("calls revokeApiKey and returns success", async () => {
       vi.mocked(revokeApiKey).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: API_KEY_ID });
 
       expect(result).toEqual({ success: true });
@@ -178,7 +150,7 @@ describe("apiKey router", () => {
     });
 
     it("rejects invalid apiKeyId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: "invalid-id" as ApiKeyId }),
       ).rejects.toThrow();
@@ -188,7 +160,7 @@ describe("apiKey router", () => {
       vi.mocked(revokeApiKey).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "API key not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: API_KEY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));

@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  InnerWorldEntityId,
-  InnerWorldRegionId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { InnerWorldEntityId, InnerWorldRegionId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -52,36 +42,11 @@ const { getCanvas, upsertCanvas } = await import("../../../services/innerworld-c
 
 const { innerworldRouter } = await import("../../../trpc/routers/innerworld.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ innerworld: innerworldRouter });
+
 const ENTITY_ID = "iwe_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as InnerWorldEntityId;
 const REGION_ID = "iwr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as InnerWorldRegionId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ innerworld: innerworldRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_ENTITY_RESULT = {
   id: ENTITY_ID,
@@ -125,7 +90,7 @@ describe("innerworld router", () => {
   describe("innerworld.createEntity", () => {
     it("calls createEntity with correct systemId and returns result", async () => {
       vi.mocked(createEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.createEntity({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -137,7 +102,7 @@ describe("innerworld router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.innerworld.createEntity({
           systemId: SYSTEM_ID,
@@ -148,7 +113,7 @@ describe("innerworld router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.innerworld.createEntity({
           systemId: foreignSystemId,
@@ -163,7 +128,7 @@ describe("innerworld router", () => {
   describe("innerworld.getEntity", () => {
     it("calls getEntity with correct systemId and entityId", async () => {
       vi.mocked(getEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.getEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -176,7 +141,7 @@ describe("innerworld router", () => {
     });
 
     it("rejects invalid entityId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.innerworld.getEntity({
           systemId: SYSTEM_ID,
@@ -189,7 +154,7 @@ describe("innerworld router", () => {
       vi.mocked(getEntity).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Entity not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.innerworld.getEntity({ systemId: SYSTEM_ID, entityId: ENTITY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -207,7 +172,7 @@ describe("innerworld router", () => {
         totalCount: null,
       };
       vi.mocked(listEntities).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.listEntities({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listEntities)).toHaveBeenCalledOnce();
@@ -218,7 +183,7 @@ describe("innerworld router", () => {
     it("passes regionId filter to service", async () => {
       const mockResult = { data: [], nextCursor: null, hasMore: false, totalCount: null };
       vi.mocked(listEntities).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.innerworld.listEntities({ systemId: SYSTEM_ID, regionId: REGION_ID });
 
       expect(vi.mocked(listEntities).mock.calls[0]?.[3]).toMatchObject({
@@ -232,7 +197,7 @@ describe("innerworld router", () => {
   describe("innerworld.updateEntity", () => {
     it("calls updateEntity with correct args and returns result", async () => {
       vi.mocked(updateEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.updateEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -249,7 +214,7 @@ describe("innerworld router", () => {
       vi.mocked(updateEntity).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.innerworld.updateEntity({
           systemId: SYSTEM_ID,
@@ -266,7 +231,7 @@ describe("innerworld router", () => {
   describe("innerworld.archiveEntity", () => {
     it("calls archiveEntity and returns success", async () => {
       vi.mocked(archiveEntity).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.archiveEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -282,7 +247,7 @@ describe("innerworld router", () => {
   describe("innerworld.restoreEntity", () => {
     it("calls restoreEntity and returns result", async () => {
       vi.mocked(restoreEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.restoreEntity({
         systemId: SYSTEM_ID,
         entityId: ENTITY_ID,
@@ -298,7 +263,7 @@ describe("innerworld router", () => {
   describe("innerworld.createRegion", () => {
     it("calls createRegion with correct systemId and returns result", async () => {
       vi.mocked(createRegion).mockResolvedValue(MOCK_REGION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.createRegion({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -310,7 +275,7 @@ describe("innerworld router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.innerworld.createRegion({
           systemId: SYSTEM_ID,
@@ -325,7 +290,7 @@ describe("innerworld router", () => {
   describe("innerworld.getRegion", () => {
     it("calls getRegion with correct systemId and regionId", async () => {
       vi.mocked(getRegion).mockResolvedValue(MOCK_REGION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.getRegion({
         systemId: SYSTEM_ID,
         regionId: REGION_ID,
@@ -338,7 +303,7 @@ describe("innerworld router", () => {
     });
 
     it("rejects invalid regionId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.innerworld.getRegion({
           systemId: SYSTEM_ID,
@@ -359,7 +324,7 @@ describe("innerworld router", () => {
         totalCount: null,
       };
       vi.mocked(listRegions).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.listRegions({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listRegions)).toHaveBeenCalledOnce();
@@ -373,7 +338,7 @@ describe("innerworld router", () => {
   describe("innerworld.updateRegion", () => {
     it("calls updateRegion with correct args and returns result", async () => {
       vi.mocked(updateRegion).mockResolvedValue(MOCK_REGION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.updateRegion({
         systemId: SYSTEM_ID,
         regionId: REGION_ID,
@@ -392,7 +357,7 @@ describe("innerworld router", () => {
   describe("innerworld.archiveRegion", () => {
     it("calls archiveRegion and returns success", async () => {
       vi.mocked(archiveRegion).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.archiveRegion({
         systemId: SYSTEM_ID,
         regionId: REGION_ID,
@@ -408,7 +373,7 @@ describe("innerworld router", () => {
   describe("innerworld.restoreRegion", () => {
     it("calls restoreRegion and returns result", async () => {
       vi.mocked(restoreRegion).mockResolvedValue(MOCK_REGION_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.restoreRegion({
         systemId: SYSTEM_ID,
         regionId: REGION_ID,
@@ -424,7 +389,7 @@ describe("innerworld router", () => {
   describe("innerworld.getCanvas", () => {
     it("calls getCanvas with correct systemId and returns result", async () => {
       vi.mocked(getCanvas).mockResolvedValue(MOCK_CANVAS_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.getCanvas({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(getCanvas)).toHaveBeenCalledOnce();
@@ -433,7 +398,7 @@ describe("innerworld router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.innerworld.getCanvas({ systemId: SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -443,7 +408,7 @@ describe("innerworld router", () => {
       vi.mocked(getCanvas).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Canvas not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.innerworld.getCanvas({ systemId: SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -455,7 +420,7 @@ describe("innerworld router", () => {
   describe("innerworld.upsertCanvas", () => {
     it("calls upsertCanvas with correct systemId and returns result", async () => {
       vi.mocked(upsertCanvas).mockResolvedValue(MOCK_CANVAS_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.innerworld.upsertCanvas({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -471,7 +436,7 @@ describe("innerworld router", () => {
       vi.mocked(upsertCanvas).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version conflict"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.innerworld.upsertCanvas({
           systemId: SYSTEM_ID,

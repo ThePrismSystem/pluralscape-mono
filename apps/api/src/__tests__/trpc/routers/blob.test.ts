@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type { AccountId, BlobId, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { BlobId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -31,34 +28,9 @@ const { createUploadUrl, confirmUpload, getBlob, listBlobs, getDownloadUrl, arch
 
 const { blobRouter } = await import("../../../trpc/routers/blob.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ blob: blobRouter });
+
 const BLOB_ID = "blob_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BlobId;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ blob: blobRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_BLOB_RESULT = {
   id: BLOB_ID,
@@ -101,7 +73,7 @@ describe("blob router", () => {
   describe("blob.createUploadUrl", () => {
     it("calls createUploadUrl with storageAdapter and quotaService and returns result", async () => {
       vi.mocked(createUploadUrl).mockResolvedValue(MOCK_UPLOAD_URL_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.blob.createUploadUrl(VALID_UPLOAD_INPUT);
 
       expect(vi.mocked(createUploadUrl)).toHaveBeenCalledOnce();
@@ -110,7 +82,7 @@ describe("blob router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(caller.blob.createUploadUrl(VALID_UPLOAD_INPUT)).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
@@ -118,7 +90,7 @@ describe("blob router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.blob.createUploadUrl({ ...VALID_UPLOAD_INPUT, systemId: foreignSystemId }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -128,7 +100,7 @@ describe("blob router", () => {
       vi.mocked(createUploadUrl).mockRejectedValue(
         new ApiHttpError(413, "BLOB_TOO_LARGE", "File too large"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.blob.createUploadUrl(VALID_UPLOAD_INPUT)).rejects.toThrow(
         expect.objectContaining({ code: "PAYLOAD_TOO_LARGE" }),
       );
@@ -146,7 +118,7 @@ describe("blob router", () => {
 
     it("calls confirmUpload with correct systemId and blobId", async () => {
       vi.mocked(confirmUpload).mockResolvedValue(MOCK_BLOB_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.blob.confirmUpload(VALID_CONFIRM_INPUT);
 
       expect(vi.mocked(confirmUpload)).toHaveBeenCalledOnce();
@@ -156,7 +128,7 @@ describe("blob router", () => {
     });
 
     it("rejects invalid blobId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.blob.confirmUpload({
           ...VALID_CONFIRM_INPUT,
@@ -169,7 +141,7 @@ describe("blob router", () => {
       vi.mocked(confirmUpload).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Blob not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.blob.confirmUpload(VALID_CONFIRM_INPUT)).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -181,7 +153,7 @@ describe("blob router", () => {
   describe("blob.get", () => {
     it("calls getBlob with correct systemId and blobId", async () => {
       vi.mocked(getBlob).mockResolvedValue(MOCK_BLOB_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.blob.get({ systemId: SYSTEM_ID, blobId: BLOB_ID });
 
       expect(vi.mocked(getBlob)).toHaveBeenCalledOnce();
@@ -191,7 +163,7 @@ describe("blob router", () => {
     });
 
     it("rejects invalid blobId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.blob.get({ systemId: SYSTEM_ID, blobId: "invalid-id" as BlobId }),
       ).rejects.toThrow();
@@ -199,7 +171,7 @@ describe("blob router", () => {
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
       vi.mocked(getBlob).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Blob not found"));
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.blob.get({ systemId: SYSTEM_ID, blobId: BLOB_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -217,7 +189,7 @@ describe("blob router", () => {
         totalCount: null,
       };
       vi.mocked(listBlobs).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.blob.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listBlobs)).toHaveBeenCalledOnce();
@@ -232,7 +204,7 @@ describe("blob router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.blob.list({
         systemId: SYSTEM_ID,
         cursor: "blob_cursor",
@@ -252,7 +224,7 @@ describe("blob router", () => {
   describe("blob.getDownloadUrl", () => {
     it("calls getDownloadUrl with storageAdapter and returns result", async () => {
       vi.mocked(getDownloadUrl).mockResolvedValue(MOCK_DOWNLOAD_URL_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.blob.getDownloadUrl({ systemId: SYSTEM_ID, blobId: BLOB_ID });
 
       expect(vi.mocked(getDownloadUrl)).toHaveBeenCalledOnce();
@@ -265,7 +237,7 @@ describe("blob router", () => {
       vi.mocked(getDownloadUrl).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Blob not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.blob.getDownloadUrl({ systemId: SYSTEM_ID, blobId: BLOB_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -277,7 +249,7 @@ describe("blob router", () => {
   describe("blob.delete", () => {
     it("calls archiveBlob and returns success", async () => {
       vi.mocked(archiveBlob).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.blob.delete({ systemId: SYSTEM_ID, blobId: BLOB_ID });
 
       expect(result).toEqual({ success: true });
@@ -290,7 +262,7 @@ describe("blob router", () => {
       vi.mocked(archiveBlob).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Blob not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.blob.delete({ systemId: SYSTEM_ID, blobId: BLOB_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );

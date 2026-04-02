@@ -1,20 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  CheckInRecordId,
-  MemberId,
-  SessionId,
-  SystemId,
-  TimerId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { CheckInRecordId, MemberId, TimerId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -44,36 +33,11 @@ const {
 
 const { checkInRecordRouter } = await import("../../../trpc/routers/check-in-record.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ checkInRecord: checkInRecordRouter });
+
 const RECORD_ID = "cir_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as CheckInRecordId;
 const TIMER_ID = "tmr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as TimerId;
 const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ checkInRecord: checkInRecordRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_PENDING_RESULT = {
   id: RECORD_ID,
@@ -115,7 +79,7 @@ describe("checkInRecord router", () => {
   describe("checkInRecord.create", () => {
     it("calls createCheckInRecord with correct systemId and returns result", async () => {
       vi.mocked(createCheckInRecord).mockResolvedValue(MOCK_PENDING_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.create({
         systemId: SYSTEM_ID,
         timerConfigId: TIMER_ID,
@@ -128,7 +92,7 @@ describe("checkInRecord router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.checkInRecord.create({
           systemId: SYSTEM_ID,
@@ -140,7 +104,7 @@ describe("checkInRecord router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.create({
           systemId: foreignSystemId,
@@ -156,7 +120,7 @@ describe("checkInRecord router", () => {
   describe("checkInRecord.get", () => {
     it("calls getCheckInRecord with correct systemId and recordId", async () => {
       vi.mocked(getCheckInRecord).mockResolvedValue(MOCK_PENDING_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.get({ systemId: SYSTEM_ID, recordId: RECORD_ID });
 
       expect(vi.mocked(getCheckInRecord)).toHaveBeenCalledOnce();
@@ -166,7 +130,7 @@ describe("checkInRecord router", () => {
     });
 
     it("rejects invalid recordId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.get({
           systemId: SYSTEM_ID,
@@ -179,7 +143,7 @@ describe("checkInRecord router", () => {
       vi.mocked(getCheckInRecord).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Check-in record not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.get({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -197,7 +161,7 @@ describe("checkInRecord router", () => {
         totalCount: null,
       };
       vi.mocked(listCheckInRecords).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listCheckInRecords)).toHaveBeenCalledOnce();
@@ -212,7 +176,7 @@ describe("checkInRecord router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.checkInRecord.list({
         systemId: SYSTEM_ID,
         timerConfigId: TIMER_ID,
@@ -234,7 +198,7 @@ describe("checkInRecord router", () => {
   describe("checkInRecord.respond", () => {
     it("calls respondCheckInRecord with correct systemId, recordId, and returns result", async () => {
       vi.mocked(respondCheckInRecord).mockResolvedValue(MOCK_RESPONDED_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.respond({
         systemId: SYSTEM_ID,
         recordId: RECORD_ID,
@@ -251,7 +215,7 @@ describe("checkInRecord router", () => {
       vi.mocked(respondCheckInRecord).mockRejectedValue(
         new ApiHttpError(409, "ALREADY_RESPONDED", "Check-in already responded"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.respond({
           systemId: SYSTEM_ID,
@@ -267,7 +231,7 @@ describe("checkInRecord router", () => {
   describe("checkInRecord.dismiss", () => {
     it("calls dismissCheckInRecord with correct systemId and recordId", async () => {
       vi.mocked(dismissCheckInRecord).mockResolvedValue(MOCK_DISMISSED_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.dismiss({
         systemId: SYSTEM_ID,
         recordId: RECORD_ID,
@@ -283,7 +247,7 @@ describe("checkInRecord router", () => {
       vi.mocked(dismissCheckInRecord).mockRejectedValue(
         new ApiHttpError(409, "ALREADY_DISMISSED", "Check-in already dismissed"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.dismiss({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
@@ -295,7 +259,7 @@ describe("checkInRecord router", () => {
   describe("checkInRecord.archive", () => {
     it("calls archiveCheckInRecord and returns success", async () => {
       vi.mocked(archiveCheckInRecord).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.archive({
         systemId: SYSTEM_ID,
         recordId: RECORD_ID,
@@ -311,7 +275,7 @@ describe("checkInRecord router", () => {
       vi.mocked(archiveCheckInRecord).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Check-in record not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.archive({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -323,7 +287,7 @@ describe("checkInRecord router", () => {
   describe("checkInRecord.restore", () => {
     it("calls restoreCheckInRecord and returns result", async () => {
       vi.mocked(restoreCheckInRecord).mockResolvedValue(MOCK_PENDING_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.restore({
         systemId: SYSTEM_ID,
         recordId: RECORD_ID,
@@ -339,7 +303,7 @@ describe("checkInRecord router", () => {
       vi.mocked(restoreCheckInRecord).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Check-in record not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.restore({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -351,7 +315,7 @@ describe("checkInRecord router", () => {
   describe("checkInRecord.delete", () => {
     it("calls deleteCheckInRecord and returns success", async () => {
       vi.mocked(deleteCheckInRecord).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.checkInRecord.delete({
         systemId: SYSTEM_ID,
         recordId: RECORD_ID,
@@ -367,7 +331,7 @@ describe("checkInRecord router", () => {
       vi.mocked(deleteCheckInRecord).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Check-in record not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.checkInRecord.delete({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));

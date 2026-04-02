@@ -1,18 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  FrontingReportId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { FrontingReportId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -38,35 +29,10 @@ const {
 
 const { frontingReportRouter } = await import("../../../trpc/routers/fronting-report.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ frontingReport: frontingReportRouter });
+
 const REPORT_ID = "fr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingReportId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ frontingReport: frontingReportRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_REPORT_RESULT = {
   id: REPORT_ID,
@@ -91,7 +57,7 @@ describe("frontingReport router", () => {
   describe("frontingReport.create", () => {
     it("calls createFrontingReport with correct systemId and returns result", async () => {
       vi.mocked(createFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingReport.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -105,7 +71,7 @@ describe("frontingReport router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.frontingReport.create({
           systemId: SYSTEM_ID,
@@ -118,7 +84,7 @@ describe("frontingReport router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingReport.create({
           systemId: foreignSystemId,
@@ -130,7 +96,7 @@ describe("frontingReport router", () => {
     });
 
     it("rejects invalid format value", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingReport.create({
           systemId: SYSTEM_ID,
@@ -147,7 +113,7 @@ describe("frontingReport router", () => {
   describe("frontingReport.get", () => {
     it("calls getFrontingReport with correct systemId and reportId", async () => {
       vi.mocked(getFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingReport.get({
         systemId: SYSTEM_ID,
         reportId: REPORT_ID,
@@ -160,7 +126,7 @@ describe("frontingReport router", () => {
     });
 
     it("rejects invalid reportId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingReport.get({
           systemId: SYSTEM_ID,
@@ -181,7 +147,7 @@ describe("frontingReport router", () => {
         totalCount: null,
       };
       vi.mocked(listFrontingReports).mockResolvedValue(mockList);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingReport.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listFrontingReports)).toHaveBeenCalledOnce();
@@ -194,7 +160,7 @@ describe("frontingReport router", () => {
   describe("frontingReport.update", () => {
     it("calls updateFrontingReport with correct reportId", async () => {
       vi.mocked(updateFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingReport.update({
         systemId: SYSTEM_ID,
         reportId: REPORT_ID,
@@ -213,7 +179,7 @@ describe("frontingReport router", () => {
   describe("frontingReport.archive", () => {
     it("calls archiveFrontingReport and returns success", async () => {
       vi.mocked(archiveFrontingReport).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingReport.archive({
         systemId: SYSTEM_ID,
         reportId: REPORT_ID,
@@ -229,7 +195,7 @@ describe("frontingReport router", () => {
   describe("frontingReport.restore", () => {
     it("calls restoreFrontingReport and returns result", async () => {
       vi.mocked(restoreFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingReport.restore({
         systemId: SYSTEM_ID,
         reportId: REPORT_ID,
@@ -247,7 +213,7 @@ describe("frontingReport router", () => {
       vi.mocked(getFrontingReport).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Fronting report not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingReport.get({ systemId: SYSTEM_ID, reportId: REPORT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -257,7 +223,7 @@ describe("frontingReport router", () => {
       vi.mocked(updateFrontingReport).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingReport.update({
           systemId: SYSTEM_ID,

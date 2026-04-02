@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  FrontingCommentId,
-  FrontingSessionId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { FrontingCommentId, FrontingSessionId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -39,37 +29,12 @@ const {
 
 const { frontingCommentRouter } = await import("../../../trpc/routers/fronting-comment.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ frontingComment: frontingCommentRouter });
+
 const SESSION_ID = "fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingSessionId;
 const COMMENT_ID = "fcom_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingCommentId;
 const VALID_MEMBER_ID = "mem_11111111-2222-3333-4444-555555555555";
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ frontingComment: frontingCommentRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_COMMENT_RESULT = {
   id: COMMENT_ID,
@@ -96,7 +61,7 @@ describe("frontingComment router", () => {
   describe("frontingComment.create", () => {
     it("calls createFrontingComment with correct systemId and sessionId", async () => {
       vi.mocked(createFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingComment.create({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -113,7 +78,7 @@ describe("frontingComment router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.frontingComment.create({
           systemId: SYSTEM_ID,
@@ -128,7 +93,7 @@ describe("frontingComment router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingComment.create({
           systemId: foreignSystemId,
@@ -142,7 +107,7 @@ describe("frontingComment router", () => {
     });
 
     it("rejects invalid sessionId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingComment.create({
           systemId: SYSTEM_ID,
@@ -156,7 +121,7 @@ describe("frontingComment router", () => {
     });
 
     it("rejects when no subject id provided", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingComment.create({
           systemId: SYSTEM_ID,
@@ -175,7 +140,7 @@ describe("frontingComment router", () => {
   describe("frontingComment.get", () => {
     it("calls getFrontingComment with correct ids", async () => {
       vi.mocked(getFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingComment.get({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -189,7 +154,7 @@ describe("frontingComment router", () => {
     });
 
     it("rejects invalid commentId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingComment.get({
           systemId: SYSTEM_ID,
@@ -211,7 +176,7 @@ describe("frontingComment router", () => {
         totalCount: null,
       };
       vi.mocked(listFrontingComments).mockResolvedValue(mockList);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingComment.list({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -228,7 +193,7 @@ describe("frontingComment router", () => {
   describe("frontingComment.update", () => {
     it("calls updateFrontingComment with correct ids", async () => {
       vi.mocked(updateFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingComment.update({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -249,7 +214,7 @@ describe("frontingComment router", () => {
   describe("frontingComment.archive", () => {
     it("calls archiveFrontingComment and returns success", async () => {
       vi.mocked(archiveFrontingComment).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingComment.archive({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -266,7 +231,7 @@ describe("frontingComment router", () => {
   describe("frontingComment.restore", () => {
     it("calls restoreFrontingComment and returns result", async () => {
       vi.mocked(restoreFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.frontingComment.restore({
         systemId: SYSTEM_ID,
         sessionId: SESSION_ID,
@@ -285,7 +250,7 @@ describe("frontingComment router", () => {
       vi.mocked(getFrontingComment).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Fronting comment not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingComment.get({
           systemId: SYSTEM_ID,
@@ -299,7 +264,7 @@ describe("frontingComment router", () => {
       vi.mocked(updateFrontingComment).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.frontingComment.update({
           systemId: SYSTEM_ID,

@@ -1,19 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
 import type {
-  AccountId,
   BucketId,
   FieldDefinitionId,
   FieldValueId,
   MemberId,
-  SessionId,
-  SystemId,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -62,37 +56,12 @@ const { setFieldBucketVisibility, removeFieldBucketVisibility, listFieldBucketVi
 
 const { fieldRouter } = await import("../../../trpc/routers/field.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ field: fieldRouter });
+
 const FIELD_DEF_ID = "fld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FieldDefinitionId;
 const BUCKET_ID = "bkt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BucketId;
 const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JmaWVsZA==";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ field: fieldRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_FIELD_DEF_RESULT = {
   id: FIELD_DEF_ID,
@@ -133,7 +102,7 @@ describe("field router", () => {
   describe("field.definition.create", () => {
     it("calls createFieldDefinition with correct systemId and returns result", async () => {
       vi.mocked(createFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.definition.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -148,7 +117,7 @@ describe("field router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.field.definition.create({
           systemId: SYSTEM_ID,
@@ -164,7 +133,7 @@ describe("field router", () => {
   describe("field.definition.get", () => {
     it("calls getFieldDefinition with correct systemId and fieldDefinitionId", async () => {
       vi.mocked(getFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.definition.get({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -180,7 +149,7 @@ describe("field router", () => {
       vi.mocked(getFieldDefinition).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Field definition not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.field.definition.get({ systemId: SYSTEM_ID, fieldDefinitionId: FIELD_DEF_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -196,7 +165,7 @@ describe("field router", () => {
         totalCount: null,
       };
       vi.mocked(listFieldDefinitions).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.definition.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listFieldDefinitions)).toHaveBeenCalledOnce();
@@ -211,7 +180,7 @@ describe("field router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.field.definition.list({ systemId: SYSTEM_ID, includeArchived: true });
 
       const opts = vi.mocked(listFieldDefinitions).mock.calls[0]?.[3];
@@ -222,7 +191,7 @@ describe("field router", () => {
   describe("field.definition.update", () => {
     it("calls updateFieldDefinition with correct systemId and fieldDefinitionId", async () => {
       vi.mocked(updateFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.definition.update({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -240,7 +209,7 @@ describe("field router", () => {
   describe("field.definition.archive", () => {
     it("calls archiveFieldDefinition and returns success", async () => {
       vi.mocked(archiveFieldDefinition).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.definition.archive({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -256,7 +225,7 @@ describe("field router", () => {
   describe("field.definition.restore", () => {
     it("calls restoreFieldDefinition and returns result", async () => {
       vi.mocked(restoreFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.definition.restore({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -272,7 +241,7 @@ describe("field router", () => {
   describe("field.definition.delete", () => {
     it("calls deleteFieldDefinition and returns success", async () => {
       vi.mocked(deleteFieldDefinition).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.definition.delete({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -287,7 +256,7 @@ describe("field router", () => {
 
     it("passes force option to service", async () => {
       vi.mocked(deleteFieldDefinition).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.field.definition.delete({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -301,7 +270,7 @@ describe("field router", () => {
       vi.mocked(deleteFieldDefinition).mockRejectedValue(
         new ApiHttpError(409, "HAS_DEPENDENTS", "Field definition has dependents"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.field.definition.delete({
           systemId: SYSTEM_ID,
@@ -317,7 +286,7 @@ describe("field router", () => {
   describe("field.value.set", () => {
     it("calls setFieldValueForOwner with correct args and returns result", async () => {
       vi.mocked(setFieldValueForOwner).mockResolvedValue(MOCK_FIELD_VALUE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.value.set({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -339,7 +308,7 @@ describe("field router", () => {
       vi.mocked(setFieldValueForOwner).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Field value already exists"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.field.value.set({
           systemId: SYSTEM_ID,
@@ -354,7 +323,7 @@ describe("field router", () => {
   describe("field.value.list", () => {
     it("calls listFieldValuesForOwner with correct args", async () => {
       vi.mocked(listFieldValuesForOwner).mockResolvedValue([MOCK_FIELD_VALUE_RESULT]);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.value.list({
         systemId: SYSTEM_ID,
         owner: { kind: "member", id: MEMBER_ID },
@@ -373,7 +342,7 @@ describe("field router", () => {
   describe("field.value.remove", () => {
     it("calls deleteFieldValueForOwner and returns success", async () => {
       vi.mocked(deleteFieldValueForOwner).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.value.remove({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -394,7 +363,7 @@ describe("field router", () => {
       vi.mocked(deleteFieldValueForOwner).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Field value not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.field.value.remove({
           systemId: SYSTEM_ID,
@@ -411,7 +380,7 @@ describe("field router", () => {
     it("calls setFieldBucketVisibility with correct args and returns result", async () => {
       const mockResult = { fieldDefinitionId: FIELD_DEF_ID, bucketId: BUCKET_ID };
       vi.mocked(setFieldBucketVisibility).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.bucketVisibility.set({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -429,7 +398,7 @@ describe("field router", () => {
   describe("field.bucketVisibility.remove", () => {
     it("calls removeFieldBucketVisibility and returns success", async () => {
       vi.mocked(removeFieldBucketVisibility).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.bucketVisibility.remove({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
@@ -447,7 +416,7 @@ describe("field router", () => {
       vi.mocked(removeFieldBucketVisibility).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Field bucket visibility not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.field.bucketVisibility.remove({
           systemId: SYSTEM_ID,
@@ -462,7 +431,7 @@ describe("field router", () => {
     it("calls listFieldBucketVisibility with correct args", async () => {
       const mockResult = [{ fieldDefinitionId: FIELD_DEF_ID, bucketId: BUCKET_ID }];
       vi.mocked(listFieldBucketVisibility).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.field.bucketVisibility.list({
         systemId: SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,

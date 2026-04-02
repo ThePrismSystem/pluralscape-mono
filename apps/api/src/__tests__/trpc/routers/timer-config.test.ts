@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type { AccountId, SessionId, SystemId, TimerId, UnixMillis } from "@pluralscape/types";
+import type { TimerId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -32,35 +29,10 @@ const {
 
 const { timerConfigRouter } = await import("../../../trpc/routers/timer-config.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ timerConfig: timerConfigRouter });
+
 const TIMER_ID = "tmr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as TimerId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3J0aW1lcg==";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ timerConfig: timerConfigRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_TIMER_RESULT = {
   id: TIMER_ID,
@@ -88,7 +60,7 @@ describe("timerConfig router", () => {
   describe("timerConfig.create", () => {
     it("calls createTimerConfig with correct systemId and returns result", async () => {
       vi.mocked(createTimerConfig).mockResolvedValue(MOCK_TIMER_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.timerConfig.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -100,7 +72,7 @@ describe("timerConfig router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.timerConfig.create({
           systemId: SYSTEM_ID,
@@ -111,7 +83,7 @@ describe("timerConfig router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.timerConfig.create({
           systemId: foreignSystemId,
@@ -126,7 +98,7 @@ describe("timerConfig router", () => {
   describe("timerConfig.get", () => {
     it("calls getTimerConfig with correct systemId and timerId", async () => {
       vi.mocked(getTimerConfig).mockResolvedValue(MOCK_TIMER_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.timerConfig.get({ systemId: SYSTEM_ID, timerId: TIMER_ID });
 
       expect(vi.mocked(getTimerConfig)).toHaveBeenCalledOnce();
@@ -136,7 +108,7 @@ describe("timerConfig router", () => {
     });
 
     it("rejects invalid timerId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.timerConfig.get({
           systemId: SYSTEM_ID,
@@ -149,7 +121,7 @@ describe("timerConfig router", () => {
       vi.mocked(getTimerConfig).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.timerConfig.get({ systemId: SYSTEM_ID, timerId: TIMER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -167,7 +139,7 @@ describe("timerConfig router", () => {
         totalCount: null,
       };
       vi.mocked(listTimerConfigs).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.timerConfig.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listTimerConfigs)).toHaveBeenCalledOnce();
@@ -182,7 +154,7 @@ describe("timerConfig router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.timerConfig.list({
         systemId: SYSTEM_ID,
         cursor: "cursor_abc",
@@ -202,7 +174,7 @@ describe("timerConfig router", () => {
   describe("timerConfig.update", () => {
     it("calls updateTimerConfig with correct systemId, timerId, and returns result", async () => {
       vi.mocked(updateTimerConfig).mockResolvedValue({ ...MOCK_TIMER_RESULT, version: 2 });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.timerConfig.update({
         systemId: SYSTEM_ID,
         timerId: TIMER_ID,
@@ -220,7 +192,7 @@ describe("timerConfig router", () => {
       vi.mocked(updateTimerConfig).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Timer config was modified by another request"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.timerConfig.update({
           systemId: SYSTEM_ID,
@@ -235,7 +207,7 @@ describe("timerConfig router", () => {
       vi.mocked(updateTimerConfig).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.timerConfig.update({
           systemId: SYSTEM_ID,
@@ -252,7 +224,7 @@ describe("timerConfig router", () => {
   describe("timerConfig.archive", () => {
     it("calls archiveTimerConfig and returns success", async () => {
       vi.mocked(archiveTimerConfig).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.timerConfig.archive({ systemId: SYSTEM_ID, timerId: TIMER_ID });
 
       expect(result).toEqual({ success: true });
@@ -265,7 +237,7 @@ describe("timerConfig router", () => {
       vi.mocked(archiveTimerConfig).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.timerConfig.archive({ systemId: SYSTEM_ID, timerId: TIMER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -277,7 +249,7 @@ describe("timerConfig router", () => {
   describe("timerConfig.restore", () => {
     it("calls restoreTimerConfig and returns result", async () => {
       vi.mocked(restoreTimerConfig).mockResolvedValue({ ...MOCK_TIMER_RESULT, archived: false });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.timerConfig.restore({ systemId: SYSTEM_ID, timerId: TIMER_ID });
 
       expect(vi.mocked(restoreTimerConfig)).toHaveBeenCalledOnce();
@@ -290,7 +262,7 @@ describe("timerConfig router", () => {
       vi.mocked(restoreTimerConfig).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Timer config not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.timerConfig.restore({ systemId: SYSTEM_ID, timerId: TIMER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));

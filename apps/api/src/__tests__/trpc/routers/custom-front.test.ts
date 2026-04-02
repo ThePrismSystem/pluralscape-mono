@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type { AccountId, CustomFrontId, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { CustomFrontId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -34,35 +31,10 @@ const {
 
 const { customFrontRouter } = await import("../../../trpc/routers/custom-front.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ customFront: customFrontRouter });
+
 const CUSTOM_FRONT_ID = "cf_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as CustomFrontId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JjZg==";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ customFront: customFrontRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_CUSTOM_FRONT_RESULT = {
   id: CUSTOM_FRONT_ID,
@@ -85,7 +57,7 @@ describe("customFront router", () => {
   describe("customFront.create", () => {
     it("calls createCustomFront with correct systemId and returns result", async () => {
       vi.mocked(createCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.customFront.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -97,7 +69,7 @@ describe("customFront router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.customFront.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
@@ -105,7 +77,7 @@ describe("customFront router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.create({
           systemId: foreignSystemId,
@@ -120,7 +92,7 @@ describe("customFront router", () => {
   describe("customFront.get", () => {
     it("calls getCustomFront with correct systemId and customFrontId", async () => {
       vi.mocked(getCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.customFront.get({
         systemId: SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
@@ -133,7 +105,7 @@ describe("customFront router", () => {
     });
 
     it("rejects invalid customFrontId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.get({
           systemId: SYSTEM_ID,
@@ -146,7 +118,7 @@ describe("customFront router", () => {
       vi.mocked(getCustomFront).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Custom front not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.get({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -164,7 +136,7 @@ describe("customFront router", () => {
         totalCount: null,
       };
       vi.mocked(listCustomFronts).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.customFront.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listCustomFronts)).toHaveBeenCalledOnce();
@@ -179,7 +151,7 @@ describe("customFront router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.customFront.list({ systemId: SYSTEM_ID, cursor: "cur_abc", limit: 10 });
 
       expect(vi.mocked(listCustomFronts).mock.calls[0]?.[3]).toBe("cur_abc");
@@ -192,7 +164,7 @@ describe("customFront router", () => {
   describe("customFront.update", () => {
     it("calls updateCustomFront with correct systemId and customFrontId", async () => {
       vi.mocked(updateCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.customFront.update({
         systemId: SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
@@ -210,7 +182,7 @@ describe("customFront router", () => {
       vi.mocked(updateCustomFront).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.update({
           systemId: SYSTEM_ID,
@@ -227,7 +199,7 @@ describe("customFront router", () => {
   describe("customFront.archive", () => {
     it("calls archiveCustomFront and returns success", async () => {
       vi.mocked(archiveCustomFront).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.customFront.archive({
         systemId: SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
@@ -243,7 +215,7 @@ describe("customFront router", () => {
       vi.mocked(archiveCustomFront).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Custom front not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.archive({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -255,7 +227,7 @@ describe("customFront router", () => {
   describe("customFront.restore", () => {
     it("calls restoreCustomFront and returns result", async () => {
       vi.mocked(restoreCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.customFront.restore({
         systemId: SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
@@ -271,7 +243,7 @@ describe("customFront router", () => {
       vi.mocked(restoreCustomFront).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Custom front not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.restore({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -283,7 +255,7 @@ describe("customFront router", () => {
   describe("customFront.delete", () => {
     it("calls deleteCustomFront and returns success", async () => {
       vi.mocked(deleteCustomFront).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.customFront.delete({
         systemId: SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
@@ -299,7 +271,7 @@ describe("customFront router", () => {
       vi.mocked(deleteCustomFront).mockRejectedValue(
         new ApiHttpError(409, "HAS_DEPENDENTS", "Custom front has fronting sessions"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.delete({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
@@ -309,7 +281,7 @@ describe("customFront router", () => {
       vi.mocked(deleteCustomFront).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Custom front not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.customFront.delete({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));

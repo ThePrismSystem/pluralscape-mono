@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  PollId,
-  PollVoteId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { PollId, PollVoteId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -54,36 +44,11 @@ const { castVote, listVotes, updatePollVote, deletePollVote, getPollResults } =
 
 const { pollRouter } = await import("../../../trpc/routers/poll.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ poll: pollRouter });
+
 const POLL_ID = "poll_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as PollId;
 const VOTE_ID = "pv_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as PollVoteId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3Jwb2xs";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ poll: pollRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_POLL_RESULT = {
   id: POLL_ID,
@@ -128,7 +93,7 @@ describe("poll router", () => {
   describe("poll.create", () => {
     it("calls createPoll with correct systemId and returns result", async () => {
       vi.mocked(createPoll).mockResolvedValue(MOCK_POLL_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -146,7 +111,7 @@ describe("poll router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.poll.create({
           systemId: SYSTEM_ID,
@@ -163,7 +128,7 @@ describe("poll router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.poll.create({
           systemId: foreignSystemId,
@@ -184,7 +149,7 @@ describe("poll router", () => {
   describe("poll.get", () => {
     it("calls getPoll with correct systemId and pollId", async () => {
       vi.mocked(getPoll).mockResolvedValue(MOCK_POLL_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.get({ systemId: SYSTEM_ID, pollId: POLL_ID });
 
       expect(vi.mocked(getPoll)).toHaveBeenCalledOnce();
@@ -194,7 +159,7 @@ describe("poll router", () => {
     });
 
     it("rejects invalid pollId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.poll.get({ systemId: SYSTEM_ID, pollId: "invalid-id" as PollId }),
       ).rejects.toThrow();
@@ -202,7 +167,7 @@ describe("poll router", () => {
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
       vi.mocked(getPoll).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Poll not found"));
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.poll.get({ systemId: SYSTEM_ID, pollId: POLL_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -220,7 +185,7 @@ describe("poll router", () => {
         totalCount: null,
       };
       vi.mocked(listPolls).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listPolls)).toHaveBeenCalledOnce();
@@ -235,7 +200,7 @@ describe("poll router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.poll.list({
         systemId: SYSTEM_ID,
         cursor: "cur_abc",
@@ -257,7 +222,7 @@ describe("poll router", () => {
   describe("poll.update", () => {
     it("calls updatePoll with correct systemId and pollId", async () => {
       vi.mocked(updatePoll).mockResolvedValue(MOCK_POLL_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.update({
         systemId: SYSTEM_ID,
         pollId: POLL_ID,
@@ -275,7 +240,7 @@ describe("poll router", () => {
       vi.mocked(updatePoll).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.poll.update({
           systemId: SYSTEM_ID,
@@ -292,7 +257,7 @@ describe("poll router", () => {
   describe("poll.close", () => {
     it("calls closePoll and returns the poll result", async () => {
       vi.mocked(closePoll).mockResolvedValue({ ...MOCK_POLL_RESULT, status: "closed" as const });
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.close({ systemId: SYSTEM_ID, pollId: POLL_ID });
 
       expect(vi.mocked(closePoll)).toHaveBeenCalledOnce();
@@ -303,7 +268,7 @@ describe("poll router", () => {
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
       vi.mocked(closePoll).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Poll not found"));
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.poll.close({ systemId: SYSTEM_ID, pollId: POLL_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -315,7 +280,7 @@ describe("poll router", () => {
   describe("poll.archive", () => {
     it("calls archivePoll and returns success", async () => {
       vi.mocked(archivePoll).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.archive({ systemId: SYSTEM_ID, pollId: POLL_ID });
 
       expect(result).toEqual({ success: true });
@@ -328,7 +293,7 @@ describe("poll router", () => {
       vi.mocked(archivePoll).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Poll not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.poll.archive({ systemId: SYSTEM_ID, pollId: POLL_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -340,7 +305,7 @@ describe("poll router", () => {
   describe("poll.restore", () => {
     it("calls restorePoll and returns the poll result", async () => {
       vi.mocked(restorePoll).mockResolvedValue(MOCK_POLL_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.restore({ systemId: SYSTEM_ID, pollId: POLL_ID });
 
       expect(vi.mocked(restorePoll)).toHaveBeenCalledOnce();
@@ -353,7 +318,7 @@ describe("poll router", () => {
       vi.mocked(restorePoll).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Poll not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.poll.restore({ systemId: SYSTEM_ID, pollId: POLL_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -365,7 +330,7 @@ describe("poll router", () => {
   describe("poll.delete", () => {
     it("calls deletePoll and returns success", async () => {
       vi.mocked(deletePoll).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.delete({ systemId: SYSTEM_ID, pollId: POLL_ID });
 
       expect(result).toEqual({ success: true });
@@ -376,7 +341,7 @@ describe("poll router", () => {
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
       vi.mocked(deletePoll).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Poll not found"));
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.poll.delete({ systemId: SYSTEM_ID, pollId: POLL_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -388,7 +353,7 @@ describe("poll router", () => {
   describe("poll.castVote", () => {
     it("calls castVote with correct systemId and pollId", async () => {
       vi.mocked(castVote).mockResolvedValue(MOCK_VOTE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.castVote({
         systemId: SYSTEM_ID,
         pollId: POLL_ID,
@@ -406,7 +371,7 @@ describe("poll router", () => {
 
     it("surfaces ApiHttpError(409) POLL_CLOSED as CONFLICT", async () => {
       vi.mocked(castVote).mockRejectedValue(new ApiHttpError(409, "POLL_CLOSED", "Poll is closed"));
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.poll.castVote({
           systemId: SYSTEM_ID,
@@ -431,7 +396,7 @@ describe("poll router", () => {
         totalCount: null,
       };
       vi.mocked(listVotes).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.listVotes({ systemId: SYSTEM_ID, pollId: POLL_ID });
 
       expect(vi.mocked(listVotes)).toHaveBeenCalledOnce();
@@ -446,7 +411,7 @@ describe("poll router", () => {
   describe("poll.updateVote", () => {
     it("calls updatePollVote with correct ids", async () => {
       vi.mocked(updatePollVote).mockResolvedValue(MOCK_VOTE_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.updateVote({
         systemId: SYSTEM_ID,
         pollId: POLL_ID,
@@ -468,7 +433,7 @@ describe("poll router", () => {
   describe("poll.deleteVote", () => {
     it("calls deletePollVote and returns success", async () => {
       vi.mocked(deletePollVote).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.deleteVote({
         systemId: SYSTEM_ID,
         pollId: POLL_ID,
@@ -486,7 +451,7 @@ describe("poll router", () => {
       vi.mocked(deletePollVote).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Poll vote not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.poll.deleteVote({ systemId: SYSTEM_ID, pollId: POLL_ID, voteId: VOTE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -504,7 +469,7 @@ describe("poll router", () => {
         optionCounts: [{ optionId: "opt_abc", count: 3 }],
       };
       vi.mocked(getPollResults).mockResolvedValue(mockResults);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.poll.results({ systemId: SYSTEM_ID, pollId: POLL_ID });
 
       expect(vi.mocked(getPollResults)).toHaveBeenCalledOnce();

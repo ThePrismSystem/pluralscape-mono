@@ -1,19 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type {
-  AccountId,
-  MemberId,
-  RelationshipId,
-  SessionId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { MemberId, RelationshipId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -41,37 +31,12 @@ const {
 
 const { relationshipRouter } = await import("../../../trpc/routers/relationship.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ relationship: relationshipRouter });
+
 const RELATIONSHIP_ID = "rel_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as RelationshipId;
 const SOURCE_MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
 const TARGET_MEMBER_ID = "mem_bbbbbbbb-cccc-dddd-eeee-ffffffffffff" as MemberId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JyZWxhdGlvbnNoaXA=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ relationship: relationshipRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_RELATIONSHIP_RESULT = {
   id: RELATIONSHIP_ID,
@@ -98,7 +63,7 @@ describe("relationship router", () => {
   describe("relationship.create", () => {
     it("calls createRelationship with correct systemId and returns result", async () => {
       vi.mocked(createRelationship).mockResolvedValue(MOCK_RELATIONSHIP_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.relationship.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -114,7 +79,7 @@ describe("relationship router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.relationship.create({
           systemId: SYSTEM_ID,
@@ -129,7 +94,7 @@ describe("relationship router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.relationship.create({
           systemId: foreignSystemId,
@@ -148,7 +113,7 @@ describe("relationship router", () => {
   describe("relationship.get", () => {
     it("calls getRelationship with correct systemId and relationshipId", async () => {
       vi.mocked(getRelationship).mockResolvedValue(MOCK_RELATIONSHIP_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.relationship.get({
         systemId: SYSTEM_ID,
         relationshipId: RELATIONSHIP_ID,
@@ -161,7 +126,7 @@ describe("relationship router", () => {
     });
 
     it("rejects invalid relationshipId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.relationship.get({
           systemId: SYSTEM_ID,
@@ -174,7 +139,7 @@ describe("relationship router", () => {
       vi.mocked(getRelationship).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Relationship not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.relationship.get({ systemId: SYSTEM_ID, relationshipId: RELATIONSHIP_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -192,7 +157,7 @@ describe("relationship router", () => {
         totalCount: null,
       };
       vi.mocked(listRelationships).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.relationship.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listRelationships)).toHaveBeenCalledOnce();
@@ -207,7 +172,7 @@ describe("relationship router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.relationship.list({
         systemId: SYSTEM_ID,
         cursor: "cursor_abc",
@@ -229,7 +194,7 @@ describe("relationship router", () => {
   describe("relationship.update", () => {
     it("calls updateRelationship with correct systemId and relationshipId", async () => {
       vi.mocked(updateRelationship).mockResolvedValue(MOCK_RELATIONSHIP_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.relationship.update({
         systemId: SYSTEM_ID,
         relationshipId: RELATIONSHIP_ID,
@@ -249,7 +214,7 @@ describe("relationship router", () => {
       vi.mocked(updateRelationship).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version conflict"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.relationship.update({
           systemId: SYSTEM_ID,
@@ -268,7 +233,7 @@ describe("relationship router", () => {
   describe("relationship.archive", () => {
     it("calls archiveRelationship and returns success", async () => {
       vi.mocked(archiveRelationship).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.relationship.archive({
         systemId: SYSTEM_ID,
         relationshipId: RELATIONSHIP_ID,
@@ -284,7 +249,7 @@ describe("relationship router", () => {
       vi.mocked(archiveRelationship).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Relationship not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.relationship.archive({ systemId: SYSTEM_ID, relationshipId: RELATIONSHIP_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -296,7 +261,7 @@ describe("relationship router", () => {
   describe("relationship.restore", () => {
     it("calls restoreRelationship and returns result", async () => {
       vi.mocked(restoreRelationship).mockResolvedValue(MOCK_RELATIONSHIP_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.relationship.restore({
         systemId: SYSTEM_ID,
         relationshipId: RELATIONSHIP_ID,
@@ -312,7 +277,7 @@ describe("relationship router", () => {
       vi.mocked(restoreRelationship).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Relationship not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.relationship.restore({ systemId: SYSTEM_ID, relationshipId: RELATIONSHIP_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -324,7 +289,7 @@ describe("relationship router", () => {
   describe("relationship.delete", () => {
     it("calls deleteRelationship and returns success", async () => {
       vi.mocked(deleteRelationship).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.relationship.delete({
         systemId: SYSTEM_ID,
         relationshipId: RELATIONSHIP_ID,
@@ -340,7 +305,7 @@ describe("relationship router", () => {
       vi.mocked(deleteRelationship).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Relationship not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.relationship.delete({ systemId: SYSTEM_ID, relationshipId: RELATIONSHIP_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
