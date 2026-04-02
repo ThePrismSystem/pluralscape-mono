@@ -245,14 +245,67 @@ function parseProcedureRateLimits(
  * Extract the content between balanced braces starting at the given index.
  * Returns the content between (exclusive of) the opening and closing brace.
  */
-function extractBalancedBlock(source: string, openIdx: number): string | null {
+export function extractBalancedBlock(source: string, openIdx: number): string | null {
   if (source[openIdx] !== "{") return null;
 
   let depth = 1;
   let i = openIdx + 1;
-  while (i < source.length && depth > 0) {
-    if (source[i] === "{") depth++;
-    else if (source[i] === "}") depth--;
+  const len = source.length;
+
+  while (i < len && depth > 0) {
+    const ch = source[i]!;
+
+    // Skip double-quoted strings
+    if (ch === '"') {
+      i++;
+      while (i < len && source[i] !== '"') {
+        if (source[i] === "\\") i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+
+    // Skip single-quoted strings
+    if (ch === "'") {
+      i++;
+      while (i < len && source[i] !== "'") {
+        if (source[i] === "\\") i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+
+    // Skip template literals (simplified -- doesn't handle nested ${})
+    if (ch === "`") {
+      i++;
+      while (i < len && source[i] !== "`") {
+        if (source[i] === "\\") i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+
+    // Skip single-line comments
+    if (ch === "/" && source[i + 1] === "/") {
+      i += 2;
+      while (i < len && source[i] !== "\n") i++;
+      i++;
+      continue;
+    }
+
+    // Skip multi-line comments
+    if (ch === "/" && source[i + 1] === "*") {
+      i += 2;
+      while (i < len && !(source[i] === "*" && source[i + 1] === "/")) i++;
+      i += 2;
+      continue;
+    }
+
+    if (ch === "{") depth++;
+    else if (ch === "}") depth--;
     i++;
   }
 
