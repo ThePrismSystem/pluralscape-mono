@@ -68,7 +68,7 @@ describe("POST /account/friend-codes/:codeId/archive", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(archiveFriendCode)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CODE_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),

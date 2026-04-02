@@ -72,7 +72,7 @@ describe("GET /account/friends", () => {
 
     expect(vi.mocked(listFriendConnections)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       MOCK_ACCOUNT_ONLY_AUTH,
       { cursor: "abc", limit: 10, includeArchived: true },
     );
@@ -85,7 +85,7 @@ describe("GET /account/friends", () => {
 
     expect(vi.mocked(listFriendConnections)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       MOCK_ACCOUNT_ONLY_AUTH,
       { cursor: undefined, limit: 25, includeArchived: false },
     );

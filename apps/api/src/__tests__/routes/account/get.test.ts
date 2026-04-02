@@ -44,7 +44,7 @@ describe("GET /account", () => {
 
   it("returns account info for authenticated user", async () => {
     const mockInfo = {
-      accountId: "acct_test" as AccountId,
+      accountId: "acct_test001" as AccountId,
       accountType: "system" as AccountType,
       systemId: "sys_test" as SystemId,
       auditLogIpTracking: false,
@@ -59,10 +59,10 @@ describe("GET /account", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: typeof mockInfo };
-    expect(body.data.accountId).toBe("acct_test");
+    expect(body.data.accountId).toBe("acct_test001");
     expect(body.data.accountType).toBe("system");
     expect(body.data.systemId).toBe("sys_test");
-    expect(vi.mocked(getAccountInfo)).toHaveBeenCalledWith({}, "acct_test");
+    expect(vi.mocked(getAccountInfo)).toHaveBeenCalledWith({}, "acct_test001");
   });
 
   it("returns 404 when account is not found", async () => {

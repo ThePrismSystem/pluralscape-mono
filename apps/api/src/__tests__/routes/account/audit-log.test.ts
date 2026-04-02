@@ -100,7 +100,7 @@ describe("GET /account/audit-log", () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       expect.objectContaining({ eventType: "member.created" }),
     );
   });
@@ -115,7 +115,7 @@ describe("GET /account/audit-log", () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       expect.objectContaining({ resourceType: "member" }),
     );
   });
@@ -128,7 +128,7 @@ describe("GET /account/audit-log", () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       expect.objectContaining({ resourceType: "custom-front" }),
     );
   });
@@ -229,7 +229,7 @@ describe("GET /account/audit-log", () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       expect.objectContaining({ cursor: "abc123", limit: 10 }),
     );
   });
@@ -241,7 +241,7 @@ describe("GET /account/audit-log", () => {
 
     expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       expect.objectContaining({ limit: 25 }),
     );
   });
@@ -266,7 +266,7 @@ describe("GET /account/audit-log", () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       expect.objectContaining({ eventType: "member.created", resourceType: "member" }),
     );
   });
@@ -279,7 +279,7 @@ describe("GET /account/audit-log", () => {
     expect(res.status).toBe(200);
     expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       expect.objectContaining({ from: 1000, to: 2000 }),
     );
   });

@@ -85,8 +85,8 @@ describe("POST /account/device-transfer/:id/approve", () => {
     expect(vi.mocked(approveTransfer)).toHaveBeenCalledWith(
       expect.anything(),
       "dtr_test-id",
-      "acct_test",
-      "sess_test",
+      "acct_test001",
+      "sess_test001",
       expect.any(Function),
     );
   });

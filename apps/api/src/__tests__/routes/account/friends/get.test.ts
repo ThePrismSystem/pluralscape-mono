@@ -80,7 +80,7 @@ describe("GET /account/friends/:connectionId", () => {
 
     expect(vi.mocked(getFriendConnection)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CONNECTION_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
     );
