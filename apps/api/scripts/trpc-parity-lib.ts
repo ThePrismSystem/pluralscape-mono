@@ -42,6 +42,8 @@ const MONOREPO_ROOT = resolve(API_ROOT, "../..");
 
 export type AuthLevel = "public" | "protected" | "system";
 
+export type ParityDimension = "existence" | "rate-limit" | "auth-level" | "idempotency";
+
 export interface TRPCProcedureInfo {
   readonly path: string;
   readonly type: "query" | "mutation";
@@ -62,7 +64,7 @@ export interface RESTRouteInfo {
 }
 
 export interface ParityFailure {
-  readonly dimension: string;
+  readonly dimension: ParityDimension;
   readonly restRoute: string;
   readonly expected: string;
   readonly actual: string;
@@ -145,11 +147,6 @@ function inferAuthLevelFromMiddlewares(mws: Array<{ toString(): string }>): Auth
 
 const RATE_LIMIT_VAR_PATTERN =
   /const\s+(\w+)\s*=\s*createTRPCCategoryRateLimiter\(\s*["']([^"']+)["']\s*\)/g;
-const RATE_LIMIT_INLINE_PATTERN =
-  /\.use\(\s*createTRPCCategoryRateLimiter\(\s*["']([^"']+)["']\s*\)\s*\)/g;
-const PROCEDURE_USE_PATTERN =
-  /(\w+)\s*:\s*(?:router\(\{[\s\S]*?)?(?:systemProcedure|protectedProcedure|errorMapProcedure)\s*[\s\S]*?\.use\(\s*(\w+)\s*\)/g;
-
 export function extractTRPCRateLimits(
   procedures: Map<string, TRPCProcedureInfo>,
 ): Map<string, TRPCProcedureInfo> {
@@ -1072,7 +1069,7 @@ export function printResults(
     console.log(`${RED}${BOLD}FAILURES (${String(failures.length)}):${RESET}\n`);
 
     // Group by dimension
-    const byDimension = new Map<string, ParityFailure[]>();
+    const byDimension = new Map<ParityDimension, ParityFailure[]>();
     for (const f of failures) {
       const group = byDimension.get(f.dimension) ?? [];
       group.push(f);
