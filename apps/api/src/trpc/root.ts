@@ -6,6 +6,7 @@ import { bucketRouter } from "./routers/bucket.js";
 import { channelRouter } from "./routers/channel.js";
 import { checkInRecordRouter } from "./routers/check-in-record.js";
 import { customFrontRouter } from "./routers/custom-front.js";
+import { deviceTokenRouter } from "./routers/device-token.js";
 import { fieldRouter } from "./routers/field.js";
 import { frontingCommentRouter } from "./routers/fronting-comment.js";
 import { frontingReportRouter } from "./routers/fronting-report.js";
@@ -17,10 +18,12 @@ import { memberPhotoRouter } from "./routers/member-photo.js";
 import { memberRouter } from "./routers/member.js";
 import { messageRouter } from "./routers/message.js";
 import { noteRouter } from "./routers/note.js";
+import { notificationConfigRouter } from "./routers/notification-config.js";
 import { pollRouter } from "./routers/poll.js";
 import { relationshipRouter } from "./routers/relationship.js";
 import { systemSettingsRouter } from "./routers/system-settings.js";
 import { systemRouter } from "./routers/system.js";
+import { timerConfigRouter } from "./routers/timer-config.js";
 import { router } from "./trpc.js";
 
 /**
@@ -39,6 +42,7 @@ export const appRouter = router({
   channel: channelRouter,
   checkInRecord: checkInRecordRouter,
   customFront: customFrontRouter,
+  deviceToken: deviceTokenRouter,
   field: fieldRouter,
   frontingComment: frontingCommentRouter,
   frontingReport: frontingReportRouter,
@@ -49,11 +53,13 @@ export const appRouter = router({
   member: memberRouter,
   memberPhoto: memberPhotoRouter,
   message: messageRouter,
+  notificationConfig: notificationConfigRouter,
   note: noteRouter,
   poll: pollRouter,
   relationship: relationshipRouter,
   system: systemRouter,
   systemSettings: systemSettingsRouter,
+  timerConfig: timerConfigRouter,
 });
 
 export type AppRouter = typeof appRouter;
