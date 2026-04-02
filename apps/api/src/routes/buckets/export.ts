@@ -18,7 +18,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const exportRoutes = new Hono<AuthEnv>();
 
 exportRoutes.use("/manifest", createCategoryRateLimiter("readHeavy"));
-exportRoutes.use("/", createCategoryRateLimiter("readDefault"));
+exportRoutes.use("/", createCategoryRateLimiter("readHeavy"));
 
 // ── Manifest ───────────────────────────────────────────────────────
 
