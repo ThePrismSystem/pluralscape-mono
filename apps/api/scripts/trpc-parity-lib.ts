@@ -1059,13 +1059,11 @@ export function runParityChecks(
         });
       }
     } else if (rest.rateLimitCategory && !trpc.rateLimitCategory) {
-      // tRPC might have a custom limiter not detected by source analysis
-      // Only warn if REST has one but tRPC source analysis found nothing
-      warnings.push({
+      failures.push({
         dimension: "rate-limit",
         restRoute: rest.routeKey,
         expected: `category "${rest.rateLimitCategory}" (REST)`,
-        actual: `no category detected (tRPC: ${trpcPath}) — may use custom limiter`,
+        actual: `no category detected (tRPC: ${trpcPath}) — add to rate-limit allowlist if using custom limiter`,
       });
     }
 

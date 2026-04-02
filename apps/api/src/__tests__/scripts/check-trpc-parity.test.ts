@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import type { ParityFailure } from "../../../scripts/trpc-parity-lib.js";
-import { extractBalancedBlock, walkRouteTree } from "../../../scripts/trpc-parity-lib.js";
+import type {
+  ParityFailure,
+  RESTRouteInfo,
+  TRPCProcedureInfo,
+} from "../../../scripts/trpc-parity-lib.js";
+import {
+  extractBalancedBlock,
+  runParityChecks,
+  walkRouteTree,
+} from "../../../scripts/trpc-parity-lib.js";
 
 describe("extractBalancedBlock", () => {
   it("extracts simple balanced braces", () => {
@@ -44,6 +52,96 @@ describe("extractBalancedBlock", () => {
     expect(extractBalancedBlock("{ a: 1, /* { not } a { brace */ b: 2 }", 0)).toBe(
       " a: 1, /* { not } a { brace */ b: 2 ",
     );
+  });
+});
+
+describe("runParityChecks", () => {
+  it("records failure when REST has rate limit but tRPC does not", () => {
+    const restRoutes: RESTRouteInfo[] = [
+      {
+        routeKey: "GET /v1/systems/:systemId/members",
+        method: "GET",
+        fullPath: "/v1/systems/:systemId/members",
+        rateLimitCategory: "readDefault",
+        authLevel: "system",
+        hasInputValidation: true,
+        hasIdempotency: false,
+        sourceFile: "test.ts",
+      },
+    ];
+    const trpcProcedures = new Map<string, TRPCProcedureInfo>([
+      [
+        "member.list",
+        {
+          path: "member.list",
+          type: "query",
+          rateLimitCategory: null,
+          authLevel: "system",
+          hasInputValidation: true,
+        },
+      ],
+    ]);
+    const result = runParityChecks(restRoutes, trpcProcedures);
+    expect(result.failures.some((f) => f.dimension === "rate-limit")).toBe(true);
+    expect(result.warnings.filter((w) => w.dimension === "rate-limit")).toHaveLength(0);
+  });
+
+  it("records failure when rate limit categories differ", () => {
+    const restRoutes: RESTRouteInfo[] = [
+      {
+        routeKey: "GET /v1/systems/:systemId/members",
+        method: "GET",
+        fullPath: "/v1/systems/:systemId/members",
+        rateLimitCategory: "readDefault",
+        authLevel: "system",
+        hasInputValidation: true,
+        hasIdempotency: false,
+        sourceFile: "test.ts",
+      },
+    ];
+    const trpcProcedures = new Map<string, TRPCProcedureInfo>([
+      [
+        "member.list",
+        {
+          path: "member.list",
+          type: "query",
+          rateLimitCategory: "readHeavy",
+          authLevel: "system",
+          hasInputValidation: true,
+        },
+      ],
+    ]);
+    const result = runParityChecks(restRoutes, trpcProcedures);
+    expect(result.failures.some((f) => f.dimension === "rate-limit")).toBe(true);
+  });
+
+  it("passes when rate limit categories match", () => {
+    const restRoutes: RESTRouteInfo[] = [
+      {
+        routeKey: "GET /v1/systems/:systemId/members",
+        method: "GET",
+        fullPath: "/v1/systems/:systemId/members",
+        rateLimitCategory: "readDefault",
+        authLevel: "system",
+        hasInputValidation: true,
+        hasIdempotency: false,
+        sourceFile: "test.ts",
+      },
+    ];
+    const trpcProcedures = new Map<string, TRPCProcedureInfo>([
+      [
+        "member.list",
+        {
+          path: "member.list",
+          type: "query",
+          rateLimitCategory: "readDefault",
+          authLevel: "system",
+          hasInputValidation: true,
+        },
+      ],
+    ]);
+    const result = runParityChecks(restRoutes, trpcProcedures);
+    expect(result.failures.filter((f) => f.dimension === "rate-limit")).toHaveLength(0);
   });
 });
 
