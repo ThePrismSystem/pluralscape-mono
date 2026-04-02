@@ -323,6 +323,22 @@ describe("bucket router", () => {
       expect(vi.mocked(assignBucketToFriend).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(assignBucketToFriend).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.bucket.assignFriend({
+          systemId: SYSTEM_ID,
+          bucketId: BUCKET_ID,
+          connectionId: CONNECTION_ID,
+          encryptedBucketKey: "a2V5ZGF0YQ==",
+          keyVersion: 1,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
   });
 
   // ── unassignFriend ────────────────────────────────────────────────
@@ -343,6 +359,20 @@ describe("bucket router", () => {
       expect(vi.mocked(unassignBucketFromFriend).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(vi.mocked(unassignBucketFromFriend).mock.calls[0]?.[3]).toBe(CONNECTION_ID);
       expect(result).toEqual(mockResult);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(unassignBucketFromFriend).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.bucket.unassignFriend({
+          systemId: SYSTEM_ID,
+          bucketId: BUCKET_ID,
+          connectionId: CONNECTION_ID,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -394,6 +424,19 @@ describe("bucket router", () => {
       expect(vi.mocked(tagContent).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
+
+    it("surfaces ApiHttpError(409) as CONFLICT", async () => {
+      vi.mocked(tagContent).mockRejectedValue(new ApiHttpError(409, "CONFLICT", "Already tagged"));
+      const caller = createCaller();
+      await expect(
+        caller.bucket.tagContent({
+          systemId: SYSTEM_ID,
+          bucketId: BUCKET_ID,
+          entityType: "member",
+          entityId: "mem_test001",
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
+    });
   });
 
   // ── untagContent ──────────────────────────────────────────────────
@@ -415,6 +458,21 @@ describe("bucket router", () => {
       expect(vi.mocked(untagContent).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(vi.mocked(untagContent).mock.calls[0]?.[3]).toBe("member");
       expect(vi.mocked(untagContent).mock.calls[0]?.[4]).toBe("mem_test001");
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(untagContent).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Tag not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.bucket.untagContent({
+          systemId: SYSTEM_ID,
+          bucketId: BUCKET_ID,
+          entityType: "member",
+          entityId: "mem_test001",
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -458,6 +516,16 @@ describe("bucket router", () => {
       expect(vi.mocked(getBucketExportManifest).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(getBucketExportManifest).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.bucket.exportManifest({ systemId: SYSTEM_ID, bucketId: BUCKET_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
   });
 
   // ── exportPage ────────────────────────────────────────────────────
@@ -486,6 +554,21 @@ describe("bucket router", () => {
       expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[4]).toBe("member");
       expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[5]).toBe(50);
       expect(result).toEqual(mockResult);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(getBucketExportPage).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.bucket.exportPage({
+          systemId: SYSTEM_ID,
+          bucketId: BUCKET_ID,
+          entityType: "member",
+          limit: 50,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
 
     it("passes cursor when provided", async () => {
