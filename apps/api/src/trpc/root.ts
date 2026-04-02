@@ -1,6 +1,8 @@
 import { analyticsRouter } from "./routers/analytics.js";
 import { authRouter } from "./routers/auth.js";
+import { boardMessageRouter } from "./routers/board-message.js";
 import { bucketRouter } from "./routers/bucket.js";
+import { channelRouter } from "./routers/channel.js";
 import { checkInRecordRouter } from "./routers/check-in-record.js";
 import { customFrontRouter } from "./routers/custom-front.js";
 import { fieldRouter } from "./routers/field.js";
@@ -12,6 +14,8 @@ import { innerworldRouter } from "./routers/innerworld.js";
 import { lifecycleEventRouter } from "./routers/lifecycle-event.js";
 import { memberPhotoRouter } from "./routers/member-photo.js";
 import { memberRouter } from "./routers/member.js";
+import { messageRouter } from "./routers/message.js";
+import { noteRouter } from "./routers/note.js";
 import { relationshipRouter } from "./routers/relationship.js";
 import { systemSettingsRouter } from "./routers/system-settings.js";
 import { systemRouter } from "./routers/system.js";
@@ -27,7 +31,9 @@ import { router } from "./trpc.js";
 export const appRouter = router({
   analytics: analyticsRouter,
   auth: authRouter,
+  boardMessage: boardMessageRouter,
   bucket: bucketRouter,
+  channel: channelRouter,
   checkInRecord: checkInRecordRouter,
   customFront: customFrontRouter,
   field: fieldRouter,
@@ -39,6 +45,8 @@ export const appRouter = router({
   lifecycleEvent: lifecycleEventRouter,
   member: memberRouter,
   memberPhoto: memberPhotoRouter,
+  message: messageRouter,
+  note: noteRouter,
   relationship: relationshipRouter,
   system: systemRouter,
   systemSettings: systemSettingsRouter,
