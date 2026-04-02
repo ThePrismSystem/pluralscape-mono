@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import {
   CreateMessageBodySchema,
   MessageTimestampQuerySchema,
@@ -50,6 +51,8 @@ export const messageRouter = router({
           cursor: z.string().optional(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
           includeArchived: z.boolean().default(false),
+          before: z.string().optional(),
+          after: z.string().optional(),
         }),
       ),
     )
@@ -58,6 +61,8 @@ export const messageRouter = router({
         cursor: input.cursor,
         limit: input.limit,
         includeArchived: input.includeArchived,
+        before: input.before !== undefined ? toUnixMillis(Number(input.before)) : undefined,
+        after: input.after !== undefined ? toUnixMillis(Number(input.after)) : undefined,
       });
     }),
 

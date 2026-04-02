@@ -1,3 +1,4 @@
+import { NOTE_AUTHOR_ENTITY_TYPES } from "@pluralscape/types";
 import {
   CreateNoteBodySchema,
   UpdateNoteBodySchema,
@@ -40,6 +41,9 @@ export const noteRouter = router({
         cursor: z.string().optional(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         includeArchived: z.boolean().default(false),
+        authorEntityType: z.enum(NOTE_AUTHOR_ENTITY_TYPES).optional(),
+        authorEntityId: z.string().optional(),
+        systemWide: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -47,6 +51,9 @@ export const noteRouter = router({
         cursor: input.cursor,
         limit: input.limit,
         includeArchived: input.includeArchived,
+        authorEntityType: input.authorEntityType,
+        authorEntityId: input.authorEntityId,
+        systemWide: input.systemWide,
       });
     }),
 

@@ -14,6 +14,7 @@ import { z } from "zod/v4";
 import {
   createEntityAssociation,
   deleteEntityAssociation,
+  getEntityHierarchy,
   listEntityAssociations,
 } from "../../services/structure-entity-association.service.js";
 import {
@@ -143,6 +144,10 @@ export const structureRouter = router({
 
   getEntity: systemProcedure.input(EntityIdSchema).query(async ({ ctx, input }) => {
     return getStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
+  }),
+
+  getHierarchy: systemProcedure.input(EntityIdSchema).query(async ({ ctx, input }) => {
+    return getEntityHierarchy(ctx.db, ctx.systemId, input.entityId, ctx.auth);
   }),
 
   listEntities: systemProcedure
