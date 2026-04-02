@@ -1,6 +1,8 @@
 import { acknowledgementRouter } from "./routers/acknowledgement.js";
 import { analyticsRouter } from "./routers/analytics.js";
+import { apiKeyRouter } from "./routers/api-key.js";
 import { authRouter } from "./routers/auth.js";
+import { blobRouter } from "./routers/blob.js";
 import { boardMessageRouter } from "./routers/board-message.js";
 import { bucketRouter } from "./routers/bucket.js";
 import { channelRouter } from "./routers/channel.js";
@@ -21,6 +23,7 @@ import { noteRouter } from "./routers/note.js";
 import { notificationConfigRouter } from "./routers/notification-config.js";
 import { pollRouter } from "./routers/poll.js";
 import { relationshipRouter } from "./routers/relationship.js";
+import { snapshotRouter } from "./routers/snapshot.js";
 import { systemSettingsRouter } from "./routers/system-settings.js";
 import { systemRouter } from "./routers/system.js";
 import { timerConfigRouter } from "./routers/timer-config.js";
@@ -36,7 +39,9 @@ import { router } from "./trpc.js";
 export const appRouter = router({
   acknowledgement: acknowledgementRouter,
   analytics: analyticsRouter,
+  apiKey: apiKeyRouter,
   auth: authRouter,
+  blob: blobRouter,
   boardMessage: boardMessageRouter,
   bucket: bucketRouter,
   channel: channelRouter,
@@ -57,6 +62,7 @@ export const appRouter = router({
   note: noteRouter,
   poll: pollRouter,
   relationship: relationshipRouter,
+  snapshot: snapshotRouter,
   system: systemRouter,
   systemSettings: systemSettingsRouter,
   timerConfig: timerConfigRouter,
