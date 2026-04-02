@@ -1,3 +1,4 @@
+import { accountRouter } from "./routers/account.js";
 import { acknowledgementRouter } from "./routers/acknowledgement.js";
 import { analyticsRouter } from "./routers/analytics.js";
 import { apiKeyRouter } from "./routers/api-key.js";
@@ -37,6 +38,7 @@ import { router } from "./trpc.js";
  * 2. Import and add it here
  */
 export const appRouter = router({
+  account: accountRouter,
   acknowledgement: acknowledgementRouter,
   analytics: analyticsRouter,
   apiKey: apiKeyRouter,
