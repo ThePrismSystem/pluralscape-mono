@@ -202,7 +202,7 @@ describe("account router", () => {
       vi.mocked(setAccountPin).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.account.setPin(input);
-      expect(result).toEqual({ ok: true });
+      expect(result).toEqual({ success: true });
       expect(vi.mocked(setAccountPin)).toHaveBeenCalledWith(
         expect.anything(),
         MOCK_AUTH.accountId,
@@ -228,7 +228,7 @@ describe("account router", () => {
       vi.mocked(removeAccountPin).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.account.removePin(input);
-      expect(result).toEqual({ ok: true });
+      expect(result).toEqual({ success: true });
       expect(vi.mocked(removeAccountPin)).toHaveBeenCalledWith(
         expect.anything(),
         MOCK_AUTH.accountId,

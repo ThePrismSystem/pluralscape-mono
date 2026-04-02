@@ -68,14 +68,14 @@ export const accountRouter = router({
   setPin: protectedProcedure.input(SetPinBodySchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
     await setAccountPin(ctx.db, ctx.auth.accountId, input, audit);
-    return { ok: true as const };
+    return { success: true as const };
   }),
 
   /** Remove the PIN from the account's system. Requires current PIN. */
   removePin: protectedProcedure.input(RemovePinBodySchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
     await removeAccountPin(ctx.db, ctx.auth.accountId, input, audit);
-    return { ok: true as const };
+    return { success: true as const };
   }),
 
   /** Verify the account PIN without removing it. */
