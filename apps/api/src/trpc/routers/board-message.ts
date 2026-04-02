@@ -12,8 +12,10 @@ import {
   deleteBoardMessage,
   getBoardMessage,
   listBoardMessages,
+  pinBoardMessage,
   reorderBoardMessages,
   restoreBoardMessage,
+  unpinBoardMessage,
   updateBoardMessage,
 } from "../../services/board-message.service.js";
 import { systemProcedure } from "../middlewares/system.js";
@@ -90,4 +92,14 @@ export const boardMessageRouter = router({
       await reorderBoardMessages(ctx.db, ctx.systemId, input, ctx.auth, audit);
       return { success: true as const };
     }),
+
+  pin: systemProcedure.input(BoardMessageIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    return pinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+  }),
+
+  unpin: systemProcedure.input(BoardMessageIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    return unpinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+  }),
 });

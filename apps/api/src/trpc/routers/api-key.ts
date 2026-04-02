@@ -1,7 +1,12 @@
 import { CreateApiKeyBodySchema, brandedIdQueryParam } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import { createApiKey, listApiKeys, revokeApiKey } from "../../services/api-key.service.js";
+import {
+  createApiKey,
+  getApiKey,
+  listApiKeys,
+  revokeApiKey,
+} from "../../services/api-key.service.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -16,6 +21,10 @@ export const apiKeyRouter = router({
   create: systemProcedure.input(CreateApiKeyBodySchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
     return createApiKey(ctx.db, ctx.systemId, input, ctx.auth, audit);
+  }),
+
+  get: systemProcedure.input(ApiKeyIdSchema).query(async ({ ctx, input }) => {
+    return getApiKey(ctx.db, ctx.systemId, input.apiKeyId, ctx.auth);
   }),
 
   list: systemProcedure

@@ -1,7 +1,12 @@
 import { CreateSnapshotBodySchema, brandedIdQueryParam } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
-import { createSnapshot, getSnapshot, listSnapshots } from "../../services/snapshot.service.js";
+import {
+  createSnapshot,
+  deleteSnapshot,
+  getSnapshot,
+  listSnapshots,
+} from "../../services/snapshot.service.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -32,4 +37,10 @@ export const snapshotRouter = router({
     .query(async ({ ctx, input }) => {
       return listSnapshots(ctx.db, ctx.systemId, ctx.auth, input.cursor, input.limit);
     }),
+
+  delete: systemProcedure.input(SnapshotIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await deleteSnapshot(ctx.db, ctx.systemId, input.snapshotId, ctx.auth, audit);
+    return { success: true as const };
+  }),
 });

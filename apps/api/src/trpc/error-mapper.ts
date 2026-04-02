@@ -13,6 +13,7 @@ const HTTP_STATUS_TO_TRPC: Readonly<Record<number, TRPCError["code"]>> = {
   409: "CONFLICT",
   413: "PAYLOAD_TOO_LARGE",
   429: "TOO_MANY_REQUESTS",
+  503: "SERVICE_UNAVAILABLE",
 };
 
 /** Maps a service-layer error to the appropriate TRPCError. */

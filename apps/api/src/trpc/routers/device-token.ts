@@ -1,4 +1,8 @@
-import { RegisterDeviceTokenBodySchema, brandedIdQueryParam } from "@pluralscape/validation";
+import {
+  RegisterDeviceTokenBodySchema,
+  UpdateDeviceTokenBodySchema,
+  brandedIdQueryParam,
+} from "@pluralscape/validation";
 import { z } from "zod/v4";
 
 import {
@@ -6,6 +10,7 @@ import {
   listDeviceTokens,
   registerDeviceToken,
   revokeDeviceToken,
+  updateDeviceToken,
 } from "../../services/device-token.service.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
@@ -37,6 +42,13 @@ export const deviceTokenRouter = router({
         cursor: input.cursor,
         limit: input.limit,
       });
+    }),
+
+  update: systemProcedure
+    .input(TokenIdSchema.and(UpdateDeviceTokenBodySchema))
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return updateDeviceToken(ctx.db, ctx.systemId, input.tokenId, input, ctx.auth, audit);
     }),
 
   revoke: systemProcedure.input(TokenIdSchema).mutation(async ({ ctx, input }) => {

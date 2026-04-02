@@ -1,7 +1,10 @@
 import { BUCKET_CONTENT_ENTITY_TYPES } from "@pluralscape/types";
 import {
   AssignBucketBodySchema,
+  ClaimChunkBodySchema,
+  CompleteChunkBodySchema,
   CreateBucketBodySchema,
+  InitiateRotationBodySchema,
   TagContentBodySchema,
   UpdateBucketBodySchema,
   brandedIdQueryParam,
@@ -31,6 +34,13 @@ import {
   restoreBucket,
   updateBucket,
 } from "../../services/bucket.service.js";
+import {
+  claimRotationChunk,
+  completeRotationChunk,
+  getRotationProgress,
+  initiateRotation,
+  retryRotation,
+} from "../../services/key-rotation.service.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -43,6 +53,10 @@ const BucketIdSchema = z.object({
 
 const ConnectionIdSchema = z.object({
   connectionId: brandedIdQueryParam("fc_"),
+});
+
+const RotationIdSchema = z.object({
+  rotationId: brandedIdQueryParam("bkr_"),
 });
 
 export const bucketRouter = router({
@@ -227,5 +241,55 @@ export const bucketRouter = router({
         input.limit,
         input.cursor,
       );
+    }),
+
+  // ── Key rotation ────────────────────────────────────────────────────
+
+  initiateRotation: systemProcedure
+    .input(BucketIdSchema.and(InitiateRotationBodySchema))
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return initiateRotation(ctx.db, ctx.systemId, input.bucketId, input, ctx.auth, audit);
+    }),
+
+  rotationProgress: systemProcedure
+    .input(BucketIdSchema.and(RotationIdSchema))
+    .query(async ({ ctx, input }) => {
+      return getRotationProgress(ctx.db, ctx.systemId, input.bucketId, input.rotationId, ctx.auth);
+    }),
+
+  claimRotationChunk: systemProcedure
+    .input(BucketIdSchema.and(RotationIdSchema).and(ClaimChunkBodySchema))
+    .mutation(async ({ ctx, input }) => {
+      return claimRotationChunk(
+        ctx.db,
+        ctx.systemId,
+        input.bucketId,
+        input.rotationId,
+        input,
+        ctx.auth,
+      );
+    }),
+
+  completeRotationChunk: systemProcedure
+    .input(BucketIdSchema.and(RotationIdSchema).and(CompleteChunkBodySchema))
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return completeRotationChunk(
+        ctx.db,
+        ctx.systemId,
+        input.bucketId,
+        input.rotationId,
+        input,
+        ctx.auth,
+        audit,
+      );
+    }),
+
+  retryRotation: systemProcedure
+    .input(BucketIdSchema.and(RotationIdSchema))
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return retryRotation(ctx.db, ctx.systemId, input.bucketId, input.rotationId, ctx.auth, audit);
     }),
 });

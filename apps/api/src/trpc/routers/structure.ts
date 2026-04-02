@@ -14,11 +14,13 @@ import { z } from "zod/v4";
 import {
   createEntityAssociation,
   deleteEntityAssociation,
+  getEntityHierarchy,
   listEntityAssociations,
 } from "../../services/structure-entity-association.service.js";
 import {
   archiveStructureEntity,
   createStructureEntity,
+  deleteStructureEntity,
   getStructureEntity,
   listStructureEntities,
   restoreStructureEntity,
@@ -38,6 +40,7 @@ import {
 import {
   archiveEntityType,
   createEntityType,
+  deleteEntityType,
   getEntityType,
   listEntityTypes,
   restoreEntityType,
@@ -124,6 +127,12 @@ export const structureRouter = router({
     return restoreEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
   }),
 
+  deleteType: systemProcedure.input(EntityTypeIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await deleteEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
+    return { success: true as const };
+  }),
+
   // ── Structure Entities ───────────────────────────────────────────
 
   createEntity: systemProcedure
@@ -135,6 +144,10 @@ export const structureRouter = router({
 
   getEntity: systemProcedure.input(EntityIdSchema).query(async ({ ctx, input }) => {
     return getStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
+  }),
+
+  getHierarchy: systemProcedure.input(EntityIdSchema).query(async ({ ctx, input }) => {
+    return getEntityHierarchy(ctx.db, ctx.systemId, input.entityId, ctx.auth);
   }),
 
   listEntities: systemProcedure
@@ -183,6 +196,12 @@ export const structureRouter = router({
   restoreEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
     return restoreStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+  }),
+
+  deleteEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await deleteStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+    return { success: true as const };
   }),
 
   // ── Entity Links ─────────────────────────────────────────────────

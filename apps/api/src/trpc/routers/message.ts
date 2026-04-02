@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import {
   CreateMessageBodySchema,
   UpdateMessageBodySchema,
@@ -8,6 +9,7 @@ import { z } from "zod/v4";
 import {
   archiveMessage,
   createMessage,
+  deleteMessage,
   getMessage,
   listMessages,
   restoreMessage,
@@ -48,6 +50,8 @@ export const messageRouter = router({
           cursor: z.string().optional(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
           includeArchived: z.boolean().default(false),
+          before: z.number().int().min(0).optional(),
+          after: z.number().int().min(0).optional(),
         }),
       ),
     )
@@ -56,6 +60,8 @@ export const messageRouter = router({
         cursor: input.cursor,
         limit: input.limit,
         includeArchived: input.includeArchived,
+        before: input.before !== undefined ? toUnixMillis(input.before) : undefined,
+        after: input.after !== undefined ? toUnixMillis(input.after) : undefined,
       });
     }),
 
@@ -86,5 +92,19 @@ export const messageRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return restoreMessage(ctx.db, ctx.systemId, input.messageId, ctx.auth, audit);
+    }),
+
+  delete: systemProcedure
+    .input(
+      ChannelScopeSchema.and(MessageIdSchema).and(
+        z.object({ timestamp: z.number().int().min(0).optional() }),
+      ),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteMessage(ctx.db, ctx.systemId, input.messageId, ctx.auth, audit, {
+        timestamp: input.timestamp !== undefined ? toUnixMillis(input.timestamp) : undefined,
+      });
+      return { success: true as const };
     }),
 });

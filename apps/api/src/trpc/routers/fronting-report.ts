@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import {
   archiveFrontingReport,
   createFrontingReport,
+  deleteFrontingReport,
   getFrontingReport,
   listFrontingReports,
   restoreFrontingReport,
@@ -63,5 +64,11 @@ export const frontingReportRouter = router({
   restore: systemProcedure.input(ReportIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
     return restoreFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
+  }),
+
+  delete: systemProcedure.input(ReportIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await deleteFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
+    return { success: true as const };
   }),
 });

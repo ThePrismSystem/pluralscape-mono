@@ -1,3 +1,4 @@
+import { NOTE_AUTHOR_ENTITY_TYPES } from "@pluralscape/types";
 import {
   CreateNoteBodySchema,
   UpdateNoteBodySchema,
@@ -20,6 +21,9 @@ import { router } from "../trpc.js";
 /** Maximum items per page for note list queries. */
 const MAX_LIST_LIMIT = 100;
 
+/** Maximum length for author entity ID query parameter. */
+const MAX_AUTHOR_ID_LENGTH = 256;
+
 const NoteIdSchema = z.object({
   noteId: brandedIdQueryParam("note_"),
 });
@@ -36,17 +40,32 @@ export const noteRouter = router({
 
   list: systemProcedure
     .input(
-      z.object({
-        cursor: z.string().optional(),
-        limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
-        includeArchived: z.boolean().default(false),
-      }),
+      z
+        .object({
+          cursor: z.string().optional(),
+          limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
+          includeArchived: z.boolean().default(false),
+          authorEntityType: z.enum(NOTE_AUTHOR_ENTITY_TYPES).optional(),
+          authorEntityId: z.string().max(MAX_AUTHOR_ID_LENGTH).optional(),
+          systemWide: z.boolean().optional(),
+        })
+        .refine((v) => v.authorEntityId === undefined || v.authorEntityType !== undefined, {
+          message: "authorEntityId requires authorEntityType",
+        })
+        .refine(
+          (v) =>
+            !v.systemWide || (v.authorEntityType === undefined && v.authorEntityId === undefined),
+          { message: "systemWide cannot be combined with authorEntityType or authorEntityId" },
+        ),
     )
     .query(async ({ ctx, input }) => {
       return listNotes(ctx.db, ctx.systemId, ctx.auth, {
         cursor: input.cursor,
         limit: input.limit,
         includeArchived: input.includeArchived,
+        authorEntityType: input.authorEntityType,
+        authorEntityId: input.authorEntityId,
+        systemWide: input.systemWide,
       });
     }),
 

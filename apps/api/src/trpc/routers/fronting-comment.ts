@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import {
   archiveFrontingComment,
   createFrontingComment,
+  deleteFrontingComment,
   getFrontingComment,
   listFrontingComments,
   restoreFrontingComment,
@@ -99,5 +100,20 @@ export const frontingCommentRouter = router({
         ctx.auth,
         audit,
       );
+    }),
+
+  delete: systemProcedure
+    .input(SessionIdSchema.and(CommentIdSchema))
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteFrontingComment(
+        ctx.db,
+        ctx.systemId,
+        input.sessionId,
+        input.commentId,
+        ctx.auth,
+        audit,
+      );
+      return { success: true as const };
     }),
 });

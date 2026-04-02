@@ -11,6 +11,8 @@ import { checkInRecordRouter } from "./routers/check-in-record.js";
 import { customFrontRouter } from "./routers/custom-front.js";
 import { deviceTokenRouter } from "./routers/device-token.js";
 import { fieldRouter } from "./routers/field.js";
+import { friendCodeRouter } from "./routers/friend-code.js";
+import { friendRouter } from "./routers/friend.js";
 import { frontingCommentRouter } from "./routers/fronting-comment.js";
 import { frontingReportRouter } from "./routers/fronting-report.js";
 import { frontingSessionRouter } from "./routers/fronting-session.js";
@@ -29,6 +31,8 @@ import { structureRouter } from "./routers/structure.js";
 import { systemSettingsRouter } from "./routers/system-settings.js";
 import { systemRouter } from "./routers/system.js";
 import { timerConfigRouter } from "./routers/timer-config.js";
+import { webhookConfigRouter } from "./routers/webhook-config.js";
+import { webhookDeliveryRouter } from "./routers/webhook-delivery.js";
 import { router } from "./trpc.js";
 
 /**
@@ -52,6 +56,8 @@ export const appRouter = router({
   customFront: customFrontRouter,
   deviceToken: deviceTokenRouter,
   field: fieldRouter,
+  friend: friendRouter,
+  friendCode: friendCodeRouter,
   frontingComment: frontingCommentRouter,
   frontingReport: frontingReportRouter,
   frontingSession: frontingSessionRouter,
@@ -70,6 +76,8 @@ export const appRouter = router({
   system: systemRouter,
   systemSettings: systemSettingsRouter,
   timerConfig: timerConfigRouter,
+  webhookConfig: webhookConfigRouter,
+  webhookDelivery: webhookDeliveryRouter,
 });
 
 export type AppRouter = typeof appRouter;
