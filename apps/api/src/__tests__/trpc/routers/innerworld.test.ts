@@ -200,7 +200,12 @@ describe("innerworld router", () => {
 
   describe("innerworld.listEntities", () => {
     it("calls listEntities and returns paginated result", async () => {
-      const mockResult = { data: [MOCK_ENTITY_RESULT], nextCursor: null };
+      const mockResult = {
+        data: [MOCK_ENTITY_RESULT],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      };
       vi.mocked(listEntities).mockResolvedValue(mockResult);
       const caller = makeCaller();
       const result = await caller.innerworld.listEntities({ systemId: SYSTEM_ID });
@@ -211,7 +216,7 @@ describe("innerworld router", () => {
     });
 
     it("passes regionId filter to service", async () => {
-      const mockResult = { data: [], nextCursor: null };
+      const mockResult = { data: [], nextCursor: null, hasMore: false, totalCount: null };
       vi.mocked(listEntities).mockResolvedValue(mockResult);
       const caller = makeCaller();
       await caller.innerworld.listEntities({ systemId: SYSTEM_ID, regionId: REGION_ID });
@@ -347,7 +352,12 @@ describe("innerworld router", () => {
 
   describe("innerworld.listRegions", () => {
     it("calls listRegions and returns paginated result", async () => {
-      const mockResult = { data: [MOCK_REGION_RESULT], nextCursor: null };
+      const mockResult = {
+        data: [MOCK_REGION_RESULT],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      };
       vi.mocked(listRegions).mockResolvedValue(mockResult);
       const caller = makeCaller();
       const result = await caller.innerworld.listRegions({ systemId: SYSTEM_ID });
