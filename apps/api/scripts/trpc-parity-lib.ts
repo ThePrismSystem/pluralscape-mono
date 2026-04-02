@@ -36,7 +36,6 @@ const RESET = useColor ? "\x1b[0m" : "";
 const __filename_lib = fileURLToPath(import.meta.url);
 const __dirname_lib = dirname(__filename_lib);
 const API_ROOT = resolve(__dirname_lib, "..");
-const MONOREPO_ROOT = resolve(API_ROOT, "../..");
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -96,10 +95,15 @@ interface RouterDef {
 }
 
 export async function discoverTRPCProcedures(): Promise<Map<string, TRPCProcedureInfo>> {
-  // Dynamic import to avoid bundling issues — the router is resolved at runtime
-  const { appRouter } = (await import("../src/trpc/root.js")) as {
-    appRouter: { _def: RouterDef };
-  };
+  // Dynamic import to avoid bundling issues — the router is resolved at runtime.
+  // The tRPC router's static type is deeply generic and doesn't structurally match
+  // our simplified RouterDef (sub-routers lack a direct _def). We extract the
+  // flattened procedure map from the runtime _def, which tRPC guarantees.
+  const mod: Record<string, unknown> = await import("../src/trpc/root.js");
+  const appRouter = mod["appRouter"] as { _def: RouterDef } | undefined;
+  if (!appRouter?._def) {
+    throw new Error("appRouter._def is not available — tRPC version mismatch?");
+  }
 
   const def = appRouter._def;
   const procedures = new Map<string, TRPCProcedureInfo>();
@@ -260,7 +264,6 @@ function extractBalancedBlock(source: string, openIdx: number): string | null {
 
 const IDEMPOTENCY_PATTERN = /createIdempotencyMiddleware\(\)/;
 const IDEMPOTENCY_PATTERN_GLOBAL = /createIdempotencyMiddleware\(\)/g;
-const REST_RATE_LIMIT_PATTERN = /createCategoryRateLimiter\(\s*["']([^"']+)["']\s*\)/;
 const REST_RATE_LIMIT_PATTERN_GLOBAL = /createCategoryRateLimiter\(\s*["']([^"']+)["']\s*\)/g;
 const AUTH_MIDDLEWARE_PATTERN = /authMiddleware\(\)/;
 const VALIDATION_SCHEMA_PATTERN = /import\s*\{([^}]+)\}\s*from\s*["']@pluralscape\/validation["']/;
@@ -938,7 +941,7 @@ const STRUCTURAL_DIVERGENCE: ReadonlySet<string> = new Set([
 function resolveMapping(restKey: string): string | null {
   // Direct override lookup
   if (restKey in MAPPING_OVERRIDES) {
-    return MAPPING_OVERRIDES[restKey];
+    return MAPPING_OVERRIDES[restKey] ?? null;
   }
 
   return null;
