@@ -305,7 +305,12 @@ describe("message router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(listMessages).mockResolvedValue({ items: [], nextCursor: null });
+    vi.mocked(listMessages).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
     const caller = createCaller();
     await caller.message.list({ systemId: SYSTEM_ID, channelId: CHANNEL_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();

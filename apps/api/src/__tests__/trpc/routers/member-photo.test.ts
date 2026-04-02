@@ -319,7 +319,12 @@ describe("memberPhoto router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(listMemberPhotos).mockResolvedValue({ items: [], nextCursor: null });
+    vi.mocked(listMemberPhotos).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
     const caller = createCaller();
     await caller.memberPhoto.list({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();

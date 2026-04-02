@@ -600,7 +600,12 @@ describe("bucket router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(listBuckets).mockResolvedValue({ items: [], nextCursor: null });
+    vi.mocked(listBuckets).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
     const caller = createCaller();
     await caller.bucket.list({ systemId: SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();

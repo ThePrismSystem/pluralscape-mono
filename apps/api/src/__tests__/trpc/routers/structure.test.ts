@@ -804,7 +804,12 @@ describe("structure router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(listEntityTypes).mockResolvedValue({ items: [], nextCursor: null });
+    vi.mocked(listEntityTypes).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
     const caller = createCaller();
     await caller.structure.listTypes({ systemId: SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();

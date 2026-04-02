@@ -297,7 +297,12 @@ describe("system router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(listSystems).mockResolvedValue({ items: [], nextCursor: null });
+    vi.mocked(listSystems).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
     const caller = createCaller();
     await caller.system.list({});
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();

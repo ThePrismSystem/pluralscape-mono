@@ -309,7 +309,12 @@ describe("acknowledgement router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(listAcknowledgements).mockResolvedValue({ items: [], nextCursor: null });
+    vi.mocked(listAcknowledgements).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
     const caller = createCaller();
     await caller.acknowledgement.list({ systemId: SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();

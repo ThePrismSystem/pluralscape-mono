@@ -266,7 +266,12 @@ describe("note router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(listNotes).mockResolvedValue({ items: [], nextCursor: null });
+    vi.mocked(listNotes).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
     const caller = createCaller();
     await caller.note.list({ systemId: SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
