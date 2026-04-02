@@ -56,7 +56,7 @@ const MOCK_API_KEY_RESULT = {
   id: API_KEY_ID,
   systemId: SYSTEM_ID,
   keyType: "metadata" as const,
-  scopes: ["read:members"] as const,
+  scopes: ["read:members" as const],
   createdAt: 1_700_000_000_000 as UnixMillis,
   lastUsedAt: null,
   revokedAt: null,
@@ -69,10 +69,12 @@ const MOCK_CREATE_RESULT = {
   token: "deadbeef01234567",
 };
 
+const SCOPES = ["read:members" as const];
+
 const VALID_CREATE_INPUT = {
   systemId: SYSTEM_ID,
   keyType: "metadata" as const,
-  scopes: ["read:members"] as string[],
+  scopes: SCOPES,
   encryptedData: "dGVzdGRhdGFmb3JrZXk=",
 };
 
