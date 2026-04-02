@@ -58,7 +58,11 @@ export {
   CreateStructureEntityBodySchema,
   UpdateStructureEntityBodySchema,
 } from "./structure.js";
-export { CreateRelationshipBodySchema, UpdateRelationshipBodySchema } from "./relationship.js";
+export {
+  CreateRelationshipBodySchema,
+  RELATIONSHIP_TYPES,
+  UpdateRelationshipBodySchema,
+} from "./relationship.js";
 export {
   CreateLifecycleEventBodySchema,
   UpdateLifecycleEventBodySchema,

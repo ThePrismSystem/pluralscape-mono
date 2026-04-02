@@ -12,6 +12,7 @@ import { getApiBaseUrl } from "../src/config.js";
 import { ConnectionManager, ConnectionProvider } from "../src/connection/index.js";
 import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
+import { TRPCProvider } from "../src/providers/trpc-provider.js";
 import { SyncProvider } from "../src/sync/index.js";
 
 import type { TokenStore } from "../src/auth/index.js";
@@ -190,6 +191,8 @@ export default function RootLayout(): React.JSX.Element {
     return <LoadingSpinner />;
   }
 
+  const getToken = useCallback(() => tokenStore.getToken(), [tokenStore]);
+
   return (
     <PlatformProvider context={platform}>
       <I18nProvider
@@ -200,15 +203,21 @@ export default function RootLayout(): React.JSX.Element {
         }}
       >
         <QueryClientProvider client={queryClientRef.current}>
-          <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
-            <ConnectionProvider manager={connectionManagerRef.current}>
-              <SyncProvider>
-                <AuthGate>
-                  <Slot />
-                </AuthGate>
-              </SyncProvider>
-            </ConnectionProvider>
-          </AuthProvider>
+          <TRPCProvider
+            queryClient={queryClientRef.current}
+            getToken={getToken}
+            onUnauthorized={() => authMachineRef.current?.dispatch({ type: "LOGOUT" })}
+          >
+            <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
+              <ConnectionProvider manager={connectionManagerRef.current}>
+                <SyncProvider>
+                  <AuthGate>
+                    <Slot />
+                  </AuthGate>
+                </SyncProvider>
+              </ConnectionProvider>
+            </AuthProvider>
+          </TRPCProvider>
         </QueryClientProvider>
       </I18nProvider>
     </PlatformProvider>

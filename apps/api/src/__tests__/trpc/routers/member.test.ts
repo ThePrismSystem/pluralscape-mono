@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { createCallerFactory, router } from "../../../trpc/trpc.js";
+import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
-import type { AuditWriter } from "../../../lib/audit-writer.js";
-import type { AuthContext } from "../../../lib/auth-context.js";
-import type { TRPCContext } from "../../../trpc/context.js";
-import type { AccountId, MemberId, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { MemberId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -38,35 +35,10 @@ const {
 
 const { memberRouter } = await import("../../../trpc/routers/member.js");
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const createCaller = makeCallerFactory({ member: memberRouter });
+
 const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
-
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
-
-const noopAuditWriter: AuditWriter = () => Promise.resolve();
-
-function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
-    auth,
-    createAudit: () => noopAuditWriter,
-    requestMeta: { ipAddress: null, userAgent: null },
-  };
-}
-
-function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
-  const appRouter = router({ member: memberRouter });
-  const createCaller = createCallerFactory(appRouter);
-  return createCaller(makeContext(auth));
-}
 
 const MOCK_MEMBER_RESULT = {
   id: MEMBER_ID,
@@ -89,7 +61,7 @@ describe("member router", () => {
   describe("member.create", () => {
     it("calls createMember with correct systemId and returns result", async () => {
       vi.mocked(createMember).mockResolvedValue(MOCK_MEMBER_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -101,7 +73,7 @@ describe("member router", () => {
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
-      const caller = makeCaller(null);
+      const caller = createCaller(null);
       await expect(
         caller.member.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
@@ -109,20 +81,20 @@ describe("member router", () => {
 
     it("throws NOT_FOUND when systemId is not owned", async () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.create({ systemId: foreignSystemId, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
 
     it("rejects invalid systemId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.create({
           systemId: "not-a-system-id" as SystemId,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -131,7 +103,7 @@ describe("member router", () => {
   describe("member.get", () => {
     it("calls getMember with correct systemId and memberId", async () => {
       vi.mocked(getMember).mockResolvedValue(MOCK_MEMBER_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.get({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
 
       expect(vi.mocked(getMember)).toHaveBeenCalledOnce();
@@ -141,13 +113,13 @@ describe("member router", () => {
     });
 
     it("rejects invalid memberId format", async () => {
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.get({
           systemId: SYSTEM_ID,
           memberId: "not-a-member-id" as MemberId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -158,7 +130,7 @@ describe("member router", () => {
       vi.mocked(getMember).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Member not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(caller.member.get({ systemId: SYSTEM_ID, memberId: MEMBER_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
@@ -168,7 +140,7 @@ describe("member router", () => {
       vi.mocked(updateMember).mockRejectedValue(
         new ApiHttpError(409, "CONFLICT", "Version mismatch"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.update({
           systemId: SYSTEM_ID,
@@ -183,7 +155,7 @@ describe("member router", () => {
       vi.mocked(createMember).mockRejectedValue(
         new ApiHttpError(400, "VALIDATION_ERROR", "Invalid data"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.create({ systemId: SYSTEM_ID, encryptedData: "dGVzdGRhdGFmb3JtZW1iZXI=" }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -201,7 +173,7 @@ describe("member router", () => {
         totalCount: null,
       };
       vi.mocked(listMembers).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.list({ systemId: SYSTEM_ID });
 
       expect(vi.mocked(listMembers)).toHaveBeenCalledOnce();
@@ -216,7 +188,7 @@ describe("member router", () => {
         hasMore: false,
         totalCount: null,
       });
-      const caller = makeCaller();
+      const caller = createCaller();
       await caller.member.list({
         systemId: SYSTEM_ID,
         cursor: "cur_abc",
@@ -238,7 +210,7 @@ describe("member router", () => {
   describe("member.update", () => {
     it("calls updateMember with correct systemId and memberId", async () => {
       vi.mocked(updateMember).mockResolvedValue(MOCK_MEMBER_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.update({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -258,7 +230,7 @@ describe("member router", () => {
   describe("member.archive", () => {
     it("calls archiveMember with correct systemId and memberId", async () => {
       vi.mocked(archiveMember).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.archive({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
 
       expect(result).toEqual({ success: true });
@@ -271,7 +243,7 @@ describe("member router", () => {
       vi.mocked(archiveMember).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Member not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.archive({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -283,7 +255,7 @@ describe("member router", () => {
   describe("member.restore", () => {
     it("calls restoreMember and returns the member result", async () => {
       vi.mocked(restoreMember).mockResolvedValue(MOCK_MEMBER_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.restore({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
 
       expect(vi.mocked(restoreMember)).toHaveBeenCalledOnce();
@@ -296,7 +268,7 @@ describe("member router", () => {
       vi.mocked(restoreMember).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Member not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.restore({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -308,7 +280,7 @@ describe("member router", () => {
   describe("member.delete", () => {
     it("calls deleteMember with correct systemId and memberId", async () => {
       vi.mocked(deleteMember).mockResolvedValue(undefined);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.delete({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
 
       expect(result).toEqual({ success: true });
@@ -321,7 +293,7 @@ describe("member router", () => {
       vi.mocked(deleteMember).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Member not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.delete({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -333,7 +305,7 @@ describe("member router", () => {
   describe("member.duplicate", () => {
     it("calls duplicateMember with correct systemId and memberId", async () => {
       vi.mocked(duplicateMember).mockResolvedValue(MOCK_MEMBER_RESULT);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.duplicate({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -350,7 +322,7 @@ describe("member router", () => {
       vi.mocked(duplicateMember).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Member not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.duplicate({
           systemId: SYSTEM_ID,
@@ -367,7 +339,7 @@ describe("member router", () => {
     it("calls listAllMemberMemberships with correct systemId and memberId", async () => {
       const mockResult = { groups: [], structureEntities: [] };
       vi.mocked(listAllMemberMemberships).mockResolvedValue(mockResult);
-      const caller = makeCaller();
+      const caller = createCaller();
       const result = await caller.member.listMemberships({
         systemId: SYSTEM_ID,
         memberId: MEMBER_ID,
@@ -383,7 +355,7 @@ describe("member router", () => {
       vi.mocked(listAllMemberMemberships).mockRejectedValue(
         new ApiHttpError(404, "NOT_FOUND", "Member not found"),
       );
-      const caller = makeCaller();
+      const caller = createCaller();
       await expect(
         caller.member.listMemberships({ systemId: SYSTEM_ID, memberId: MEMBER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));

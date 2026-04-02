@@ -23,6 +23,7 @@
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@tanstack/react-query": "^5.66.9",
+    "@trpc/client": "11.16.0",
     "expo": "~55.0.5",
     "expo-constants": "^55.0.9",
     "expo-linking": "~55.0.7",
