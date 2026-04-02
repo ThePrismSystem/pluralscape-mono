@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
 import type { LifecycleEventId, UnixMillis } from "@pluralscape/types";
 
@@ -42,7 +42,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JsaWZlY3ljbGU=";
 
 const MOCK_EVENT_RESULT = {
   id: EVENT_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   eventType: "discovery" as const,
   occurredAt: 1_700_000_000_000 as UnixMillis,
   recordedAt: 1_700_000_000_000 as UnixMillis,
@@ -66,14 +66,14 @@ describe("lifecycleEvent router", () => {
       vi.mocked(createLifecycleEvent).mockResolvedValue(MOCK_EVENT_RESULT);
       const caller = createCaller();
       const result = await caller.lifecycleEvent.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         eventType: "discovery",
         occurredAt: 1_700_000_000_000,
       });
 
       expect(vi.mocked(createLifecycleEvent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createLifecycleEvent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createLifecycleEvent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_EVENT_RESULT);
     });
 
@@ -81,7 +81,7 @@ describe("lifecycleEvent router", () => {
       const caller = createCaller(null);
       await expect(
         caller.lifecycleEvent.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           eventType: "discovery",
           occurredAt: 1_700_000_000_000,
@@ -109,10 +109,13 @@ describe("lifecycleEvent router", () => {
     it("calls getLifecycleEvent with correct systemId and eventId", async () => {
       vi.mocked(getLifecycleEvent).mockResolvedValue(MOCK_EVENT_RESULT);
       const caller = createCaller();
-      const result = await caller.lifecycleEvent.get({ systemId: SYSTEM_ID, eventId: EVENT_ID });
+      const result = await caller.lifecycleEvent.get({
+        systemId: MOCK_SYSTEM_ID,
+        eventId: EVENT_ID,
+      });
 
       expect(vi.mocked(getLifecycleEvent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getLifecycleEvent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getLifecycleEvent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getLifecycleEvent).mock.calls[0]?.[2]).toBe(EVENT_ID);
       expect(result).toEqual(MOCK_EVENT_RESULT);
     });
@@ -121,7 +124,7 @@ describe("lifecycleEvent router", () => {
       const caller = createCaller();
       await expect(
         caller.lifecycleEvent.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           eventId: "not-an-event-id" as LifecycleEventId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -133,7 +136,7 @@ describe("lifecycleEvent router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.lifecycleEvent.get({ systemId: SYSTEM_ID, eventId: EVENT_ID }),
+        caller.lifecycleEvent.get({ systemId: MOCK_SYSTEM_ID, eventId: EVENT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -150,10 +153,10 @@ describe("lifecycleEvent router", () => {
       };
       vi.mocked(listLifecycleEvents).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.lifecycleEvent.list({ systemId: SYSTEM_ID });
+      const result = await caller.lifecycleEvent.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listLifecycleEvents)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listLifecycleEvents).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listLifecycleEvents).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -166,7 +169,7 @@ describe("lifecycleEvent router", () => {
       });
       const caller = createCaller();
       await caller.lifecycleEvent.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "cursor_abc",
         limit: 10,
         eventType: "discovery",
@@ -188,14 +191,14 @@ describe("lifecycleEvent router", () => {
       vi.mocked(updateLifecycleEvent).mockResolvedValue(MOCK_EVENT_RESULT);
       const caller = createCaller();
       const result = await caller.lifecycleEvent.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         eventId: EVENT_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateLifecycleEvent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateLifecycleEvent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateLifecycleEvent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateLifecycleEvent).mock.calls[0]?.[2]).toBe(EVENT_ID);
       expect(result).toEqual(MOCK_EVENT_RESULT);
     });
@@ -207,7 +210,7 @@ describe("lifecycleEvent router", () => {
       const caller = createCaller();
       await expect(
         caller.lifecycleEvent.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           eventId: EVENT_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -223,13 +226,13 @@ describe("lifecycleEvent router", () => {
       vi.mocked(archiveLifecycleEvent).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.lifecycleEvent.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         eventId: EVENT_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveLifecycleEvent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveLifecycleEvent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveLifecycleEvent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveLifecycleEvent).mock.calls[0]?.[2]).toBe(EVENT_ID);
     });
 
@@ -239,7 +242,7 @@ describe("lifecycleEvent router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.lifecycleEvent.archive({ systemId: SYSTEM_ID, eventId: EVENT_ID }),
+        caller.lifecycleEvent.archive({ systemId: MOCK_SYSTEM_ID, eventId: EVENT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -251,12 +254,12 @@ describe("lifecycleEvent router", () => {
       vi.mocked(restoreLifecycleEvent).mockResolvedValue(MOCK_EVENT_RESULT);
       const caller = createCaller();
       const result = await caller.lifecycleEvent.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         eventId: EVENT_ID,
       });
 
       expect(vi.mocked(restoreLifecycleEvent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreLifecycleEvent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreLifecycleEvent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreLifecycleEvent).mock.calls[0]?.[2]).toBe(EVENT_ID);
       expect(result).toEqual(MOCK_EVENT_RESULT);
     });
@@ -267,7 +270,7 @@ describe("lifecycleEvent router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.lifecycleEvent.restore({ systemId: SYSTEM_ID, eventId: EVENT_ID }),
+        caller.lifecycleEvent.restore({ systemId: MOCK_SYSTEM_ID, eventId: EVENT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -278,11 +281,14 @@ describe("lifecycleEvent router", () => {
     it("calls deleteLifecycleEvent and returns success", async () => {
       vi.mocked(deleteLifecycleEvent).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.lifecycleEvent.delete({ systemId: SYSTEM_ID, eventId: EVENT_ID });
+      const result = await caller.lifecycleEvent.delete({
+        systemId: MOCK_SYSTEM_ID,
+        eventId: EVENT_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteLifecycleEvent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteLifecycleEvent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteLifecycleEvent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteLifecycleEvent).mock.calls[0]?.[2]).toBe(EVENT_ID);
     });
 
@@ -292,7 +298,7 @@ describe("lifecycleEvent router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.lifecycleEvent.delete({ systemId: SYSTEM_ID, eventId: EVENT_ID }),
+        caller.lifecycleEvent.delete({ systemId: MOCK_SYSTEM_ID, eventId: EVENT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -308,7 +314,7 @@ describe("lifecycleEvent router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.lifecycleEvent.list({ systemId: SYSTEM_ID });
+    await caller.lifecycleEvent.list({ systemId: MOCK_SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
     expect(callKey).toContain("readDefault");

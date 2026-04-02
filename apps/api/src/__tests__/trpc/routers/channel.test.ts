@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
 import type { ChannelId, UnixMillis } from "@pluralscape/types";
 
@@ -42,7 +42,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JjaGFubmVs";
 
 const MOCK_CHANNEL_RESULT = {
   id: CHANNEL_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   type: "channel" as const,
   parentId: null,
   sortOrder: 0,
@@ -66,7 +66,7 @@ describe("channel router", () => {
       vi.mocked(createChannel).mockResolvedValue(MOCK_CHANNEL_RESULT);
       const caller = createCaller();
       const result = await caller.channel.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         type: "channel",
         sortOrder: 0,
@@ -74,7 +74,7 @@ describe("channel router", () => {
       });
 
       expect(vi.mocked(createChannel)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createChannel).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createChannel).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_CHANNEL_RESULT);
     });
 
@@ -82,7 +82,7 @@ describe("channel router", () => {
       const caller = createCaller(null);
       await expect(
         caller.channel.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           type: "channel",
           sortOrder: 0,
@@ -112,10 +112,10 @@ describe("channel router", () => {
     it("calls getChannel with correct systemId and channelId", async () => {
       vi.mocked(getChannel).mockResolvedValue(MOCK_CHANNEL_RESULT);
       const caller = createCaller();
-      const result = await caller.channel.get({ systemId: SYSTEM_ID, channelId: CHANNEL_ID });
+      const result = await caller.channel.get({ systemId: MOCK_SYSTEM_ID, channelId: CHANNEL_ID });
 
       expect(vi.mocked(getChannel)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getChannel).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getChannel).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getChannel).mock.calls[0]?.[2]).toBe(CHANNEL_ID);
       expect(result).toEqual(MOCK_CHANNEL_RESULT);
     });
@@ -123,7 +123,7 @@ describe("channel router", () => {
     it("rejects invalid channelId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.channel.get({ systemId: SYSTEM_ID, channelId: "invalid-id" as ChannelId }),
+        caller.channel.get({ systemId: MOCK_SYSTEM_ID, channelId: "invalid-id" as ChannelId }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
@@ -133,7 +133,7 @@ describe("channel router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.channel.get({ systemId: SYSTEM_ID, channelId: CHANNEL_ID }),
+        caller.channel.get({ systemId: MOCK_SYSTEM_ID, channelId: CHANNEL_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -150,10 +150,10 @@ describe("channel router", () => {
       };
       vi.mocked(listChannels).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.channel.list({ systemId: SYSTEM_ID });
+      const result = await caller.channel.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listChannels)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listChannels).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listChannels).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -166,7 +166,7 @@ describe("channel router", () => {
       });
       const caller = createCaller();
       await caller.channel.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "cur_abc",
         limit: 10,
         includeArchived: true,
@@ -186,14 +186,14 @@ describe("channel router", () => {
       vi.mocked(updateChannel).mockResolvedValue(MOCK_CHANNEL_RESULT);
       const caller = createCaller();
       const result = await caller.channel.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         channelId: CHANNEL_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateChannel)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateChannel).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateChannel).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateChannel).mock.calls[0]?.[2]).toBe(CHANNEL_ID);
       expect(result).toEqual(MOCK_CHANNEL_RESULT);
     });
@@ -205,7 +205,7 @@ describe("channel router", () => {
       const caller = createCaller();
       await expect(
         caller.channel.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           channelId: CHANNEL_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -220,11 +220,14 @@ describe("channel router", () => {
     it("calls archiveChannel and returns success", async () => {
       vi.mocked(archiveChannel).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.channel.archive({ systemId: SYSTEM_ID, channelId: CHANNEL_ID });
+      const result = await caller.channel.archive({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveChannel)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveChannel).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveChannel).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveChannel).mock.calls[0]?.[2]).toBe(CHANNEL_ID);
     });
 
@@ -234,7 +237,7 @@ describe("channel router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.channel.archive({ systemId: SYSTEM_ID, channelId: CHANNEL_ID }),
+        caller.channel.archive({ systemId: MOCK_SYSTEM_ID, channelId: CHANNEL_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -245,10 +248,13 @@ describe("channel router", () => {
     it("calls restoreChannel and returns the channel result", async () => {
       vi.mocked(restoreChannel).mockResolvedValue(MOCK_CHANNEL_RESULT);
       const caller = createCaller();
-      const result = await caller.channel.restore({ systemId: SYSTEM_ID, channelId: CHANNEL_ID });
+      const result = await caller.channel.restore({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+      });
 
       expect(vi.mocked(restoreChannel)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreChannel).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreChannel).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreChannel).mock.calls[0]?.[2]).toBe(CHANNEL_ID);
       expect(result).toEqual(MOCK_CHANNEL_RESULT);
     });
@@ -259,7 +265,7 @@ describe("channel router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.channel.restore({ systemId: SYSTEM_ID, channelId: CHANNEL_ID }),
+        caller.channel.restore({ systemId: MOCK_SYSTEM_ID, channelId: CHANNEL_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -270,11 +276,14 @@ describe("channel router", () => {
     it("calls deleteChannel and returns success", async () => {
       vi.mocked(deleteChannel).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.channel.delete({ systemId: SYSTEM_ID, channelId: CHANNEL_ID });
+      const result = await caller.channel.delete({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteChannel)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteChannel).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteChannel).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteChannel).mock.calls[0]?.[2]).toBe(CHANNEL_ID);
     });
 
@@ -284,7 +293,7 @@ describe("channel router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.channel.delete({ systemId: SYSTEM_ID, channelId: CHANNEL_ID }),
+        caller.channel.delete({ systemId: MOCK_SYSTEM_ID, channelId: CHANNEL_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -300,7 +309,7 @@ describe("channel router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.channel.list({ systemId: SYSTEM_ID });
+    await caller.channel.list({ systemId: MOCK_SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
     expect(callKey).toContain("readDefault");

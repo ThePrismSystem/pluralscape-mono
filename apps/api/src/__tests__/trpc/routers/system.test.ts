@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, MOCK_AUTH, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, MOCK_AUTH, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
 import type { UnixMillis } from "@pluralscape/types";
 
@@ -42,7 +42,7 @@ const createCaller = makeCallerFactory({ system: systemRouter });
 const SOURCE_SNAPSHOT_ID = "snap_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
 const MOCK_SYSTEM_RESULT = {
-  id: SYSTEM_ID,
+  id: MOCK_SYSTEM_ID,
   encryptedData: null,
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
@@ -81,16 +81,16 @@ describe("system router", () => {
     it("calls getSystemProfile with correct systemId", async () => {
       vi.mocked(getSystemProfile).mockResolvedValue(MOCK_SYSTEM_RESULT);
       const caller = createCaller();
-      const result = await caller.system.get({ systemId: SYSTEM_ID });
+      const result = await caller.system.get({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(getSystemProfile)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getSystemProfile).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getSystemProfile).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_SYSTEM_RESULT);
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.system.get({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.system.get({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
@@ -115,7 +115,7 @@ describe("system router", () => {
         new ApiHttpError(404, "NOT_FOUND", "System not found"),
       );
       const caller = createCaller();
-      await expect(caller.system.get({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.system.get({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
@@ -169,13 +169,13 @@ describe("system router", () => {
       vi.mocked(updateSystemProfile).mockResolvedValue(MOCK_SYSTEM_RESULT);
       const caller = createCaller();
       const result = await caller.system.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: "dGVzdGRhdGFmb3JzeXN0ZW0=",
         version: 1,
       });
 
       expect(vi.mocked(updateSystemProfile)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateSystemProfile).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateSystemProfile).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_SYSTEM_RESULT);
     });
 
@@ -186,7 +186,7 @@ describe("system router", () => {
       const caller = createCaller();
       await expect(
         caller.system.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: "dGVzdGRhdGFmb3JzeXN0ZW0=",
           version: 1,
         }),
@@ -200,11 +200,11 @@ describe("system router", () => {
     it("calls archiveSystem and returns success", async () => {
       vi.mocked(archiveSystem).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.system.archive({ systemId: SYSTEM_ID });
+      const result = await caller.system.archive({ systemId: MOCK_SYSTEM_ID });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveSystem)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveSystem).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveSystem).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -212,7 +212,7 @@ describe("system router", () => {
         new ApiHttpError(404, "NOT_FOUND", "System not found"),
       );
       const caller = createCaller();
-      await expect(caller.system.archive({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.system.archive({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
@@ -222,7 +222,7 @@ describe("system router", () => {
         new ApiHttpError(409, "CONFLICT", "Cannot delete the only system"),
       );
       const caller = createCaller();
-      await expect(caller.system.archive({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.system.archive({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "CONFLICT" }),
       );
     });
@@ -232,16 +232,16 @@ describe("system router", () => {
 
   describe("system.duplicate", () => {
     it("calls duplicateSystem with correct sourceSystemId and returns result", async () => {
-      const mockResult = { id: SYSTEM_ID, sourceSnapshotId: SOURCE_SNAPSHOT_ID };
+      const mockResult = { id: MOCK_SYSTEM_ID, sourceSnapshotId: SOURCE_SNAPSHOT_ID };
       vi.mocked(duplicateSystem).mockResolvedValue(mockResult as never);
       const caller = createCaller();
       const result = await caller.system.duplicate({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         snapshotId: SOURCE_SNAPSHOT_ID,
       });
 
       expect(vi.mocked(duplicateSystem)).toHaveBeenCalledOnce();
-      expect(vi.mocked(duplicateSystem).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(duplicateSystem).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -251,7 +251,7 @@ describe("system router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.system.duplicate({ systemId: SYSTEM_ID, snapshotId: SOURCE_SNAPSHOT_ID }),
+        caller.system.duplicate({ systemId: MOCK_SYSTEM_ID, snapshotId: SOURCE_SNAPSHOT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -263,13 +263,13 @@ describe("system router", () => {
       vi.mocked(purgeSystem).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.system.purge({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         password: "correct-password",
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(purgeSystem)).toHaveBeenCalledOnce();
-      expect(vi.mocked(purgeSystem).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(purgeSystem).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
 
     it("surfaces ApiHttpError(400) as BAD_REQUEST", async () => {
@@ -278,7 +278,7 @@ describe("system router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.system.purge({ systemId: SYSTEM_ID, password: "wrong-password" }),
+        caller.system.purge({ systemId: MOCK_SYSTEM_ID, password: "wrong-password" }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
@@ -288,7 +288,7 @@ describe("system router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.system.purge({ systemId: SYSTEM_ID, password: "password" }),
+        caller.system.purge({ systemId: MOCK_SYSTEM_ID, password: "password" }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
   });

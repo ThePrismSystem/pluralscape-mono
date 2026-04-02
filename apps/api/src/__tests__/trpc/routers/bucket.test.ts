@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
 import type { AccountId, BucketId, FriendConnectionId, UnixMillis } from "@pluralscape/types";
 
@@ -69,7 +69,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JidWNrZXQ=";
 
 const MOCK_BUCKET_RESULT = {
   id: BUCKET_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "base64data==",
   version: 1,
   archived: false,
@@ -97,19 +97,19 @@ describe("bucket router", () => {
       vi.mocked(createBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
       const caller = createCaller();
       const result = await caller.bucket.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(vi.mocked(createBucket)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createBucket).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createBucket).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_BUCKET_RESULT);
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
       await expect(
-        caller.bucket.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
+        caller.bucket.create({ systemId: MOCK_SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
 
@@ -128,10 +128,10 @@ describe("bucket router", () => {
     it("calls getBucket with correct systemId and bucketId", async () => {
       vi.mocked(getBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
       const caller = createCaller();
-      const result = await caller.bucket.get({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
+      const result = await caller.bucket.get({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(vi.mocked(getBucket)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getBucket).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getBucket).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getBucket).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(MOCK_BUCKET_RESULT);
     });
@@ -139,7 +139,7 @@ describe("bucket router", () => {
     it("rejects invalid bucketId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.bucket.get({ systemId: SYSTEM_ID, bucketId: "not-a-bucket-id" as BucketId }),
+        caller.bucket.get({ systemId: MOCK_SYSTEM_ID, bucketId: "not-a-bucket-id" as BucketId }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
@@ -148,9 +148,9 @@ describe("bucket router", () => {
         new ApiHttpError(404, "NOT_FOUND", "Bucket not found"),
       );
       const caller = createCaller();
-      await expect(caller.bucket.get({ systemId: SYSTEM_ID, bucketId: BUCKET_ID })).rejects.toThrow(
-        expect.objectContaining({ code: "NOT_FOUND" }),
-      );
+      await expect(
+        caller.bucket.get({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -160,10 +160,10 @@ describe("bucket router", () => {
     it("calls listBuckets and returns result", async () => {
       vi.mocked(listBuckets).mockResolvedValue(MOCK_PAGINATED);
       const caller = createCaller();
-      const result = await caller.bucket.list({ systemId: SYSTEM_ID });
+      const result = await caller.bucket.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listBuckets)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listBuckets).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listBuckets).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_PAGINATED);
     });
 
@@ -176,7 +176,7 @@ describe("bucket router", () => {
       });
       const caller = createCaller();
       await caller.bucket.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "cur_abc",
         limit: 10,
         includeArchived: true,
@@ -196,14 +196,14 @@ describe("bucket router", () => {
       vi.mocked(updateBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
       const caller = createCaller();
       const result = await caller.bucket.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateBucket)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateBucket).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateBucket).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateBucket).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(MOCK_BUCKET_RESULT);
     });
@@ -215,7 +215,7 @@ describe("bucket router", () => {
       const caller = createCaller();
       await expect(
         caller.bucket.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -230,11 +230,11 @@ describe("bucket router", () => {
     it("calls archiveBucket and returns success", async () => {
       vi.mocked(archiveBucket).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.bucket.archive({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
+      const result = await caller.bucket.archive({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveBucket)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveBucket).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveBucket).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveBucket).mock.calls[0]?.[2]).toBe(BUCKET_ID);
     });
 
@@ -244,7 +244,7 @@ describe("bucket router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.bucket.archive({ systemId: SYSTEM_ID, bucketId: BUCKET_ID }),
+        caller.bucket.archive({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -255,10 +255,10 @@ describe("bucket router", () => {
     it("calls restoreBucket and returns result", async () => {
       vi.mocked(restoreBucket).mockResolvedValue(MOCK_BUCKET_RESULT);
       const caller = createCaller();
-      const result = await caller.bucket.restore({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
+      const result = await caller.bucket.restore({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(vi.mocked(restoreBucket)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreBucket).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreBucket).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreBucket).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(MOCK_BUCKET_RESULT);
     });
@@ -270,11 +270,11 @@ describe("bucket router", () => {
     it("calls deleteBucket and returns success", async () => {
       vi.mocked(deleteBucket).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.bucket.delete({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
+      const result = await caller.bucket.delete({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteBucket)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteBucket).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteBucket).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteBucket).mock.calls[0]?.[2]).toBe(BUCKET_ID);
     });
 
@@ -284,7 +284,7 @@ describe("bucket router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.bucket.delete({ systemId: SYSTEM_ID, bucketId: BUCKET_ID }),
+        caller.bucket.delete({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
   });
@@ -298,7 +298,7 @@ describe("bucket router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.bucket.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
+        caller.bucket.create({ systemId: MOCK_SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
@@ -315,7 +315,7 @@ describe("bucket router", () => {
       vi.mocked(assignBucketToFriend).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.bucket.assignFriend({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         connectionId: CONNECTION_ID,
         encryptedBucketKey: "a2V5ZGF0YQ==",
@@ -323,7 +323,7 @@ describe("bucket router", () => {
       });
 
       expect(vi.mocked(assignBucketToFriend)).toHaveBeenCalledOnce();
-      expect(vi.mocked(assignBucketToFriend).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(assignBucketToFriend).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(assignBucketToFriend).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
@@ -335,7 +335,7 @@ describe("bucket router", () => {
       const caller = createCaller();
       await expect(
         caller.bucket.assignFriend({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           connectionId: CONNECTION_ID,
           encryptedBucketKey: "a2V5ZGF0YQ==",
@@ -349,17 +349,17 @@ describe("bucket router", () => {
 
   describe("bucket.unassignFriend", () => {
     it("calls unassignBucketFromFriend and returns result", async () => {
-      const mockResult = { pendingRotation: { systemId: SYSTEM_ID, bucketId: BUCKET_ID } };
+      const mockResult = { pendingRotation: { systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID } };
       vi.mocked(unassignBucketFromFriend).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.bucket.unassignFriend({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         connectionId: CONNECTION_ID,
       });
 
       expect(vi.mocked(unassignBucketFromFriend)).toHaveBeenCalledOnce();
-      expect(vi.mocked(unassignBucketFromFriend).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(unassignBucketFromFriend).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(unassignBucketFromFriend).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(vi.mocked(unassignBucketFromFriend).mock.calls[0]?.[3]).toBe(CONNECTION_ID);
       expect(result).toEqual(mockResult);
@@ -372,7 +372,7 @@ describe("bucket router", () => {
       const caller = createCaller();
       await expect(
         caller.bucket.unassignFriend({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           connectionId: CONNECTION_ID,
         }),
@@ -394,12 +394,12 @@ describe("bucket router", () => {
       vi.mocked(listFriendBucketAssignments).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.bucket.listFriendAssignments({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
       });
 
       expect(vi.mocked(listFriendBucketAssignments)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listFriendBucketAssignments).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listFriendBucketAssignments).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(listFriendBucketAssignments).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
@@ -417,14 +417,14 @@ describe("bucket router", () => {
       vi.mocked(tagContent).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.bucket.tagContent({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         entityType: "member",
         entityId: "mem_test001",
       });
 
       expect(vi.mocked(tagContent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(tagContent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(tagContent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(tagContent).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
@@ -434,7 +434,7 @@ describe("bucket router", () => {
       const caller = createCaller();
       await expect(
         caller.bucket.tagContent({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           entityType: "member",
           entityId: "mem_test001",
@@ -450,7 +450,7 @@ describe("bucket router", () => {
       vi.mocked(untagContent).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.bucket.untagContent({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         entityType: "member",
         entityId: "mem_test001",
@@ -458,7 +458,7 @@ describe("bucket router", () => {
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(untagContent)).toHaveBeenCalledOnce();
-      expect(vi.mocked(untagContent).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(untagContent).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(untagContent).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(vi.mocked(untagContent).mock.calls[0]?.[3]).toBe("member");
       expect(vi.mocked(untagContent).mock.calls[0]?.[4]).toBe("mem_test001");
@@ -471,7 +471,7 @@ describe("bucket router", () => {
       const caller = createCaller();
       await expect(
         caller.bucket.untagContent({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           entityType: "member",
           entityId: "mem_test001",
@@ -489,10 +489,13 @@ describe("bucket router", () => {
       ];
       vi.mocked(listTagsByBucket).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.bucket.listTags({ systemId: SYSTEM_ID, bucketId: BUCKET_ID });
+      const result = await caller.bucket.listTags({
+        systemId: MOCK_SYSTEM_ID,
+        bucketId: BUCKET_ID,
+      });
 
       expect(vi.mocked(listTagsByBucket)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listTagsByBucket).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listTagsByBucket).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(listTagsByBucket).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
@@ -503,7 +506,7 @@ describe("bucket router", () => {
   describe("bucket.exportManifest", () => {
     it("calls getBucketExportManifest and returns result", async () => {
       const mockResult = {
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         entries: [],
         etag: "etag_abc",
@@ -511,12 +514,12 @@ describe("bucket router", () => {
       vi.mocked(getBucketExportManifest).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.bucket.exportManifest({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
       });
 
       expect(vi.mocked(getBucketExportManifest)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getBucketExportManifest).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getBucketExportManifest).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getBucketExportManifest).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
     });
@@ -527,7 +530,7 @@ describe("bucket router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.bucket.exportManifest({ systemId: SYSTEM_ID, bucketId: BUCKET_ID }),
+        caller.bucket.exportManifest({ systemId: MOCK_SYSTEM_ID, bucketId: BUCKET_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -546,14 +549,14 @@ describe("bucket router", () => {
       vi.mocked(getBucketExportPage).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.bucket.exportPage({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         entityType: "member",
         limit: 50,
       });
 
       expect(vi.mocked(getBucketExportPage)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[2]).toBe(BUCKET_ID);
       expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[4]).toBe("member");
       expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[5]).toBe(50);
@@ -567,7 +570,7 @@ describe("bucket router", () => {
       const caller = createCaller();
       await expect(
         caller.bucket.exportPage({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           bucketId: BUCKET_ID,
           entityType: "member",
           limit: 50,
@@ -585,7 +588,7 @@ describe("bucket router", () => {
       });
       const caller = createCaller();
       await caller.bucket.exportPage({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         bucketId: BUCKET_ID,
         entityType: "member",
         limit: 50,
@@ -607,7 +610,7 @@ describe("bucket router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.bucket.list({ systemId: SYSTEM_ID });
+    await caller.bucket.list({ systemId: MOCK_SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
     expect(callKey).toContain("readDefault");

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ID, MOCK_AUTH, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, MOCK_AUTH, makeCallerFactory } from "../test-helpers.js";
 
 import type { SessionId } from "@pluralscape/types";
 
@@ -127,7 +127,7 @@ describe("auth router", () => {
     const loginResult = {
       sessionToken: "tok_xyz",
       accountId: MOCK_AUTH.accountId,
-      systemId: SYSTEM_ID,
+      systemId: MOCK_SYSTEM_ID,
       accountType: "system" as const,
     };
 

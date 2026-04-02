@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
 import type { CustomFrontId, UnixMillis } from "@pluralscape/types";
 
@@ -42,7 +42,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JjZg==";
 
 const MOCK_CUSTOM_FRONT_RESULT = {
   id: CUSTOM_FRONT_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "base64data==",
   version: 1,
   archived: false,
@@ -63,19 +63,22 @@ describe("customFront router", () => {
       vi.mocked(createCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
       const caller = createCaller();
       const result = await caller.customFront.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(vi.mocked(createCustomFront)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createCustomFront).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createCustomFront).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_CUSTOM_FRONT_RESULT);
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
       await expect(
-        caller.customFront.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
+        caller.customFront.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
 
@@ -98,12 +101,12 @@ describe("customFront router", () => {
       vi.mocked(getCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
       const caller = createCaller();
       const result = await caller.customFront.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
       });
 
       expect(vi.mocked(getCustomFront)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getCustomFront).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getCustomFront).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getCustomFront).mock.calls[0]?.[2]).toBe(CUSTOM_FRONT_ID);
       expect(result).toEqual(MOCK_CUSTOM_FRONT_RESULT);
     });
@@ -112,7 +115,7 @@ describe("customFront router", () => {
       const caller = createCaller();
       await expect(
         caller.customFront.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           customFrontId: "not-a-custom-front-id" as CustomFrontId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -124,7 +127,7 @@ describe("customFront router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.customFront.get({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
+        caller.customFront.get({ systemId: MOCK_SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -141,10 +144,10 @@ describe("customFront router", () => {
       };
       vi.mocked(listCustomFronts).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.customFront.list({ systemId: SYSTEM_ID });
+      const result = await caller.customFront.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listCustomFronts)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listCustomFronts).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listCustomFronts).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -156,7 +159,7 @@ describe("customFront router", () => {
         totalCount: null,
       });
       const caller = createCaller();
-      await caller.customFront.list({ systemId: SYSTEM_ID, cursor: "cur_abc", limit: 10 });
+      await caller.customFront.list({ systemId: MOCK_SYSTEM_ID, cursor: "cur_abc", limit: 10 });
 
       expect(vi.mocked(listCustomFronts).mock.calls[0]?.[3]).toBe("cur_abc");
       expect(vi.mocked(listCustomFronts).mock.calls[0]?.[4]).toBe(10);
@@ -170,14 +173,14 @@ describe("customFront router", () => {
       vi.mocked(updateCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
       const caller = createCaller();
       const result = await caller.customFront.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateCustomFront)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateCustomFront).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateCustomFront).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateCustomFront).mock.calls[0]?.[2]).toBe(CUSTOM_FRONT_ID);
       expect(result).toEqual(MOCK_CUSTOM_FRONT_RESULT);
     });
@@ -189,7 +192,7 @@ describe("customFront router", () => {
       const caller = createCaller();
       await expect(
         caller.customFront.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           customFrontId: CUSTOM_FRONT_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -205,13 +208,13 @@ describe("customFront router", () => {
       vi.mocked(archiveCustomFront).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.customFront.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveCustomFront)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveCustomFront).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveCustomFront).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveCustomFront).mock.calls[0]?.[2]).toBe(CUSTOM_FRONT_ID);
     });
 
@@ -221,7 +224,7 @@ describe("customFront router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.customFront.archive({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
+        caller.customFront.archive({ systemId: MOCK_SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -233,12 +236,12 @@ describe("customFront router", () => {
       vi.mocked(restoreCustomFront).mockResolvedValue(MOCK_CUSTOM_FRONT_RESULT);
       const caller = createCaller();
       const result = await caller.customFront.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
       });
 
       expect(vi.mocked(restoreCustomFront)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreCustomFront).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreCustomFront).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreCustomFront).mock.calls[0]?.[2]).toBe(CUSTOM_FRONT_ID);
       expect(result).toEqual(MOCK_CUSTOM_FRONT_RESULT);
     });
@@ -249,7 +252,7 @@ describe("customFront router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.customFront.restore({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
+        caller.customFront.restore({ systemId: MOCK_SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -261,13 +264,13 @@ describe("customFront router", () => {
       vi.mocked(deleteCustomFront).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.customFront.delete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         customFrontId: CUSTOM_FRONT_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteCustomFront)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteCustomFront).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteCustomFront).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteCustomFront).mock.calls[0]?.[2]).toBe(CUSTOM_FRONT_ID);
     });
 
@@ -277,7 +280,7 @@ describe("customFront router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.customFront.delete({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
+        caller.customFront.delete({ systemId: MOCK_SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
 
@@ -287,7 +290,7 @@ describe("customFront router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.customFront.delete({ systemId: SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
+        caller.customFront.delete({ systemId: MOCK_SYSTEM_ID, customFrontId: CUSTOM_FRONT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -303,7 +306,7 @@ describe("customFront router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.customFront.list({ systemId: SYSTEM_ID });
+    await caller.customFront.list({ systemId: MOCK_SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
     expect(callKey).toContain("readDefault");

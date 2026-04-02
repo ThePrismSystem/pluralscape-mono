@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
 import type {
   MemberId,
@@ -107,7 +107,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 
 const MOCK_ENTITY_TYPE_RESULT = {
   id: ENTITY_TYPE_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   sortOrder: 0,
   encryptedData: "base64data==",
   version: 1,
@@ -119,7 +119,7 @@ const MOCK_ENTITY_TYPE_RESULT = {
 
 const MOCK_ENTITY_RESULT = {
   id: ENTITY_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   entityTypeId: ENTITY_TYPE_ID,
   sortOrder: 0,
   encryptedData: "base64data==",
@@ -132,7 +132,7 @@ const MOCK_ENTITY_RESULT = {
 
 const MOCK_LINK_RESULT = {
   id: LINK_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   entityId: ENTITY_ID,
   parentEntityId: null,
   sortOrder: 0,
@@ -141,7 +141,7 @@ const MOCK_LINK_RESULT = {
 
 const MOCK_MEMBER_LINK_RESULT = {
   id: MEMBER_LINK_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   parentEntityId: ENTITY_ID,
   memberId: MEMBER_ID,
   sortOrder: 0,
@@ -150,7 +150,7 @@ const MOCK_MEMBER_LINK_RESULT = {
 
 const MOCK_ASSOCIATION_RESULT = {
   id: ASSOCIATION_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   sourceEntityId: ENTITY_ID,
   targetEntityId: ENTITY_ID,
   createdAt: NOW,
@@ -168,13 +168,13 @@ describe("structure router", () => {
       vi.mocked(createEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
       const caller = createCaller();
       const result = await caller.structure.createType({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         sortOrder: 0,
       });
 
       expect(vi.mocked(createEntityType)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createEntityType).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createEntityType).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_ENTITY_TYPE_RESULT);
     });
 
@@ -182,7 +182,7 @@ describe("structure router", () => {
       const caller = createCaller(null);
       await expect(
         caller.structure.createType({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           sortOrder: 0,
         }),
@@ -209,12 +209,12 @@ describe("structure router", () => {
       vi.mocked(getEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
       const caller = createCaller();
       const result = await caller.structure.getType({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
       });
 
       expect(vi.mocked(getEntityType)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getEntityType).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getEntityType).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getEntityType).mock.calls[0]?.[2]).toBe(ENTITY_TYPE_ID);
       expect(result).toEqual(MOCK_ENTITY_TYPE_RESULT);
     });
@@ -223,7 +223,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.getType({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           entityTypeId: "not-a-type-id" as SystemStructureEntityTypeId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -235,7 +235,7 @@ describe("structure router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.structure.getType({ systemId: SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
+        caller.structure.getType({ systemId: MOCK_SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -252,10 +252,10 @@ describe("structure router", () => {
       };
       vi.mocked(listEntityTypes).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.structure.listTypes({ systemId: SYSTEM_ID });
+      const result = await caller.structure.listTypes({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listEntityTypes)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listEntityTypes).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listEntityTypes).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
   });
@@ -267,7 +267,7 @@ describe("structure router", () => {
       vi.mocked(updateEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
       const caller = createCaller();
       const result = await caller.structure.updateType({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         sortOrder: 0,
@@ -286,7 +286,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.updateType({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           entityTypeId: ENTITY_TYPE_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           sortOrder: 0,
@@ -303,7 +303,7 @@ describe("structure router", () => {
       vi.mocked(archiveEntityType).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.structure.archiveType({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
       });
 
@@ -317,7 +317,7 @@ describe("structure router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.structure.archiveType({ systemId: SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
+        caller.structure.archiveType({ systemId: MOCK_SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -329,7 +329,7 @@ describe("structure router", () => {
       vi.mocked(restoreEntityType).mockResolvedValue(MOCK_ENTITY_TYPE_RESULT);
       const caller = createCaller();
       const result = await caller.structure.restoreType({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
       });
 
@@ -343,7 +343,7 @@ describe("structure router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.structure.restoreType({ systemId: SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
+        caller.structure.restoreType({ systemId: MOCK_SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -355,7 +355,7 @@ describe("structure router", () => {
       vi.mocked(createStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
       const result = await caller.structure.createEntity({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         structureEntityTypeId: ENTITY_TYPE_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         sortOrder: 0,
@@ -363,7 +363,7 @@ describe("structure router", () => {
       });
 
       expect(vi.mocked(createStructureEntity)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createStructureEntity).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createStructureEntity).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_ENTITY_RESULT);
     });
 
@@ -371,7 +371,7 @@ describe("structure router", () => {
       const caller = createCaller(null);
       await expect(
         caller.structure.createEntity({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           structureEntityTypeId: ENTITY_TYPE_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           sortOrder: 0,
@@ -388,12 +388,12 @@ describe("structure router", () => {
       vi.mocked(getStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
       const result = await caller.structure.getEntity({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
       });
 
       expect(vi.mocked(getStructureEntity)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getStructureEntity).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getStructureEntity).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getStructureEntity).mock.calls[0]?.[2]).toBe(ENTITY_ID);
       expect(result).toEqual(MOCK_ENTITY_RESULT);
     });
@@ -402,7 +402,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.getEntity({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           entityId: "not-an-entity-id" as SystemStructureEntityId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -414,7 +414,7 @@ describe("structure router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.structure.getEntity({ systemId: SYSTEM_ID, entityId: ENTITY_ID }),
+        caller.structure.getEntity({ systemId: MOCK_SYSTEM_ID, entityId: ENTITY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -431,10 +431,10 @@ describe("structure router", () => {
       };
       vi.mocked(listStructureEntities).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.structure.listEntities({ systemId: SYSTEM_ID });
+      const result = await caller.structure.listEntities({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listStructureEntities)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listStructureEntities).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listStructureEntities).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -443,7 +443,7 @@ describe("structure router", () => {
       vi.mocked(listStructureEntities).mockResolvedValue(mockResult);
       const caller = createCaller();
       await caller.structure.listEntities({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityTypeId: ENTITY_TYPE_ID,
       });
 
@@ -460,7 +460,7 @@ describe("structure router", () => {
       vi.mocked(updateStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
       const result = await caller.structure.updateEntity({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         sortOrder: 0,
@@ -480,7 +480,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.updateEntity({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           entityId: ENTITY_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           sortOrder: 0,
@@ -498,7 +498,7 @@ describe("structure router", () => {
       vi.mocked(archiveStructureEntity).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.structure.archiveEntity({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
       });
 
@@ -512,7 +512,7 @@ describe("structure router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.structure.archiveEntity({ systemId: SYSTEM_ID, entityId: ENTITY_ID }),
+        caller.structure.archiveEntity({ systemId: MOCK_SYSTEM_ID, entityId: ENTITY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -524,7 +524,7 @@ describe("structure router", () => {
       vi.mocked(restoreStructureEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
       const result = await caller.structure.restoreEntity({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
       });
 
@@ -538,7 +538,7 @@ describe("structure router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.structure.restoreEntity({ systemId: SYSTEM_ID, entityId: ENTITY_ID }),
+        caller.structure.restoreEntity({ systemId: MOCK_SYSTEM_ID, entityId: ENTITY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -550,14 +550,14 @@ describe("structure router", () => {
       vi.mocked(createEntityLink).mockResolvedValue(MOCK_LINK_RESULT);
       const caller = createCaller();
       const result = await caller.structure.createLink({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
         parentEntityId: null,
         sortOrder: 0,
       });
 
       expect(vi.mocked(createEntityLink)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createEntityLink).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createEntityLink).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_LINK_RESULT);
     });
 
@@ -565,7 +565,7 @@ describe("structure router", () => {
       const caller = createCaller(null);
       await expect(
         caller.structure.createLink({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           entityId: ENTITY_ID,
           parentEntityId: null,
           sortOrder: 0,
@@ -586,10 +586,10 @@ describe("structure router", () => {
       };
       vi.mocked(listEntityLinks).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.structure.listLinks({ systemId: SYSTEM_ID });
+      const result = await caller.structure.listLinks({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listEntityLinks)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listEntityLinks).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listEntityLinks).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
   });
@@ -601,7 +601,7 @@ describe("structure router", () => {
       vi.mocked(updateEntityLink).mockResolvedValue(MOCK_LINK_RESULT);
       const caller = createCaller();
       const result = await caller.structure.updateLink({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         linkId: LINK_ID,
         sortOrder: 1,
       });
@@ -617,7 +617,7 @@ describe("structure router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.structure.updateLink({ systemId: SYSTEM_ID, linkId: LINK_ID, sortOrder: 1 }),
+        caller.structure.updateLink({ systemId: MOCK_SYSTEM_ID, linkId: LINK_ID, sortOrder: 1 }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -628,7 +628,10 @@ describe("structure router", () => {
     it("calls deleteEntityLink and returns success", async () => {
       vi.mocked(deleteEntityLink).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.structure.deleteLink({ systemId: SYSTEM_ID, linkId: LINK_ID });
+      const result = await caller.structure.deleteLink({
+        systemId: MOCK_SYSTEM_ID,
+        linkId: LINK_ID,
+      });
 
       expect(vi.mocked(deleteEntityLink)).toHaveBeenCalledOnce();
       expect(result).toEqual({ success: true });
@@ -638,7 +641,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.deleteLink({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           linkId: "not-a-link-id" as SystemStructureEntityLinkId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -652,14 +655,14 @@ describe("structure router", () => {
       vi.mocked(createEntityMemberLink).mockResolvedValue(MOCK_MEMBER_LINK_RESULT);
       const caller = createCaller();
       const result = await caller.structure.createMemberLink({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         parentEntityId: ENTITY_ID,
         memberId: MEMBER_ID,
         sortOrder: 0,
       });
 
       expect(vi.mocked(createEntityMemberLink)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createEntityMemberLink).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createEntityMemberLink).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_MEMBER_LINK_RESULT);
     });
 
@@ -670,7 +673,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.createMemberLink({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           parentEntityId: ENTITY_ID,
           memberId: MEMBER_ID,
           sortOrder: 0,
@@ -691,10 +694,10 @@ describe("structure router", () => {
       };
       vi.mocked(listEntityMemberLinks).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.structure.listMemberLinks({ systemId: SYSTEM_ID });
+      const result = await caller.structure.listMemberLinks({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listEntityMemberLinks)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listEntityMemberLinks).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listEntityMemberLinks).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
   });
@@ -706,7 +709,7 @@ describe("structure router", () => {
       vi.mocked(deleteEntityMemberLink).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.structure.deleteMemberLink({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberLinkId: MEMBER_LINK_ID,
       });
 
@@ -718,7 +721,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.deleteMemberLink({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           memberLinkId: "not-a-member-link-id" as SystemStructureEntityMemberLinkId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -732,13 +735,13 @@ describe("structure router", () => {
       vi.mocked(createEntityAssociation).mockResolvedValue(MOCK_ASSOCIATION_RESULT);
       const caller = createCaller();
       const result = await caller.structure.createAssociation({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sourceEntityId: ENTITY_ID,
         targetEntityId: ENTITY_ID,
       });
 
       expect(vi.mocked(createEntityAssociation)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createEntityAssociation).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createEntityAssociation).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_ASSOCIATION_RESULT);
     });
 
@@ -746,7 +749,7 @@ describe("structure router", () => {
       const caller = createCaller(null);
       await expect(
         caller.structure.createAssociation({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sourceEntityId: ENTITY_ID,
           targetEntityId: ENTITY_ID,
         }),
@@ -766,10 +769,10 @@ describe("structure router", () => {
       };
       vi.mocked(listEntityAssociations).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.structure.listAssociations({ systemId: SYSTEM_ID });
+      const result = await caller.structure.listAssociations({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listEntityAssociations)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listEntityAssociations).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listEntityAssociations).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
   });
@@ -781,7 +784,7 @@ describe("structure router", () => {
       vi.mocked(deleteEntityAssociation).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.structure.deleteAssociation({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         associationId: ASSOCIATION_ID,
       });
 
@@ -793,7 +796,7 @@ describe("structure router", () => {
       const caller = createCaller();
       await expect(
         caller.structure.deleteAssociation({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           associationId: "not-an-association-id" as SystemStructureEntityAssociationId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -811,7 +814,7 @@ describe("structure router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.structure.listTypes({ systemId: SYSTEM_ID });
+    await caller.structure.listTypes({ systemId: MOCK_SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
     expect(callKey).toContain("readDefault");

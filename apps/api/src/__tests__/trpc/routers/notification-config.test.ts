@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
 
 import type { NotificationConfigId, NotificationEventType, UnixMillis } from "@pluralscape/types";
 
@@ -30,7 +30,7 @@ const EVENT_TYPE: NotificationEventType = "check-in-due";
 
 const MOCK_CONFIG_RESULT = {
   id: CONFIG_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   eventType: EVENT_TYPE,
   enabled: true,
   pushEnabled: true,
@@ -50,12 +50,12 @@ describe("notificationConfig router", () => {
       vi.mocked(getOrCreateNotificationConfig).mockResolvedValue(MOCK_CONFIG_RESULT);
       const caller = createCaller();
       const result = await caller.notificationConfig.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         eventType: EVENT_TYPE,
       });
 
       expect(vi.mocked(getOrCreateNotificationConfig)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getOrCreateNotificationConfig).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getOrCreateNotificationConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getOrCreateNotificationConfig).mock.calls[0]?.[2]).toBe(EVENT_TYPE);
       expect(result).toEqual(MOCK_CONFIG_RESULT);
     });
@@ -63,7 +63,7 @@ describe("notificationConfig router", () => {
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
       await expect(
-        caller.notificationConfig.get({ systemId: SYSTEM_ID, eventType: EVENT_TYPE }),
+        caller.notificationConfig.get({ systemId: MOCK_SYSTEM_ID, eventType: EVENT_TYPE }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
 
@@ -79,7 +79,7 @@ describe("notificationConfig router", () => {
       const caller = createCaller();
       await expect(
         caller.notificationConfig.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           eventType: "not-a-valid-event-type" as NotificationEventType,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -96,13 +96,13 @@ describe("notificationConfig router", () => {
       });
       const caller = createCaller();
       const result = await caller.notificationConfig.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         eventType: EVENT_TYPE,
         enabled: false,
       });
 
       expect(vi.mocked(updateNotificationConfig)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateNotificationConfig).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateNotificationConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateNotificationConfig).mock.calls[0]?.[2]).toBe(EVENT_TYPE);
       expect(result.enabled).toBe(false);
     });
@@ -114,7 +114,7 @@ describe("notificationConfig router", () => {
       });
       const caller = createCaller();
       await caller.notificationConfig.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         eventType: EVENT_TYPE,
         pushEnabled: false,
       });
@@ -127,7 +127,7 @@ describe("notificationConfig router", () => {
       const caller = createCaller(null);
       await expect(
         caller.notificationConfig.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           eventType: EVENT_TYPE,
           enabled: true,
         }),
@@ -142,16 +142,16 @@ describe("notificationConfig router", () => {
       const mockResult = [MOCK_CONFIG_RESULT];
       vi.mocked(listNotificationConfigs).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.notificationConfig.list({ systemId: SYSTEM_ID });
+      const result = await caller.notificationConfig.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listNotificationConfigs)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listNotificationConfigs).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listNotificationConfigs).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.notificationConfig.list({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.notificationConfig.list({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
@@ -163,7 +163,7 @@ describe("notificationConfig router", () => {
     vi.mocked(checkRateLimit).mockClear();
     vi.mocked(listNotificationConfigs).mockResolvedValue([]);
     const caller = createCaller();
-    await caller.notificationConfig.list({ systemId: SYSTEM_ID });
+    await caller.notificationConfig.list({ systemId: MOCK_SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
     expect(callKey).toContain("readDefault");

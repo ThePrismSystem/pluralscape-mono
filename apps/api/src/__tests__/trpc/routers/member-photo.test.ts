@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
 
 import type { MemberId, MemberPhotoId, UnixMillis } from "@pluralscape/types";
 
@@ -52,7 +52,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const MOCK_PHOTO_RESULT = {
   id: PHOTO_ID,
   memberId: MEMBER_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   sortOrder: 0,
   encryptedData: "base64data==",
   version: 1,
@@ -74,13 +74,13 @@ describe("memberPhoto router", () => {
       vi.mocked(createMemberPhoto).mockResolvedValue(MOCK_PHOTO_RESULT);
       const caller = createCaller();
       const result = await caller.memberPhoto.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberId: MEMBER_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(vi.mocked(createMemberPhoto)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createMemberPhoto).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createMemberPhoto).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(createMemberPhoto).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(MOCK_PHOTO_RESULT);
     });
@@ -89,7 +89,7 @@ describe("memberPhoto router", () => {
       const caller = createCaller(null);
       await expect(
         caller.memberPhoto.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           memberId: MEMBER_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
@@ -100,7 +100,7 @@ describe("memberPhoto router", () => {
       const caller = createCaller();
       await expect(
         caller.memberPhoto.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           memberId: "not-a-member-id" as MemberId,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
@@ -115,13 +115,13 @@ describe("memberPhoto router", () => {
       vi.mocked(getMemberPhoto).mockResolvedValue(MOCK_PHOTO_RESULT);
       const caller = createCaller();
       const result = await caller.memberPhoto.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberId: MEMBER_ID,
         photoId: PHOTO_ID,
       });
 
       expect(vi.mocked(getMemberPhoto)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getMemberPhoto).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getMemberPhoto).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getMemberPhoto).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(vi.mocked(getMemberPhoto).mock.calls[0]?.[3]).toBe(PHOTO_ID);
       expect(result).toEqual(MOCK_PHOTO_RESULT);
@@ -131,7 +131,7 @@ describe("memberPhoto router", () => {
       const caller = createCaller();
       await expect(
         caller.memberPhoto.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           memberId: MEMBER_ID,
           photoId: "not-a-photo-id" as MemberPhotoId,
         }),
@@ -144,7 +144,11 @@ describe("memberPhoto router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.memberPhoto.get({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
+        caller.memberPhoto.get({
+          systemId: MOCK_SYSTEM_ID,
+          memberId: MEMBER_ID,
+          photoId: PHOTO_ID,
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -161,10 +165,13 @@ describe("memberPhoto router", () => {
       };
       vi.mocked(listMemberPhotos).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.memberPhoto.list({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
+      const result = await caller.memberPhoto.list({
+        systemId: MOCK_SYSTEM_ID,
+        memberId: MEMBER_ID,
+      });
 
       expect(vi.mocked(listMemberPhotos)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listMemberPhotos).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listMemberPhotos).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(listMemberPhotos).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(mockResult);
     });
@@ -178,7 +185,7 @@ describe("memberPhoto router", () => {
       });
       const caller = createCaller();
       await caller.memberPhoto.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberId: MEMBER_ID,
         cursor: "cursor_abc",
         limit: 10,
@@ -197,14 +204,14 @@ describe("memberPhoto router", () => {
       vi.mocked(archiveMemberPhoto).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.memberPhoto.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberId: MEMBER_ID,
         photoId: PHOTO_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveMemberPhoto)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveMemberPhoto).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveMemberPhoto).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveMemberPhoto).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(vi.mocked(archiveMemberPhoto).mock.calls[0]?.[3]).toBe(PHOTO_ID);
     });
@@ -215,7 +222,11 @@ describe("memberPhoto router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.memberPhoto.archive({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
+        caller.memberPhoto.archive({
+          systemId: MOCK_SYSTEM_ID,
+          memberId: MEMBER_ID,
+          photoId: PHOTO_ID,
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -227,13 +238,13 @@ describe("memberPhoto router", () => {
       vi.mocked(restoreMemberPhoto).mockResolvedValue(MOCK_PHOTO_RESULT);
       const caller = createCaller();
       const result = await caller.memberPhoto.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberId: MEMBER_ID,
         photoId: PHOTO_ID,
       });
 
       expect(vi.mocked(restoreMemberPhoto)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreMemberPhoto).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreMemberPhoto).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreMemberPhoto).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(vi.mocked(restoreMemberPhoto).mock.calls[0]?.[3]).toBe(PHOTO_ID);
       expect(result).toEqual(MOCK_PHOTO_RESULT);
@@ -245,7 +256,11 @@ describe("memberPhoto router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.memberPhoto.restore({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
+        caller.memberPhoto.restore({
+          systemId: MOCK_SYSTEM_ID,
+          memberId: MEMBER_ID,
+          photoId: PHOTO_ID,
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -257,14 +272,14 @@ describe("memberPhoto router", () => {
       vi.mocked(deleteMemberPhoto).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.memberPhoto.delete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberId: MEMBER_ID,
         photoId: PHOTO_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteMemberPhoto)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteMemberPhoto).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteMemberPhoto).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteMemberPhoto).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(vi.mocked(deleteMemberPhoto).mock.calls[0]?.[3]).toBe(PHOTO_ID);
     });
@@ -275,7 +290,11 @@ describe("memberPhoto router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.memberPhoto.delete({ systemId: SYSTEM_ID, memberId: MEMBER_ID, photoId: PHOTO_ID }),
+        caller.memberPhoto.delete({
+          systemId: MOCK_SYSTEM_ID,
+          memberId: MEMBER_ID,
+          photoId: PHOTO_ID,
+        }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -289,13 +308,13 @@ describe("memberPhoto router", () => {
       const caller = createCaller();
       const order = [{ id: PHOTO_ID, sortOrder: 0 }];
       const result = await caller.memberPhoto.reorder({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         memberId: MEMBER_ID,
         order,
       });
 
       expect(vi.mocked(reorderMemberPhotos)).toHaveBeenCalledOnce();
-      expect(vi.mocked(reorderMemberPhotos).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(reorderMemberPhotos).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(reorderMemberPhotos).mock.calls[0]?.[2]).toBe(MEMBER_ID);
       expect(result).toEqual(mockOrdered);
     });
@@ -307,7 +326,7 @@ describe("memberPhoto router", () => {
       const caller = createCaller();
       await expect(
         caller.memberPhoto.reorder({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           memberId: MEMBER_ID,
           order: [{ id: PHOTO_ID, sortOrder: 0 }],
         }),
@@ -326,7 +345,7 @@ describe("memberPhoto router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.memberPhoto.list({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
+    await caller.memberPhoto.list({ systemId: MOCK_SYSTEM_ID, memberId: MEMBER_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
     const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
     expect(callKey).toContain("readDefault");

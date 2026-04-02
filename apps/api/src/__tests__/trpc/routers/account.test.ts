@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ID, MOCK_AUTH, noopAuditWriter, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, MOCK_AUTH, noopAuditWriter, makeCallerFactory } from "../test-helpers.js";
 
 import type { BiometricTokenId, UnixMillis } from "@pluralscape/types";
 
@@ -65,7 +65,7 @@ describe("account router", () => {
     const mockAccountInfo = {
       accountId: MOCK_AUTH.accountId,
       accountType: "system" as const,
-      systemId: SYSTEM_ID,
+      systemId: MOCK_SYSTEM_ID,
       auditLogIpTracking: false,
       version: 1,
       createdAt: MOCK_TIMESTAMP,
@@ -443,7 +443,7 @@ describe("account router", () => {
     vi.mocked(getAccountInfo).mockResolvedValue({
       accountId: MOCK_AUTH.accountId,
       accountType: "system" as const,
-      systemId: SYSTEM_ID,
+      systemId: MOCK_SYSTEM_ID,
       auditLogIpTracking: false,
       version: 1,
       createdAt: 1_700_000_000_000 as import("@pluralscape/types").UnixMillis,
