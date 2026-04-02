@@ -40,7 +40,7 @@ const createCaller = makeCallerFactory({ frontingSession: frontingSessionRouter 
 const SESSION_ID = "fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingSessionId;
 const MEMBER_ID = "mem_11111111-2222-3333-4444-555555555555" as MemberId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
-const START_TIME = 1_700_000_000_000;
+const START_TIME = 1_700_000_000_000 as UnixMillis;
 
 const MOCK_SESSION_RESULT = {
   id: SESSION_ID,
@@ -48,14 +48,14 @@ const MOCK_SESSION_RESULT = {
   memberId: MEMBER_ID,
   customFrontId: null,
   structureEntityId: null,
-  startTime: START_TIME as UnixMillis,
+  startTime: START_TIME,
   endTime: null,
   encryptedData: "base64data==",
   version: 1,
   archived: false,
   archivedAt: null,
-  createdAt: START_TIME as UnixMillis,
-  updatedAt: START_TIME as UnixMillis,
+  createdAt: START_TIME,
+  updatedAt: START_TIME,
 };
 
 describe("frontingSession router", () => {
