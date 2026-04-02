@@ -8,6 +8,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../services/auth.service.js", () => ({
   registerAccount: vi.fn(),
   loginAccount: vi.fn(),
@@ -102,6 +106,17 @@ describe("auth router", () => {
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
     });
+
+    it("applies authHeavy rate limiting", async () => {
+      const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+      vi.mocked(registerAccount).mockResolvedValue(registrationResult);
+      vi.mocked(checkRateLimit).mockClear();
+      const caller = createCaller(null);
+      await caller.auth.register(registrationInput);
+      expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+      const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+      expect(callKey).toContain("authHeavy");
+    });
   });
 
   // ── login ─────────────────────────────────────────────────────────
@@ -137,6 +152,17 @@ describe("auth router", () => {
       await expect(caller.auth.login(loginInput)).rejects.toThrow(
         expect.objectContaining({ code: "TOO_MANY_REQUESTS" }),
       );
+    });
+
+    it("applies authHeavy rate limiting", async () => {
+      const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+      vi.mocked(loginAccount).mockResolvedValue(loginResult);
+      vi.mocked(checkRateLimit).mockClear();
+      const caller = createCaller(null);
+      await caller.auth.login(loginInput);
+      expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+      const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+      expect(callKey).toContain("authHeavy");
     });
   });
 
