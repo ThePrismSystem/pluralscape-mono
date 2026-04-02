@@ -25,6 +25,7 @@ import { notificationConfigRouter } from "./routers/notification-config.js";
 import { pollRouter } from "./routers/poll.js";
 import { relationshipRouter } from "./routers/relationship.js";
 import { snapshotRouter } from "./routers/snapshot.js";
+import { structureRouter } from "./routers/structure.js";
 import { systemSettingsRouter } from "./routers/system-settings.js";
 import { systemRouter } from "./routers/system.js";
 import { timerConfigRouter } from "./routers/timer-config.js";
@@ -65,6 +66,7 @@ export const appRouter = router({
   poll: pollRouter,
   relationship: relationshipRouter,
   snapshot: snapshotRouter,
+  structure: structureRouter,
   system: systemRouter,
   systemSettings: systemSettingsRouter,
   timerConfig: timerConfigRouter,
