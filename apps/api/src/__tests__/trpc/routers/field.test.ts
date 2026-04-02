@@ -1,0 +1,477 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ApiHttpError } from "../../../lib/api-error.js";
+import { createCallerFactory, router } from "../../../trpc/trpc.js";
+
+import type { AuditWriter } from "../../../lib/audit-writer.js";
+import type { AuthContext } from "../../../lib/auth-context.js";
+import type { TRPCContext } from "../../../trpc/context.js";
+import type {
+  AccountId,
+  BucketId,
+  FieldDefinitionId,
+  FieldValueId,
+  MemberId,
+  SessionId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
+
+vi.mock("../../../lib/logger.js", () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../services/field-definition.service.js", () => ({
+  createFieldDefinition: vi.fn(),
+  getFieldDefinition: vi.fn(),
+  listFieldDefinitions: vi.fn(),
+  updateFieldDefinition: vi.fn(),
+  archiveFieldDefinition: vi.fn(),
+  restoreFieldDefinition: vi.fn(),
+  deleteFieldDefinition: vi.fn(),
+  clearFieldDefCache: vi.fn(),
+}));
+
+vi.mock("../../../services/field-value.service.js", () => ({
+  setFieldValueForOwner: vi.fn(),
+  listFieldValuesForOwner: vi.fn(),
+  deleteFieldValueForOwner: vi.fn(),
+}));
+
+vi.mock("../../../services/field-bucket-visibility.service.js", () => ({
+  setFieldBucketVisibility: vi.fn(),
+  removeFieldBucketVisibility: vi.fn(),
+  listFieldBucketVisibility: vi.fn(),
+}));
+
+const {
+  createFieldDefinition,
+  getFieldDefinition,
+  listFieldDefinitions,
+  updateFieldDefinition,
+  archiveFieldDefinition,
+  restoreFieldDefinition,
+  deleteFieldDefinition,
+} = await import("../../../services/field-definition.service.js");
+
+const { setFieldValueForOwner, listFieldValuesForOwner, deleteFieldValueForOwner } =
+  await import("../../../services/field-value.service.js");
+
+const { setFieldBucketVisibility, removeFieldBucketVisibility, listFieldBucketVisibility } =
+  await import("../../../services/field-bucket-visibility.service.js");
+
+const { fieldRouter } = await import("../../../trpc/routers/field.js");
+
+const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
+const FIELD_DEF_ID = "fld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FieldDefinitionId;
+const BUCKET_ID = "bkt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BucketId;
+const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
+const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JmaWVsZA==";
+
+const MOCK_AUTH: AuthContext = {
+  accountId: "acct_test001" as AccountId,
+  systemId: SYSTEM_ID,
+  sessionId: "sess_test001" as SessionId,
+  accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
+  auditLogIpTracking: false,
+};
+
+const noopAuditWriter: AuditWriter = () => Promise.resolve();
+
+function makeContext(auth: AuthContext | null): TRPCContext {
+  return {
+    db: {} as TRPCContext["db"],
+    auth,
+    createAudit: () => noopAuditWriter,
+    requestMeta: { ipAddress: null, userAgent: null },
+  };
+}
+
+function makeCaller(auth: AuthContext | null = MOCK_AUTH) {
+  const appRouter = router({ field: fieldRouter });
+  const createCaller = createCallerFactory(appRouter);
+  return createCaller(makeContext(auth));
+}
+
+const MOCK_FIELD_DEF_RESULT = {
+  id: FIELD_DEF_ID,
+  systemId: SYSTEM_ID,
+  fieldType: "text" as const,
+  required: false,
+  sortOrder: 0,
+  encryptedData: "base64data==",
+  version: 1,
+  archived: false,
+  archivedAt: null,
+  createdAt: 1_700_000_000_000 as UnixMillis,
+  updatedAt: 1_700_000_000_000 as UnixMillis,
+};
+
+const FIELD_VALUE_ID = "fv_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FieldValueId;
+
+const MOCK_FIELD_VALUE_RESULT = {
+  id: FIELD_VALUE_ID,
+  fieldDefinitionId: FIELD_DEF_ID,
+  memberId: MEMBER_ID,
+  structureEntityId: null,
+  groupId: null,
+  systemId: SYSTEM_ID,
+  encryptedData: "base64data==",
+  version: 1,
+  createdAt: 1_700_000_000_000 as UnixMillis,
+  updatedAt: 1_700_000_000_000 as UnixMillis,
+};
+
+describe("field router", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // ── field.definition ─────────────────────────────────────────────
+
+  describe("field.definition.create", () => {
+    it("calls createFieldDefinition with correct systemId and returns result", async () => {
+      vi.mocked(createFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
+      const caller = makeCaller();
+      const result = await caller.field.definition.create({
+        systemId: SYSTEM_ID,
+        encryptedData: VALID_ENCRYPTED_DATA,
+        fieldType: "text",
+        required: false,
+        sortOrder: 0,
+      });
+
+      expect(vi.mocked(createFieldDefinition)).toHaveBeenCalledOnce();
+      expect(vi.mocked(createFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
+    });
+
+    it("throws UNAUTHORIZED for unauthenticated callers", async () => {
+      const caller = makeCaller(null);
+      await expect(
+        caller.field.definition.create({
+          systemId: SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          fieldType: "text",
+          required: false,
+          sortOrder: 0,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
+    });
+  });
+
+  describe("field.definition.get", () => {
+    it("calls getFieldDefinition with correct systemId and fieldDefinitionId", async () => {
+      vi.mocked(getFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
+      const caller = makeCaller();
+      const result = await caller.field.definition.get({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+      });
+
+      expect(vi.mocked(getFieldDefinition)).toHaveBeenCalledOnce();
+      expect(vi.mocked(getFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+      expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(getFieldDefinition).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Field definition not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.field.definition.get({ systemId: SYSTEM_ID, fieldDefinitionId: FIELD_DEF_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+  });
+
+  describe("field.definition.list", () => {
+    it("calls listFieldDefinitions and returns result", async () => {
+      const mockResult = {
+        data: [MOCK_FIELD_DEF_RESULT],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      };
+      vi.mocked(listFieldDefinitions).mockResolvedValue(mockResult);
+      const caller = makeCaller();
+      const result = await caller.field.definition.list({ systemId: SYSTEM_ID });
+
+      expect(vi.mocked(listFieldDefinitions)).toHaveBeenCalledOnce();
+      expect(vi.mocked(listFieldDefinitions).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(result).toEqual(mockResult);
+    });
+
+    it("passes includeArchived option", async () => {
+      vi.mocked(listFieldDefinitions).mockResolvedValue({
+        data: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      });
+      const caller = makeCaller();
+      await caller.field.definition.list({ systemId: SYSTEM_ID, includeArchived: true });
+
+      const opts = vi.mocked(listFieldDefinitions).mock.calls[0]?.[3];
+      expect(opts?.includeArchived).toBe(true);
+    });
+  });
+
+  describe("field.definition.update", () => {
+    it("calls updateFieldDefinition with correct systemId and fieldDefinitionId", async () => {
+      vi.mocked(updateFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
+      const caller = makeCaller();
+      const result = await caller.field.definition.update({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+        encryptedData: VALID_ENCRYPTED_DATA,
+        version: 1,
+      });
+
+      expect(vi.mocked(updateFieldDefinition)).toHaveBeenCalledOnce();
+      expect(vi.mocked(updateFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+      expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
+    });
+  });
+
+  describe("field.definition.archive", () => {
+    it("calls archiveFieldDefinition and returns success", async () => {
+      vi.mocked(archiveFieldDefinition).mockResolvedValue(undefined);
+      const caller = makeCaller();
+      const result = await caller.field.definition.archive({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(vi.mocked(archiveFieldDefinition)).toHaveBeenCalledOnce();
+      expect(vi.mocked(archiveFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+    });
+  });
+
+  describe("field.definition.restore", () => {
+    it("calls restoreFieldDefinition and returns result", async () => {
+      vi.mocked(restoreFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
+      const caller = makeCaller();
+      const result = await caller.field.definition.restore({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+      });
+
+      expect(vi.mocked(restoreFieldDefinition)).toHaveBeenCalledOnce();
+      expect(vi.mocked(restoreFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+      expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
+    });
+  });
+
+  describe("field.definition.delete", () => {
+    it("calls deleteFieldDefinition and returns success", async () => {
+      vi.mocked(deleteFieldDefinition).mockResolvedValue(undefined);
+      const caller = makeCaller();
+      const result = await caller.field.definition.delete({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+        force: false,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(vi.mocked(deleteFieldDefinition)).toHaveBeenCalledOnce();
+      expect(vi.mocked(deleteFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+    });
+
+    it("passes force option to service", async () => {
+      vi.mocked(deleteFieldDefinition).mockResolvedValue(undefined);
+      const caller = makeCaller();
+      await caller.field.definition.delete({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+        force: true,
+      });
+
+      expect(vi.mocked(deleteFieldDefinition).mock.calls[0]?.[5]).toEqual({ force: true });
+    });
+
+    it("surfaces ApiHttpError(409) as CONFLICT when has dependents", async () => {
+      vi.mocked(deleteFieldDefinition).mockRejectedValue(
+        new ApiHttpError(409, "HAS_DEPENDENTS", "Field definition has dependents"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.field.definition.delete({
+          systemId: SYSTEM_ID,
+          fieldDefinitionId: FIELD_DEF_ID,
+          force: false,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
+    });
+  });
+
+  // ── field.value ───────────────────────────────────────────────────
+
+  describe("field.value.set", () => {
+    it("calls setFieldValueForOwner with correct args and returns result", async () => {
+      vi.mocked(setFieldValueForOwner).mockResolvedValue(MOCK_FIELD_VALUE_RESULT);
+      const caller = makeCaller();
+      const result = await caller.field.value.set({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+        owner: { kind: "member", id: MEMBER_ID },
+        encryptedData: VALID_ENCRYPTED_DATA,
+      });
+
+      expect(vi.mocked(setFieldValueForOwner)).toHaveBeenCalledOnce();
+      expect(vi.mocked(setFieldValueForOwner).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setFieldValueForOwner).mock.calls[0]?.[2]).toEqual({
+        kind: "member",
+        id: MEMBER_ID,
+      });
+      expect(vi.mocked(setFieldValueForOwner).mock.calls[0]?.[3]).toBe(FIELD_DEF_ID);
+      expect(result).toEqual(MOCK_FIELD_VALUE_RESULT);
+    });
+
+    it("surfaces ApiHttpError(409) as CONFLICT when value already exists", async () => {
+      vi.mocked(setFieldValueForOwner).mockRejectedValue(
+        new ApiHttpError(409, "CONFLICT", "Field value already exists"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.field.value.set({
+          systemId: SYSTEM_ID,
+          fieldDefinitionId: FIELD_DEF_ID,
+          owner: { kind: "member", id: MEMBER_ID },
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
+    });
+  });
+
+  describe("field.value.list", () => {
+    it("calls listFieldValuesForOwner with correct args", async () => {
+      vi.mocked(listFieldValuesForOwner).mockResolvedValue([MOCK_FIELD_VALUE_RESULT]);
+      const caller = makeCaller();
+      const result = await caller.field.value.list({
+        systemId: SYSTEM_ID,
+        owner: { kind: "member", id: MEMBER_ID },
+      });
+
+      expect(vi.mocked(listFieldValuesForOwner)).toHaveBeenCalledOnce();
+      expect(vi.mocked(listFieldValuesForOwner).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listFieldValuesForOwner).mock.calls[0]?.[2]).toEqual({
+        kind: "member",
+        id: MEMBER_ID,
+      });
+      expect(result).toEqual([MOCK_FIELD_VALUE_RESULT]);
+    });
+  });
+
+  describe("field.value.remove", () => {
+    it("calls deleteFieldValueForOwner and returns success", async () => {
+      vi.mocked(deleteFieldValueForOwner).mockResolvedValue(undefined);
+      const caller = makeCaller();
+      const result = await caller.field.value.remove({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+        owner: { kind: "member", id: MEMBER_ID },
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(vi.mocked(deleteFieldValueForOwner)).toHaveBeenCalledOnce();
+      expect(vi.mocked(deleteFieldValueForOwner).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteFieldValueForOwner).mock.calls[0]?.[2]).toEqual({
+        kind: "member",
+        id: MEMBER_ID,
+      });
+      expect(vi.mocked(deleteFieldValueForOwner).mock.calls[0]?.[3]).toBe(FIELD_DEF_ID);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(deleteFieldValueForOwner).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Field value not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.field.value.remove({
+          systemId: SYSTEM_ID,
+          fieldDefinitionId: FIELD_DEF_ID,
+          owner: { kind: "member", id: MEMBER_ID },
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+  });
+
+  // ── field.bucketVisibility ────────────────────────────────────────
+
+  describe("field.bucketVisibility.set", () => {
+    it("calls setFieldBucketVisibility with correct args and returns result", async () => {
+      const mockResult = { fieldDefinitionId: FIELD_DEF_ID, bucketId: BUCKET_ID };
+      vi.mocked(setFieldBucketVisibility).mockResolvedValue(mockResult);
+      const caller = makeCaller();
+      const result = await caller.field.bucketVisibility.set({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+        bucketId: BUCKET_ID,
+      });
+
+      expect(vi.mocked(setFieldBucketVisibility)).toHaveBeenCalledOnce();
+      expect(vi.mocked(setFieldBucketVisibility).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setFieldBucketVisibility).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+      expect(vi.mocked(setFieldBucketVisibility).mock.calls[0]?.[3]).toBe(BUCKET_ID);
+      expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe("field.bucketVisibility.remove", () => {
+    it("calls removeFieldBucketVisibility and returns success", async () => {
+      vi.mocked(removeFieldBucketVisibility).mockResolvedValue(undefined);
+      const caller = makeCaller();
+      const result = await caller.field.bucketVisibility.remove({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+        bucketId: BUCKET_ID,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(vi.mocked(removeFieldBucketVisibility)).toHaveBeenCalledOnce();
+      expect(vi.mocked(removeFieldBucketVisibility).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(removeFieldBucketVisibility).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+      expect(vi.mocked(removeFieldBucketVisibility).mock.calls[0]?.[3]).toBe(BUCKET_ID);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(removeFieldBucketVisibility).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Field bucket visibility not found"),
+      );
+      const caller = makeCaller();
+      await expect(
+        caller.field.bucketVisibility.remove({
+          systemId: SYSTEM_ID,
+          fieldDefinitionId: FIELD_DEF_ID,
+          bucketId: BUCKET_ID,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+  });
+
+  describe("field.bucketVisibility.list", () => {
+    it("calls listFieldBucketVisibility with correct args", async () => {
+      const mockResult = [{ fieldDefinitionId: FIELD_DEF_ID, bucketId: BUCKET_ID }];
+      vi.mocked(listFieldBucketVisibility).mockResolvedValue(mockResult);
+      const caller = makeCaller();
+      const result = await caller.field.bucketVisibility.list({
+        systemId: SYSTEM_ID,
+        fieldDefinitionId: FIELD_DEF_ID,
+      });
+
+      expect(vi.mocked(listFieldBucketVisibility)).toHaveBeenCalledOnce();
+      expect(vi.mocked(listFieldBucketVisibility).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listFieldBucketVisibility).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
+      expect(result).toEqual(mockResult);
+    });
+  });
+});
