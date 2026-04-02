@@ -51,8 +51,8 @@ export const messageRouter = router({
           cursor: z.string().optional(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
           includeArchived: z.boolean().default(false),
-          before: z.string().optional(),
-          after: z.string().optional(),
+          before: z.number().int().min(0).optional(),
+          after: z.number().int().min(0).optional(),
         }),
       ),
     )
@@ -61,8 +61,8 @@ export const messageRouter = router({
         cursor: input.cursor,
         limit: input.limit,
         includeArchived: input.includeArchived,
-        before: input.before !== undefined ? toUnixMillis(Number(input.before)) : undefined,
-        after: input.after !== undefined ? toUnixMillis(Number(input.after)) : undefined,
+        before: input.before !== undefined ? toUnixMillis(input.before) : undefined,
+        after: input.after !== undefined ? toUnixMillis(input.after) : undefined,
       });
     }),
 
