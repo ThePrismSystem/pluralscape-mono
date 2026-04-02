@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { MOCK_SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type {
   BucketId,
@@ -451,7 +451,6 @@ describe("field router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(listFieldDefinitions).mockResolvedValue({
       data: [],
       nextCursor: null,
@@ -459,9 +458,28 @@ describe("field router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.field.definition.list({ systemId: MOCK_SYSTEM_ID });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("readDefault");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.field.definition.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.field.definition.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          fieldType: "text",
+          required: false,
+          sortOrder: 0,
+        }),
+      "write",
+    );
   });
 });

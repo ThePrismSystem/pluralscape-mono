@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { FrontingAnalytics, CoFrontingAnalytics } from "@pluralscape/types";
 
@@ -174,12 +179,12 @@ describe("analytics router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
     const caller = createCaller();
-    await caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("readDefault");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
   });
 });

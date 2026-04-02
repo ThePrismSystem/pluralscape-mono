@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MOCK_SYSTEM_ID, MOCK_AUTH, makeCallerFactory } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  MOCK_AUTH,
+  makeCallerFactory,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { SessionId } from "@pluralscape/types";
 
@@ -110,12 +115,12 @@ describe("auth router", () => {
     it("applies authHeavy rate limiting", async () => {
       const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
       vi.mocked(registerAccount).mockResolvedValue(registrationResult);
-      vi.mocked(checkRateLimit).mockClear();
       const caller = createCaller(null);
-      await caller.auth.register(registrationInput);
-      expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-      const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-      expect(callKey).toContain("authHeavy");
+      await assertProcedureRateLimited(
+        vi.mocked(checkRateLimit),
+        () => caller.auth.register(registrationInput),
+        "authHeavy",
+      );
     });
   });
 
@@ -157,12 +162,12 @@ describe("auth router", () => {
     it("applies authHeavy rate limiting", async () => {
       const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
       vi.mocked(loginAccount).mockResolvedValue(loginResult);
-      vi.mocked(checkRateLimit).mockClear();
       const caller = createCaller(null);
-      await caller.auth.login(loginInput);
-      expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-      const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-      expect(callKey).toContain("authHeavy");
+      await assertProcedureRateLimited(
+        vi.mocked(checkRateLimit),
+        () => caller.auth.login(loginInput),
+        "authHeavy",
+      );
     });
   });
 

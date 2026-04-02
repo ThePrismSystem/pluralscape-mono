@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MOCK_SYSTEM_ID, MOCK_AUTH, noopAuditWriter, makeCallerFactory } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  MOCK_AUTH,
+  noopAuditWriter,
+  makeCallerFactory,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { BiometricTokenId, UnixMillis } from "@pluralscape/types";
 
@@ -439,7 +445,6 @@ describe("account router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(getAccountInfo).mockResolvedValue({
       accountId: MOCK_AUTH.accountId,
       accountType: "system" as const,
@@ -450,9 +455,22 @@ describe("account router", () => {
       updatedAt: 1_700_000_000_000 as import("@pluralscape/types").UnixMillis,
     });
     const caller = createCaller();
-    await caller.account.getInfo();
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("authLight");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.account.getInfo(),
+      "authLight",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(changeEmail).mockResolvedValue({ ok: true });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.account.changeEmail({ email: "new@example.com", currentPassword: "OldPassword1!" }),
+      "authHeavy",
+    );
   });
 });

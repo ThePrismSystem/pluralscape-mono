@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { ChannelId, MessageId, UnixMillis } from "@pluralscape/types";
 
@@ -308,7 +313,6 @@ describe("message router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(listMessages).mockResolvedValue({
       data: [],
       nextCursor: null,
@@ -316,9 +320,28 @@ describe("message router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.message.list({ systemId: MOCK_SYSTEM_ID, channelId: CHANNEL_ID });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("readDefault");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.message.list({ systemId: MOCK_SYSTEM_ID, channelId: CHANNEL_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createMessage).mockResolvedValue(MOCK_MESSAGE_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.message.create({
+          systemId: MOCK_SYSTEM_ID,
+          channelId: CHANNEL_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          timestamp: VALID_TIMESTAMP,
+          replyToId: undefined,
+        }),
+      "write",
+    );
   });
 });

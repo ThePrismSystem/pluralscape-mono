@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { MOCK_SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { SystemSnapshotId, UnixMillis } from "@pluralscape/types";
 
@@ -161,7 +166,6 @@ describe("snapshot router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(listSnapshots).mockResolvedValue({
       data: [],
       nextCursor: null,
@@ -169,9 +173,21 @@ describe("snapshot router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.snapshot.list({ systemId: MOCK_SYSTEM_ID });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("readDefault");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.snapshot.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createSnapshot).mockResolvedValue(MOCK_SNAPSHOT_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.snapshot.create(VALID_CREATE_INPUT),
+      "write",
+    );
   });
 });

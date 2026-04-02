@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { MOCK_SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type { MemberId, MemberPhotoId, UnixMillis } from "@pluralscape/types";
 
@@ -337,7 +337,6 @@ describe("memberPhoto router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(listMemberPhotos).mockResolvedValue({
       data: [],
       nextCursor: null,
@@ -345,9 +344,26 @@ describe("memberPhoto router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.memberPhoto.list({ systemId: MOCK_SYSTEM_ID, memberId: MEMBER_ID });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("readDefault");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.memberPhoto.list({ systemId: MOCK_SYSTEM_ID, memberId: MEMBER_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createMemberPhoto).mockResolvedValue(MOCK_PHOTO_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.memberPhoto.create({
+          systemId: MOCK_SYSTEM_ID,
+          memberId: MEMBER_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      "write",
+    );
   });
 });

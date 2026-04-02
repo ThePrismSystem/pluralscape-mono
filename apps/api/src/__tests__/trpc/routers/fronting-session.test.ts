@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { MOCK_SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type { FrontingSessionId, MemberId, UnixMillis } from "@pluralscape/types";
 
@@ -375,7 +375,6 @@ describe("frontingSession router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(listFrontingSessions).mockResolvedValue({
       data: [],
       nextCursor: null,
@@ -383,9 +382,29 @@ describe("frontingSession router", () => {
       totalCount: null,
     });
     const caller = createCaller();
-    await caller.frontingSession.list({ systemId: MOCK_SYSTEM_ID });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("readDefault");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.frontingSession.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.frontingSession.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          startTime: START_TIME,
+          memberId: MEMBER_ID,
+          customFrontId: undefined,
+          structureEntityId: undefined,
+        }),
+      "write",
+    );
   });
 });

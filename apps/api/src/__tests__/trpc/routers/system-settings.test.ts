@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { MOCK_SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type { SystemSettingsId, UnixMillis } from "@pluralscape/types";
 
@@ -364,12 +364,12 @@ describe("system-settings router", () => {
 
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
-    vi.mocked(checkRateLimit).mockClear();
     vi.mocked(getSystemSettings).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
     const caller = createCaller();
-    await caller.systemSettings.getSettings({ systemId: MOCK_SYSTEM_ID });
-    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
-    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
-    expect(callKey).toContain("readDefault");
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.systemSettings.getSettings({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
   });
 });
