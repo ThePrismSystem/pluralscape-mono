@@ -1,7 +1,6 @@
 import { toUnixMillis } from "@pluralscape/types";
 import {
   CreateMessageBodySchema,
-  MessageTimestampQuerySchema,
   UpdateMessageBodySchema,
   brandedIdQueryParam,
 } from "@pluralscape/validation";
@@ -96,11 +95,15 @@ export const messageRouter = router({
     }),
 
   delete: systemProcedure
-    .input(ChannelScopeSchema.and(MessageIdSchema).and(MessageTimestampQuerySchema))
+    .input(
+      ChannelScopeSchema.and(MessageIdSchema).and(
+        z.object({ timestamp: z.number().int().min(0).optional() }),
+      ),
+    )
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await deleteMessage(ctx.db, ctx.systemId, input.messageId, ctx.auth, audit, {
-        timestamp: input.timestamp,
+        timestamp: input.timestamp !== undefined ? toUnixMillis(input.timestamp) : undefined,
       });
       return { success: true as const };
     }),

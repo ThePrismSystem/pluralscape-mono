@@ -10,8 +10,6 @@ import {
 import { protectedProcedure } from "../middlewares/auth.js";
 import { router } from "../trpc.js";
 
-import type { FriendCodeId } from "@pluralscape/types";
-
 /** Maximum items per page for friend code list queries. */
 const MAX_LIST_LIMIT = 100;
 
@@ -47,13 +45,7 @@ export const friendCodeRouter = router({
   /** Archive (revoke) a friend code. */
   archive: protectedProcedure.input(FriendCodeIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    await archiveFriendCode(
-      ctx.db,
-      ctx.auth.accountId,
-      input.codeId as FriendCodeId,
-      ctx.auth,
-      audit,
-    );
+    await archiveFriendCode(ctx.db, ctx.auth.accountId, input.codeId, ctx.auth, audit);
     return { success: true as const };
   }),
 });

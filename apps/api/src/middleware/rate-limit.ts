@@ -112,6 +112,32 @@ export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandle
 /** Shared store instance, resolved at startup. */
 let sharedStore: RateLimitStore | undefined;
 
+/** Module-level fallback for standalone rate-limit checks (no per-limiter store). */
+const standaloneFallbackStore = new MemoryRateLimitStore();
+
+interface RateLimitCheckResult {
+  readonly allowed: boolean;
+  readonly retryAfterMs: number;
+}
+
+/**
+ * Standalone rate-limit check for use outside Hono middleware (e.g. tRPC).
+ * Uses the shared store when available, falls back to in-memory.
+ */
+export async function checkRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitCheckResult> {
+  if (RATE_LIMIT_DISABLED) return { allowed: true, retryAfterMs: 0 };
+  const store = sharedStore ?? standaloneFallbackStore;
+  const result = await store.increment(key, windowMs);
+  if (result.count > limit) {
+    return { allowed: false, retryAfterMs: Math.max(0, result.resetAt - Date.now()) };
+  }
+  return { allowed: true, retryAfterMs: 0 };
+}
+
 /** Set the shared rate limit store (call at startup). */
 export function setRateLimitStore(store: RateLimitStore): void {
   sharedStore = store;

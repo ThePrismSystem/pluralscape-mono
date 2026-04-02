@@ -30,8 +30,6 @@ import {
 import { protectedProcedure } from "../middlewares/auth.js";
 import { router } from "../trpc.js";
 
-import type { FriendConnectionId } from "@pluralscape/types";
-
 /** Maximum items per page for friend connection list queries. */
 const MAX_LIST_LIMIT = 100;
 
@@ -64,85 +62,44 @@ export const friendRouter = router({
 
   /** Get a single friend connection by ID. */
   get: protectedProcedure.input(ConnectionIdSchema).query(async ({ ctx, input }) => {
-    return getFriendConnection(
-      ctx.db,
-      ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
-      ctx.auth,
-    );
+    return getFriendConnection(ctx.db, ctx.auth.accountId, input.connectionId, ctx.auth);
   }),
 
   /** Accept a pending friend connection. */
   accept: protectedProcedure.input(ConnectionIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    return acceptFriendConnection(
-      ctx.db,
-      ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
-      ctx.auth,
-      audit,
-    );
+    return acceptFriendConnection(ctx.db, ctx.auth.accountId, input.connectionId, ctx.auth, audit);
   }),
 
   /** Reject a pending friend connection. */
   reject: protectedProcedure.input(ConnectionIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    return rejectFriendConnection(
-      ctx.db,
-      ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
-      ctx.auth,
-      audit,
-    );
+    return rejectFriendConnection(ctx.db, ctx.auth.accountId, input.connectionId, ctx.auth, audit);
   }),
 
   /** Block a friend connection. */
   block: protectedProcedure.input(ConnectionIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    return blockFriendConnection(
-      ctx.db,
-      ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
-      ctx.auth,
-      audit,
-    );
+    return blockFriendConnection(ctx.db, ctx.auth.accountId, input.connectionId, ctx.auth, audit);
   }),
 
   /** Remove a friend connection. */
   remove: protectedProcedure.input(ConnectionIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    return removeFriendConnection(
-      ctx.db,
-      ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
-      ctx.auth,
-      audit,
-    );
+    return removeFriendConnection(ctx.db, ctx.auth.accountId, input.connectionId, ctx.auth, audit);
   }),
 
   /** Archive a friend connection (soft-hide without changing status). */
   archive: protectedProcedure.input(ConnectionIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    await archiveFriendConnection(
-      ctx.db,
-      ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
-      ctx.auth,
-      audit,
-    );
+    await archiveFriendConnection(ctx.db, ctx.auth.accountId, input.connectionId, ctx.auth, audit);
     return { success: true as const };
   }),
 
   /** Restore an archived friend connection. */
   restore: protectedProcedure.input(ConnectionIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
-    return restoreFriendConnection(
-      ctx.db,
-      ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
-      ctx.auth,
-      audit,
-    );
+    return restoreFriendConnection(ctx.db, ctx.auth.accountId, input.connectionId, ctx.auth, audit);
   }),
 
   /** Update the encrypted visibility data for a friend connection. */
@@ -154,7 +111,7 @@ export const friendRouter = router({
       return updateFriendVisibility(
         ctx.db,
         ctx.auth.accountId,
-        connectionId as FriendConnectionId,
+        connectionId,
         body,
         ctx.auth,
         audit,
@@ -163,12 +120,12 @@ export const friendRouter = router({
 
   /** Get the friend dashboard for a connection (visible fronting, members, etc.). */
   getDashboard: protectedProcedure.input(ConnectionIdSchema).query(async ({ ctx, input }) => {
-    return getFriendDashboard(ctx.db, input.connectionId as FriendConnectionId, ctx.auth);
+    return getFriendDashboard(ctx.db, input.connectionId, ctx.auth);
   }),
 
   /** Get the sync snapshot for a friend dashboard connection. */
   getDashboardSync: protectedProcedure.input(ConnectionIdSchema).query(async ({ ctx, input }) => {
-    return getFriendDashboardSync(ctx.db, input.connectionId as FriendConnectionId, ctx.auth);
+    return getFriendDashboardSync(ctx.db, input.connectionId, ctx.auth);
   }),
 
   /** Get a paginated export page of a friend's data. */
@@ -176,19 +133,12 @@ export const friendRouter = router({
     .input(ConnectionIdSchema.and(FriendExportQuerySchema))
     .query(async ({ ctx, input }) => {
       const { connectionId, entityType, limit, cursor } = input;
-      return getFriendExportPage(
-        ctx.db,
-        connectionId as FriendConnectionId,
-        ctx.auth,
-        entityType,
-        limit,
-        cursor,
-      );
+      return getFriendExportPage(ctx.db, connectionId, ctx.auth, entityType, limit, cursor);
     }),
 
   /** Get the export manifest (entity counts + ETags) for a friend connection. */
   exportManifest: protectedProcedure.input(ConnectionIdSchema).query(async ({ ctx, input }) => {
-    return getFriendExportManifest(ctx.db, input.connectionId as FriendConnectionId, ctx.auth);
+    return getFriendExportManifest(ctx.db, input.connectionId, ctx.auth);
   }),
 
   /** Get or create notification preferences for a friend connection. */
@@ -196,7 +146,7 @@ export const friendRouter = router({
     return getOrCreateFriendNotificationPreference(
       ctx.db,
       ctx.auth.accountId,
-      input.connectionId as FriendConnectionId,
+      input.connectionId,
       ctx.auth,
     );
   }),
@@ -210,7 +160,7 @@ export const friendRouter = router({
       return updateFriendNotificationPreference(
         ctx.db,
         ctx.auth.accountId,
-        connectionId as FriendConnectionId,
+        connectionId,
         body,
         ctx.auth,
         audit,

@@ -20,7 +20,10 @@ import {
 } from "../../services/recovery-key.service.js";
 import { errorMapProcedure } from "../error-mapper.js";
 import { protectedProcedure } from "../middlewares/auth.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { router } from "../trpc.js";
+
+const authHeavyLimiter = createTRPCCategoryRateLimiter("authHeavy");
 
 /** Default page size for session listing. */
 const DEFAULT_SESSION_LIMIT = 25;
@@ -93,6 +96,7 @@ export const authRouter = router({
    * Throws UNAUTHORIZED if email/recovery key combination is invalid.
    */
   resetPasswordWithRecoveryKey: errorMapProcedure
+    .use(authHeavyLimiter)
     .input(
       z.object({
         email: z.email(),
