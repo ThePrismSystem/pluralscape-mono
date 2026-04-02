@@ -9,6 +9,7 @@ import type { TRPCContext } from "../../../trpc/context.js";
 import type {
   AccountId,
   FrontingSessionId,
+  MemberId,
   SessionId,
   SystemId,
   UnixMillis,
@@ -46,7 +47,7 @@ const { frontingSessionRouter } = await import("../../../trpc/routers/fronting-s
 
 const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
 const SESSION_ID = "fs_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as FrontingSessionId;
-const MEMBER_ID = "mem_11111111-2222-3333-4444-555555555555";
+const MEMBER_ID = "mem_11111111-2222-3333-4444-555555555555" as MemberId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const START_TIME = 1_700_000_000_000;
 
