@@ -2,7 +2,9 @@ import { authRouter } from "./routers/auth.js";
 import { bucketRouter } from "./routers/bucket.js";
 import { customFrontRouter } from "./routers/custom-front.js";
 import { fieldRouter } from "./routers/field.js";
+import { frontingSessionRouter } from "./routers/fronting-session.js";
 import { groupRouter } from "./routers/group.js";
+import { memberPhotoRouter } from "./routers/member-photo.js";
 import { memberRouter } from "./routers/member.js";
 import { systemRouter } from "./routers/system.js";
 import { router } from "./trpc.js";
@@ -19,8 +21,10 @@ export const appRouter = router({
   bucket: bucketRouter,
   customFront: customFrontRouter,
   field: fieldRouter,
+  frontingSession: frontingSessionRouter,
   group: groupRouter,
   member: memberRouter,
+  memberPhoto: memberPhotoRouter,
   system: systemRouter,
 });
 
