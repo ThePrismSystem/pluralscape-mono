@@ -193,6 +193,6 @@ export const authRouter = router({
   revokeAllSessions: protectedProcedure.use(authLightLimiter).mutation(async ({ ctx }) => {
     const audit = ctx.createAudit(ctx.auth);
     const count = await revokeAllSessions(ctx.db, ctx.auth.accountId, ctx.auth.sessionId, audit);
-    return { revoked: count };
+    return { revokedCount: count };
   }),
 });

@@ -266,7 +266,7 @@ describe("auth router", () => {
       vi.mocked(revokeAllSessions).mockResolvedValue(3);
       const caller = createCaller(MOCK_AUTH);
       const result = await caller.auth.revokeAllSessions();
-      expect(result).toEqual({ revoked: 3 });
+      expect(result).toEqual({ revokedCount: 3 });
     });
 
     it("passes current sessionId as exception", async () => {
