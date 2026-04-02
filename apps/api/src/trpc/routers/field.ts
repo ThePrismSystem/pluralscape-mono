@@ -47,6 +47,15 @@ const FieldOwnerSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("structureEntity"), id: brandedIdQueryParam("ste_") }),
 ]);
 
+/**
+ * Zod's discriminatedUnion infers branded IDs per variant, but the merged
+ * output type is not structurally identical to FieldValueOwner (readonly).
+ * This single-point assertion bridges the gap.
+ */
+function toFieldValueOwner(owner: z.infer<typeof FieldOwnerSchema>): FieldValueOwner {
+  return owner as FieldValueOwner;
+}
+
 export const fieldRouter = router({
   // ── Field definitions ─────────────────────────────────────────────
 
@@ -133,7 +142,7 @@ export const fieldRouter = router({
         return setFieldValueForOwner(
           ctx.db,
           ctx.systemId,
-          input.owner as FieldValueOwner,
+          toFieldValueOwner(input.owner),
           input.fieldDefinitionId,
           input,
           ctx.auth,
@@ -147,7 +156,7 @@ export const fieldRouter = router({
         return listFieldValuesForOwner(
           ctx.db,
           ctx.systemId,
-          input.owner as FieldValueOwner,
+          toFieldValueOwner(input.owner),
           ctx.auth,
         );
       }),
@@ -159,7 +168,7 @@ export const fieldRouter = router({
         await deleteFieldValueForOwner(
           ctx.db,
           ctx.systemId,
-          input.owner as FieldValueOwner,
+          toFieldValueOwner(input.owner),
           input.fieldDefinitionId,
           ctx.auth,
           audit,
