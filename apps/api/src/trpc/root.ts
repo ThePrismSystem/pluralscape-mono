@@ -1,4 +1,5 @@
 import { authRouter } from "./routers/auth.js";
+import { groupRouter } from "./routers/group.js";
 import { memberRouter } from "./routers/member.js";
 import { systemRouter } from "./routers/system.js";
 import { router } from "./trpc.js";
@@ -12,6 +13,7 @@ import { router } from "./trpc.js";
  */
 export const appRouter = router({
   auth: authRouter,
+  group: groupRouter,
   member: memberRouter,
   system: systemRouter,
 });
