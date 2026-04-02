@@ -6,7 +6,11 @@ import type {
   TRPCProcedureInfo,
 } from "../../../scripts/trpc-parity-lib.js";
 import {
+  deriveRouterPrefix,
   extractBalancedBlock,
+  inferAuthLevelFromMiddlewares,
+  normalizePath,
+  resolveMapping,
   runParityChecks,
   walkRouteTree,
 } from "../../../scripts/trpc-parity-lib.js";
@@ -153,5 +157,74 @@ describe("walkRouteTree", () => {
     expect(failures).toHaveLength(1);
     expect(failures[0]?.dimension).toBe("existence");
     expect(failures[0]?.actual).toContain("not readable");
+  });
+});
+
+describe("inferAuthLevelFromMiddlewares", () => {
+  it("returns 'system' when middleware checks ownedSystemIds", () => {
+    const mws = [{ toString: () => "ctx.auth.ownedSystemIds.has(systemId)" }];
+    expect(inferAuthLevelFromMiddlewares(mws)).toBe("system");
+  });
+
+  it("returns 'protected' when middleware checks ctx.auth + UNAUTHORIZED", () => {
+    const mws = [
+      { toString: () => 'if (!ctx.auth) throw new TRPCError({ code: "UNAUTHORIZED" })' },
+    ];
+    expect(inferAuthLevelFromMiddlewares(mws)).toBe("protected");
+  });
+
+  it("returns 'public' when no auth middleware detected", () => {
+    const mws = [{ toString: () => "return next()" }];
+    expect(inferAuthLevelFromMiddlewares(mws)).toBe("public");
+  });
+
+  it("returns 'system' over 'protected' when both patterns present", () => {
+    const mws = [
+      { toString: () => 'if (!ctx.auth) throw new TRPCError({ code: "UNAUTHORIZED" })' },
+      { toString: () => "ctx.auth.ownedSystemIds.has(systemId)" },
+    ];
+    expect(inferAuthLevelFromMiddlewares(mws)).toBe("system");
+  });
+});
+
+describe("resolveMapping", () => {
+  it("returns tRPC path for known REST route", () => {
+    expect(resolveMapping("POST /v1/auth/register")).toBe("auth.register");
+  });
+
+  it("returns null for unknown REST route", () => {
+    expect(resolveMapping("GET /v1/unknown/endpoint")).toBeNull();
+  });
+
+  it("returns tRPC path for system-scoped routes", () => {
+    expect(resolveMapping("POST /v1/systems/:systemId/members")).toBe("member.create");
+  });
+});
+
+describe("normalizePath", () => {
+  it("collapses double slashes", () => {
+    expect(normalizePath("/v1//members")).toBe("/v1/members");
+  });
+
+  it("removes trailing slash", () => {
+    expect(normalizePath("/v1/members/")).toBe("/v1/members");
+  });
+
+  it("returns / for empty input", () => {
+    expect(normalizePath("")).toBe("/");
+  });
+});
+
+describe("deriveRouterPrefix", () => {
+  it("strips .ts extension", () => {
+    expect(deriveRouterPrefix("member.ts")).toBe("member");
+  });
+
+  it("converts kebab-case to camelCase", () => {
+    expect(deriveRouterPrefix("board-message.ts")).toBe("boardMessage");
+  });
+
+  it("handles multi-hyphen names", () => {
+    expect(deriveRouterPrefix("check-in-record.ts")).toBe("checkInRecord");
   });
 });

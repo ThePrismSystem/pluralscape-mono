@@ -131,7 +131,7 @@ export async function discoverTRPCProcedures(): Promise<Map<string, TRPCProcedur
   return procedures;
 }
 
-function inferAuthLevelFromMiddlewares(mws: Array<{ toString(): string }>): AuthLevel {
+export function inferAuthLevelFromMiddlewares(mws: Array<{ toString(): string }>): AuthLevel {
   const mwStrings = mws.map((mw) => mw.toString());
 
   // System procedure has enforceSystemAccess (checks ownedSystemIds)
@@ -184,7 +184,7 @@ export function extractTRPCRateLimits(
   return updated;
 }
 
-function deriveRouterPrefix(filename: string): string {
+export function deriveRouterPrefix(filename: string): string {
   // "member.ts" → "member", "board-message.ts" → "boardMessage"
   const base = filename.replace(/\.ts$/, "");
   return base.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
@@ -546,7 +546,7 @@ function resolveImportPath(
   return resolve(dir, resolved);
 }
 
-function normalizePath(p: string): string {
+export function normalizePath(p: string): string {
   return p.replace(/\/+/g, "/").replace(/\/$/, "") || "/";
 }
 
@@ -991,7 +991,7 @@ const STRUCTURAL_DIVERGENCE: ReadonlySet<string> = new Set([
   "GET /v1/systems/:systemId/notification-configs/:eventType",
 ]);
 
-function resolveMapping(restKey: string): string | null {
+export function resolveMapping(restKey: string): string | null {
   // Direct override lookup
   if (restKey in MAPPING_OVERRIDES) {
     return MAPPING_OVERRIDES[restKey] ?? null;
