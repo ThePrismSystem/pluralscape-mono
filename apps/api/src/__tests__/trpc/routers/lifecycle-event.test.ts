@@ -120,7 +120,7 @@ describe("lifecycleEvent router", () => {
           systemId: SYSTEM_ID,
           eventId: "not-an-event-id" as LifecycleEventId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

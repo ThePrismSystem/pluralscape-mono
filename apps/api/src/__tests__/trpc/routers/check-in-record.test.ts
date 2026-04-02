@@ -136,7 +136,7 @@ describe("checkInRecord router", () => {
           systemId: SYSTEM_ID,
           recordId: "not-a-record-id" as CheckInRecordId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

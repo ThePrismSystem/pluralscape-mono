@@ -120,7 +120,7 @@ describe("channel router", () => {
       const caller = createCaller();
       await expect(
         caller.channel.get({ systemId: SYSTEM_ID, channelId: "invalid-id" as ChannelId }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

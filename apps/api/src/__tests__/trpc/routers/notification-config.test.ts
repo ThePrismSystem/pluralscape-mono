@@ -78,7 +78,7 @@ describe("notificationConfig router", () => {
           systemId: SYSTEM_ID,
           eventType: "not-a-valid-event-type" as NotificationEventType,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 

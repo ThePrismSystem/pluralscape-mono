@@ -108,7 +108,7 @@ describe("frontingSession router", () => {
           encryptedData: VALID_ENCRYPTED_DATA,
           startTime: START_TIME,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -136,7 +136,7 @@ describe("frontingSession router", () => {
           systemId: SYSTEM_ID,
           sessionId: "not-a-session-id" as FrontingSessionId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

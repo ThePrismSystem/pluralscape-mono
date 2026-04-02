@@ -104,7 +104,7 @@ describe("frontingReport router", () => {
           format: "docx" as "html",
           generatedAt: 1_700_000_000_000,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -132,7 +132,7 @@ describe("frontingReport router", () => {
           systemId: SYSTEM_ID,
           reportId: "not-a-report-id" as FrontingReportId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 

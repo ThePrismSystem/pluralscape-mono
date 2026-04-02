@@ -94,7 +94,7 @@ describe("member router", () => {
           systemId: "not-a-system-id" as SystemId,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -119,7 +119,7 @@ describe("member router", () => {
           systemId: SYSTEM_ID,
           memberId: "not-a-member-id" as MemberId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 

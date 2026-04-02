@@ -107,7 +107,7 @@ describe("message router", () => {
           timestamp: VALID_TIMESTAMP,
           replyToId: undefined,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -137,7 +137,7 @@ describe("message router", () => {
           channelId: CHANNEL_ID,
           messageId: "invalid-id" as MessageId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

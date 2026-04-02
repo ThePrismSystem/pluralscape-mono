@@ -100,7 +100,7 @@ describe("memberPhoto router", () => {
           memberId: "not-a-member-id" as MemberId,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -131,7 +131,7 @@ describe("memberPhoto router", () => {
           memberId: MEMBER_ID,
           photoId: "not-a-photo-id" as MemberPhotoId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

@@ -162,7 +162,7 @@ describe("poll router", () => {
       const caller = createCaller();
       await expect(
         caller.poll.get({ systemId: SYSTEM_ID, pollId: "invalid-id" as PollId }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

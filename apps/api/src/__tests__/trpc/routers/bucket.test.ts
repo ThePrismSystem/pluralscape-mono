@@ -136,7 +136,7 @@ describe("bucket router", () => {
       const caller = createCaller();
       await expect(
         caller.bucket.get({ systemId: SYSTEM_ID, bucketId: "not-a-bucket-id" as BucketId }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

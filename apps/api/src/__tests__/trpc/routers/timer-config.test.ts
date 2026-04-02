@@ -114,7 +114,7 @@ describe("timerConfig router", () => {
           systemId: SYSTEM_ID,
           timerId: "not-a-timer-id" as TimerId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

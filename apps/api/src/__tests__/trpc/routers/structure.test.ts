@@ -222,7 +222,7 @@ describe("structure router", () => {
           systemId: SYSTEM_ID,
           entityTypeId: "not-a-type-id" as SystemStructureEntityTypeId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -401,7 +401,7 @@ describe("structure router", () => {
           systemId: SYSTEM_ID,
           entityId: "not-an-entity-id" as SystemStructureEntityId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -637,7 +637,7 @@ describe("structure router", () => {
           systemId: SYSTEM_ID,
           linkId: "not-a-link-id" as SystemStructureEntityLinkId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -717,7 +717,7 @@ describe("structure router", () => {
           systemId: SYSTEM_ID,
           memberLinkId: "not-a-member-link-id" as SystemStructureEntityMemberLinkId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -792,7 +792,7 @@ describe("structure router", () => {
           systemId: SYSTEM_ID,
           associationId: "not-an-association-id" as SystemStructureEntityAssociationId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 });

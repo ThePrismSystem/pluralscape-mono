@@ -116,7 +116,7 @@ describe("acknowledgement router", () => {
           systemId: SYSTEM_ID,
           ackId: "invalid-id" as AcknowledgementId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

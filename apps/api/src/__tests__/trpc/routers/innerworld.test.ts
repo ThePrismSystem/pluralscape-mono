@@ -147,7 +147,7 @@ describe("innerworld router", () => {
           systemId: SYSTEM_ID,
           entityId: "not-an-entity-id" as InnerWorldEntityId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -309,7 +309,7 @@ describe("innerworld router", () => {
           systemId: SYSTEM_ID,
           regionId: "not-a-region-id" as InnerWorldRegionId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 

@@ -93,12 +93,14 @@ describe("auth router", () => {
       const caller = createCaller();
       await expect(
         caller.auth.register({ ...registrationInput, email: "not-an-email" }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("rejects empty password", async () => {
       const caller = createCaller();
-      await expect(caller.auth.register({ ...registrationInput, password: "" })).rejects.toThrow();
+      await expect(caller.auth.register({ ...registrationInput, password: "" })).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
     });
   });
 
@@ -192,7 +194,9 @@ describe("auth router", () => {
 
     it("rejects limit exceeding maximum", async () => {
       const caller = createCaller(MOCK_AUTH);
-      await expect(caller.auth.listSessions({ limit: 200 })).rejects.toThrow();
+      await expect(caller.auth.listSessions({ limit: 200 })).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
     });
   });
 

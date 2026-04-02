@@ -153,7 +153,7 @@ describe("apiKey router", () => {
       const caller = createCaller();
       await expect(
         caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: "invalid-id" as ApiKeyId }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

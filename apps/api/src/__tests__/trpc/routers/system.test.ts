@@ -101,9 +101,9 @@ describe("system router", () => {
 
     it("rejects invalid systemId format", async () => {
       const caller = createCaller();
-      await expect(
-        caller.system.get({ systemId: "not-a-system-id" as SystemId }),
-      ).rejects.toThrow();
+      await expect(caller.system.get({ systemId: "not-a-system-id" as SystemId })).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

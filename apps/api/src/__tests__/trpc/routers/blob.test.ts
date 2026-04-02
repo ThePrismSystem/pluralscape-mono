@@ -134,7 +134,7 @@ describe("blob router", () => {
           ...VALID_CONFIRM_INPUT,
           blobId: "invalid-id" as BlobId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -166,7 +166,7 @@ describe("blob router", () => {
       const caller = createCaller();
       await expect(
         caller.blob.get({ systemId: SYSTEM_ID, blobId: "invalid-id" as BlobId }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

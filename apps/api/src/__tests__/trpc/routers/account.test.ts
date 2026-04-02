@@ -125,9 +125,9 @@ describe("account router", () => {
 
     it("rejects invalid email format", async () => {
       const caller = createCaller();
-      await expect(
-        caller.account.changeEmail({ ...input, email: "not-an-email" }),
-      ).rejects.toThrow();
+      await expect(caller.account.changeEmail({ ...input, email: "not-an-email" })).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
     });
   });
 
@@ -426,7 +426,9 @@ describe("account router", () => {
 
     it("rejects limit exceeding maximum", async () => {
       const caller = createCaller();
-      await expect(caller.account.queryAuditLog({ limit: 500 })).rejects.toThrow();
+      await expect(caller.account.queryAuditLog({ limit: 500 })).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
     });
   });
 });

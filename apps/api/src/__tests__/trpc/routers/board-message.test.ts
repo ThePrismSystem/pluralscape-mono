@@ -121,7 +121,7 @@ describe("board-message router", () => {
           systemId: SYSTEM_ID,
           boardMessageId: "invalid-id" as BoardMessageId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -331,7 +331,7 @@ describe("board-message router", () => {
           systemId: SYSTEM_ID,
           operations: [],
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 });

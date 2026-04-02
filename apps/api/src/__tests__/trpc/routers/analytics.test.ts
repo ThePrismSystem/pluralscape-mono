@@ -106,7 +106,7 @@ describe("analytics router", () => {
       const caller = createCaller();
       await expect(
         caller.analytics.fronting({ systemId: SYSTEM_ID, preset: "custom" }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("rejects endDate before startDate", async () => {
@@ -118,7 +118,7 @@ describe("analytics router", () => {
           startDate: 1_700_000_000_000,
           endDate: 1_697_000_000_000,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {

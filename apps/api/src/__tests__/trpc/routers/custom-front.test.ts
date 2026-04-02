@@ -111,7 +111,7 @@ describe("customFront router", () => {
           systemId: SYSTEM_ID,
           customFrontId: "not-a-custom-front-id" as CustomFrontId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

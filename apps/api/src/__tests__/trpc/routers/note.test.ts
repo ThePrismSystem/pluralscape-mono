@@ -97,7 +97,7 @@ describe("note router", () => {
       const caller = createCaller();
       await expect(
         caller.note.get({ systemId: SYSTEM_ID, noteId: "invalid-id" as NoteId }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {

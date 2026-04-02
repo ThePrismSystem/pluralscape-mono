@@ -117,7 +117,7 @@ describe("frontingComment router", () => {
           customFrontId: undefined,
           structureEntityId: undefined,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("rejects when no subject id provided", async () => {
@@ -131,7 +131,7 @@ describe("frontingComment router", () => {
           customFrontId: undefined,
           structureEntityId: undefined,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
@@ -161,7 +161,7 @@ describe("frontingComment router", () => {
           sessionId: SESSION_ID,
           commentId: "not-a-comment-id" as FrontingCommentId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 

@@ -141,7 +141,7 @@ describe("group router", () => {
       const caller = createCaller();
       await expect(
         caller.group.get({ systemId: SYSTEM_ID, groupId: "not-a-group-id" as GroupId }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -189,7 +189,9 @@ describe("group router", () => {
 
     it("rejects limit above MAX_LIST_LIMIT", async () => {
       const caller = createCaller();
-      await expect(caller.group.list({ systemId: SYSTEM_ID, limit: 101 })).rejects.toThrow();
+      await expect(caller.group.list({ systemId: SYSTEM_ID, limit: 101 })).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
     });
   });
 

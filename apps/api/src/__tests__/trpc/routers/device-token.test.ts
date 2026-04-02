@@ -136,7 +136,7 @@ describe("deviceToken router", () => {
           systemId: SYSTEM_ID,
           tokenId: "not-a-token-id" as DeviceTokenId,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
