@@ -22,10 +22,11 @@ import {
 async function main(): Promise<void> {
   let trpcProcedures = await discoverTRPCProcedures();
   trpcProcedures = extractTRPCRateLimits(trpcProcedures);
-  const restRoutes = buildRESTInventory();
+  const { routes: restRoutes, failures: discoveryFailures } = buildRESTInventory();
   const { failures, warnings, stats } = runParityChecks(restRoutes, trpcProcedures);
-  printResults(failures, warnings, stats);
-  if (failures.length > 0) {
+  const allFailures = [...discoveryFailures, ...failures];
+  printResults(allFailures, warnings, stats);
+  if (allFailures.length > 0) {
     process.exit(1);
   }
 }

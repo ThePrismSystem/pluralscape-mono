@@ -267,20 +267,32 @@ const VALIDATION_SCHEMA_PATTERN = /import\s*\{([^}]+)\}\s*from\s*["']@pluralscap
 const METHOD_PATTERN = /\.(get|post|put|delete|patch)\(\s*["'](\/[^"']*?)["']/g;
 const ROUTE_MOUNT_PATTERN = /\.route\(\s*["']([^"']+)["']\s*,\s*(\w+)\s*\)/g;
 
-export function buildRESTInventory(): RESTRouteInfo[] {
+export function buildRESTInventory(): {
+  routes: RESTRouteInfo[];
+  failures: ParityFailure[];
+} {
+  const failures: ParityFailure[] = [];
   const entryFile = resolve(API_ROOT, "src/routes/v1.ts");
-  return walkRouteTree(entryFile, "/v1", false);
+  const routes = walkRouteTree(entryFile, "/v1", false, failures);
+  return { routes, failures };
 }
 
-function walkRouteTree(
+export function walkRouteTree(
   entryFile: string,
   basePath: string,
   inheritedAuth: boolean,
+  failures: ParityFailure[],
 ): RESTRouteInfo[] {
   let source: string;
   try {
     source = readFileSync(entryFile, "utf-8");
   } catch {
+    failures.push({
+      dimension: "existence",
+      restRoute: `[file: ${entryFile}]`,
+      expected: "readable route file",
+      actual: "file not found or not readable",
+    });
     return [];
   }
 
@@ -356,7 +368,7 @@ function walkRouteTree(
     if (!childPath) continue;
 
     const childMountPath = normalizePath(basePath + mountPath);
-    const childEntries = walkRouteTree(childPath, childMountPath, hasAuth);
+    const childEntries = walkRouteTree(childPath, childMountPath, hasAuth, failures);
     entries.push(...childEntries);
   }
 
