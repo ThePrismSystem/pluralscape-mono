@@ -200,11 +200,12 @@ export default function RootLayout(): React.JSX.Element {
           resources,
         }}
       >
-        <TRPCProvider
-          queryClient={queryClientRef.current}
-          getToken={tokenStore.getToken.bind(tokenStore)}
-        >
-          <QueryClientProvider client={queryClientRef.current}>
+        <QueryClientProvider client={queryClientRef.current}>
+          <TRPCProvider
+            queryClient={queryClientRef.current}
+            getToken={tokenStore.getToken.bind(tokenStore)}
+            onUnauthorized={() => authMachineRef.current?.dispatch({ type: "LOGOUT" })}
+          >
             <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
               <ConnectionProvider manager={connectionManagerRef.current}>
                 <SyncProvider>
@@ -214,8 +215,8 @@ export default function RootLayout(): React.JSX.Element {
                 </SyncProvider>
               </ConnectionProvider>
             </AuthProvider>
-          </QueryClientProvider>
-        </TRPCProvider>
+          </TRPCProvider>
+        </QueryClientProvider>
       </I18nProvider>
     </PlatformProvider>
   );
