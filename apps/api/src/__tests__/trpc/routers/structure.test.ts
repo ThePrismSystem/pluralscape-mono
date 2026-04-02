@@ -306,6 +306,16 @@ describe("structure router", () => {
       expect(vi.mocked(archiveEntityType)).toHaveBeenCalledOnce();
       expect(result).toEqual({ success: true });
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(archiveEntityType).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Entity type not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.structure.archiveType({ systemId: SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
   });
 
   // ── Entity Types: restoreType ────────────────────────────────────
@@ -321,6 +331,16 @@ describe("structure router", () => {
 
       expect(vi.mocked(restoreEntityType)).toHaveBeenCalledOnce();
       expect(result).toEqual(MOCK_ENTITY_TYPE_RESULT);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(restoreEntityType).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Entity type not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.structure.restoreType({ systemId: SYSTEM_ID, entityTypeId: ENTITY_TYPE_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -448,6 +468,23 @@ describe("structure router", () => {
       expect(vi.mocked(updateStructureEntity).mock.calls[0]?.[2]).toBe(ENTITY_ID);
       expect(result).toEqual(MOCK_ENTITY_RESULT);
     });
+
+    it("surfaces ApiHttpError(409) as CONFLICT", async () => {
+      vi.mocked(updateStructureEntity).mockRejectedValue(
+        new ApiHttpError(409, "CONFLICT", "Version mismatch"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.structure.updateEntity({
+          systemId: SYSTEM_ID,
+          entityId: ENTITY_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          sortOrder: 0,
+          version: 1,
+          parentEntityId: null,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
+    });
   });
 
   // ── Entities: archiveEntity ──────────────────────────────────────
@@ -464,6 +501,16 @@ describe("structure router", () => {
       expect(vi.mocked(archiveStructureEntity)).toHaveBeenCalledOnce();
       expect(result).toEqual({ success: true });
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(archiveStructureEntity).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Entity not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.structure.archiveEntity({ systemId: SYSTEM_ID, entityId: ENTITY_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
   });
 
   // ── Entities: restoreEntity ──────────────────────────────────────
@@ -479,6 +526,16 @@ describe("structure router", () => {
 
       expect(vi.mocked(restoreStructureEntity)).toHaveBeenCalledOnce();
       expect(result).toEqual(MOCK_ENTITY_RESULT);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(restoreStructureEntity).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Entity not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.structure.restoreEntity({ systemId: SYSTEM_ID, entityId: ENTITY_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -600,6 +657,21 @@ describe("structure router", () => {
       expect(vi.mocked(createEntityMemberLink)).toHaveBeenCalledOnce();
       expect(vi.mocked(createEntityMemberLink).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(result).toEqual(MOCK_MEMBER_LINK_RESULT);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(createEntityMemberLink).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Entity not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.structure.createMemberLink({
+          systemId: SYSTEM_ID,
+          parentEntityId: ENTITY_ID,
+          memberId: MEMBER_ID,
+          sortOrder: 0,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
