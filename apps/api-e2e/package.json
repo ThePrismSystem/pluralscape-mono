@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "@pluralscape/api": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
@@ -20,5 +21,8 @@
     "drizzle-orm": "^0.45.1",
     "postgres": "^3.4.5",
     "typescript": "^6.0.0"
+  },
+  "dependencies": {
+    "@trpc/client": "11.16.0"
   }
 }

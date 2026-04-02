@@ -154,10 +154,17 @@ importers:
         version: 5.10.1
 
   apps/api-e2e:
+    dependencies:
+      '@trpc/client':
+        specifier: 11.16.0
+        version: 11.16.0(@trpc/server@11.16.0(typescript@6.0.2))(typescript@6.0.2)
     devDependencies:
       '@playwright/test':
         specifier: ^1.52.0
         version: 1.58.2
+      '@pluralscape/api':
+        specifier: workspace:*
+        version: link:../api
       '@pluralscape/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
