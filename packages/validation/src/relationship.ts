@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { brandedString } from "./branded.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
-const RELATIONSHIP_TYPES = [
+export const RELATIONSHIP_TYPES = [
   "split-from",
   "fused-from",
   "sibling",

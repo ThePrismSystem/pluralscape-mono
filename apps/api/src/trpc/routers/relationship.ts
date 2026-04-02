@@ -1,5 +1,6 @@
 import {
   CreateRelationshipBodySchema,
+  RELATIONSHIP_TYPES,
   UpdateRelationshipBodySchema,
   brandedIdQueryParam,
 } from "@pluralscape/validation";
@@ -40,20 +41,7 @@ export const relationshipRouter = router({
         cursor: z.string().optional(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         memberId: z.string().optional(),
-        type: z
-          .enum([
-            "split-from",
-            "fused-from",
-            "sibling",
-            "partner",
-            "parent-child",
-            "protector-of",
-            "caretaker-of",
-            "gatekeeper-of",
-            "source",
-            "custom",
-          ])
-          .optional(),
+        type: z.enum(RELATIONSHIP_TYPES).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
