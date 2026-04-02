@@ -15,8 +15,12 @@ import {
   respondCheckInRecord,
   restoreCheckInRecord,
 } from "../../services/check-in-record.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for check-in record list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -26,16 +30,23 @@ const RecordIdSchema = z.object({
 });
 
 export const checkInRecordRouter = router({
-  create: systemProcedure.input(CreateCheckInRecordBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createCheckInRecord(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateCheckInRecordBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createCheckInRecord(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  get: systemProcedure.input(RecordIdSchema).query(async ({ ctx, input }) => {
-    return getCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(RecordIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -56,31 +67,44 @@ export const checkInRecordRouter = router({
     }),
 
   respond: systemProcedure
+    .use(writeLimiter)
     .input(RecordIdSchema.and(RespondCheckInRecordBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return respondCheckInRecord(ctx.db, ctx.systemId, input.recordId, input, ctx.auth, audit);
     }),
 
-  dismiss: systemProcedure.input(RecordIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return dismissCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
-  }),
+  dismiss: systemProcedure
+    .use(writeLimiter)
+    .input(RecordIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return dismissCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
+    }),
 
-  archive: systemProcedure.input(RecordIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(RecordIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(RecordIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(RecordIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(RecordIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(RecordIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

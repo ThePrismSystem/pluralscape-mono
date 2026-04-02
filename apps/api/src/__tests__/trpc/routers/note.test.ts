@@ -9,6 +9,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../services/note.service.js", () => ({
   createNote: vi.fn(),
   getNote: vi.fn(),
@@ -256,5 +260,17 @@ describe("note router", () => {
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(checkRateLimit).mockClear();
+    vi.mocked(listNotes).mockResolvedValue({ items: [], nextCursor: null });
+    const caller = createCaller();
+    await caller.note.list({ systemId: SYSTEM_ID });
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+    expect(callKey).toContain("readDefault");
   });
 });

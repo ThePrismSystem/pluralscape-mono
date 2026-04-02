@@ -41,8 +41,13 @@ import {
   initiateRotation,
   retryRotation,
 } from "../../services/key-rotation.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const readHeavyLimiter = createTRPCCategoryRateLimiter("readHeavy");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for bucket list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -60,22 +65,29 @@ const RotationIdSchema = z.object({
 });
 
 export const bucketRouter = router({
-  create: systemProcedure.input(CreateBucketBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createBucket(
-      ctx.db,
-      ctx.systemId,
-      { encryptedData: input.encryptedData },
-      ctx.auth,
-      audit,
-    );
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateBucketBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createBucket(
+        ctx.db,
+        ctx.systemId,
+        { encryptedData: input.encryptedData },
+        ctx.auth,
+        audit,
+      );
+    }),
 
-  get: systemProcedure.input(BucketIdSchema).query(async ({ ctx, input }) => {
-    return getBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(BucketIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -92,6 +104,7 @@ export const bucketRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(UpdateBucketBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -105,26 +118,36 @@ export const bucketRouter = router({
       );
     }),
 
-  archive: systemProcedure.input(BucketIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(BucketIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(BucketIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(BucketIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(BucketIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(BucketIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  // ── Friend assignments ──────────────────────────────────────────────
+  // ── Friend assignments ──────────────────────────────────────────
 
   assignFriend: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(ConnectionIdSchema).and(AssignBucketBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -143,6 +166,7 @@ export const bucketRouter = router({
     }),
 
   unassignFriend: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(ConnectionIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -156,13 +180,17 @@ export const bucketRouter = router({
       );
     }),
 
-  listFriendAssignments: systemProcedure.input(BucketIdSchema).query(async ({ ctx, input }) => {
-    return listFriendBucketAssignments(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
-  }),
+  listFriendAssignments: systemProcedure
+    .use(readLimiter)
+    .input(BucketIdSchema)
+    .query(async ({ ctx, input }) => {
+      return listFriendBucketAssignments(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
+    }),
 
   // ── Content tags ────────────────────────────────────────────────────
 
   tagContent: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(TagContentBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -177,6 +205,7 @@ export const bucketRouter = router({
     }),
 
   untagContent: systemProcedure
+    .use(writeLimiter)
     .input(
       BucketIdSchema.and(
         z.object({
@@ -200,6 +229,7 @@ export const bucketRouter = router({
     }),
 
   listTags: systemProcedure
+    .use(readLimiter)
     .input(
       BucketIdSchema.and(
         z.object({
@@ -217,11 +247,15 @@ export const bucketRouter = router({
 
   // ── Export ──────────────────────────────────────────────────────────
 
-  exportManifest: systemProcedure.input(BucketIdSchema).query(async ({ ctx, input }) => {
-    return getBucketExportManifest(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
-  }),
+  exportManifest: systemProcedure
+    .use(readHeavyLimiter)
+    .input(BucketIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getBucketExportManifest(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
+    }),
 
   exportPage: systemProcedure
+    .use(readHeavyLimiter)
     .input(
       BucketIdSchema.and(
         z.object({
@@ -246,6 +280,7 @@ export const bucketRouter = router({
   // ── Key rotation ────────────────────────────────────────────────────
 
   initiateRotation: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(InitiateRotationBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -253,12 +288,14 @@ export const bucketRouter = router({
     }),
 
   rotationProgress: systemProcedure
+    .use(readLimiter)
     .input(BucketIdSchema.and(RotationIdSchema))
     .query(async ({ ctx, input }) => {
       return getRotationProgress(ctx.db, ctx.systemId, input.bucketId, input.rotationId, ctx.auth);
     }),
 
   claimRotationChunk: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(RotationIdSchema).and(ClaimChunkBodySchema))
     .mutation(async ({ ctx, input }) => {
       return claimRotationChunk(
@@ -272,6 +309,7 @@ export const bucketRouter = router({
     }),
 
   completeRotationChunk: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(RotationIdSchema).and(CompleteChunkBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -287,6 +325,7 @@ export const bucketRouter = router({
     }),
 
   retryRotation: systemProcedure
+    .use(writeLimiter)
     .input(BucketIdSchema.and(RotationIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

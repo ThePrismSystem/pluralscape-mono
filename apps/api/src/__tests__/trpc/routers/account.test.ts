@@ -8,6 +8,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../services/account.service.js", () => ({
   getAccountInfo: vi.fn(),
   changeEmail: vi.fn(),
@@ -430,5 +434,25 @@ describe("account router", () => {
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(checkRateLimit).mockClear();
+    vi.mocked(getAccountInfo).mockResolvedValue({
+      accountId: MOCK_AUTH.accountId,
+      accountType: "system" as const,
+      systemId: SYSTEM_ID,
+      auditLogIpTracking: false,
+      version: 1,
+      createdAt: 1_700_000_000_000 as import("@pluralscape/types").UnixMillis,
+      updatedAt: 1_700_000_000_000 as import("@pluralscape/types").UnixMillis,
+    });
+    const caller = createCaller();
+    await caller.account.getInfo();
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+    expect(callKey).toContain("authLight");
   });
 });

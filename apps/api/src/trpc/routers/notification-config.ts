@@ -7,8 +7,12 @@ import {
   listNotificationConfigs,
   updateNotificationConfig,
 } from "../../services/notification-config.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 const [firstEventType, ...restEventTypes] = NOTIFICATION_EVENT_TYPES;
 
@@ -17,11 +21,15 @@ const EventTypeSchema = z.object({
 });
 
 export const notificationConfigRouter = router({
-  get: systemProcedure.input(EventTypeSchema).query(async ({ ctx, input }) => {
-    return getOrCreateNotificationConfig(ctx.db, ctx.systemId, input.eventType, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(EventTypeSchema)
+    .query(async ({ ctx, input }) => {
+      return getOrCreateNotificationConfig(ctx.db, ctx.systemId, input.eventType, ctx.auth);
+    }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(EventTypeSchema.and(UpdateNotificationConfigBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -35,7 +43,7 @@ export const notificationConfigRouter = router({
       );
     }),
 
-  list: systemProcedure.query(async ({ ctx }) => {
+  list: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
     return listNotificationConfigs(ctx.db, ctx.systemId, ctx.auth);
   }),
 });

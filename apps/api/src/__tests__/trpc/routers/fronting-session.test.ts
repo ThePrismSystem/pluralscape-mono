@@ -9,6 +9,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../services/fronting-session.service.js", () => ({
   createFrontingSession: vi.fn(),
   getFrontingSession: vi.fn(),
@@ -366,5 +370,17 @@ describe("frontingSession router", () => {
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(checkRateLimit).mockClear();
+    vi.mocked(listFrontingSessions).mockResolvedValue({ items: [], nextCursor: null });
+    const caller = createCaller();
+    await caller.frontingSession.list({ systemId: SYSTEM_ID });
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+    expect(callKey).toContain("readDefault");
   });
 });

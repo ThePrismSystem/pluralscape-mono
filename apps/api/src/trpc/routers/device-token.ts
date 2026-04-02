@@ -12,8 +12,12 @@ import {
   revokeDeviceToken,
   updateDeviceToken,
 } from "../../services/device-token.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for device token list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -24,6 +28,7 @@ const TokenIdSchema = z.object({
 
 export const deviceTokenRouter = router({
   register: systemProcedure
+    .use(writeLimiter)
     .input(RegisterDeviceTokenBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -31,6 +36,7 @@ export const deviceTokenRouter = router({
     }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -45,21 +51,28 @@ export const deviceTokenRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(TokenIdSchema.and(UpdateDeviceTokenBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return updateDeviceToken(ctx.db, ctx.systemId, input.tokenId, input, ctx.auth, audit);
     }),
 
-  revoke: systemProcedure.input(TokenIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await revokeDeviceToken(ctx.db, ctx.systemId, input.tokenId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  revoke: systemProcedure
+    .use(writeLimiter)
+    .input(TokenIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await revokeDeviceToken(ctx.db, ctx.systemId, input.tokenId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  delete: systemProcedure.input(TokenIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteDeviceToken(ctx.db, ctx.systemId, input.tokenId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(TokenIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteDeviceToken(ctx.db, ctx.systemId, input.tokenId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

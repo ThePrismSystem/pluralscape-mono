@@ -14,8 +14,12 @@ import {
   restoreFrontingReport,
   updateFrontingReport,
 } from "../../services/fronting-report.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for fronting report list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -25,16 +29,23 @@ const ReportIdSchema = z.object({
 });
 
 export const frontingReportRouter = router({
-  create: systemProcedure.input(CreateFrontingReportBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createFrontingReport(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateFrontingReportBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createFrontingReport(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  get: systemProcedure.input(ReportIdSchema).query(async ({ ctx, input }) => {
-    return getFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(ReportIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -49,26 +60,36 @@ export const frontingReportRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(ReportIdSchema.and(UpdateFrontingReportBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return updateFrontingReport(ctx.db, ctx.systemId, input.reportId, input, ctx.auth, audit);
     }),
 
-  archive: systemProcedure.input(ReportIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(ReportIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(ReportIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(ReportIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(ReportIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(ReportIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

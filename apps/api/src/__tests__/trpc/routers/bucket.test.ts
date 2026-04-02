@@ -9,6 +9,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../services/bucket.service.js", () => ({
   createBucket: vi.fn(),
   getBucket: vi.fn(),
@@ -590,5 +594,17 @@ describe("bucket router", () => {
 
       expect(vi.mocked(getBucketExportPage).mock.calls[0]?.[6]).toBe("cur_xyz");
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(checkRateLimit).mockClear();
+    vi.mocked(listBuckets).mockResolvedValue({ items: [], nextCursor: null });
+    const caller = createCaller();
+    await caller.bucket.list({ systemId: SYSTEM_ID });
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+    expect(callKey).toContain("readDefault");
   });
 });

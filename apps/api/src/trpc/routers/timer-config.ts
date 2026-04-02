@@ -14,8 +14,12 @@ import {
   restoreTimerConfig,
   updateTimerConfig,
 } from "../../services/timer-config.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for timer config list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -25,16 +29,23 @@ const TimerIdSchema = z.object({
 });
 
 export const timerConfigRouter = router({
-  create: systemProcedure.input(CreateTimerConfigBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createTimerConfig(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateTimerConfigBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createTimerConfig(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  get: systemProcedure.input(TimerIdSchema).query(async ({ ctx, input }) => {
-    return getTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(TimerIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -51,26 +62,36 @@ export const timerConfigRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(TimerIdSchema.and(UpdateTimerConfigBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return updateTimerConfig(ctx.db, ctx.systemId, input.timerId, input, ctx.auth, audit);
     }),
 
-  archive: systemProcedure.input(TimerIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(TimerIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(TimerIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(TimerIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(TimerIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(TimerIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

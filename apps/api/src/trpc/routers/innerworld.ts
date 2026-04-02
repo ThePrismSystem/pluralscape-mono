@@ -27,8 +27,12 @@ import {
   restoreRegion,
   updateRegion,
 } from "../../services/innerworld-region.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for innerworld list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -44,16 +48,23 @@ const RegionIdSchema = z.object({
 export const innerworldRouter = router({
   // ── Entity procedures ────────────────────────────────────────────
 
-  createEntity: systemProcedure.input(CreateEntityBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createEntity(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  createEntity: systemProcedure
+    .use(writeLimiter)
+    .input(CreateEntityBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createEntity(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  getEntity: systemProcedure.input(EntityIdSchema).query(async ({ ctx, input }) => {
-    return getEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
-  }),
+  getEntity: systemProcedure
+    .use(readLimiter)
+    .input(EntityIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
+    }),
 
   listEntities: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -72,6 +83,7 @@ export const innerworldRouter = router({
     }),
 
   updateEntity: systemProcedure
+    .use(writeLimiter)
     .input(EntityIdSchema.and(UpdateEntityBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -85,35 +97,51 @@ export const innerworldRouter = router({
       );
     }),
 
-  archiveEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archiveEntity: systemProcedure
+    .use(writeLimiter)
+    .input(EntityIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restoreEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
-  }),
+  restoreEntity: systemProcedure
+    .use(writeLimiter)
+    .input(EntityIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+    }),
 
-  deleteEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteEntity: systemProcedure
+    .use(writeLimiter)
+    .input(EntityIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   // ── Region procedures ────────────────────────────────────────────
 
-  createRegion: systemProcedure.input(CreateRegionBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createRegion(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  createRegion: systemProcedure
+    .use(writeLimiter)
+    .input(CreateRegionBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createRegion(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  getRegion: systemProcedure.input(RegionIdSchema).query(async ({ ctx, input }) => {
-    return getRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth);
-  }),
+  getRegion: systemProcedure
+    .use(readLimiter)
+    .input(RegionIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth);
+    }),
 
   listRegions: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -130,6 +158,7 @@ export const innerworldRouter = router({
     }),
 
   updateRegion: systemProcedure
+    .use(writeLimiter)
     .input(RegionIdSchema.and(UpdateRegionBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -143,31 +172,43 @@ export const innerworldRouter = router({
       );
     }),
 
-  archiveRegion: systemProcedure.input(RegionIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archiveRegion: systemProcedure
+    .use(writeLimiter)
+    .input(RegionIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restoreRegion: systemProcedure.input(RegionIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
-  }),
+  restoreRegion: systemProcedure
+    .use(writeLimiter)
+    .input(RegionIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
+    }),
 
-  deleteRegion: systemProcedure.input(RegionIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteRegion: systemProcedure
+    .use(writeLimiter)
+    .input(RegionIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   // ── Canvas procedures ────────────────────────────────────────────
 
-  getCanvas: systemProcedure.query(async ({ ctx }) => {
+  getCanvas: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
     return getCanvas(ctx.db, ctx.systemId, ctx.auth);
   }),
 
-  upsertCanvas: systemProcedure.input(UpdateCanvasBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return upsertCanvas(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  upsertCanvas: systemProcedure
+    .use(writeLimiter)
+    .input(UpdateCanvasBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return upsertCanvas(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 });

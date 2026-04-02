@@ -9,6 +9,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../lib/pagination.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/pagination.js")>();
   return {
@@ -309,5 +313,17 @@ describe("memberPhoto router", () => {
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(checkRateLimit).mockClear();
+    vi.mocked(listMemberPhotos).mockResolvedValue({ items: [], nextCursor: null });
+    const caller = createCaller();
+    await caller.memberPhoto.list({ systemId: SYSTEM_ID, memberId: MEMBER_ID });
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+    expect(callKey).toContain("readDefault");
   });
 });

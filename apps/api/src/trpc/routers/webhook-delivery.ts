@@ -6,8 +6,12 @@ import {
   getWebhookDelivery,
   listWebhookDeliveries,
 } from "../../services/webhook-delivery.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for webhook delivery list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -18,6 +22,7 @@ const DeliveryIdSchema = z.object({
 
 export const webhookDeliveryRouter = router({
   list: systemProcedure
+    .use(readLimiter)
     .input(
       WebhookDeliveryQuerySchema.and(
         z.object({
@@ -38,13 +43,19 @@ export const webhookDeliveryRouter = router({
       });
     }),
 
-  get: systemProcedure.input(DeliveryIdSchema).query(async ({ ctx, input }) => {
-    return getWebhookDelivery(ctx.db, ctx.systemId, input.deliveryId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(DeliveryIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getWebhookDelivery(ctx.db, ctx.systemId, input.deliveryId, ctx.auth);
+    }),
 
-  delete: systemProcedure.input(DeliveryIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteWebhookDelivery(ctx.db, ctx.systemId, input.deliveryId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(DeliveryIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteWebhookDelivery(ctx.db, ctx.systemId, input.deliveryId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

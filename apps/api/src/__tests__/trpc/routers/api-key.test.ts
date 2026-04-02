@@ -9,6 +9,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../services/api-key.service.js", () => ({
   createApiKey: vi.fn(),
   listApiKeys: vi.fn(),
@@ -165,5 +169,17 @@ describe("apiKey router", () => {
         caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: API_KEY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(checkRateLimit).mockClear();
+    vi.mocked(listApiKeys).mockResolvedValue({ items: [], nextCursor: null });
+    const caller = createCaller();
+    await caller.apiKey.list({ systemId: SYSTEM_ID });
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+    expect(callKey).toContain("readDefault");
   });
 });

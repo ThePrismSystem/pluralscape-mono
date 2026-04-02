@@ -8,6 +8,10 @@ vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
+
 vi.mock("../../../services/notification-config.service.js", () => ({
   getOrCreateNotificationConfig: vi.fn(),
   updateNotificationConfig: vi.fn(),
@@ -151,5 +155,17 @@ describe("notificationConfig router", () => {
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(checkRateLimit).mockClear();
+    vi.mocked(listNotificationConfigs).mockResolvedValue([]);
+    const caller = createCaller();
+    await caller.notificationConfig.list({ systemId: SYSTEM_ID });
+    expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
+    const callKey = vi.mocked(checkRateLimit).mock.calls[0]?.[0] as string;
+    expect(callKey).toContain("readDefault");
   });
 });

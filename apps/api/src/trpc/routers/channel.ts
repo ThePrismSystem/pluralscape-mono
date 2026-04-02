@@ -14,8 +14,12 @@ import {
   restoreChannel,
   updateChannel,
 } from "../../services/channel.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for channel list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -25,16 +29,23 @@ const ChannelIdSchema = z.object({
 });
 
 export const channelRouter = router({
-  create: systemProcedure.input(CreateChannelBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createChannel(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateChannelBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createChannel(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  get: systemProcedure.input(ChannelIdSchema).query(async ({ ctx, input }) => {
-    return getChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(ChannelIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -51,6 +62,7 @@ export const channelRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(ChannelIdSchema.and(UpdateChannelBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -64,20 +76,29 @@ export const channelRouter = router({
       );
     }),
 
-  archive: systemProcedure.input(ChannelIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(ChannelIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(ChannelIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(ChannelIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(ChannelIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(ChannelIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

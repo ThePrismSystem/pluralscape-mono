@@ -121,7 +121,10 @@ const completeTransferInput = z.object({
 
 // ── Rate limiters (matching REST parity) ──────────────────────────────────────
 
-const deleteAccountLimiter = createTRPCCategoryRateLimiter("write");
+const authLightLimiter = createTRPCCategoryRateLimiter("authLight");
+const authHeavyLimiter = createTRPCCategoryRateLimiter("authHeavy");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
+const auditQueryLimiter = createTRPCCategoryRateLimiter("auditQuery");
 
 const initiateTransferLimiter = createTRPCRateLimiter({
   limit: TRANSFER_INITIATION_LIMIT,
@@ -148,7 +151,7 @@ const completeTransferLimiter = createTRPCRateLimiter({
 
 export const accountRouter = router({
   /** Get current account info. */
-  getInfo: protectedProcedure.query(async ({ ctx }) => {
+  getInfo: protectedProcedure.use(authLightLimiter).query(async ({ ctx }) => {
     const info = await getAccountInfo(ctx.db, ctx.auth.accountId);
     if (!info) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" });
@@ -157,13 +160,17 @@ export const accountRouter = router({
   }),
 
   /** Change account email address. Requires current password. */
-  changeEmail: protectedProcedure.input(ChangeEmailSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return changeEmail(ctx.db, ctx.auth.accountId, input, audit);
-  }),
+  changeEmail: protectedProcedure
+    .use(authHeavyLimiter)
+    .input(ChangeEmailSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return changeEmail(ctx.db, ctx.auth.accountId, input, audit);
+    }),
 
   /** Change account password. Revokes all active sessions. */
   changePassword: protectedProcedure
+    .use(authHeavyLimiter)
     .input(ChangePasswordSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -172,6 +179,7 @@ export const accountRouter = router({
 
   /** Update account-level settings (e.g. audit log IP tracking). */
   updateSettings: protectedProcedure
+    .use(writeLimiter)
     .input(UpdateAccountSettingsSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -179,27 +187,37 @@ export const accountRouter = router({
     }),
 
   /** Set a PIN for the account's system. */
-  setPin: protectedProcedure.input(SetPinBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await setAccountPin(ctx.db, ctx.auth.accountId, input, audit);
-    return { success: true as const };
-  }),
+  setPin: protectedProcedure
+    .use(authHeavyLimiter)
+    .input(SetPinBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await setAccountPin(ctx.db, ctx.auth.accountId, input, audit);
+      return { success: true as const };
+    }),
 
   /** Remove the PIN from the account's system. Requires current PIN. */
-  removePin: protectedProcedure.input(RemovePinBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await removeAccountPin(ctx.db, ctx.auth.accountId, input, audit);
-    return { success: true as const };
-  }),
+  removePin: protectedProcedure
+    .use(authHeavyLimiter)
+    .input(RemovePinBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await removeAccountPin(ctx.db, ctx.auth.accountId, input, audit);
+      return { success: true as const };
+    }),
 
   /** Verify the account PIN without removing it. */
-  verifyPin: protectedProcedure.input(VerifyPinBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return verifyAccountPin(ctx.db, ctx.auth.accountId, input, audit);
-  }),
+  verifyPin: protectedProcedure
+    .use(authHeavyLimiter)
+    .input(VerifyPinBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return verifyAccountPin(ctx.db, ctx.auth.accountId, input, audit);
+    }),
 
   /** Enroll a biometric token for the current session. */
   enrollBiometric: protectedProcedure
+    .use(authHeavyLimiter)
     .input(BiometricEnrollBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -208,6 +226,7 @@ export const accountRouter = router({
 
   /** Verify a biometric token for the current session. */
   verifyBiometric: protectedProcedure
+    .use(authHeavyLimiter)
     .input(BiometricVerifyBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -215,12 +234,13 @@ export const accountRouter = router({
     }),
 
   /** Get recovery key status (whether an active key exists). */
-  getRecoveryKeyStatus: protectedProcedure.query(async ({ ctx }) => {
+  getRecoveryKeyStatus: protectedProcedure.use(authLightLimiter).query(async ({ ctx }) => {
     return getRecoveryKeyStatus(ctx.db, ctx.auth.accountId);
   }),
 
   /** Regenerate the recovery key backup. Requires current password. */
   regenerateRecoveryKey: protectedProcedure
+    .use(authHeavyLimiter)
     .input(RegenerateRecoveryKeySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -228,24 +248,27 @@ export const accountRouter = router({
     }),
 
   /** Query the audit log for the authenticated account. */
-  queryAuditLog: protectedProcedure.input(AuditLogQuerySchema).query(async ({ ctx, input }) => {
-    const now = Date.now();
-    return queryAuditLog(ctx.db, ctx.auth.accountId, {
-      eventType: input.event_type,
-      resourceType: input.resource_type,
-      from: input.from ?? 0,
-      to: input.to ?? now,
-      cursor: input.cursor,
-      limit: input.limit,
-    });
-  }),
+  queryAuditLog: protectedProcedure
+    .use(auditQueryLimiter)
+    .input(AuditLogQuerySchema)
+    .query(async ({ ctx, input }) => {
+      const now = Date.now();
+      return queryAuditLog(ctx.db, ctx.auth.accountId, {
+        eventType: input.event_type,
+        resourceType: input.resource_type,
+        from: input.from ?? 0,
+        to: input.to ?? now,
+        cursor: input.cursor,
+        limit: input.limit,
+      });
+    }),
 
   /**
    * Permanently delete the authenticated account and all associated data.
    * Requires password confirmation.
    */
   deleteAccount: protectedProcedure
-    .use(deleteAccountLimiter)
+    .use(writeLimiter)
     .input(DeleteAccountBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

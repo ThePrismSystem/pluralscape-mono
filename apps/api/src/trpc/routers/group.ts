@@ -26,8 +26,13 @@ import {
   restoreGroup,
   updateGroup,
 } from "../../services/group.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const readHeavyLimiter = createTRPCCategoryRateLimiter("readHeavy");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for group list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -41,26 +46,33 @@ const MemberIdSchema = z.object({
 });
 
 export const groupRouter = router({
-  create: systemProcedure.input(CreateGroupBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createGroup(
-      ctx.db,
-      ctx.systemId,
-      {
-        encryptedData: input.encryptedData,
-        parentGroupId: input.parentGroupId,
-        sortOrder: input.sortOrder,
-      },
-      ctx.auth,
-      audit,
-    );
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateGroupBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createGroup(
+        ctx.db,
+        ctx.systemId,
+        {
+          encryptedData: input.encryptedData,
+          parentGroupId: input.parentGroupId,
+          sortOrder: input.sortOrder,
+        },
+        ctx.auth,
+        audit,
+      );
+    }),
 
-  get: systemProcedure.input(GroupIdSchema).query(async ({ ctx, input }) => {
-    return getGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(GroupIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -80,6 +92,7 @@ export const groupRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(GroupIdSchema.and(UpdateGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -93,24 +106,34 @@ export const groupRouter = router({
       );
     }),
 
-  delete: systemProcedure.input(GroupIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(GroupIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  archive: systemProcedure.input(GroupIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(GroupIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(GroupIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(GroupIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth, audit);
+    }),
 
   move: systemProcedure
+    .use(writeLimiter)
     .input(GroupIdSchema.and(MoveGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -125,6 +148,7 @@ export const groupRouter = router({
     }),
 
   copy: systemProcedure
+    .use(writeLimiter)
     .input(GroupIdSchema.and(CopyGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -141,17 +165,21 @@ export const groupRouter = router({
       );
     }),
 
-  getTree: systemProcedure.query(async ({ ctx }) => {
+  getTree: systemProcedure.use(readHeavyLimiter).query(async ({ ctx }) => {
     return getGroupTree(ctx.db, ctx.systemId, ctx.auth);
   }),
 
-  reorder: systemProcedure.input(ReorderGroupsBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await reorderGroups(ctx.db, ctx.systemId, { operations: input.operations }, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  reorder: systemProcedure
+    .use(writeLimiter)
+    .input(ReorderGroupsBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await reorderGroups(ctx.db, ctx.systemId, { operations: input.operations }, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   addMember: systemProcedure
+    .use(writeLimiter)
     .input(GroupIdSchema.and(MemberIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -166,6 +194,7 @@ export const groupRouter = router({
     }),
 
   removeMember: systemProcedure
+    .use(writeLimiter)
     .input(GroupIdSchema.and(MemberIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -174,6 +203,7 @@ export const groupRouter = router({
     }),
 
   listMembers: systemProcedure
+    .use(readLimiter)
     .input(
       GroupIdSchema.and(
         z.object({

@@ -46,8 +46,12 @@ import {
   restoreEntityType,
   updateEntityType,
 } from "../../services/structure-entity-type.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for structure list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -76,17 +80,22 @@ export const structureRouter = router({
   // ── Entity Types ─────────────────────────────────────────────────
 
   createType: systemProcedure
+    .use(writeLimiter)
     .input(CreateStructureEntityTypeBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return createEntityType(ctx.db, ctx.systemId, input, ctx.auth, audit);
     }),
 
-  getType: systemProcedure.input(EntityTypeIdSchema).query(async ({ ctx, input }) => {
-    return getEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth);
-  }),
+  getType: systemProcedure
+    .use(readLimiter)
+    .input(EntityTypeIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth);
+    }),
 
   listTypes: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -103,6 +112,7 @@ export const structureRouter = router({
     }),
 
   updateType: systemProcedure
+    .use(writeLimiter)
     .input(EntityTypeIdSchema.and(UpdateStructureEntityTypeBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -116,41 +126,58 @@ export const structureRouter = router({
       );
     }),
 
-  archiveType: systemProcedure.input(EntityTypeIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archiveType: systemProcedure
+    .use(writeLimiter)
+    .input(EntityTypeIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restoreType: systemProcedure.input(EntityTypeIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
-  }),
+  restoreType: systemProcedure
+    .use(writeLimiter)
+    .input(EntityTypeIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
+    }),
 
-  deleteType: systemProcedure.input(EntityTypeIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteType: systemProcedure
+    .use(writeLimiter)
+    .input(EntityTypeIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   // ── Structure Entities ───────────────────────────────────────────
 
   createEntity: systemProcedure
+    .use(writeLimiter)
     .input(CreateStructureEntityBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return createStructureEntity(ctx.db, ctx.systemId, input, ctx.auth, audit);
     }),
 
-  getEntity: systemProcedure.input(EntityIdSchema).query(async ({ ctx, input }) => {
-    return getStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
-  }),
+  getEntity: systemProcedure
+    .use(readLimiter)
+    .input(EntityIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
+    }),
 
-  getHierarchy: systemProcedure.input(EntityIdSchema).query(async ({ ctx, input }) => {
-    return getEntityHierarchy(ctx.db, ctx.systemId, input.entityId, ctx.auth);
-  }),
+  getHierarchy: systemProcedure
+    .use(readLimiter)
+    .input(EntityIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getEntityHierarchy(ctx.db, ctx.systemId, input.entityId, ctx.auth);
+    }),
 
   listEntities: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -169,6 +196,7 @@ export const structureRouter = router({
     }),
 
   updateEntity: systemProcedure
+    .use(writeLimiter)
     .input(EntityIdSchema.and(UpdateStructureEntityBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -187,26 +215,36 @@ export const structureRouter = router({
       );
     }),
 
-  archiveEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archiveEntity: systemProcedure
+    .use(writeLimiter)
+    .input(EntityIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restoreEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
-  }),
+  restoreEntity: systemProcedure
+    .use(writeLimiter)
+    .input(EntityIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+    }),
 
-  deleteEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteEntity: systemProcedure
+    .use(writeLimiter)
+    .input(EntityIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   // ── Entity Links ─────────────────────────────────────────────────
 
   createLink: systemProcedure
+    .use(writeLimiter)
     .input(CreateStructureEntityLinkBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -214,6 +252,7 @@ export const structureRouter = router({
     }),
 
   listLinks: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -228,6 +267,7 @@ export const structureRouter = router({
     }),
 
   updateLink: systemProcedure
+    .use(writeLimiter)
     .input(LinkIdSchema.and(UpdateStructureEntityLinkBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -241,15 +281,19 @@ export const structureRouter = router({
       );
     }),
 
-  deleteLink: systemProcedure.input(LinkIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteEntityLink(ctx.db, ctx.systemId, input.linkId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteLink: systemProcedure
+    .use(writeLimiter)
+    .input(LinkIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteEntityLink(ctx.db, ctx.systemId, input.linkId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   // ── Entity Member Links ──────────────────────────────────────────
 
   createMemberLink: systemProcedure
+    .use(writeLimiter)
     .input(CreateStructureEntityMemberLinkBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -257,6 +301,7 @@ export const structureRouter = router({
     }),
 
   listMemberLinks: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -270,15 +315,19 @@ export const structureRouter = router({
       });
     }),
 
-  deleteMemberLink: systemProcedure.input(MemberLinkIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteEntityMemberLink(ctx.db, ctx.systemId, input.memberLinkId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteMemberLink: systemProcedure
+    .use(writeLimiter)
+    .input(MemberLinkIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteEntityMemberLink(ctx.db, ctx.systemId, input.memberLinkId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   // ── Entity Associations ──────────────────────────────────────────
 
   createAssociation: systemProcedure
+    .use(writeLimiter)
     .input(CreateStructureEntityAssociationBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -286,6 +335,7 @@ export const structureRouter = router({
     }),
 
   listAssociations: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -299,9 +349,12 @@ export const structureRouter = router({
       });
     }),
 
-  deleteAssociation: systemProcedure.input(AssociationIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteEntityAssociation(ctx.db, ctx.systemId, input.associationId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteAssociation: systemProcedure
+    .use(writeLimiter)
+    .input(AssociationIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteEntityAssociation(ctx.db, ctx.systemId, input.associationId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });
