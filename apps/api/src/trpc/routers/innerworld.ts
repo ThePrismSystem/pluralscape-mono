@@ -12,6 +12,7 @@ import { getCanvas, upsertCanvas } from "../../services/innerworld-canvas.servic
 import {
   archiveEntity,
   createEntity,
+  deleteEntity,
   getEntity,
   listEntities,
   restoreEntity,
@@ -20,6 +21,7 @@ import {
 import {
   archiveRegion,
   createRegion,
+  deleteRegion,
   getRegion,
   listRegions,
   restoreRegion,
@@ -94,6 +96,12 @@ export const innerworldRouter = router({
     return restoreEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
   }),
 
+  deleteEntity: systemProcedure.input(EntityIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await deleteEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth, audit);
+    return { success: true as const };
+  }),
+
   // ── Region procedures ────────────────────────────────────────────
 
   createRegion: systemProcedure.input(CreateRegionBodySchema).mutation(async ({ ctx, input }) => {
@@ -144,6 +152,12 @@ export const innerworldRouter = router({
   restoreRegion: systemProcedure.input(RegionIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
     return restoreRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
+  }),
+
+  deleteRegion: systemProcedure.input(RegionIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await deleteRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth, audit);
+    return { success: true as const };
   }),
 
   // ── Canvas procedures ────────────────────────────────────────────

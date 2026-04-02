@@ -8,6 +8,7 @@ import { z } from "zod/v4";
 import {
   archiveTimerConfig,
   createTimerConfig,
+  deleteTimerConfig,
   getTimerConfig,
   listTimerConfigs,
   restoreTimerConfig,
@@ -65,5 +66,11 @@ export const timerConfigRouter = router({
   restore: systemProcedure.input(TimerIdSchema).mutation(async ({ ctx, input }) => {
     const audit = ctx.createAudit(ctx.auth);
     return restoreTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
+  }),
+
+  delete: systemProcedure.input(TimerIdSchema).mutation(async ({ ctx, input }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await deleteTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth, audit);
+    return { success: true as const };
   }),
 });

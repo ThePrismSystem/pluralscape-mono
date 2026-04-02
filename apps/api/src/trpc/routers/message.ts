@@ -1,5 +1,6 @@
 import {
   CreateMessageBodySchema,
+  MessageTimestampQuerySchema,
   UpdateMessageBodySchema,
   brandedIdQueryParam,
 } from "@pluralscape/validation";
@@ -8,6 +9,7 @@ import { z } from "zod/v4";
 import {
   archiveMessage,
   createMessage,
+  deleteMessage,
   getMessage,
   listMessages,
   restoreMessage,
@@ -86,5 +88,15 @@ export const messageRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return restoreMessage(ctx.db, ctx.systemId, input.messageId, ctx.auth, audit);
+    }),
+
+  delete: systemProcedure
+    .input(ChannelScopeSchema.and(MessageIdSchema).and(MessageTimestampQuerySchema))
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteMessage(ctx.db, ctx.systemId, input.messageId, ctx.auth, audit, {
+        timestamp: input.timestamp,
+      });
+      return { success: true as const };
     }),
 });
