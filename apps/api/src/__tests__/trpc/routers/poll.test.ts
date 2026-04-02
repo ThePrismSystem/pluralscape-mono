@@ -404,6 +404,14 @@ describe("poll router", () => {
       expect(vi.mocked(listVotes).mock.calls[0]?.[2]).toBe(POLL_ID);
       expect(result).toEqual(mockResult);
     });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(listVotes).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Poll not found"));
+      const caller = createCaller();
+      await expect(caller.poll.listVotes({ systemId: SYSTEM_ID, pollId: POLL_ID })).rejects.toThrow(
+        expect.objectContaining({ code: "NOT_FOUND" }),
+      );
+    });
   });
 
   // ── updateVote ────────────────────────────────────────────────────
@@ -425,6 +433,38 @@ describe("poll router", () => {
       expect(vi.mocked(updatePollVote).mock.calls[0]?.[2]).toBe(POLL_ID);
       expect(vi.mocked(updatePollVote).mock.calls[0]?.[3]).toBe(VOTE_ID);
       expect(result).toEqual(MOCK_VOTE_RESULT);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(updatePollVote).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Vote not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.poll.updateVote({
+          systemId: SYSTEM_ID,
+          pollId: POLL_ID,
+          voteId: VOTE_ID,
+          optionId: null,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+
+    it("surfaces ApiHttpError(409) POLL_CLOSED as CONFLICT", async () => {
+      vi.mocked(updatePollVote).mockRejectedValue(
+        new ApiHttpError(409, "POLL_CLOSED", "Poll is closed"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.poll.updateVote({
+          systemId: SYSTEM_ID,
+          pollId: POLL_ID,
+          voteId: VOTE_ID,
+          optionId: null,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
   });
 
@@ -476,6 +516,16 @@ describe("poll router", () => {
       expect(vi.mocked(getPollResults).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
       expect(vi.mocked(getPollResults).mock.calls[0]?.[2]).toBe(POLL_ID);
       expect(result).toEqual(mockResults);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(getPollResults).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Poll not found"),
+      );
+      const caller = createCaller();
+      await expect(caller.poll.results({ systemId: SYSTEM_ID, pollId: POLL_ID })).rejects.toThrow(
+        expect.objectContaining({ code: "NOT_FOUND" }),
+      );
     });
   });
 });
