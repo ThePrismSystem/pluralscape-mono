@@ -1,6 +1,7 @@
 import { RATE_LIMITS } from "@pluralscape/types";
 import { TRPCError } from "@trpc/server";
 
+import { logger } from "../../lib/logger.js";
 import { checkRateLimit } from "../../middleware/rate-limit.js";
 import { middleware } from "../trpc.js";
 
@@ -15,8 +16,21 @@ const MS_PER_SECOND = 1_000;
 
 type KeyExtractor = (ctx: Pick<TRPCContext, "auth" | "requestMeta">, input: unknown) => string;
 
+// Once-flag to avoid per-request log spam when IP is unavailable
+let ipFallbackWarningLogged = false;
+
 /** Extract rate-limit key from client IP (default). */
-export const ipKeyExtractor: KeyExtractor = (ctx) => ctx.requestMeta.ipAddress ?? GLOBAL_KEY;
+export const ipKeyExtractor: KeyExtractor = (ctx) => {
+  if (ctx.requestMeta.ipAddress) return ctx.requestMeta.ipAddress;
+  if (!ipFallbackWarningLogged) {
+    ipFallbackWarningLogged = true;
+    logger.warn(
+      "tRPC rate limiter: IP address unavailable, using global rate-limit bucket. " +
+        "All unauthenticated requests share a single limit.",
+    );
+  }
+  return GLOBAL_KEY;
+};
 
 /** Extract rate-limit key from authenticated account ID. */
 export const accountKeyExtractor: KeyExtractor = (ctx) => {
