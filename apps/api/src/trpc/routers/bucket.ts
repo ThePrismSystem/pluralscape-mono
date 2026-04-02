@@ -111,7 +111,7 @@ export const bucketRouter = router({
   // ── Friend assignments ──────────────────────────────────────────────
 
   assignFriend: systemProcedure
-    .input(BucketIdSchema.and(AssignBucketBodySchema))
+    .input(BucketIdSchema.and(ConnectionIdSchema).and(AssignBucketBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return assignBucketToFriend(
