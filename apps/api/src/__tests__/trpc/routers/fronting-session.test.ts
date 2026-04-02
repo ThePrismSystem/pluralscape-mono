@@ -109,6 +109,8 @@ describe("frontingSession router", () => {
         encryptedData: VALID_ENCRYPTED_DATA,
         startTime: START_TIME,
         memberId: MEMBER_ID,
+        customFrontId: undefined,
+        structureEntityId: undefined,
       });
 
       expect(vi.mocked(createFrontingSession)).toHaveBeenCalledOnce();
@@ -124,14 +126,19 @@ describe("frontingSession router", () => {
           encryptedData: VALID_ENCRYPTED_DATA,
           startTime: START_TIME,
           memberId: MEMBER_ID,
+          customFrontId: undefined,
+          structureEntityId: undefined,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
 
     it("rejects input missing both memberId and customFrontId (no subject)", async () => {
       const caller = makeCaller();
+      const createWithUnknownInput = caller.frontingSession.create as (
+        input: Record<string, unknown>,
+      ) => Promise<unknown>;
       await expect(
-        caller.frontingSession.create({
+        createWithUnknownInput({
           systemId: SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           startTime: START_TIME,
