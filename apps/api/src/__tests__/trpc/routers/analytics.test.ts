@@ -175,7 +175,7 @@ describe("analytics router", () => {
   it("applies rate limiting to queries", async () => {
     const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
     vi.mocked(checkRateLimit).mockClear();
-    vi.mocked(computeFrontingBreakdown).mockResolvedValue({ breakdown: [], totalMs: 0 });
+    vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
     const caller = createCaller();
     await caller.analytics.fronting({ systemId: SYSTEM_ID });
     expect(vi.mocked(checkRateLimit)).toHaveBeenCalled();
