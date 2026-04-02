@@ -55,7 +55,7 @@ interface InitiateTransferInput {
   readonly encryptedKeyMaterialHex: string;
 }
 
-interface InitiateTransferResult {
+export interface InitiateTransferResult {
   readonly transferId: string;
   readonly expiresAt: UnixMillis;
 }
@@ -189,7 +189,7 @@ export async function approveTransfer(
 
 // ── Complete transfer ─────────────────────────────────────────────────
 
-interface CompleteTransferResult {
+export interface CompleteTransferResult {
   readonly encryptedKeyMaterialHex: string;
 }
 
