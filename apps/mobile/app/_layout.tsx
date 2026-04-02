@@ -12,6 +12,7 @@ import { getApiBaseUrl } from "../src/config.js";
 import { ConnectionManager, ConnectionProvider } from "../src/connection/index.js";
 import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
+import { TRPCProvider } from "../src/providers/trpc-provider.js";
 import { SyncProvider } from "../src/sync/index.js";
 
 import type { TokenStore } from "../src/auth/index.js";
@@ -199,17 +200,22 @@ export default function RootLayout(): React.JSX.Element {
           resources,
         }}
       >
-        <QueryClientProvider client={queryClientRef.current}>
-          <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
-            <ConnectionProvider manager={connectionManagerRef.current}>
-              <SyncProvider>
-                <AuthGate>
-                  <Slot />
-                </AuthGate>
-              </SyncProvider>
-            </ConnectionProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+        <TRPCProvider
+          queryClient={queryClientRef.current}
+          getToken={tokenStore.getToken.bind(tokenStore)}
+        >
+          <QueryClientProvider client={queryClientRef.current}>
+            <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
+              <ConnectionProvider manager={connectionManagerRef.current}>
+                <SyncProvider>
+                  <AuthGate>
+                    <Slot />
+                  </AuthGate>
+                </SyncProvider>
+              </ConnectionProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </TRPCProvider>
       </I18nProvider>
     </PlatformProvider>
   );
