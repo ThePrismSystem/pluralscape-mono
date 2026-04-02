@@ -6,6 +6,7 @@ import { frontingSessionRouter } from "./routers/fronting-session.js";
 import { groupRouter } from "./routers/group.js";
 import { memberPhotoRouter } from "./routers/member-photo.js";
 import { memberRouter } from "./routers/member.js";
+import { systemSettingsRouter } from "./routers/system-settings.js";
 import { systemRouter } from "./routers/system.js";
 import { router } from "./trpc.js";
 
@@ -26,6 +27,7 @@ export const appRouter = router({
   member: memberRouter,
   memberPhoto: memberPhotoRouter,
   system: systemRouter,
+  systemSettings: systemSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;
