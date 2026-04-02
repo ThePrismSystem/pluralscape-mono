@@ -97,6 +97,7 @@ describe("acknowledgement router", () => {
       const result = await caller.acknowledgement.create({
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
+        createdByMemberId: undefined,
       });
 
       expect(vi.mocked(createAcknowledgement)).toHaveBeenCalledOnce();
@@ -110,6 +111,7 @@ describe("acknowledgement router", () => {
         caller.acknowledgement.create({
           systemId: SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
+          createdByMemberId: undefined,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
@@ -121,6 +123,7 @@ describe("acknowledgement router", () => {
         caller.acknowledgement.create({
           systemId: foreignSystemId,
           encryptedData: VALID_ENCRYPTED_DATA,
+          createdByMemberId: undefined,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });

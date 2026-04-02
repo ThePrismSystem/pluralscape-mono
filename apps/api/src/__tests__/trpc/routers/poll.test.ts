@@ -133,6 +133,7 @@ describe("poll router", () => {
         systemId: SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         kind: "standard",
+        createdByMemberId: undefined,
         allowMultipleVotes: false,
         maxVotesPerMember: 1,
         allowAbstain: false,
@@ -151,7 +152,7 @@ describe("poll router", () => {
           systemId: SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           kind: "standard",
-
+          createdByMemberId: undefined,
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
           allowAbstain: false,
@@ -168,7 +169,7 @@ describe("poll router", () => {
           systemId: foreignSystemId,
           encryptedData: VALID_ENCRYPTED_DATA,
           kind: "standard",
-
+          createdByMemberId: undefined,
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
           allowAbstain: false,
