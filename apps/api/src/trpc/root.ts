@@ -1,5 +1,6 @@
 import { authRouter } from "./routers/auth.js";
 import { memberRouter } from "./routers/member.js";
+import { systemRouter } from "./routers/system.js";
 import { router } from "./trpc.js";
 
 /**
@@ -12,6 +13,7 @@ import { router } from "./trpc.js";
 export const appRouter = router({
   auth: authRouter,
   member: memberRouter,
+  system: systemRouter,
 });
 
 export type AppRouter = typeof appRouter;
