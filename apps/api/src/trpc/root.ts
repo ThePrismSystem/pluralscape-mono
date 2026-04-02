@@ -1,3 +1,4 @@
+import { acknowledgementRouter } from "./routers/acknowledgement.js";
 import { analyticsRouter } from "./routers/analytics.js";
 import { authRouter } from "./routers/auth.js";
 import { boardMessageRouter } from "./routers/board-message.js";
@@ -16,6 +17,7 @@ import { memberPhotoRouter } from "./routers/member-photo.js";
 import { memberRouter } from "./routers/member.js";
 import { messageRouter } from "./routers/message.js";
 import { noteRouter } from "./routers/note.js";
+import { pollRouter } from "./routers/poll.js";
 import { relationshipRouter } from "./routers/relationship.js";
 import { systemSettingsRouter } from "./routers/system-settings.js";
 import { systemRouter } from "./routers/system.js";
@@ -29,6 +31,7 @@ import { router } from "./trpc.js";
  * 2. Import and add it here
  */
 export const appRouter = router({
+  acknowledgement: acknowledgementRouter,
   analytics: analyticsRouter,
   auth: authRouter,
   boardMessage: boardMessageRouter,
@@ -47,6 +50,7 @@ export const appRouter = router({
   memberPhoto: memberPhotoRouter,
   message: messageRouter,
   note: noteRouter,
+  poll: pollRouter,
   relationship: relationshipRouter,
   system: systemRouter,
   systemSettings: systemSettingsRouter,
