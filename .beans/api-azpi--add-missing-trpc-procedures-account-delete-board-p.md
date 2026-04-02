@@ -1,10 +1,11 @@
 ---
 # api-azpi
 title: Add missing tRPC procedures (account delete, board pin/unpin, key rotation, misc)
-status: todo
+status: completed
 type: task
+priority: normal
 created_at: 2026-04-02T09:47:15Z
-updated_at: 2026-04-02T09:47:15Z
+updated_at: 2026-04-02T10:56:44Z
 ---
 
 Add remaining missing procedures:
@@ -16,3 +17,5 @@ Add remaining missing procedures:
 - deviceToken.update (systemProcedure)
 - apiKey.get (systemProcedure)
   See audit Domains 2, 6, 9, 11, 15.
+
+## Summary of Changes\n\nAdded boardMessage.pin/unpin, 5 bucket rotation procedures, structure.getHierarchy, deviceToken.update, apiKey.get
