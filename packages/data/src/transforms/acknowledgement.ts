@@ -1,14 +1,7 @@
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type {
-  AcknowledgementId,
-  AcknowledgementRequest,
-  ArchivedAcknowledgementRequest,
-  MemberId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { AcknowledgementId, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Wire types (API response shapes) ─────────────────────────────────
 
@@ -16,7 +9,7 @@ import type {
 interface AcknowledgementRaw {
   readonly id: AcknowledgementId;
   readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId;
+  readonly createdByMemberId: MemberId | null;
   readonly confirmed: boolean;
   readonly encryptedData: string;
   readonly version: number;
@@ -45,6 +38,24 @@ export interface AcknowledgementEncryptedFields {
   readonly confirmedAt: UnixMillis | null;
 }
 
+// ── Decrypted output type ─────────────────────────────────────────────
+
+/** A fully decrypted acknowledgement, combining wire metadata with plaintext fields. */
+export interface AcknowledgementDecrypted {
+  readonly id: AcknowledgementId;
+  readonly systemId: SystemId;
+  readonly createdByMemberId: MemberId | null;
+  readonly targetMemberId: MemberId;
+  readonly message: string;
+  readonly confirmed: boolean;
+  readonly confirmedAt: UnixMillis | null;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly version: number;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertAcknowledgementEncryptedFields(
@@ -65,7 +76,7 @@ function assertAcknowledgementEncryptedFields(
 // ── Acknowledgement transforms ────────────────────────────────────────
 
 /**
- * Decrypt a single acknowledgement request API result into an `AcknowledgementRequest`.
+ * Decrypt a single acknowledgement request API result.
  *
  * The encrypted blob contains: `message`, `targetMemberId`, `confirmedAt`.
  * All other fields pass through from the wire payload.
@@ -73,11 +84,11 @@ function assertAcknowledgementEncryptedFields(
 export function decryptAcknowledgement(
   raw: AcknowledgementRaw,
   masterKey: KdfMasterKey,
-): AcknowledgementRequest | ArchivedAcknowledgementRequest {
+): AcknowledgementDecrypted {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertAcknowledgementEncryptedFields(plaintext);
 
-  const base = {
+  return {
     id: raw.id,
     systemId: raw.systemId,
     createdByMemberId: raw.createdByMemberId,
@@ -85,16 +96,12 @@ export function decryptAcknowledgement(
     message: plaintext.message,
     confirmed: raw.confirmed,
     confirmedAt: plaintext.confirmedAt,
+    archived: raw.archived,
+    archivedAt: raw.archivedAt,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
-
-  if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived acknowledgement missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
-  }
-  return { ...base, archived: false as const };
 }
 
 /**
@@ -103,10 +110,7 @@ export function decryptAcknowledgement(
 export function decryptAcknowledgementPage(
   raw: AcknowledgementPage,
   masterKey: KdfMasterKey,
-): {
-  data: (AcknowledgementRequest | ArchivedAcknowledgementRequest)[];
-  nextCursor: string | null;
-} {
+): { data: AcknowledgementDecrypted[]; nextCursor: string | null } {
   return {
     data: raw.data.map((item) => decryptAcknowledgement(item, masterKey)),
     nextCursor: raw.nextCursor,
@@ -115,9 +119,6 @@ export function decryptAcknowledgementPage(
 
 /**
  * Encrypt acknowledgement plaintext fields for create payloads.
- *
- * Returns `{ encryptedData: string }` — pass the spread of this into the
- * `CreateAcknowledgementBodySchema`.
  */
 export function encryptAcknowledgementInput(
   data: AcknowledgementEncryptedFields,
@@ -128,9 +129,6 @@ export function encryptAcknowledgementInput(
 
 /**
  * Encrypt acknowledgement plaintext fields for update payloads.
- *
- * Returns `{ encryptedData: string; version: number }` — pass the spread of this
- * into the `UpdateAcknowledgementBodySchema`.
  */
 export function encryptAcknowledgementUpdate(
   data: AcknowledgementEncryptedFields,
@@ -142,12 +140,7 @@ export function encryptAcknowledgementUpdate(
 
 /**
  * Encrypt acknowledgement plaintext fields for confirm mutations.
- *
- * The confirm mutation sends a full encrypted blob (not a versioned update),
- * so this uses `encryptInput` rather than `encryptUpdate`.
- *
- * Returns `{ encryptedData: string }` — pass the spread of this into the
- * `ConfirmAcknowledgementBodySchema`.
+ * Uses `encryptInput` (not versioned update) since confirm sends a full blob.
  */
 export function encryptAcknowledgementConfirm(
   data: AcknowledgementEncryptedFields,

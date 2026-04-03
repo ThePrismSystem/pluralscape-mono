@@ -99,12 +99,14 @@ describe("decryptAcknowledgement", () => {
     expect(result.message).toBe("Please acknowledge this.");
   });
 
-  it("throws when archived is true but archivedAt is null", () => {
+  it("handles archived with null archivedAt", () => {
     const raw = makeServerAcknowledgement(makeEncryptedFields(), {
       archived: true,
       archivedAt: null,
     });
-    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow("missing archivedAt");
+    const result = decryptAcknowledgement(raw, masterKey);
+    expect(result.archived).toBe(true);
+    expect(result.archivedAt).toBeNull();
   });
 });
 
@@ -117,7 +119,9 @@ describe("decryptAcknowledgementPage", () => {
 
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("cursor-token");
-    result.data.forEach((a) => { expect(a.message).toBe("Please acknowledge this."); });
+    result.data.forEach((a) => {
+      expect(a.message).toBe("Please acknowledge this.");
+    });
   });
 
   it("handles null cursor", () => {

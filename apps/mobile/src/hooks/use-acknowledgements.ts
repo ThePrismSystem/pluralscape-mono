@@ -16,17 +16,14 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  AcknowledgementId,
-  AcknowledgementRequest,
-  ArchivedAcknowledgementRequest,
-} from "@pluralscape/types";
+import type { AcknowledgementDecrypted } from "@pluralscape/data/transforms/acknowledgement";
+import type { AcknowledgementId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawAcknowledgement = RouterOutput["acknowledgement"]["get"];
 type RawAcknowledgementPage = RouterOutput["acknowledgement"]["list"];
 type AcknowledgementPage = {
-  readonly data: (AcknowledgementRequest | ArchivedAcknowledgementRequest)[];
+  readonly data: AcknowledgementDecrypted[];
   readonly nextCursor: string | null;
 };
 
@@ -39,7 +36,7 @@ interface AcknowledgementListOpts extends SystemIdOverride {
 export function useAcknowledgement(
   ackId: AcknowledgementId,
   opts?: SystemIdOverride,
-): TRPCQuery<AcknowledgementRequest | ArchivedAcknowledgementRequest> {
+): TRPCQuery<AcknowledgementDecrypted> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -48,9 +45,7 @@ export function useAcknowledgement(
     { systemId, ackId },
     {
       enabled: masterKey !== null,
-      select: (
-        raw: RawAcknowledgement,
-      ): AcknowledgementRequest | ArchivedAcknowledgementRequest => {
+      select: (raw: RawAcknowledgement): AcknowledgementDecrypted => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptAcknowledgement(raw, masterKey);
       },

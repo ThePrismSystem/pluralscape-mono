@@ -151,4 +151,7 @@ export {
   encryptAcknowledgementUpdate,
   encryptAcknowledgementConfirm,
 } from "./transforms/acknowledgement.js";
-export type { AcknowledgementEncryptedFields } from "./transforms/acknowledgement.js";
+export type {
+  AcknowledgementDecrypted,
+  AcknowledgementEncryptedFields,
+} from "./transforms/acknowledgement.js";
