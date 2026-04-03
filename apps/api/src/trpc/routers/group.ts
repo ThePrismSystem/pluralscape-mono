@@ -218,7 +218,7 @@ export const groupRouter = router({
         ctx.systemId,
         input.groupId,
         ctx.auth,
-        input.cursor,
+        input.cursor ?? undefined,
         input.limit,
       );
     }),
