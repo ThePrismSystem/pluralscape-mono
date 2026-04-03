@@ -29,7 +29,9 @@ interface TRPCProviderProps {
  * Prevents React Query's isFetching from getting stuck when multiple requests
  * each trigger an independent token refresh.
  */
-function createMemoizedTokenGetter(getToken: () => Promise<string | null>) {
+export function createMemoizedTokenGetter(
+  getToken: () => Promise<string | null>,
+): () => Promise<string | null> {
   let pending: Promise<string | null> | null = null;
   return () => {
     pending ??= getToken().finally(() => {
