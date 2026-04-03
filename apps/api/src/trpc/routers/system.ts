@@ -44,7 +44,7 @@ export const systemRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return listSystems(ctx.db, ctx.auth.accountId, input.cursor, input.limit);
+      return listSystems(ctx.db, ctx.auth.accountId, input.cursor ?? undefined, input.limit);
     }),
 
   update: systemProcedure

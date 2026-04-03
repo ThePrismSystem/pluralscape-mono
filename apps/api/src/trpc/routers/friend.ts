@@ -58,7 +58,7 @@ export const friendRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listFriendConnections(ctx.db, ctx.auth.accountId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         status: input.status,

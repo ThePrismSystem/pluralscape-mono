@@ -71,7 +71,7 @@ export const noteRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listNotes(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         authorEntityType: input.authorEntityType,

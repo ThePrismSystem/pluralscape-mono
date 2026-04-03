@@ -66,7 +66,7 @@ export const frontingSessionRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listFrontingSessions(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         memberId: input.memberId,
         customFrontId: input.customFrontId,

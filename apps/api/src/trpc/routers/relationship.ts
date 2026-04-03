@@ -60,7 +60,7 @@ export const relationshipRouter = router({
         ctx.db,
         ctx.systemId,
         ctx.auth,
-        input.cursor,
+        input.cursor ?? undefined,
         input.limit,
         input.memberId,
         input.type,

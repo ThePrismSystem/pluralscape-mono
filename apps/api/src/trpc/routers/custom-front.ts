@@ -59,7 +59,13 @@ export const customFrontRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return listCustomFronts(ctx.db, ctx.systemId, ctx.auth, input.cursor, input.limit);
+      return listCustomFronts(
+        ctx.db,
+        ctx.systemId,
+        ctx.auth,
+        input.cursor ?? undefined,
+        input.limit,
+      );
     }),
 
   update: systemProcedure

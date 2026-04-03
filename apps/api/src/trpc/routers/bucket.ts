@@ -97,7 +97,7 @@ export const bucketRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listBuckets(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });
@@ -273,7 +273,7 @@ export const bucketRouter = router({
         ctx.auth,
         input.entityType,
         input.limit,
-        input.cursor,
+        input.cursor ?? undefined,
       );
     }),
 

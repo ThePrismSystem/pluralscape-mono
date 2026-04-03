@@ -74,7 +74,7 @@ export const blobRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listBlobs(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });

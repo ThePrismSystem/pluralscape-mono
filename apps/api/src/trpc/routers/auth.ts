@@ -160,7 +160,7 @@ export const authRouter = router({
       }),
     )
     .query(async ({ input, ctx }) => {
-      return listSessions(ctx.db, ctx.auth.accountId, input.cursor, input.limit);
+      return listSessions(ctx.db, ctx.auth.accountId, input.cursor ?? undefined, input.limit);
     }),
 
   /**

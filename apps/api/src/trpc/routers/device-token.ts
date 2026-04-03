@@ -45,7 +45,7 @@ export const deviceTokenRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listDeviceTokens(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
       });
     }),

@@ -48,7 +48,7 @@ export const apiKeyRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listApiKeys(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeRevoked: input.includeRevoked,
       });

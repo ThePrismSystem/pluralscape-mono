@@ -64,7 +64,7 @@ export const messageRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listMessages(ctx.db, ctx.systemId, input.channelId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         before: input.before !== undefined ? toUnixMillis(input.before) : undefined,

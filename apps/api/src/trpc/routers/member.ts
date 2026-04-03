@@ -66,7 +66,7 @@ export const memberRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listMembers(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         groupId: input.groupId,
         includeArchived: input.includeArchived,

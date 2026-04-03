@@ -73,7 +73,7 @@ export const pollRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listPolls(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         status: input.status,
@@ -152,7 +152,7 @@ export const pollRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listVotes(ctx.db, ctx.systemId, input.pollId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });

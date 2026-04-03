@@ -105,7 +105,7 @@ export const structureRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listEntityTypes(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });
@@ -188,7 +188,7 @@ export const structureRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listStructureEntities(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         entityTypeId: input.entityTypeId,
@@ -261,7 +261,7 @@ export const structureRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listEntityLinks(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
       });
     }),
@@ -310,7 +310,7 @@ export const structureRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listEntityMemberLinks(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
       });
     }),
@@ -344,7 +344,7 @@ export const structureRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listEntityAssociations(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
       });
     }),

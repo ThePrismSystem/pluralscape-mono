@@ -33,7 +33,7 @@ export const webhookDeliveryRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listWebhookDeliveries(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         webhookId: input.webhookId,
         status: input.status,

@@ -54,7 +54,7 @@ export const frontingReportRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listFrontingReports(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
       });
     }),

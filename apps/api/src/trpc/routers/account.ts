@@ -258,7 +258,7 @@ export const accountRouter = router({
         resourceType: input.resource_type,
         from: input.from ?? 0,
         to: input.to ?? now,
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
       });
     }),

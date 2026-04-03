@@ -75,7 +75,7 @@ export const innerworldRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listEntities(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         regionId: input.regionId,
         includeArchived: input.includeArchived,
@@ -151,7 +151,7 @@ export const innerworldRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listRegions(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });

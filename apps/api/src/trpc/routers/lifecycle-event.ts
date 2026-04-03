@@ -59,7 +59,7 @@ export const lifecycleEventRouter = router({
         ctx.db,
         ctx.systemId,
         ctx.auth,
-        input.cursor,
+        input.cursor ?? undefined,
         input.limit,
         input.eventType,
         input.includeArchived,

@@ -43,7 +43,7 @@ export const webhookConfigRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listWebhookConfigs(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });

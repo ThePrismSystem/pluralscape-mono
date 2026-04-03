@@ -39,7 +39,13 @@ export const friendCodeRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return listFriendCodes(ctx.db, ctx.auth.accountId, ctx.auth, input.cursor, input.limit);
+      return listFriendCodes(
+        ctx.db,
+        ctx.auth.accountId,
+        ctx.auth,
+        input.cursor ?? undefined,
+        input.limit,
+      );
     }),
 
   /** Redeem a friend code to create a bidirectional friend connection. */

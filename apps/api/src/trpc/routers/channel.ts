@@ -55,7 +55,7 @@ export const channelRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listChannels(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });

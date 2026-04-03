@@ -61,7 +61,7 @@ export const frontingCommentRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listFrontingComments(ctx.db, ctx.systemId, input.sessionId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });

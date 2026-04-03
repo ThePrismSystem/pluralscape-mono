@@ -56,7 +56,7 @@ export const acknowledgementRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listAcknowledgements(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         confirmed: input.confirmed,

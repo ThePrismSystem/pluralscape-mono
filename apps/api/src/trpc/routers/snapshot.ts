@@ -46,7 +46,7 @@ export const snapshotRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return listSnapshots(ctx.db, ctx.systemId, ctx.auth, input.cursor, input.limit);
+      return listSnapshots(ctx.db, ctx.systemId, ctx.auth, input.cursor ?? undefined, input.limit);
     }),
 
   delete: systemProcedure
