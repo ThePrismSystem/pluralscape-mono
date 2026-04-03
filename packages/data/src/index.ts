@@ -10,7 +10,12 @@ export type {
 } from "./rest-query-factory.js";
 
 // --- Blob decode/encode ---
-export { decodeAndDecryptT1, encryptAndEncodeT1 } from "./transforms/decode-blob.js";
+export {
+  decodeAndDecryptT1,
+  encryptAndEncodeT1,
+  encryptInput,
+  encryptUpdate,
+} from "./transforms/decode-blob.js";
 
 // --- Domain crypto transforms ---
 export {
@@ -56,6 +61,7 @@ export {
   decryptNomenclature,
   encryptNomenclatureUpdate,
 } from "./transforms/system-settings.js";
+export type { DecryptedNomenclature } from "./transforms/system-settings.js";
 
 export {
   decryptFrontingSession,
@@ -72,8 +78,6 @@ export {
   encryptFrontingCommentUpdate,
 } from "./transforms/fronting-comment.js";
 export type { FrontingCommentEncryptedFields } from "./transforms/fronting-comment.js";
-
-export { toFrontingAnalytics, toCoFrontingAnalytics } from "./transforms/fronting-analytics.js";
 
 export {
   decryptFrontingReport,

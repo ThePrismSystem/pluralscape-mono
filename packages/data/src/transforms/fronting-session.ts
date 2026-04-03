@@ -1,4 +1,4 @@
-import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -125,7 +125,7 @@ export function encryptFrontingSessionInput(
   data: FrontingSessionEncryptedFields,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey) };
+  return encryptInput(data, masterKey);
 }
 
 /**
@@ -137,5 +137,5 @@ export function encryptFrontingSessionUpdate(
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey), version };
+  return encryptUpdate(data, version, masterKey);
 }

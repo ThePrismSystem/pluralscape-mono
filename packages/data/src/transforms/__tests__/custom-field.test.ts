@@ -137,7 +137,10 @@ describe("decryptFieldDefinitionPage", () => {
   });
 
   it("returns empty data array and null nextCursor for empty page", () => {
-    const raw = { data: [] as (typeof BASE_DEFINITION_RESULT)[], nextCursor: null };
+    const raw = {
+      data: [] as (typeof BASE_DEFINITION_RESULT & { encryptedData: string })[],
+      nextCursor: null,
+    };
     const result = decryptFieldDefinitionPage(raw, masterKey);
     expect(result.data).toHaveLength(0);
     expect(result.nextCursor).toBeNull();

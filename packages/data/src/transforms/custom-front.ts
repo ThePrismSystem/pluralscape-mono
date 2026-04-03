@@ -1,4 +1,4 @@
-import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
@@ -122,7 +122,7 @@ export function encryptCustomFrontInput(
   data: CustomFrontEncryptedFields,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey) };
+  return encryptInput(data, masterKey);
 }
 
 /**
@@ -136,5 +136,5 @@ export function encryptCustomFrontUpdate(
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey), version };
+  return encryptUpdate(data, version, masterKey);
 }

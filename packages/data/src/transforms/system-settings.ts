@@ -1,4 +1,4 @@
-import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
@@ -32,6 +32,13 @@ interface NomenclatureSettingsRaw {
   readonly updatedAt: UnixMillis;
 }
 
+// ── Decrypted output types ──────────────────────────────────────────
+
+/** Decrypted nomenclature with wire version for optimistic locking. */
+export interface DecryptedNomenclature extends NomenclatureSettings {
+  readonly version: number;
+}
+
 // ── Validators ───────────────────────────────────────────────────────
 
 function assertSystemSettings(raw: unknown): asserts raw is SystemSettings {
@@ -55,15 +62,25 @@ function assertNomenclatureSettings(raw: unknown): asserts raw is NomenclatureSe
 /**
  * Decrypt the T1-encrypted blob in a system settings server response.
  *
+ * Wire metadata (id, systemId, version, createdAt, updatedAt) is taken from
+ * the server response rather than the blob to avoid stale values.
+ *
  * Flow: base64 encryptedData → T1 blob → SystemSettings
  */
 export function decryptSystemSettings(
   raw: SystemSettingsRaw,
   masterKey: KdfMasterKey,
 ): SystemSettings {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertSystemSettings(plaintext);
-  return plaintext;
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertSystemSettings(decrypted);
+  return {
+    ...decrypted,
+    id: raw.id,
+    systemId: raw.systemId,
+    version: raw.version,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+  };
 }
 
 /**
@@ -76,10 +93,7 @@ export function encryptSystemSettingsUpdate(
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
-  return {
-    encryptedData: encryptAndEncodeT1(data, masterKey),
-    version,
-  };
+  return encryptUpdate(data, version, masterKey);
 }
 
 // ── Nomenclature settings transforms ─────────────────────────────────
@@ -87,15 +101,17 @@ export function encryptSystemSettingsUpdate(
 /**
  * Decrypt the T1-encrypted blob in a nomenclature settings server response.
  *
- * Flow: base64 encryptedData → T1 blob → NomenclatureSettings
+ * Preserves `version` from the wire response for optimistic locking.
+ *
+ * Flow: base64 encryptedData → T1 blob → DecryptedNomenclature
  */
 export function decryptNomenclature(
   raw: NomenclatureSettingsRaw,
   masterKey: KdfMasterKey,
-): NomenclatureSettings {
-  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
-  assertNomenclatureSettings(plaintext);
-  return plaintext;
+): DecryptedNomenclature {
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertNomenclatureSettings(decrypted);
+  return { ...decrypted, version: raw.version };
 }
 
 /**
@@ -108,8 +124,5 @@ export function encryptNomenclatureUpdate(
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
-  return {
-    encryptedData: encryptAndEncodeT1(data, masterKey),
-    version,
-  };
+  return encryptUpdate(data, version, masterKey);
 }

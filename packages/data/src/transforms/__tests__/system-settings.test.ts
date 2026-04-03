@@ -149,6 +149,31 @@ describe("decryptSystemSettings", () => {
     expect(result).toEqual(settings);
   });
 
+  it("preserves wire metadata over blob values", () => {
+    const blobSettings = makeSystemSettings({
+      version: 1,
+      createdAt: 100 as UnixMillis,
+      updatedAt: 200 as UnixMillis,
+    });
+    const raw = makeRawSystemSettings(makeBase64Blob(blobSettings, masterKey), 5);
+    // Override wire metadata to differ from blob
+    const rawWithWireMeta = {
+      ...raw,
+      id: "sys-settings-wire" as SystemSettingsId,
+      systemId: "system-wire" as SystemId,
+      version: 5,
+      createdAt: 999 as UnixMillis,
+      updatedAt: 1000 as UnixMillis,
+    };
+
+    const result = decryptSystemSettings(rawWithWireMeta, masterKey);
+    expect(result.id).toBe("sys-settings-wire");
+    expect(result.systemId).toBe("system-wire");
+    expect(result.version).toBe(5);
+    expect(result.createdAt).toBe(999);
+    expect(result.updatedAt).toBe(1000);
+  });
+
   it("decrypts settings with non-default theme and locale", () => {
     const settings = makeSystemSettings({ theme: "dark", locale: "en" as Locale | null });
     const raw = makeRawSystemSettings(makeBase64Blob(settings, masterKey));
@@ -179,13 +204,14 @@ describe("encryptSystemSettingsUpdate", () => {
     expect(result.version).toBe(3);
   });
 
-  it("round-trips: encrypt then decrypt yields original data", () => {
+  it("round-trips: encrypt then decrypt yields original data with wire version", () => {
     const settings = makeSystemSettings({ theme: "high-contrast", onboardingComplete: true });
     const { encryptedData, version } = encryptSystemSettingsUpdate(settings, 7, masterKey);
     const raw = makeRawSystemSettings(encryptedData, version);
 
     const decrypted = decryptSystemSettings(raw, masterKey);
-    expect(decrypted).toEqual(settings);
+    // Wire metadata (version, id, systemId, createdAt, updatedAt) comes from `raw`, not the blob
+    expect(decrypted).toEqual({ ...settings, version: 7 });
   });
 
   it("produces different ciphertext for different inputs", () => {
@@ -202,12 +228,20 @@ describe("encryptSystemSettingsUpdate", () => {
 // ── decryptNomenclature ──────────────────────────────────────────────
 
 describe("decryptNomenclature", () => {
-  it("decrypts T1 blob to NomenclatureSettings", () => {
+  it("decrypts T1 blob to DecryptedNomenclature with wire version", () => {
     const nomenclature = makeNomenclature();
-    const raw = makeRawNomenclature(makeBase64Blob(nomenclature, masterKey));
+    const raw = makeRawNomenclature(makeBase64Blob(nomenclature, masterKey), 3);
 
     const result = decryptNomenclature(raw, masterKey);
-    expect(result).toEqual(nomenclature);
+    expect(result).toMatchObject({ ...nomenclature, version: 3 });
+  });
+
+  it("preserves wire version over any version in the blob", () => {
+    const nomenclature = makeNomenclature();
+    const raw = makeRawNomenclature(makeBase64Blob(nomenclature, masterKey), 7);
+
+    const result = decryptNomenclature(raw, masterKey);
+    expect(result.version).toBe(7);
   });
 
   it("decrypts customised terminology", () => {
@@ -235,13 +269,13 @@ describe("encryptNomenclatureUpdate", () => {
     expect(result.version).toBe(2);
   });
 
-  it("round-trips: encrypt then decrypt yields original data", () => {
+  it("round-trips: encrypt then decrypt yields original data with version", () => {
     const nomenclature = makeNomenclature({ fronting: "Driving", "primary-fronter": "Captain" });
     const { encryptedData, version } = encryptNomenclatureUpdate(nomenclature, 5, masterKey);
     const raw = makeRawNomenclature(encryptedData, version);
 
     const decrypted = decryptNomenclature(raw, masterKey);
-    expect(decrypted).toEqual(nomenclature);
+    expect(decrypted).toMatchObject({ ...nomenclature, version: 5 });
   });
 
   it("produces different ciphertext on each call (nonce randomisation)", () => {

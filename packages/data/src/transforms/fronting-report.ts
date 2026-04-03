@@ -1,4 +1,4 @@
-import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptInput } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
@@ -82,5 +82,5 @@ export function encryptFrontingReportInput(
   data: FrontingReportEncryptedFields,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey) };
+  return encryptInput(data, masterKey);
 }
