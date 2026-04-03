@@ -1,5 +1,6 @@
 import { DATE_RANGE_PRESETS, MS_PER_DAY } from "@pluralscape/types";
 import { MAX_ANALYTICS_CUSTOM_RANGE_MS } from "@pluralscape/validation";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
 import {
@@ -77,7 +78,10 @@ function toDateRangeFilter(input: z.infer<typeof AnalyticsInputSchema>): DateRan
     if (startDate === undefined || endDate === undefined) {
       // Unreachable: Zod refinement rejects this combination before we get here.
       // The check exists solely so TypeScript narrows startDate/endDate to number.
-      throw new Error("invariant: custom preset requires startDate and endDate");
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "invariant: custom preset requires startDate and endDate",
+      });
     }
     return {
       preset: "custom",
