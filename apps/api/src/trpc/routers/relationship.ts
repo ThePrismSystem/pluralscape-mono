@@ -49,7 +49,7 @@ export const relationshipRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         memberId: z.string().optional(),
         type: z.enum(RELATIONSHIP_TYPES).optional(),

@@ -58,7 +58,7 @@ export const memberRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         groupId: brandedIdQueryParam("grp_").optional(),
         includeArchived: z.boolean().default(false),

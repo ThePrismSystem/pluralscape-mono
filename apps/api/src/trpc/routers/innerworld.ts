@@ -67,7 +67,7 @@ export const innerworldRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         regionId: brandedIdQueryParam("iwr_").optional(),
         includeArchived: z.boolean().default(false),
@@ -144,7 +144,7 @@ export const innerworldRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         includeArchived: z.boolean().default(false),
       }),

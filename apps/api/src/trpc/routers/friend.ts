@@ -50,7 +50,7 @@ export const friendRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).default(DEFAULT_LIST_LIMIT),
         includeArchived: z.boolean().default(false),
         status: z.enum(["pending", "accepted", "blocked", "removed"]).optional(),

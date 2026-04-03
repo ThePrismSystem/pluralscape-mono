@@ -65,7 +65,7 @@ export const pollRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         includeArchived: z.boolean().default(false),
         status: z.enum(["open", "closed"]).optional(),
@@ -144,7 +144,7 @@ export const pollRouter = router({
     .input(
       PollIdSchema.and(
         z.object({
-          cursor: z.string().optional(),
+          cursor: z.string().nullish(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
           includeArchived: z.boolean().default(false),
         }),

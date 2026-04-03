@@ -53,7 +53,7 @@ export const noteRouter = router({
     .input(
       z
         .object({
-          cursor: z.string().optional(),
+          cursor: z.string().nullish(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
           includeArchived: z.boolean().default(false),
           authorEntityType: z.enum(NOTE_AUTHOR_ENTITY_TYPES).optional(),

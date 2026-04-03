@@ -90,7 +90,7 @@ export const bucketRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         includeArchived: z.boolean().default(false),
       }),
@@ -261,7 +261,7 @@ export const bucketRouter = router({
         z.object({
           entityType: z.enum(BUCKET_CONTENT_ENTITY_TYPES),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT),
-          cursor: z.string().optional(),
+          cursor: z.string().nullish(),
         }),
       ),
     )
