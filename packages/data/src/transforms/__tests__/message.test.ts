@@ -134,7 +134,9 @@ describe("decryptMessagePage", () => {
 
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("msg_cursor");
-    result.data.forEach((m) => { expect(m.content).toBe("Hello, world!"); });
+    result.data.forEach((m) => {
+      expect(m.content).toBe("Hello, world!");
+    });
   });
 
   it("handles null cursor and empty data", () => {

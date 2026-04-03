@@ -107,7 +107,9 @@ describe("decryptBoardMessagePage", () => {
 
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("bm_cursor");
-    result.data.forEach((m) => { expect(m.content).toBe("A board message from the host."); });
+    result.data.forEach((m) => {
+      expect(m.content).toBe("A board message from the host.");
+    });
   });
 
   it("handles null cursor and empty data", () => {

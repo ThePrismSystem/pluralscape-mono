@@ -111,7 +111,9 @@ describe("decryptChannelPage", () => {
 
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("cursor-token");
-    result.data.forEach((c) => { expect(c.name).toBe("general"); });
+    result.data.forEach((c) => {
+      expect(c.name).toBe("general");
+    });
   });
 
   it("handles null cursor", () => {
