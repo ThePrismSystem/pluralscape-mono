@@ -317,6 +317,9 @@ importers:
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@trpc/server':
+        specifier: 11.16.0
+        version: 11.16.0(typescript@6.0.2)
       eslint:
         specifier: ^10.0.3
         version: 10.1.0(jiti@2.6.1)
