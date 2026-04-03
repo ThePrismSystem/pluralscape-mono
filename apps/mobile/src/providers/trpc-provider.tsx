@@ -69,7 +69,10 @@ export function TRPCProvider({
           condition: (op) => op.type === "subscription",
           true: httpSubscriptionLink({
             url,
-            headers: sharedHeaders,
+            connectionParams: async () => {
+              const token = await getMemoizedToken();
+              return token ? { token } : {};
+            },
           }),
           false: httpBatchLink({
             url,
