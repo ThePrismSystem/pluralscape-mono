@@ -1,10 +1,4 @@
-import {
-  configureSodium,
-  encryptTier1,
-  generateMasterKey,
-  initSodium,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
+import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -14,6 +8,8 @@ import {
   encryptFrontingSessionInput,
   encryptFrontingSessionUpdate,
 } from "../fronting-session.js";
+
+import { makeBase64Blob } from "./helpers.js";
 
 import type { FrontingSessionEncryptedFields } from "../fronting-session.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -32,20 +28,6 @@ beforeAll(async () => {
   await initSodium();
   masterKey = generateMasterKey();
 });
-
-/** Encode Uint8Array to base64 without Buffer (matches runtime in packages/data). */
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-function makeEncryptedData(fields: FrontingSessionEncryptedFields): string {
-  const blob = encryptTier1(fields, masterKey);
-  return toBase64(serializeEncryptedBlob(blob));
-}
 
 /** Minimal raw server response for a fronting session. */
 function makeRawSession(
@@ -68,7 +50,7 @@ function makeRawSession(
     structureEntityId: null,
     startTime: 1700000000000 as UnixMillis,
     endTime: overrides.endTime !== undefined ? overrides.endTime : null,
-    encryptedData: makeEncryptedData(fields),
+    encryptedData: makeBase64Blob(fields, masterKey),
     version: 1,
     archived: false as const,
     archivedAt: null,

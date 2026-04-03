@@ -1,10 +1,4 @@
-import {
-  configureSodium,
-  encryptTier1,
-  generateMasterKey,
-  initSodium,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
+import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -15,23 +9,11 @@ import {
   encryptCustomFrontUpdate,
 } from "../custom-front.js";
 
+import { makeBase64Blob } from "./helpers.js";
+
 import type { CustomFrontEncryptedFields } from "../custom-front.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { CustomFrontId, HexColor, SystemId, UnixMillis } from "@pluralscape/types";
-
-/** Convert Uint8Array to base64 without Buffer (matches runtime in packages/data). */
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-/** Encrypt a value to a base64 T1 blob using the provided master key. */
-function makeEncryptedBlob(value: unknown, key: KdfMasterKey): string {
-  return toBase64(serializeEncryptedBlob(encryptTier1(value, key)));
-}
 
 let masterKey: KdfMasterKey;
 
@@ -59,7 +41,7 @@ function makeRawCustomFront(
   return {
     id: "cf_abc123" as CustomFrontId,
     systemId: "sys_xyz" as SystemId,
-    encryptedData: makeEncryptedBlob(fields, key),
+    encryptedData: makeBase64Blob(fields, key),
     version: 1,
     archived: false as const,
     archivedAt: null as UnixMillis | null,

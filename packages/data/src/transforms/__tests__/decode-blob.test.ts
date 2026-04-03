@@ -1,4 +1,3 @@
-
 import {
   configureSodium,
   encryptTier1,
@@ -11,6 +10,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { decodeAndDecryptT1, encryptAndEncodeT1 } from "../decode-blob.js";
 
+import { toBase64 } from "./helpers.js";
+
 import type { KdfMasterKey } from "@pluralscape/crypto";
 
 let masterKey: KdfMasterKey;
@@ -20,15 +21,6 @@ beforeAll(async () => {
   await initSodium();
   masterKey = generateMasterKey();
 });
-
-/** Convert Uint8Array to base64 without Buffer (matches runtime in packages/data). */
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
 
 describe("decodeAndDecryptT1", () => {
   it("decodes base64 and decrypts a T1 blob to plaintext", () => {

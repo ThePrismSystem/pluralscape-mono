@@ -1,10 +1,4 @@
-import {
-  configureSodium,
-  encryptTier1,
-  generateMasterKey,
-  initSodium,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
+import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -14,6 +8,8 @@ import {
   encryptNomenclatureUpdate,
   encryptSystemSettingsUpdate,
 } from "../system-settings.js";
+
+import { makeBase64Blob } from "./helpers.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
@@ -26,15 +22,6 @@ import type {
 } from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
-
-/** Convert Uint8Array to base64 without Buffer. */
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
 
 /** Build a minimal valid SystemSettings fixture. */
 function makeSystemSettings(overrides?: Partial<SystemSettings>): SystemSettings {
@@ -120,12 +107,6 @@ function makeNomenclature(overrides?: Partial<NomenclatureSettings>): Nomenclatu
   };
 }
 
-/** Encrypt data as T1 and return base64-encoded blob. */
-function encryptToBase64(data: unknown, key: KdfMasterKey): string {
-  const blob = encryptTier1(data, key);
-  return toBase64(serializeEncryptedBlob(blob));
-}
-
 /** Build a mock system settings server response. */
 function makeRawSystemSettings(encryptedData: string, version = 1) {
   return {
@@ -162,7 +143,7 @@ beforeAll(async () => {
 describe("decryptSystemSettings", () => {
   it("decrypts T1 blob to SystemSettings", () => {
     const settings = makeSystemSettings();
-    const raw = makeRawSystemSettings(encryptToBase64(settings, masterKey));
+    const raw = makeRawSystemSettings(makeBase64Blob(settings, masterKey));
 
     const result = decryptSystemSettings(raw, masterKey);
     expect(result).toEqual(settings);
@@ -170,7 +151,7 @@ describe("decryptSystemSettings", () => {
 
   it("decrypts settings with non-default theme and locale", () => {
     const settings = makeSystemSettings({ theme: "dark", locale: "en" as Locale | null });
-    const raw = makeRawSystemSettings(encryptToBase64(settings, masterKey));
+    const raw = makeRawSystemSettings(makeBase64Blob(settings, masterKey));
 
     const result = decryptSystemSettings(raw, masterKey);
     expect(result).toMatchObject({ theme: "dark", locale: "en" });
@@ -223,7 +204,7 @@ describe("encryptSystemSettingsUpdate", () => {
 describe("decryptNomenclature", () => {
   it("decrypts T1 blob to NomenclatureSettings", () => {
     const nomenclature = makeNomenclature();
-    const raw = makeRawNomenclature(encryptToBase64(nomenclature, masterKey));
+    const raw = makeRawNomenclature(makeBase64Blob(nomenclature, masterKey));
 
     const result = decryptNomenclature(raw, masterKey);
     expect(result).toEqual(nomenclature);
@@ -231,7 +212,7 @@ describe("decryptNomenclature", () => {
 
   it("decrypts customised terminology", () => {
     const nomenclature = makeNomenclature({ individual: "Alter", collective: "Collective" });
-    const raw = makeRawNomenclature(encryptToBase64(nomenclature, masterKey));
+    const raw = makeRawNomenclature(makeBase64Blob(nomenclature, masterKey));
 
     const result = decryptNomenclature(raw, masterKey);
     expect(result).toMatchObject({ individual: "Alter", collective: "Collective" });

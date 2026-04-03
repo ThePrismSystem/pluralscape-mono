@@ -1,10 +1,4 @@
-import {
-  configureSodium,
-  encryptTier1,
-  generateMasterKey,
-  initSodium,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
+import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -14,6 +8,8 @@ import {
   encryptFrontingCommentInput,
   encryptFrontingCommentUpdate,
 } from "../fronting-comment.js";
+
+import { makeBase64Blob } from "./helpers.js";
 
 import type { FrontingCommentEncryptedFields } from "../fronting-comment.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -37,17 +33,6 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-/** Encode a T1 blob to base64 without Buffer. */
-function makeBase64Blob(payload: unknown): string {
-  const blob = encryptTier1(payload, masterKey);
-  const bytes = serializeEncryptedBlob(blob);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
 const BASE_COMMENT_RESULT = {
   id: "fcom_test001" as FrontingCommentId,
   frontingSessionId: "fs_test001" as FrontingSessionId,
@@ -69,7 +54,7 @@ describe("decryptFrontingComment", () => {
     const encrypted: FrontingCommentEncryptedFields = {
       content: "This is a fronting comment.",
     };
-    const raw = { ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
 
     const result = decryptFrontingComment(raw, masterKey);
 
@@ -92,7 +77,7 @@ describe("decryptFrontingComment", () => {
       ...BASE_COMMENT_RESULT,
       memberId: null,
       customFrontId: "cf_001" as CustomFrontId,
-      encryptedData: makeBase64Blob(encrypted),
+      encryptedData: makeBase64Blob(encrypted, masterKey),
     };
 
     const result = decryptFrontingComment(raw, masterKey);
@@ -117,12 +102,15 @@ describe("decryptFrontingComment", () => {
   it("throws when blob was encrypted with a different key", () => {
     const otherKey = generateMasterKey();
     const encrypted: FrontingCommentEncryptedFields = { content: "secret" };
-    const raw = { ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
     expect(() => decryptFrontingComment(raw, otherKey)).toThrow();
   });
 
   it("throws when decrypted blob is missing content field", () => {
-    const raw = { ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob({ notContent: "oops" }) };
+    const raw = {
+      ...BASE_COMMENT_RESULT,
+      encryptedData: makeBase64Blob({ notContent: "oops" }, masterKey),
+    };
     expect(() => decryptFrontingComment(raw, masterKey)).toThrow();
   });
 });
@@ -133,7 +121,7 @@ describe("decryptFrontingCommentPage", () => {
   it("decrypts all items and passes through nextCursor", () => {
     const encrypted: FrontingCommentEncryptedFields = { content: "Page item." };
     const raw = {
-      items: [{ ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted) }],
+      items: [{ ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) }],
       nextCursor: "fcom_cursor_abc",
     };
 
@@ -158,12 +146,12 @@ describe("decryptFrontingCommentPage", () => {
         {
           ...BASE_COMMENT_RESULT,
           id: "fcom_001" as FrontingCommentId,
-          encryptedData: makeBase64Blob(enc1),
+          encryptedData: makeBase64Blob(enc1, masterKey),
         },
         {
           ...BASE_COMMENT_RESULT,
           id: "fcom_002" as FrontingCommentId,
-          encryptedData: makeBase64Blob(enc2),
+          encryptedData: makeBase64Blob(enc2, masterKey),
         },
       ],
       nextCursor: null,

@@ -1,10 +1,4 @@
-import {
-  configureSodium,
-  encryptTier1,
-  generateMasterKey,
-  initSodium,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
+import { configureSodium, generateMasterKey, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -16,6 +10,8 @@ import {
   encryptFieldDefinitionInput,
   encryptFieldValueInput,
 } from "../custom-field.js";
+
+import { makeBase64Blob } from "./helpers.js";
 
 import type { FieldDefinitionEncryptedFields, FieldValueDecrypted } from "../custom-field.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -30,17 +26,6 @@ beforeAll(async () => {
   await initSodium();
   masterKey = generateMasterKey();
 });
-
-/** Encode a T1 blob to base64 without Buffer. */
-function makeBase64Blob(payload: unknown): string {
-  const blob = encryptTier1(payload, masterKey);
-  const bytes = serializeEncryptedBlob(blob);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
 
 const BASE_DEFINITION_RESULT = {
   id: "fld_test123" as FieldDefinitionId,
@@ -76,7 +61,7 @@ describe("decryptFieldDefinition", () => {
       description: "Preferred pronoun",
       options: null,
     };
-    const raw = { ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
 
     const result = decryptFieldDefinition(raw, masterKey);
 
@@ -103,7 +88,7 @@ describe("decryptFieldDefinition", () => {
     const raw = {
       ...BASE_DEFINITION_RESULT,
       fieldType: "select" as const,
-      encryptedData: makeBase64Blob(encrypted),
+      encryptedData: makeBase64Blob(encrypted, masterKey),
     };
 
     const result = decryptFieldDefinition(raw, masterKey);
@@ -125,7 +110,7 @@ describe("decryptFieldDefinition", () => {
       description: null,
       options: null,
     };
-    const raw = { ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
     expect(() => decryptFieldDefinition(raw, otherKey)).toThrow();
   });
 });
@@ -140,7 +125,7 @@ describe("decryptFieldDefinitionPage", () => {
       options: null,
     };
     const raw = {
-      items: [{ ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted) }],
+      items: [{ ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) }],
       nextCursor: "cursor_abc",
     };
 
@@ -174,13 +159,13 @@ describe("decryptFieldDefinitionPage", () => {
         {
           ...BASE_DEFINITION_RESULT,
           id: "fld_001" as FieldDefinitionId,
-          encryptedData: makeBase64Blob(enc1),
+          encryptedData: makeBase64Blob(enc1, masterKey),
         },
         {
           ...BASE_DEFINITION_RESULT,
           id: "fld_002" as FieldDefinitionId,
           fieldType: "multi-select" as const,
-          encryptedData: makeBase64Blob(enc2),
+          encryptedData: makeBase64Blob(enc2, masterKey),
         },
       ],
       nextCursor: null,
@@ -233,7 +218,7 @@ describe("encryptFieldDefinitionInput", () => {
 describe("decryptFieldValue", () => {
   it("decrypts a text field value", () => {
     const encrypted = { fieldType: "text" as const, value: "they/them" };
-    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
 
     const result = decryptFieldValue(raw, masterKey);
 
@@ -248,7 +233,7 @@ describe("decryptFieldValue", () => {
 
   it("decrypts a number field value", () => {
     const encrypted = { fieldType: "number" as const, value: 42 };
-    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
 
     const result = decryptFieldValue(raw, masterKey);
     expect(result.fieldType).toBe("number");
@@ -257,7 +242,7 @@ describe("decryptFieldValue", () => {
 
   it("decrypts a boolean field value", () => {
     const encrypted = { fieldType: "boolean" as const, value: false };
-    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
 
     const result = decryptFieldValue(raw, masterKey);
     expect(result.fieldType).toBe("boolean");
@@ -266,7 +251,7 @@ describe("decryptFieldValue", () => {
 
   it("decrypts a multi-select field value", () => {
     const encrypted = { fieldType: "multi-select" as const, value: ["host", "gatekeeper"] };
-    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
 
     const result = decryptFieldValue(raw, masterKey);
     expect(result.fieldType).toBe("multi-select");
@@ -279,14 +264,17 @@ describe("decryptFieldValue", () => {
   });
 
   it("throws when decrypted blob payload is not a valid FieldValueUnion", () => {
-    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob({ unexpected: true }) };
+    const raw = {
+      ...BASE_VALUE_RESULT,
+      encryptedData: makeBase64Blob({ unexpected: true }, masterKey),
+    };
     expect(() => decryptFieldValue(raw, masterKey)).toThrow();
   });
 
   it("throws when blob was encrypted with a different key", () => {
     const otherKey = generateMasterKey();
     const encrypted = { fieldType: "text" as const, value: "x" };
-    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted) };
+    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) };
     expect(() => decryptFieldValue(raw, otherKey)).toThrow();
   });
 });
@@ -298,8 +286,16 @@ describe("decryptFieldValueList", () => {
     const enc1 = { fieldType: "text" as const, value: "Alice" };
     const enc2 = { fieldType: "number" as const, value: 30 };
     const raw = [
-      { ...BASE_VALUE_RESULT, id: "fv_001" as FieldValueId, encryptedData: makeBase64Blob(enc1) },
-      { ...BASE_VALUE_RESULT, id: "fv_002" as FieldValueId, encryptedData: makeBase64Blob(enc2) },
+      {
+        ...BASE_VALUE_RESULT,
+        id: "fv_001" as FieldValueId,
+        encryptedData: makeBase64Blob(enc1, masterKey),
+      },
+      {
+        ...BASE_VALUE_RESULT,
+        id: "fv_002" as FieldValueId,
+        encryptedData: makeBase64Blob(enc2, masterKey),
+      },
     ];
 
     const result = decryptFieldValueList(raw, masterKey);
@@ -357,7 +353,7 @@ describe("FieldValueDecrypted shape", () => {
     const raw = {
       ...BASE_VALUE_RESULT,
       memberId: "mem_xyz" as import("@pluralscape/types").MemberId,
-      encryptedData: makeBase64Blob(encrypted),
+      encryptedData: makeBase64Blob(encrypted, masterKey),
     };
 
     const result: FieldValueDecrypted = decryptFieldValue(raw, masterKey);
