@@ -16,11 +16,14 @@ export type { TrackedEnvelope, TrackedData } from "@trpc/server/unstable-core-do
  * Service errors are also caught by the errorMapper middleware (error-mapper.ts)
  * and re-thrown as TRPCError with the correct code.
  */
+const SSE_PING_INTERVAL_MS = 5_000;
+const SSE_RECONNECT_AFTER_INACTIVITY_MS = 15_000;
+
 const t = initTRPC.context<TRPCContext>().create({
   isDev: process.env.NODE_ENV === "development",
   sse: {
-    ping: { enabled: true, intervalMs: 2_000 },
-    client: { reconnectAfterInactivityMs: 5_000 },
+    ping: { enabled: true, intervalMs: SSE_PING_INTERVAL_MS },
+    client: { reconnectAfterInactivityMs: SSE_RECONNECT_AFTER_INACTIVITY_MS },
   },
   errorFormatter({ shape, error }) {
     const cause = error.cause;
