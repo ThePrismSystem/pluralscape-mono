@@ -1,3 +1,4 @@
+import { logger } from "./logger.js";
 import { getNotificationPubSub } from "./notification-pubsub.js";
 
 import type { EntityChangeEvent, SystemId } from "@pluralscape/types";
@@ -29,11 +30,78 @@ export async function subscribeToEntityChanges(
   if (!pubsub) return null;
   const channel = `entity-change:${systemId}:${entity}`;
   const messageHandler = (message: string): void => {
-    const parsed = JSON.parse(message) as EntityChangeEvent;
+    let parsed: EntityChangeEvent;
+    try {
+      parsed = JSON.parse(message) as EntityChangeEvent;
+    } catch {
+      logger.error(`[entity-pubsub] Malformed JSON on channel ${channel}:`, { message });
+      return;
+    }
     handler(parsed);
   };
   await pubsub.subscribe(channel, messageHandler);
   return async () => {
     await pubsub.unsubscribe(channel, messageHandler);
   };
+}
+
+/**
+ * Async generator that yields entity change events from Valkey pub/sub.
+ *
+ * Fixes several issues vs inline generators:
+ * - JSON.parse is guarded (malformed messages are logged + skipped)
+ * - AbortSignal breaks the waiting promise immediately
+ * - No race condition between queue drain and resolve installation
+ * - Returns immediately if pub/sub is unavailable
+ */
+export async function* entityChangeGenerator<T extends EntityChangeEvent>(
+  systemId: SystemId,
+  entity: T["entity"],
+  signal: AbortSignal | undefined,
+  filter?: (event: T) => boolean,
+): AsyncGenerator<T> {
+  const queue: T[] = [];
+  let resolve: (() => void) | null = null;
+
+  const notify = (): void => {
+    resolve?.();
+  };
+
+  const unsubscribe = await subscribeToEntityChanges(systemId, entity, (event) => {
+    const typed = event as T;
+    if (!filter || filter(typed)) {
+      queue.push(typed);
+      notify();
+    }
+  });
+
+  // If pub/sub is unavailable, return immediately instead of hanging
+  if (unsubscribe === null) return;
+
+  // Break the waiting promise when the signal aborts
+  const onAbort = (): void => {
+    notify();
+  };
+  signal?.addEventListener("abort", onAbort);
+
+  try {
+    while (!signal?.aborted) {
+      // Drain the queue
+      while (queue.length > 0) {
+        const event = queue.shift();
+        if (event) yield event;
+      }
+      // Wait for next event or abort — resolve is set BEFORE the await
+      // so events arriving between drain and await are not lost
+      await new Promise<void>((r) => {
+        resolve = r;
+        // Check queue again after installing resolve to close the race window
+        if (queue.length > 0) r();
+      });
+      resolve = null;
+    }
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+    await unsubscribe();
+  }
 }
