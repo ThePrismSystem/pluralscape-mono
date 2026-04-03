@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { IDBFactory } from "fake-indexeddb";
 import React from "react";
 import { renderToString } from "react-dom/server";
@@ -46,6 +47,10 @@ beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
 });
 
+function makeQueryClient(): QueryClient {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
 async function makeProviderDeps(): Promise<{
   machine: AuthStateMachine;
   tokenStore: TokenStore;
@@ -66,9 +71,11 @@ describe("AuthProvider", () => {
     }
 
     renderToString(
-      <AuthProvider machine={machine} tokenStore={tokenStore}>
-        <Consumer />
-      </AuthProvider>,
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthProvider machine={machine} tokenStore={tokenStore}>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
     );
 
     expect(snapshots).toHaveLength(1);
@@ -110,9 +117,11 @@ describe("AuthProvider", () => {
     }
 
     renderToString(
-      <AuthProvider machine={machine} tokenStore={failingTokenStore}>
-        <Consumer />
-      </AuthProvider>,
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthProvider machine={machine} tokenStore={failingTokenStore}>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
     );
 
     const auth = captured[0] as AuthContextValue;
@@ -136,9 +145,11 @@ describe("AuthProvider", () => {
     }
 
     renderToString(
-      <AuthProvider machine={machine} tokenStore={tokenStore}>
-        <Consumer />
-      </AuthProvider>,
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthProvider machine={machine} tokenStore={tokenStore}>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
     );
 
     const auth = captured[0] as AuthContextValue;
@@ -166,9 +177,11 @@ describe("AuthProvider", () => {
     }
 
     renderToString(
-      <AuthProvider machine={machine} tokenStore={tokenStore}>
-        <Consumer />
-      </AuthProvider>,
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthProvider machine={machine} tokenStore={tokenStore}>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
     );
 
     const auth = captured[0] as AuthContextValue;
@@ -195,9 +208,11 @@ describe("AuthProvider", () => {
     }
 
     renderToString(
-      <AuthProvider machine={machine} tokenStore={failingTokenStore}>
-        <Consumer />
-      </AuthProvider>,
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthProvider machine={machine} tokenStore={failingTokenStore}>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
     );
 
     const auth = captured[0] as AuthContextValue;
@@ -219,9 +234,11 @@ describe("AuthProvider", () => {
     }
 
     renderToString(
-      <AuthProvider machine={machine} tokenStore={tokenStore}>
-        <Consumer />
-      </AuthProvider>,
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthProvider machine={machine} tokenStore={tokenStore}>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
     );
 
     const auth = captured[0] as AuthContextValue;
@@ -243,9 +260,11 @@ describe("AuthProvider", () => {
     }
 
     renderToString(
-      <AuthProvider machine={machine} tokenStore={tokenStore}>
-        <Consumer />
-      </AuthProvider>,
+      <QueryClientProvider client={makeQueryClient()}>
+        <AuthProvider machine={machine} tokenStore={tokenStore}>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
     );
 
     const auth = captured[0] as AuthContextValue;

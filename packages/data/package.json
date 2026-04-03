@@ -4,7 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./transforms/member": "./src/transforms/member.ts",
+    "./transforms/group": "./src/transforms/group.ts",
+    "./transforms/custom-front": "./src/transforms/custom-front.ts",
+    "./transforms/custom-field": "./src/transforms/custom-field.ts",
+    "./transforms/system-settings": "./src/transforms/system-settings.ts",
+    "./transforms/fronting-session": "./src/transforms/fronting-session.ts",
+    "./transforms/fronting-comment": "./src/transforms/fronting-comment.ts",
+    "./transforms/fronting-report": "./src/transforms/fronting-report.ts",
+    "./transforms/timer-check-in": "./src/transforms/timer-check-in.ts"
   },
   "scripts": {
     "test": "vitest run",

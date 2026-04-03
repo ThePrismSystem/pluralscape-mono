@@ -12,6 +12,8 @@ import { getApiBaseUrl } from "../src/config.js";
 import { ConnectionManager, ConnectionProvider } from "../src/connection/index.js";
 import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
+import { CryptoProvider } from "../src/providers/crypto-provider.js";
+import { SystemProvider } from "../src/providers/system-provider.js";
 import { TRPCProvider } from "../src/providers/trpc-provider.js";
 import { SyncProvider } from "../src/sync/index.js";
 
@@ -114,6 +116,18 @@ function LockScreen(): React.JSX.Element {
   );
 }
 
+function AuthBridgeProviders({ children }: { readonly children: ReactNode }): React.JSX.Element {
+  const { snapshot } = useAuth();
+  const systemId = snapshot.credentials?.systemId ?? null;
+  const masterKey = snapshot.state === "unlocked" ? snapshot.session.masterKey : null;
+
+  return (
+    <SystemProvider systemId={systemId}>
+      <CryptoProvider masterKey={masterKey}>{children}</CryptoProvider>
+    </SystemProvider>
+  );
+}
+
 function AuthGate({ children }: { readonly children: ReactNode }): React.JSX.Element {
   const { snapshot } = useAuth();
 
@@ -209,13 +223,15 @@ export default function RootLayout(): React.JSX.Element {
             onUnauthorized={() => authMachineRef.current?.dispatch({ type: "LOGOUT" })}
           >
             <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
-              <ConnectionProvider manager={connectionManagerRef.current}>
-                <SyncProvider>
-                  <AuthGate>
-                    <Slot />
-                  </AuthGate>
-                </SyncProvider>
-              </ConnectionProvider>
+              <AuthBridgeProviders>
+                <ConnectionProvider manager={connectionManagerRef.current}>
+                  <SyncProvider>
+                    <AuthGate>
+                      <Slot />
+                    </AuthGate>
+                  </SyncProvider>
+                </ConnectionProvider>
+              </AuthBridgeProviders>
             </AuthProvider>
           </TRPCProvider>
         </QueryClientProvider>

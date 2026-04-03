@@ -8,3 +8,90 @@ export type {
   RestQueryOptsWithDecrypt,
   RestQueryOptsPlain,
 } from "./rest-query-factory.js";
+
+// --- Blob decode/encode ---
+export {
+  decodeAndDecryptT1,
+  encryptAndEncodeT1,
+  encryptInput,
+  encryptUpdate,
+} from "./transforms/decode-blob.js";
+
+// --- Domain crypto transforms ---
+export {
+  decryptMember,
+  decryptMemberPage,
+  encryptMemberInput,
+  encryptMemberUpdate,
+} from "./transforms/member.js";
+export type { MemberEncryptedFields } from "./transforms/member.js";
+
+export {
+  decryptGroup,
+  decryptGroupPage,
+  encryptGroupInput,
+  encryptGroupUpdate,
+} from "./transforms/group.js";
+export type { GroupEncryptedFields } from "./transforms/group.js";
+
+export {
+  decryptCustomFront,
+  decryptCustomFrontPage,
+  encryptCustomFrontInput,
+  encryptCustomFrontUpdate,
+} from "./transforms/custom-front.js";
+export type { CustomFrontEncryptedFields } from "./transforms/custom-front.js";
+
+export {
+  decryptFieldDefinition,
+  decryptFieldDefinitionPage,
+  encryptFieldDefinitionInput,
+  decryptFieldValue,
+  decryptFieldValueList,
+  encryptFieldValueInput,
+} from "./transforms/custom-field.js";
+export type {
+  FieldDefinitionEncryptedFields,
+  FieldValueDecrypted,
+} from "./transforms/custom-field.js";
+
+export {
+  decryptSystemSettings,
+  encryptSystemSettingsUpdate,
+  decryptNomenclature,
+  encryptNomenclatureUpdate,
+} from "./transforms/system-settings.js";
+export type { DecryptedNomenclature } from "./transforms/system-settings.js";
+
+export {
+  decryptFrontingSession,
+  decryptFrontingSessionPage,
+  encryptFrontingSessionInput,
+  encryptFrontingSessionUpdate,
+} from "./transforms/fronting-session.js";
+export type { FrontingSessionEncryptedFields } from "./transforms/fronting-session.js";
+
+export {
+  decryptFrontingComment,
+  decryptFrontingCommentPage,
+  encryptFrontingCommentInput,
+  encryptFrontingCommentUpdate,
+} from "./transforms/fronting-comment.js";
+export type { FrontingCommentEncryptedFields } from "./transforms/fronting-comment.js";
+
+export {
+  decryptFrontingReport,
+  decryptFrontingReportPage,
+  encryptFrontingReportInput,
+} from "./transforms/fronting-report.js";
+export type { FrontingReportEncryptedFields } from "./transforms/fronting-report.js";
+
+export {
+  decryptTimerConfig,
+  decryptTimerConfigPage,
+  encryptTimerConfigInput,
+  encryptTimerConfigUpdate,
+  decryptCheckInRecord,
+  decryptCheckInRecordPage,
+} from "./transforms/timer-check-in.js";
+export type { TimerConfigEncryptedFields } from "./transforms/timer-check-in.js";

@@ -1,11 +1,11 @@
 ---
 # ps-0ph3
 title: Fronting data hooks
-status: todo
+status: in-progress
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:43Z
-updated_at: 2026-04-03T02:23:37Z
+updated_at: 2026-04-03T11:00:31Z
 parent: ps-7j8n
 ---
 
