@@ -3,6 +3,10 @@ import { z } from "zod/v4";
 
 import type { TRPCContext } from "./context.js";
 
+// Re-export TrackedEnvelope so TypeScript can name inferred router types
+// that include subscription procedures using `tracked()`.
+export type { TrackedEnvelope, TrackedData } from "@trpc/server/unstable-core-do-not-import";
+
 /**
  * tRPC initialization. Shares one `t` instance across all routers.
  *
