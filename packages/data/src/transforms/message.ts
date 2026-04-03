@@ -1,4 +1,11 @@
-import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
+import {
+  assertArrayField,
+  assertObjectBlob,
+  assertStringField,
+  decodeAndDecryptT1,
+  encryptInput,
+  encryptUpdate,
+} from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
@@ -52,22 +59,11 @@ export interface MessageEncryptedFields {
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertMessageEncryptedFields(raw: unknown): asserts raw is MessageEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted message blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["content"] !== "string") {
-    throw new Error("Decrypted message blob missing required string field: content");
-  }
-  if (typeof obj["senderId"] !== "string") {
-    throw new Error("Decrypted message blob missing required string field: senderId");
-  }
-  if (!Array.isArray(obj["attachments"])) {
-    throw new Error("Decrypted message blob missing required array field: attachments");
-  }
-  if (!Array.isArray(obj["mentions"])) {
-    throw new Error("Decrypted message blob missing required array field: mentions");
-  }
+  const obj = assertObjectBlob(raw, "message");
+  assertStringField(obj, "message", "content");
+  assertStringField(obj, "message", "senderId");
+  assertArrayField(obj, "message", "attachments");
+  assertArrayField(obj, "message", "mentions");
 }
 
 // ── Message transforms ────────────────────────────────────────────────

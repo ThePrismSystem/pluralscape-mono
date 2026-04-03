@@ -1,4 +1,10 @@
-import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
+import {
+  assertObjectBlob,
+  assertStringField,
+  decodeAndDecryptT1,
+  encryptInput,
+  encryptUpdate,
+} from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AcknowledgementId, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
@@ -61,16 +67,9 @@ export interface AcknowledgementDecrypted {
 function assertAcknowledgementEncryptedFields(
   raw: unknown,
 ): asserts raw is AcknowledgementEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted acknowledgement blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["message"] !== "string") {
-    throw new Error("Decrypted acknowledgement blob missing required string field: message");
-  }
-  if (typeof obj["targetMemberId"] !== "string") {
-    throw new Error("Decrypted acknowledgement blob missing required string field: targetMemberId");
-  }
+  const obj = assertObjectBlob(raw, "acknowledgement");
+  assertStringField(obj, "acknowledgement", "message");
+  assertStringField(obj, "acknowledgement", "targetMemberId");
 }
 
 // ── Acknowledgement transforms ────────────────────────────────────────

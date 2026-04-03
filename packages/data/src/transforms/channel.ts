@@ -1,4 +1,10 @@
-import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
+import {
+  assertObjectBlob,
+  assertStringField,
+  decodeAndDecryptT1,
+  encryptInput,
+  encryptUpdate,
+} from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { Archived, Channel, ChannelId, SystemId, UnixMillis } from "@pluralscape/types";
@@ -39,13 +45,8 @@ export interface ChannelEncryptedFields {
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertChannelEncryptedFields(raw: unknown): asserts raw is ChannelEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted channel blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["name"] !== "string") {
-    throw new Error("Decrypted channel blob missing required string field: name");
-  }
+  const obj = assertObjectBlob(raw, "channel");
+  assertStringField(obj, "channel", "name");
 }
 
 // ── Channel transforms ────────────────────────────────────────────────

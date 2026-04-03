@@ -1,4 +1,11 @@
-import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
+import {
+  assertArrayField,
+  assertObjectBlob,
+  assertStringField,
+  decodeAndDecryptT1,
+  encryptInput,
+  encryptUpdate,
+} from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
@@ -120,16 +127,9 @@ export interface PollVoteDecrypted {
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertPollEncryptedFields(raw: unknown): asserts raw is PollEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted poll blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["title"] !== "string") {
-    throw new Error("Decrypted poll blob missing required string field: title");
-  }
-  if (!Array.isArray(obj["options"])) {
-    throw new Error("Decrypted poll blob missing required array field: options");
-  }
+  const obj = assertObjectBlob(raw, "poll");
+  assertStringField(obj, "poll", "title");
+  assertArrayField(obj, "poll", "options");
 }
 
 // ── Poll transforms ───────────────────────────────────────────────────

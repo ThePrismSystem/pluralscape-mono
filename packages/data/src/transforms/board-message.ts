@@ -1,4 +1,10 @@
-import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
+import {
+  assertObjectBlob,
+  assertStringField,
+  decodeAndDecryptT1,
+  encryptInput,
+  encryptUpdate,
+} from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
@@ -48,16 +54,9 @@ export interface BoardMessageEncryptedFields {
 function assertBoardMessageEncryptedFields(
   raw: unknown,
 ): asserts raw is BoardMessageEncryptedFields {
-  if (raw === null || typeof raw !== "object") {
-    throw new Error("Decrypted board message blob is not an object");
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj["content"] !== "string") {
-    throw new Error("Decrypted board message blob missing required string field: content");
-  }
-  if (typeof obj["senderId"] !== "string") {
-    throw new Error("Decrypted board message blob missing required string field: senderId");
-  }
+  const obj = assertObjectBlob(raw, "board message");
+  assertStringField(obj, "board message", "content");
+  assertStringField(obj, "board message", "senderId");
 }
 
 // ── BoardMessage transforms ───────────────────────────────────────────
