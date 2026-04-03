@@ -73,7 +73,6 @@ export function TRPCProvider({
               const token = await getMemoizedToken();
               return token ? { token } : {};
             },
-            fetch: sharedFetch,
           }),
           false: httpBatchLink({
             url,

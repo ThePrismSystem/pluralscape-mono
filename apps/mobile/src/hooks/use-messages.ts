@@ -44,7 +44,7 @@ export function useMessage(
   const masterKey = useMasterKey();
 
   return trpc.message.get.useQuery(
-    { systemId, channelId, messageId, timestamp: opts?.timestamp },
+    { systemId, channelId, messageId },
     {
       enabled: masterKey !== null,
       select: (raw: RawMessage): ChatMessage | ArchivedChatMessage => {
