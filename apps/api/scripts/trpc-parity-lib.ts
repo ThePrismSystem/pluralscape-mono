@@ -567,8 +567,8 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "POST /v1/auth/register": "auth.register",
   "POST /v1/auth/login": "auth.login",
   "POST /v1/auth/logout": "auth.logout",
-  "GET /v1/auth/sessions": "auth.listSessions",
-  "DELETE /v1/auth/sessions/:id": "auth.revokeSession",
+  "GET /v1/auth/sessions": "auth.session.list",
+  "DELETE /v1/auth/sessions/:id": "auth.session.revoke",
   "POST /v1/auth/sessions/revoke-all": "auth.revokeAllSessions",
   "POST /v1/auth/password-reset/recovery-key": "auth.resetPasswordWithRecoveryKey",
   "GET /v1/auth/recovery-key/status": "account.getRecoveryKeyStatus",
@@ -577,7 +577,7 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "POST /v1/auth/biometric/verify": "account.verifyBiometric",
 
   // Account routes
-  "GET /v1/account": "account.getInfo",
+  "GET /v1/account": "account.get",
   "DELETE /v1/account": "account.deleteAccount",
   "PUT /v1/account/email": "account.changeEmail",
   "PUT /v1/account/password": "account.changePassword",
@@ -623,17 +623,17 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "POST /v1/systems/:id/purge": "system.purge",
 
   // System settings
-  "GET /v1/systems/:systemId/settings": "systemSettings.getSettings",
-  "PUT /v1/systems/:systemId/settings": "systemSettings.updateSettings",
-  "GET /v1/systems/:systemId/nomenclature": "systemSettings.getNomenclature",
-  "PUT /v1/systems/:systemId/nomenclature": "systemSettings.updateNomenclature",
-  "POST /v1/systems/:systemId/settings/pin": "systemSettings.setPin",
-  "DELETE /v1/systems/:systemId/settings/pin": "systemSettings.removePin",
-  "POST /v1/systems/:systemId/settings/pin/verify": "systemSettings.verifyPin",
-  "GET /v1/systems/:systemId/setup/status": "systemSettings.getSetupStatus",
-  "POST /v1/systems/:systemId/setup/nomenclature": "systemSettings.setupNomenclatureStep",
-  "POST /v1/systems/:systemId/setup/profile": "systemSettings.setupProfileStep",
-  "POST /v1/systems/:systemId/setup/complete": "systemSettings.setupComplete",
+  "GET /v1/systems/:systemId/settings": "systemSettings.settings.get",
+  "PUT /v1/systems/:systemId/settings": "systemSettings.settings.update",
+  "GET /v1/systems/:systemId/nomenclature": "systemSettings.nomenclature.get",
+  "PUT /v1/systems/:systemId/nomenclature": "systemSettings.nomenclature.update",
+  "POST /v1/systems/:systemId/settings/pin": "systemSettings.pin.set",
+  "DELETE /v1/systems/:systemId/settings/pin": "systemSettings.pin.remove",
+  "POST /v1/systems/:systemId/settings/pin/verify": "systemSettings.pin.verify",
+  "GET /v1/systems/:systemId/setup/status": "systemSettings.setup.getStatus",
+  "POST /v1/systems/:systemId/setup/nomenclature": "systemSettings.setup.nomenclatureStep",
+  "POST /v1/systems/:systemId/setup/profile": "systemSettings.setup.profileStep",
+  "POST /v1/systems/:systemId/setup/complete": "systemSettings.setup.complete",
 
   // Blobs
   "POST /v1/systems/:systemId/blobs/upload-url": "blob.createUploadUrl",
@@ -787,26 +787,26 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "DELETE /v1/systems/:systemId/lifecycle-events/:eventId": "lifecycleEvent.delete",
 
   // Innerworld entities
-  "POST /v1/systems/:systemId/innerworld/entities": "innerworld.createEntity",
-  "GET /v1/systems/:systemId/innerworld/entities": "innerworld.listEntities",
-  "GET /v1/systems/:systemId/innerworld/entities/:entityId": "innerworld.getEntity",
-  "PUT /v1/systems/:systemId/innerworld/entities/:entityId": "innerworld.updateEntity",
-  "POST /v1/systems/:systemId/innerworld/entities/:entityId/archive": "innerworld.archiveEntity",
-  "POST /v1/systems/:systemId/innerworld/entities/:entityId/restore": "innerworld.restoreEntity",
-  "DELETE /v1/systems/:systemId/innerworld/entities/:entityId": "innerworld.deleteEntity",
+  "POST /v1/systems/:systemId/innerworld/entities": "innerworld.entity.create",
+  "GET /v1/systems/:systemId/innerworld/entities": "innerworld.entity.list",
+  "GET /v1/systems/:systemId/innerworld/entities/:entityId": "innerworld.entity.get",
+  "PUT /v1/systems/:systemId/innerworld/entities/:entityId": "innerworld.entity.update",
+  "POST /v1/systems/:systemId/innerworld/entities/:entityId/archive": "innerworld.entity.archive",
+  "POST /v1/systems/:systemId/innerworld/entities/:entityId/restore": "innerworld.entity.restore",
+  "DELETE /v1/systems/:systemId/innerworld/entities/:entityId": "innerworld.entity.delete",
 
   // Innerworld regions
-  "POST /v1/systems/:systemId/innerworld/regions": "innerworld.createRegion",
-  "GET /v1/systems/:systemId/innerworld/regions": "innerworld.listRegions",
-  "GET /v1/systems/:systemId/innerworld/regions/:regionId": "innerworld.getRegion",
-  "PUT /v1/systems/:systemId/innerworld/regions/:regionId": "innerworld.updateRegion",
-  "POST /v1/systems/:systemId/innerworld/regions/:regionId/archive": "innerworld.archiveRegion",
-  "POST /v1/systems/:systemId/innerworld/regions/:regionId/restore": "innerworld.restoreRegion",
-  "DELETE /v1/systems/:systemId/innerworld/regions/:regionId": "innerworld.deleteRegion",
+  "POST /v1/systems/:systemId/innerworld/regions": "innerworld.region.create",
+  "GET /v1/systems/:systemId/innerworld/regions": "innerworld.region.list",
+  "GET /v1/systems/:systemId/innerworld/regions/:regionId": "innerworld.region.get",
+  "PUT /v1/systems/:systemId/innerworld/regions/:regionId": "innerworld.region.update",
+  "POST /v1/systems/:systemId/innerworld/regions/:regionId/archive": "innerworld.region.archive",
+  "POST /v1/systems/:systemId/innerworld/regions/:regionId/restore": "innerworld.region.restore",
+  "DELETE /v1/systems/:systemId/innerworld/regions/:regionId": "innerworld.region.delete",
 
   // Innerworld canvas
-  "GET /v1/systems/:systemId/innerworld/canvas": "innerworld.getCanvas",
-  "PUT /v1/systems/:systemId/innerworld/canvas": "innerworld.upsertCanvas",
+  "GET /v1/systems/:systemId/innerworld/canvas": "innerworld.canvas.get",
+  "PUT /v1/systems/:systemId/innerworld/canvas": "innerworld.canvas.upsert",
 
   // Analytics
   "GET /v1/systems/:systemId/analytics/fronting": "analytics.fronting",
@@ -938,43 +938,45 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "DELETE /v1/systems/:systemId/snapshots/:snapshotId": "snapshot.delete",
 
   // Structure - entity types
-  "POST /v1/systems/:systemId/structure/entity-types": "structure.createType",
-  "GET /v1/systems/:systemId/structure/entity-types": "structure.listTypes",
-  "GET /v1/systems/:systemId/structure/entity-types/:entityTypeId": "structure.getType",
-  "PUT /v1/systems/:systemId/structure/entity-types/:entityTypeId": "structure.updateType",
+  "POST /v1/systems/:systemId/structure/entity-types": "structure.entityType.create",
+  "GET /v1/systems/:systemId/structure/entity-types": "structure.entityType.list",
+  "GET /v1/systems/:systemId/structure/entity-types/:entityTypeId": "structure.entityType.get",
+  "PUT /v1/systems/:systemId/structure/entity-types/:entityTypeId": "structure.entityType.update",
   "POST /v1/systems/:systemId/structure/entity-types/:entityTypeId/archive":
-    "structure.archiveType",
+    "structure.entityType.archive",
   "POST /v1/systems/:systemId/structure/entity-types/:entityTypeId/restore":
-    "structure.restoreType",
-  "DELETE /v1/systems/:systemId/structure/entity-types/:entityTypeId": "structure.deleteType",
+    "structure.entityType.restore",
+  "DELETE /v1/systems/:systemId/structure/entity-types/:entityTypeId":
+    "structure.entityType.delete",
 
   // Structure - entities
-  "POST /v1/systems/:systemId/structure/entities": "structure.createEntity",
-  "GET /v1/systems/:systemId/structure/entities": "structure.listEntities",
-  "GET /v1/systems/:systemId/structure/entities/:entityId": "structure.getEntity",
-  "GET /v1/systems/:systemId/structure/entities/:entityId/hierarchy": "structure.getHierarchy",
-  "PUT /v1/systems/:systemId/structure/entities/:entityId": "structure.updateEntity",
-  "POST /v1/systems/:systemId/structure/entities/:entityId/archive": "structure.archiveEntity",
-  "POST /v1/systems/:systemId/structure/entities/:entityId/restore": "structure.restoreEntity",
-  "DELETE /v1/systems/:systemId/structure/entities/:entityId": "structure.deleteEntity",
+  "POST /v1/systems/:systemId/structure/entities": "structure.entity.create",
+  "GET /v1/systems/:systemId/structure/entities": "structure.entity.list",
+  "GET /v1/systems/:systemId/structure/entities/:entityId": "structure.entity.get",
+  "GET /v1/systems/:systemId/structure/entities/:entityId/hierarchy":
+    "structure.entity.getHierarchy",
+  "PUT /v1/systems/:systemId/structure/entities/:entityId": "structure.entity.update",
+  "POST /v1/systems/:systemId/structure/entities/:entityId/archive": "structure.entity.archive",
+  "POST /v1/systems/:systemId/structure/entities/:entityId/restore": "structure.entity.restore",
+  "DELETE /v1/systems/:systemId/structure/entities/:entityId": "structure.entity.delete",
 
   // Structure - entity links
-  "POST /v1/systems/:systemId/structure/entity-links": "structure.createLink",
-  "GET /v1/systems/:systemId/structure/entity-links": "structure.listLinks",
-  "PUT /v1/systems/:systemId/structure/entity-links/:linkId": "structure.updateLink",
-  "DELETE /v1/systems/:systemId/structure/entity-links/:linkId": "structure.deleteLink",
+  "POST /v1/systems/:systemId/structure/entity-links": "structure.link.create",
+  "GET /v1/systems/:systemId/structure/entity-links": "structure.link.list",
+  "PUT /v1/systems/:systemId/structure/entity-links/:linkId": "structure.link.update",
+  "DELETE /v1/systems/:systemId/structure/entity-links/:linkId": "structure.link.delete",
 
   // Structure - entity member links
-  "POST /v1/systems/:systemId/structure/entity-member-links": "structure.createMemberLink",
-  "GET /v1/systems/:systemId/structure/entity-member-links": "structure.listMemberLinks",
+  "POST /v1/systems/:systemId/structure/entity-member-links": "structure.memberLink.create",
+  "GET /v1/systems/:systemId/structure/entity-member-links": "structure.memberLink.list",
   "DELETE /v1/systems/:systemId/structure/entity-member-links/:linkId":
-    "structure.deleteMemberLink",
+    "structure.memberLink.delete",
 
   // Structure - entity associations
-  "POST /v1/systems/:systemId/structure/entity-associations": "structure.createAssociation",
-  "GET /v1/systems/:systemId/structure/entity-associations": "structure.listAssociations",
+  "POST /v1/systems/:systemId/structure/entity-associations": "structure.association.create",
+  "GET /v1/systems/:systemId/structure/entity-associations": "structure.association.list",
   "DELETE /v1/systems/:systemId/structure/entity-associations/:associationId":
-    "structure.deleteAssociation",
+    "structure.association.delete",
 };
 
 /**
