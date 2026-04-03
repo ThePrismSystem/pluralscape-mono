@@ -569,7 +569,7 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "POST /v1/auth/logout": "auth.logout",
   "GET /v1/auth/sessions": "auth.session.list",
   "DELETE /v1/auth/sessions/:id": "auth.session.revoke",
-  "POST /v1/auth/sessions/revoke-all": "auth.revokeAllSessions",
+  "POST /v1/auth/sessions/revoke-all": "auth.session.revokeAll",
   "POST /v1/auth/password-reset/recovery-key": "auth.resetPasswordWithRecoveryKey",
   "GET /v1/auth/recovery-key/status": "account.getRecoveryKeyStatus",
   "POST /v1/auth/recovery-key/regenerate": "account.regenerateRecoveryKey",
