@@ -25,24 +25,33 @@ type RawFrontingSessionPage = RouterOutput["frontingSession"]["list"];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function decryptFields(
-  encryptedData: string,
-  masterKey: KdfMasterKey,
-): FrontingSessionEncryptedFields {
-  const decrypted = decodeAndDecryptT1(encryptedData, masterKey);
-  const fields = decrypted as Record<string, unknown>;
-  return {
-    comment: typeof fields["comment"] === "string" ? fields["comment"] : null,
-    positionality: typeof fields["positionality"] === "string" ? fields["positionality"] : null,
-    outtrigger: typeof fields["outtrigger"] === "string" ? fields["outtrigger"] : null,
-    outtriggerSentiment: isOuttriggerSentiment(fields["outtriggerSentiment"])
-      ? fields["outtriggerSentiment"]
-      : null,
-  };
-}
-
 function isOuttriggerSentiment(value: unknown): value is OuttriggerSentiment {
   return value === "negative" || value === "neutral" || value === "positive";
+}
+
+// ── Validator ────────────────────────────────────────────────────────────────
+
+function assertFrontingSessionEncryptedFields(
+  raw: unknown,
+): asserts raw is FrontingSessionEncryptedFields {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("Decrypted fronting session blob is not an object");
+  }
+  const obj = raw as Record<string, unknown>;
+  if (obj["comment"] !== null && typeof obj["comment"] !== "string") {
+    throw new Error("Decrypted fronting session blob: comment must be string or null");
+  }
+  if (obj["positionality"] !== null && typeof obj["positionality"] !== "string") {
+    throw new Error("Decrypted fronting session blob: positionality must be string or null");
+  }
+  if (obj["outtrigger"] !== null && typeof obj["outtrigger"] !== "string") {
+    throw new Error("Decrypted fronting session blob: outtrigger must be string or null");
+  }
+  if (obj["outtriggerSentiment"] !== null && !isOuttriggerSentiment(obj["outtriggerSentiment"])) {
+    throw new Error(
+      "Decrypted fronting session blob: outtriggerSentiment must be a valid sentiment or null",
+    );
+  }
 }
 
 // ── Decrypt ───────────────────────────────────────────────────────────────────
@@ -55,7 +64,8 @@ export function decryptFrontingSession(
   raw: RawFrontingSession,
   masterKey: KdfMasterKey,
 ): FrontingSession {
-  const fields = decryptFields(raw.encryptedData, masterKey);
+  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertFrontingSessionEncryptedFields(plaintext);
 
   const base = {
     id: raw.id,
@@ -68,7 +78,10 @@ export function decryptFrontingSession(
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
-    ...fields,
+    comment: plaintext.comment ?? null,
+    positionality: plaintext.positionality ?? null,
+    outtrigger: plaintext.outtrigger ?? null,
+    outtriggerSentiment: plaintext.outtriggerSentiment ?? null,
   };
 
   if (raw.endTime === null) {

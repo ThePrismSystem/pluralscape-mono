@@ -11,7 +11,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 
-
 export interface TimerConfigEncryptedFields {
   readonly promptText: string;
 }
@@ -54,8 +53,23 @@ interface RawCheckInRecordList {
   readonly nextCursor: string | null;
 }
 
+// ── Validator ─────────────────────────────────────────────────────────
+
+function assertTimerConfigEncryptedFields(raw: unknown): asserts raw is TimerConfigEncryptedFields {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("Decrypted timer config blob is not an object");
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj["promptText"] !== "string") {
+    throw new Error("Decrypted timer config blob missing required string field: promptText");
+  }
+}
+
+// ── Timer config transforms ──────────────────────────────────────────
+
 export function decryptTimerConfig(raw: RawTimerConfig, masterKey: KdfMasterKey): TimerConfig {
-  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey) as TimerConfigEncryptedFields;
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertTimerConfigEncryptedFields(decrypted);
   return {
     id: raw.id,
     systemId: raw.systemId,

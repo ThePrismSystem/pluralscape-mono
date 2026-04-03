@@ -32,6 +32,24 @@ interface NomenclatureSettingsRaw {
   readonly updatedAt: UnixMillis;
 }
 
+// ── Validators ───────────────────────────────────────────────────────
+
+function assertSystemSettings(raw: unknown): asserts raw is SystemSettings {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("Decrypted system settings blob is not an object");
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj["theme"] !== "string") {
+    throw new Error("Decrypted system settings blob missing required string field: theme");
+  }
+}
+
+function assertNomenclatureSettings(raw: unknown): asserts raw is NomenclatureSettings {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("Decrypted nomenclature settings blob is not an object");
+  }
+}
+
 // ── System settings transforms ────────────────────────────────────────
 
 /**
@@ -43,7 +61,9 @@ export function decryptSystemSettings(
   raw: SystemSettingsRaw,
   masterKey: KdfMasterKey,
 ): SystemSettings {
-  return decodeAndDecryptT1(raw.encryptedData, masterKey) as SystemSettings;
+  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertSystemSettings(plaintext);
+  return plaintext;
 }
 
 /**
@@ -73,7 +93,9 @@ export function decryptNomenclature(
   raw: NomenclatureSettingsRaw,
   masterKey: KdfMasterKey,
 ): NomenclatureSettings {
-  return decodeAndDecryptT1(raw.encryptedData, masterKey) as NomenclatureSettings;
+  const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertNomenclatureSettings(plaintext);
+  return plaintext;
 }
 
 /**

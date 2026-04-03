@@ -9,6 +9,8 @@ import {
   encryptFrontingReportInput,
 } from "../fronting-report.js";
 
+import { makeBase64Blob } from "./helpers.js";
+
 import type { FrontingReportEncryptedFields } from "../fronting-report.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { FrontingReportId, SystemId, UnixMillis } from "@pluralscape/types";
@@ -102,5 +104,29 @@ describe("encryptFrontingReportInput", () => {
     const a = encryptFrontingReportInput(ENCRYPTED_FIELDS, masterKey);
     const b = encryptFrontingReportInput(ENCRYPTED_FIELDS, masterKey);
     expect(a.encryptedData).not.toBe(b.encryptedData);
+  });
+});
+
+// ── Assertion guard tests ────────────────────────────────────────────
+
+
+describe("assertFrontingReportEncryptedFields", () => {
+  it("throws when decrypted blob is not an object", () => {
+    const raw = makeRawReport(makeBase64Blob("not-an-object", masterKey));
+    expect(() => decryptFrontingReport(raw, masterKey)).toThrow("not an object");
+  });
+
+  it("throws when blob is missing dateRange field", () => {
+    const raw = makeRawReport(makeBase64Blob({ memberBreakdowns: [] }, masterKey));
+    expect(() => decryptFrontingReport(raw, masterKey)).toThrow(
+      "missing required object field: dateRange",
+    );
+  });
+
+  it("throws when dateRange is null", () => {
+    const raw = makeRawReport(makeBase64Blob({ dateRange: null }, masterKey));
+    expect(() => decryptFrontingReport(raw, masterKey)).toThrow(
+      "missing required object field: dateRange",
+    );
   });
 });

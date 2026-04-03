@@ -1,4 +1,4 @@
-import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
@@ -19,6 +19,23 @@ export interface MemberEncryptedFields {
   readonly boardMessageNotificationOnFront: boolean;
 }
 
+// ── Validator ─────────────────────────────────────────────────────────
+
+function assertMemberEncryptedFields(raw: unknown): asserts raw is MemberEncryptedFields {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("Decrypted member blob is not an object");
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj["name"] !== "string") {
+    throw new Error("Decrypted member blob missing required string field: name");
+  }
+  if (!Array.isArray(obj["pronouns"])) {
+    throw new Error("Decrypted member blob missing required array field: pronouns");
+  }
+}
+
+// ── Member transforms ────────────────────────────────────────────────
+
 /**
  * Decrypt a single member wire object to the canonical domain type.
  *
@@ -26,7 +43,8 @@ export interface MemberEncryptedFields {
  * are copied directly; all other fields are decrypted from encryptedData.
  */
 export function decryptMember(raw: ServerMember, masterKey: KdfMasterKey): Member {
-  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey) as MemberEncryptedFields;
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertMemberEncryptedFields(decrypted);
   return {
     id: raw.id,
     systemId: raw.systemId,
@@ -66,7 +84,7 @@ export function encryptMemberInput(
   data: MemberEncryptedFields,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey) };
+  return encryptInput(data, masterKey);
 }
 
 /**
@@ -77,5 +95,5 @@ export function encryptMemberUpdate(
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey), version };
+  return encryptUpdate(data, version, masterKey);
 }

@@ -199,3 +199,70 @@ describe("encryptFrontingSessionUpdate", () => {
     expect(result.version).toBe(3);
   });
 });
+
+// ── Assertion guard tests ────────────────────────────────────────────
+
+describe("assertFrontingSessionEncryptedFields", () => {
+  it("throws when decrypted blob is not an object", () => {
+    const raw = { ...makeRawSession(), encryptedData: makeBase64Blob("not-an-object", masterKey) };
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow("not an object");
+  });
+
+  it("throws when comment is not string or null", () => {
+    const raw = {
+      ...makeRawSession(),
+      encryptedData: makeBase64Blob(
+        { comment: 42, positionality: null, outtrigger: null, outtriggerSentiment: null },
+        masterKey,
+      ),
+    };
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow("comment must be string or null");
+  });
+
+  it("throws when positionality is not string or null", () => {
+    const raw = {
+      ...makeRawSession(),
+      encryptedData: makeBase64Blob(
+        { comment: null, positionality: 42, outtrigger: null, outtriggerSentiment: null },
+        masterKey,
+      ),
+    };
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(
+      "positionality must be string or null",
+    );
+  });
+
+  it("throws when outtrigger is not string or null", () => {
+    const raw = {
+      ...makeRawSession(),
+      encryptedData: makeBase64Blob(
+        { comment: null, positionality: null, outtrigger: 42, outtriggerSentiment: null },
+        masterKey,
+      ),
+    };
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(
+      "outtrigger must be string or null",
+    );
+  });
+
+  it("throws when outtriggerSentiment is invalid", () => {
+    const raw = {
+      ...makeRawSession(),
+      encryptedData: makeBase64Blob(
+        { comment: null, positionality: null, outtrigger: null, outtriggerSentiment: "invalid" },
+        masterKey,
+      ),
+    };
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow(
+      "outtriggerSentiment must be a valid sentiment or null",
+    );
+  });
+
+  it("accepts null blob with null encrypted fields via assertion", () => {
+    const raw = {
+      ...makeRawSession(),
+      encryptedData: makeBase64Blob(null, masterKey),
+    };
+    expect(() => decryptFrontingSession(raw, masterKey)).toThrow("not an object");
+  });
+});

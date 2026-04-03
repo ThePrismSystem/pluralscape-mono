@@ -12,6 +12,8 @@ import {
   encryptTimerConfigUpdate,
 } from "../timer-check-in.js";
 
+import { makeBase64Blob } from "./helpers.js";
+
 import type { TimerConfigEncryptedFields } from "../timer-check-in.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { CheckInRecordId, MemberId, SystemId, TimerId, UnixMillis } from "@pluralscape/types";
@@ -151,5 +153,29 @@ describe("decryptCheckInRecordPage", () => {
     });
     expect(result.items).toHaveLength(2);
     expect(result.nextCursor).toBe("c1");
+  });
+});
+
+// ── Assertion guard tests ────────────────────────────────────────────
+
+
+describe("assertTimerConfigEncryptedFields", () => {
+  it("throws when decrypted blob is not an object", () => {
+    const raw = makeRawTimerConfig(makeBase64Blob("not-an-object", masterKey));
+    expect(() => decryptTimerConfig(raw, masterKey)).toThrow("not an object");
+  });
+
+  it("throws when blob is missing promptText field", () => {
+    const raw = makeRawTimerConfig(makeBase64Blob({ other: "value" }, masterKey));
+    expect(() => decryptTimerConfig(raw, masterKey)).toThrow(
+      "missing required string field: promptText",
+    );
+  });
+
+  it("throws when promptText is not a string", () => {
+    const raw = makeRawTimerConfig(makeBase64Blob({ promptText: 42 }, masterKey));
+    expect(() => decryptTimerConfig(raw, masterKey)).toThrow(
+      "missing required string field: promptText",
+    );
   });
 });

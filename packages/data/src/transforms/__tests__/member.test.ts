@@ -11,6 +11,8 @@ import {
   encryptMemberUpdate,
 } from "../member.js";
 
+import { makeBase64Blob } from "./helpers.js";
+
 import type { MemberEncryptedFields } from "../member.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { HexColor, MemberId, SystemId } from "@pluralscape/types";
@@ -184,5 +186,42 @@ describe("encryptMemberUpdate", () => {
     const member = decryptMember(raw, masterKey);
 
     expect(member.name).toBe(fields.name);
+  });
+});
+
+// ── Assertion guard tests ────────────────────────────────────────────
+
+
+describe("assertMemberEncryptedFields", () => {
+  it("throws when decrypted blob is not an object", () => {
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: makeBase64Blob("not-an-object", masterKey),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("not an object");
+  });
+
+  it("throws when blob is missing name field", () => {
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: makeBase64Blob({ pronouns: [] }, masterKey),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("missing required string field: name");
+  });
+
+  it("throws when blob is missing pronouns array", () => {
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: makeBase64Blob({ name: "Test" }, masterKey),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("missing required array field: pronouns");
+  });
+
+  it("throws when pronouns is not an array", () => {
+    const raw = {
+      ...makeServerMember(),
+      encryptedData: makeBase64Blob({ name: "Test", pronouns: "not-array" }, masterKey),
+    };
+    expect(() => decryptMember(raw, masterKey)).toThrow("missing required array field: pronouns");
   });
 });

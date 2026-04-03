@@ -254,3 +254,31 @@ describe("encryptNomenclatureUpdate", () => {
     expect(enc1).not.toBe(enc2);
   });
 });
+
+// ── Assertion guard tests ────────────────────────────────────────────
+
+describe("assertSystemSettings", () => {
+  it("throws when decrypted blob is not an object", () => {
+    const raw = makeRawSystemSettings(makeBase64Blob("not-an-object", masterKey));
+    expect(() => decryptSystemSettings(raw, masterKey)).toThrow("not an object");
+  });
+
+  it("throws when blob is missing theme field", () => {
+    const raw = makeRawSystemSettings(makeBase64Blob({ fontScale: 1 }, masterKey));
+    expect(() => decryptSystemSettings(raw, masterKey)).toThrow(
+      "missing required string field: theme",
+    );
+  });
+});
+
+describe("assertNomenclatureSettings", () => {
+  it("throws when decrypted blob is not an object", () => {
+    const raw = makeRawNomenclature(makeBase64Blob("not-an-object", masterKey));
+    expect(() => decryptNomenclature(raw, masterKey)).toThrow("not an object");
+  });
+
+  it("throws when decrypted blob is null inside valid T1 envelope", () => {
+    const raw = makeRawNomenclature(makeBase64Blob(null, masterKey));
+    expect(() => decryptNomenclature(raw, masterKey)).toThrow("not an object");
+  });
+});

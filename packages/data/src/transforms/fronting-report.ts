@@ -11,7 +11,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 
-
 export interface FrontingReportEncryptedFields {
   readonly dateRange: DateRange;
   readonly memberBreakdowns: readonly MemberFrontingBreakdown[];
@@ -36,14 +35,28 @@ interface RawFrontingReportList {
   readonly nextCursor: string | null;
 }
 
+// ── Validator ─────────────────────────────────────────────────────────
+
+function assertFrontingReportEncryptedFields(
+  raw: unknown,
+): asserts raw is FrontingReportEncryptedFields {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error("Decrypted fronting report blob is not an object");
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj["dateRange"] !== "object" || obj["dateRange"] === null) {
+    throw new Error("Decrypted fronting report blob missing required object field: dateRange");
+  }
+}
+
+// ── Transforms ───────────────────────────────────────────────────────
+
 export function decryptFrontingReport(
   raw: RawFrontingReport,
   masterKey: KdfMasterKey,
 ): FrontingReport {
-  const decrypted = decodeAndDecryptT1(
-    raw.encryptedData,
-    masterKey,
-  ) as FrontingReportEncryptedFields;
+  const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
+  assertFrontingReportEncryptedFields(decrypted);
   return {
     id: raw.id,
     systemId: raw.systemId,
