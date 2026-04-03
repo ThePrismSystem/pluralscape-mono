@@ -13,14 +13,8 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type {
-  ArchivedPoll,
-  ArchivedPollVote,
-  Poll,
-  PollId,
-  PollStatus,
-  PollVote,
-} from "@pluralscape/types";
+import type { PollDecrypted, PollVoteDecrypted } from "@pluralscape/data/transforms/poll";
+import type { PollId, PollStatus } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawPoll = RouterOutput["poll"]["get"];
@@ -29,12 +23,12 @@ type RawPollResults = RouterOutput["poll"]["results"];
 type RawPollVotePage = RouterOutput["poll"]["listVotes"];
 
 type PollPage = {
-  readonly data: (Poll | ArchivedPoll)[];
+  readonly data: PollDecrypted[];
   readonly nextCursor: string | null;
 };
 
 type PollVotePage = {
-  readonly data: (PollVote | ArchivedPollVote)[];
+  readonly data: PollVoteDecrypted[];
   readonly nextCursor: string | null;
 };
 
@@ -49,7 +43,7 @@ interface PollVoteListOpts extends SystemIdOverride {
   readonly includeArchived?: boolean;
 }
 
-export function usePoll(pollId: PollId, opts?: SystemIdOverride): TRPCQuery<Poll | ArchivedPoll> {
+export function usePoll(pollId: PollId, opts?: SystemIdOverride): TRPCQuery<PollDecrypted> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -58,7 +52,7 @@ export function usePoll(pollId: PollId, opts?: SystemIdOverride): TRPCQuery<Poll
     { systemId, pollId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawPoll): Poll | ArchivedPoll => {
+      select: (raw: RawPoll): PollDecrypted => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptPoll(raw, masterKey);
       },

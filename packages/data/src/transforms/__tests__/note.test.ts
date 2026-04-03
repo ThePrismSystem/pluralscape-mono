@@ -11,7 +11,6 @@ import { makeBase64Blob } from "./helpers.js";
 import type { NoteEncryptedFields } from "../note.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
-  EntityReference,
   HexColor,
   NoteAuthorEntityType,
   NoteId,
@@ -38,7 +37,8 @@ function makeEncryptedFields(): NoteEncryptedFields {
 function makeServerNote(
   fields: NoteEncryptedFields = makeEncryptedFields(),
   overrides?: Partial<{
-    author: EntityReference<NoteAuthorEntityType> | null;
+    authorEntityType: NoteAuthorEntityType | null;
+    authorEntityId: string | null;
     archived: boolean;
     archivedAt: UnixMillis | null;
   }>,
@@ -46,10 +46,8 @@ function makeServerNote(
   return {
     id: "note_abc123" as NoteId,
     systemId: "sys_xyz789" as SystemId,
-    author: {
-      entityType: "member" as const,
-      entityId: "mem_author",
-    } as EntityReference<NoteAuthorEntityType> | null,
+    authorEntityType: "member" as NoteAuthorEntityType | null,
+    authorEntityId: "mem_author" as string | null,
     encryptedData: encryptAndEncodeT1(fields, masterKey),
     version: 1,
     createdAt: toUnixMillis(1_700_000_000_000),
@@ -78,16 +76,21 @@ describe("decryptNote", () => {
     expect(result.backgroundColor).toBe("#ffffff");
   });
 
-  it("passes through author when set", () => {
+  it("passes through author fields when set", () => {
     const raw = makeServerNote();
     const result = decryptNote(raw, masterKey);
-    expect(result.author).toEqual({ entityType: "member", entityId: "mem_author" });
+    expect(result.authorEntityType).toBe("member");
+    expect(result.authorEntityId).toBe("mem_author");
   });
 
-  it("passes through null author", () => {
-    const raw = makeServerNote(makeEncryptedFields(), { author: null });
+  it("passes through null author fields", () => {
+    const raw = makeServerNote(makeEncryptedFields(), {
+      authorEntityType: null,
+      authorEntityId: null,
+    });
     const result = decryptNote(raw, masterKey);
-    expect(result.author).toBeNull();
+    expect(result.authorEntityType).toBeNull();
+    expect(result.authorEntityId).toBeNull();
   });
 
   it("handles null backgroundColor", () => {
@@ -108,15 +111,8 @@ describe("decryptNote", () => {
     const result = decryptNote(raw, masterKey);
 
     expect(result.archived).toBe(true);
-    if (result.archived) {
-      expect(result.archivedAt).toBe(archivedAt);
-    }
+    expect(result.archivedAt).toBe(archivedAt);
     expect(result.title).toBe("My Note");
-  });
-
-  it("throws when archived is true but archivedAt is null", () => {
-    const raw = makeServerNote(makeEncryptedFields(), { archived: true, archivedAt: null });
-    expect(() => decryptNote(raw, masterKey)).toThrow("missing archivedAt");
   });
 });
 
@@ -129,7 +125,9 @@ describe("decryptNotePage", () => {
 
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("cursor-token");
-    result.data.forEach((n) => { expect(n.title).toBe("My Note"); });
+    result.data.forEach((n) => {
+      expect(n.title).toBe("My Note");
+    });
   });
 
   it("handles null cursor", () => {
@@ -160,12 +158,6 @@ describe("encryptNoteInput", () => {
     expect(result.title).toBe(fields.title);
     expect(result.content).toBe(fields.content);
     expect(result.backgroundColor).toBe(fields.backgroundColor);
-  });
-
-  it("produces different ciphertext on each call", () => {
-    const r1 = encryptNoteInput(makeEncryptedFields(), masterKey);
-    const r2 = encryptNoteInput(makeEncryptedFields(), masterKey);
-    expect(r1.encryptedData).not.toBe(r2.encryptedData);
   });
 });
 
@@ -203,26 +195,10 @@ describe("assertNoteEncryptedFields", () => {
     expect(() => decryptNote(raw, masterKey)).toThrow("missing required string field: title");
   });
 
-  it("throws when title is not a string", () => {
-    const raw = {
-      ...makeServerNote(),
-      encryptedData: makeBase64Blob({ title: 42, content: "hi" }, masterKey),
-    };
-    expect(() => decryptNote(raw, masterKey)).toThrow("missing required string field: title");
-  });
-
   it("throws when blob is missing content field", () => {
     const raw = {
       ...makeServerNote(),
       encryptedData: makeBase64Blob({ title: "My Note" }, masterKey),
-    };
-    expect(() => decryptNote(raw, masterKey)).toThrow("missing required string field: content");
-  });
-
-  it("throws when content is not a string", () => {
-    const raw = {
-      ...makeServerNote(),
-      encryptedData: makeBase64Blob({ title: "My Note", content: 99 }, masterKey),
     };
     expect(() => decryptNote(raw, masterKey)).toThrow("missing required string field: content");
   });

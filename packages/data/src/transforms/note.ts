@@ -2,10 +2,7 @@ import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.j
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
-  ArchivedNote,
-  EntityReference,
   HexColor,
-  Note,
   NoteAuthorEntityType,
   NoteId,
   SystemId,
@@ -18,7 +15,8 @@ import type {
 interface NoteRaw {
   readonly id: NoteId;
   readonly systemId: SystemId;
-  readonly author: EntityReference<NoteAuthorEntityType> | null;
+  readonly authorEntityType: NoteAuthorEntityType | null;
+  readonly authorEntityId: string | null;
   readonly encryptedData: string;
   readonly version: number;
   readonly archived: boolean;
@@ -45,6 +43,24 @@ export interface NoteEncryptedFields {
   readonly backgroundColor: HexColor | null;
 }
 
+// ── Decrypted output type ─────────────────────────────────────────────
+
+/** A fully decrypted note, combining wire metadata with plaintext fields. */
+export interface NoteDecrypted {
+  readonly id: NoteId;
+  readonly systemId: SystemId;
+  readonly authorEntityType: NoteAuthorEntityType | null;
+  readonly authorEntityId: string | null;
+  readonly title: string;
+  readonly content: string;
+  readonly backgroundColor: HexColor | null;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+  readonly version: number;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertNoteEncryptedFields(raw: unknown): asserts raw is NoteEncryptedFields {
@@ -63,32 +79,29 @@ function assertNoteEncryptedFields(raw: unknown): asserts raw is NoteEncryptedFi
 // ── Note transforms ───────────────────────────────────────────────────
 
 /**
- * Decrypt a single note API result into a `Note`.
+ * Decrypt a single note API result.
  *
  * The encrypted blob contains: `title`, `content`, `backgroundColor`.
  * All other fields pass through from the wire payload.
  */
-export function decryptNote(raw: NoteRaw, masterKey: KdfMasterKey): Note | ArchivedNote {
+export function decryptNote(raw: NoteRaw, masterKey: KdfMasterKey): NoteDecrypted {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertNoteEncryptedFields(plaintext);
 
-  const base = {
+  return {
     id: raw.id,
     systemId: raw.systemId,
-    author: raw.author,
+    authorEntityType: raw.authorEntityType,
+    authorEntityId: raw.authorEntityId,
     title: plaintext.title,
     content: plaintext.content,
     backgroundColor: plaintext.backgroundColor,
+    archived: raw.archived,
+    archivedAt: raw.archivedAt,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
-
-  if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived note missing archivedAt");
-    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
-  }
-  return { ...base, archived: false as const };
 }
 
 /**
@@ -97,7 +110,7 @@ export function decryptNote(raw: NoteRaw, masterKey: KdfMasterKey): Note | Archi
 export function decryptNotePage(
   raw: NotePage,
   masterKey: KdfMasterKey,
-): { data: (Note | ArchivedNote)[]; nextCursor: string | null } {
+): { data: NoteDecrypted[]; nextCursor: string | null } {
   return {
     data: raw.data.map((item) => decryptNote(item, masterKey)),
     nextCursor: raw.nextCursor,
@@ -106,9 +119,6 @@ export function decryptNotePage(
 
 /**
  * Encrypt note plaintext fields for create payloads.
- *
- * Returns `{ encryptedData: string }` — pass the spread of this into the
- * `CreateNoteBodySchema`.
  */
 export function encryptNoteInput(
   data: NoteEncryptedFields,
@@ -119,9 +129,6 @@ export function encryptNoteInput(
 
 /**
  * Encrypt note plaintext fields for update payloads.
- *
- * Returns `{ encryptedData: string; version: number }` — pass the spread of this
- * into the `UpdateNoteBodySchema`.
  */
 export function encryptNoteUpdate(
   data: NoteEncryptedFields,

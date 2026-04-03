@@ -159,9 +159,11 @@ describe("decryptPoll", () => {
     }
   });
 
-  it("throws when archived is true but archivedAt is null", () => {
+  it("handles archived with null archivedAt", () => {
     const raw = makeServerPoll(makePollEncryptedFields(), { archived: true, archivedAt: null });
-    expect(() => decryptPoll(raw, masterKey)).toThrow("missing archivedAt");
+    const result = decryptPoll(raw, masterKey);
+    expect(result.archived).toBe(true);
+    expect(result.archivedAt).toBeNull();
   });
 });
 
@@ -174,7 +176,9 @@ describe("decryptPollPage", () => {
 
     expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("poll_cursor");
-    result.data.forEach((p) => { expect(p.title).toBe("Best snack?"); });
+    result.data.forEach((p) => {
+      expect(p.title).toBe("Best snack?");
+    });
   });
 
   it("handles null cursor and empty data", () => {
@@ -264,9 +268,11 @@ describe("decryptPollVote", () => {
     }
   });
 
-  it("throws when archived is true but archivedAt is null", () => {
+  it("handles archived with null archivedAt", () => {
     const raw = makeServerPollVote({ archived: true, archivedAt: null });
-    expect(() => decryptPollVote(raw, masterKey)).toThrow("missing archivedAt");
+    const result = decryptPollVote(raw, masterKey);
+    expect(result.archived).toBe(true);
+    expect(result.archivedAt).toBeNull();
   });
 });
 

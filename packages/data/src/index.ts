@@ -129,7 +129,12 @@ export {
   encryptPollUpdate,
   encryptPollVoteInput,
 } from "./transforms/poll.js";
-export type { PollEncryptedFields, PollVoteEncryptedFields } from "./transforms/poll.js";
+export type {
+  PollDecrypted,
+  PollEncryptedFields,
+  PollVoteDecrypted,
+  PollVoteEncryptedFields,
+} from "./transforms/poll.js";
 
 export {
   decryptNote,
@@ -137,7 +142,7 @@ export {
   encryptNoteInput,
   encryptNoteUpdate,
 } from "./transforms/note.js";
-export type { NoteEncryptedFields } from "./transforms/note.js";
+export type { NoteDecrypted, NoteEncryptedFields } from "./transforms/note.js";
 
 export {
   decryptAcknowledgement,
