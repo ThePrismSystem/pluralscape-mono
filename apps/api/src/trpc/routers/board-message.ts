@@ -4,8 +4,10 @@ import {
   UpdateBoardMessageBodySchema,
   brandedIdQueryParam,
 } from "@pluralscape/validation";
+import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
+import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
 import {
   archiveBoardMessage,
   createBoardMessage,
@@ -21,6 +23,8 @@ import {
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+import type { BoardMessageChangeEvent, BoardMessageId } from "@pluralscape/types";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 const writeLimiter = createTRPCCategoryRateLimiter("write");
@@ -38,7 +42,13 @@ export const boardMessageRouter = router({
     .input(CreateBoardMessageBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return createBoardMessage(ctx.db, ctx.systemId, input, ctx.auth, audit);
+      const result = await createBoardMessage(ctx.db, ctx.systemId, input, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "created",
+        boardMessageId: result.id,
+      });
+      return result;
     }),
 
   get: systemProcedure
@@ -70,7 +80,7 @@ export const boardMessageRouter = router({
     .input(BoardMessageIdSchema.and(UpdateBoardMessageBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return updateBoardMessage(
+      const result = await updateBoardMessage(
         ctx.db,
         ctx.systemId,
         input.boardMessageId,
@@ -78,6 +88,12 @@ export const boardMessageRouter = router({
         ctx.auth,
         audit,
       );
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "updated",
+        boardMessageId: input.boardMessageId,
+      });
+      return result;
     }),
 
   archive: systemProcedure
@@ -86,6 +102,11 @@ export const boardMessageRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await archiveBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "archived",
+        boardMessageId: input.boardMessageId,
+      });
       return { success: true as const };
     }),
 
@@ -94,7 +115,19 @@ export const boardMessageRouter = router({
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return restoreBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+      const result = await restoreBoardMessage(
+        ctx.db,
+        ctx.systemId,
+        input.boardMessageId,
+        ctx.auth,
+        audit,
+      );
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "updated",
+        boardMessageId: input.boardMessageId,
+      });
+      return result;
     }),
 
   delete: systemProcedure
@@ -103,6 +136,11 @@ export const boardMessageRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await deleteBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "deleted",
+        boardMessageId: input.boardMessageId,
+      });
       return { success: true as const };
     }),
 
@@ -112,6 +150,12 @@ export const boardMessageRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await reorderBoardMessages(ctx.db, ctx.systemId, input, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "reordered",
+        // Reorder is a batch operation — no single ID is meaningful
+        boardMessageId: "reorder" as BoardMessageId,
+      });
       return { success: true as const };
     }),
 
@@ -120,7 +164,19 @@ export const boardMessageRouter = router({
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return pinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+      const result = await pinBoardMessage(
+        ctx.db,
+        ctx.systemId,
+        input.boardMessageId,
+        ctx.auth,
+        audit,
+      );
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "pinned",
+        boardMessageId: input.boardMessageId,
+      });
+      return result;
     }),
 
   unpin: systemProcedure
@@ -128,6 +184,45 @@ export const boardMessageRouter = router({
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return unpinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+      const result = await unpinBoardMessage(
+        ctx.db,
+        ctx.systemId,
+        input.boardMessageId,
+        ctx.auth,
+        audit,
+      );
+      void publishEntityChange(ctx.systemId, {
+        entity: "boardMessage",
+        type: "unpinned",
+        boardMessageId: input.boardMessageId,
+      });
+      return result;
     }),
+
+  onChange: systemProcedure.subscription(async function* ({ ctx, signal }) {
+    const queue: BoardMessageChangeEvent[] = [];
+    let resolve: (() => void) | null = null;
+
+    const unsubscribe = await subscribeToEntityChanges(ctx.systemId, "boardMessage", (event) => {
+      queue.push(event as BoardMessageChangeEvent);
+      resolve?.();
+    });
+
+    try {
+      while (!signal?.aborted) {
+        while (queue.length > 0) {
+          const event = queue.shift();
+          if (event) {
+            yield tracked(`${event.type}:${event.boardMessageId}`, event);
+          }
+        }
+        await new Promise<void>((r) => {
+          resolve = r;
+        });
+        resolve = null;
+      }
+    } finally {
+      await unsubscribe?.();
+    }
+  }),
 });
