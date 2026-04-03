@@ -2,7 +2,6 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-
 import { SystemProvider, useActiveSystemId } from "../system-provider.js";
 
 import type { SystemId } from "@pluralscape/types";

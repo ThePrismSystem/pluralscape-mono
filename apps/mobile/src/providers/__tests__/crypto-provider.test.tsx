@@ -7,7 +7,6 @@ import { CryptoProvider, useMasterKey } from "../crypto-provider.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { PropsWithChildren } from "react";
 
-
 function makeTestKey(): KdfMasterKey {
   const raw = new Uint8Array(32).fill(0xab);
   // KdfMasterKey is a branded Uint8Array (Uint8Array & { brand }). The brand
