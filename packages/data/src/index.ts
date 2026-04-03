@@ -95,3 +95,55 @@ export {
   decryptCheckInRecordPage,
 } from "./transforms/timer-check-in.js";
 export type { TimerConfigEncryptedFields } from "./transforms/timer-check-in.js";
+
+// --- Communication crypto transforms ---
+export {
+  decryptChannel,
+  decryptChannelPage,
+  encryptChannelInput,
+  encryptChannelUpdate,
+} from "./transforms/channel.js";
+export type { ChannelEncryptedFields } from "./transforms/channel.js";
+
+export {
+  decryptMessage,
+  decryptMessagePage,
+  encryptMessageInput,
+  encryptMessageUpdate,
+} from "./transforms/message.js";
+export type { MessageEncryptedFields } from "./transforms/message.js";
+
+export {
+  decryptBoardMessage,
+  decryptBoardMessagePage,
+  encryptBoardMessageInput,
+  encryptBoardMessageUpdate,
+} from "./transforms/board-message.js";
+export type { BoardMessageEncryptedFields } from "./transforms/board-message.js";
+
+export {
+  decryptPoll,
+  decryptPollPage,
+  decryptPollVote,
+  encryptPollInput,
+  encryptPollUpdate,
+  encryptPollVoteInput,
+} from "./transforms/poll.js";
+export type { PollEncryptedFields, PollVoteEncryptedFields } from "./transforms/poll.js";
+
+export {
+  decryptNote,
+  decryptNotePage,
+  encryptNoteInput,
+  encryptNoteUpdate,
+} from "./transforms/note.js";
+export type { NoteEncryptedFields } from "./transforms/note.js";
+
+export {
+  decryptAcknowledgement,
+  decryptAcknowledgementPage,
+  encryptAcknowledgementInput,
+  encryptAcknowledgementUpdate,
+  encryptAcknowledgementConfirm,
+} from "./transforms/acknowledgement.js";
+export type { AcknowledgementEncryptedFields } from "./transforms/acknowledgement.js";
