@@ -107,6 +107,15 @@ describe("error-mapper middleware", () => {
     );
   });
 
+  it("maps ApiHttpError 422 to UNPROCESSABLE_CONTENT", async () => {
+    const caller = callerThatThrows(
+      new ApiHttpError(422, "PRECONDITION_FAILED", "Invalid entity state"),
+    );
+    await expect(caller.fail()).rejects.toThrow(
+      expect.objectContaining({ code: "UNPROCESSABLE_CONTENT", message: "Invalid entity state" }),
+    );
+  });
+
   it("maps ApiHttpError with unmapped status to INTERNAL_SERVER_ERROR", async () => {
     const caller = callerThatThrows(new ApiHttpError(500, "NOT_FOUND", "DB down"));
     await expect(caller.fail()).rejects.toThrow(
