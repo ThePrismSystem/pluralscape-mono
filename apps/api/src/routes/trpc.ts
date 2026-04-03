@@ -41,5 +41,15 @@ trpcRoute.all("/*", async (c) => {
     req: c.req.raw,
     router: appRouter,
     createContext: () => createTRPCContext(c),
+    responseMeta() {
+      return {
+        headers: new Headers([["cache-control", "no-store"]]),
+      };
+    },
+    onError({ error, path }) {
+      if (error.code === "INTERNAL_SERVER_ERROR") {
+        logger.error("tRPC internal error", { path, error });
+      }
+    },
   });
 });
