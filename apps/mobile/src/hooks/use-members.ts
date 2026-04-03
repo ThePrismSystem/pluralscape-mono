@@ -13,12 +13,15 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { Member, MemberId } from "@pluralscape/types";
+import type { Archived, GroupId, Member, MemberId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawMember = RouterOutput["member"]["get"];
 type RawMemberPage = RouterOutput["member"]["list"];
-type MemberPage = { readonly items: Member[]; readonly nextCursor: string | null };
+type MemberPage = {
+  readonly data: (Member | Archived<Member>)[];
+  readonly nextCursor: string | null;
+};
 
 interface MemberListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -26,15 +29,19 @@ interface MemberListOpts extends SystemIdOverride {
   readonly includeArchived?: boolean;
 }
 
-export function useMember(memberId: MemberId, opts?: SystemIdOverride): TRPCQuery<Member> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+export function useMember(
+  memberId: MemberId,
+  opts?: SystemIdOverride,
+): TRPCQuery<Member | Archived<Member>> {
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.member.get.useQuery(
     { systemId, memberId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawMember): Member => {
+      select: (raw: RawMember): Member | Archived<Member> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptMember(raw, masterKey);
       },
@@ -43,14 +50,15 @@ export function useMember(memberId: MemberId, opts?: SystemIdOverride): TRPCQuer
 }
 
 export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.member.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
-      groupId: opts?.groupId as MemberId | undefined,
+      groupId: opts?.groupId as GroupId | undefined,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
@@ -62,7 +70,7 @@ export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberP
         return {
           ...data,
           pages: data.pages.map((page) => ({
-            items: page.data.map((item) => decryptMember(item, key)),
+            data: page.data.map((item) => decryptMember(item, key)),
             nextCursor: page.nextCursor,
           })),
         };

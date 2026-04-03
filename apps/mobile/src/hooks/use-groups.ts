@@ -19,7 +19,7 @@ import type { InfiniteData } from "@tanstack/react-query";
 
 type RawGroup = RouterOutput["group"]["get"];
 type RawGroupPage = RouterOutput["group"]["list"];
-type GroupPage = { readonly items: GroupDecrypted[]; readonly nextCursor: string | null };
+type GroupPage = { readonly data: GroupDecrypted[]; readonly nextCursor: string | null };
 
 interface GroupListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -27,7 +27,8 @@ interface GroupListOpts extends SystemIdOverride {
 }
 
 export function useGroup(groupId: GroupId, opts?: SystemIdOverride): TRPCQuery<GroupDecrypted> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.group.get.useQuery(
@@ -43,7 +44,8 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): TRPCQuery<G
 }
 
 export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.group.list.useInfiniteQuery(
@@ -61,7 +63,7 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
         return {
           ...data,
           pages: data.pages.map((page) => ({
-            items: page.data.map((item) => decryptGroup(item, key)),
+            data: page.data.map((item) => decryptGroup(item, key)),
             nextCursor: page.nextCursor,
           })),
         };
@@ -124,6 +126,10 @@ export function useAddGroupMembers(): TRPCMutation<
   return trpc.group.addMember.useMutation({
     onSuccess: (_data, variables) => {
       void utils.group.listMembers.invalidate({ systemId, groupId: variables.groupId });
+      void utils.member.listMemberships.invalidate({
+        systemId,
+        memberId: variables.memberId as MemberId,
+      });
     },
   });
 }

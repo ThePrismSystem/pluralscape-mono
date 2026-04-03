@@ -13,12 +13,20 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { FrontingComment, FrontingCommentId, FrontingSessionId } from "@pluralscape/types";
+import type {
+  Archived,
+  FrontingComment,
+  FrontingCommentId,
+  FrontingSessionId,
+} from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawComment = RouterOutput["frontingComment"]["get"];
 type RawCommentPage = RouterOutput["frontingComment"]["list"];
-type CommentPage = { readonly items: FrontingComment[]; readonly nextCursor: string | null };
+type CommentPage = {
+  readonly data: (FrontingComment | Archived<FrontingComment>)[];
+  readonly nextCursor: string | null;
+};
 
 interface FrontingCommentListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -29,15 +37,16 @@ export function useFrontingComment(
   commentId: FrontingCommentId,
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
-): TRPCQuery<FrontingComment> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+): TRPCQuery<FrontingComment | Archived<FrontingComment>> {
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.frontingComment.get.useQuery(
     { systemId, sessionId, commentId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawComment): FrontingComment => {
+      select: (raw: RawComment): FrontingComment | Archived<FrontingComment> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptFrontingComment(raw, masterKey);
       },
@@ -49,7 +58,8 @@ export function useFrontingCommentsList(
   sessionId: FrontingSessionId,
   opts?: FrontingCommentListOpts,
 ): TRPCInfiniteQuery<CommentPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.frontingComment.list.useInfiniteQuery(
@@ -68,7 +78,7 @@ export function useFrontingCommentsList(
         return {
           ...data,
           pages: data.pages.map((page) => ({
-            items: page.data.map((item) => decryptFrontingComment(item, key)),
+            data: page.data.map((item) => decryptFrontingComment(item, key)),
             nextCursor: page.nextCursor,
           })),
         };

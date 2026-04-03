@@ -16,15 +16,21 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { TimerConfig, TimerId } from "@pluralscape/types";
+import type { Archived, TimerConfig, TimerId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawTimerConfig = RouterOutput["timerConfig"]["get"];
 type RawTimerConfigPage = RouterOutput["timerConfig"]["list"];
 type RawCheckInPage = RouterOutput["checkInRecord"]["list"];
 type CheckInRecord = RouterOutput["checkInRecord"]["get"];
-type TimerPage = { readonly items: TimerConfig[]; readonly nextCursor: string | null };
-type CheckInPage = { readonly items: CheckInRecord[]; readonly nextCursor: string | null };
+type TimerPage = {
+  readonly data: (TimerConfig | Archived<TimerConfig>)[];
+  readonly nextCursor: string | null;
+};
+type CheckInPage = {
+  readonly data: CheckInRecord[];
+  readonly nextCursor: string | null;
+};
 
 interface TimerConfigListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -38,15 +44,19 @@ interface CheckInHistoryOpts extends SystemIdOverride {
   readonly includeArchived?: boolean;
 }
 
-export function useTimerConfig(timerId: TimerId, opts?: SystemIdOverride): TRPCQuery<TimerConfig> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+export function useTimerConfig(
+  timerId: TimerId,
+  opts?: SystemIdOverride,
+): TRPCQuery<TimerConfig | Archived<TimerConfig>> {
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.timerConfig.get.useQuery(
     { systemId, timerId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawTimerConfig): TimerConfig => {
+      select: (raw: RawTimerConfig): TimerConfig | Archived<TimerConfig> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptTimerConfig(raw, masterKey);
       },
@@ -55,7 +65,8 @@ export function useTimerConfig(timerId: TimerId, opts?: SystemIdOverride): TRPCQ
 }
 
 export function useTimerConfigsList(opts?: TimerConfigListOpts): TRPCInfiniteQuery<TimerPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.timerConfig.list.useInfiniteQuery(
@@ -124,7 +135,8 @@ export function useDeleteTimer(): TRPCMutation<
 }
 
 export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<CheckInPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
 
   return trpc.checkInRecord.list.useInfiniteQuery(
     {
@@ -139,7 +151,7 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
       select: (data: InfiniteData<RawCheckInPage>): InfiniteData<CheckInPage> => ({
         ...data,
         pages: data.pages.map((page) => ({
-          items: [...page.data],
+          data: [...page.data],
           nextCursor: page.nextCursor,
         })),
       }),

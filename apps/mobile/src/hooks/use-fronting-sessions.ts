@@ -17,7 +17,7 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { FrontingSession, FrontingSessionId } from "@pluralscape/types";
+import type { Archived, FrontingSession, FrontingSessionId } from "@pluralscape/types";
 import type { InfiniteData, UseMutationResult } from "@tanstack/react-query";
 import type { TRPCHookResult } from "@trpc/react-query/shared";
 
@@ -27,9 +27,12 @@ type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
 type RawSession = RouterOutput["frontingSession"]["get"];
 type RawSessionPage = RouterOutput["frontingSession"]["list"];
 type RawGetActive = RouterOutput["frontingSession"]["getActive"];
-type SessionPage = { readonly items: FrontingSession[]; readonly nextCursor: string | null };
+type SessionPage = {
+  readonly data: (FrontingSession | Archived<FrontingSession>)[];
+  readonly nextCursor: string | null;
+};
 type ActiveFrontersResult = {
-  readonly sessions: FrontingSession[];
+  readonly sessions: (FrontingSession | Archived<FrontingSession>)[];
   readonly isCofronting: boolean;
   readonly entityMemberMap: Record<string, readonly string[]>;
 };
@@ -43,15 +46,16 @@ interface FrontingSessionListOpts extends SystemIdOverride {
 export function useFrontingSession(
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
-): TRPCQuery<FrontingSession> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+): TRPCQuery<FrontingSession | Archived<FrontingSession>> {
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.frontingSession.get.useQuery(
     { systemId, sessionId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawSession): FrontingSession => {
+      select: (raw: RawSession): FrontingSession | Archived<FrontingSession> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptFrontingSession(raw, masterKey);
       },
@@ -62,7 +66,8 @@ export function useFrontingSession(
 export function useFrontingSessionsList(
   opts?: FrontingSessionListOpts,
 ): TRPCInfiniteQuery<SessionPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.frontingSession.list.useInfiniteQuery(

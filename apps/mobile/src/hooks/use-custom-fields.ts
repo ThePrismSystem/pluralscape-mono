@@ -27,7 +27,7 @@ type RawFieldDef = RouterOutput["field"]["definition"]["get"];
 type RawFieldDefPage = RouterOutput["field"]["definition"]["list"];
 type RawFieldValueList = RouterOutput["field"]["value"]["list"];
 type FieldDefPage = {
-  readonly items: FieldDefinitionDecrypted[];
+  readonly data: FieldDefinitionDecrypted[];
   readonly nextCursor: string | null;
 };
 
@@ -40,7 +40,8 @@ export function useFieldDefinition(
   fieldDefinitionId: FieldDefinitionId,
   opts?: SystemIdOverride,
 ): TRPCQuery<FieldDefinitionDecrypted> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.field.definition.get.useQuery(
@@ -58,7 +59,8 @@ export function useFieldDefinition(
 export function useFieldDefinitionsList(
   opts?: FieldDefinitionListOpts,
 ): TRPCInfiniteQuery<FieldDefPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.field.definition.list.useInfiniteQuery(
@@ -76,7 +78,7 @@ export function useFieldDefinitionsList(
         return {
           ...data,
           pages: data.pages.map((page) => ({
-            items: page.data.map((item) => decryptFieldDefinition(item, key)),
+            data: page.data.map((item) => decryptFieldDefinition(item, key)),
             nextCursor: page.nextCursor,
           })),
         };
@@ -139,7 +141,8 @@ export function useMemberFieldValues(
   memberId: MemberId,
   opts?: SystemIdOverride,
 ): TRPCQuery<FieldValueDecrypted[]> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.field.value.list.useQuery(

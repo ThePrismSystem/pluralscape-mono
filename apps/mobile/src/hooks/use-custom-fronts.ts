@@ -13,12 +13,15 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { CustomFront, CustomFrontId } from "@pluralscape/types";
+import type { Archived, CustomFront, CustomFrontId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawCustomFront = RouterOutput["customFront"]["get"];
 type RawCustomFrontPage = RouterOutput["customFront"]["list"];
-type CustomFrontPage = { readonly items: CustomFront[]; readonly nextCursor: string | null };
+type CustomFrontPage = {
+  readonly data: (CustomFront | Archived<CustomFront>)[];
+  readonly nextCursor: string | null;
+};
 
 interface CustomFrontListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -27,15 +30,16 @@ interface CustomFrontListOpts extends SystemIdOverride {
 export function useCustomFront(
   customFrontId: CustomFrontId,
   opts?: SystemIdOverride,
-): TRPCQuery<CustomFront> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+): TRPCQuery<CustomFront | Archived<CustomFront>> {
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.customFront.get.useQuery(
     { systemId, customFrontId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawCustomFront): CustomFront => {
+      select: (raw: RawCustomFront): CustomFront | Archived<CustomFront> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptCustomFront(raw, masterKey);
       },
@@ -46,7 +50,8 @@ export function useCustomFront(
 export function useCustomFrontsList(
   opts?: CustomFrontListOpts,
 ): TRPCInfiniteQuery<CustomFrontPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.customFront.list.useInfiniteQuery(
@@ -63,7 +68,7 @@ export function useCustomFrontsList(
         return {
           ...data,
           pages: data.pages.map((page) => ({
-            items: page.data.map((item) => decryptCustomFront(item, key)),
+            data: page.data.map((item) => decryptCustomFront(item, key)),
             nextCursor: page.nextCursor,
           })),
         };

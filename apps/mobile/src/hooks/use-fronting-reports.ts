@@ -18,7 +18,7 @@ import type { InfiniteData } from "@tanstack/react-query";
 
 type RawReport = RouterOutput["frontingReport"]["get"];
 type RawReportPage = RouterOutput["frontingReport"]["list"];
-type ReportPage = { readonly items: FrontingReport[]; readonly nextCursor: string | null };
+type ReportPage = { readonly data: FrontingReport[]; readonly nextCursor: string | null };
 
 interface FrontingReportListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -28,7 +28,8 @@ export function useFrontingReport(
   reportId: FrontingReportId,
   opts?: SystemIdOverride,
 ): TRPCQuery<FrontingReport> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.frontingReport.get.useQuery(
@@ -46,7 +47,8 @@ export function useFrontingReport(
 export function useFrontingReportsList(
   opts?: FrontingReportListOpts,
 ): TRPCInfiniteQuery<ReportPage> {
-  const systemId = opts?.systemId ?? useActiveSystemId();
+  const activeSystemId = useActiveSystemId();
+  const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
   return trpc.frontingReport.list.useInfiniteQuery(
@@ -63,7 +65,7 @@ export function useFrontingReportsList(
         return {
           ...data,
           pages: data.pages.map((page) => ({
-            items: page.data.map((item) => decryptFrontingReport(item, key)),
+            data: page.data.map((item) => decryptFrontingReport(item, key)),
             nextCursor: page.nextCursor,
           })),
         };
