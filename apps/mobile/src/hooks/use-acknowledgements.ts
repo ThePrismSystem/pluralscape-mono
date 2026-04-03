@@ -17,13 +17,13 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { AcknowledgementDecrypted } from "@pluralscape/data/transforms/acknowledgement";
-import type { AcknowledgementId } from "@pluralscape/types";
+import type { AcknowledgementId, Archived } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawAcknowledgement = RouterOutput["acknowledgement"]["get"];
 type RawAcknowledgementPage = RouterOutput["acknowledgement"]["list"];
 type AcknowledgementPage = {
-  readonly data: AcknowledgementDecrypted[];
+  readonly data: (AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>)[];
   readonly nextCursor: string | null;
 };
 
@@ -36,7 +36,7 @@ interface AcknowledgementListOpts extends SystemIdOverride {
 export function useAcknowledgement(
   ackId: AcknowledgementId,
   opts?: SystemIdOverride,
-): TRPCQuery<AcknowledgementDecrypted> {
+): TRPCQuery<AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -45,7 +45,9 @@ export function useAcknowledgement(
     { systemId, ackId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawAcknowledgement): AcknowledgementDecrypted => {
+      select: (
+        raw: RawAcknowledgement,
+      ): AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptAcknowledgement(raw, masterKey);
       },

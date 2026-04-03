@@ -7,7 +7,13 @@ import {
 } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { AcknowledgementId, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  AcknowledgementId,
+  Archived,
+  MemberId,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 // ── Wire types (API response shapes) ─────────────────────────────────
 
@@ -55,8 +61,7 @@ export interface AcknowledgementDecrypted {
   readonly message: string;
   readonly confirmed: boolean;
   readonly confirmedAt: UnixMillis | null;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
+  readonly archived: false;
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
@@ -83,11 +88,11 @@ function assertAcknowledgementEncryptedFields(
 export function decryptAcknowledgement(
   raw: AcknowledgementRaw,
   masterKey: KdfMasterKey,
-): AcknowledgementDecrypted {
+): AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertAcknowledgementEncryptedFields(plaintext);
 
-  return {
+  const base = {
     id: raw.id,
     systemId: raw.systemId,
     createdByMemberId: raw.createdByMemberId,
@@ -95,12 +100,16 @@ export function decryptAcknowledgement(
     message: plaintext.message,
     confirmed: raw.confirmed,
     confirmedAt: plaintext.confirmedAt,
-    archived: raw.archived,
-    archivedAt: raw.archivedAt,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived acknowledgement missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 /**
@@ -109,7 +118,10 @@ export function decryptAcknowledgement(
 export function decryptAcknowledgementPage(
   raw: AcknowledgementPage,
   masterKey: KdfMasterKey,
-): { data: AcknowledgementDecrypted[]; nextCursor: string | null } {
+): {
+  data: (AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>)[];
+  nextCursor: string | null;
+} {
   return {
     data: raw.data.map((item) => decryptAcknowledgement(item, masterKey)),
     nextCursor: raw.nextCursor,

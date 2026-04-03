@@ -14,7 +14,7 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { PollDecrypted, PollVoteDecrypted } from "@pluralscape/data/transforms/poll";
-import type { PollId, PollStatus } from "@pluralscape/types";
+import type { Archived, PollId, PollStatus } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawPoll = RouterOutput["poll"]["get"];
@@ -23,12 +23,12 @@ type RawPollResults = RouterOutput["poll"]["results"];
 type RawPollVotePage = RouterOutput["poll"]["listVotes"];
 
 type PollPage = {
-  readonly data: PollDecrypted[];
+  readonly data: (PollDecrypted | Archived<PollDecrypted>)[];
   readonly nextCursor: string | null;
 };
 
 type PollVotePage = {
-  readonly data: PollVoteDecrypted[];
+  readonly data: (PollVoteDecrypted | Archived<PollVoteDecrypted>)[];
   readonly nextCursor: string | null;
 };
 
@@ -43,7 +43,10 @@ interface PollVoteListOpts extends SystemIdOverride {
   readonly includeArchived?: boolean;
 }
 
-export function usePoll(pollId: PollId, opts?: SystemIdOverride): TRPCQuery<PollDecrypted> {
+export function usePoll(
+  pollId: PollId,
+  opts?: SystemIdOverride,
+): TRPCQuery<PollDecrypted | Archived<PollDecrypted>> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -52,7 +55,7 @@ export function usePoll(pollId: PollId, opts?: SystemIdOverride): TRPCQuery<Poll
     { systemId, pollId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawPoll): PollDecrypted => {
+      select: (raw: RawPoll): PollDecrypted | Archived<PollDecrypted> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptPoll(raw, masterKey);
       },
@@ -118,7 +121,9 @@ export function usePollVotes(
         return {
           ...data,
           pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptPollVote(item, key)),
+            data: page.data.map((item): PollVoteDecrypted | Archived<PollVoteDecrypted> =>
+              decryptPollVote(item, key),
+            ),
             nextCursor: page.nextCursor,
           })),
         };

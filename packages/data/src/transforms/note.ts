@@ -8,6 +8,7 @@ import {
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  Archived,
   HexColor,
   NoteAuthorEntityType,
   NoteId,
@@ -60,8 +61,7 @@ export interface NoteDecrypted {
   readonly title: string;
   readonly content: string;
   readonly backgroundColor: HexColor | null;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
+  readonly archived: false;
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
@@ -83,11 +83,14 @@ function assertNoteEncryptedFields(raw: unknown): asserts raw is NoteEncryptedFi
  * The encrypted blob contains: `title`, `content`, `backgroundColor`.
  * All other fields pass through from the wire payload.
  */
-export function decryptNote(raw: NoteRaw, masterKey: KdfMasterKey): NoteDecrypted {
+export function decryptNote(
+  raw: NoteRaw,
+  masterKey: KdfMasterKey,
+): NoteDecrypted | Archived<NoteDecrypted> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertNoteEncryptedFields(plaintext);
 
-  return {
+  const base = {
     id: raw.id,
     systemId: raw.systemId,
     authorEntityType: raw.authorEntityType,
@@ -95,12 +98,16 @@ export function decryptNote(raw: NoteRaw, masterKey: KdfMasterKey): NoteDecrypte
     title: plaintext.title,
     content: plaintext.content,
     backgroundColor: plaintext.backgroundColor,
-    archived: raw.archived,
-    archivedAt: raw.archivedAt,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived note missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 /**
@@ -109,7 +116,7 @@ export function decryptNote(raw: NoteRaw, masterKey: KdfMasterKey): NoteDecrypte
 export function decryptNotePage(
   raw: NotePage,
   masterKey: KdfMasterKey,
-): { data: NoteDecrypted[]; nextCursor: string | null } {
+): { data: (NoteDecrypted | Archived<NoteDecrypted>)[]; nextCursor: string | null } {
   return {
     data: raw.data.map((item) => decryptNote(item, masterKey)),
     nextCursor: raw.nextCursor,

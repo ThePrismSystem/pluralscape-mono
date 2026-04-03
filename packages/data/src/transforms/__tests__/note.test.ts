@@ -105,6 +105,11 @@ describe("decryptNote", () => {
     expect(() => decryptNote(raw, masterKey)).toThrow();
   });
 
+  it("throws when archived is true but archivedAt is null", () => {
+    const raw = makeServerNote(makeEncryptedFields(), { archived: true, archivedAt: null });
+    expect(() => decryptNote(raw, masterKey)).toThrow("missing archivedAt");
+  });
+
   it("returns archived variant when raw.archived is true", () => {
     const archivedAt = toUnixMillis(1_700_002_000_000);
     const raw = makeServerNote(makeEncryptedFields(), { archived: true, archivedAt });

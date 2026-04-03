@@ -14,13 +14,13 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { NoteDecrypted } from "@pluralscape/data/transforms/note";
-import type { NoteAuthorEntityType, NoteId } from "@pluralscape/types";
+import type { Archived, NoteAuthorEntityType, NoteId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type RawNote = RouterOutput["note"]["get"];
 type RawNotePage = RouterOutput["note"]["list"];
 type NotePage = {
-  readonly data: NoteDecrypted[];
+  readonly data: (NoteDecrypted | Archived<NoteDecrypted>)[];
   readonly nextCursor: string | null;
 };
 
@@ -32,7 +32,10 @@ interface NoteListOpts extends SystemIdOverride {
   readonly systemWide?: boolean;
 }
 
-export function useNote(noteId: NoteId, opts?: SystemIdOverride): TRPCQuery<NoteDecrypted> {
+export function useNote(
+  noteId: NoteId,
+  opts?: SystemIdOverride,
+): TRPCQuery<NoteDecrypted | Archived<NoteDecrypted>> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -41,7 +44,7 @@ export function useNote(noteId: NoteId, opts?: SystemIdOverride): TRPCQuery<Note
     { systemId, noteId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawNote): NoteDecrypted => {
+      select: (raw: RawNote): NoteDecrypted | Archived<NoteDecrypted> => {
         if (masterKey === null) throw new Error("masterKey is null");
         return decryptNote(raw, masterKey);
       },

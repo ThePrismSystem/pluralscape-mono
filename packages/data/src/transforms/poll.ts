@@ -9,6 +9,7 @@ import {
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  Archived,
   EntityReference,
   HexColor,
   MemberId,
@@ -104,8 +105,7 @@ export interface PollDecrypted {
   readonly maxVotesPerMember: number;
   readonly allowAbstain: boolean;
   readonly allowVeto: boolean;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
+  readonly archived: false;
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
@@ -120,8 +120,7 @@ export interface PollVoteDecrypted {
   readonly comment: string | null;
   readonly isVeto: boolean;
   readonly votedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
+  readonly archived: false;
 }
 
 // ── Validators ────────────────────────────────────────────────────────
@@ -140,11 +139,14 @@ function assertPollEncryptedFields(raw: unknown): asserts raw is PollEncryptedFi
  * The encrypted blob contains: `title`, `description`, `options`.
  * All other fields pass through from the wire payload.
  */
-export function decryptPoll(raw: PollRaw, masterKey: KdfMasterKey): PollDecrypted {
+export function decryptPoll(
+  raw: PollRaw,
+  masterKey: KdfMasterKey,
+): PollDecrypted | Archived<PollDecrypted> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertPollEncryptedFields(plaintext);
 
-  return {
+  const base = {
     id: raw.id,
     systemId: raw.systemId,
     createdByMemberId: raw.createdByMemberId,
@@ -159,12 +161,16 @@ export function decryptPoll(raw: PollRaw, masterKey: KdfMasterKey): PollDecrypte
     maxVotesPerMember: raw.maxVotesPerMember,
     allowAbstain: raw.allowAbstain,
     allowVeto: raw.allowVeto,
-    archived: raw.archived,
-    archivedAt: raw.archivedAt,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived poll missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 /**
@@ -173,7 +179,7 @@ export function decryptPoll(raw: PollRaw, masterKey: KdfMasterKey): PollDecrypte
 export function decryptPollPage(
   raw: PollPage,
   masterKey: KdfMasterKey,
-): { data: PollDecrypted[]; nextCursor: string | null } {
+): { data: (PollDecrypted | Archived<PollDecrypted>)[]; nextCursor: string | null } {
   return {
     data: raw.data.map((item) => decryptPoll(item, masterKey)),
     nextCursor: raw.nextCursor,
@@ -209,7 +215,10 @@ export function encryptPollUpdate(
  * The encrypted blob contains: `comment`.
  * When `encryptedData` is null, the comment is null and no decryption is performed.
  */
-export function decryptPollVote(raw: PollVoteRaw, masterKey: KdfMasterKey): PollVoteDecrypted {
+export function decryptPollVote(
+  raw: PollVoteRaw,
+  masterKey: KdfMasterKey,
+): PollVoteDecrypted | Archived<PollVoteDecrypted> {
   let comment: string | null = null;
   if (raw.encryptedData !== null) {
     const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
@@ -219,7 +228,7 @@ export function decryptPollVote(raw: PollVoteRaw, masterKey: KdfMasterKey): Poll
     }
   }
 
-  return {
+  const base = {
     id: raw.id,
     pollId: raw.pollId,
     optionId: raw.optionId,
@@ -227,9 +236,13 @@ export function decryptPollVote(raw: PollVoteRaw, masterKey: KdfMasterKey): Poll
     comment,
     isVeto: raw.isVeto,
     votedAt: raw.votedAt,
-    archived: raw.archived,
-    archivedAt: raw.archivedAt,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived poll vote missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 /**

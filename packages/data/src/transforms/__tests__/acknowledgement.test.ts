@@ -99,14 +99,12 @@ describe("decryptAcknowledgement", () => {
     expect(result.message).toBe("Please acknowledge this.");
   });
 
-  it("handles archived with null archivedAt", () => {
+  it("throws when archived is true but archivedAt is null", () => {
     const raw = makeServerAcknowledgement(makeEncryptedFields(), {
       archived: true,
       archivedAt: null,
     });
-    const result = decryptAcknowledgement(raw, masterKey);
-    expect(result.archived).toBe(true);
-    expect(result.archivedAt).toBeNull();
+    expect(() => decryptAcknowledgement(raw, masterKey)).toThrow("missing archivedAt");
   });
 });
 

@@ -159,11 +159,9 @@ describe("decryptPoll", () => {
     }
   });
 
-  it("handles archived with null archivedAt", () => {
+  it("throws when archived is true but archivedAt is null", () => {
     const raw = makeServerPoll(makePollEncryptedFields(), { archived: true, archivedAt: null });
-    const result = decryptPoll(raw, masterKey);
-    expect(result.archived).toBe(true);
-    expect(result.archivedAt).toBeNull();
+    expect(() => decryptPoll(raw, masterKey)).toThrow("missing archivedAt");
   });
 });
 
@@ -268,11 +266,9 @@ describe("decryptPollVote", () => {
     }
   });
 
-  it("handles archived with null archivedAt", () => {
+  it("throws when archived is true but archivedAt is null", () => {
     const raw = makeServerPollVote({ archived: true, archivedAt: null });
-    const result = decryptPollVote(raw, masterKey);
-    expect(result.archived).toBe(true);
-    expect(result.archivedAt).toBeNull();
+    expect(() => decryptPollVote(raw, masterKey)).toThrow("missing archivedAt");
   });
 });
 
