@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptMessage, decryptMessagePage } from "@pluralscape/data/transforms/message";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -43,14 +44,19 @@ export function useMessage(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectMessage = useCallback(
+    (raw: RawMessage): ChatMessage | ArchivedChatMessage => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptMessage(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.message.get.useQuery(
     { systemId, channelId, messageId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawMessage): ChatMessage | ArchivedChatMessage => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptMessage(raw, masterKey);
-      },
+      select: selectMessage,
     },
   );
 }
@@ -62,6 +68,18 @@ export function useMessagesList(
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
+
+  const selectMessagePage = useCallback(
+    (data: InfiniteData<RawMessagePage>): InfiniteData<MessagePage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptMessagePage(page, key)),
+      };
+    },
+    [masterKey],
+  );
 
   return trpc.message.list.useInfiniteQuery(
     {
@@ -75,14 +93,7 @@ export function useMessagesList(
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawMessagePage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawMessagePage>): InfiniteData<MessagePage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptMessagePage(page, key)),
-        };
-      },
+      select: selectMessagePage,
     },
   );
 }

@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptChannel, decryptChannelPage } from "@pluralscape/data/transforms/channel";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -36,14 +37,19 @@ export function useChannel(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectChannel = useCallback(
+    (raw: RawChannel): Channel | Archived<Channel> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptChannel(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.channel.get.useQuery(
     { systemId, channelId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawChannel): Channel | Archived<Channel> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptChannel(raw, masterKey);
-      },
+      select: selectChannel,
     },
   );
 }
@@ -52,6 +58,18 @@ export function useChannelsList(opts?: ChannelListOpts): TRPCInfiniteQuery<Chann
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
+
+  const selectChannelPage = useCallback(
+    (data: InfiniteData<RawChannelPage>): InfiniteData<ChannelPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptChannelPage(page, key)),
+      };
+    },
+    [masterKey],
+  );
 
   return trpc.channel.list.useInfiniteQuery(
     {
@@ -62,14 +80,7 @@ export function useChannelsList(opts?: ChannelListOpts): TRPCInfiniteQuery<Chann
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawChannelPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawChannelPage>): InfiniteData<ChannelPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptChannelPage(page, key)),
-        };
-      },
+      select: selectChannelPage,
     },
   );
 }

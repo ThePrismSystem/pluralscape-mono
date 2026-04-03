@@ -3,6 +3,7 @@ import {
   decryptBoardMessage,
   decryptBoardMessagePage,
 } from "@pluralscape/data/transforms/board-message";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -39,14 +40,19 @@ export function useBoardMessage(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectBoardMessage = useCallback(
+    (raw: RawBoardMessage): BoardMessage | Archived<BoardMessage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptBoardMessage(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.boardMessage.get.useQuery(
     { systemId, boardMessageId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawBoardMessage): BoardMessage | Archived<BoardMessage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptBoardMessage(raw, masterKey);
-      },
+      select: selectBoardMessage,
     },
   );
 }
@@ -58,6 +64,18 @@ export function useBoardMessagesList(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectBoardMessagePage = useCallback(
+    (data: InfiniteData<RawBoardMessagePage>): InfiniteData<BoardMessagePage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptBoardMessagePage(page, key)),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.boardMessage.list.useInfiniteQuery(
     {
       systemId,
@@ -67,14 +85,7 @@ export function useBoardMessagesList(
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawBoardMessagePage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawBoardMessagePage>): InfiniteData<BoardMessagePage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptBoardMessagePage(page, key)),
-        };
-      },
+      select: selectBoardMessagePage,
     },
   );
 }

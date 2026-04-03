@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptPoll, decryptPollPage, decryptPollVote } from "@pluralscape/data/transforms/poll";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -51,14 +52,19 @@ export function usePoll(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectPoll = useCallback(
+    (raw: RawPoll): PollDecrypted | Archived<PollDecrypted> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptPoll(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.poll.get.useQuery(
     { systemId, pollId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawPoll): PollDecrypted | Archived<PollDecrypted> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptPoll(raw, masterKey);
-      },
+      select: selectPoll,
     },
   );
 }
@@ -67,6 +73,18 @@ export function usePollsList(opts?: PollListOpts): TRPCInfiniteQuery<PollPage> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
+
+  const selectPollPage = useCallback(
+    (data: InfiniteData<RawPollPage>): InfiniteData<PollPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptPollPage(page, key)),
+      };
+    },
+    [masterKey],
+  );
 
   return trpc.poll.list.useInfiniteQuery(
     {
@@ -78,14 +96,7 @@ export function usePollsList(opts?: PollListOpts): TRPCInfiniteQuery<PollPage> {
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawPollPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawPollPage>): InfiniteData<PollPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptPollPage(page, key)),
-        };
-      },
+      select: selectPollPage,
     },
   );
 }
@@ -105,6 +116,23 @@ export function usePollVotes(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectPollVotePage = useCallback(
+    (data: InfiniteData<RawPollVotePage>): InfiniteData<PollVotePage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item): PollVoteDecrypted | Archived<PollVoteDecrypted> =>
+            decryptPollVote(item, key),
+          ),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.poll.listVotes.useInfiniteQuery(
     {
       systemId,
@@ -115,19 +143,7 @@ export function usePollVotes(
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawPollVotePage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawPollVotePage>): InfiniteData<PollVotePage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item): PollVoteDecrypted | Archived<PollVoteDecrypted> =>
-              decryptPollVote(item, key),
-            ),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      select: selectPollVotePage,
     },
   );
 }

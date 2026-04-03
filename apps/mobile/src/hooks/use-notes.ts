@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptNote, decryptNotePage } from "@pluralscape/data/transforms/note";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -40,14 +41,19 @@ export function useNote(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectNote = useCallback(
+    (raw: RawNote): NoteDecrypted | Archived<NoteDecrypted> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptNote(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.note.get.useQuery(
     { systemId, noteId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawNote): NoteDecrypted | Archived<NoteDecrypted> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptNote(raw, masterKey);
-      },
+      select: selectNote,
     },
   );
 }
@@ -56,6 +62,18 @@ export function useNotesList(opts?: NoteListOpts): TRPCInfiniteQuery<NotePage> {
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
+
+  const selectNotePage = useCallback(
+    (data: InfiniteData<RawNotePage>): InfiniteData<NotePage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptNotePage(page, key)),
+      };
+    },
+    [masterKey],
+  );
 
   return trpc.note.list.useInfiniteQuery(
     {
@@ -69,14 +87,7 @@ export function useNotesList(opts?: NoteListOpts): TRPCInfiniteQuery<NotePage> {
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawNotePage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawNotePage>): InfiniteData<NotePage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptNotePage(page, key)),
-        };
-      },
+      select: selectNotePage,
     },
   );
 }

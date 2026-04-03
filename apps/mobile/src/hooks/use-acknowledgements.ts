@@ -3,6 +3,7 @@ import {
   decryptAcknowledgement,
   decryptAcknowledgementPage,
 } from "@pluralscape/data/transforms/acknowledgement";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -41,16 +42,19 @@ export function useAcknowledgement(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectAcknowledgement = useCallback(
+    (raw: RawAcknowledgement): AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptAcknowledgement(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.acknowledgement.get.useQuery(
     { systemId, ackId },
     {
       enabled: masterKey !== null,
-      select: (
-        raw: RawAcknowledgement,
-      ): AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptAcknowledgement(raw, masterKey);
-      },
+      select: selectAcknowledgement,
     },
   );
 }
@@ -62,6 +66,18 @@ export function useAcknowledgementsList(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectAcknowledgementPage = useCallback(
+    (data: InfiniteData<RawAcknowledgementPage>): InfiniteData<AcknowledgementPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptAcknowledgementPage(page, key)),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.acknowledgement.list.useInfiniteQuery(
     {
       systemId,
@@ -72,14 +88,7 @@ export function useAcknowledgementsList(
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawAcknowledgementPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawAcknowledgementPage>): InfiniteData<AcknowledgementPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptAcknowledgementPage(page, key)),
-        };
-      },
+      select: selectAcknowledgementPage,
     },
   );
 }
