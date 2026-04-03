@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
 import { AuthStateMachine } from "./auth-state-machine.js";
@@ -36,6 +37,8 @@ export function AuthProvider({
   readonly tokenStore: TokenStore;
   readonly children: ReactNode;
 }): React.JSX.Element {
+  const queryClient = useQueryClient();
+
   const subscribe = useCallback((listener: () => void) => machine.subscribe(listener), [machine]);
 
   const snapshot = useSyncExternalStore(
@@ -64,11 +67,13 @@ export function AuthProvider({
   const logout = useCallback(async (): Promise<void> => {
     await tokenStore.clearToken();
     machine.dispatch({ type: "LOGOUT" });
-  }, [machine, tokenStore]);
+    queryClient.clear();
+  }, [machine, tokenStore, queryClient]);
 
   const lock = useCallback((): void => {
     machine.dispatch({ type: "LOCK" });
-  }, [machine]);
+    queryClient.clear();
+  }, [machine, queryClient]);
 
   const unlock = useCallback(
     (masterKey: KdfMasterKey, identityKeys: AuthSession["identityKeys"]): void => {
