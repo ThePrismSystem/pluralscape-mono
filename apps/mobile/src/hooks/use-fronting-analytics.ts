@@ -1,14 +1,10 @@
 import { trpc } from "@pluralscape/api-client/trpc";
-import {
-  toCoFrontingAnalytics,
-  toFrontingAnalytics,
-} from "@pluralscape/data/transforms/fronting-analytics";
 
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import { type TRPCQuery } from "./types.js";
 
-import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { RouterInput } from "@pluralscape/api-client/trpc";
 import type { CoFrontingAnalytics, FrontingAnalytics } from "@pluralscape/types";
 
 /** Analytics data is treated as fresh for 5 minutes. */
@@ -28,8 +24,6 @@ export function useFrontingAnalytics(opts?: AnalyticsInput): TRPCQuery<FrontingA
     },
     {
       staleTime: ANALYTICS_STALE_TIME,
-      select: (raw: RouterOutput["analytics"]["fronting"]): FrontingAnalytics =>
-        toFrontingAnalytics(raw),
     },
   );
 }
@@ -46,8 +40,6 @@ export function useCoFrontingAnalytics(opts?: AnalyticsInput): TRPCQuery<CoFront
     },
     {
       staleTime: ANALYTICS_STALE_TIME,
-      select: (raw: RouterOutput["analytics"]["coFronting"]): CoFrontingAnalytics =>
-        toCoFrontingAnalytics(raw),
     },
   );
 }

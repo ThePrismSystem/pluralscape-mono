@@ -12,7 +12,6 @@
     "./transforms/system-settings": "./src/transforms/system-settings.ts",
     "./transforms/fronting-session": "./src/transforms/fronting-session.ts",
     "./transforms/fronting-comment": "./src/transforms/fronting-comment.ts",
-    "./transforms/fronting-analytics": "./src/transforms/fronting-analytics.ts",
     "./transforms/fronting-report": "./src/transforms/fronting-report.ts",
     "./transforms/timer-check-in": "./src/transforms/timer-check-in.ts"
   },
