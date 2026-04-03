@@ -12,7 +12,9 @@ const SystemIdInputSchema = z.object({
 });
 
 const enforceSystemAccess = middleware(async ({ ctx, input, next }) => {
-  // ctx.auth is guaranteed non-null by protectedProcedure.
+  // protectedProcedure guarantees ctx.auth is non-null at runtime, but the
+  // middleware type doesn't carry that narrowing. Optional chaining is used
+  // defensively so a misconfiguration surfaces as NOT_FOUND, not a crash.
   const auth = ctx.auth;
   const { systemId } = input as z.infer<typeof SystemIdInputSchema>;
 

@@ -1,4 +1,4 @@
-import { trpc } from "@pluralscape/api-client/trpc";
+import { MAX_BATCH_ITEMS, MAX_URL_LENGTH, trpc } from "@pluralscape/api-client/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { httpBatchLink, loggerLink } from "@trpc/client";
 import { useState } from "react";
@@ -11,12 +11,6 @@ import type { ReactNode } from "react";
 
 /** HTTP status code for unauthorized responses. */
 const HTTP_UNAUTHORIZED = 401;
-
-/** Maximum URL length before httpBatchLink splits into multiple requests. */
-const MAX_URL_LENGTH = 2083;
-
-/** Maximum operations per batch request. */
-const MAX_BATCH_ITEMS = 10;
 
 /** Type guard for typed tRPC client errors. */
 export function isTRPCClientError(cause: unknown): cause is TRPCClientError<AppRouter> {

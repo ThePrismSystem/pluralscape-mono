@@ -32,18 +32,8 @@ export interface SystemTRPCContext extends TRPCContext {
  * Used by server-side callers and tests. The Hono-specific
  * `createTRPCContext` calls this internally.
  */
-export function createTRPCContextInner(opts: {
-  db: PostgresJsDatabase;
-  auth: AuthContext | null;
-  createAudit: (auth?: AuthContext | null) => AuditWriter;
-  requestMeta: RequestMeta;
-}): TRPCContext {
-  return {
-    db: opts.db,
-    auth: opts.auth,
-    createAudit: opts.createAudit,
-    requestMeta: opts.requestMeta,
-  };
+export function createTRPCContextInner(opts: TRPCContext): TRPCContext {
+  return { ...opts };
 }
 
 /**

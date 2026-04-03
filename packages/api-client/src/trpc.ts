@@ -19,3 +19,9 @@ export type RouterInput = inferRouterInputs<AppRouter>;
 
 /** Typed procedure output shapes, indexed by router path. */
 export type RouterOutput = inferRouterOutputs<AppRouter>;
+
+/** Maximum URL length before httpBatchLink splits into multiple requests. */
+export const MAX_URL_LENGTH = 2083;
+
+/** Maximum operations per batch request. */
+export const MAX_BATCH_ITEMS = 10;

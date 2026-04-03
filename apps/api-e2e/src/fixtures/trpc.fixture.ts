@@ -30,7 +30,7 @@ interface TRPCFixtures {
 function makeTrpcClient(token?: string): ReturnType<typeof createTRPCClient<AppRouter>> {
   return createTRPCClient<AppRouter>({
     links: [
-      loggerLink(),
+      loggerLink({ enabled: () => !!process.env.DEBUG_TRPC }),
       httpBatchLink({
         url: TRPC_URL,
         maxURLLength: MAX_URL_LENGTH,
