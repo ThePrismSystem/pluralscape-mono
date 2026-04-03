@@ -14,6 +14,10 @@ import type { TRPCContext } from "./context.js";
  */
 const t = initTRPC.context<TRPCContext>().create({
   isDev: process.env.NODE_ENV === "development",
+  sse: {
+    ping: { enabled: true, intervalMs: 2_000 },
+    client: { reconnectAfterInactivityMs: 5_000 },
+  },
   errorFormatter({ shape, error }) {
     const cause = error.cause;
     const zodError =
