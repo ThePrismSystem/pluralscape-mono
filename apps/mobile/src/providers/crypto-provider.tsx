@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo } from "react";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { PropsWithChildren } from "react";
@@ -15,7 +15,8 @@ export function CryptoProvider({
   masterKey,
   children,
 }: PropsWithChildren<{ masterKey: KdfMasterKey | null }>): React.JSX.Element {
-  return <CryptoContext.Provider value={{ masterKey }}>{children}</CryptoContext.Provider>;
+  const value = useMemo(() => ({ masterKey }), [masterKey]);
+  return <CryptoContext.Provider value={value}>{children}</CryptoContext.Provider>;
 }
 
 export function useMasterKey(): KdfMasterKey | null {

@@ -4,31 +4,21 @@ import { decryptMember } from "@pluralscape/data/transforms/member";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
-import type { AppRouter, RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { Member, MemberId, SystemId } from "@pluralscape/types";
-import type {
-  InfiniteData,
-  UseInfiniteQueryResult,
-  UseMutationResult,
-  UseQueryResult,
-} from "@tanstack/react-query";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { TRPCHookResult } from "@trpc/react-query/shared";
+import {
+  DEFAULT_LIST_LIMIT,
+  type SystemIdOverride,
+  type TRPCInfiniteQuery,
+  type TRPCMutation,
+  type TRPCQuery,
+} from "./types.js";
 
-/** Default page size for member list queries. */
-const DEFAULT_LIST_LIMIT = 20;
+import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { Member, MemberId } from "@pluralscape/types";
+import type { InfiniteData } from "@tanstack/react-query";
 
 type RawMember = RouterOutput["member"]["get"];
 type RawMemberPage = RouterOutput["member"]["list"];
-type TRPCError = TRPCClientErrorLike<AppRouter>;
 type MemberPage = { readonly items: Member[]; readonly nextCursor: string | null };
-type TRPCQuery<T> = TRPCHookResult & UseQueryResult<T, TRPCError>;
-type TRPCInfiniteQuery<T> = TRPCHookResult & UseInfiniteQueryResult<InfiniteData<T>, TRPCError>;
-type TRPCMutation<TData, TVars> = TRPCHookResult & UseMutationResult<TData, TRPCError, TVars>;
-
-interface SystemIdOverride {
-  readonly systemId?: SystemId;
-}
 
 interface MemberListOpts extends SystemIdOverride {
   readonly limit?: number;

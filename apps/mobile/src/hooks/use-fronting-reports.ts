@@ -4,31 +4,21 @@ import { decryptFrontingReport } from "@pluralscape/data/transforms/fronting-rep
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
-import type { AppRouter, RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { FrontingReport, FrontingReportId, SystemId } from "@pluralscape/types";
-import type {
-  InfiniteData,
-  UseInfiniteQueryResult,
-  UseMutationResult,
-  UseQueryResult,
-} from "@tanstack/react-query";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { TRPCHookResult } from "@trpc/react-query/shared";
+import {
+  DEFAULT_LIST_LIMIT,
+  type SystemIdOverride,
+  type TRPCInfiniteQuery,
+  type TRPCMutation,
+  type TRPCQuery,
+} from "./types.js";
 
-/** Default page size for fronting report list queries. */
-const DEFAULT_LIST_LIMIT = 20;
+import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { FrontingReport, FrontingReportId } from "@pluralscape/types";
+import type { InfiniteData } from "@tanstack/react-query";
 
 type RawReport = RouterOutput["frontingReport"]["get"];
 type RawReportPage = RouterOutput["frontingReport"]["list"];
-type TRPCError = TRPCClientErrorLike<AppRouter>;
 type ReportPage = { readonly items: FrontingReport[]; readonly nextCursor: string | null };
-type TRPCQuery<T> = TRPCHookResult & UseQueryResult<T, TRPCError>;
-type TRPCInfiniteQuery<T> = TRPCHookResult & UseInfiniteQueryResult<InfiniteData<T>, TRPCError>;
-type TRPCMutation<TData, TVars> = TRPCHookResult & UseMutationResult<TData, TRPCError, TVars>;
-
-interface SystemIdOverride {
-  readonly systemId?: SystemId;
-}
 
 interface FrontingReportListOpts extends SystemIdOverride {
   readonly limit?: number;

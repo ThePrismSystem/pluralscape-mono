@@ -4,32 +4,22 @@ import { decryptGroup } from "@pluralscape/data/transforms/group";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
-import type { AppRouter, RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { GroupDecrypted } from "@pluralscape/data/transforms/group";
-import type { GroupId, MemberId, SystemId } from "@pluralscape/types";
-import type {
-  InfiniteData,
-  UseInfiniteQueryResult,
-  UseMutationResult,
-  UseQueryResult,
-} from "@tanstack/react-query";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { TRPCHookResult } from "@trpc/react-query/shared";
+import {
+  DEFAULT_LIST_LIMIT,
+  type SystemIdOverride,
+  type TRPCInfiniteQuery,
+  type TRPCMutation,
+  type TRPCQuery,
+} from "./types.js";
 
-/** Default page size for group list queries. */
-const DEFAULT_LIST_LIMIT = 20;
+import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { GroupDecrypted } from "@pluralscape/data/transforms/group";
+import type { GroupId, MemberId } from "@pluralscape/types";
+import type { InfiniteData } from "@tanstack/react-query";
 
 type RawGroup = RouterOutput["group"]["get"];
 type RawGroupPage = RouterOutput["group"]["list"];
-type TRPCError = TRPCClientErrorLike<AppRouter>;
 type GroupPage = { readonly items: GroupDecrypted[]; readonly nextCursor: string | null };
-type TRPCQuery<T> = TRPCHookResult & UseQueryResult<T, TRPCError>;
-type TRPCInfiniteQuery<T> = TRPCHookResult & UseInfiniteQueryResult<InfiniteData<T>, TRPCError>;
-type TRPCMutation<TData, TVars> = TRPCHookResult & UseMutationResult<TData, TRPCError, TVars>;
-
-interface SystemIdOverride {
-  readonly systemId?: SystemId;
-}
 
 interface GroupListOpts extends SystemIdOverride {
   readonly limit?: number;

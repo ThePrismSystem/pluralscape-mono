@@ -7,38 +7,32 @@ import {
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
-import type { AppRouter, RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { FrontingSession, FrontingSessionId, SystemId } from "@pluralscape/types";
-import type {
-  InfiniteData,
-  UseInfiniteQueryResult,
-  UseMutationResult,
-  UseQueryResult,
-} from "@tanstack/react-query";
-import type { TRPCClientErrorLike } from "@trpc/client";
+import {
+  DEFAULT_LIST_LIMIT,
+  type SystemIdOverride,
+  type TRPCError,
+  type TRPCInfiniteQuery,
+  type TRPCMutation,
+  type TRPCQuery,
+} from "./types.js";
+
+import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { FrontingSession, FrontingSessionId } from "@pluralscape/types";
+import type { InfiniteData, UseMutationResult } from "@tanstack/react-query";
 import type { TRPCHookResult } from "@trpc/react-query/shared";
 
-/** Default page size for fronting session list queries. */
-const DEFAULT_LIST_LIMIT = 20;
+type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
+  UseMutationResult<TData, TRPCError, TVars, TCtx>;
 
 type RawSession = RouterOutput["frontingSession"]["get"];
 type RawSessionPage = RouterOutput["frontingSession"]["list"];
 type RawGetActive = RouterOutput["frontingSession"]["getActive"];
-type TRPCError = TRPCClientErrorLike<AppRouter>;
 type SessionPage = { readonly items: FrontingSession[]; readonly nextCursor: string | null };
 type ActiveFrontersResult = {
   readonly sessions: FrontingSession[];
   readonly isCofronting: boolean;
   readonly entityMemberMap: Record<string, readonly string[]>;
 };
-type TRPCQuery<T> = TRPCHookResult & UseQueryResult<T, TRPCError>;
-type TRPCInfiniteQuery<T> = TRPCHookResult & UseInfiniteQueryResult<InfiniteData<T>, TRPCError>;
-type TRPCMutation<TData, TVars, TCtx = unknown> = TRPCHookResult &
-  UseMutationResult<TData, TRPCError, TVars, TCtx>;
-
-interface SystemIdOverride {
-  readonly systemId?: SystemId;
-}
 
 interface FrontingSessionListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -113,7 +107,7 @@ export function useStartSession(): TRPCMutation<
 
 type EndSessionContext = { readonly previousSession: RawSession | undefined };
 
-export function useEndSession(): TRPCMutation<
+export function useEndSession(): TRPCMutationCtx<
   RouterOutput["frontingSession"]["end"],
   RouterInput["frontingSession"]["end"],
   EndSessionContext

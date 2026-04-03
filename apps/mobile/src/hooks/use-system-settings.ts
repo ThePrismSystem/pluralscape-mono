@@ -7,17 +7,13 @@ import {
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
-import type { AppRouter, RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import { type TRPCMutation, type TRPCQuery } from "./types.js";
+
+import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { NomenclatureSettings, SystemSettings } from "@pluralscape/types";
-import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { TRPCHookResult } from "@trpc/react-query/shared";
 
 type RawSystemSettings = RouterOutput["systemSettings"]["settings"]["get"];
 type RawNomenclature = RouterOutput["systemSettings"]["nomenclature"]["get"];
-type TRPCError = TRPCClientErrorLike<AppRouter>;
-type TRPCQuery<T> = TRPCHookResult & UseQueryResult<T, TRPCError>;
-type TRPCMutation<TData, TVars> = TRPCHookResult & UseMutationResult<TData, TRPCError, TVars>;
 
 export function useSystemSettings(): TRPCQuery<SystemSettings> {
   const systemId = useActiveSystemId();

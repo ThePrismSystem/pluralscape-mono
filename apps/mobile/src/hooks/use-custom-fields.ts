@@ -7,39 +7,29 @@ import {
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
-import type { AppRouter, RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import {
+  DEFAULT_LIST_LIMIT,
+  type SystemIdOverride,
+  type TRPCInfiniteQuery,
+  type TRPCMutation,
+  type TRPCQuery,
+} from "./types.js";
+
+import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   FieldDefinitionDecrypted,
   FieldValueDecrypted,
 } from "@pluralscape/data/transforms/custom-field";
-import type { FieldDefinitionId, MemberId, SystemId } from "@pluralscape/types";
-import type {
-  InfiniteData,
-  UseInfiniteQueryResult,
-  UseMutationResult,
-  UseQueryResult,
-} from "@tanstack/react-query";
-import type { TRPCClientErrorLike } from "@trpc/client";
-import type { TRPCHookResult } from "@trpc/react-query/shared";
-
-/** Default page size for field definition list queries. */
-const DEFAULT_LIST_LIMIT = 20;
+import type { FieldDefinitionId, MemberId } from "@pluralscape/types";
+import type { InfiniteData } from "@tanstack/react-query";
 
 type RawFieldDef = RouterOutput["field"]["definition"]["get"];
 type RawFieldDefPage = RouterOutput["field"]["definition"]["list"];
 type RawFieldValueList = RouterOutput["field"]["value"]["list"];
-type TRPCError = TRPCClientErrorLike<AppRouter>;
 type FieldDefPage = {
   readonly items: FieldDefinitionDecrypted[];
   readonly nextCursor: string | null;
 };
-type TRPCQuery<T> = TRPCHookResult & UseQueryResult<T, TRPCError>;
-type TRPCInfiniteQuery<T> = TRPCHookResult & UseInfiniteQueryResult<InfiniteData<T>, TRPCError>;
-type TRPCMutation<TData, TVars> = TRPCHookResult & UseMutationResult<TData, TRPCError, TVars>;
-
-interface SystemIdOverride {
-  readonly systemId?: SystemId;
-}
 
 interface FieldDefinitionListOpts extends SystemIdOverride {
   readonly limit?: number;

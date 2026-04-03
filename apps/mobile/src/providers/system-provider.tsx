@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 
 import type { SystemId } from "@pluralscape/types";
 import type { PropsWithChildren } from "react";
@@ -13,7 +13,8 @@ export function SystemProvider({
   systemId,
   children,
 }: PropsWithChildren<{ systemId: SystemId | null }>): React.JSX.Element {
-  return <SystemContext.Provider value={{ systemId }}>{children}</SystemContext.Provider>;
+  const value = useMemo(() => ({ systemId }), [systemId]);
+  return <SystemContext.Provider value={value}>{children}</SystemContext.Provider>;
 }
 
 export function useActiveSystemId(): SystemId {
