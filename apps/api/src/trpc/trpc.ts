@@ -1,5 +1,5 @@
 import { initTRPC } from "@trpc/server";
-import { flattenError, ZodError } from "zod/v4";
+import { z } from "zod/v4";
 
 import type { TRPCContext } from "./context.js";
 
@@ -15,14 +15,14 @@ import type { TRPCContext } from "./context.js";
 const t = initTRPC.context<TRPCContext>().create({
   isDev: process.env.NODE_ENV === "development",
   errorFormatter({ shape, error }) {
+    const cause = error.cause;
+    const zodError =
+      error.code === "BAD_REQUEST" && cause instanceof z.ZodError ? z.treeifyError(cause) : null;
     return {
       ...shape,
       data: {
         ...shape.data,
-        zodError:
-          error.code === "BAD_REQUEST" && error.cause instanceof ZodError
-            ? flattenError(error.cause)
-            : null,
+        zodError,
       },
     };
   },
