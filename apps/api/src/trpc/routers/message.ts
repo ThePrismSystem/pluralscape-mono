@@ -15,8 +15,12 @@ import {
   restoreMessage,
   updateMessage,
 } from "../../services/message.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for message list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -31,6 +35,7 @@ const MessageIdSchema = z.object({
 
 export const messageRouter = router({
   create: systemProcedure
+    .use(writeLimiter)
     .input(ChannelScopeSchema.and(CreateMessageBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -38,12 +43,14 @@ export const messageRouter = router({
     }),
 
   get: systemProcedure
+    .use(readLimiter)
     .input(ChannelScopeSchema.and(MessageIdSchema))
     .query(async ({ ctx, input }) => {
       return getMessage(ctx.db, ctx.systemId, input.messageId, ctx.auth);
     }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       ChannelScopeSchema.and(
         z.object({
@@ -66,6 +73,7 @@ export const messageRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(ChannelScopeSchema.and(MessageIdSchema).and(UpdateMessageBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -80,6 +88,7 @@ export const messageRouter = router({
     }),
 
   archive: systemProcedure
+    .use(writeLimiter)
     .input(ChannelScopeSchema.and(MessageIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -88,6 +97,7 @@ export const messageRouter = router({
     }),
 
   restore: systemProcedure
+    .use(writeLimiter)
     .input(ChannelScopeSchema.and(MessageIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -95,6 +105,7 @@ export const messageRouter = router({
     }),
 
   delete: systemProcedure
+    .use(writeLimiter)
     .input(
       ChannelScopeSchema.and(MessageIdSchema).and(
         z.object({ timestamp: z.number().int().min(0).optional() }),

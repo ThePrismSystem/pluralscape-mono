@@ -1,22 +1,16 @@
+import { expect, type MockInstance } from "vitest";
+
 import { createCallerFactory, router } from "../../trpc/trpc.js";
+import { MOCK_AUTH, MOCK_SYSTEM_ID } from "../helpers/shared-mocks.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { TRPCContext } from "../../trpc/context.js";
-import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 
 export type { SystemId };
 
-export const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
-
-export const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test001" as AccountId,
-  systemId: SYSTEM_ID,
-  sessionId: "sess_test001" as SessionId,
-  accountType: "system",
-  ownedSystemIds: new Set([SYSTEM_ID]),
-  auditLogIpTracking: false,
-};
+export { MOCK_AUTH, MOCK_SYSTEM_ID };
 
 export const noopAuditWriter: AuditWriter = () => Promise.resolve();
 
@@ -37,4 +31,28 @@ export function makeCallerFactory<T extends Parameters<typeof router>[0]>(
   const appRouter = router(routerDef);
   const createCaller = createCallerFactory(appRouter);
   return (auth: AuthContext | null = MOCK_AUTH) => createCaller(makeContext(auth));
+}
+
+/** Extract the rate-limit key from the first call to a mocked checkRateLimit. */
+export function getRateLimitKey(mock: MockInstance): string {
+  const key = mock.mock.calls[0]?.[0];
+  if (typeof key !== "string") {
+    throw new Error("checkRateLimit was not called or first arg is not a string");
+  }
+  return key;
+}
+
+/**
+ * Assert that calling `fn` triggers rate limiting with the expected category.
+ * Clears the mock before calling, then checks the rate-limit key contains the category.
+ */
+export async function assertProcedureRateLimited(
+  checkRateLimitMock: MockInstance,
+  fn: () => Promise<unknown>,
+  expectedCategory: string,
+): Promise<void> {
+  checkRateLimitMock.mockClear();
+  await fn();
+  expect(checkRateLimitMock).toHaveBeenCalled();
+  expect(getRateLimitKey(checkRateLimitMock)).toContain(expectedCategory);
 }

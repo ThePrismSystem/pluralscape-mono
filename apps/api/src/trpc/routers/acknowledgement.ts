@@ -14,8 +14,12 @@ import {
   listAcknowledgements,
   restoreAcknowledgement,
 } from "../../services/acknowledgement.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for acknowledgement list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -26,17 +30,22 @@ const AckIdSchema = z.object({
 
 export const acknowledgementRouter = router({
   create: systemProcedure
+    .use(writeLimiter)
     .input(CreateAcknowledgementBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return createAcknowledgement(ctx.db, ctx.systemId, input, ctx.auth, audit);
     }),
 
-  get: systemProcedure.input(AckIdSchema).query(async ({ ctx, input }) => {
-    return getAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(AckIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -55,6 +64,7 @@ export const acknowledgementRouter = router({
     }),
 
   confirm: systemProcedure
+    .use(writeLimiter)
     .input(AckIdSchema.and(ConfirmAcknowledgementBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -68,20 +78,29 @@ export const acknowledgementRouter = router({
       );
     }),
 
-  archive: systemProcedure.input(AckIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(AckIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(AckIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(AckIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(AckIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(AckIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

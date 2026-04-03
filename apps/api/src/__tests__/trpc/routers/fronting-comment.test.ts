@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { FrontingCommentId, FrontingSessionId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/fronting-comment.service.js", () => ({
@@ -39,7 +48,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 const MOCK_COMMENT_RESULT = {
   id: COMMENT_ID,
   frontingSessionId: SESSION_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   memberId: null,
   customFrontId: null,
   structureEntityId: null,
@@ -63,7 +72,7 @@ describe("frontingComment router", () => {
       vi.mocked(createFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingComment.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         memberId: VALID_MEMBER_ID,
@@ -72,7 +81,7 @@ describe("frontingComment router", () => {
       });
 
       expect(vi.mocked(createFrontingComment)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createFrontingComment).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createFrontingComment).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(createFrontingComment).mock.calls[0]?.[2]).toBe(SESSION_ID);
       expect(result).toEqual(MOCK_COMMENT_RESULT);
     });
@@ -81,7 +90,7 @@ describe("frontingComment router", () => {
       const caller = createCaller(null);
       await expect(
         caller.frontingComment.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           memberId: VALID_MEMBER_ID,
@@ -110,7 +119,7 @@ describe("frontingComment router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingComment.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: "not-a-session-id" as FrontingSessionId,
           encryptedData: VALID_ENCRYPTED_DATA,
           memberId: VALID_MEMBER_ID,
@@ -124,7 +133,7 @@ describe("frontingComment router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingComment.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           memberId: undefined,
@@ -142,7 +151,7 @@ describe("frontingComment router", () => {
       vi.mocked(getFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingComment.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
         commentId: COMMENT_ID,
       });
@@ -157,7 +166,7 @@ describe("frontingComment router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingComment.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
           commentId: "not-a-comment-id" as FrontingCommentId,
         }),
@@ -178,7 +187,7 @@ describe("frontingComment router", () => {
       vi.mocked(listFrontingComments).mockResolvedValue(mockList);
       const caller = createCaller();
       const result = await caller.frontingComment.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
       });
 
@@ -195,7 +204,7 @@ describe("frontingComment router", () => {
       vi.mocked(updateFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingComment.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
         commentId: COMMENT_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -216,7 +225,7 @@ describe("frontingComment router", () => {
       vi.mocked(archiveFrontingComment).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.frontingComment.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
         commentId: COMMENT_ID,
       });
@@ -233,7 +242,7 @@ describe("frontingComment router", () => {
       vi.mocked(restoreFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingComment.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
         commentId: COMMENT_ID,
       });
@@ -253,7 +262,7 @@ describe("frontingComment router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingComment.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
           commentId: COMMENT_ID,
         }),
@@ -267,7 +276,7 @@ describe("frontingComment router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingComment.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
           commentId: COMMENT_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
@@ -275,5 +284,41 @@ describe("frontingComment router", () => {
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listFrontingComments).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.frontingComment.list({ systemId: MOCK_SYSTEM_ID, sessionId: SESSION_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createFrontingComment).mockResolvedValue(MOCK_COMMENT_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.frontingComment.create({
+          systemId: MOCK_SYSTEM_ID,
+          sessionId: SESSION_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          memberId: VALID_MEMBER_ID,
+          customFrontId: undefined,
+          structureEntityId: undefined,
+        }),
+      "write",
+    );
   });
 });

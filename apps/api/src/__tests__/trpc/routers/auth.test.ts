@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ID, MOCK_AUTH, makeCallerFactory } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  MOCK_AUTH,
+  makeCallerFactory,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { SessionId } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
@@ -102,6 +111,17 @@ describe("auth router", () => {
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
     });
+
+    it("applies authHeavy rate limiting", async () => {
+      const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+      vi.mocked(registerAccount).mockResolvedValue(registrationResult);
+      const caller = createCaller(null);
+      await assertProcedureRateLimited(
+        vi.mocked(checkRateLimit),
+        () => caller.auth.register(registrationInput),
+        "authHeavy",
+      );
+    });
   });
 
   // ── login ─────────────────────────────────────────────────────────
@@ -112,7 +132,7 @@ describe("auth router", () => {
     const loginResult = {
       sessionToken: "tok_xyz",
       accountId: MOCK_AUTH.accountId,
-      systemId: SYSTEM_ID,
+      systemId: MOCK_SYSTEM_ID,
       accountType: "system" as const,
     };
 
@@ -136,6 +156,17 @@ describe("auth router", () => {
       const caller = createCaller();
       await expect(caller.auth.login(loginInput)).rejects.toThrow(
         expect.objectContaining({ code: "TOO_MANY_REQUESTS" }),
+      );
+    });
+
+    it("applies authHeavy rate limiting", async () => {
+      const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+      vi.mocked(loginAccount).mockResolvedValue(loginResult);
+      const caller = createCaller(null);
+      await assertProcedureRateLimited(
+        vi.mocked(checkRateLimit),
+        () => caller.auth.login(loginInput),
+        "authHeavy",
       );
     });
   });
@@ -240,7 +271,7 @@ describe("auth router", () => {
       vi.mocked(revokeAllSessions).mockResolvedValue(3);
       const caller = createCaller(MOCK_AUTH);
       const result = await caller.auth.revokeAllSessions();
-      expect(result).toEqual({ revoked: 3 });
+      expect(result).toEqual({ revokedCount: 3 });
     });
 
     it("passes current sessionId as exception", async () => {

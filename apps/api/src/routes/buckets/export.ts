@@ -17,8 +17,10 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 
 export const exportRoutes = new Hono<AuthEnv>();
 
+// Bucket export is resource-intensive (large encrypted payloads + pagination).
+// Uses readHeavy to match the tRPC bucket.exportManifest/exportPage rate limit.
 exportRoutes.use("/manifest", createCategoryRateLimiter("readHeavy"));
-exportRoutes.use("/", createCategoryRateLimiter("readDefault"));
+exportRoutes.use("/", createCategoryRateLimiter("readHeavy"));
 
 // ── Manifest ───────────────────────────────────────────────────────
 

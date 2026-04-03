@@ -99,7 +99,7 @@ describe("POST /account/friends/:connectionId/accept", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(acceptFriendConnection)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CONNECTION_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),
@@ -149,7 +149,7 @@ describe("POST /account/friends/:connectionId/reject", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(rejectFriendConnection)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CONNECTION_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),

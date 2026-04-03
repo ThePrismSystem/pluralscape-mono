@@ -24,8 +24,12 @@ import {
   restorePoll,
   updatePoll,
 } from "../../services/poll.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for poll list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -42,16 +46,23 @@ const VoteIdSchema = z.object({
 export const pollRouter = router({
   // ── Poll procedures ───────────────────────────────────────────────
 
-  create: systemProcedure.input(CreatePollBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createPoll(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreatePollBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createPoll(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  get: systemProcedure.input(PollIdSchema).query(async ({ ctx, input }) => {
-    return getPoll(ctx.db, ctx.systemId, input.pollId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(PollIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getPoll(ctx.db, ctx.systemId, input.pollId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -70,6 +81,7 @@ export const pollRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(PollIdSchema.and(UpdatePollBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -83,31 +95,44 @@ export const pollRouter = router({
       );
     }),
 
-  close: systemProcedure.input(PollIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return closePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
-  }),
+  close: systemProcedure
+    .use(writeLimiter)
+    .input(PollIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return closePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+    }),
 
-  archive: systemProcedure.input(PollIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archivePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(PollIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archivePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(PollIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restorePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(PollIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restorePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(PollIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deletePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(PollIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deletePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   // ── Poll vote procedures ──────────────────────────────────────────
 
   castVote: systemProcedure
+    .use(writeLimiter)
     .input(PollIdSchema.and(CastVoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -115,6 +140,7 @@ export const pollRouter = router({
     }),
 
   listVotes: systemProcedure
+    .use(readLimiter)
     .input(
       PollIdSchema.and(
         z.object({
@@ -133,6 +159,7 @@ export const pollRouter = router({
     }),
 
   updateVote: systemProcedure
+    .use(writeLimiter)
     .input(VoteIdSchema.and(UpdatePollVoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -147,13 +174,19 @@ export const pollRouter = router({
       );
     }),
 
-  deleteVote: systemProcedure.input(VoteIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deletePollVote(ctx.db, ctx.systemId, input.pollId, input.voteId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  deleteVote: systemProcedure
+    .use(writeLimiter)
+    .input(VoteIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deletePollVote(ctx.db, ctx.systemId, input.pollId, input.voteId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  results: systemProcedure.input(PollIdSchema).query(async ({ ctx, input }) => {
-    return getPollResults(ctx.db, ctx.systemId, input.pollId, ctx.auth);
-  }),
+  results: systemProcedure
+    .use(readLimiter)
+    .input(PollIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getPollResults(ctx.db, ctx.systemId, input.pollId, ctx.auth);
+    }),
 });

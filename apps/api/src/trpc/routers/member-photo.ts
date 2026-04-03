@@ -15,8 +15,12 @@ import {
   reorderMemberPhotos,
   restoreMemberPhoto,
 } from "../../services/member-photo.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for member photo list queries. */
 const MAX_LIST_LIMIT = 50;
@@ -33,6 +37,7 @@ const MemberPhotoIdSchema = MemberIdSchema.and(PhotoIdSchema);
 
 export const memberPhotoRouter = router({
   create: systemProcedure
+    .use(writeLimiter)
     .input(MemberIdSchema.and(CreateMemberPhotoBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -46,11 +51,15 @@ export const memberPhotoRouter = router({
       );
     }),
 
-  get: systemProcedure.input(MemberPhotoIdSchema).query(async ({ ctx, input }) => {
-    return getMemberPhoto(ctx.db, ctx.systemId, input.memberId, input.photoId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(MemberPhotoIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getMemberPhoto(ctx.db, ctx.systemId, input.memberId, input.photoId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       MemberIdSchema.and(
         z.object({
@@ -67,24 +76,48 @@ export const memberPhotoRouter = router({
       });
     }),
 
-  archive: systemProcedure.input(MemberPhotoIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveMemberPhoto(ctx.db, ctx.systemId, input.memberId, input.photoId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(MemberPhotoIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveMemberPhoto(
+        ctx.db,
+        ctx.systemId,
+        input.memberId,
+        input.photoId,
+        ctx.auth,
+        audit,
+      );
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(MemberPhotoIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreMemberPhoto(ctx.db, ctx.systemId, input.memberId, input.photoId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(MemberPhotoIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreMemberPhoto(
+        ctx.db,
+        ctx.systemId,
+        input.memberId,
+        input.photoId,
+        ctx.auth,
+        audit,
+      );
+    }),
 
-  delete: systemProcedure.input(MemberPhotoIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteMemberPhoto(ctx.db, ctx.systemId, input.memberId, input.photoId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(MemberPhotoIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteMemberPhoto(ctx.db, ctx.systemId, input.memberId, input.photoId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   reorder: systemProcedure
+    .use(writeLimiter)
     .input(MemberIdSchema.and(ReorderPhotosBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

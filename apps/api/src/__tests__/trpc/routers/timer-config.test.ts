@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { TimerId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/timer-config.service.js", () => ({
@@ -36,7 +45,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3J0aW1lcg==";
 
 const MOCK_TIMER_RESULT = {
   id: TIMER_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   enabled: true,
   intervalMinutes: 60,
   wakingHoursOnly: false as const,
@@ -62,12 +71,12 @@ describe("timerConfig router", () => {
       vi.mocked(createTimerConfig).mockResolvedValue(MOCK_TIMER_RESULT);
       const caller = createCaller();
       const result = await caller.timerConfig.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(vi.mocked(createTimerConfig)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createTimerConfig).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createTimerConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_TIMER_RESULT);
     });
 
@@ -75,7 +84,7 @@ describe("timerConfig router", () => {
       const caller = createCaller(null);
       await expect(
         caller.timerConfig.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
@@ -99,10 +108,10 @@ describe("timerConfig router", () => {
     it("calls getTimerConfig with correct systemId and timerId", async () => {
       vi.mocked(getTimerConfig).mockResolvedValue(MOCK_TIMER_RESULT);
       const caller = createCaller();
-      const result = await caller.timerConfig.get({ systemId: SYSTEM_ID, timerId: TIMER_ID });
+      const result = await caller.timerConfig.get({ systemId: MOCK_SYSTEM_ID, timerId: TIMER_ID });
 
       expect(vi.mocked(getTimerConfig)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getTimerConfig).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getTimerConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getTimerConfig).mock.calls[0]?.[2]).toBe(TIMER_ID);
       expect(result).toEqual(MOCK_TIMER_RESULT);
     });
@@ -111,7 +120,7 @@ describe("timerConfig router", () => {
       const caller = createCaller();
       await expect(
         caller.timerConfig.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           timerId: "not-a-timer-id" as TimerId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -123,7 +132,7 @@ describe("timerConfig router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.timerConfig.get({ systemId: SYSTEM_ID, timerId: TIMER_ID }),
+        caller.timerConfig.get({ systemId: MOCK_SYSTEM_ID, timerId: TIMER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -140,10 +149,10 @@ describe("timerConfig router", () => {
       };
       vi.mocked(listTimerConfigs).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.timerConfig.list({ systemId: SYSTEM_ID });
+      const result = await caller.timerConfig.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listTimerConfigs)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listTimerConfigs).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listTimerConfigs).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -156,7 +165,7 @@ describe("timerConfig router", () => {
       });
       const caller = createCaller();
       await caller.timerConfig.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "cursor_abc",
         limit: 10,
         includeArchived: true,
@@ -176,14 +185,14 @@ describe("timerConfig router", () => {
       vi.mocked(updateTimerConfig).mockResolvedValue({ ...MOCK_TIMER_RESULT, version: 2 });
       const caller = createCaller();
       const result = await caller.timerConfig.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         timerId: TIMER_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateTimerConfig)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateTimerConfig).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateTimerConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateTimerConfig).mock.calls[0]?.[2]).toBe(TIMER_ID);
       expect(result.version).toBe(2);
     });
@@ -195,7 +204,7 @@ describe("timerConfig router", () => {
       const caller = createCaller();
       await expect(
         caller.timerConfig.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           timerId: TIMER_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -210,7 +219,7 @@ describe("timerConfig router", () => {
       const caller = createCaller();
       await expect(
         caller.timerConfig.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           timerId: TIMER_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -225,11 +234,14 @@ describe("timerConfig router", () => {
     it("calls archiveTimerConfig and returns success", async () => {
       vi.mocked(archiveTimerConfig).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.timerConfig.archive({ systemId: SYSTEM_ID, timerId: TIMER_ID });
+      const result = await caller.timerConfig.archive({
+        systemId: MOCK_SYSTEM_ID,
+        timerId: TIMER_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveTimerConfig)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveTimerConfig).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveTimerConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveTimerConfig).mock.calls[0]?.[2]).toBe(TIMER_ID);
     });
 
@@ -239,7 +251,7 @@ describe("timerConfig router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.timerConfig.archive({ systemId: SYSTEM_ID, timerId: TIMER_ID }),
+        caller.timerConfig.archive({ systemId: MOCK_SYSTEM_ID, timerId: TIMER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -250,10 +262,13 @@ describe("timerConfig router", () => {
     it("calls restoreTimerConfig and returns result", async () => {
       vi.mocked(restoreTimerConfig).mockResolvedValue({ ...MOCK_TIMER_RESULT, archived: false });
       const caller = createCaller();
-      const result = await caller.timerConfig.restore({ systemId: SYSTEM_ID, timerId: TIMER_ID });
+      const result = await caller.timerConfig.restore({
+        systemId: MOCK_SYSTEM_ID,
+        timerId: TIMER_ID,
+      });
 
       expect(vi.mocked(restoreTimerConfig)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreTimerConfig).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreTimerConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreTimerConfig).mock.calls[0]?.[2]).toBe(TIMER_ID);
       expect(result).toBeDefined();
     });
@@ -264,8 +279,40 @@ describe("timerConfig router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.timerConfig.restore({ systemId: SYSTEM_ID, timerId: TIMER_ID }),
+        caller.timerConfig.restore({ systemId: MOCK_SYSTEM_ID, timerId: TIMER_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listTimerConfigs).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.timerConfig.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createTimerConfig).mockResolvedValue(MOCK_TIMER_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.timerConfig.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      "write",
+    );
   });
 });

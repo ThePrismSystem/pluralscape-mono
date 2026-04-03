@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type { SystemSettingsId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/system-settings.service.js", () => ({
@@ -51,7 +55,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_SETTINGS_RESULT = {
   id: "sset_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemSettingsId,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   locale: "en",
   biometricEnabled: false,
   encryptedData: "base64data==",
@@ -61,7 +65,7 @@ const MOCK_SETTINGS_RESULT = {
 };
 
 const MOCK_NOMENCLATURE_RESULT = {
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "base64data==",
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
@@ -79,16 +83,16 @@ describe("system-settings router", () => {
     it("calls getSystemSettings with correct systemId and returns result", async () => {
       vi.mocked(getSystemSettings).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
       const caller = createCaller();
-      const result = await caller.systemSettings.getSettings({ systemId: SYSTEM_ID });
+      const result = await caller.systemSettings.getSettings({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(getSystemSettings)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getSystemSettings).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getSystemSettings).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_SETTINGS_RESULT);
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.systemSettings.getSettings({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.systemSettings.getSettings({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
@@ -98,7 +102,7 @@ describe("system-settings router", () => {
         new ApiHttpError(404, "NOT_FOUND", "System settings not found"),
       );
       const caller = createCaller();
-      await expect(caller.systemSettings.getSettings({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.systemSettings.getSettings({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
@@ -111,13 +115,13 @@ describe("system-settings router", () => {
       vi.mocked(updateSystemSettings).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
       const caller = createCaller();
       const result = await caller.systemSettings.updateSettings({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateSystemSettings)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateSystemSettings).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateSystemSettings).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_SETTINGS_RESULT);
     });
 
@@ -128,7 +132,7 @@ describe("system-settings router", () => {
       const caller = createCaller();
       await expect(
         caller.systemSettings.updateSettings({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
         }),
@@ -142,10 +146,10 @@ describe("system-settings router", () => {
     it("calls getNomenclatureSettings with correct systemId and returns result", async () => {
       vi.mocked(getNomenclatureSettings).mockResolvedValue(MOCK_NOMENCLATURE_RESULT);
       const caller = createCaller();
-      const result = await caller.systemSettings.getNomenclature({ systemId: SYSTEM_ID });
+      const result = await caller.systemSettings.getNomenclature({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(getNomenclatureSettings)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getNomenclatureSettings).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getNomenclatureSettings).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_NOMENCLATURE_RESULT);
     });
 
@@ -154,9 +158,9 @@ describe("system-settings router", () => {
         new ApiHttpError(404, "NOT_FOUND", "Nomenclature settings not found"),
       );
       const caller = createCaller();
-      await expect(caller.systemSettings.getNomenclature({ systemId: SYSTEM_ID })).rejects.toThrow(
-        expect.objectContaining({ code: "NOT_FOUND" }),
-      );
+      await expect(
+        caller.systemSettings.getNomenclature({ systemId: MOCK_SYSTEM_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -167,13 +171,13 @@ describe("system-settings router", () => {
       vi.mocked(updateNomenclatureSettings).mockResolvedValue(MOCK_NOMENCLATURE_RESULT);
       const caller = createCaller();
       const result = await caller.systemSettings.updateNomenclature({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateNomenclatureSettings)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateNomenclatureSettings).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateNomenclatureSettings).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_NOMENCLATURE_RESULT);
     });
 
@@ -184,7 +188,7 @@ describe("system-settings router", () => {
       const caller = createCaller();
       await expect(
         caller.systemSettings.updateNomenclature({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
         }),
@@ -198,11 +202,11 @@ describe("system-settings router", () => {
     it("calls setPin with correct systemId and returns success", async () => {
       vi.mocked(setPin).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.systemSettings.setPin({ systemId: SYSTEM_ID, pin: "1234" });
+      const result = await caller.systemSettings.setPin({ systemId: MOCK_SYSTEM_ID, pin: "1234" });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(setPin)).toHaveBeenCalledOnce();
-      expect(vi.mocked(setPin).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setPin).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
@@ -211,7 +215,7 @@ describe("system-settings router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.systemSettings.setPin({ systemId: SYSTEM_ID, pin: "1234" }),
+        caller.systemSettings.setPin({ systemId: MOCK_SYSTEM_ID, pin: "1234" }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -222,11 +226,14 @@ describe("system-settings router", () => {
     it("calls removePin with correct systemId and returns success", async () => {
       vi.mocked(removePin).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.systemSettings.removePin({ systemId: SYSTEM_ID, pin: "1234" });
+      const result = await caller.systemSettings.removePin({
+        systemId: MOCK_SYSTEM_ID,
+        pin: "1234",
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(removePin)).toHaveBeenCalledOnce();
-      expect(vi.mocked(removePin).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(removePin).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
 
     it("surfaces ApiHttpError(401) as UNAUTHORIZED", async () => {
@@ -235,7 +242,7 @@ describe("system-settings router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.systemSettings.removePin({ systemId: SYSTEM_ID, pin: "9999" }),
+        caller.systemSettings.removePin({ systemId: MOCK_SYSTEM_ID, pin: "9999" }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
   });
@@ -246,11 +253,14 @@ describe("system-settings router", () => {
     it("calls verifyPinCode with correct systemId and returns result", async () => {
       vi.mocked(verifyPinCode).mockResolvedValue({ verified: true });
       const caller = createCaller();
-      const result = await caller.systemSettings.verifyPin({ systemId: SYSTEM_ID, pin: "1234" });
+      const result = await caller.systemSettings.verifyPin({
+        systemId: MOCK_SYSTEM_ID,
+        pin: "1234",
+      });
 
       expect(result).toEqual({ verified: true });
       expect(vi.mocked(verifyPinCode)).toHaveBeenCalledOnce();
-      expect(vi.mocked(verifyPinCode).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(verifyPinCode).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
 
     it("surfaces ApiHttpError(401) as UNAUTHORIZED when PIN is wrong", async () => {
@@ -259,7 +269,7 @@ describe("system-settings router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.systemSettings.verifyPin({ systemId: SYSTEM_ID, pin: "9999" }),
+        caller.systemSettings.verifyPin({ systemId: MOCK_SYSTEM_ID, pin: "9999" }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
   });
@@ -277,10 +287,10 @@ describe("system-settings router", () => {
       };
       vi.mocked(getSetupStatus).mockResolvedValue(mockStatus);
       const caller = createCaller();
-      const result = await caller.systemSettings.getSetupStatus({ systemId: SYSTEM_ID });
+      const result = await caller.systemSettings.getSetupStatus({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(getSetupStatus)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getSetupStatus).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getSetupStatus).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockStatus);
     });
   });
@@ -292,13 +302,13 @@ describe("system-settings router", () => {
       vi.mocked(setupNomenclatureStep).mockResolvedValue({ success: true });
       const caller = createCaller();
       const result = await caller.systemSettings.setupNomenclatureStep({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(setupNomenclatureStep)).toHaveBeenCalledOnce();
-      expect(vi.mocked(setupNomenclatureStep).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setupNomenclatureStep).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
   });
 
@@ -309,13 +319,13 @@ describe("system-settings router", () => {
       vi.mocked(setupProfileStep).mockResolvedValue({ success: true });
       const caller = createCaller();
       const result = await caller.systemSettings.setupProfileStep({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(setupProfileStep)).toHaveBeenCalledOnce();
-      expect(vi.mocked(setupProfileStep).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setupProfileStep).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
   });
 
@@ -326,13 +336,13 @@ describe("system-settings router", () => {
       vi.mocked(setupComplete).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
       const caller = createCaller();
       const result = await caller.systemSettings.setupComplete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         recoveryKeyBackupConfirmed: true,
       });
 
       expect(vi.mocked(setupComplete)).toHaveBeenCalledOnce();
-      expect(vi.mocked(setupComplete).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setupComplete).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_SETTINGS_RESULT);
     });
 
@@ -343,11 +353,23 @@ describe("system-settings router", () => {
       const caller = createCaller();
       await expect(
         caller.systemSettings.setupComplete({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           recoveryKeyBackupConfirmed: true,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(getSystemSettings).mockResolvedValue(MOCK_SETTINGS_RESULT as never);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.systemSettings.getSettings({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
   });
 });

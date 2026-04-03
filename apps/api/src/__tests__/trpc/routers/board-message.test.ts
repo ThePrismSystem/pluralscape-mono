@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { BoardMessageId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/board-message.service.js", () => ({
@@ -40,7 +49,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3Jib2FyZA==";
 
 const MOCK_BOARD_MESSAGE_RESULT = {
   id: BOARD_MESSAGE_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   pinned: false,
   sortOrder: 0,
   encryptedData: "base64data==",
@@ -63,13 +72,13 @@ describe("board-message router", () => {
       vi.mocked(createBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
       const caller = createCaller();
       const result = await caller.boardMessage.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         sortOrder: 0,
       });
 
       expect(vi.mocked(createBoardMessage)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createBoardMessage).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createBoardMessage).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_BOARD_MESSAGE_RESULT);
     });
 
@@ -77,7 +86,7 @@ describe("board-message router", () => {
       const caller = createCaller(null);
       await expect(
         caller.boardMessage.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           sortOrder: 0,
         }),
@@ -104,12 +113,12 @@ describe("board-message router", () => {
       vi.mocked(getBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
       const caller = createCaller();
       const result = await caller.boardMessage.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
       });
 
       expect(vi.mocked(getBoardMessage)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getBoardMessage).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getBoardMessage).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getBoardMessage).mock.calls[0]?.[2]).toBe(BOARD_MESSAGE_ID);
       expect(result).toEqual(MOCK_BOARD_MESSAGE_RESULT);
     });
@@ -118,7 +127,7 @@ describe("board-message router", () => {
       const caller = createCaller();
       await expect(
         caller.boardMessage.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           boardMessageId: "invalid-id" as BoardMessageId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -130,7 +139,7 @@ describe("board-message router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.boardMessage.get({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
+        caller.boardMessage.get({ systemId: MOCK_SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -147,10 +156,10 @@ describe("board-message router", () => {
       };
       vi.mocked(listBoardMessages).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.boardMessage.list({ systemId: SYSTEM_ID });
+      const result = await caller.boardMessage.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listBoardMessages)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listBoardMessages).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listBoardMessages).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -163,7 +172,7 @@ describe("board-message router", () => {
       });
       const caller = createCaller();
       await caller.boardMessage.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "cur_abc",
         limit: 10,
         includeArchived: true,
@@ -183,14 +192,14 @@ describe("board-message router", () => {
       vi.mocked(updateBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
       const caller = createCaller();
       const result = await caller.boardMessage.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateBoardMessage)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateBoardMessage).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateBoardMessage).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateBoardMessage).mock.calls[0]?.[2]).toBe(BOARD_MESSAGE_ID);
       expect(result).toEqual(MOCK_BOARD_MESSAGE_RESULT);
     });
@@ -202,7 +211,7 @@ describe("board-message router", () => {
       const caller = createCaller();
       await expect(
         caller.boardMessage.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           boardMessageId: BOARD_MESSAGE_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -218,13 +227,13 @@ describe("board-message router", () => {
       vi.mocked(archiveBoardMessage).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.boardMessage.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveBoardMessage)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveBoardMessage).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveBoardMessage).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveBoardMessage).mock.calls[0]?.[2]).toBe(BOARD_MESSAGE_ID);
     });
 
@@ -234,7 +243,7 @@ describe("board-message router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.boardMessage.archive({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
+        caller.boardMessage.archive({ systemId: MOCK_SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -246,12 +255,12 @@ describe("board-message router", () => {
       vi.mocked(restoreBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
       const caller = createCaller();
       const result = await caller.boardMessage.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
       });
 
       expect(vi.mocked(restoreBoardMessage)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreBoardMessage).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreBoardMessage).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreBoardMessage).mock.calls[0]?.[2]).toBe(BOARD_MESSAGE_ID);
       expect(result).toEqual(MOCK_BOARD_MESSAGE_RESULT);
     });
@@ -262,7 +271,7 @@ describe("board-message router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.boardMessage.restore({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
+        caller.boardMessage.restore({ systemId: MOCK_SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -274,13 +283,13 @@ describe("board-message router", () => {
       vi.mocked(deleteBoardMessage).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.boardMessage.delete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         boardMessageId: BOARD_MESSAGE_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteBoardMessage)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteBoardMessage).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteBoardMessage).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteBoardMessage).mock.calls[0]?.[2]).toBe(BOARD_MESSAGE_ID);
     });
 
@@ -290,7 +299,7 @@ describe("board-message router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.boardMessage.delete({ systemId: SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
+        caller.boardMessage.delete({ systemId: MOCK_SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -302,13 +311,13 @@ describe("board-message router", () => {
       vi.mocked(reorderBoardMessages).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.boardMessage.reorder({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         operations: [{ boardMessageId: BOARD_MESSAGE_ID, sortOrder: 1 }],
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(reorderBoardMessages)).toHaveBeenCalledOnce();
-      expect(vi.mocked(reorderBoardMessages).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(reorderBoardMessages).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND when a board message is missing", async () => {
@@ -318,7 +327,7 @@ describe("board-message router", () => {
       const caller = createCaller();
       await expect(
         caller.boardMessage.reorder({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           operations: [{ boardMessageId: BOARD_MESSAGE_ID, sortOrder: 1 }],
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
@@ -328,10 +337,43 @@ describe("board-message router", () => {
       const caller = createCaller();
       await expect(
         caller.boardMessage.reorder({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           operations: [],
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listBoardMessages).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.boardMessage.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.boardMessage.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          sortOrder: 0,
+        }),
+      "write",
+    );
   });
 });

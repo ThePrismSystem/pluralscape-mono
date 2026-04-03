@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { SystemSnapshotId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/snapshot.service.js", () => ({
@@ -26,14 +35,14 @@ const SNAPSHOT_ID = "snap_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as SystemSnapsho
 
 const MOCK_SNAPSHOT_RESULT = {
   id: SNAPSHOT_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   snapshotTrigger: "manual" as const,
   encryptedData: "dGVzdGVuY3J5cHRlZGRhdGE=",
   createdAt: 1_700_000_000_000 as UnixMillis,
 };
 
 const VALID_CREATE_INPUT = {
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   snapshotTrigger: "manual" as const,
   encryptedData: "dGVzdGVuY3J5cHRlZGRhdGE=",
 };
@@ -52,7 +61,7 @@ describe("snapshot router", () => {
       const result = await caller.snapshot.create(VALID_CREATE_INPUT);
 
       expect(vi.mocked(createSnapshot)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createSnapshot).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createSnapshot).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_SNAPSHOT_RESULT);
     });
 
@@ -88,10 +97,13 @@ describe("snapshot router", () => {
     it("calls getSnapshot with correct systemId and snapshotId", async () => {
       vi.mocked(getSnapshot).mockResolvedValue(MOCK_SNAPSHOT_RESULT);
       const caller = createCaller();
-      const result = await caller.snapshot.get({ systemId: SYSTEM_ID, snapshotId: SNAPSHOT_ID });
+      const result = await caller.snapshot.get({
+        systemId: MOCK_SYSTEM_ID,
+        snapshotId: SNAPSHOT_ID,
+      });
 
       expect(vi.mocked(getSnapshot)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getSnapshot).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getSnapshot).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getSnapshot).mock.calls[0]?.[2]).toBe(SNAPSHOT_ID);
       expect(result).toEqual(MOCK_SNAPSHOT_RESULT);
     });
@@ -100,7 +112,7 @@ describe("snapshot router", () => {
       const caller = createCaller();
       await expect(
         caller.snapshot.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           snapshotId: "invalid-id" as SystemSnapshotId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -112,7 +124,7 @@ describe("snapshot router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.snapshot.get({ systemId: SYSTEM_ID, snapshotId: SNAPSHOT_ID }),
+        caller.snapshot.get({ systemId: MOCK_SYSTEM_ID, snapshotId: SNAPSHOT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -129,10 +141,10 @@ describe("snapshot router", () => {
       };
       vi.mocked(listSnapshots).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.snapshot.list({ systemId: SYSTEM_ID });
+      const result = await caller.snapshot.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listSnapshots)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listSnapshots).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listSnapshots).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -144,10 +156,38 @@ describe("snapshot router", () => {
         totalCount: null,
       });
       const caller = createCaller();
-      await caller.snapshot.list({ systemId: SYSTEM_ID, cursor: "snap_cursor", limit: 10 });
+      await caller.snapshot.list({ systemId: MOCK_SYSTEM_ID, cursor: "snap_cursor", limit: 10 });
 
       expect(vi.mocked(listSnapshots).mock.calls[0]?.[3]).toBe("snap_cursor");
       expect(vi.mocked(listSnapshots).mock.calls[0]?.[4]).toBe(10);
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listSnapshots).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.snapshot.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createSnapshot).mockResolvedValue(MOCK_SNAPSHOT_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.snapshot.create(VALID_CREATE_INPUT),
+      "write",
+    );
   });
 });

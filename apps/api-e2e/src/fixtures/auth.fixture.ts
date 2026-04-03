@@ -30,7 +30,7 @@ interface AccountInfo extends RegisterData {
   password: string;
 }
 
-interface AuthFixtures {
+export interface AuthFixtures {
   /** A freshly registered account with session token. */
   registeredAccount: AccountInfo;
   /** Pre-built Authorization header for the registered account. */

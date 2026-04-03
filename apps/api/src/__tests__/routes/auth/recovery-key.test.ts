@@ -134,7 +134,7 @@ describe("GET /auth/recovery-key/status", () => {
     const app = createApp();
     await app.request("/auth/recovery-key/status", { method: "GET" });
 
-    expect(vi.mocked(getRecoveryKeyStatus)).toHaveBeenCalledWith({}, "acct_test");
+    expect(vi.mocked(getRecoveryKeyStatus)).toHaveBeenCalledWith({}, "acct_test001");
   });
 });
 
@@ -247,13 +247,13 @@ describe("POST /auth/recovery-key/regenerate", () => {
 
     expect(vi.mocked(regenerateRecoveryKeyBackup)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       { currentPassword: "password123", confirmed: true },
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ accountId: "acct_test" }),
+      expect.objectContaining({ accountId: "acct_test001" }),
     );
   });
 });

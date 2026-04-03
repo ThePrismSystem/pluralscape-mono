@@ -135,13 +135,13 @@ describe("PUT /account/settings", () => {
 
     expect(vi.mocked(updateAccountSettings)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       { auditLogIpTracking: false, version: 1 },
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ accountId: "acct_test" }),
+      expect.objectContaining({ accountId: "acct_test001" }),
     );
   });
 });

@@ -99,7 +99,7 @@ describe("PUT /account/friends/:connectionId/visibility", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(updateFriendVisibility)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CONNECTION_ID,
       VALID_BODY,
       MOCK_ACCOUNT_ONLY_AUTH,

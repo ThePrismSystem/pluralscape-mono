@@ -18,8 +18,12 @@ import {
   unpinBoardMessage,
   updateBoardMessage,
 } from "../../services/board-message.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for board message list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -29,16 +33,23 @@ const BoardMessageIdSchema = z.object({
 });
 
 export const boardMessageRouter = router({
-  create: systemProcedure.input(CreateBoardMessageBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createBoardMessage(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateBoardMessageBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createBoardMessage(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  get: systemProcedure.input(BoardMessageIdSchema).query(async ({ ctx, input }) => {
-    return getBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(BoardMessageIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -55,6 +66,7 @@ export const boardMessageRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(BoardMessageIdSchema.and(UpdateBoardMessageBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -68,24 +80,34 @@ export const boardMessageRouter = router({
       );
     }),
 
-  archive: systemProcedure.input(BoardMessageIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(BoardMessageIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(BoardMessageIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(BoardMessageIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(BoardMessageIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(BoardMessageIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
   reorder: systemProcedure
+    .use(writeLimiter)
     .input(ReorderBoardMessagesBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -93,13 +115,19 @@ export const boardMessageRouter = router({
       return { success: true as const };
     }),
 
-  pin: systemProcedure.input(BoardMessageIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return pinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
-  }),
+  pin: systemProcedure
+    .use(writeLimiter)
+    .input(BoardMessageIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return pinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+    }),
 
-  unpin: systemProcedure.input(BoardMessageIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return unpinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
-  }),
+  unpin: systemProcedure
+    .use(writeLimiter)
+    .input(BoardMessageIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return unpinBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth, audit);
+    }),
 });

@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { AcknowledgementId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/acknowledgement.service.js", () => ({
@@ -38,7 +47,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JhY2s=";
 
 const MOCK_ACK_RESULT = {
   id: ACK_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   createdByMemberId: null,
   confirmed: false,
   encryptedData: "base64data==",
@@ -61,13 +70,13 @@ describe("acknowledgement router", () => {
       vi.mocked(createAcknowledgement).mockResolvedValue(MOCK_ACK_RESULT);
       const caller = createCaller();
       const result = await caller.acknowledgement.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         createdByMemberId: undefined,
       });
 
       expect(vi.mocked(createAcknowledgement)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createAcknowledgement).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createAcknowledgement).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_ACK_RESULT);
     });
 
@@ -75,7 +84,7 @@ describe("acknowledgement router", () => {
       const caller = createCaller(null);
       await expect(
         caller.acknowledgement.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           createdByMemberId: undefined,
         }),
@@ -101,10 +110,10 @@ describe("acknowledgement router", () => {
     it("calls getAcknowledgement with correct systemId and ackId", async () => {
       vi.mocked(getAcknowledgement).mockResolvedValue(MOCK_ACK_RESULT);
       const caller = createCaller();
-      const result = await caller.acknowledgement.get({ systemId: SYSTEM_ID, ackId: ACK_ID });
+      const result = await caller.acknowledgement.get({ systemId: MOCK_SYSTEM_ID, ackId: ACK_ID });
 
       expect(vi.mocked(getAcknowledgement)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getAcknowledgement).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getAcknowledgement).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getAcknowledgement).mock.calls[0]?.[2]).toBe(ACK_ID);
       expect(result).toEqual(MOCK_ACK_RESULT);
     });
@@ -113,7 +122,7 @@ describe("acknowledgement router", () => {
       const caller = createCaller();
       await expect(
         caller.acknowledgement.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           ackId: "invalid-id" as AcknowledgementId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -125,7 +134,7 @@ describe("acknowledgement router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.acknowledgement.get({ systemId: SYSTEM_ID, ackId: ACK_ID }),
+        caller.acknowledgement.get({ systemId: MOCK_SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -142,10 +151,10 @@ describe("acknowledgement router", () => {
       };
       vi.mocked(listAcknowledgements).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.acknowledgement.list({ systemId: SYSTEM_ID });
+      const result = await caller.acknowledgement.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listAcknowledgements)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listAcknowledgements).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listAcknowledgements).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -158,7 +167,7 @@ describe("acknowledgement router", () => {
       });
       const caller = createCaller();
       await caller.acknowledgement.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "cur_abc",
         limit: 10,
         includeArchived: true,
@@ -183,12 +192,12 @@ describe("acknowledgement router", () => {
       });
       const caller = createCaller();
       const result = await caller.acknowledgement.confirm({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         ackId: ACK_ID,
       });
 
       expect(vi.mocked(confirmAcknowledgement)).toHaveBeenCalledOnce();
-      expect(vi.mocked(confirmAcknowledgement).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(confirmAcknowledgement).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(confirmAcknowledgement).mock.calls[0]?.[2]).toBe(ACK_ID);
       expect(result.confirmed).toBe(true);
     });
@@ -200,14 +209,14 @@ describe("acknowledgement router", () => {
       });
       const caller = createCaller();
       await caller.acknowledgement.confirm({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         ackId: ACK_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(vi.mocked(confirmAcknowledgement)).toHaveBeenCalledWith(
         expect.anything(),
-        SYSTEM_ID,
+        MOCK_SYSTEM_ID,
         ACK_ID,
         { encryptedData: VALID_ENCRYPTED_DATA },
         expect.anything(),
@@ -221,7 +230,7 @@ describe("acknowledgement router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.acknowledgement.confirm({ systemId: SYSTEM_ID, ackId: ACK_ID }),
+        caller.acknowledgement.confirm({ systemId: MOCK_SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -232,11 +241,14 @@ describe("acknowledgement router", () => {
     it("calls archiveAcknowledgement and returns success", async () => {
       vi.mocked(archiveAcknowledgement).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.acknowledgement.archive({ systemId: SYSTEM_ID, ackId: ACK_ID });
+      const result = await caller.acknowledgement.archive({
+        systemId: MOCK_SYSTEM_ID,
+        ackId: ACK_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveAcknowledgement)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveAcknowledgement).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveAcknowledgement).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveAcknowledgement).mock.calls[0]?.[2]).toBe(ACK_ID);
     });
 
@@ -246,7 +258,7 @@ describe("acknowledgement router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.acknowledgement.archive({ systemId: SYSTEM_ID, ackId: ACK_ID }),
+        caller.acknowledgement.archive({ systemId: MOCK_SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -257,10 +269,13 @@ describe("acknowledgement router", () => {
     it("calls restoreAcknowledgement and returns the result", async () => {
       vi.mocked(restoreAcknowledgement).mockResolvedValue(MOCK_ACK_RESULT);
       const caller = createCaller();
-      const result = await caller.acknowledgement.restore({ systemId: SYSTEM_ID, ackId: ACK_ID });
+      const result = await caller.acknowledgement.restore({
+        systemId: MOCK_SYSTEM_ID,
+        ackId: ACK_ID,
+      });
 
       expect(vi.mocked(restoreAcknowledgement)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreAcknowledgement).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreAcknowledgement).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreAcknowledgement).mock.calls[0]?.[2]).toBe(ACK_ID);
       expect(result).toEqual(MOCK_ACK_RESULT);
     });
@@ -271,7 +286,7 @@ describe("acknowledgement router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.acknowledgement.restore({ systemId: SYSTEM_ID, ackId: ACK_ID }),
+        caller.acknowledgement.restore({ systemId: MOCK_SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -282,11 +297,14 @@ describe("acknowledgement router", () => {
     it("calls deleteAcknowledgement and returns success", async () => {
       vi.mocked(deleteAcknowledgement).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.acknowledgement.delete({ systemId: SYSTEM_ID, ackId: ACK_ID });
+      const result = await caller.acknowledgement.delete({
+        systemId: MOCK_SYSTEM_ID,
+        ackId: ACK_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteAcknowledgement)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteAcknowledgement).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteAcknowledgement).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteAcknowledgement).mock.calls[0]?.[2]).toBe(ACK_ID);
     });
 
@@ -296,8 +314,41 @@ describe("acknowledgement router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.acknowledgement.delete({ systemId: SYSTEM_ID, ackId: ACK_ID }),
+        caller.acknowledgement.delete({ systemId: MOCK_SYSTEM_ID, ackId: ACK_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listAcknowledgements).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.acknowledgement.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createAcknowledgement).mockResolvedValue(MOCK_ACK_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.acknowledgement.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          createdByMemberId: undefined,
+        }),
+      "write",
+    );
   });
 });

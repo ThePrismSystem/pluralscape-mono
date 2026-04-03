@@ -25,10 +25,14 @@ import {
   listFieldValuesForOwner,
   setFieldValueForOwner,
 } from "../../services/field-value.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
 import type { FieldValueOwner } from "../../services/field-value.service.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for field list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -61,17 +65,22 @@ export const fieldRouter = router({
 
   definition: router({
     create: systemProcedure
+      .use(writeLimiter)
       .input(CreateFieldDefinitionBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
         return createFieldDefinition(ctx.db, ctx.systemId, input, ctx.auth, audit);
       }),
 
-    get: systemProcedure.input(FieldDefinitionIdSchema).query(async ({ ctx, input }) => {
-      return getFieldDefinition(ctx.db, ctx.systemId, input.fieldDefinitionId, ctx.auth);
-    }),
+    get: systemProcedure
+      .use(readLimiter)
+      .input(FieldDefinitionIdSchema)
+      .query(async ({ ctx, input }) => {
+        return getFieldDefinition(ctx.db, ctx.systemId, input.fieldDefinitionId, ctx.auth);
+      }),
 
     list: systemProcedure
+      .use(readLimiter)
       .input(
         z.object({
           cursor: z.string().optional(),
@@ -88,6 +97,7 @@ export const fieldRouter = router({
       }),
 
     update: systemProcedure
+      .use(writeLimiter)
       .input(FieldDefinitionIdSchema.and(UpdateFieldDefinitionBodySchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -101,18 +111,37 @@ export const fieldRouter = router({
         );
       }),
 
-    archive: systemProcedure.input(FieldDefinitionIdSchema).mutation(async ({ ctx, input }) => {
-      const audit = ctx.createAudit(ctx.auth);
-      await archiveFieldDefinition(ctx.db, ctx.systemId, input.fieldDefinitionId, ctx.auth, audit);
-      return { success: true as const };
-    }),
+    archive: systemProcedure
+      .use(writeLimiter)
+      .input(FieldDefinitionIdSchema)
+      .mutation(async ({ ctx, input }) => {
+        const audit = ctx.createAudit(ctx.auth);
+        await archiveFieldDefinition(
+          ctx.db,
+          ctx.systemId,
+          input.fieldDefinitionId,
+          ctx.auth,
+          audit,
+        );
+        return { success: true as const };
+      }),
 
-    restore: systemProcedure.input(FieldDefinitionIdSchema).mutation(async ({ ctx, input }) => {
-      const audit = ctx.createAudit(ctx.auth);
-      return restoreFieldDefinition(ctx.db, ctx.systemId, input.fieldDefinitionId, ctx.auth, audit);
-    }),
+    restore: systemProcedure
+      .use(writeLimiter)
+      .input(FieldDefinitionIdSchema)
+      .mutation(async ({ ctx, input }) => {
+        const audit = ctx.createAudit(ctx.auth);
+        return restoreFieldDefinition(
+          ctx.db,
+          ctx.systemId,
+          input.fieldDefinitionId,
+          ctx.auth,
+          audit,
+        );
+      }),
 
     delete: systemProcedure
+      .use(writeLimiter)
       .input(FieldDefinitionIdSchema.and(z.object({ force: z.boolean().default(false) })))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -132,6 +161,7 @@ export const fieldRouter = router({
 
   value: router({
     set: systemProcedure
+      .use(writeLimiter)
       .input(
         FieldDefinitionIdSchema.and(z.object({ owner: FieldOwnerSchema })).and(
           SetFieldValueBodySchema,
@@ -151,6 +181,7 @@ export const fieldRouter = router({
       }),
 
     list: systemProcedure
+      .use(readLimiter)
       .input(z.object({ owner: FieldOwnerSchema }))
       .query(async ({ ctx, input }) => {
         return listFieldValuesForOwner(
@@ -162,6 +193,7 @@ export const fieldRouter = router({
       }),
 
     remove: systemProcedure
+      .use(writeLimiter)
       .input(FieldDefinitionIdSchema.and(z.object({ owner: FieldOwnerSchema })))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -181,6 +213,7 @@ export const fieldRouter = router({
 
   bucketVisibility: router({
     set: systemProcedure
+      .use(writeLimiter)
       .input(FieldDefinitionIdSchema.and(BucketIdSchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -195,6 +228,7 @@ export const fieldRouter = router({
       }),
 
     remove: systemProcedure
+      .use(writeLimiter)
       .input(FieldDefinitionIdSchema.and(BucketIdSchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -210,6 +244,7 @@ export const fieldRouter = router({
       }),
 
     list: systemProcedure
+      .use(readLimiter)
       .input(
         FieldDefinitionIdSchema.and(
           z.object({ limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional() }),

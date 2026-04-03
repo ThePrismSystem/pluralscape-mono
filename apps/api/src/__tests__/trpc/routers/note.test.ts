@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { NoteId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/note.service.js", () => ({
@@ -31,7 +40,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3Jub3Rl";
 
 const MOCK_NOTE_RESULT = {
   id: NOTE_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   authorEntityType: null,
   authorEntityId: null,
   encryptedData: "base64data==",
@@ -54,19 +63,19 @@ describe("note router", () => {
       vi.mocked(createNote).mockResolvedValue(MOCK_NOTE_RESULT);
       const caller = createCaller();
       const result = await caller.note.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(vi.mocked(createNote)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createNote).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createNote).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_NOTE_RESULT);
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
       await expect(
-        caller.note.create({ systemId: SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
+        caller.note.create({ systemId: MOCK_SYSTEM_ID, encryptedData: VALID_ENCRYPTED_DATA }),
       ).rejects.toThrow(expect.objectContaining({ code: "UNAUTHORIZED" }));
     });
 
@@ -85,10 +94,10 @@ describe("note router", () => {
     it("calls getNote with correct systemId and noteId", async () => {
       vi.mocked(getNote).mockResolvedValue(MOCK_NOTE_RESULT);
       const caller = createCaller();
-      const result = await caller.note.get({ systemId: SYSTEM_ID, noteId: NOTE_ID });
+      const result = await caller.note.get({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID });
 
       expect(vi.mocked(getNote)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getNote).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getNote).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getNote).mock.calls[0]?.[2]).toBe(NOTE_ID);
       expect(result).toEqual(MOCK_NOTE_RESULT);
     });
@@ -96,14 +105,14 @@ describe("note router", () => {
     it("rejects invalid noteId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.note.get({ systemId: SYSTEM_ID, noteId: "invalid-id" as NoteId }),
+        caller.note.get({ systemId: MOCK_SYSTEM_ID, noteId: "invalid-id" as NoteId }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
       vi.mocked(getNote).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Note not found"));
       const caller = createCaller();
-      await expect(caller.note.get({ systemId: SYSTEM_ID, noteId: NOTE_ID })).rejects.toThrow(
+      await expect(caller.note.get({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
@@ -121,10 +130,10 @@ describe("note router", () => {
       };
       vi.mocked(listNotes).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.note.list({ systemId: SYSTEM_ID });
+      const result = await caller.note.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listNotes)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listNotes).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listNotes).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -137,7 +146,7 @@ describe("note router", () => {
       });
       const caller = createCaller();
       await caller.note.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "cur_abc",
         limit: 10,
         includeArchived: true,
@@ -157,14 +166,14 @@ describe("note router", () => {
       vi.mocked(updateNote).mockResolvedValue(MOCK_NOTE_RESULT);
       const caller = createCaller();
       const result = await caller.note.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         noteId: NOTE_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateNote)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateNote).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateNote).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateNote).mock.calls[0]?.[2]).toBe(NOTE_ID);
       expect(result).toEqual(MOCK_NOTE_RESULT);
     });
@@ -176,7 +185,7 @@ describe("note router", () => {
       const caller = createCaller();
       await expect(
         caller.note.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           noteId: NOTE_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -191,11 +200,11 @@ describe("note router", () => {
     it("calls archiveNote and returns success", async () => {
       vi.mocked(archiveNote).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.note.archive({ systemId: SYSTEM_ID, noteId: NOTE_ID });
+      const result = await caller.note.archive({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveNote)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveNote).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveNote).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveNote).mock.calls[0]?.[2]).toBe(NOTE_ID);
     });
 
@@ -204,9 +213,9 @@ describe("note router", () => {
         new ApiHttpError(404, "NOT_FOUND", "Note not found"),
       );
       const caller = createCaller();
-      await expect(caller.note.archive({ systemId: SYSTEM_ID, noteId: NOTE_ID })).rejects.toThrow(
-        expect.objectContaining({ code: "NOT_FOUND" }),
-      );
+      await expect(
+        caller.note.archive({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -216,10 +225,10 @@ describe("note router", () => {
     it("calls restoreNote and returns the note result", async () => {
       vi.mocked(restoreNote).mockResolvedValue(MOCK_NOTE_RESULT);
       const caller = createCaller();
-      const result = await caller.note.restore({ systemId: SYSTEM_ID, noteId: NOTE_ID });
+      const result = await caller.note.restore({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID });
 
       expect(vi.mocked(restoreNote)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreNote).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreNote).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreNote).mock.calls[0]?.[2]).toBe(NOTE_ID);
       expect(result).toEqual(MOCK_NOTE_RESULT);
     });
@@ -229,9 +238,9 @@ describe("note router", () => {
         new ApiHttpError(404, "NOT_FOUND", "Note not found"),
       );
       const caller = createCaller();
-      await expect(caller.note.restore({ systemId: SYSTEM_ID, noteId: NOTE_ID })).rejects.toThrow(
-        expect.objectContaining({ code: "NOT_FOUND" }),
-      );
+      await expect(
+        caller.note.restore({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
@@ -241,20 +250,52 @@ describe("note router", () => {
     it("calls deleteNote and returns success", async () => {
       vi.mocked(deleteNote).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.note.delete({ systemId: SYSTEM_ID, noteId: NOTE_ID });
+      const result = await caller.note.delete({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteNote)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteNote).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteNote).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteNote).mock.calls[0]?.[2]).toBe(NOTE_ID);
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
       vi.mocked(deleteNote).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Note not found"));
       const caller = createCaller();
-      await expect(caller.note.delete({ systemId: SYSTEM_ID, noteId: NOTE_ID })).rejects.toThrow(
-        expect.objectContaining({ code: "NOT_FOUND" }),
-      );
+      await expect(
+        caller.note.delete({ systemId: MOCK_SYSTEM_ID, noteId: NOTE_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listNotes).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.note.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createNote).mockResolvedValue(MOCK_NOTE_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.note.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+        }),
+      "write",
+    );
   });
 });

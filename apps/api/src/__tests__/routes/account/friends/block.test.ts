@@ -88,7 +88,7 @@ describe("POST /account/friends/:connectionId/block", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(blockFriendConnection)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CONNECTION_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),

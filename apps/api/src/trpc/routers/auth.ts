@@ -24,6 +24,7 @@ import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { router } from "../trpc.js";
 
 const authHeavyLimiter = createTRPCCategoryRateLimiter("authHeavy");
+const authLightLimiter = createTRPCCategoryRateLimiter("authLight");
 
 /** Default page size for session listing. */
 const DEFAULT_SESSION_LIMIT = 25;
@@ -39,6 +40,7 @@ export const authRouter = router({
    * Platform defaults to "web" since tRPC cannot read Hono headers.
    */
   register: errorMapProcedure
+    .use(authHeavyLimiter)
     .input(
       z.object({
         email: z.email(),
@@ -59,6 +61,7 @@ export const authRouter = router({
    * Throws UNAUTHORIZED on invalid credentials, TOO_MANY_REQUESTS if throttled.
    */
   login: errorMapProcedure
+    .use(authHeavyLimiter)
     .input(
       z.object({
         email: z.email(),
@@ -135,7 +138,7 @@ export const authRouter = router({
     }),
 
   /** Logout the current session. Requires authentication. */
-  logout: protectedProcedure.mutation(async ({ ctx }) => {
+  logout: protectedProcedure.use(authLightLimiter).mutation(async ({ ctx }) => {
     const audit = ctx.createAudit(ctx.auth);
     await logoutCurrentSession(ctx.db, ctx.auth.sessionId, ctx.auth.accountId, audit);
     return { success: true as const };
@@ -143,6 +146,7 @@ export const authRouter = router({
 
   /** List active sessions for the authenticated account. */
   listSessions: protectedProcedure
+    .use(authLightLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -165,6 +169,7 @@ export const authRouter = router({
    * Throws NOT_FOUND if the session does not exist or is already revoked.
    */
   revokeSession: protectedProcedure
+    .use(authLightLimiter)
     .input(z.object({ sessionId: brandedIdQueryParam("sess_") }))
     .mutation(async ({ input, ctx }) => {
       if (input.sessionId === ctx.auth.sessionId) {
@@ -185,9 +190,9 @@ export const authRouter = router({
     }),
 
   /** Revoke all sessions except the current one. */
-  revokeAllSessions: protectedProcedure.mutation(async ({ ctx }) => {
+  revokeAllSessions: protectedProcedure.use(authLightLimiter).mutation(async ({ ctx }) => {
     const audit = ctx.createAudit(ctx.auth);
     const count = await revokeAllSessions(ctx.db, ctx.auth.accountId, ctx.auth.sessionId, audit);
-    return { revoked: count };
+    return { revokedCount: count };
   }),
 });

@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type { FrontingSessionId, MemberId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/fronting-session.service.js", () => ({
@@ -44,7 +48,7 @@ const START_TIME = 1_700_000_000_000 as UnixMillis;
 
 const MOCK_SESSION_RESULT = {
   id: SESSION_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   memberId: MEMBER_ID,
   customFrontId: null,
   structureEntityId: null,
@@ -70,7 +74,7 @@ describe("frontingSession router", () => {
       vi.mocked(createFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
       const caller = createCaller();
       const result = await caller.frontingSession.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         startTime: START_TIME,
         memberId: MEMBER_ID,
@@ -79,7 +83,7 @@ describe("frontingSession router", () => {
       });
 
       expect(vi.mocked(createFrontingSession)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createFrontingSession).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createFrontingSession).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_SESSION_RESULT);
     });
 
@@ -87,7 +91,7 @@ describe("frontingSession router", () => {
       const caller = createCaller(null);
       await expect(
         caller.frontingSession.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           startTime: START_TIME,
           memberId: MEMBER_ID,
@@ -104,7 +108,7 @@ describe("frontingSession router", () => {
       ) => Promise<unknown>;
       await expect(
         createWithUnknownInput({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           startTime: START_TIME,
         }),
@@ -119,12 +123,12 @@ describe("frontingSession router", () => {
       vi.mocked(getFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
       const caller = createCaller();
       const result = await caller.frontingSession.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
       });
 
       expect(vi.mocked(getFrontingSession)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getFrontingSession).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getFrontingSession).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getFrontingSession).mock.calls[0]?.[2]).toBe(SESSION_ID);
       expect(result).toEqual(MOCK_SESSION_RESULT);
     });
@@ -133,7 +137,7 @@ describe("frontingSession router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingSession.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: "not-a-session-id" as FrontingSessionId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -145,7 +149,7 @@ describe("frontingSession router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.frontingSession.get({ systemId: SYSTEM_ID, sessionId: SESSION_ID }),
+        caller.frontingSession.get({ systemId: MOCK_SYSTEM_ID, sessionId: SESSION_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -162,10 +166,10 @@ describe("frontingSession router", () => {
       };
       vi.mocked(listFrontingSessions).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.frontingSession.list({ systemId: SYSTEM_ID });
+      const result = await caller.frontingSession.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listFrontingSessions)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listFrontingSessions).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listFrontingSessions).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -178,7 +182,7 @@ describe("frontingSession router", () => {
       });
       const caller = createCaller();
       await caller.frontingSession.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         activeOnly: true,
         includeArchived: false,
         startFrom: 1_000_000,
@@ -201,14 +205,14 @@ describe("frontingSession router", () => {
       vi.mocked(updateFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
       const caller = createCaller();
       const result = await caller.frontingSession.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateFrontingSession)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateFrontingSession).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateFrontingSession).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateFrontingSession).mock.calls[0]?.[2]).toBe(SESSION_ID);
       expect(result).toEqual(MOCK_SESSION_RESULT);
     });
@@ -220,7 +224,7 @@ describe("frontingSession router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingSession.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -240,14 +244,14 @@ describe("frontingSession router", () => {
       vi.mocked(endFrontingSession).mockResolvedValue(endedSession);
       const caller = createCaller();
       const result = await caller.frontingSession.end({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
         endTime: START_TIME + 3_600_000,
         version: 1,
       });
 
       expect(vi.mocked(endFrontingSession)).toHaveBeenCalledOnce();
-      expect(vi.mocked(endFrontingSession).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(endFrontingSession).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(endFrontingSession).mock.calls[0]?.[2]).toBe(SESSION_ID);
       expect(result).toEqual(endedSession);
     });
@@ -259,7 +263,7 @@ describe("frontingSession router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingSession.end({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           sessionId: SESSION_ID,
           endTime: START_TIME + 3_600_000,
           version: 1,
@@ -275,13 +279,13 @@ describe("frontingSession router", () => {
       vi.mocked(archiveFrontingSession).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.frontingSession.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveFrontingSession)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveFrontingSession).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveFrontingSession).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveFrontingSession).mock.calls[0]?.[2]).toBe(SESSION_ID);
     });
 
@@ -291,7 +295,7 @@ describe("frontingSession router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.frontingSession.archive({ systemId: SYSTEM_ID, sessionId: SESSION_ID }),
+        caller.frontingSession.archive({ systemId: MOCK_SYSTEM_ID, sessionId: SESSION_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -303,12 +307,12 @@ describe("frontingSession router", () => {
       vi.mocked(restoreFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
       const caller = createCaller();
       const result = await caller.frontingSession.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
       });
 
       expect(vi.mocked(restoreFrontingSession)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreFrontingSession).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreFrontingSession).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreFrontingSession).mock.calls[0]?.[2]).toBe(SESSION_ID);
       expect(result).toEqual(MOCK_SESSION_RESULT);
     });
@@ -321,13 +325,13 @@ describe("frontingSession router", () => {
       vi.mocked(deleteFrontingSession).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.frontingSession.delete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         sessionId: SESSION_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteFrontingSession)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteFrontingSession).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteFrontingSession).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteFrontingSession).mock.calls[0]?.[2]).toBe(SESSION_ID);
     });
 
@@ -337,7 +341,7 @@ describe("frontingSession router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.frontingSession.delete({ systemId: SYSTEM_ID, sessionId: SESSION_ID }),
+        caller.frontingSession.delete({ systemId: MOCK_SYSTEM_ID, sessionId: SESSION_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
   });
@@ -353,18 +357,54 @@ describe("frontingSession router", () => {
       };
       vi.mocked(getActiveFronting).mockResolvedValue(mockActive);
       const caller = createCaller();
-      const result = await caller.frontingSession.getActive({ systemId: SYSTEM_ID });
+      const result = await caller.frontingSession.getActive({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(getActiveFronting)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getActiveFronting).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getActiveFronting).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockActive);
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.frontingSession.getActive({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.frontingSession.getActive({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listFrontingSessions).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.frontingSession.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createFrontingSession).mockResolvedValue(MOCK_SESSION_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.frontingSession.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          startTime: START_TIME,
+          memberId: MEMBER_ID,
+          customFrontId: undefined,
+          structureEntityId: undefined,
+        }),
+      "write",
+    );
   });
 });

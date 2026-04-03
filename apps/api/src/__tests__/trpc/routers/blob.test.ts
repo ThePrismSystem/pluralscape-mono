@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { BlobId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/blob.service.js", () => ({
@@ -34,7 +43,7 @@ const BLOB_ID = "blob_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as BlobId;
 
 const MOCK_BLOB_RESULT = {
   id: BLOB_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   purpose: "member-photo" as const,
   mimeType: "image/jpeg",
   sizeBytes: 1024,
@@ -56,7 +65,7 @@ const MOCK_DOWNLOAD_URL_RESULT = {
 };
 
 const VALID_UPLOAD_INPUT = {
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   purpose: "member-photo" as const,
   mimeType: "image/jpeg",
   sizeBytes: 1024,
@@ -77,7 +86,7 @@ describe("blob router", () => {
       const result = await caller.blob.createUploadUrl(VALID_UPLOAD_INPUT);
 
       expect(vi.mocked(createUploadUrl)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createUploadUrl).mock.calls[0]?.[3]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createUploadUrl).mock.calls[0]?.[3]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_UPLOAD_URL_RESULT);
     });
 
@@ -111,7 +120,7 @@ describe("blob router", () => {
 
   describe("blob.confirmUpload", () => {
     const VALID_CONFIRM_INPUT = {
-      systemId: SYSTEM_ID,
+      systemId: MOCK_SYSTEM_ID,
       blobId: BLOB_ID,
       checksum: "a".repeat(64),
     };
@@ -122,7 +131,7 @@ describe("blob router", () => {
       const result = await caller.blob.confirmUpload(VALID_CONFIRM_INPUT);
 
       expect(vi.mocked(confirmUpload)).toHaveBeenCalledOnce();
-      expect(vi.mocked(confirmUpload).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(confirmUpload).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(confirmUpload).mock.calls[0]?.[2]).toBe(BLOB_ID);
       expect(result).toEqual(MOCK_BLOB_RESULT);
     });
@@ -154,10 +163,10 @@ describe("blob router", () => {
     it("calls getBlob with correct systemId and blobId", async () => {
       vi.mocked(getBlob).mockResolvedValue(MOCK_BLOB_RESULT);
       const caller = createCaller();
-      const result = await caller.blob.get({ systemId: SYSTEM_ID, blobId: BLOB_ID });
+      const result = await caller.blob.get({ systemId: MOCK_SYSTEM_ID, blobId: BLOB_ID });
 
       expect(vi.mocked(getBlob)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getBlob).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getBlob).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getBlob).mock.calls[0]?.[2]).toBe(BLOB_ID);
       expect(result).toEqual(MOCK_BLOB_RESULT);
     });
@@ -165,14 +174,14 @@ describe("blob router", () => {
     it("rejects invalid blobId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.blob.get({ systemId: SYSTEM_ID, blobId: "invalid-id" as BlobId }),
+        caller.blob.get({ systemId: MOCK_SYSTEM_ID, blobId: "invalid-id" as BlobId }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
     it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
       vi.mocked(getBlob).mockRejectedValue(new ApiHttpError(404, "NOT_FOUND", "Blob not found"));
       const caller = createCaller();
-      await expect(caller.blob.get({ systemId: SYSTEM_ID, blobId: BLOB_ID })).rejects.toThrow(
+      await expect(caller.blob.get({ systemId: MOCK_SYSTEM_ID, blobId: BLOB_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
@@ -190,10 +199,10 @@ describe("blob router", () => {
       };
       vi.mocked(listBlobs).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.blob.list({ systemId: SYSTEM_ID });
+      const result = await caller.blob.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listBlobs)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listBlobs).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listBlobs).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -206,7 +215,7 @@ describe("blob router", () => {
       });
       const caller = createCaller();
       await caller.blob.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "blob_cursor",
         limit: 20,
         includeArchived: true,
@@ -225,10 +234,13 @@ describe("blob router", () => {
     it("calls getDownloadUrl with storageAdapter and returns result", async () => {
       vi.mocked(getDownloadUrl).mockResolvedValue(MOCK_DOWNLOAD_URL_RESULT);
       const caller = createCaller();
-      const result = await caller.blob.getDownloadUrl({ systemId: SYSTEM_ID, blobId: BLOB_ID });
+      const result = await caller.blob.getDownloadUrl({
+        systemId: MOCK_SYSTEM_ID,
+        blobId: BLOB_ID,
+      });
 
       expect(vi.mocked(getDownloadUrl)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getDownloadUrl).mock.calls[0]?.[2]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getDownloadUrl).mock.calls[0]?.[2]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getDownloadUrl).mock.calls[0]?.[3]).toBe(BLOB_ID);
       expect(result).toEqual(MOCK_DOWNLOAD_URL_RESULT);
     });
@@ -239,7 +251,7 @@ describe("blob router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.blob.getDownloadUrl({ systemId: SYSTEM_ID, blobId: BLOB_ID }),
+        caller.blob.getDownloadUrl({ systemId: MOCK_SYSTEM_ID, blobId: BLOB_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -250,11 +262,11 @@ describe("blob router", () => {
     it("calls archiveBlob and returns success", async () => {
       vi.mocked(archiveBlob).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.blob.delete({ systemId: SYSTEM_ID, blobId: BLOB_ID });
+      const result = await caller.blob.delete({ systemId: MOCK_SYSTEM_ID, blobId: BLOB_ID });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveBlob)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveBlob).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveBlob).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveBlob).mock.calls[0]?.[2]).toBe(BLOB_ID);
     });
 
@@ -263,9 +275,37 @@ describe("blob router", () => {
         new ApiHttpError(404, "NOT_FOUND", "Blob not found"),
       );
       const caller = createCaller();
-      await expect(caller.blob.delete({ systemId: SYSTEM_ID, blobId: BLOB_ID })).rejects.toThrow(
-        expect.objectContaining({ code: "NOT_FOUND" }),
-      );
+      await expect(
+        caller.blob.delete({ systemId: MOCK_SYSTEM_ID, blobId: BLOB_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listBlobs).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.blob.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createUploadUrl).mockResolvedValue(MOCK_UPLOAD_URL_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.blob.createUploadUrl(VALID_UPLOAD_INPUT),
+      "blobUpload",
+    );
   });
 });

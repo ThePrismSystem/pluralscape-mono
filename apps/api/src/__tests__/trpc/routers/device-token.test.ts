@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { DeviceTokenId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/device-token.service.js", () => ({
@@ -27,7 +36,7 @@ const TOKEN_ID = "dt_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as DeviceTokenId;
 
 const MOCK_TOKEN_RESULT = {
   id: TOKEN_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   platform: "ios" as const,
   token: "***abc123",
   lastActiveAt: 1_700_000_000_000 as UnixMillis,
@@ -46,13 +55,13 @@ describe("deviceToken router", () => {
       vi.mocked(registerDeviceToken).mockResolvedValue(MOCK_TOKEN_RESULT);
       const caller = createCaller();
       const result = await caller.deviceToken.register({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         platform: "ios",
         token: "device-push-token-abc123",
       });
 
       expect(vi.mocked(registerDeviceToken)).toHaveBeenCalledOnce();
-      expect(vi.mocked(registerDeviceToken).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(registerDeviceToken).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_TOKEN_RESULT);
     });
 
@@ -60,7 +69,7 @@ describe("deviceToken router", () => {
       const caller = createCaller(null);
       await expect(
         caller.deviceToken.register({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           platform: "ios",
           token: "device-push-token-abc123",
         }),
@@ -92,10 +101,10 @@ describe("deviceToken router", () => {
       };
       vi.mocked(listDeviceTokens).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.deviceToken.list({ systemId: SYSTEM_ID });
+      const result = await caller.deviceToken.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listDeviceTokens)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listDeviceTokens).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listDeviceTokens).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -107,7 +116,7 @@ describe("deviceToken router", () => {
         totalCount: null,
       });
       const caller = createCaller();
-      await caller.deviceToken.list({ systemId: SYSTEM_ID, cursor: "cursor_xyz", limit: 5 });
+      await caller.deviceToken.list({ systemId: MOCK_SYSTEM_ID, cursor: "cursor_xyz", limit: 5 });
 
       const opts = vi.mocked(listDeviceTokens).mock.calls[0]?.[3];
       expect(opts?.cursor).toBe("cursor_xyz");
@@ -121,11 +130,14 @@ describe("deviceToken router", () => {
     it("calls revokeDeviceToken and returns success", async () => {
       vi.mocked(revokeDeviceToken).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.deviceToken.revoke({ systemId: SYSTEM_ID, tokenId: TOKEN_ID });
+      const result = await caller.deviceToken.revoke({
+        systemId: MOCK_SYSTEM_ID,
+        tokenId: TOKEN_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(revokeDeviceToken)).toHaveBeenCalledOnce();
-      expect(vi.mocked(revokeDeviceToken).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(revokeDeviceToken).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(revokeDeviceToken).mock.calls[0]?.[2]).toBe(TOKEN_ID);
     });
 
@@ -133,7 +145,7 @@ describe("deviceToken router", () => {
       const caller = createCaller();
       await expect(
         caller.deviceToken.revoke({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           tokenId: "not-a-token-id" as DeviceTokenId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -145,7 +157,7 @@ describe("deviceToken router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.deviceToken.revoke({ systemId: SYSTEM_ID, tokenId: TOKEN_ID }),
+        caller.deviceToken.revoke({ systemId: MOCK_SYSTEM_ID, tokenId: TOKEN_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -156,11 +168,14 @@ describe("deviceToken router", () => {
     it("calls deleteDeviceToken and returns success", async () => {
       vi.mocked(deleteDeviceToken).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.deviceToken.delete({ systemId: SYSTEM_ID, tokenId: TOKEN_ID });
+      const result = await caller.deviceToken.delete({
+        systemId: MOCK_SYSTEM_ID,
+        tokenId: TOKEN_ID,
+      });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteDeviceToken)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteDeviceToken).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteDeviceToken).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteDeviceToken).mock.calls[0]?.[2]).toBe(TOKEN_ID);
     });
 
@@ -170,8 +185,41 @@ describe("deviceToken router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.deviceToken.delete({ systemId: SYSTEM_ID, tokenId: TOKEN_ID }),
+        caller.deviceToken.delete({ systemId: MOCK_SYSTEM_ID, tokenId: TOKEN_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listDeviceTokens).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.deviceToken.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(registerDeviceToken).mockResolvedValue(MOCK_TOKEN_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.deviceToken.register({
+          systemId: MOCK_SYSTEM_ID,
+          platform: "ios",
+          token: "device-push-token-abc123",
+        }),
+      "write",
+    );
   });
 });

@@ -17,8 +17,12 @@ import {
   restoreMember,
   updateMember,
 } from "../../services/member.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for member list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -28,23 +32,30 @@ const MemberIdSchema = z.object({
 });
 
 export const memberRouter = router({
-  create: systemProcedure.input(CreateMemberBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    // Service validates params internally; pass the domain fields only.
-    return createMember(
-      ctx.db,
-      ctx.systemId,
-      { encryptedData: input.encryptedData },
-      ctx.auth,
-      audit,
-    );
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateMemberBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      // Service validates params internally; pass the domain fields only.
+      return createMember(
+        ctx.db,
+        ctx.systemId,
+        { encryptedData: input.encryptedData },
+        ctx.auth,
+        audit,
+      );
+    }),
 
-  get: systemProcedure.input(MemberIdSchema).query(async ({ ctx, input }) => {
-    return getMember(ctx.db, ctx.systemId, input.memberId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(MemberIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getMember(ctx.db, ctx.systemId, input.memberId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -63,6 +74,7 @@ export const memberRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(MemberIdSchema.and(UpdateMemberBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -77,6 +89,7 @@ export const memberRouter = router({
     }),
 
   duplicate: systemProcedure
+    .use(writeLimiter)
     .input(MemberIdSchema.and(DuplicateMemberBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -95,24 +108,36 @@ export const memberRouter = router({
       );
     }),
 
-  archive: systemProcedure.input(MemberIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(MemberIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(MemberIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(MemberIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(MemberIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(MemberIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteMember(ctx.db, ctx.systemId, input.memberId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  listMemberships: systemProcedure.input(MemberIdSchema).query(async ({ ctx, input }) => {
-    return listAllMemberMemberships(ctx.db, ctx.systemId, input.memberId, ctx.auth);
-  }),
+  listMemberships: systemProcedure
+    .use(readLimiter)
+    .input(MemberIdSchema)
+    .query(async ({ ctx, input }) => {
+      return listAllMemberMemberships(ctx.db, ctx.systemId, input.memberId, ctx.auth);
+    }),
 });

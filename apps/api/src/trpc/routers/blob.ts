@@ -14,8 +14,13 @@ import {
   getDownloadUrl,
   listBlobs,
 } from "../../services/blob.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
+const blobUploadLimiter = createTRPCCategoryRateLimiter("blobUpload");
 
 /** Maximum items per page for blob list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -26,6 +31,7 @@ const BlobIdSchema = z.object({
 
 export const blobRouter = router({
   createUploadUrl: systemProcedure
+    .use(blobUploadLimiter)
     .input(CreateUploadUrlBodySchema)
     .mutation(async ({ ctx, input }) => {
       const storageAdapter = getStorageAdapter();
@@ -43,17 +49,22 @@ export const blobRouter = router({
     }),
 
   confirmUpload: systemProcedure
+    .use(writeLimiter)
     .input(BlobIdSchema.and(ConfirmUploadBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return confirmUpload(ctx.db, ctx.systemId, input.blobId, input, ctx.auth, audit);
     }),
 
-  get: systemProcedure.input(BlobIdSchema).query(async ({ ctx, input }) => {
-    return getBlob(ctx.db, ctx.systemId, input.blobId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(BlobIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getBlob(ctx.db, ctx.systemId, input.blobId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -69,14 +80,20 @@ export const blobRouter = router({
       });
     }),
 
-  getDownloadUrl: systemProcedure.input(BlobIdSchema).query(async ({ ctx, input }) => {
-    const storageAdapter = getStorageAdapter();
-    return getDownloadUrl(ctx.db, storageAdapter, ctx.systemId, input.blobId, ctx.auth);
-  }),
+  getDownloadUrl: systemProcedure
+    .use(readLimiter)
+    .input(BlobIdSchema)
+    .query(async ({ ctx, input }) => {
+      const storageAdapter = getStorageAdapter();
+      return getDownloadUrl(ctx.db, storageAdapter, ctx.systemId, input.blobId, ctx.auth);
+    }),
 
-  delete: systemProcedure.input(BlobIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveBlob(ctx.db, ctx.systemId, input.blobId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(BlobIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveBlob(ctx.db, ctx.systemId, input.blobId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

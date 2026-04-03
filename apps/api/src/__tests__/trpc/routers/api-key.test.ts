@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { ApiKeyId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/api-key.service.js", () => ({
@@ -26,7 +35,7 @@ const API_KEY_ID = "ak_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ApiKeyId;
 
 const MOCK_API_KEY_RESULT = {
   id: API_KEY_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   keyType: "metadata" as const,
   scopes: ["read:members" as const],
   createdAt: 1_700_000_000_000 as UnixMillis,
@@ -44,7 +53,7 @@ const MOCK_CREATE_RESULT = {
 const SCOPES = ["read:members" as const];
 
 const VALID_CREATE_INPUT = {
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   keyType: "metadata" as const,
   scopes: SCOPES,
   encryptedData: "dGVzdGRhdGFmb3JrZXk=",
@@ -64,7 +73,7 @@ describe("apiKey router", () => {
       const result = await caller.apiKey.create(VALID_CREATE_INPUT);
 
       expect(vi.mocked(createApiKey)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createApiKey).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createApiKey).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_CREATE_RESULT);
     });
 
@@ -106,10 +115,10 @@ describe("apiKey router", () => {
       };
       vi.mocked(listApiKeys).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.apiKey.list({ systemId: SYSTEM_ID });
+      const result = await caller.apiKey.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listApiKeys)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listApiKeys).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listApiKeys).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -122,7 +131,7 @@ describe("apiKey router", () => {
       });
       const caller = createCaller();
       await caller.apiKey.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         cursor: "ak_cursor",
         limit: 5,
         includeRevoked: true,
@@ -141,18 +150,18 @@ describe("apiKey router", () => {
     it("calls revokeApiKey and returns success", async () => {
       vi.mocked(revokeApiKey).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: API_KEY_ID });
+      const result = await caller.apiKey.revoke({ systemId: MOCK_SYSTEM_ID, apiKeyId: API_KEY_ID });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(revokeApiKey)).toHaveBeenCalledOnce();
-      expect(vi.mocked(revokeApiKey).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(revokeApiKey).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(revokeApiKey).mock.calls[0]?.[2]).toBe(API_KEY_ID);
     });
 
     it("rejects invalid apiKeyId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: "invalid-id" as ApiKeyId }),
+        caller.apiKey.revoke({ systemId: MOCK_SYSTEM_ID, apiKeyId: "invalid-id" as ApiKeyId }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
@@ -162,8 +171,36 @@ describe("apiKey router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.apiKey.revoke({ systemId: SYSTEM_ID, apiKeyId: API_KEY_ID }),
+        caller.apiKey.revoke({ systemId: MOCK_SYSTEM_ID, apiKeyId: API_KEY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listApiKeys).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.apiKey.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createApiKey).mockResolvedValue(MOCK_CREATE_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.apiKey.create(VALID_CREATE_INPUT),
+      "write",
+    );
   });
 });

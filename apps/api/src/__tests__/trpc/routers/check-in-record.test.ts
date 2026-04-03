@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { CheckInRecordId, MemberId, TimerId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/check-in-record.service.js", () => ({
@@ -41,7 +50,7 @@ const MEMBER_ID = "mem_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MemberId;
 
 const MOCK_PENDING_RESULT = {
   id: RECORD_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   timerConfigId: TIMER_ID,
   scheduledAt: 1_700_000_000_000 as UnixMillis,
   encryptedData: null,
@@ -81,13 +90,13 @@ describe("checkInRecord router", () => {
       vi.mocked(createCheckInRecord).mockResolvedValue(MOCK_PENDING_RESULT);
       const caller = createCaller();
       const result = await caller.checkInRecord.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         timerConfigId: TIMER_ID,
         scheduledAt: 1_700_000_000_000,
       });
 
       expect(vi.mocked(createCheckInRecord)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createCheckInRecord).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createCheckInRecord).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_PENDING_RESULT);
     });
 
@@ -95,7 +104,7 @@ describe("checkInRecord router", () => {
       const caller = createCaller(null);
       await expect(
         caller.checkInRecord.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           timerConfigId: TIMER_ID,
           scheduledAt: 1_700_000_000_000,
         }),
@@ -121,10 +130,13 @@ describe("checkInRecord router", () => {
     it("calls getCheckInRecord with correct systemId and recordId", async () => {
       vi.mocked(getCheckInRecord).mockResolvedValue(MOCK_PENDING_RESULT);
       const caller = createCaller();
-      const result = await caller.checkInRecord.get({ systemId: SYSTEM_ID, recordId: RECORD_ID });
+      const result = await caller.checkInRecord.get({
+        systemId: MOCK_SYSTEM_ID,
+        recordId: RECORD_ID,
+      });
 
       expect(vi.mocked(getCheckInRecord)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getCheckInRecord).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getCheckInRecord).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getCheckInRecord).mock.calls[0]?.[2]).toBe(RECORD_ID);
       expect(result).toEqual(MOCK_PENDING_RESULT);
     });
@@ -133,7 +145,7 @@ describe("checkInRecord router", () => {
       const caller = createCaller();
       await expect(
         caller.checkInRecord.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           recordId: "not-a-record-id" as CheckInRecordId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -145,7 +157,7 @@ describe("checkInRecord router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.checkInRecord.get({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
+        caller.checkInRecord.get({ systemId: MOCK_SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -162,10 +174,10 @@ describe("checkInRecord router", () => {
       };
       vi.mocked(listCheckInRecords).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.checkInRecord.list({ systemId: SYSTEM_ID });
+      const result = await caller.checkInRecord.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listCheckInRecords)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listCheckInRecords).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listCheckInRecords).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -178,7 +190,7 @@ describe("checkInRecord router", () => {
       });
       const caller = createCaller();
       await caller.checkInRecord.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         timerConfigId: TIMER_ID,
         pending: true,
         cursor: "cursor_abc",
@@ -200,13 +212,13 @@ describe("checkInRecord router", () => {
       vi.mocked(respondCheckInRecord).mockResolvedValue(MOCK_RESPONDED_RESULT);
       const caller = createCaller();
       const result = await caller.checkInRecord.respond({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         recordId: RECORD_ID,
         respondedByMemberId: MEMBER_ID,
       });
 
       expect(vi.mocked(respondCheckInRecord)).toHaveBeenCalledOnce();
-      expect(vi.mocked(respondCheckInRecord).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(respondCheckInRecord).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(respondCheckInRecord).mock.calls[0]?.[2]).toBe(RECORD_ID);
       expect(result).toEqual(MOCK_RESPONDED_RESULT);
     });
@@ -218,7 +230,7 @@ describe("checkInRecord router", () => {
       const caller = createCaller();
       await expect(
         caller.checkInRecord.respond({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           recordId: RECORD_ID,
           respondedByMemberId: MEMBER_ID,
         }),
@@ -233,12 +245,12 @@ describe("checkInRecord router", () => {
       vi.mocked(dismissCheckInRecord).mockResolvedValue(MOCK_DISMISSED_RESULT);
       const caller = createCaller();
       const result = await caller.checkInRecord.dismiss({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         recordId: RECORD_ID,
       });
 
       expect(vi.mocked(dismissCheckInRecord)).toHaveBeenCalledOnce();
-      expect(vi.mocked(dismissCheckInRecord).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(dismissCheckInRecord).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(dismissCheckInRecord).mock.calls[0]?.[2]).toBe(RECORD_ID);
       expect(result).toEqual(MOCK_DISMISSED_RESULT);
     });
@@ -249,7 +261,7 @@ describe("checkInRecord router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.checkInRecord.dismiss({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
+        caller.checkInRecord.dismiss({ systemId: MOCK_SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
   });
@@ -261,13 +273,13 @@ describe("checkInRecord router", () => {
       vi.mocked(archiveCheckInRecord).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.checkInRecord.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         recordId: RECORD_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveCheckInRecord)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveCheckInRecord).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveCheckInRecord).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveCheckInRecord).mock.calls[0]?.[2]).toBe(RECORD_ID);
     });
 
@@ -277,7 +289,7 @@ describe("checkInRecord router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.checkInRecord.archive({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
+        caller.checkInRecord.archive({ systemId: MOCK_SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -289,12 +301,12 @@ describe("checkInRecord router", () => {
       vi.mocked(restoreCheckInRecord).mockResolvedValue(MOCK_PENDING_RESULT);
       const caller = createCaller();
       const result = await caller.checkInRecord.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         recordId: RECORD_ID,
       });
 
       expect(vi.mocked(restoreCheckInRecord)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreCheckInRecord).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreCheckInRecord).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreCheckInRecord).mock.calls[0]?.[2]).toBe(RECORD_ID);
       expect(result).toEqual(MOCK_PENDING_RESULT);
     });
@@ -305,7 +317,7 @@ describe("checkInRecord router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.checkInRecord.restore({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
+        caller.checkInRecord.restore({ systemId: MOCK_SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -317,13 +329,13 @@ describe("checkInRecord router", () => {
       vi.mocked(deleteCheckInRecord).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.checkInRecord.delete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         recordId: RECORD_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteCheckInRecord)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteCheckInRecord).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteCheckInRecord).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteCheckInRecord).mock.calls[0]?.[2]).toBe(RECORD_ID);
     });
 
@@ -333,8 +345,41 @@ describe("checkInRecord router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.checkInRecord.delete({ systemId: SYSTEM_ID, recordId: RECORD_ID }),
+        caller.checkInRecord.delete({ systemId: MOCK_SYSTEM_ID, recordId: RECORD_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listCheckInRecords).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.checkInRecord.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createCheckInRecord).mockResolvedValue(MOCK_PENDING_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.checkInRecord.create({
+          systemId: MOCK_SYSTEM_ID,
+          timerConfigId: TIMER_ID,
+          scheduledAt: 1_700_000_000_000,
+        }),
+      "write",
+    );
   });
 });

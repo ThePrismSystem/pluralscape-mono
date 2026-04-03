@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { FrontingAnalytics, CoFrontingAnalytics } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/analytics.service.js", () => ({
@@ -21,7 +30,7 @@ const { analyticsRouter } = await import("../../../trpc/routers/analytics.js");
 const createCaller = makeCallerFactory({ analytics: analyticsRouter });
 
 const MOCK_FRONTING_ANALYTICS: FrontingAnalytics = {
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   dateRange: {
     preset: "last-30-days",
     start: 1_697_000_000_000 as never,
@@ -32,7 +41,7 @@ const MOCK_FRONTING_ANALYTICS: FrontingAnalytics = {
 };
 
 const MOCK_COFRONTING_ANALYTICS: CoFrontingAnalytics = {
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   dateRange: {
     preset: "last-30-days",
     start: 1_697_000_000_000 as never,
@@ -54,17 +63,17 @@ describe("analytics router", () => {
     it("calls computeFrontingBreakdown with correct systemId", async () => {
       vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
       const caller = createCaller();
-      const result = await caller.analytics.fronting({ systemId: SYSTEM_ID });
+      const result = await caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(computeFrontingBreakdown)).toHaveBeenCalledOnce();
-      expect(vi.mocked(computeFrontingBreakdown).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(computeFrontingBreakdown).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_FRONTING_ANALYTICS);
     });
 
     it("defaults to last-30-days when no preset provided", async () => {
       vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
       const caller = createCaller();
-      await caller.analytics.fronting({ systemId: SYSTEM_ID });
+      await caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID });
 
       const dateRange = vi.mocked(computeFrontingBreakdown).mock.calls[0]?.[3];
       expect(dateRange?.preset).toBe("last-30-days");
@@ -73,7 +82,7 @@ describe("analytics router", () => {
     it("accepts last-7-days preset", async () => {
       vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
       const caller = createCaller();
-      await caller.analytics.fronting({ systemId: SYSTEM_ID, preset: "last-7-days" });
+      await caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID, preset: "last-7-days" });
 
       const dateRange = vi.mocked(computeFrontingBreakdown).mock.calls[0]?.[3];
       expect(dateRange?.preset).toBe("last-7-days");
@@ -82,7 +91,7 @@ describe("analytics router", () => {
     it("accepts all-time preset", async () => {
       vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
       const caller = createCaller();
-      await caller.analytics.fronting({ systemId: SYSTEM_ID, preset: "all-time" });
+      await caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID, preset: "all-time" });
 
       const dateRange = vi.mocked(computeFrontingBreakdown).mock.calls[0]?.[3];
       expect(dateRange?.preset).toBe("all-time");
@@ -92,7 +101,7 @@ describe("analytics router", () => {
       vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
       const caller = createCaller();
       await caller.analytics.fronting({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         preset: "custom",
         startDate: 1_697_000_000_000,
         endDate: 1_700_000_000_000,
@@ -105,7 +114,7 @@ describe("analytics router", () => {
     it("rejects custom preset without startDate/endDate", async () => {
       const caller = createCaller();
       await expect(
-        caller.analytics.fronting({ systemId: SYSTEM_ID, preset: "custom" }),
+        caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID, preset: "custom" }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
 
@@ -113,7 +122,7 @@ describe("analytics router", () => {
       const caller = createCaller();
       await expect(
         caller.analytics.fronting({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           preset: "custom",
           startDate: 1_700_000_000_000,
           endDate: 1_697_000_000_000,
@@ -123,7 +132,7 @@ describe("analytics router", () => {
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.analytics.fronting({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
@@ -143,17 +152,17 @@ describe("analytics router", () => {
     it("calls computeCoFrontingBreakdown with correct systemId", async () => {
       vi.mocked(computeCoFrontingBreakdown).mockResolvedValue(MOCK_COFRONTING_ANALYTICS);
       const caller = createCaller();
-      const result = await caller.analytics.coFronting({ systemId: SYSTEM_ID });
+      const result = await caller.analytics.coFronting({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(computeCoFrontingBreakdown)).toHaveBeenCalledOnce();
-      expect(vi.mocked(computeCoFrontingBreakdown).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(computeCoFrontingBreakdown).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_COFRONTING_ANALYTICS);
     });
 
     it("defaults to last-30-days when no preset provided", async () => {
       vi.mocked(computeCoFrontingBreakdown).mockResolvedValue(MOCK_COFRONTING_ANALYTICS);
       const caller = createCaller();
-      await caller.analytics.coFronting({ systemId: SYSTEM_ID });
+      await caller.analytics.coFronting({ systemId: MOCK_SYSTEM_ID });
 
       const dateRange = vi.mocked(computeCoFrontingBreakdown).mock.calls[0]?.[3];
       expect(dateRange?.preset).toBe("last-30-days");
@@ -161,9 +170,21 @@ describe("analytics router", () => {
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.analytics.coFronting({ systemId: SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.analytics.coFronting({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(computeFrontingBreakdown).mockResolvedValue(MOCK_FRONTING_ANALYTICS);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.analytics.fronting({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
   });
 });

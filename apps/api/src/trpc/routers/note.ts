@@ -15,8 +15,12 @@ import {
   restoreNote,
   updateNote,
 } from "../../services/note.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for note list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -29,16 +33,23 @@ const NoteIdSchema = z.object({
 });
 
 export const noteRouter = router({
-  create: systemProcedure.input(CreateNoteBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createNote(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateNoteBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createNote(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
-  get: systemProcedure.input(NoteIdSchema).query(async ({ ctx, input }) => {
-    return getNote(ctx.db, ctx.systemId, input.noteId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(NoteIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getNote(ctx.db, ctx.systemId, input.noteId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z
         .object({
@@ -70,6 +81,7 @@ export const noteRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(NoteIdSchema.and(UpdateNoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -83,20 +95,29 @@ export const noteRouter = router({
       );
     }),
 
-  archive: systemProcedure.input(NoteIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveNote(ctx.db, ctx.systemId, input.noteId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(NoteIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveNote(ctx.db, ctx.systemId, input.noteId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(NoteIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreNote(ctx.db, ctx.systemId, input.noteId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(NoteIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreNote(ctx.db, ctx.systemId, input.noteId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(NoteIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteNote(ctx.db, ctx.systemId, input.noteId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(NoteIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteNote(ctx.db, ctx.systemId, input.noteId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 });

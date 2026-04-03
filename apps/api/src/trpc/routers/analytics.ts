@@ -6,10 +6,13 @@ import {
   computeCoFrontingBreakdown,
   computeFrontingBreakdown,
 } from "../../services/analytics.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
 import type { DateRangeFilter, UnixMillis } from "@pluralscape/types";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 
 /** tRPC-native analytics date range input — uses numbers, not query-param strings. */
 const AnalyticsInputSchema = z
@@ -92,13 +95,19 @@ function toDateRangeFilter(input: z.infer<typeof AnalyticsInputSchema>): DateRan
 }
 
 export const analyticsRouter = router({
-  fronting: systemProcedure.input(AnalyticsInputSchema).query(async ({ ctx, input }) => {
-    const dateRange = toDateRangeFilter(input);
-    return computeFrontingBreakdown(ctx.db, ctx.systemId, ctx.auth, dateRange);
-  }),
+  fronting: systemProcedure
+    .use(readLimiter)
+    .input(AnalyticsInputSchema)
+    .query(async ({ ctx, input }) => {
+      const dateRange = toDateRangeFilter(input);
+      return computeFrontingBreakdown(ctx.db, ctx.systemId, ctx.auth, dateRange);
+    }),
 
-  coFronting: systemProcedure.input(AnalyticsInputSchema).query(async ({ ctx, input }) => {
-    const dateRange = toDateRangeFilter(input);
-    return computeCoFrontingBreakdown(ctx.db, ctx.systemId, ctx.auth, dateRange);
-  }),
+  coFronting: systemProcedure
+    .use(readLimiter)
+    .input(AnalyticsInputSchema)
+    .query(async ({ ctx, input }) => {
+      const dateRange = toDateRangeFilter(input);
+      return computeCoFrontingBreakdown(ctx.db, ctx.systemId, ctx.auth, dateRange);
+    }),
 });

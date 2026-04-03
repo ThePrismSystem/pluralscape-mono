@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory, type SystemId } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  makeCallerFactory,
+  type SystemId,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { FrontingReportId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/fronting-report.service.js", () => ({
@@ -36,7 +45,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZW1iZXI=";
 
 const MOCK_REPORT_RESULT = {
   id: REPORT_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "base64data==",
   format: "html" as const,
   generatedAt: 1_700_000_000_000 as UnixMillis,
@@ -59,14 +68,14 @@ describe("frontingReport router", () => {
       vi.mocked(createFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingReport.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         format: "html",
         generatedAt: 1_700_000_000_000,
       });
 
       expect(vi.mocked(createFrontingReport)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createFrontingReport).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createFrontingReport).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_REPORT_RESULT);
     });
 
@@ -74,7 +83,7 @@ describe("frontingReport router", () => {
       const caller = createCaller(null);
       await expect(
         caller.frontingReport.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           format: "html",
           generatedAt: 1_700_000_000_000,
@@ -99,7 +108,7 @@ describe("frontingReport router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingReport.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           format: "docx" as "html",
           generatedAt: 1_700_000_000_000,
@@ -115,12 +124,12 @@ describe("frontingReport router", () => {
       vi.mocked(getFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingReport.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         reportId: REPORT_ID,
       });
 
       expect(vi.mocked(getFrontingReport)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getFrontingReport).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getFrontingReport).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getFrontingReport).mock.calls[0]?.[2]).toBe(REPORT_ID);
       expect(result).toEqual(MOCK_REPORT_RESULT);
     });
@@ -129,7 +138,7 @@ describe("frontingReport router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingReport.get({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           reportId: "not-a-report-id" as FrontingReportId,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
@@ -148,7 +157,7 @@ describe("frontingReport router", () => {
       };
       vi.mocked(listFrontingReports).mockResolvedValue(mockList);
       const caller = createCaller();
-      const result = await caller.frontingReport.list({ systemId: SYSTEM_ID });
+      const result = await caller.frontingReport.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listFrontingReports)).toHaveBeenCalledOnce();
       expect(result).toEqual(mockList);
@@ -162,7 +171,7 @@ describe("frontingReport router", () => {
       vi.mocked(updateFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingReport.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         reportId: REPORT_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
@@ -181,7 +190,7 @@ describe("frontingReport router", () => {
       vi.mocked(archiveFrontingReport).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.frontingReport.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         reportId: REPORT_ID,
       });
 
@@ -197,7 +206,7 @@ describe("frontingReport router", () => {
       vi.mocked(restoreFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
       const caller = createCaller();
       const result = await caller.frontingReport.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         reportId: REPORT_ID,
       });
 
@@ -215,7 +224,7 @@ describe("frontingReport router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.frontingReport.get({ systemId: SYSTEM_ID, reportId: REPORT_ID }),
+        caller.frontingReport.get({ systemId: MOCK_SYSTEM_ID, reportId: REPORT_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
 
@@ -226,12 +235,46 @@ describe("frontingReport router", () => {
       const caller = createCaller();
       await expect(
         caller.frontingReport.update({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           reportId: REPORT_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
         }),
       ).rejects.toThrow(expect.objectContaining({ code: "CONFLICT" }));
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listFrontingReports).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.frontingReport.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createFrontingReport).mockResolvedValue(MOCK_REPORT_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.frontingReport.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          format: "html",
+          generatedAt: 1_700_000_000_000,
+        }),
+      "write",
+    );
   });
 });

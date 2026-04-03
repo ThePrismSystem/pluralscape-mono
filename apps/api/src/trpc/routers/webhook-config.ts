@@ -17,8 +17,12 @@ import {
   testWebhookConfig,
   updateWebhookConfig,
 } from "../../services/webhook-config.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for webhook config list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -29,6 +33,7 @@ const WebhookIdSchema = z.object({
 
 export const webhookConfigRouter = router({
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -44,16 +49,23 @@ export const webhookConfigRouter = router({
       });
     }),
 
-  get: systemProcedure.input(WebhookIdSchema).query(async ({ ctx, input }) => {
-    return getWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(WebhookIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth);
+    }),
 
-  create: systemProcedure.input(CreateWebhookConfigBodySchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return createWebhookConfig(ctx.db, ctx.systemId, input, ctx.auth, audit);
-  }),
+  create: systemProcedure
+    .use(writeLimiter)
+    .input(CreateWebhookConfigBodySchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return createWebhookConfig(ctx.db, ctx.systemId, input, ctx.auth, audit);
+    }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(WebhookIdSchema.and(UpdateWebhookConfigBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -61,24 +73,34 @@ export const webhookConfigRouter = router({
       return updateWebhookConfig(ctx.db, ctx.systemId, webhookId, body, ctx.auth, audit);
     }),
 
-  delete: systemProcedure.input(WebhookIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(WebhookIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  archive: systemProcedure.input(WebhookIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(WebhookIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(WebhookIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(WebhookIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth, audit);
+    }),
 
   rotateSecret: systemProcedure
+    .use(writeLimiter)
     .input(WebhookIdSchema.and(RotateWebhookSecretBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -86,7 +108,10 @@ export const webhookConfigRouter = router({
       return rotateWebhookSecret(ctx.db, ctx.systemId, webhookId, body, ctx.auth, audit);
     }),
 
-  test: systemProcedure.input(WebhookIdSchema).mutation(async ({ ctx, input }) => {
-    return testWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth);
-  }),
+  test: systemProcedure
+    .use(writeLimiter)
+    .input(WebhookIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      return testWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth);
+    }),
 });

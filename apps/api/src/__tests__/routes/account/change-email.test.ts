@@ -130,13 +130,13 @@ describe("PUT /account/email", () => {
 
     expect(vi.mocked(changeEmail)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       { email: "new@example.com", currentPassword: "password123" },
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ accountId: "acct_test" }),
+      expect.objectContaining({ accountId: "acct_test001" }),
     );
   });
 });

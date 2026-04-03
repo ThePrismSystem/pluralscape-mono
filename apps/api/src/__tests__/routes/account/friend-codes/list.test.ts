@@ -94,7 +94,7 @@ describe("GET /account/friend-codes", () => {
 
     expect(vi.mocked(listFriendCodes)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       MOCK_ACCOUNT_ONLY_AUTH,
       undefined,
       expect.any(Number),

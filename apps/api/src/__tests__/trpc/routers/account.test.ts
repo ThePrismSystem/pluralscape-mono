@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_ID, MOCK_AUTH, noopAuditWriter, makeCallerFactory } from "../test-helpers.js";
+import {
+  MOCK_SYSTEM_ID,
+  MOCK_AUTH,
+  noopAuditWriter,
+  makeCallerFactory,
+  assertProcedureRateLimited,
+} from "../test-helpers.js";
 
 import type { BiometricTokenId, UnixMillis } from "@pluralscape/types";
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/account.service.js", () => ({
@@ -61,7 +71,7 @@ describe("account router", () => {
     const mockAccountInfo = {
       accountId: MOCK_AUTH.accountId,
       accountType: "system" as const,
-      systemId: SYSTEM_ID,
+      systemId: MOCK_SYSTEM_ID,
       auditLogIpTracking: false,
       version: 1,
       createdAt: MOCK_TIMESTAMP,
@@ -430,5 +440,37 @@ describe("account router", () => {
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(getAccountInfo).mockResolvedValue({
+      accountId: MOCK_AUTH.accountId,
+      accountType: "system" as const,
+      systemId: MOCK_SYSTEM_ID,
+      auditLogIpTracking: false,
+      version: 1,
+      createdAt: 1_700_000_000_000 as import("@pluralscape/types").UnixMillis,
+      updatedAt: 1_700_000_000_000 as import("@pluralscape/types").UnixMillis,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.account.getInfo(),
+      "authLight",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(changeEmail).mockResolvedValue({ ok: true });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.account.changeEmail({ email: "new@example.com", currentPassword: "OldPassword1!" }),
+      "authHeavy",
+    );
   });
 });

@@ -110,13 +110,13 @@ describe("PUT /account/password", () => {
 
     expect(vi.mocked(changePassword)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       { currentPassword: "oldpass123", newPassword: "newpass123" },
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ accountId: "acct_test" }),
+      expect.objectContaining({ accountId: "acct_test001" }),
     );
   });
 

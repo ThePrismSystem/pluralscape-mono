@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
-import { SYSTEM_ID, makeCallerFactory } from "../test-helpers.js";
+import { MOCK_SYSTEM_ID, makeCallerFactory, assertProcedureRateLimited } from "../test-helpers.js";
 
 import type {
   BucketId,
@@ -13,6 +13,10 @@ import type {
 
 vi.mock("../../../lib/logger.js", () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
 vi.mock("../../../services/field-definition.service.js", () => ({
@@ -65,7 +69,7 @@ const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JmaWVsZA==";
 
 const MOCK_FIELD_DEF_RESULT = {
   id: FIELD_DEF_ID,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   fieldType: "text" as const,
   required: false,
   sortOrder: 0,
@@ -85,7 +89,7 @@ const MOCK_FIELD_VALUE_RESULT = {
   memberId: MEMBER_ID,
   structureEntityId: null,
   groupId: null,
-  systemId: SYSTEM_ID,
+  systemId: MOCK_SYSTEM_ID,
   encryptedData: "base64data==",
   version: 1,
   createdAt: 1_700_000_000_000 as UnixMillis,
@@ -104,7 +108,7 @@ describe("field router", () => {
       vi.mocked(createFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
       const caller = createCaller();
       const result = await caller.field.definition.create({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         fieldType: "text",
         required: false,
@@ -112,7 +116,7 @@ describe("field router", () => {
       });
 
       expect(vi.mocked(createFieldDefinition)).toHaveBeenCalledOnce();
-      expect(vi.mocked(createFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(createFieldDefinition).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
     });
 
@@ -120,7 +124,7 @@ describe("field router", () => {
       const caller = createCaller(null);
       await expect(
         caller.field.definition.create({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           fieldType: "text",
           required: false,
@@ -135,12 +139,12 @@ describe("field router", () => {
       vi.mocked(getFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
       const caller = createCaller();
       const result = await caller.field.definition.get({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
       });
 
       expect(vi.mocked(getFieldDefinition)).toHaveBeenCalledOnce();
-      expect(vi.mocked(getFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(getFieldDefinition).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(getFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
       expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
     });
@@ -151,7 +155,7 @@ describe("field router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.field.definition.get({ systemId: SYSTEM_ID, fieldDefinitionId: FIELD_DEF_ID }),
+        caller.field.definition.get({ systemId: MOCK_SYSTEM_ID, fieldDefinitionId: FIELD_DEF_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
@@ -166,10 +170,10 @@ describe("field router", () => {
       };
       vi.mocked(listFieldDefinitions).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.field.definition.list({ systemId: SYSTEM_ID });
+      const result = await caller.field.definition.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listFieldDefinitions)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listFieldDefinitions).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listFieldDefinitions).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(result).toEqual(mockResult);
     });
 
@@ -181,7 +185,7 @@ describe("field router", () => {
         totalCount: null,
       });
       const caller = createCaller();
-      await caller.field.definition.list({ systemId: SYSTEM_ID, includeArchived: true });
+      await caller.field.definition.list({ systemId: MOCK_SYSTEM_ID, includeArchived: true });
 
       const opts = vi.mocked(listFieldDefinitions).mock.calls[0]?.[3];
       expect(opts?.includeArchived).toBe(true);
@@ -193,14 +197,14 @@ describe("field router", () => {
       vi.mocked(updateFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
       const caller = createCaller();
       const result = await caller.field.definition.update({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
       });
 
       expect(vi.mocked(updateFieldDefinition)).toHaveBeenCalledOnce();
-      expect(vi.mocked(updateFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(updateFieldDefinition).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(updateFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
       expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
     });
@@ -211,13 +215,13 @@ describe("field router", () => {
       vi.mocked(archiveFieldDefinition).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.field.definition.archive({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveFieldDefinition)).toHaveBeenCalledOnce();
-      expect(vi.mocked(archiveFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(archiveFieldDefinition).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(archiveFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
     });
   });
@@ -227,12 +231,12 @@ describe("field router", () => {
       vi.mocked(restoreFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
       const caller = createCaller();
       const result = await caller.field.definition.restore({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
       });
 
       expect(vi.mocked(restoreFieldDefinition)).toHaveBeenCalledOnce();
-      expect(vi.mocked(restoreFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(restoreFieldDefinition).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(restoreFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
       expect(result).toEqual(MOCK_FIELD_DEF_RESULT);
     });
@@ -243,14 +247,14 @@ describe("field router", () => {
       vi.mocked(deleteFieldDefinition).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.field.definition.delete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
         force: false,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteFieldDefinition)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteFieldDefinition).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteFieldDefinition).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteFieldDefinition).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
     });
 
@@ -258,7 +262,7 @@ describe("field router", () => {
       vi.mocked(deleteFieldDefinition).mockResolvedValue(undefined);
       const caller = createCaller();
       await caller.field.definition.delete({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
         force: true,
       });
@@ -273,7 +277,7 @@ describe("field router", () => {
       const caller = createCaller();
       await expect(
         caller.field.definition.delete({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           fieldDefinitionId: FIELD_DEF_ID,
           force: false,
         }),
@@ -288,14 +292,14 @@ describe("field router", () => {
       vi.mocked(setFieldValueForOwner).mockResolvedValue(MOCK_FIELD_VALUE_RESULT);
       const caller = createCaller();
       const result = await caller.field.value.set({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
         owner: { kind: "member", id: MEMBER_ID },
         encryptedData: VALID_ENCRYPTED_DATA,
       });
 
       expect(vi.mocked(setFieldValueForOwner)).toHaveBeenCalledOnce();
-      expect(vi.mocked(setFieldValueForOwner).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setFieldValueForOwner).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(setFieldValueForOwner).mock.calls[0]?.[2]).toEqual({
         kind: "member",
         id: MEMBER_ID,
@@ -311,7 +315,7 @@ describe("field router", () => {
       const caller = createCaller();
       await expect(
         caller.field.value.set({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           fieldDefinitionId: FIELD_DEF_ID,
           owner: { kind: "member", id: MEMBER_ID },
           encryptedData: VALID_ENCRYPTED_DATA,
@@ -325,12 +329,12 @@ describe("field router", () => {
       vi.mocked(listFieldValuesForOwner).mockResolvedValue([MOCK_FIELD_VALUE_RESULT]);
       const caller = createCaller();
       const result = await caller.field.value.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         owner: { kind: "member", id: MEMBER_ID },
       });
 
       expect(vi.mocked(listFieldValuesForOwner)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listFieldValuesForOwner).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listFieldValuesForOwner).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(listFieldValuesForOwner).mock.calls[0]?.[2]).toEqual({
         kind: "member",
         id: MEMBER_ID,
@@ -344,14 +348,14 @@ describe("field router", () => {
       vi.mocked(deleteFieldValueForOwner).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.field.value.remove({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
         owner: { kind: "member", id: MEMBER_ID },
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteFieldValueForOwner)).toHaveBeenCalledOnce();
-      expect(vi.mocked(deleteFieldValueForOwner).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(deleteFieldValueForOwner).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(deleteFieldValueForOwner).mock.calls[0]?.[2]).toEqual({
         kind: "member",
         id: MEMBER_ID,
@@ -366,7 +370,7 @@ describe("field router", () => {
       const caller = createCaller();
       await expect(
         caller.field.value.remove({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           fieldDefinitionId: FIELD_DEF_ID,
           owner: { kind: "member", id: MEMBER_ID },
         }),
@@ -382,13 +386,13 @@ describe("field router", () => {
       vi.mocked(setFieldBucketVisibility).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.field.bucketVisibility.set({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
         bucketId: BUCKET_ID,
       });
 
       expect(vi.mocked(setFieldBucketVisibility)).toHaveBeenCalledOnce();
-      expect(vi.mocked(setFieldBucketVisibility).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(setFieldBucketVisibility).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(setFieldBucketVisibility).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
       expect(vi.mocked(setFieldBucketVisibility).mock.calls[0]?.[3]).toBe(BUCKET_ID);
       expect(result).toEqual(mockResult);
@@ -400,14 +404,14 @@ describe("field router", () => {
       vi.mocked(removeFieldBucketVisibility).mockResolvedValue(undefined);
       const caller = createCaller();
       const result = await caller.field.bucketVisibility.remove({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
         bucketId: BUCKET_ID,
       });
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(removeFieldBucketVisibility)).toHaveBeenCalledOnce();
-      expect(vi.mocked(removeFieldBucketVisibility).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(removeFieldBucketVisibility).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(removeFieldBucketVisibility).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
       expect(vi.mocked(removeFieldBucketVisibility).mock.calls[0]?.[3]).toBe(BUCKET_ID);
     });
@@ -419,7 +423,7 @@ describe("field router", () => {
       const caller = createCaller();
       await expect(
         caller.field.bucketVisibility.remove({
-          systemId: SYSTEM_ID,
+          systemId: MOCK_SYSTEM_ID,
           fieldDefinitionId: FIELD_DEF_ID,
           bucketId: BUCKET_ID,
         }),
@@ -433,14 +437,49 @@ describe("field router", () => {
       vi.mocked(listFieldBucketVisibility).mockResolvedValue(mockResult);
       const caller = createCaller();
       const result = await caller.field.bucketVisibility.list({
-        systemId: SYSTEM_ID,
+        systemId: MOCK_SYSTEM_ID,
         fieldDefinitionId: FIELD_DEF_ID,
       });
 
       expect(vi.mocked(listFieldBucketVisibility)).toHaveBeenCalledOnce();
-      expect(vi.mocked(listFieldBucketVisibility).mock.calls[0]?.[1]).toBe(SYSTEM_ID);
+      expect(vi.mocked(listFieldBucketVisibility).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
       expect(vi.mocked(listFieldBucketVisibility).mock.calls[0]?.[2]).toBe(FIELD_DEF_ID);
       expect(result).toEqual(mockResult);
     });
+  });
+  // ── rate limiting ─────────────────────────────────────────────────
+
+  it("applies rate limiting to queries", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(listFieldDefinitions).mockResolvedValue({
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    });
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () => caller.field.definition.list({ systemId: MOCK_SYSTEM_ID }),
+      "readDefault",
+    );
+  });
+
+  it("applies rate limiting to mutations", async () => {
+    const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
+    vi.mocked(createFieldDefinition).mockResolvedValue(MOCK_FIELD_DEF_RESULT);
+    const caller = createCaller();
+    await assertProcedureRateLimited(
+      vi.mocked(checkRateLimit),
+      () =>
+        caller.field.definition.create({
+          systemId: MOCK_SYSTEM_ID,
+          encryptedData: VALID_ENCRYPTED_DATA,
+          fieldType: "text",
+          required: false,
+          sortOrder: 0,
+        }),
+      "write",
+    );
   });
 });

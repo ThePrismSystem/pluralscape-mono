@@ -90,7 +90,7 @@ describe("POST /account/friends/:connectionId/remove", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(removeFriendConnection)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CONNECTION_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),

@@ -74,7 +74,7 @@ describe("POST /account/friends/:connectionId/archive", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(archiveFriendConnection)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       CONNECTION_ID,
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),

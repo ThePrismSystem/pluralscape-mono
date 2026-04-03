@@ -70,12 +70,12 @@ describe("DELETE /account", () => {
     expect(vi.mocked(deleteAccount)).toHaveBeenCalledWith(
       {},
       { password: "mypassword123" },
-      expect.objectContaining({ accountId: "acct_test" }),
+      expect.objectContaining({ accountId: "acct_test001" }),
       expect.any(Function),
     );
     expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ accountId: "acct_test" }),
+      expect.objectContaining({ accountId: "acct_test001" }),
     );
   });
 });

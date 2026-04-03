@@ -74,7 +74,7 @@ describe("POST /account/friend-codes", () => {
     expect(createAuditWriter).toHaveBeenCalled();
     expect(vi.mocked(generateFriendCode)).toHaveBeenCalledWith(
       {},
-      "acct_test",
+      "acct_test001",
       MOCK_ACCOUNT_ONLY_AUTH,
       expect.any(Function),
     );

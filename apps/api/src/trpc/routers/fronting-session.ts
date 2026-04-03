@@ -17,8 +17,12 @@ import {
   restoreFrontingSession,
   updateFrontingSession,
 } from "../../services/fronting-session.service.js";
+import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum items per page for fronting session list queries. */
 const MAX_LIST_LIMIT = 100;
@@ -29,17 +33,22 @@ const SessionIdSchema = z.object({
 
 export const frontingSessionRouter = router({
   create: systemProcedure
+    .use(writeLimiter)
     .input(CreateFrontingSessionBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       return createFrontingSession(ctx.db, ctx.systemId, input, ctx.auth, audit);
     }),
 
-  get: systemProcedure.input(SessionIdSchema).query(async ({ ctx, input }) => {
-    return getFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth);
-  }),
+  get: systemProcedure
+    .use(readLimiter)
+    .input(SessionIdSchema)
+    .query(async ({ ctx, input }) => {
+      return getFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth);
+    }),
 
   list: systemProcedure
+    .use(readLimiter)
     .input(
       z.object({
         cursor: z.string().optional(),
@@ -72,6 +81,7 @@ export const frontingSessionRouter = router({
     }),
 
   update: systemProcedure
+    .use(writeLimiter)
     .input(SessionIdSchema.and(UpdateFrontingSessionBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -86,6 +96,7 @@ export const frontingSessionRouter = router({
     }),
 
   end: systemProcedure
+    .use(writeLimiter)
     .input(SessionIdSchema.and(EndFrontingSessionBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -99,24 +110,33 @@ export const frontingSessionRouter = router({
       );
     }),
 
-  archive: systemProcedure.input(SessionIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await archiveFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  archive: systemProcedure
+    .use(writeLimiter)
+    .input(SessionIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await archiveFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  restore: systemProcedure.input(SessionIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    return restoreFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth, audit);
-  }),
+  restore: systemProcedure
+    .use(writeLimiter)
+    .input(SessionIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      return restoreFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth, audit);
+    }),
 
-  delete: systemProcedure.input(SessionIdSchema).mutation(async ({ ctx, input }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    await deleteFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth, audit);
-    return { success: true as const };
-  }),
+  delete: systemProcedure
+    .use(writeLimiter)
+    .input(SessionIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      const audit = ctx.createAudit(ctx.auth);
+      await deleteFrontingSession(ctx.db, ctx.systemId, input.sessionId, ctx.auth, audit);
+      return { success: true as const };
+    }),
 
-  getActive: systemProcedure.query(async ({ ctx }) => {
+  getActive: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
     return getActiveFronting(ctx.db, ctx.systemId, ctx.auth);
   }),
 });
