@@ -41,7 +41,7 @@ export const publicProcedure = t.procedure;
  */
 export const createCallerFactory = t.createCallerFactory;
 
-// Re-export base procedures from middleware files for discoverability.
-// The canonical definitions live in their respective middleware modules.
-export { protectedProcedure } from "./middlewares/auth.js";
-export { systemProcedure } from "./middlewares/system.js";
+// Base procedures (protectedProcedure, systemProcedure) are exported from
+// their respective middleware modules: ./middlewares/auth.js and ./middlewares/system.js.
+// They are NOT re-exported here to avoid circular dependencies
+// (trpc.ts → auth.ts → error-mapper.ts → trpc.ts).
