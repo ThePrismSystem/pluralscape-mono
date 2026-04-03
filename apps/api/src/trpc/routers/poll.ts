@@ -65,7 +65,7 @@ export const pollRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         includeArchived: z.boolean().default(false),
         status: z.enum(["open", "closed"]).optional(),
@@ -73,7 +73,7 @@ export const pollRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listPolls(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         status: input.status,
@@ -144,7 +144,7 @@ export const pollRouter = router({
     .input(
       PollIdSchema.and(
         z.object({
-          cursor: z.string().optional(),
+          cursor: z.string().nullish(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
           includeArchived: z.boolean().default(false),
         }),
@@ -152,7 +152,7 @@ export const pollRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listVotes(ctx.db, ctx.systemId, input.pollId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
       });

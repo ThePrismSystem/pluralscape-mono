@@ -33,7 +33,7 @@ test.describe("tRPC auth router", () => {
     });
 
     await test.step("list sessions returns current session", async () => {
-      const result = await trpc.auth.listSessions.query({});
+      const result = await trpc.auth.session.list.query({});
       expect(Array.isArray(result.sessions)).toBe(true);
       expect(result.sessions.length).toBeGreaterThanOrEqual(1);
     });
@@ -61,6 +61,6 @@ test.describe("tRPC auth router", () => {
   });
 
   test("listSessions without auth throws UNAUTHORIZED", async ({ anonTrpc }) => {
-    await expect(anonTrpc.auth.listSessions.query({})).rejects.toThrow(TRPCClientError);
+    await expect(anonTrpc.auth.session.list.query({})).rejects.toThrow(TRPCClientError);
   });
 });

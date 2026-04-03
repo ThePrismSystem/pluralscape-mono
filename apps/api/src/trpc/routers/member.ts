@@ -58,7 +58,7 @@ export const memberRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         groupId: brandedIdQueryParam("grp_").optional(),
         includeArchived: z.boolean().default(false),
@@ -66,7 +66,7 @@ export const memberRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listMembers(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         groupId: input.groupId,
         includeArchived: input.includeArchived,

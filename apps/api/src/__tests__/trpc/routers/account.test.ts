@@ -65,9 +65,9 @@ describe("account router", () => {
     vi.clearAllMocks();
   });
 
-  // ── getInfo ───────────────────────────────────────────────────────
+  // ── get ───────────────────────────────────────────────────────
 
-  describe("account.getInfo", () => {
+  describe("account.get", () => {
     const mockAccountInfo = {
       accountId: MOCK_AUTH.accountId,
       accountType: "system" as const,
@@ -81,7 +81,7 @@ describe("account router", () => {
     it("returns account info for authenticated caller", async () => {
       vi.mocked(getAccountInfo).mockResolvedValue(mockAccountInfo);
       const caller = createCaller();
-      const result = await caller.account.getInfo();
+      const result = await caller.account.get();
       expect(result).toEqual(mockAccountInfo);
       expect(vi.mocked(getAccountInfo)).toHaveBeenCalledWith(
         expect.anything(),
@@ -92,14 +92,14 @@ describe("account router", () => {
     it("throws NOT_FOUND when account does not exist", async () => {
       vi.mocked(getAccountInfo).mockResolvedValue(null);
       const caller = createCaller();
-      await expect(caller.account.getInfo()).rejects.toThrow(
+      await expect(caller.account.get()).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.account.getInfo()).rejects.toThrow(
+      await expect(caller.account.get()).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
@@ -457,7 +457,7 @@ describe("account router", () => {
     const caller = createCaller();
     await assertProcedureRateLimited(
       vi.mocked(checkRateLimit),
-      () => caller.account.getInfo(),
+      () => caller.account.get(),
       "authLight",
     );
   });

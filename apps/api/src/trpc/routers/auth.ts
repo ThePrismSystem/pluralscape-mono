@@ -144,55 +144,48 @@ export const authRouter = router({
     return { success: true as const };
   }),
 
-  /** List active sessions for the authenticated account. */
-  listSessions: protectedProcedure
-    .use(authLightLimiter)
-    .input(
-      z.object({
-        cursor: z.string().optional(),
-        limit: z
-          .number()
-          .int()
-          .min(1)
-          .max(MAX_SESSION_LIMIT)
-          .optional()
-          .default(DEFAULT_SESSION_LIMIT),
+  session: router({
+    list: protectedProcedure
+      .use(authLightLimiter)
+      .input(
+        z.object({
+          cursor: z.string().nullish(),
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(MAX_SESSION_LIMIT)
+            .optional()
+            .default(DEFAULT_SESSION_LIMIT),
+        }),
+      )
+      .query(async ({ input, ctx }) => {
+        return listSessions(ctx.db, ctx.auth.accountId, input.cursor ?? undefined, input.limit);
       }),
-    )
-    .query(async ({ input, ctx }) => {
-      return listSessions(ctx.db, ctx.auth.accountId, input.cursor, input.limit);
-    }),
-
-  /**
-   * Revoke a specific session by ID.
-   * Throws BAD_REQUEST if caller tries to revoke their own current session.
-   * Throws NOT_FOUND if the session does not exist or is already revoked.
-   */
-  revokeSession: protectedProcedure
-    .use(authLightLimiter)
-    .input(z.object({ sessionId: brandedIdQueryParam("sess_") }))
-    .mutation(async ({ input, ctx }) => {
-      if (input.sessionId === ctx.auth.sessionId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Use logout to revoke the current session",
-        });
-      }
+    revoke: protectedProcedure
+      .use(authLightLimiter)
+      .input(z.object({ sessionId: brandedIdQueryParam("sess_") }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.sessionId === ctx.auth.sessionId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Use logout to revoke the current session",
+          });
+        }
+        const audit = ctx.createAudit(ctx.auth);
+        const revoked = await revokeSession(ctx.db, input.sessionId, ctx.auth.accountId, audit);
+        if (!revoked) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Session not found or already revoked",
+          });
+        }
+        return { revoked: true as const };
+      }),
+    revokeAll: protectedProcedure.use(authLightLimiter).mutation(async ({ ctx }) => {
       const audit = ctx.createAudit(ctx.auth);
-      const revoked = await revokeSession(ctx.db, input.sessionId, ctx.auth.accountId, audit);
-      if (!revoked) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Session not found or already revoked",
-        });
-      }
-      return { revoked: true as const };
+      const count = await revokeAllSessions(ctx.db, ctx.auth.accountId, ctx.auth.sessionId, audit);
+      return { revokedCount: count };
     }),
-
-  /** Revoke all sessions except the current one. */
-  revokeAllSessions: protectedProcedure.use(authLightLimiter).mutation(async ({ ctx }) => {
-    const audit = ctx.createAudit(ctx.auth);
-    const count = await revokeAllSessions(ctx.db, ctx.auth.accountId, ctx.auth.sessionId, audit);
-    return { revokedCount: count };
   }),
 });

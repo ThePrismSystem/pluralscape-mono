@@ -75,7 +75,7 @@ export const groupRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         includeArchived: z.boolean().default(false),
       }),
@@ -85,7 +85,7 @@ export const groupRouter = router({
         ctx.db,
         ctx.systemId,
         ctx.auth,
-        input.cursor,
+        input.cursor ?? undefined,
         input.limit,
         input.includeArchived,
       );
@@ -207,7 +207,7 @@ export const groupRouter = router({
     .input(
       GroupIdSchema.and(
         z.object({
-          cursor: z.string().optional(),
+          cursor: z.string().nullish(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         }),
       ),
@@ -218,7 +218,7 @@ export const groupRouter = router({
         ctx.systemId,
         input.groupId,
         ctx.auth,
-        input.cursor,
+        input.cursor ?? undefined,
         input.limit,
       );
     }),

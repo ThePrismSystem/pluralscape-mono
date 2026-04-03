@@ -39,12 +39,12 @@ export const systemRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      return listSystems(ctx.db, ctx.auth.accountId, input.cursor, input.limit);
+      return listSystems(ctx.db, ctx.auth.accountId, input.cursor ?? undefined, input.limit);
     }),
 
   update: systemProcedure

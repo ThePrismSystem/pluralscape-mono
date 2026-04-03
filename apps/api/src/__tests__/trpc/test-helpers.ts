@@ -1,5 +1,6 @@
 import { expect, type MockInstance } from "vitest";
 
+import { createTRPCContextInner } from "../../trpc/context.js";
 import { createCallerFactory, router } from "../../trpc/trpc.js";
 import { MOCK_AUTH, MOCK_SYSTEM_ID } from "../helpers/shared-mocks.js";
 
@@ -15,12 +16,18 @@ export { MOCK_AUTH, MOCK_SYSTEM_ID };
 export const noopAuditWriter: AuditWriter = () => Promise.resolve();
 
 export function makeContext(auth: AuthContext | null): TRPCContext {
-  return {
-    db: {} as TRPCContext["db"],
+  return createTRPCContextInner({
+    db: new Proxy({} as TRPCContext["db"], {
+      get(_, prop) {
+        throw new Error(
+          `Test tried to access db.${String(prop)} — use integration tests for DB access`,
+        );
+      },
+    }),
     auth,
     createAudit: () => noopAuditWriter,
     requestMeta: { ipAddress: null, userAgent: null },
-  };
+  });
 }
 
 export function makeCallerFactory<T extends Parameters<typeof router>[0]>(

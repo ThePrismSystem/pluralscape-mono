@@ -34,12 +34,18 @@ export const friendCodeRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      return listFriendCodes(ctx.db, ctx.auth.accountId, ctx.auth, input.cursor, input.limit);
+      return listFriendCodes(
+        ctx.db,
+        ctx.auth.accountId,
+        ctx.auth,
+        input.cursor ?? undefined,
+        input.limit,
+      );
     }),
 
   /** Redeem a friend code to create a bidirectional friend connection. */

@@ -41,12 +41,12 @@ export const snapshotRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      return listSnapshots(ctx.db, ctx.systemId, ctx.auth, input.cursor, input.limit);
+      return listSnapshots(ctx.db, ctx.systemId, ctx.auth, input.cursor ?? undefined, input.limit);
     }),
 
   delete: systemProcedure

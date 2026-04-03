@@ -27,6 +27,16 @@ export interface SystemTRPCContext extends TRPCContext {
 }
 
 /**
+ * Build a TRPCContext from plain data, without requiring HTTP objects.
+ *
+ * Used by server-side callers and tests. The Hono-specific
+ * `createTRPCContext` calls this internally.
+ */
+export function createTRPCContextInner(opts: TRPCContext): TRPCContext {
+  return { ...opts };
+}
+
+/**
  * Build a TRPCContext from the current Hono request context.
  *
  * Called once per request when `/trpc/*` is hit. Hono middleware (auth, CORS,
@@ -39,11 +49,11 @@ export async function createTRPCContext(c: Context<AuthEnv>): Promise<TRPCContex
   // AuthEnv types auth as required, so the undefined cast is necessary.
   const auth: AuthContext | null = (c.get("auth") as AuthContext | undefined) ?? null;
 
-  return {
+  return createTRPCContextInner({
     db,
     auth,
     createAudit: (authOverride) =>
       createAuditWriter(c, authOverride !== undefined ? authOverride : auth),
     requestMeta: extractRequestMeta(c),
-  };
+  });
 }

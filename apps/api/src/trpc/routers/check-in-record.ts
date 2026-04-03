@@ -49,7 +49,7 @@ export const checkInRecordRouter = router({
     .use(readLimiter)
     .input(
       z.object({
-        cursor: z.string().optional(),
+        cursor: z.string().nullish(),
         limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
         timerConfigId: brandedIdQueryParam("tmr_").optional(),
         pending: z.boolean().optional(),
@@ -58,7 +58,7 @@ export const checkInRecordRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listCheckInRecords(ctx.db, ctx.systemId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         timerConfigId: input.timerConfigId,
         pending: input.pending,

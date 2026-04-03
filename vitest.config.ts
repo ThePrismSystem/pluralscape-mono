@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 const PACKAGES = [
@@ -78,6 +79,14 @@ export default defineConfig({
         },
       },
       {
+        resolve: {
+          alias: {
+            // react-native uses Flow types and cannot be parsed by rolldown/esbuild
+            // in a Node/vitest environment. Redirect to a minimal stub so tests
+            // that transitively import react-native (e.g. via expo-constants) work.
+            "react-native": path.resolve("apps/mobile/src/__tests__/react-native-mock.ts"),
+          },
+        },
         test: {
           name: "mobile",
           root: "apps/mobile",

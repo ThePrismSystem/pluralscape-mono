@@ -94,13 +94,13 @@ describe("innerworld router", () => {
     vi.clearAllMocks();
   });
 
-  // ── Entity: createEntity ─────────────────────────────────────────
+  // ── Entity: create ────────────────────────────────────────────────
 
-  describe("innerworld.createEntity", () => {
+  describe("innerworld.entity.create", () => {
     it("calls createEntity with correct systemId and returns result", async () => {
       vi.mocked(createEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.createEntity({
+      const result = await caller.innerworld.entity.create({
         systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
@@ -113,7 +113,7 @@ describe("innerworld router", () => {
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
       await expect(
-        caller.innerworld.createEntity({
+        caller.innerworld.entity.create({
           systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
@@ -124,7 +124,7 @@ describe("innerworld router", () => {
       const foreignSystemId = "sys_ffffffff-ffff-ffff-ffff-ffffffffffff" as SystemId;
       const caller = createCaller();
       await expect(
-        caller.innerworld.createEntity({
+        caller.innerworld.entity.create({
           systemId: foreignSystemId,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
@@ -132,13 +132,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Entity: getEntity ────────────────────────────────────────────
+  // ── Entity: get ──────────────────────────────────────────────────
 
-  describe("innerworld.getEntity", () => {
+  describe("innerworld.entity.get", () => {
     it("calls getEntity with correct systemId and entityId", async () => {
       vi.mocked(getEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.getEntity({
+      const result = await caller.innerworld.entity.get({
         systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
       });
@@ -152,7 +152,7 @@ describe("innerworld router", () => {
     it("rejects invalid entityId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.innerworld.getEntity({
+        caller.innerworld.entity.get({
           systemId: MOCK_SYSTEM_ID,
           entityId: "not-an-entity-id" as InnerWorldEntityId,
         }),
@@ -165,14 +165,14 @@ describe("innerworld router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.innerworld.getEntity({ systemId: MOCK_SYSTEM_ID, entityId: ENTITY_ID }),
+        caller.innerworld.entity.get({ systemId: MOCK_SYSTEM_ID, entityId: ENTITY_ID }),
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
 
-  // ── Entity: listEntities ─────────────────────────────────────────
+  // ── Entity: list ─────────────────────────────────────────────────
 
-  describe("innerworld.listEntities", () => {
+  describe("innerworld.entity.list", () => {
     it("calls listEntities and returns paginated result", async () => {
       const mockResult = {
         data: [MOCK_ENTITY_RESULT],
@@ -182,7 +182,7 @@ describe("innerworld router", () => {
       };
       vi.mocked(listEntities).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.innerworld.listEntities({ systemId: MOCK_SYSTEM_ID });
+      const result = await caller.innerworld.entity.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listEntities)).toHaveBeenCalledOnce();
       expect(vi.mocked(listEntities).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
@@ -193,7 +193,7 @@ describe("innerworld router", () => {
       const mockResult = { data: [], nextCursor: null, hasMore: false, totalCount: null };
       vi.mocked(listEntities).mockResolvedValue(mockResult);
       const caller = createCaller();
-      await caller.innerworld.listEntities({ systemId: MOCK_SYSTEM_ID, regionId: REGION_ID });
+      await caller.innerworld.entity.list({ systemId: MOCK_SYSTEM_ID, regionId: REGION_ID });
 
       expect(vi.mocked(listEntities).mock.calls[0]?.[3]).toMatchObject({
         regionId: REGION_ID,
@@ -201,13 +201,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Entity: updateEntity ─────────────────────────────────────────
+  // ── Entity: update ───────────────────────────────────────────────
 
-  describe("innerworld.updateEntity", () => {
+  describe("innerworld.entity.update", () => {
     it("calls updateEntity with correct args and returns result", async () => {
       vi.mocked(updateEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.updateEntity({
+      const result = await caller.innerworld.entity.update({
         systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -225,7 +225,7 @@ describe("innerworld router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.innerworld.updateEntity({
+        caller.innerworld.entity.update({
           systemId: MOCK_SYSTEM_ID,
           entityId: ENTITY_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
@@ -235,13 +235,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Entity: archiveEntity ────────────────────────────────────────
+  // ── Entity: archive ──────────────────────────────────────────────
 
-  describe("innerworld.archiveEntity", () => {
+  describe("innerworld.entity.archive", () => {
     it("calls archiveEntity and returns success", async () => {
       vi.mocked(archiveEntity).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.innerworld.archiveEntity({
+      const result = await caller.innerworld.entity.archive({
         systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
       });
@@ -251,13 +251,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Entity: restoreEntity ────────────────────────────────────────
+  // ── Entity: restore ──────────────────────────────────────────────
 
-  describe("innerworld.restoreEntity", () => {
+  describe("innerworld.entity.restore", () => {
     it("calls restoreEntity and returns result", async () => {
       vi.mocked(restoreEntity).mockResolvedValue(MOCK_ENTITY_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.restoreEntity({
+      const result = await caller.innerworld.entity.restore({
         systemId: MOCK_SYSTEM_ID,
         entityId: ENTITY_ID,
       });
@@ -267,13 +267,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Region: createRegion ─────────────────────────────────────────
+  // ── Region: create ───────────────────────────────────────────────
 
-  describe("innerworld.createRegion", () => {
+  describe("innerworld.region.create", () => {
     it("calls createRegion with correct systemId and returns result", async () => {
       vi.mocked(createRegion).mockResolvedValue(MOCK_REGION_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.createRegion({
+      const result = await caller.innerworld.region.create({
         systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
       });
@@ -286,7 +286,7 @@ describe("innerworld router", () => {
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
       await expect(
-        caller.innerworld.createRegion({
+        caller.innerworld.region.create({
           systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),
@@ -294,13 +294,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Region: getRegion ────────────────────────────────────────────
+  // ── Region: get ──────────────────────────────────────────────────
 
-  describe("innerworld.getRegion", () => {
+  describe("innerworld.region.get", () => {
     it("calls getRegion with correct systemId and regionId", async () => {
       vi.mocked(getRegion).mockResolvedValue(MOCK_REGION_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.getRegion({
+      const result = await caller.innerworld.region.get({
         systemId: MOCK_SYSTEM_ID,
         regionId: REGION_ID,
       });
@@ -314,7 +314,7 @@ describe("innerworld router", () => {
     it("rejects invalid regionId format", async () => {
       const caller = createCaller();
       await expect(
-        caller.innerworld.getRegion({
+        caller.innerworld.region.get({
           systemId: MOCK_SYSTEM_ID,
           regionId: "not-a-region-id" as InnerWorldRegionId,
         }),
@@ -322,9 +322,9 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Region: listRegions ──────────────────────────────────────────
+  // ── Region: list ─────────────────────────────────────────────────
 
-  describe("innerworld.listRegions", () => {
+  describe("innerworld.region.list", () => {
     it("calls listRegions and returns paginated result", async () => {
       const mockResult = {
         data: [MOCK_REGION_RESULT],
@@ -334,7 +334,7 @@ describe("innerworld router", () => {
       };
       vi.mocked(listRegions).mockResolvedValue(mockResult);
       const caller = createCaller();
-      const result = await caller.innerworld.listRegions({ systemId: MOCK_SYSTEM_ID });
+      const result = await caller.innerworld.region.list({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(listRegions)).toHaveBeenCalledOnce();
       expect(vi.mocked(listRegions).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
@@ -342,13 +342,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Region: updateRegion ─────────────────────────────────────────
+  // ── Region: update ───────────────────────────────────────────────
 
-  describe("innerworld.updateRegion", () => {
+  describe("innerworld.region.update", () => {
     it("calls updateRegion with correct args and returns result", async () => {
       vi.mocked(updateRegion).mockResolvedValue(MOCK_REGION_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.updateRegion({
+      const result = await caller.innerworld.region.update({
         systemId: MOCK_SYSTEM_ID,
         regionId: REGION_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
@@ -361,13 +361,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Region: archiveRegion ────────────────────────────────────────
+  // ── Region: archive ──────────────────────────────────────────────
 
-  describe("innerworld.archiveRegion", () => {
+  describe("innerworld.region.archive", () => {
     it("calls archiveRegion and returns success", async () => {
       vi.mocked(archiveRegion).mockResolvedValue(undefined);
       const caller = createCaller();
-      const result = await caller.innerworld.archiveRegion({
+      const result = await caller.innerworld.region.archive({
         systemId: MOCK_SYSTEM_ID,
         regionId: REGION_ID,
       });
@@ -377,13 +377,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Region: restoreRegion ────────────────────────────────────────
+  // ── Region: restore ──────────────────────────────────────────────
 
-  describe("innerworld.restoreRegion", () => {
+  describe("innerworld.region.restore", () => {
     it("calls restoreRegion and returns result", async () => {
       vi.mocked(restoreRegion).mockResolvedValue(MOCK_REGION_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.restoreRegion({
+      const result = await caller.innerworld.region.restore({
         systemId: MOCK_SYSTEM_ID,
         regionId: REGION_ID,
       });
@@ -393,13 +393,13 @@ describe("innerworld router", () => {
     });
   });
 
-  // ── Canvas: getCanvas ────────────────────────────────────────────
+  // ── Canvas: get ──────────────────────────────────────────────────
 
-  describe("innerworld.getCanvas", () => {
+  describe("innerworld.canvas.get", () => {
     it("calls getCanvas with correct systemId and returns result", async () => {
       vi.mocked(getCanvas).mockResolvedValue(MOCK_CANVAS_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.getCanvas({ systemId: MOCK_SYSTEM_ID });
+      const result = await caller.innerworld.canvas.get({ systemId: MOCK_SYSTEM_ID });
 
       expect(vi.mocked(getCanvas)).toHaveBeenCalledOnce();
       expect(vi.mocked(getCanvas).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
@@ -408,7 +408,7 @@ describe("innerworld router", () => {
 
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.innerworld.getCanvas({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.innerworld.canvas.get({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
@@ -418,19 +418,19 @@ describe("innerworld router", () => {
         new ApiHttpError(404, "NOT_FOUND", "Canvas not found"),
       );
       const caller = createCaller();
-      await expect(caller.innerworld.getCanvas({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
+      await expect(caller.innerworld.canvas.get({ systemId: MOCK_SYSTEM_ID })).rejects.toThrow(
         expect.objectContaining({ code: "NOT_FOUND" }),
       );
     });
   });
 
-  // ── Canvas: upsertCanvas ─────────────────────────────────────────
+  // ── Canvas: upsert ───────────────────────────────────────────────
 
-  describe("innerworld.upsertCanvas", () => {
+  describe("innerworld.canvas.upsert", () => {
     it("calls upsertCanvas with correct systemId and returns result", async () => {
       vi.mocked(upsertCanvas).mockResolvedValue(MOCK_CANVAS_RESULT);
       const caller = createCaller();
-      const result = await caller.innerworld.upsertCanvas({
+      const result = await caller.innerworld.canvas.upsert({
         systemId: MOCK_SYSTEM_ID,
         encryptedData: VALID_ENCRYPTED_DATA,
         version: 1,
@@ -447,7 +447,7 @@ describe("innerworld router", () => {
       );
       const caller = createCaller();
       await expect(
-        caller.innerworld.upsertCanvas({
+        caller.innerworld.canvas.upsert({
           systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
           version: 1,
@@ -468,7 +468,7 @@ describe("innerworld router", () => {
     const caller = createCaller();
     await assertProcedureRateLimited(
       vi.mocked(checkRateLimit),
-      () => caller.innerworld.listEntities({ systemId: MOCK_SYSTEM_ID }),
+      () => caller.innerworld.entity.list({ systemId: MOCK_SYSTEM_ID }),
       "readDefault",
     );
   });
@@ -480,7 +480,7 @@ describe("innerworld router", () => {
     await assertProcedureRateLimited(
       vi.mocked(checkRateLimit),
       () =>
-        caller.innerworld.createEntity({
+        caller.innerworld.entity.create({
           systemId: MOCK_SYSTEM_ID,
           encryptedData: VALID_ENCRYPTED_DATA,
         }),

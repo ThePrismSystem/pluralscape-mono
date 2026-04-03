@@ -103,4 +103,13 @@ test.describe("tRPC transport edge cases", () => {
     // Clean up
     await trpc.member.delete.mutate({ systemId, memberId: result.id });
   });
+
+  test("tRPC responses include cache-control: no-store", async ({ registeredAccount }) => {
+    const response = await fetch("http://localhost:10099/v1/trpc/system.list?input=%7B%7D", {
+      headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
 });

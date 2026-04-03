@@ -54,7 +54,7 @@ export const messageRouter = router({
     .input(
       ChannelScopeSchema.and(
         z.object({
-          cursor: z.string().optional(),
+          cursor: z.string().nullish(),
           limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
           includeArchived: z.boolean().default(false),
           before: z.number().int().min(0).optional(),
@@ -64,7 +64,7 @@ export const messageRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return listMessages(ctx.db, ctx.systemId, input.channelId, ctx.auth, {
-        cursor: input.cursor,
+        cursor: input.cursor ?? undefined,
         limit: input.limit,
         includeArchived: input.includeArchived,
         before: input.before !== undefined ? toUnixMillis(input.before) : undefined,

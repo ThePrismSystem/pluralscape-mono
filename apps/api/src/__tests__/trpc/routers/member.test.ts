@@ -215,6 +215,21 @@ describe("member router", () => {
       expect(opts?.groupId).toBe("grp_11111111-2222-3333-4444-555555555555");
       expect(opts?.includeArchived).toBe(true);
     });
+
+    it("accepts null cursor without validation error", async () => {
+      const mockResult = { data: [], nextCursor: null, hasMore: false, totalCount: null };
+      vi.mocked(listMembers).mockResolvedValue(mockResult);
+      const caller = createCaller();
+      const result = await caller.member.list({
+        systemId: MOCK_SYSTEM_ID,
+        cursor: null,
+      });
+      expect(result).toEqual(mockResult);
+      // Verify null was coerced to undefined at the service boundary
+      expect(vi.mocked(listMembers).mock.calls[0]?.[3]).toMatchObject({
+        cursor: undefined,
+      });
+    });
   });
 
   // ── update ────────────────────────────────────────────────────────

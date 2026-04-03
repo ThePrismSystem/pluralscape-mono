@@ -12,13 +12,13 @@ const SystemIdInputSchema = z.object({
 });
 
 const enforceSystemAccess = middleware(async ({ ctx, input, next }) => {
-  if (!ctx.auth) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required" });
-  }
-
+  // protectedProcedure guarantees ctx.auth is non-null at runtime, but the
+  // middleware type doesn't carry that narrowing. Optional chaining is used
+  // defensively so a misconfiguration surfaces as NOT_FOUND, not a crash.
+  const auth = ctx.auth;
   const { systemId } = input as z.infer<typeof SystemIdInputSchema>;
 
-  if (!ctx.auth.ownedSystemIds.has(systemId)) {
+  if (!auth?.ownedSystemIds.has(systemId)) {
     throw new TRPCError({ code: "NOT_FOUND", message: "System not found" });
   }
 
