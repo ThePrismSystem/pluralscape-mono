@@ -18,15 +18,15 @@ export type BoardMessageChangeType =
   | "archived"
   | "deleted"
   | "pinned"
-  | "unpinned"
-  | "reordered";
+  | "unpinned";
 
-export interface BoardMessageChangeEvent extends BaseChangeEvent<
-  "boardMessage",
-  BoardMessageChangeType
-> {
+interface BoardMessageEntityEvent extends BaseChangeEvent<"boardMessage", BoardMessageChangeType> {
   readonly boardMessageId: BoardMessageId;
 }
+
+type BoardMessageReorderEvent = BaseChangeEvent<"boardMessage", "reordered">;
+
+export type BoardMessageChangeEvent = BoardMessageEntityEvent | BoardMessageReorderEvent;
 
 export type PollChangeType = "created" | "updated" | "closed" | "voteCast" | "archived" | "deleted";
 

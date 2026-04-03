@@ -116,7 +116,9 @@ describe("decryptNote", () => {
     const result = decryptNote(raw, masterKey);
 
     expect(result.archived).toBe(true);
-    expect(result.archivedAt).toBe(archivedAt);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
     expect(result.title).toBe("My Note");
   });
 });

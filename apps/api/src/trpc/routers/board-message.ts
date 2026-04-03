@@ -24,7 +24,7 @@ import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
-import type { BoardMessageChangeEvent, BoardMessageId } from "@pluralscape/types";
+import type { BoardMessageChangeEvent } from "@pluralscape/types";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 const writeLimiter = createTRPCCategoryRateLimiter("write");
@@ -153,8 +153,6 @@ export const boardMessageRouter = router({
       void publishEntityChange(ctx.systemId, {
         entity: "boardMessage",
         type: "reordered",
-        // Reorder is a batch operation — no single ID is meaningful
-        boardMessageId: "reorder" as BoardMessageId,
       });
       return { success: true as const };
     }),
@@ -213,7 +211,8 @@ export const boardMessageRouter = router({
         while (queue.length > 0) {
           const event = queue.shift();
           if (event) {
-            yield tracked(`${event.type}:${event.boardMessageId}`, event);
+            const id = "boardMessageId" in event ? event.boardMessageId : event.type;
+            yield tracked(`${event.type}:${id}`, event);
           }
         }
         await new Promise<void>((r) => {
