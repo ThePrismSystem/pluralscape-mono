@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { toCoFrontingAnalytics, toFrontingAnalytics } from "../fronting-analytics.js";
 
 import type { CoFrontingAnalytics, FrontingAnalytics } from "@pluralscape/types";
-import type { CustomFrontId, MemberId, SystemId } from "@pluralscape/types";
+import type { CustomFrontId, Duration, MemberId, SystemId } from "@pluralscape/types";
 import type { UnixMillis } from "@pluralscape/types";
 
 const systemId = "sys_test" as SystemId;
@@ -18,17 +18,17 @@ const rawFrontingAnalytics = {
     {
       subjectType: "member" as const,
       subjectId: memberId,
-      totalDuration: 3600000 as ReturnType<typeof Number>,
+      totalDuration: 3600000 as Duration,
       sessionCount: 3,
-      averageSessionLength: 1200000 as ReturnType<typeof Number>,
+      averageSessionLength: 1200000 as Duration,
       percentageOfTotal: 80,
     },
     {
       subjectType: "customFront" as const,
       subjectId: customFrontId,
-      totalDuration: 900000 as ReturnType<typeof Number>,
+      totalDuration: 900000 as Duration,
       sessionCount: 1,
-      averageSessionLength: 900000 as ReturnType<typeof Number>,
+      averageSessionLength: 900000 as Duration,
       percentageOfTotal: 20,
     },
   ],
@@ -43,7 +43,7 @@ const rawCoFrontingAnalytics = {
     {
       memberA: "mem_a" as MemberId,
       memberB: "mem_b" as MemberId,
-      totalDuration: 1800000 as ReturnType<typeof Number>,
+      totalDuration: 1800000 as Duration,
       sessionCount: 2,
       percentageOfTotal: 25,
     },

@@ -17,6 +17,7 @@ import {
 
 import type { CustomFrontEncryptedFields } from "../custom-front.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
+import type { CustomFrontId, HexColor, SystemId, UnixMillis } from "@pluralscape/types";
 
 /** Convert Uint8Array to base64 without Buffer (matches runtime in packages/data). */
 function toBase64(bytes: Uint8Array): string {
@@ -46,24 +47,24 @@ function makeRawCustomFront(
   fields: CustomFrontEncryptedFields,
   key: KdfMasterKey,
   overrides?: Partial<{
-    id: string;
-    systemId: string;
+    id: CustomFrontId;
+    systemId: SystemId;
     version: number;
     archived: boolean;
-    archivedAt: number | null;
-    createdAt: number;
-    updatedAt: number;
+    archivedAt: UnixMillis | null;
+    createdAt: UnixMillis;
+    updatedAt: UnixMillis;
   }>,
 ) {
   return {
-    id: "cf_abc123" as `cf_${string}`,
-    systemId: "sys_xyz" as `sys_${string}`,
+    id: "cf_abc123" as CustomFrontId,
+    systemId: "sys_xyz" as SystemId,
     encryptedData: makeEncryptedBlob(fields, key),
     version: 1,
     archived: false as const,
-    archivedAt: null as number | null,
-    createdAt: 1_700_000_000_000,
-    updatedAt: 1_700_000_000_000,
+    archivedAt: null as UnixMillis | null,
+    createdAt: 1_700_000_000_000 as UnixMillis,
+    updatedAt: 1_700_000_000_000 as UnixMillis,
     ...overrides,
   };
 }
@@ -75,7 +76,7 @@ describe("decryptCustomFront", () => {
     const fields: CustomFrontEncryptedFields = {
       name: "Dissociated",
       description: "A foggy state",
-      color: "#aabbcc" as `#${string}`,
+      color: "#aabbcc" as HexColor,
       emoji: "🌫️",
     };
     const raw = makeRawCustomFront(fields, masterKey);
@@ -147,8 +148,8 @@ describe("decryptCustomFrontPage", () => {
       color: null,
       emoji: "✨",
     };
-    const raw1 = makeRawCustomFront(fields1, masterKey, { id: "cf_001" as `cf_${string}` });
-    const raw2 = makeRawCustomFront(fields2, masterKey, { id: "cf_002" as `cf_${string}` });
+    const raw1 = makeRawCustomFront(fields1, masterKey, { id: "cf_001" as CustomFrontId });
+    const raw2 = makeRawCustomFront(fields2, masterKey, { id: "cf_002" as CustomFrontId });
 
     const page = {
       data: [raw1, raw2] as const,
@@ -206,7 +207,7 @@ describe("encryptCustomFrontInput", () => {
     const input: CustomFrontEncryptedFields = {
       name: "Overwhelmed",
       description: "Too much sensory input",
-      color: "#ff0000" as `#${string}`,
+      color: "#ff0000" as HexColor,
       emoji: "😵",
     };
 
@@ -256,7 +257,7 @@ describe("encryptCustomFrontUpdate", () => {
     const data: CustomFrontEncryptedFields = {
       name: "Round-trip",
       description: "desc",
-      color: "#123456" as `#${string}`,
+      color: "#123456" as HexColor,
       emoji: "🔄",
     };
     const { encryptedData, version } = encryptCustomFrontUpdate(data, 7, masterKey);

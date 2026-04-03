@@ -17,6 +17,7 @@ import {
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  Locale,
   NomenclatureSettings,
   SystemId,
   SystemSettings,
@@ -130,7 +131,7 @@ function makeRawSystemSettings(encryptedData: string, version = 1) {
   return {
     id: "sys-settings-1" as SystemSettingsId,
     systemId: "system-1" as SystemId,
-    locale: null as string | null,
+    locale: null as Locale | null,
     biometricEnabled: false,
     encryptedData,
     version,
@@ -168,7 +169,7 @@ describe("decryptSystemSettings", () => {
   });
 
   it("decrypts settings with non-default theme and locale", () => {
-    const settings = makeSystemSettings({ theme: "dark", locale: "en" });
+    const settings = makeSystemSettings({ theme: "dark", locale: "en" as Locale | null });
     const raw = makeRawSystemSettings(encryptToBase64(settings, masterKey));
 
     const result = decryptSystemSettings(raw, masterKey);

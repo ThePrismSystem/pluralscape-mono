@@ -17,7 +17,13 @@ import {
 
 import type { FrontingSessionEncryptedFields } from "../fronting-session.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { FrontingSessionId, MemberId, PaginationCursor, SystemId } from "@pluralscape/types";
+import type {
+  FrontingSessionId,
+  MemberId,
+  PaginationCursor,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -44,7 +50,7 @@ function makeEncryptedData(fields: FrontingSessionEncryptedFields): string {
 /** Minimal raw server response for a fronting session. */
 function makeRawSession(
   overrides: Partial<{
-    endTime: number | null;
+    endTime: UnixMillis | null;
     encryptedFields: FrontingSessionEncryptedFields;
   }> = {},
 ) {
@@ -60,14 +66,14 @@ function makeRawSession(
     memberId: "mem_001" as MemberId,
     customFrontId: null,
     structureEntityId: null,
-    startTime: 1700000000000,
+    startTime: 1700000000000 as UnixMillis,
     endTime: overrides.endTime !== undefined ? overrides.endTime : null,
     encryptedData: makeEncryptedData(fields),
     version: 1,
     archived: false as const,
     archivedAt: null,
-    createdAt: 1700000000000,
-    updatedAt: 1700000000000,
+    createdAt: 1700000000000 as UnixMillis,
+    updatedAt: 1700000000000 as UnixMillis,
   };
 }
 
@@ -95,7 +101,7 @@ describe("decryptFrontingSession", () => {
   });
 
   it("decrypts a completed session (endTime: number)", () => {
-    const raw = makeRawSession({ endTime: 1700001000000 });
+    const raw = makeRawSession({ endTime: 1700001000000 as UnixMillis });
     const result = decryptFrontingSession(raw, masterKey);
 
     expect(result.endTime).toBe(1700001000000);
@@ -129,7 +135,7 @@ describe("decryptFrontingSessionPage", () => {
   it("decrypts a page of sessions", () => {
     const cursor = "cursor_abc" as PaginationCursor;
     const page = makePage(
-      [makeRawSession({ endTime: null }), makeRawSession({ endTime: 1700001000000 })],
+      [makeRawSession({ endTime: null }), makeRawSession({ endTime: 1700001000000 as UnixMillis })],
       cursor,
     );
     const result = decryptFrontingSessionPage(page, masterKey);
