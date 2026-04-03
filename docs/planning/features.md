@@ -170,13 +170,19 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 
 ## 9. API and Integrations
 
-- **Public REST API** — 17+ endpoint categories (ADR 003) [API complete, client pending]
+- **Public REST API** — 31 route domains, 304 operations (ADR 003) [API complete, client pending]
   - API uses canonical terms (`member`, `system`, `fronting`, `switch`) regardless of per-system nomenclature settings
   - Hybrid auth model with two key types (ADR 013):
     - **Metadata keys** — access tier 3 plaintext data only (timestamps, events, connection status). No crypto needed. For simple integrations like Discord bots.
     - **Crypto keys** — carry encrypted key material, enabling decryption of tier 1/2 data. User-controlled scoping (full access, specific buckets, fronting only, etc.). Created from an authenticated client session.
   - API key management: create, get, list, revoke [API complete, client pending]
   - Key creation UI uses plain language, visual scope indicators, and confirmation prompts for high-access keys
+  - OpenAPI 3.1 specification with automated reconciliation script and CI drift check
+- **tRPC internal API** — end-to-end type-safe API layer for the Expo mobile client (ADR 032) [complete]
+  - 35 routers mirroring the full REST surface; same service layer, same validation, same rate limits
+  - `@pluralscape/api-client` package with TanStack Query integration, React provider, and typed hooks
+  - CI-enforced parity script verifying 1:1 REST ↔ tRPC coverage
+  - [tRPC consumer guide](../trpc-guide.md) and [API consumer guide](../guides/api-consumer-guide.md)
 - **Custom webhooks** — user-configurable, triggered on events (switches, messages, member changes, etc.) [API complete, client pending]
   - Full CRUD + archive/restore on webhook configurations
   - Secret rotation endpoint for re-keying webhook HMAC secrets
@@ -187,8 +193,8 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 - **Email notifications** — system-level email delivery for account events (password changes, friend requests, etc.); managed via notification configuration API
 - **Device transfer** — encrypted device-to-device key transfer for multi-device key recovery (ADR 011) [API complete, client pending]
 - **PluralKit bridge** — bidirectional sync via PK token; runs client-side (requires app to be open) since the server cannot decrypt data
-- **Rate limiting** — intelligent backoff
-- **API documentation** — auto-generated from endpoint definitions
+- **Rate limiting** — per-category rate limits (read, write, auth, sensitive) with Valkey-backed distributed store; applied to both REST and tRPC
+- **API documentation** — OpenAPI 3.1 specification (304 operations), API consumer guide, tRPC consumer guide
 - **Integration guides** — step-by-step guides for common languages (Python, JavaScript/TypeScript, Go, Rust, C#) covering authentication, metadata endpoints, and encrypted data decryption
 - **Client SDKs** (future) — official libraries for common languages that handle authentication and libsodium decryption, so third-party developers don't need to implement the crypto stack themselves. See [future feature doc](../future-features/003-client-sdks.md) for detailed design.
 

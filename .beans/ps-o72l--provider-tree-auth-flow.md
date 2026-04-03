@@ -1,11 +1,11 @@
 ---
 # ps-o72l
 title: Provider tree & auth flow
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:32Z
-updated_at: 2026-04-01T05:57:19Z
+updated_at: 2026-04-03T01:16:03Z
 parent: ps-7j8n
 ---
 

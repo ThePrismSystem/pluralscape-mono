@@ -1,11 +1,11 @@
 ---
 # ps-4rjt
 title: App shell & navigation
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:26Z
-updated_at: 2026-04-01T05:57:11Z
+updated_at: 2026-04-03T01:16:03Z
 parent: ps-7j8n
 ---
 
