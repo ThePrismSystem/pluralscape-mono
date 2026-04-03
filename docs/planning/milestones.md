@@ -120,9 +120,9 @@ Epics:
 - ~~Report generation~~ [COMPLETED] — bucket-scoped data export endpoint with manifest counts and key grants, E2E tests, OpenAPI spec
 - ~~M6 audit remediation~~ [COMPLETED] — 30 findings across security (device token takeover, member count leak, CRDT factory), performance (SQL-pushed bucket filtering, batch queries, caching), and code quality (shared helpers, barrel exports, constants extraction); executed via 10 parallel worktree PRs
 
-## Milestone 7: Data Portability [IN PROGRESS]
+## Milestone 7: Data Portability [COMPLETED]
 
-Goal: Email notifications, webhook enhancements, public API audit, integration guides
+Goal: Email notifications, webhook enhancements, tRPC parity, API documentation, integration guides
 
 Epics:
 
@@ -133,9 +133,9 @@ Epics:
 - ~~API feature completeness~~ [COMPLETED] — closed audit gaps across the REST API surface: account deletion/PIN/device transfer approval, friend accept/reject/dashboard sync, API key CRUD, system snapshots/duplication/purge, structure entity field values/hierarchy, poll vote update/delete/results, check-in restore, lifecycle event update, device token update/delete, key rotation retry, member photo GET, list filters and pagination; CRDT sync document type coverage verification; migration regeneration
 - ~~API code quality audit~~ [COMPLETED] — four-phase audit covering security (auth, validation, rate limiting), type safety (catch parameters, cast removal), code patterns (best practices), and refactoring/simplification; response envelope normalization and idempotency standardization
 - ~~Comprehensive E2E test expansion~~ [COMPLETED] — expanded Playwright suite to cover blobs, custom fronts, groups, fronting, polls, board messages, private notes, lifecycle events, webhooks, notifications, and timers
-- Public REST API audit (features.md section 9)
-- Email & webhook audit findings
-- Integration guides (features.md section 9)
+- ~~tRPC internal API layer~~ [COMPLETED] — 35 routers mirroring the full REST surface for the Expo mobile client; `@pluralscape/api-client` with TanStack Query integration; centralized error mapper; system-scoped middleware; rate limiting on all procedures (ADR 031, ADR 032)
+- ~~tRPC parity enforcement~~ [COMPLETED] — CI script verifying 1:1 REST ↔ tRPC coverage across routes, input validation, and rate limiting; parity audit and remediation of missing procedures (delete, auth, input validation gaps)
+- ~~API documentation~~ [COMPLETED] — API consumer guide (authentication, encryption lifecycle, REST conventions, tRPC setup, sync protocol, error handling), tRPC consumer guide for mobile developers, OpenAPI expanded to 304 operations across 31 route domains
 
 ## Milestone 8: App Foundation & Data Layer
 

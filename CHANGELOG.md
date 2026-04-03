@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
 
-## [Unreleased] — Milestone 7: Data Portability (in progress)
+## Milestone 7: Data Portability
 
 ### Added
 
@@ -27,7 +27,19 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
   - Infrastructure — device token update/delete, key rotation retry, single member photo GET, missing list filters and pagination across entities
 - CRDT sync document type coverage — verified all document types mapped to sync strategies
 - OpenAPI spec reconciliation — automated reconciliation script with CI drift check ensuring spec stays in sync with implementation
-- E2E tests expanded — 310 tests across 69 spec files (was 205 across 43)
+- tRPC internal API layer — end-to-end type-safe API for the Expo mobile client, mirroring the full REST surface:
+  - 35 routers covering all domain endpoints (identity, fronting, communication, social, structure, infrastructure)
+  - `@pluralscape/api-client` package with TanStack Query integration and React provider
+  - Centralized error mapper translating service errors to tRPC error codes
+  - System-scoped middleware with branded ID validation
+  - Rate limiting on all tRPC procedures matching REST rate-limit categories
+  - CI-enforced parity script verifying 1:1 REST ↔ tRPC coverage across routes, input validation, and rate limiting
+- ADR 031: Web platform storage backend
+- ADR 032: tRPC parity enforcement — CI script verifying REST ↔ tRPC consistency
+- API consumer guide — step-by-step guide covering authentication, encryption lifecycle, REST conventions, tRPC setup, sync protocol, and error handling
+- tRPC consumer guide — mobile developer guide for client setup, authentication, and query patterns
+- OpenAPI specification expanded — 304 operations across 31 route domains (was 155 across 20)
+- E2E tests expanded — 314 tests across 69 spec files (was 205 across 43), including tRPC smoke tests
 
 ### Changed
 
@@ -38,6 +50,7 @@ The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/
 - M7 audit remediation (high priority) — anti-enumeration timing for auth endpoints, ownership consolidation, strict typing replacements for loose `Record<string, unknown>` types
 - M7 audit remediation (medium + low) — webhook `as never` cast removal, email worker review findings, inconsistent zod imports, dependency updates
 - API code quality audits — combined security audit (auth, validation, rate limiting), code patterns and best practices audit, refactoring and simplification audit, batch key-rotation item updates
+- tRPC parity remediation — fixed input validation gaps, missing delete procedures, missing auth procedures (password reset, device transfer), response shape alignment
 - Regenerated database migrations — consolidated PG and SQLite migrations into single 0000 files with updated RLS migration
 - Pending friend flow — fixed friend code service tests and migration alignment for pending friend connections
 

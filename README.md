@@ -8,11 +8,11 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-7 largely complete, public REST API documentation and integration guides in progress.**
+**Active development — Milestones 0-7 complete, Milestone 8 (App Foundation & Data Layer) next.**
 
-Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), 6 (Privacy and Social), and 7 (Data Portability) are substantially complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)) covering 155+ operations across 31 route domains.
+Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), 6 (Privacy and Social), and 7 (Data Portability) are complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)) covering 304 operations across 31 route domains. The internal tRPC layer provides end-to-end type-safe access to the same service layer for the Expo mobile client (see [tRPC guide](docs/trpc-guide.md) and [ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
 
-Milestone 7 delivered: email notifications (Resend + SMTP adapters with security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), webhook event dispatch for identity and friend events, API feature completeness (closing audit gaps across account management, friends, API keys, system operations, structure entities, communication, and infrastructure), multiple audit rounds, and comprehensive E2E test expansion. Remaining work includes public REST API audit completion and integration guides. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
+Milestone 7 delivered: email notifications (Resend + SMTP adapters with security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), webhook event dispatch for identity and friend events, API feature completeness (closing audit gaps across account management, friends, API keys, system operations, structure entities, communication, and infrastructure), tRPC parity (35 routers mirroring every REST endpoint with CI-enforced consistency), API consumer guide, multiple audit rounds, and comprehensive E2E test expansion. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 
@@ -30,12 +30,12 @@ pnpm test:e2e          # E2E tests (Playwright)
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 94.94%   |
-| Branches   | 88.13%   |
-| Functions  | 96.15%   |
-| Lines      | 95.30%   |
+| Statements | 95.54%   |
+| Branches   | 87.37%   |
+| Functions  | 96.22%   |
+| Lines      | 96.06%   |
 
-E2E suite: 310 tests across 69 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, and notification configs. Run `pnpm test:coverage` for up-to-date numbers.
+E2E suite: 314 tests across 69 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 
@@ -79,7 +79,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (30 accepted)
+  adr/             Architecture Decision Records (33 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -99,7 +99,7 @@ docs/
 | Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md) |
 | Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)    |
 
-All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md).
+All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [33 ADRs](docs/adr/).
 
 ## Key Libraries
 
@@ -198,7 +198,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 30 accepted ADRs cover the full stack from licensing through email provider selection. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 33 accepted ADRs cover the full stack from licensing through email provider selection. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 
