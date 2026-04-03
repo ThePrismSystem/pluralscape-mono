@@ -2,6 +2,7 @@ import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  Archived,
   CheckInRecord,
   CheckInRecordId,
   MemberId,
@@ -44,7 +45,7 @@ interface RawCheckInRecord {
   readonly respondedByMemberId: MemberId | null;
   readonly respondedAt: UnixMillis | null;
   readonly dismissed: boolean;
-  readonly archived: false;
+  readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
 }
 
@@ -67,10 +68,14 @@ function assertTimerConfigEncryptedFields(raw: unknown): asserts raw is TimerCon
 
 // ── Timer config transforms ──────────────────────────────────────────
 
-export function decryptTimerConfig(raw: RawTimerConfig, masterKey: KdfMasterKey): TimerConfig {
+export function decryptTimerConfig(
+  raw: RawTimerConfig,
+  masterKey: KdfMasterKey,
+): TimerConfig | Archived<TimerConfig> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertTimerConfigEncryptedFields(decrypted);
-  return {
+
+  const base = {
     id: raw.id,
     systemId: raw.systemId,
     intervalMinutes: raw.intervalMinutes,
@@ -79,19 +84,24 @@ export function decryptTimerConfig(raw: RawTimerConfig, masterKey: KdfMasterKey)
     wakingEnd: raw.wakingEnd,
     promptText: decrypted.promptText,
     enabled: raw.enabled,
-    archived: false,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     version: raw.version,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived timer config missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 export function decryptTimerConfigPage(
   raw: RawTimerConfigList,
   masterKey: KdfMasterKey,
-): { items: TimerConfig[]; nextCursor: string | null } {
+): { data: (TimerConfig | Archived<TimerConfig>)[]; nextCursor: string | null } {
   return {
-    items: raw.data.map((item) => decryptTimerConfig(item, masterKey)),
+    data: raw.data.map((item) => decryptTimerConfig(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }
@@ -111,8 +121,10 @@ export function encryptTimerConfigUpdate(
   return { encryptedData: encryptAndEncodeT1(data, masterKey), version };
 }
 
-export function decryptCheckInRecord(raw: RawCheckInRecord): CheckInRecord {
-  return {
+export function decryptCheckInRecord(
+  raw: RawCheckInRecord,
+): CheckInRecord | Archived<CheckInRecord> {
+  const base = {
     id: raw.id,
     timerConfigId: raw.timerConfigId,
     systemId: raw.systemId,
@@ -120,17 +132,22 @@ export function decryptCheckInRecord(raw: RawCheckInRecord): CheckInRecord {
     respondedByMemberId: raw.respondedByMemberId,
     respondedAt: raw.respondedAt,
     dismissed: raw.dismissed,
-    archived: false,
     archivedAt: raw.archivedAt,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived check-in record missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const, archivedAt: raw.archivedAt };
 }
 
 export function decryptCheckInRecordPage(raw: RawCheckInRecordList): {
-  items: CheckInRecord[];
+  data: (CheckInRecord | Archived<CheckInRecord>)[];
   nextCursor: string | null;
 } {
   return {
-    items: raw.data.map((item) => decryptCheckInRecord(item)),
+    data: raw.data.map((item) => decryptCheckInRecord(item)),
     nextCursor: raw.nextCursor,
   };
 }

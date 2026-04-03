@@ -43,7 +43,7 @@ function makeRawCustomFront(
     systemId: "sys_xyz" as SystemId,
     encryptedData: makeBase64Blob(fields, key),
     version: 1,
-    archived: false as const,
+    archived: false as boolean,
     archivedAt: null as UnixMillis | null,
     createdAt: 1_700_000_000_000 as UnixMillis,
     updatedAt: 1_700_000_000_000 as UnixMillis,
@@ -112,6 +112,24 @@ describe("decryptCustomFront", () => {
     const raw = makeRawCustomFront(fields, otherKey);
     expect(() => decryptCustomFront(raw, masterKey)).toThrow();
   });
+
+  it("returns archived variant when raw.archived is true", () => {
+    const fields: CustomFrontEncryptedFields = {
+      name: "Archived Front",
+      description: null,
+      color: null,
+      emoji: null,
+    };
+    const archivedAt = 1_700_002_000_000 as UnixMillis;
+    const raw = makeRawCustomFront(fields, masterKey, { archived: true, archivedAt });
+    const result = decryptCustomFront(raw, masterKey);
+
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+    expect(result.name).toBe("Archived Front");
+  });
 });
 
 // ── decryptCustomFrontPage ───────────────────────────────────────────
@@ -142,10 +160,10 @@ describe("decryptCustomFrontPage", () => {
 
     const result = decryptCustomFrontPage(page, masterKey);
 
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]?.name).toBe("Alpha");
-    expect(result.items[1]?.name).toBe("Beta");
-    expect(result.items[1]?.emoji).toBe("✨");
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.name).toBe("Alpha");
+    expect(result.data[1]?.name).toBe("Beta");
+    expect(result.data[1]?.emoji).toBe("✨");
     expect(result.nextCursor).toBe("cf_002");
   });
 
@@ -166,10 +184,10 @@ describe("decryptCustomFrontPage", () => {
 
     const result = decryptCustomFrontPage(page, masterKey);
     expect(result.nextCursor).toBeNull();
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
   });
 
-  it("returns empty items array for empty page", () => {
+  it("returns empty data array for empty page", () => {
     const page = {
       data: [] as ReturnType<typeof makeRawCustomFront>[],
       nextCursor: null as string | null,
@@ -177,7 +195,7 @@ describe("decryptCustomFrontPage", () => {
       totalCount: null as number | null,
     };
     const result = decryptCustomFrontPage(page, masterKey);
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
     expect(result.nextCursor).toBeNull();
   });
 });

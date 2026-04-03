@@ -78,7 +78,7 @@ describe("decryptFrontingReportPage", () => {
     const raw = { data: [makeRawReport(enc), makeRawReport(enc)], nextCursor: "c1" };
     const result = decryptFrontingReportPage(raw, masterKey);
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("c1");
   });
 
@@ -108,7 +108,6 @@ describe("encryptFrontingReportInput", () => {
 });
 
 // ── Assertion guard tests ────────────────────────────────────────────
-
 
 describe("assertFrontingReportEncryptedFields", () => {
   it("throws when decrypted blob is not an object", () => {

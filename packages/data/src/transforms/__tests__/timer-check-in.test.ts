@@ -35,7 +35,10 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-function makeRawTimerConfig(encryptedData: string) {
+function makeRawTimerConfig(
+  encryptedData: string,
+  overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
+) {
   return {
     id: TIMER_ID,
     systemId: SYSTEM_ID,
@@ -46,10 +49,11 @@ function makeRawTimerConfig(encryptedData: string) {
     wakingStart: null,
     wakingEnd: null,
     version: 1,
-    archived: false,
-    archivedAt: null,
+    archived: false as boolean,
+    archivedAt: null as UnixMillis | null,
     createdAt: NOW,
     updatedAt: NOW,
+    ...overrides,
   };
 }
 
@@ -57,6 +61,8 @@ function makeRawCheckInRecord(opts?: {
   respondedByMemberId?: MemberId | null;
   respondedAt?: UnixMillis | null;
   dismissed?: boolean;
+  archived?: boolean;
+  archivedAt?: UnixMillis | null;
 }) {
   return {
     id: RECORD_ID,
@@ -66,8 +72,8 @@ function makeRawCheckInRecord(opts?: {
     respondedByMemberId: opts?.respondedByMemberId ?? null,
     respondedAt: opts?.respondedAt ?? null,
     dismissed: opts?.dismissed ?? false,
-    archived: false as const,
-    archivedAt: null,
+    archived: opts?.archived ?? (false as boolean),
+    archivedAt: opts?.archivedAt ?? (null as UnixMillis | null),
   };
 }
 
@@ -90,6 +96,21 @@ describe("decryptTimerConfig", () => {
   it("throws on corrupted data", () => {
     expect(() => decryptTimerConfig(makeRawTimerConfig(btoa("garbage")), masterKey)).toThrow();
   });
+
+  it("returns archived variant when raw.archived is true", () => {
+    const archivedAt = 1700002000000 as UnixMillis;
+    const raw = makeRawTimerConfig(encryptAndEncodeT1(ENCRYPTED_FIELDS, masterKey), {
+      archived: true,
+      archivedAt,
+    });
+    const result = decryptTimerConfig(raw, masterKey);
+
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+    expect(result.promptText).toBe("Who is fronting right now?");
+  });
 });
 
 describe("decryptTimerConfigPage", () => {
@@ -99,7 +120,7 @@ describe("decryptTimerConfigPage", () => {
       { data: [makeRawTimerConfig(enc)], nextCursor: "c1" },
       masterKey,
     );
-    expect(result.items).toHaveLength(1);
+    expect(result.data).toHaveLength(1);
     expect(result.nextCursor).toBe("c1");
   });
 });
@@ -143,6 +164,16 @@ describe("decryptCheckInRecord", () => {
     const result = decryptCheckInRecord(makeRawCheckInRecord({ dismissed: true }));
     expect(result.dismissed).toBe(true);
   });
+
+  it("returns archived variant when raw.archived is true", () => {
+    const archivedAt = 1700002000000 as UnixMillis;
+    const result = decryptCheckInRecord(makeRawCheckInRecord({ archived: true, archivedAt }));
+
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+  });
 });
 
 describe("decryptCheckInRecordPage", () => {
@@ -151,13 +182,12 @@ describe("decryptCheckInRecordPage", () => {
       data: [makeRawCheckInRecord(), makeRawCheckInRecord({ dismissed: true })],
       nextCursor: "c1",
     });
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("c1");
   });
 });
 
 // ── Assertion guard tests ────────────────────────────────────────────
-
 
 describe("assertTimerConfigEncryptedFields", () => {
   it("throws when decrypted blob is not an object", () => {

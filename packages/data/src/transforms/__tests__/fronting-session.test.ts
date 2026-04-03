@@ -34,6 +34,8 @@ function makeRawSession(
   overrides: Partial<{
     endTime: UnixMillis | null;
     encryptedFields: FrontingSessionEncryptedFields;
+    archived: boolean;
+    archivedAt: UnixMillis | null;
   }> = {},
 ) {
   const fields: FrontingSessionEncryptedFields = overrides.encryptedFields ?? {
@@ -52,8 +54,8 @@ function makeRawSession(
     endTime: overrides.endTime !== undefined ? overrides.endTime : null,
     encryptedData: makeBase64Blob(fields, masterKey),
     version: 1,
-    archived: false as const,
-    archivedAt: null,
+    archived: overrides.archived ?? (false as boolean),
+    archivedAt: overrides.archivedAt ?? (null as UnixMillis | null),
     createdAt: 1700000000000 as UnixMillis,
     updatedAt: 1700000000000 as UnixMillis,
   };
@@ -111,6 +113,34 @@ describe("decryptFrontingSession", () => {
     const bad = { ...raw, encryptedData: "not-valid!!!" };
     expect(() => decryptFrontingSession(bad, masterKey)).toThrow();
   });
+
+  it("returns archived active session when raw.archived is true and endTime is null", () => {
+    const archivedAt = 1700002000000 as UnixMillis;
+    const raw = makeRawSession({ endTime: null, archived: true, archivedAt });
+    const result = decryptFrontingSession(raw, masterKey);
+
+    expect(result.archived).toBe(true);
+    expect(result.endTime).toBeNull();
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+  });
+
+  it("returns archived completed session when raw.archived is true and endTime is set", () => {
+    const archivedAt = 1700003000000 as UnixMillis;
+    const raw = makeRawSession({
+      endTime: 1700001000000 as UnixMillis,
+      archived: true,
+      archivedAt,
+    });
+    const result = decryptFrontingSession(raw, masterKey);
+
+    expect(result.archived).toBe(true);
+    expect(result.endTime).toBe(1700001000000);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+  });
 });
 
 describe("decryptFrontingSessionPage", () => {
@@ -122,9 +152,9 @@ describe("decryptFrontingSessionPage", () => {
     );
     const result = decryptFrontingSessionPage(page, masterKey);
 
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]?.endTime).toBeNull();
-    expect(result.items[1]?.endTime).toBe(1700001000000);
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.endTime).toBeNull();
+    expect(result.data[1]?.endTime).toBe(1700001000000);
     expect(result.nextCursor).toBe(cursor);
   });
 

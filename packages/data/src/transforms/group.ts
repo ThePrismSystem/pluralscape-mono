@@ -1,4 +1,4 @@
-import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
+import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { GroupId, HexColor, ImageSource, SystemId, UnixMillis } from "@pluralscape/types";
@@ -111,15 +111,13 @@ export function decryptGroup(raw: GroupRaw, masterKey: KdfMasterKey): GroupDecry
 
 /**
  * Decrypt a paginated group list result.
- *
- * Returns `{ items: GroupDecrypted[]; nextCursor: string | null }`.
  */
 export function decryptGroupPage(
   raw: GroupPage,
   masterKey: KdfMasterKey,
-): { items: GroupDecrypted[]; nextCursor: string | null } {
+): { data: GroupDecrypted[]; nextCursor: string | null } {
   return {
-    items: raw.data.map((item) => decryptGroup(item, masterKey)),
+    data: raw.data.map((item) => decryptGroup(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }
@@ -134,7 +132,7 @@ export function encryptGroupInput(
   data: GroupEncryptedFields,
   masterKey: KdfMasterKey,
 ): { encryptedData: string } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey) };
+  return encryptInput(data, masterKey);
 }
 
 /**
@@ -148,5 +146,5 @@ export function encryptGroupUpdate(
   version: number,
   masterKey: KdfMasterKey,
 ): { encryptedData: string; version: number } {
-  return { encryptedData: encryptAndEncodeT1(data, masterKey), version };
+  return encryptUpdate(data, version, masterKey);
 }

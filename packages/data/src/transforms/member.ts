@@ -2,7 +2,7 @@ import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.j
 
 import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Member } from "@pluralscape/types";
+import type { Archived, Member } from "@pluralscape/types";
 
 type ServerMember = RouterOutput["member"]["get"];
 
@@ -42,13 +42,16 @@ function assertMemberEncryptedFields(raw: unknown): asserts raw is MemberEncrypt
  * Passthrough fields (id, systemId, archived, version, createdAt, updatedAt)
  * are copied directly; all other fields are decrypted from encryptedData.
  */
-export function decryptMember(raw: ServerMember, masterKey: KdfMasterKey): Member {
+export function decryptMember(
+  raw: ServerMember,
+  masterKey: KdfMasterKey,
+): Member | Archived<Member> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertMemberEncryptedFields(decrypted);
-  return {
+
+  const base = {
     id: raw.id,
     systemId: raw.systemId,
-    archived: raw.archived as false,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
@@ -62,17 +65,23 @@ export function decryptMember(raw: ServerMember, masterKey: KdfMasterKey): Membe
     suppressFriendFrontNotification: decrypted.suppressFriendFrontNotification,
     boardMessageNotificationOnFront: decrypted.boardMessageNotificationOnFront,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived member missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 /**
  * Decrypt a paginated list of member wire objects.
  */
 export function decryptMemberPage(
-  raw: { items: readonly ServerMember[]; nextCursor: string | null },
+  raw: { data: readonly ServerMember[]; nextCursor: string | null },
   masterKey: KdfMasterKey,
-): { items: Member[]; nextCursor: string | null } {
+): { data: (Member | Archived<Member>)[]; nextCursor: string | null } {
   return {
-    items: raw.items.map((item) => decryptMember(item, masterKey)),
+    data: raw.data.map((item) => decryptMember(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }

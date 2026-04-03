@@ -15,7 +15,7 @@ import { makeBase64Blob } from "./helpers.js";
 
 import type { MemberEncryptedFields } from "../member.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { HexColor, MemberId, SystemId } from "@pluralscape/types";
+import type { HexColor, MemberId, SystemId, UnixMillis } from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -44,7 +44,10 @@ function makeEncryptedFields(): MemberEncryptedFields {
 }
 
 /** Build a minimal ServerMember wire object from encrypted fields. */
-function makeServerMember(fields: MemberEncryptedFields = makeEncryptedFields()) {
+function makeServerMember(
+  fields: MemberEncryptedFields = makeEncryptedFields(),
+  overrides?: Partial<{ archived: boolean; archivedAt: UnixMillis | null }>,
+) {
   return {
     id: "mem_abc123" as MemberId,
     systemId: "sys_xyz789" as SystemId,
@@ -52,8 +55,9 @@ function makeServerMember(fields: MemberEncryptedFields = makeEncryptedFields())
     version: 3,
     createdAt: toUnixMillis(1_700_000_000_000),
     updatedAt: toUnixMillis(1_700_001_000_000),
-    archived: false as const,
-    archivedAt: null,
+    archived: false as boolean,
+    archivedAt: null as UnixMillis | null,
+    ...overrides,
   };
 }
 
@@ -112,31 +116,43 @@ describe("decryptMember", () => {
     const raw = { ...makeServerMember(), encryptedData: "not-valid-base64!!!" };
     expect(() => decryptMember(raw, masterKey)).toThrow();
   });
+
+  it("returns archived variant when raw.archived is true", () => {
+    const archivedAt = toUnixMillis(1_700_002_000_000);
+    const raw = makeServerMember(makeEncryptedFields(), { archived: true, archivedAt });
+    const result = decryptMember(raw, masterKey);
+
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+    expect(result.name).toBe("River");
+  });
 });
 
 describe("decryptMemberPage", () => {
   it("decrypts all items and preserves cursor", () => {
-    const items = [makeServerMember(), makeServerMember()];
-    const page = { items, nextCursor: "cursor-token" };
+    const data = [makeServerMember(), makeServerMember()];
+    const page = { data, nextCursor: "cursor-token" };
     const result = decryptMemberPage(page, masterKey);
 
-    expect(result.items).toHaveLength(2);
+    expect(result.data).toHaveLength(2);
     expect(result.nextCursor).toBe("cursor-token");
-    result.items.forEach((m) => {
+    result.data.forEach((m) => {
       expect(m.name).toBe("River");
     });
   });
 
   it("handles null cursor", () => {
-    const page = { items: [makeServerMember()], nextCursor: null };
+    const page = { data: [makeServerMember()], nextCursor: null };
     const result = decryptMemberPage(page, masterKey);
     expect(result.nextCursor).toBeNull();
   });
 
-  it("handles empty items array", () => {
-    const page = { items: [], nextCursor: null };
+  it("handles empty data array", () => {
+    const page = { data: [] as ReturnType<typeof makeServerMember>[], nextCursor: null };
     const result = decryptMemberPage(page, masterKey);
-    expect(result.items).toEqual([]);
+    expect(result.data).toEqual([]);
     expect(result.nextCursor).toBeNull();
   });
 });
@@ -190,7 +206,6 @@ describe("encryptMemberUpdate", () => {
 });
 
 // ── Assertion guard tests ────────────────────────────────────────────
-
 
 describe("assertMemberEncryptedFields", () => {
   it("throws when decrypted blob is not an object", () => {

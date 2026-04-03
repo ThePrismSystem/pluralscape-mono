@@ -41,7 +41,7 @@ const BASE_COMMENT_RESULT = {
   customFrontId: null as CustomFrontId | null,
   structureEntityId: null as SystemStructureEntityId | null,
   version: 1,
-  archived: false as const,
+  archived: false as boolean,
   archivedAt: null as UnixMillis | null,
   createdAt: 1_700_000_000_000 as UnixMillis,
   updatedAt: 1_700_000_001_000 as UnixMillis,
@@ -113,6 +113,24 @@ describe("decryptFrontingComment", () => {
     };
     expect(() => decryptFrontingComment(raw, masterKey)).toThrow();
   });
+
+  it("returns archived variant when raw.archived is true", () => {
+    const encrypted: FrontingCommentEncryptedFields = { content: "Archived comment." };
+    const archivedAt = 1_700_002_000_000 as UnixMillis;
+    const raw = {
+      ...BASE_COMMENT_RESULT,
+      archived: true,
+      archivedAt,
+      encryptedData: makeBase64Blob(encrypted, masterKey),
+    };
+    const result = decryptFrontingComment(raw, masterKey);
+
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(archivedAt);
+    }
+    expect(result.content).toBe("Archived comment.");
+  });
 });
 
 // ── decryptFrontingCommentPage ────────────────────────────────────────
@@ -121,20 +139,20 @@ describe("decryptFrontingCommentPage", () => {
   it("decrypts all items and passes through nextCursor", () => {
     const encrypted: FrontingCommentEncryptedFields = { content: "Page item." };
     const raw = {
-      items: [{ ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) }],
+      data: [{ ...BASE_COMMENT_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) }],
       nextCursor: "fcom_cursor_abc",
     };
 
     const result = decryptFrontingCommentPage(raw, masterKey);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.content).toBe("Page item.");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.content).toBe("Page item.");
     expect(result.nextCursor).toBe("fcom_cursor_abc");
   });
 
-  it("returns empty items and null nextCursor for empty page", () => {
-    const result = decryptFrontingCommentPage({ items: [], nextCursor: null }, masterKey);
-    expect(result.items).toHaveLength(0);
+  it("returns empty data and null nextCursor for empty page", () => {
+    const result = decryptFrontingCommentPage({ data: [], nextCursor: null }, masterKey);
+    expect(result.data).toHaveLength(0);
     expect(result.nextCursor).toBeNull();
   });
 
@@ -142,7 +160,7 @@ describe("decryptFrontingCommentPage", () => {
     const enc1: FrontingCommentEncryptedFields = { content: "First comment." };
     const enc2: FrontingCommentEncryptedFields = { content: "Second comment." };
     const raw = {
-      items: [
+      data: [
         {
           ...BASE_COMMENT_RESULT,
           id: "fcom_001" as FrontingCommentId,
@@ -159,9 +177,9 @@ describe("decryptFrontingCommentPage", () => {
 
     const result = decryptFrontingCommentPage(raw, masterKey);
 
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]?.content).toBe("First comment.");
-    expect(result.items[1]?.content).toBe("Second comment.");
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.content).toBe("First comment.");
+    expect(result.data[1]?.content).toBe("Second comment.");
     expect(result.nextCursor).toBeNull();
   });
 });

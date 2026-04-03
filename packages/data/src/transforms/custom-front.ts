@@ -2,6 +2,7 @@ import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  Archived,
   CustomFront,
   CustomFrontId,
   HexColor,
@@ -72,34 +73,41 @@ function assertCustomFrontEncryptedFields(raw: unknown): asserts raw is CustomFr
  * The encrypted blob contains: `name`, `description`, `color`, `emoji`.
  * All other fields pass through from the wire payload.
  */
-export function decryptCustomFront(raw: CustomFrontRaw, masterKey: KdfMasterKey): CustomFront {
+export function decryptCustomFront(
+  raw: CustomFrontRaw,
+  masterKey: KdfMasterKey,
+): CustomFront | Archived<CustomFront> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertCustomFrontEncryptedFields(plaintext);
-  return {
+
+  const base = {
     id: raw.id,
     systemId: raw.systemId,
     name: plaintext.name,
     description: plaintext.description,
     color: plaintext.color,
     emoji: plaintext.emoji,
-    archived: false,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived custom front missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 /**
  * Decrypt a paginated custom front list result.
- *
- * Returns `{ items: CustomFront[]; nextCursor: string | null }`.
  */
 export function decryptCustomFrontPage(
   raw: CustomFrontPage,
   masterKey: KdfMasterKey,
-): { items: CustomFront[]; nextCursor: string | null } {
+): { data: (CustomFront | Archived<CustomFront>)[]; nextCursor: string | null } {
   return {
-    items: raw.data.map((item) => decryptCustomFront(item, masterKey)),
+    data: raw.data.map((item) => decryptCustomFront(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }

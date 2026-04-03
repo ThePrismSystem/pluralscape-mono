@@ -2,6 +2,7 @@ import { decodeAndDecryptT1, encryptAndEncodeT1 } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
+  Archived,
   CustomFrontId,
   FrontingComment,
   FrontingCommentId,
@@ -32,7 +33,7 @@ interface FrontingCommentRaw {
 
 /** Shape returned by `frontingComment.list`. */
 interface FrontingCommentPage {
-  readonly items: readonly FrontingCommentRaw[];
+  readonly data: readonly FrontingCommentRaw[];
   readonly nextCursor: string | null;
 }
 
@@ -71,10 +72,11 @@ function assertFrontingCommentEncryptedFields(
 export function decryptFrontingComment(
   raw: FrontingCommentRaw,
   masterKey: KdfMasterKey,
-): FrontingComment {
+): FrontingComment | Archived<FrontingComment> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertFrontingCommentEncryptedFields(plaintext);
-  return {
+
+  const base = {
     id: raw.id,
     frontingSessionId: raw.frontingSessionId,
     systemId: raw.systemId,
@@ -82,24 +84,27 @@ export function decryptFrontingComment(
     customFrontId: raw.customFrontId,
     structureEntityId: raw.structureEntityId,
     content: plaintext.content,
-    archived: false,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
+
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived fronting comment missing archivedAt");
+    return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+  }
+  return { ...base, archived: false as const };
 }
 
 /**
  * Decrypt a paginated fronting comment list result.
- *
- * Returns `{ items: FrontingComment[]; nextCursor: string | null }`.
  */
 export function decryptFrontingCommentPage(
   raw: FrontingCommentPage,
   masterKey: KdfMasterKey,
-): { items: FrontingComment[]; nextCursor: string | null } {
+): { data: (FrontingComment | Archived<FrontingComment>)[]; nextCursor: string | null } {
   return {
-    items: raw.items.map((item) => decryptFrontingComment(item, masterKey)),
+    data: raw.data.map((item) => decryptFrontingComment(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }

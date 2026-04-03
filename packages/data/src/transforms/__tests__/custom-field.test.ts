@@ -125,21 +125,21 @@ describe("decryptFieldDefinitionPage", () => {
       options: null,
     };
     const raw = {
-      items: [{ ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) }],
+      data: [{ ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(encrypted, masterKey) }],
       nextCursor: "cursor_abc",
     };
 
     const result = decryptFieldDefinitionPage(raw, masterKey);
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]?.name).toBe("Field A");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]?.name).toBe("Field A");
     expect(result.nextCursor).toBe("cursor_abc");
   });
 
-  it("returns empty items array and null nextCursor for empty page", () => {
-    const raw = { items: [], nextCursor: null };
+  it("returns empty data array and null nextCursor for empty page", () => {
+    const raw = { data: [] as (typeof BASE_DEFINITION_RESULT)[], nextCursor: null };
     const result = decryptFieldDefinitionPage(raw, masterKey);
-    expect(result.items).toHaveLength(0);
+    expect(result.data).toHaveLength(0);
     expect(result.nextCursor).toBeNull();
   });
 
@@ -155,7 +155,7 @@ describe("decryptFieldDefinitionPage", () => {
       options: ["a", "b"],
     };
     const raw = {
-      items: [
+      data: [
         {
           ...BASE_DEFINITION_RESULT,
           id: "fld_001" as FieldDefinitionId,
@@ -173,10 +173,10 @@ describe("decryptFieldDefinitionPage", () => {
 
     const result = decryptFieldDefinitionPage(raw, masterKey);
 
-    expect(result.items).toHaveLength(2);
-    expect(result.items[0]?.name).toBe("Alpha");
-    expect(result.items[1]?.name).toBe("Beta");
-    expect(result.items[1]?.options).toEqual(["a", "b"]);
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0]?.name).toBe("Alpha");
+    expect(result.data[1]?.name).toBe("Beta");
+    expect(result.data[1]?.options).toEqual(["a", "b"]);
   });
 });
 

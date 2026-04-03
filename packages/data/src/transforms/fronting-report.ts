@@ -71,9 +71,9 @@ export function decryptFrontingReport(
 export function decryptFrontingReportPage(
   raw: RawFrontingReportList,
   masterKey: KdfMasterKey,
-): { items: FrontingReport[]; nextCursor: string | null } {
+): { data: FrontingReport[]; nextCursor: string | null } {
   return {
-    items: raw.data.map((item) => decryptFrontingReport(item, masterKey)),
+    data: raw.data.map((item) => decryptFrontingReport(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }

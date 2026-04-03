@@ -32,7 +32,7 @@ interface FieldDefinitionRaw {
 
 /** Shape returned by `field.definition.list`. */
 interface FieldDefinitionPage {
-  readonly items: readonly FieldDefinitionRaw[];
+  readonly data: readonly FieldDefinitionRaw[];
   readonly nextCursor: string | null;
 }
 
@@ -184,15 +184,13 @@ export function decryptFieldDefinition(
 
 /**
  * Decrypt a paginated field definition list result.
- *
- * Returns `{ items: FieldDefinitionDecrypted[]; nextCursor: string | null }`.
  */
 export function decryptFieldDefinitionPage(
   raw: FieldDefinitionPage,
   masterKey: KdfMasterKey,
-): { items: FieldDefinitionDecrypted[]; nextCursor: string | null } {
+): { data: FieldDefinitionDecrypted[]; nextCursor: string | null } {
   return {
-    items: raw.items.map((item) => decryptFieldDefinition(item, masterKey)),
+    data: raw.data.map((item) => decryptFieldDefinition(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }

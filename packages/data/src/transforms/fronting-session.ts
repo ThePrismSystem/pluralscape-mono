@@ -4,6 +4,7 @@ import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   ActiveFrontingSession,
+  Archived,
   CompletedFrontingSession,
   FrontingSession,
   OuttriggerSentiment,
@@ -59,11 +60,12 @@ function assertFrontingSessionEncryptedFields(
 /**
  * Decrypt a raw fronting session from the server into a typed `FrontingSession`.
  * Discriminates on `endTime` to produce `ActiveFrontingSession | CompletedFrontingSession`.
+ * Returns the archived variant when `raw.archived` is true.
  */
 export function decryptFrontingSession(
   raw: RawFrontingSession,
   masterKey: KdfMasterKey,
-): FrontingSession {
+): FrontingSession | Archived<FrontingSession> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertFrontingSessionEncryptedFields(plaintext);
 
@@ -74,7 +76,6 @@ export function decryptFrontingSession(
     customFrontId: raw.customFrontId,
     structureEntityId: raw.structureEntityId,
     startTime: raw.startTime,
-    archived: false as const,
     version: raw.version,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
@@ -84,10 +85,21 @@ export function decryptFrontingSession(
     outtriggerSentiment: plaintext.outtriggerSentiment ?? null,
   };
 
-  if (raw.endTime === null) {
-    return { ...base, endTime: null } satisfies ActiveFrontingSession;
+  if (raw.archived) {
+    if (raw.archivedAt === null) throw new Error("Archived fronting session missing archivedAt");
+    const archivedBase = { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    if (raw.endTime === null) return { ...archivedBase, endTime: null };
+    return { ...archivedBase, endTime: raw.endTime };
   }
-  return { ...base, endTime: raw.endTime } satisfies CompletedFrontingSession;
+
+  if (raw.endTime === null) {
+    return { ...base, archived: false as const, endTime: null } satisfies ActiveFrontingSession;
+  }
+  return {
+    ...base,
+    archived: false as const,
+    endTime: raw.endTime,
+  } satisfies CompletedFrontingSession;
 }
 
 /**
@@ -96,9 +108,9 @@ export function decryptFrontingSession(
 export function decryptFrontingSessionPage(
   raw: RawFrontingSessionPage,
   masterKey: KdfMasterKey,
-): { items: FrontingSession[]; nextCursor: string | null } {
+): { data: (FrontingSession | Archived<FrontingSession>)[]; nextCursor: string | null } {
   return {
-    items: raw.data.map((item) => decryptFrontingSession(item, masterKey)),
+    data: raw.data.map((item) => decryptFrontingSession(item, masterKey)),
     nextCursor: raw.nextCursor,
   };
 }

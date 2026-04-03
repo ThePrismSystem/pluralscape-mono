@@ -124,8 +124,8 @@ describe("decryptGroupPage", () => {
     const raw2 = makeRawGroup({ id: "grp_02xyz" as GroupId, sortOrder: 2 });
     const page = decryptGroupPage({ data: [raw1, raw2], nextCursor: "cursor_abc" }, masterKey);
 
-    expect(page.items).toHaveLength(2);
-    const [first, second] = page.items;
+    expect(page.data).toHaveLength(2);
+    const [first, second] = page.data;
     expect(first?.id).toBe("grp_01abc");
     expect(second?.id).toBe("grp_02xyz");
     expect(page.nextCursor).toBe("cursor_abc");
@@ -136,9 +136,9 @@ describe("decryptGroupPage", () => {
     expect(page.nextCursor).toBeNull();
   });
 
-  it("returns empty items for empty page", () => {
+  it("returns empty data for empty page", () => {
     const page = decryptGroupPage({ data: [], nextCursor: null }, masterKey);
-    expect(page.items).toHaveLength(0);
+    expect(page.data).toHaveLength(0);
     expect(page.nextCursor).toBeNull();
   });
 });
