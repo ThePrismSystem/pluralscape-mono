@@ -151,7 +151,7 @@ const completeTransferLimiter = createTRPCRateLimiter({
 
 export const accountRouter = router({
   /** Get current account info. */
-  getInfo: protectedProcedure.use(authLightLimiter).query(async ({ ctx }) => {
+  get: protectedProcedure.use(authLightLimiter).query(async ({ ctx }) => {
     const info = await getAccountInfo(ctx.db, ctx.auth.accountId);
     if (!info) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" });

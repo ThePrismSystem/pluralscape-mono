@@ -193,12 +193,12 @@ describe("auth router", () => {
     });
   });
 
-  // ── listSessions ──────────────────────────────────────────────────
+  // ── session.list ──────────────────────────────────────────────────
 
-  describe("auth.listSessions", () => {
+  describe("auth.session.list", () => {
     it("throws UNAUTHORIZED for unauthenticated callers", async () => {
       const caller = createCaller(null);
-      await expect(caller.auth.listSessions({})).rejects.toThrow(
+      await expect(caller.auth.session.list({})).rejects.toThrow(
         expect.objectContaining({ code: "UNAUTHORIZED" }),
       );
     });
@@ -210,14 +210,14 @@ describe("auth router", () => {
       };
       vi.mocked(listSessions).mockResolvedValue(mockResult);
       const caller = createCaller(MOCK_AUTH);
-      const result = await caller.auth.listSessions({});
+      const result = await caller.auth.session.list({});
       expect(result).toEqual(mockResult);
     });
 
     it("passes cursor and limit", async () => {
       vi.mocked(listSessions).mockResolvedValue({ sessions: [], nextCursor: null });
       const caller = createCaller(MOCK_AUTH);
-      await caller.auth.listSessions({ cursor: "cur_abc", limit: 10 });
+      await caller.auth.session.list({ cursor: "cur_abc", limit: 10 });
 
       expect(vi.mocked(listSessions).mock.calls[0]?.[2]).toBe("cur_abc");
       expect(vi.mocked(listSessions).mock.calls[0]?.[3]).toBe(10);
@@ -225,18 +225,18 @@ describe("auth router", () => {
 
     it("rejects limit exceeding maximum", async () => {
       const caller = createCaller(MOCK_AUTH);
-      await expect(caller.auth.listSessions({ limit: 200 })).rejects.toThrow(
+      await expect(caller.auth.session.list({ limit: 200 })).rejects.toThrow(
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
     });
   });
 
-  // ── revokeSession ─────────────────────────────────────────────────
+  // ── session.revoke ────────────────────────────────────────────────
 
-  describe("auth.revokeSession", () => {
+  describe("auth.session.revoke", () => {
     it("throws BAD_REQUEST when revoking the current session", async () => {
       const caller = createCaller(MOCK_AUTH);
-      await expect(caller.auth.revokeSession({ sessionId: MOCK_AUTH.sessionId })).rejects.toThrow(
+      await expect(caller.auth.session.revoke({ sessionId: MOCK_AUTH.sessionId })).rejects.toThrow(
         expect.objectContaining({ code: "BAD_REQUEST" }),
       );
     });
@@ -244,40 +244,40 @@ describe("auth router", () => {
     it("throws NOT_FOUND when revokeSession returns false", async () => {
       vi.mocked(revokeSession).mockResolvedValue(false);
       const caller = createCaller(MOCK_AUTH);
-      await expect(caller.auth.revokeSession({ sessionId: MOCK_OTHER_SESSION_ID })).rejects.toThrow(
-        expect.objectContaining({ code: "NOT_FOUND" }),
-      );
+      await expect(
+        caller.auth.session.revoke({ sessionId: MOCK_OTHER_SESSION_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
 
     it("returns success when session is revoked", async () => {
       vi.mocked(revokeSession).mockResolvedValue(true);
       const caller = createCaller(MOCK_AUTH);
-      const result = await caller.auth.revokeSession({ sessionId: MOCK_OTHER_SESSION_ID });
+      const result = await caller.auth.session.revoke({ sessionId: MOCK_OTHER_SESSION_ID });
       expect(result).toEqual({ revoked: true });
     });
 
     it("rejects invalid sessionId format", async () => {
       const caller = createCaller(MOCK_AUTH);
       await expect(
-        caller.auth.revokeSession({ sessionId: "not-valid" as SessionId }),
+        caller.auth.session.revoke({ sessionId: "not-valid" as SessionId }),
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
 
-  // ── revokeAllSessions ─────────────────────────────────────────────
+  // ── session.revokeAll ─────────────────────────────────────────────
 
-  describe("auth.revokeAllSessions", () => {
+  describe("auth.session.revokeAll", () => {
     it("returns count of revoked sessions", async () => {
       vi.mocked(revokeAllSessions).mockResolvedValue(3);
       const caller = createCaller(MOCK_AUTH);
-      const result = await caller.auth.revokeAllSessions();
+      const result = await caller.auth.session.revokeAll();
       expect(result).toEqual({ revokedCount: 3 });
     });
 
     it("passes current sessionId as exception", async () => {
       vi.mocked(revokeAllSessions).mockResolvedValue(0);
       const caller = createCaller(MOCK_AUTH);
-      await caller.auth.revokeAllSessions();
+      await caller.auth.session.revokeAll();
 
       expect(vi.mocked(revokeAllSessions).mock.calls[0]?.[2]).toBe(MOCK_AUTH.sessionId);
     });
