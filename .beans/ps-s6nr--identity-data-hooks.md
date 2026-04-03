@@ -1,11 +1,11 @@
 ---
 # ps-s6nr
 title: Identity data hooks
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:39Z
-updated_at: 2026-04-03T11:00:30Z
+updated_at: 2026-04-03T19:00:43Z
 parent: ps-7j8n
 ---
 
