@@ -32,6 +32,20 @@ export function encryptAndEncodeT1(data: unknown, masterKey: KdfMasterKey): stri
   return uint8ArrayToBase64(bytes);
 }
 
+/** Encrypt data for a create mutation. */
+export function encryptInput(data: unknown, masterKey: KdfMasterKey): { encryptedData: string } {
+  return { encryptedData: encryptAndEncodeT1(data, masterKey) };
+}
+
+/** Encrypt data for an update mutation with optimistic locking. */
+export function encryptUpdate(
+  data: unknown,
+  version: number,
+  masterKey: KdfMasterKey,
+): { encryptedData: string; version: number } {
+  return { encryptedData: encryptAndEncodeT1(data, masterKey), version };
+}
+
 function base64ToUint8Array(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
