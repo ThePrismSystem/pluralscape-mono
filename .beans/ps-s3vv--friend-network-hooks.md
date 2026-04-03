@@ -11,4 +11,4 @@ parent: ps-sxcy
 
 Friend codes, connection management, bucket assignment
 
-Uses trpc.friend._ and trpc.friendCode._ for codes, connection management, and bucket assignment.
+Uses trpc.friend.\* and trpc.friendCode.\* for codes, connection management, and bucket assignment.

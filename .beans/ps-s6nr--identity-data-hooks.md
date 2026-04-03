@@ -13,4 +13,4 @@ Members, groups/folders, custom fields, custom fronts, system settings, member d
 
 ## Transport
 
-All hooks use tRPC via trpc.member._, trpc.group._, trpc.field._, trpc.customFront._, trpc.systemSettings._, trpc.system._.
+All hooks use tRPC via trpc.member.\*, trpc.group.\*, trpc.field.\*, trpc.customFront.\*, trpc.systemSettings.\*, trpc.system.\*.

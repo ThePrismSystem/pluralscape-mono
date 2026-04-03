@@ -13,6 +13,6 @@ Privacy buckets, friend network, push notification config, external dashboard, f
 
 ## Transport
 
-All hooks use tRPC via trpc.bucket._, trpc.friend._, trpc.friendCode._, trpc.notificationConfig._, trpc.deviceToken.\*.
+All hooks use tRPC via trpc.bucket.\*, trpc.friend.\*, trpc.friendCode.\*, trpc.notificationConfig.\*, trpc.deviceToken.\*.
 
 **REST exception:** friend export manifest/pages use REST client for ETag-based conditional caching (304 Not Modified).

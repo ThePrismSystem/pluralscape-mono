@@ -11,4 +11,4 @@ parent: ps-s6nr
 
 System profile, nomenclature, preferences
 
-Uses trpc.systemSettings._ and trpc.system._ for profile, nomenclature, and preferences.
+Uses trpc.systemSettings.\* and trpc.system.\* for profile, nomenclature, and preferences.

@@ -13,4 +13,4 @@ System structure entities/links, journaling entries
 
 ## Transport
 
-All hooks use tRPC via trpc.structure._, trpc.innerworld._, trpc.snapshot.\*.
+All hooks use tRPC via trpc.structure.\*, trpc.innerworld.\*, trpc.snapshot.\*.

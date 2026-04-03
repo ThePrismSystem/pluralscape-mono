@@ -11,4 +11,4 @@ parent: ps-j47j
 
 Paginated query, filters
 
-Uses trpc.account.auditLog or dedicated audit procedure for paginated queries and filters.
+Uses trpc.account.auditLog for paginated queries and filters.

@@ -11,4 +11,4 @@ parent: ps-0ph3
 
 Timer configs CRUD, check-in record creation/history
 
-Uses trpc.timerConfig._ and trpc.checkInRecord._ for CRUD and history.
+Uses trpc.timerConfig.\* and trpc.checkInRecord.\* for CRUD and history.

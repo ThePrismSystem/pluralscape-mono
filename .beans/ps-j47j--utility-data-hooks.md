@@ -13,6 +13,6 @@ Search, API key management, audit log, lifecycle events, media upload, account m
 
 ## Transport
 
-All hooks use tRPC via trpc.system.search, trpc.apiKey._, trpc.lifecycleEvent._, trpc.blob._, trpc.account._.
+All hooks use tRPC via trpc.system.search, trpc.apiKey.\*, trpc.lifecycleEvent.\*, trpc.blob.\*, trpc.account.\*.
 
 **REST exception:** blob upload/download URL generation uses REST client for presigned URL handling.

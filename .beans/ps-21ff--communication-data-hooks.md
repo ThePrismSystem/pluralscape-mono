@@ -13,4 +13,4 @@ Chat channels/messages, board messages, private notes, polls, acknowledgements
 
 ## Transport
 
-All hooks use tRPC via trpc.channel._, trpc.message._, trpc.boardMessage._, trpc.note._, trpc.poll._, trpc.acknowledgement._.
+All hooks use tRPC via trpc.channel.\*, trpc.message.\*, trpc.boardMessage.\*, trpc.note.\*, trpc.poll.\*, trpc.acknowledgement.\*.

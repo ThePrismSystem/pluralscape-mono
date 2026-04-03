@@ -11,8 +11,6 @@ parent: ps-7j8n
 
 Fronting sessions, co-fronting, analytics queries, timers, check-ins, fronting comments
 
-## Transport\n\nAll hooks use tRPC via `trpc.frontingSession.*`, `trpc.frontingComment.*`, `trpc.analytics.*`, `trpc.timerConfig.*`, `trpc.checkInRecord.*`, `trpc.frontingReport.*`.
-
 ## Transport
 
-All hooks use tRPC via trpc.frontingSession._, trpc.frontingComment._, trpc.analytics._, trpc.timerConfig._, trpc.checkInRecord._, trpc.frontingReport._.
+All hooks use tRPC via trpc.frontingSession.\*, trpc.frontingComment.\*, trpc.analytics.\*, trpc.timerConfig.\*, trpc.checkInRecord.\*, trpc.frontingReport.\*.
