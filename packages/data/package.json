@@ -13,7 +13,13 @@
     "./transforms/fronting-session": "./src/transforms/fronting-session.ts",
     "./transforms/fronting-comment": "./src/transforms/fronting-comment.ts",
     "./transforms/fronting-report": "./src/transforms/fronting-report.ts",
-    "./transforms/timer-check-in": "./src/transforms/timer-check-in.ts"
+    "./transforms/timer-check-in": "./src/transforms/timer-check-in.ts",
+    "./transforms/channel": "./src/transforms/channel.ts",
+    "./transforms/message": "./src/transforms/message.ts",
+    "./transforms/board-message": "./src/transforms/board-message.ts",
+    "./transforms/poll": "./src/transforms/poll.ts",
+    "./transforms/note": "./src/transforms/note.ts",
+    "./transforms/acknowledgement": "./src/transforms/acknowledgement.ts"
   },
   "scripts": {
     "test": "vitest run",

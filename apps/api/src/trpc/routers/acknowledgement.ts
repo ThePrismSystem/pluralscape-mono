@@ -3,8 +3,10 @@ import {
   CreateAcknowledgementBodySchema,
   brandedIdQueryParam,
 } from "@pluralscape/validation";
+import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
+import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
 import {
   archiveAcknowledgement,
   confirmAcknowledgement,
@@ -17,6 +19,8 @@ import {
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+import type { AcknowledgementChangeEvent } from "@pluralscape/types";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 const writeLimiter = createTRPCCategoryRateLimiter("write");
@@ -34,7 +38,13 @@ export const acknowledgementRouter = router({
     .input(CreateAcknowledgementBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return createAcknowledgement(ctx.db, ctx.systemId, input, ctx.auth, audit);
+      const result = await createAcknowledgement(ctx.db, ctx.systemId, input, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "acknowledgement",
+        type: "created",
+        ackId: result.id,
+      });
+      return result;
     }),
 
   get: systemProcedure
@@ -68,7 +78,7 @@ export const acknowledgementRouter = router({
     .input(AckIdSchema.and(ConfirmAcknowledgementBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return confirmAcknowledgement(
+      const result = await confirmAcknowledgement(
         ctx.db,
         ctx.systemId,
         input.ackId,
@@ -76,6 +86,12 @@ export const acknowledgementRouter = router({
         ctx.auth,
         audit,
       );
+      void publishEntityChange(ctx.systemId, {
+        entity: "acknowledgement",
+        type: "confirmed",
+        ackId: input.ackId,
+      });
+      return result;
     }),
 
   archive: systemProcedure
@@ -84,6 +100,11 @@ export const acknowledgementRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await archiveAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "acknowledgement",
+        type: "archived",
+        ackId: input.ackId,
+      });
       return { success: true as const };
     }),
 
@@ -92,7 +113,19 @@ export const acknowledgementRouter = router({
     .input(AckIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return restoreAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
+      const result = await restoreAcknowledgement(
+        ctx.db,
+        ctx.systemId,
+        input.ackId,
+        ctx.auth,
+        audit,
+      );
+      void publishEntityChange(ctx.systemId, {
+        entity: "acknowledgement",
+        type: "updated",
+        ackId: input.ackId,
+      });
+      return result;
     }),
 
   delete: systemProcedure
@@ -101,6 +134,38 @@ export const acknowledgementRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await deleteAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "acknowledgement",
+        type: "deleted",
+        ackId: input.ackId,
+      });
       return { success: true as const };
     }),
+
+  onChange: systemProcedure.subscription(async function* ({ ctx, signal }) {
+    const queue: AcknowledgementChangeEvent[] = [];
+    let resolve: (() => void) | null = null;
+
+    const unsubscribe = await subscribeToEntityChanges(ctx.systemId, "acknowledgement", (event) => {
+      queue.push(event as AcknowledgementChangeEvent);
+      resolve?.();
+    });
+
+    try {
+      while (!signal?.aborted) {
+        while (queue.length > 0) {
+          const event = queue.shift();
+          if (event) {
+            yield tracked(`${event.type}:${event.ackId}`, event);
+          }
+        }
+        await new Promise<void>((r) => {
+          resolve = r;
+        });
+        resolve = null;
+      }
+    } finally {
+      await unsubscribe?.();
+    }
+  }),
 });

@@ -5,17 +5,26 @@
  * setNotificationPubSub() at startup, then getNotificationPubSub()
  * from route handlers.
  */
-import type { ValkeyPubSub } from "../ws/valkey-pubsub.js";
 
-let notificationPubSub: ValkeyPubSub | undefined;
+/** Minimal interface required by SSE and entity-change pub/sub consumers. */
+export interface NotificationPubSub {
+  publish(channel: string, message: string): Promise<boolean>;
+  subscribe(
+    channel: string,
+    handler: (message: string) => void,
+  ): Promise<"subscribed" | "deferred" | "failed">;
+  unsubscribe(channel: string, handler?: (message: string) => void): Promise<void>;
+}
+
+let notificationPubSub: NotificationPubSub | undefined;
 
 /** Set the notification pub/sub instance (call at startup). */
-export function setNotificationPubSub(pubsub: ValkeyPubSub): void {
+export function setNotificationPubSub(pubsub: NotificationPubSub): void {
   notificationPubSub = pubsub;
 }
 
 /** Get the notification pub/sub instance. Returns undefined if not configured. */
-export function getNotificationPubSub(): ValkeyPubSub | undefined {
+export function getNotificationPubSub(): NotificationPubSub | undefined {
   return notificationPubSub;
 }
 

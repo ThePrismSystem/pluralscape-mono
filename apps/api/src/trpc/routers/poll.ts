@@ -5,8 +5,10 @@ import {
   UpdatePollVoteBodySchema,
   brandedIdQueryParam,
 } from "@pluralscape/validation";
+import { tracked } from "@trpc/server";
 import { z } from "zod/v4";
 
+import { publishEntityChange, subscribeToEntityChanges } from "../../lib/entity-pubsub.js";
 import {
   castVote,
   deletePollVote,
@@ -27,6 +29,8 @@ import {
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
+
+import type { PollChangeEvent } from "@pluralscape/types";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 const writeLimiter = createTRPCCategoryRateLimiter("write");
@@ -51,7 +55,13 @@ export const pollRouter = router({
     .input(CreatePollBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return createPoll(ctx.db, ctx.systemId, input, ctx.auth, audit);
+      const result = await createPoll(ctx.db, ctx.systemId, input, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "created",
+        pollId: result.id,
+      });
+      return result;
     }),
 
   get: systemProcedure
@@ -85,7 +95,7 @@ export const pollRouter = router({
     .input(PollIdSchema.and(UpdatePollBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return updatePoll(
+      const result = await updatePoll(
         ctx.db,
         ctx.systemId,
         input.pollId,
@@ -93,6 +103,12 @@ export const pollRouter = router({
         ctx.auth,
         audit,
       );
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "updated",
+        pollId: input.pollId,
+      });
+      return result;
     }),
 
   close: systemProcedure
@@ -100,7 +116,13 @@ export const pollRouter = router({
     .input(PollIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return closePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      const result = await closePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "closed",
+        pollId: input.pollId,
+      });
+      return result;
     }),
 
   archive: systemProcedure
@@ -109,6 +131,11 @@ export const pollRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await archivePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "archived",
+        pollId: input.pollId,
+      });
       return { success: true as const };
     }),
 
@@ -117,7 +144,13 @@ export const pollRouter = router({
     .input(PollIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return restorePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      const result = await restorePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "updated",
+        pollId: input.pollId,
+      });
+      return result;
     }),
 
   delete: systemProcedure
@@ -126,6 +159,11 @@ export const pollRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await deletePoll(ctx.db, ctx.systemId, input.pollId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "deleted",
+        pollId: input.pollId,
+      });
       return { success: true as const };
     }),
 
@@ -136,7 +174,13 @@ export const pollRouter = router({
     .input(PollIdSchema.and(CastVoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return castVote(ctx.db, ctx.systemId, input.pollId, input, ctx.auth, audit);
+      const result = await castVote(ctx.db, ctx.systemId, input.pollId, input, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "voteCast",
+        pollId: input.pollId,
+      });
+      return result;
     }),
 
   listVotes: systemProcedure
@@ -163,7 +207,7 @@ export const pollRouter = router({
     .input(VoteIdSchema.and(UpdatePollVoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
-      return updatePollVote(
+      const result = await updatePollVote(
         ctx.db,
         ctx.systemId,
         input.pollId,
@@ -172,6 +216,12 @@ export const pollRouter = router({
         ctx.auth,
         audit,
       );
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "voteCast",
+        pollId: input.pollId,
+      });
+      return result;
     }),
 
   deleteVote: systemProcedure
@@ -180,6 +230,11 @@ export const pollRouter = router({
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
       await deletePollVote(ctx.db, ctx.systemId, input.pollId, input.voteId, ctx.auth, audit);
+      void publishEntityChange(ctx.systemId, {
+        entity: "poll",
+        type: "voteCast",
+        pollId: input.pollId,
+      });
       return { success: true as const };
     }),
 
@@ -188,5 +243,38 @@ export const pollRouter = router({
     .input(PollIdSchema)
     .query(async ({ ctx, input }) => {
       return getPollResults(ctx.db, ctx.systemId, input.pollId, ctx.auth);
+    }),
+
+  onChange: systemProcedure
+    .input(z.object({ pollId: brandedIdQueryParam("poll_").optional() }))
+    .subscription(async function* ({ ctx, input, signal }) {
+      const filterPollId = input.pollId;
+      const queue: PollChangeEvent[] = [];
+      let resolve: (() => void) | null = null;
+
+      const unsubscribe = await subscribeToEntityChanges(ctx.systemId, "poll", (event) => {
+        const pollEvent = event as PollChangeEvent;
+        if (!filterPollId || pollEvent.pollId === filterPollId) {
+          queue.push(pollEvent);
+          resolve?.();
+        }
+      });
+
+      try {
+        while (!signal?.aborted) {
+          while (queue.length > 0) {
+            const event = queue.shift();
+            if (event) {
+              yield tracked(`${event.type}:${event.pollId}`, event);
+            }
+          }
+          await new Promise<void>((r) => {
+            resolve = r;
+          });
+          resolve = null;
+        }
+      } finally {
+        await unsubscribe?.();
+      }
     }),
 });

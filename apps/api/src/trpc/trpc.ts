@@ -3,6 +3,10 @@ import { z } from "zod/v4";
 
 import type { TRPCContext } from "./context.js";
 
+// Re-export TrackedEnvelope so TypeScript can name inferred router types
+// that include subscription procedures using `tracked()`.
+export type { TrackedEnvelope, TrackedData } from "@trpc/server/unstable-core-do-not-import";
+
 /**
  * tRPC initialization. Shares one `t` instance across all routers.
  *
@@ -12,8 +16,15 @@ import type { TRPCContext } from "./context.js";
  * Service errors are also caught by the errorMapper middleware (error-mapper.ts)
  * and re-thrown as TRPCError with the correct code.
  */
+const SSE_PING_INTERVAL_MS = 5_000;
+const SSE_RECONNECT_AFTER_INACTIVITY_MS = 15_000;
+
 const t = initTRPC.context<TRPCContext>().create({
   isDev: process.env.NODE_ENV === "development",
+  sse: {
+    ping: { enabled: true, intervalMs: SSE_PING_INTERVAL_MS },
+    client: { reconnectAfterInactivityMs: SSE_RECONNECT_AFTER_INACTIVITY_MS },
+  },
   errorFormatter({ shape, error }) {
     const cause = error.cause;
     const zodError =

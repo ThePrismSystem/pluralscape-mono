@@ -677,3 +677,16 @@ export type { Logger } from "./logger.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO, extractErrorMessage } from "./runtime.js";
+
+// ── Subscription events ────────────────────────────────────────────
+export type {
+  MessageChangeEvent,
+  MessageChangeType,
+  BoardMessageChangeEvent,
+  BoardMessageChangeType,
+  PollChangeEvent,
+  PollChangeType,
+  AcknowledgementChangeEvent,
+  AcknowledgementChangeType,
+  EntityChangeEvent,
+} from "./subscription-events.js";

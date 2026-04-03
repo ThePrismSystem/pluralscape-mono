@@ -1,6 +1,6 @@
 import { MAX_BATCH_ITEMS, MAX_URL_LENGTH, trpc } from "@pluralscape/api-client/trpc";
 import { TRPCClientError } from "@trpc/client";
-import { httpBatchLink, loggerLink } from "@trpc/client";
+import { httpBatchLink, httpSubscriptionLink, loggerLink, splitLink } from "@trpc/client";
 import { useState } from "react";
 
 import { getApiBaseUrl } from "../config.js";
@@ -9,10 +9,8 @@ import type { AppRouter } from "@pluralscape/api-client/trpc";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-/** HTTP status code for unauthorized responses. */
 const HTTP_UNAUTHORIZED = 401;
 
-/** Type guard for typed tRPC client errors. */
 export function isTRPCClientError(cause: unknown): cause is TRPCClientError<AppRouter> {
   return cause instanceof TRPCClientError;
 }
@@ -49,24 +47,40 @@ export function TRPCProvider({
 }: TRPCProviderProps): React.JSX.Element {
   const [trpcClient] = useState(() => {
     const getMemoizedToken = createMemoizedTokenGetter(getToken);
+    const url = `${getApiBaseUrl()}/v1/trpc`;
+
+    const sharedHeaders = async () => {
+      const token = await getMemoizedToken();
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
+    const sharedFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const response = await fetch(input, init);
+      if (response.status === HTTP_UNAUTHORIZED) {
+        onUnauthorized();
+      }
+      return response;
+    };
+
     return trpc.createClient({
       links: [
         loggerLink({ enabled: () => __DEV__ }),
-        httpBatchLink({
-          url: `${getApiBaseUrl()}/v1/trpc`,
-          maxURLLength: MAX_URL_LENGTH,
-          maxItems: MAX_BATCH_ITEMS,
-          headers: async () => {
-            const token = await getMemoizedToken();
-            return token ? { Authorization: `Bearer ${token}` } : {};
-          },
-          fetch: async (input, init) => {
-            const response = await fetch(input, init);
-            if (response.status === HTTP_UNAUTHORIZED) {
-              onUnauthorized();
-            }
-            return response;
-          },
+        splitLink({
+          condition: (op) => op.type === "subscription",
+          true: httpSubscriptionLink({
+            url,
+            connectionParams: async () => {
+              const token = await getMemoizedToken();
+              return token ? { token } : {};
+            },
+          }),
+          false: httpBatchLink({
+            url,
+            maxURLLength: MAX_URL_LENGTH,
+            maxItems: MAX_BATCH_ITEMS,
+            headers: sharedHeaders,
+            fetch: sharedFetch,
+          }),
         }),
       ],
     });

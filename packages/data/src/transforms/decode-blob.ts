@@ -46,6 +46,39 @@ export function encryptUpdate(
   return { encryptedData: encryptAndEncodeT1(data, masterKey), version };
 }
 
+/**
+ * Validate that a decrypted blob is a non-null object.
+ * Returns the object cast to Record for field inspection.
+ */
+export function assertObjectBlob(raw: unknown, entity: string): Record<string, unknown> {
+  if (raw === null || typeof raw !== "object") {
+    throw new Error(`Decrypted ${entity} blob is not an object`);
+  }
+  return raw as Record<string, unknown>;
+}
+
+/** Validate that a field exists and is a string. */
+export function assertStringField(
+  obj: Record<string, unknown>,
+  entity: string,
+  field: string,
+): void {
+  if (typeof obj[field] !== "string") {
+    throw new Error(`Decrypted ${entity} blob missing required string field: ${field}`);
+  }
+}
+
+/** Validate that a field exists and is an array. */
+export function assertArrayField(
+  obj: Record<string, unknown>,
+  entity: string,
+  field: string,
+): void {
+  if (!Array.isArray(obj[field])) {
+    throw new Error(`Decrypted ${entity} blob missing required array field: ${field}`);
+  }
+}
+
 function base64ToUint8Array(base64: string): Uint8Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
