@@ -53,7 +53,7 @@ interface TRPCRateLimitOptions {
  */
 export function createTRPCRateLimiter(
   options: TRPCRateLimitOptions,
-): TRPCMiddlewareBuilder<TRPCContext, unknown, unknown, unknown> {
+): TRPCMiddlewareBuilder<TRPCContext, object, object, unknown> {
   const { limit, windowMs, keyPrefix, keyExtractor = ipKeyExtractor } = options;
   return middleware(async ({ ctx, input, next }) => {
     const clientKey = keyExtractor(ctx, input);
@@ -74,7 +74,7 @@ export function createTRPCRateLimiter(
 export function createTRPCCategoryRateLimiter(
   category: RateLimitCategory,
   keyExtractor?: KeyExtractor,
-): TRPCMiddlewareBuilder<TRPCContext, unknown, unknown, unknown> {
+): TRPCMiddlewareBuilder<TRPCContext, object, object, unknown> {
   const config = RATE_LIMITS[category];
   return createTRPCRateLimiter({ ...config, keyPrefix: category, keyExtractor });
 }
