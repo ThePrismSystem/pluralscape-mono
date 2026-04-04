@@ -80,20 +80,19 @@ function assertLifecycleEventPayload(raw: unknown): asserts raw is LifecycleEven
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-function memberIds(meta: PlaintextMetadataWire | null): readonly string[] {
-  return meta?.memberIds ?? [];
+function metaIds(
+  meta: PlaintextMetadataWire | null,
+  key: keyof PlaintextMetadataWire,
+): readonly string[] {
+  return meta?.[key] ?? [];
 }
 
-function structureIds(meta: PlaintextMetadataWire | null): readonly string[] {
-  return meta?.structureIds ?? [];
-}
-
-function entityIds(meta: PlaintextMetadataWire | null): readonly string[] {
-  return meta?.entityIds ?? [];
-}
-
-function regionIds(meta: PlaintextMetadataWire | null): readonly string[] {
-  return meta?.regionIds ?? [];
+function firstOrThrow(arr: readonly string[], label: string): string {
+  const value = arr[0];
+  if (value === undefined) {
+    throw new Error(`lifecycleEvent missing required ${label} in plaintextMetadata`);
+  }
+  return value;
 }
 
 // ── Transforms ────────────────────────────────────────────────────────
@@ -134,7 +133,10 @@ export function decryptLifecycleEvent(
 
   switch (raw.eventType) {
     case "split": {
-      const ids = memberIds(meta);
+      const ids = metaIds(meta, "memberIds");
+      if (ids.length < 2) {
+        throw new Error("lifecycleEvent split requires at least 2 memberIds in plaintextMetadata");
+      }
       return withArchive({
         ...shared,
         eventType: "split" as const,
@@ -143,7 +145,10 @@ export function decryptLifecycleEvent(
       });
     }
     case "fusion": {
-      const ids = memberIds(meta);
+      const ids = metaIds(meta, "memberIds");
+      if (ids.length < 2) {
+        throw new Error("lifecycleEvent fusion requires at least 2 memberIds in plaintextMetadata");
+      }
       return withArchive({
         ...shared,
         eventType: "fusion" as const,
@@ -155,19 +160,19 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "merge" as const,
-        memberIds: memberIds(meta) as MemberId[],
+        memberIds: metaIds(meta, "memberIds") as MemberId[],
       });
     case "unmerge":
       return withArchive({
         ...shared,
         eventType: "unmerge" as const,
-        memberIds: memberIds(meta) as MemberId[],
+        memberIds: metaIds(meta, "memberIds") as MemberId[],
       });
     case "dormancy-start":
       return withArchive({
         ...shared,
         eventType: "dormancy-start" as const,
-        memberId: memberIds(meta)[0] as MemberId,
+        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
         relatedLifecycleEventId:
           (payload.relatedLifecycleEventId as LifecycleEventId | null) ?? null,
       });
@@ -175,7 +180,7 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "dormancy-end" as const,
-        memberId: memberIds(meta)[0] as MemberId,
+        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
         relatedLifecycleEventId:
           (payload.relatedLifecycleEventId as LifecycleEventId | null) ?? null,
       });
@@ -183,39 +188,56 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "discovery" as const,
-        memberId: memberIds(meta)[0] as MemberId,
+        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
       });
-    case "archival":
+    case "archival": {
+      if (payload.entity === undefined) {
+        throw new Error("Decrypted lifecycleEvent(archival) blob missing required field: entity");
+      }
       return withArchive({
         ...shared,
         eventType: "archival" as const,
-        entity: payload.entity as EntityReference,
+        entity: payload.entity,
       });
+    }
     case "structure-entity-formation":
       return withArchive({
         ...shared,
         eventType: "structure-entity-formation" as const,
-        memberId: memberIds(meta)[0] as MemberId,
-        resultStructureEntityId: structureIds(meta)[0] as SystemStructureEntityId,
+        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
+        resultStructureEntityId: firstOrThrow(
+          metaIds(meta, "structureIds"),
+          "structureIds",
+        ) as SystemStructureEntityId,
       });
     case "form-change":
       return withArchive({
         ...shared,
         eventType: "form-change" as const,
-        memberId: memberIds(meta)[0] as MemberId,
+        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
         previousForm: (payload.previousForm as string | null) ?? null,
         newForm: (payload.newForm as string | null) ?? null,
       });
-    case "name-change":
+    case "name-change": {
+      if (payload.newName === undefined) {
+        throw new Error(
+          "Decrypted lifecycleEvent(name-change) blob missing required field: newName",
+        );
+      }
       return withArchive({
         ...shared,
         eventType: "name-change" as const,
-        memberId: memberIds(meta)[0] as MemberId,
+        memberId: firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId,
         previousName: (payload.previousName as string | null) ?? null,
-        newName: payload.newName as string,
+        newName: payload.newName,
       });
+    }
     case "structure-move": {
-      const sIds = structureIds(meta);
+      const sIds = metaIds(meta, "structureIds");
+      if (sIds.length === 0) {
+        throw new Error("lifecycleEvent missing required structureIds in plaintextMetadata");
+      }
+      const mId = firstOrThrow(metaIds(meta, "memberIds"), "memberIds") as MemberId;
       const fromStructure: EntityReference<"structure-entity"> | null =
         sIds.length >= 2 ? { entityType: "structure-entity", entityId: sIds[0] as string } : null;
       const toStructure: EntityReference<"structure-entity"> =
@@ -225,14 +247,14 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "structure-move" as const,
-        memberId: memberIds(meta)[0] as MemberId,
+        memberId: mId,
         fromStructure,
         toStructure,
       });
     }
     case "innerworld-move": {
-      const eIds = entityIds(meta);
-      const rIds = regionIds(meta);
+      const eIds = metaIds(meta, "entityIds");
+      const rIds = metaIds(meta, "regionIds");
       const iwEntityType = payload.entityType;
       if (iwEntityType === undefined) {
         throw new Error(
@@ -250,7 +272,7 @@ export function decryptLifecycleEvent(
       return withArchive({
         ...shared,
         eventType: "innerworld-move" as const,
-        entityId: eIds[0] as InnerWorldEntityId,
+        entityId: firstOrThrow(eIds, "entityIds") as InnerWorldEntityId,
         entityType: iwEntityType,
         fromRegionId,
         toRegionId,

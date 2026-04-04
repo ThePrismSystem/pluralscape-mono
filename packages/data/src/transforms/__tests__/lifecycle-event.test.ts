@@ -478,3 +478,67 @@ describe("assertLifecycleEventPayload", () => {
     expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("not an object");
   });
 });
+
+// ── Metadata validation ───────────────────────────────────────────────
+
+describe("decryptLifecycleEvent — metadata validation", () => {
+  it("throws on discovery with empty memberIds", () => {
+    const raw = makeRaw("discovery", { notes: null }, { memberIds: [] });
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required memberIds");
+  });
+
+  it("throws on split with fewer than 2 memberIds", () => {
+    const raw = makeRaw("split", { notes: null }, { memberIds: ["mem_only"] });
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow(
+      "split requires at least 2 memberIds",
+    );
+  });
+
+  it("throws on fusion with fewer than 2 memberIds", () => {
+    const raw = makeRaw("fusion", { notes: null }, { memberIds: ["mem_only"] });
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow(
+      "fusion requires at least 2 memberIds",
+    );
+  });
+
+  it("throws on structure-entity-formation with empty structureIds", () => {
+    const raw = makeRaw(
+      "structure-entity-formation",
+      { notes: null },
+      { memberIds: ["mem_a"], structureIds: [] },
+    );
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required structureIds");
+  });
+
+  it("throws on structure-move with empty structureIds", () => {
+    const raw = makeRaw(
+      "structure-move",
+      { notes: null },
+      { memberIds: ["mem_a"], structureIds: [] },
+    );
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required structureIds");
+  });
+
+  it("throws on innerworld-move with empty entityIds", () => {
+    const raw = makeRaw(
+      "innerworld-move",
+      { notes: null, entityType: "member" },
+      { entityIds: [], regionIds: [] },
+    );
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required entityIds");
+  });
+
+  it("throws on archival with missing payload.entity", () => {
+    const raw = makeRaw("archival", { notes: null }, { memberIds: ["mem_a"] });
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required field: entity");
+  });
+
+  it("throws on name-change with missing payload.newName", () => {
+    const raw = makeRaw(
+      "name-change",
+      { notes: null, previousName: "Old" },
+      { memberIds: ["mem_a"] },
+    );
+    expect(() => decryptLifecycleEvent(raw, masterKey)).toThrow("missing required field: newName");
+  });
+});
