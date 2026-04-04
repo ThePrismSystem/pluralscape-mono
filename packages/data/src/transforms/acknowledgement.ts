@@ -15,28 +15,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
-
-/** Shape returned by `acknowledgement.get` and `acknowledgement.list` items. */
-interface AcknowledgementRaw {
-  readonly id: AcknowledgementId;
-  readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId | null;
-  readonly confirmed: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-/** Shape returned by `acknowledgement.list`. */
-interface AcknowledgementPage {
-  readonly data: readonly AcknowledgementRaw[];
-  readonly nextCursor: string | null;
-}
-
 // ── Encrypted payload types ───────────────────────────────────────────
 
 /**
@@ -65,6 +43,24 @@ export interface AcknowledgementDecrypted {
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
+}
+
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `acknowledgement.get` — derived from `AcknowledgementDecrypted`. */
+export type AcknowledgementRaw = Omit<
+  AcknowledgementDecrypted,
+  keyof AcknowledgementEncryptedFields | "archived"
+> & {
+  readonly encryptedData: string;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/** Shape returned by `acknowledgement.list`. */
+export interface AcknowledgementPage {
+  readonly data: readonly AcknowledgementRaw[];
+  readonly nextCursor: string | null;
 }
 
 // ── Validators ────────────────────────────────────────────────────────

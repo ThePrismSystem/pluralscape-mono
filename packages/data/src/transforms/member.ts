@@ -1,10 +1,22 @@
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
-import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, Member } from "@pluralscape/types";
+import type { Archived, Member, UnixMillis } from "@pluralscape/types";
 
-type ServerMember = RouterOutput["member"]["get"];
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `member.get` — derived from the `Member` domain type. */
+export type MemberRaw = Omit<Member, keyof MemberEncryptedFields | "archived"> & {
+  readonly encryptedData: string;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/** Shape returned by `member.list`. */
+export interface MemberPage {
+  readonly data: readonly MemberRaw[];
+  readonly nextCursor: string | null;
+}
 
 /** The subset of Member fields stored encrypted on the server. */
 export interface MemberEncryptedFields {
@@ -42,10 +54,7 @@ function assertMemberEncryptedFields(raw: unknown): asserts raw is MemberEncrypt
  * Passthrough fields (id, systemId, archived, version, createdAt, updatedAt)
  * are copied directly; all other fields are decrypted from encryptedData.
  */
-export function decryptMember(
-  raw: ServerMember,
-  masterKey: KdfMasterKey,
-): Member | Archived<Member> {
+export function decryptMember(raw: MemberRaw, masterKey: KdfMasterKey): Member | Archived<Member> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
   assertMemberEncryptedFields(decrypted);
 
@@ -77,7 +86,7 @@ export function decryptMember(
  * Decrypt a paginated list of member wire objects.
  */
 export function decryptMemberPage(
-  raw: { data: readonly ServerMember[]; nextCursor: string | null },
+  raw: MemberPage,
   masterKey: KdfMasterKey,
 ): { data: (Member | Archived<Member>)[]; nextCursor: string | null } {
   return {

@@ -5,9 +5,7 @@ import type {
   ChartData,
   DateRange,
   FrontingReport,
-  FrontingReportId,
   MemberFrontingBreakdown,
-  SystemId,
   UnixMillis,
 } from "@pluralscape/types";
 
@@ -17,21 +15,21 @@ export interface FrontingReportEncryptedFields {
   readonly chartData: readonly ChartData[];
 }
 
-interface RawFrontingReport {
-  readonly id: FrontingReportId;
-  readonly systemId: SystemId;
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape for a fronting report — adds wire-only fields absent from the domain type. */
+export type FrontingReportRaw = Omit<FrontingReport, keyof FrontingReportEncryptedFields> & {
   readonly encryptedData: string;
-  readonly format: "html" | "pdf";
-  readonly generatedAt: UnixMillis;
   readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
   readonly createdAt?: UnixMillis;
   readonly updatedAt?: UnixMillis;
-}
+};
 
-interface RawFrontingReportList {
-  readonly data: readonly RawFrontingReport[];
+/** Shape returned by `frontingReport.list`. */
+export interface FrontingReportPage {
+  readonly data: readonly FrontingReportRaw[];
   readonly nextCursor: string | null;
 }
 
@@ -52,7 +50,7 @@ function assertFrontingReportEncryptedFields(
 // ── Transforms ───────────────────────────────────────────────────────
 
 export function decryptFrontingReport(
-  raw: RawFrontingReport,
+  raw: FrontingReportRaw,
   masterKey: KdfMasterKey,
 ): FrontingReport {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
@@ -69,7 +67,7 @@ export function decryptFrontingReport(
 }
 
 export function decryptFrontingReportPage(
-  raw: RawFrontingReportList,
+  raw: FrontingReportPage,
   masterKey: KdfMasterKey,
 ): { data: FrontingReport[]; nextCursor: string | null } {
   return {

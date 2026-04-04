@@ -3,28 +3,6 @@ import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.j
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { GroupId, HexColor, ImageSource, SystemId, UnixMillis } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
-
-/** Shape returned by `group.get` and `group.list` items. */
-interface GroupRaw {
-  readonly id: GroupId;
-  readonly systemId: SystemId;
-  readonly parentGroupId: GroupId | null;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
-/** Shape returned by `group.list`. */
-interface GroupPage {
-  readonly data: readonly GroupRaw[];
-  readonly nextCursor: string | null;
-}
-
 // ── Encrypted payload types ───────────────────────────────────────────
 
 /**
@@ -57,6 +35,19 @@ export interface GroupDecrypted {
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
+}
+
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `group.get` — derived from `GroupDecrypted`. */
+export type GroupRaw = Omit<GroupDecrypted, keyof GroupEncryptedFields> & {
+  readonly encryptedData: string;
+};
+
+/** Shape returned by `group.list`. */
+export interface GroupPage {
+  readonly data: readonly GroupRaw[];
+  readonly nextCursor: string | null;
 }
 
 // ── Validator ─────────────────────────────────────────────────────────

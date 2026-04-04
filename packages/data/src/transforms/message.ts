@@ -11,34 +11,22 @@ import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   ArchivedChatMessage,
   BlobId,
-  ChannelId,
   ChatMessage,
   MemberId,
-  MessageId,
-  SystemId,
   UnixMillis,
 } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
+// ── Wire types (derived from domain types) ──────────────────────────
 
-/** Shape returned by `chatMessage.get` and `chatMessage.list` items. */
-interface MessageRaw {
-  readonly id: MessageId;
-  readonly channelId: ChannelId;
-  readonly systemId: SystemId;
-  readonly replyToId: MessageId | null;
-  readonly timestamp: UnixMillis;
-  readonly editedAt: UnixMillis | null;
+/** Wire shape returned by `chatMessage.get` — derived from the `ChatMessage` domain type. */
+export type MessageRaw = Omit<ChatMessage, keyof MessageEncryptedFields | "archived"> & {
   readonly encryptedData: string;
-  readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+};
 
 /** Shape returned by `chatMessage.list`. */
-interface MessagePage {
+export interface MessagePage {
   readonly data: readonly MessageRaw[];
   readonly nextCursor: string | null;
 }

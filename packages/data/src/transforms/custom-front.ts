@@ -1,31 +1,19 @@
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type {
-  Archived,
-  CustomFront,
-  CustomFrontId,
-  HexColor,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { Archived, CustomFront, HexColor, UnixMillis } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
+// ── Wire types (derived from domain types) ──────────────────────────
 
-/** Shape returned by `customFront.get` and items in `customFront.list`. */
-interface CustomFrontRaw {
-  readonly id: CustomFrontId;
-  readonly systemId: SystemId;
+/** Wire shape returned by `customFront.get` — derived from the `CustomFront` domain type. */
+export type CustomFrontRaw = Omit<CustomFront, keyof CustomFrontEncryptedFields | "archived"> & {
   readonly encryptedData: string;
-  readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+};
 
 /** Shape returned by `customFront.list`. */
-interface CustomFrontPage {
+export interface CustomFrontPage {
   readonly data: readonly CustomFrontRaw[];
   readonly nextCursor: string | null;
 }

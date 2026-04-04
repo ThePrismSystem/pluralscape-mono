@@ -1,6 +1,5 @@
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
-import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   ActiveFrontingSession,
@@ -8,6 +7,7 @@ import type {
   CompletedFrontingSession,
   FrontingSession,
   OuttriggerSentiment,
+  UnixMillis,
 } from "@pluralscape/types";
 
 /** The T1-encrypted fields stored inside a fronting session blob. */
@@ -18,11 +18,24 @@ export interface FrontingSessionEncryptedFields {
   readonly outtriggerSentiment: OuttriggerSentiment | null;
 }
 
-/** Raw server response shape for a single fronting session. */
-type RawFrontingSession = RouterOutput["frontingSession"]["get"];
+// ── Wire types (derived from domain types) ──────────────────────────
 
-/** Raw server response shape for a paged fronting session list. */
-type RawFrontingSessionPage = RouterOutput["frontingSession"]["list"];
+/** Wire shape for a single fronting session — derived from `ActiveFrontingSession`. */
+export type FrontingSessionRaw = Omit<
+  ActiveFrontingSession,
+  keyof FrontingSessionEncryptedFields | "archived" | "endTime"
+> & {
+  readonly endTime: UnixMillis | null;
+  readonly encryptedData: string;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/** Shape returned by `frontingSession.list`. */
+export interface FrontingSessionPage {
+  readonly data: readonly FrontingSessionRaw[];
+  readonly nextCursor: string | null;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -63,7 +76,7 @@ function assertFrontingSessionEncryptedFields(
  * Returns the archived variant when `raw.archived` is true.
  */
 export function decryptFrontingSession(
-  raw: RawFrontingSession,
+  raw: FrontingSessionRaw,
   masterKey: KdfMasterKey,
 ): FrontingSession | Archived<FrontingSession> {
   const plaintext = decodeAndDecryptT1(raw.encryptedData, masterKey);
@@ -106,7 +119,7 @@ export function decryptFrontingSession(
  * Decrypt a paginated page of fronting sessions from the server.
  */
 export function decryptFrontingSessionPage(
-  raw: RawFrontingSessionPage,
+  raw: FrontingSessionPage,
   masterKey: KdfMasterKey,
 ): { data: (FrontingSession | Archived<FrontingSession>)[]; nextCursor: string | null } {
   return {

@@ -7,33 +7,19 @@ import {
 } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type {
-  Archived,
-  BoardMessage,
-  BoardMessageId,
-  MemberId,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { Archived, BoardMessage, MemberId, UnixMillis } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
+// ── Wire types (derived from domain types) ──────────────────────────
 
-/** Shape returned by `boardMessage.get` and `boardMessage.list` items. */
-interface BoardMessageRaw {
-  readonly id: BoardMessageId;
-  readonly systemId: SystemId;
-  readonly pinned: boolean;
-  readonly sortOrder: number;
+/** Wire shape returned by `boardMessage.get` — derived from the `BoardMessage` domain type. */
+export type BoardMessageRaw = Omit<BoardMessage, keyof BoardMessageEncryptedFields | "archived"> & {
   readonly encryptedData: string;
-  readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+};
 
 /** Shape returned by `boardMessage.list`. */
-interface BoardMessagePage {
+export interface BoardMessagePage {
   readonly data: readonly BoardMessageRaw[];
   readonly nextCursor: string | null;
 }
