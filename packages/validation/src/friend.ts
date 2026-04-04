@@ -44,6 +44,10 @@ export const FriendCodeQuerySchema = z.object({
   includeExpired: booleanQueryParam,
 });
 
+// ── Key grant schemas ──────────────────────────────────────────────
+
+export const ListReceivedKeyGrantsQuerySchema = z.object({});
+
 // ── Bucket assignment schemas ───────────────────────────────────────
 
 export const AssignBucketBodySchema = z

@@ -7,7 +7,7 @@ export type { FetchOptions, MaybeOptionalInit } from "openapi-fetch";
 
 export interface ApiClientConfig {
   readonly baseUrl: string;
-  readonly getToken: () => string | null;
+  readonly getToken: () => string | null | Promise<string | null>;
   readonly platform?: "web" | "mobile";
 }
 
@@ -20,8 +20,8 @@ export function createApiClient(config: ApiClientConfig): ReturnType<typeof crea
   });
 
   client.use({
-    onRequest({ request }) {
-      const token = config.getToken();
+    async onRequest({ request }) {
+      const token = await config.getToken();
       if (token) {
         request.headers.set("Authorization", `Bearer ${token}`);
       }
