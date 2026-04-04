@@ -17,11 +17,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  BoardMessagePage as BoardMessageRawPage,
+  BoardMessageRaw,
+} from "@pluralscape/data/transforms/board-message";
 import type { Archived, BoardMessage, BoardMessageId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawBoardMessage = RouterOutput["boardMessage"]["get"];
-type RawBoardMessagePage = RouterOutput["boardMessage"]["list"];
 type BoardMessagePage = {
   readonly data: (BoardMessage | Archived<BoardMessage>)[];
   readonly nextCursor: string | null;
@@ -41,7 +42,7 @@ export function useBoardMessage(
   const masterKey = useMasterKey();
 
   const selectBoardMessage = useCallback(
-    (raw: RawBoardMessage): BoardMessage | Archived<BoardMessage> => {
+    (raw: BoardMessageRaw): BoardMessage | Archived<BoardMessage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptBoardMessage(raw, masterKey);
     },
@@ -65,7 +66,7 @@ export function useBoardMessagesList(
   const masterKey = useMasterKey();
 
   const selectBoardMessagePage = useCallback(
-    (data: InfiniteData<RawBoardMessagePage>): InfiniteData<BoardMessagePage> => {
+    (data: InfiniteData<BoardMessageRawPage>): InfiniteData<BoardMessagePage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -84,7 +85,7 @@ export function useBoardMessagesList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawBoardMessagePage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: BoardMessageRawPage) => lastPage.nextCursor,
       select: selectBoardMessagePage,
     },
   );

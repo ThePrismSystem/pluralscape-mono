@@ -12,7 +12,7 @@ import type {
 // ── Wire types (API response shapes) ─────────────────────────────────
 
 /** Shape returned by `systemSettings.settings.get`. */
-interface SystemSettingsRaw {
+export interface SystemSettingsRaw {
   readonly id: SystemSettingsId;
   readonly systemId: SystemId;
   readonly locale: string | null;
@@ -24,7 +24,7 @@ interface SystemSettingsRaw {
 }
 
 /** Shape returned by `systemSettings.nomenclature.get`. */
-interface NomenclatureSettingsRaw {
+export interface NomenclatureSettingsRaw {
   readonly systemId: SystemId;
   readonly encryptedData: string;
   readonly version: number;

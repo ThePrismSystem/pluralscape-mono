@@ -14,12 +14,17 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { PollDecrypted, PollVoteDecrypted } from "@pluralscape/data/transforms/poll";
+import type {
+  PollDecrypted,
+  PollPage as PollRawPage,
+  PollRaw,
+  PollVoteDecrypted,
+} from "@pluralscape/data/transforms/poll";
 import type { Archived, PollId, PollStatus } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
-type RawPoll = RouterOutput["poll"]["get"];
-type RawPollPage = RouterOutput["poll"]["list"];
+// These remain as RouterOutput derivations because the endpoints return non-standard
+// shapes (aggregated results, paginated votes) with no corresponding transform-level wire types.
 type RawPollResults = RouterOutput["poll"]["results"];
 type RawPollVotePage = RouterOutput["poll"]["listVotes"];
 
@@ -53,7 +58,7 @@ export function usePoll(
   const masterKey = useMasterKey();
 
   const selectPoll = useCallback(
-    (raw: RawPoll): PollDecrypted | Archived<PollDecrypted> => {
+    (raw: PollRaw): PollDecrypted | Archived<PollDecrypted> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptPoll(raw, masterKey);
     },
@@ -75,7 +80,7 @@ export function usePollsList(opts?: PollListOpts): TRPCInfiniteQuery<PollPage> {
   const masterKey = useMasterKey();
 
   const selectPollPage = useCallback(
-    (data: InfiniteData<RawPollPage>): InfiniteData<PollPage> => {
+    (data: InfiniteData<PollRawPage>): InfiniteData<PollPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -95,7 +100,7 @@ export function usePollsList(opts?: PollListOpts): TRPCInfiniteQuery<PollPage> {
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawPollPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: PollRawPage) => lastPage.nextCursor,
       select: selectPollPage,
     },
   );

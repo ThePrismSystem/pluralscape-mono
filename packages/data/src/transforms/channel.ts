@@ -7,27 +7,19 @@ import {
 } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type { Archived, Channel, ChannelId, SystemId, UnixMillis } from "@pluralscape/types";
+import type { Archived, Channel, UnixMillis } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
+// ── Wire types (derived from domain types) ──────────────────────────
 
-/** Shape returned by `channel.get` and `channel.list` items. */
-interface ChannelRaw {
-  readonly id: ChannelId;
-  readonly systemId: SystemId;
-  readonly type: "category" | "channel";
-  readonly parentId: ChannelId | null;
-  readonly sortOrder: number;
+/** Wire shape returned by `channel.get` — derived from the `Channel` domain type. */
+export type ChannelRaw = Omit<Channel, keyof ChannelEncryptedFields | "archived"> & {
   readonly encryptedData: string;
-  readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+};
 
 /** Shape returned by `channel.list`. */
-interface ChannelPage {
+export interface ChannelPage {
   readonly data: readonly ChannelRaw[];
   readonly nextCursor: string | null;
 }

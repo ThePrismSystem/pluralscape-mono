@@ -13,43 +13,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
-
-/** Shape returned by `field.definition.get` and `field.definition.list` items. */
-interface FieldDefinitionRaw {
-  readonly id: FieldDefinitionId;
-  readonly systemId: SystemId;
-  readonly fieldType: FieldType;
-  readonly required: boolean;
-  readonly sortOrder: number;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
-/** Shape returned by `field.definition.list`. */
-interface FieldDefinitionPage {
-  readonly data: readonly FieldDefinitionRaw[];
-  readonly nextCursor: string | null;
-}
-
-/** Shape returned by `field.value.list` and `field.value.set`. */
-interface FieldValueRaw {
-  readonly id: FieldValueId;
-  readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
-  readonly groupId: GroupId | null;
-  readonly systemId: SystemId;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
 // ── Encrypted payload types ───────────────────────────────────────────
 
 /**
@@ -97,6 +60,27 @@ export type FieldValueDecrypted = {
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
 } & FieldValueUnion;
+
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `field.definition.get` — derived from `FieldDefinitionDecrypted`. */
+export type FieldDefinitionRaw = Omit<
+  FieldDefinitionDecrypted,
+  keyof FieldDefinitionEncryptedFields
+> & {
+  readonly encryptedData: string;
+};
+
+/** Shape returned by `field.definition.list`. */
+export interface FieldDefinitionPage {
+  readonly data: readonly FieldDefinitionRaw[];
+  readonly nextCursor: string | null;
+}
+
+/** Wire shape returned by `field.value.list` — derived from `FieldValueDecrypted`. */
+export type FieldValueRaw = Omit<FieldValueDecrypted, keyof FieldValueUnion> & {
+  readonly encryptedData: string;
+};
 
 // ── Validators ────────────────────────────────────────────────────────
 

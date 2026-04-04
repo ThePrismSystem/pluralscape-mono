@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingReport } from "@pluralscape/data/transforms/fronting-report";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -13,11 +14,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  FrontingReportPage,
+  FrontingReportRaw,
+} from "@pluralscape/data/transforms/fronting-report";
 import type { FrontingReport, FrontingReportId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawReport = RouterOutput["frontingReport"]["get"];
-type RawReportPage = RouterOutput["frontingReport"]["list"];
 type ReportPage = { readonly data: FrontingReport[]; readonly nextCursor: string | null };
 
 interface FrontingReportListOpts extends SystemIdOverride {
@@ -32,14 +34,19 @@ export function useFrontingReport(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFrontingReport = useCallback(
+    (raw: FrontingReportRaw): FrontingReport => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptFrontingReport(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.frontingReport.get.useQuery(
     { systemId, reportId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawReport): FrontingReport => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptFrontingReport(raw, masterKey);
-      },
+      select: selectFrontingReport,
     },
   );
 }
@@ -51,6 +58,21 @@ export function useFrontingReportsList(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFrontingReportsList = useCallback(
+    (data: InfiniteData<FrontingReportPage>): InfiniteData<ReportPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item) => decryptFrontingReport(item, key)),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.frontingReport.list.useInfiniteQuery(
     {
       systemId,
@@ -58,18 +80,8 @@ export function useFrontingReportsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawReportPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawReportPage>): InfiniteData<ReportPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptFrontingReport(item, key)),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      getNextPageParam: (lastPage: FrontingReportPage) => lastPage.nextCursor,
+      select: selectFrontingReportsList,
     },
   );
 }

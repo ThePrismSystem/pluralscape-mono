@@ -16,28 +16,23 @@ export interface TimerConfigEncryptedFields {
   readonly promptText: string;
 }
 
-interface RawTimerConfig {
-  readonly id: TimerId;
-  readonly systemId: SystemId;
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `timerConfig.get` — derived from the `TimerConfig` domain type. */
+export type TimerConfigRaw = Omit<TimerConfig, keyof TimerConfigEncryptedFields | "archived"> & {
   readonly encryptedData: string;
-  readonly enabled: boolean;
-  readonly intervalMinutes: number | null;
-  readonly wakingHoursOnly: boolean | null;
-  readonly wakingStart: string | null;
-  readonly wakingEnd: string | null;
-  readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+};
 
-interface RawTimerConfigList {
-  readonly data: readonly RawTimerConfig[];
+/** Shape returned by `timerConfig.list`. */
+export interface TimerConfigPage {
+  readonly data: readonly TimerConfigRaw[];
   readonly nextCursor: string | null;
 }
 
-interface RawCheckInRecord {
+/** Wire shape for a single check-in record. */
+export interface CheckInRecordRaw {
   readonly id: CheckInRecordId;
   readonly timerConfigId: TimerId;
   readonly systemId: SystemId;
@@ -49,8 +44,9 @@ interface RawCheckInRecord {
   readonly archivedAt: UnixMillis | null;
 }
 
-interface RawCheckInRecordList {
-  readonly data: readonly RawCheckInRecord[];
+/** Shape returned by `checkInRecord.list`. */
+export interface CheckInRecordPage {
+  readonly data: readonly CheckInRecordRaw[];
   readonly nextCursor: string | null;
 }
 
@@ -69,7 +65,7 @@ function assertTimerConfigEncryptedFields(raw: unknown): asserts raw is TimerCon
 // ── Timer config transforms ──────────────────────────────────────────
 
 export function decryptTimerConfig(
-  raw: RawTimerConfig,
+  raw: TimerConfigRaw,
   masterKey: KdfMasterKey,
 ): TimerConfig | Archived<TimerConfig> {
   const decrypted = decodeAndDecryptT1(raw.encryptedData, masterKey);
@@ -97,7 +93,7 @@ export function decryptTimerConfig(
 }
 
 export function decryptTimerConfigPage(
-  raw: RawTimerConfigList,
+  raw: TimerConfigPage,
   masterKey: KdfMasterKey,
 ): { data: (TimerConfig | Archived<TimerConfig>)[]; nextCursor: string | null } {
   return {
@@ -122,7 +118,7 @@ export function encryptTimerConfigUpdate(
 }
 
 export function decryptCheckInRecord(
-  raw: RawCheckInRecord,
+  raw: CheckInRecordRaw,
 ): CheckInRecord | Archived<CheckInRecord> {
   const base = {
     id: raw.id,
@@ -142,7 +138,7 @@ export function decryptCheckInRecord(
   return { ...base, archived: false as const, archivedAt: raw.archivedAt };
 }
 
-export function decryptCheckInRecordPage(raw: RawCheckInRecordList): {
+export function decryptCheckInRecordPage(raw: CheckInRecordPage): {
   data: (CheckInRecord | Archived<CheckInRecord>)[];
   nextCursor: string | null;
 } {

@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptCustomFront } from "@pluralscape/data/transforms/custom-front";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -13,11 +14,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  CustomFrontPage as CustomFrontRawPage,
+  CustomFrontRaw,
+} from "@pluralscape/data/transforms/custom-front";
 import type { Archived, CustomFront, CustomFrontId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawCustomFront = RouterOutput["customFront"]["get"];
-type RawCustomFrontPage = RouterOutput["customFront"]["list"];
 type CustomFrontPage = {
   readonly data: (CustomFront | Archived<CustomFront>)[];
   readonly nextCursor: string | null;
@@ -35,14 +37,19 @@ export function useCustomFront(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectCustomFront = useCallback(
+    (raw: CustomFrontRaw): CustomFront | Archived<CustomFront> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptCustomFront(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.customFront.get.useQuery(
     { systemId, customFrontId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawCustomFront): CustomFront | Archived<CustomFront> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptCustomFront(raw, masterKey);
-      },
+      select: selectCustomFront,
     },
   );
 }
@@ -54,6 +61,21 @@ export function useCustomFrontsList(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectCustomFrontsList = useCallback(
+    (data: InfiniteData<CustomFrontRawPage>): InfiniteData<CustomFrontPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item) => decryptCustomFront(item, key)),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.customFront.list.useInfiniteQuery(
     {
       systemId,
@@ -61,18 +83,8 @@ export function useCustomFrontsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawCustomFrontPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawCustomFrontPage>): InfiniteData<CustomFrontPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptCustomFront(item, key)),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      getNextPageParam: (lastPage: CustomFrontRawPage) => lastPage.nextCursor,
+      select: selectCustomFrontsList,
     },
   );
 }

@@ -23,49 +23,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
-
-/** Shape returned by `poll.get` and `poll.list` items. */
-interface PollRaw {
-  readonly id: PollId;
-  readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId | null;
-  readonly kind: PollKind;
-  readonly status: PollStatus;
-  readonly closedAt: UnixMillis | null;
-  readonly endsAt: UnixMillis | null;
-  readonly allowMultipleVotes: boolean;
-  readonly maxVotesPerMember: number;
-  readonly allowAbstain: boolean;
-  readonly allowVeto: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-/** Shape returned by `poll.list`. */
-interface PollPage {
-  readonly data: readonly PollRaw[];
-  readonly nextCursor: string | null;
-}
-
-/** Shape returned by `pollVote.get` and `pollVote.list` items. */
-interface PollVoteRaw {
-  readonly id: PollVoteId;
-  readonly pollId: PollId;
-  readonly optionId: PollOptionId | null;
-  readonly voter: EntityReference<"member" | "structure-entity"> | null;
-  readonly isVeto: boolean;
-  readonly votedAt: UnixMillis;
-  /** Null when the vote has no comment. Skip decryption when null. */
-  readonly encryptedData: string | null;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-}
-
 // ── Encrypted payload types ───────────────────────────────────────────
 
 /**
@@ -122,6 +79,28 @@ export interface PollVoteDecrypted {
   readonly votedAt: UnixMillis;
   readonly archived: false;
 }
+
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `poll.get` — derived from `PollDecrypted`. */
+export type PollRaw = Omit<PollDecrypted, keyof PollEncryptedFields | "archived"> & {
+  readonly encryptedData: string;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/** Shape returned by `poll.list`. */
+export interface PollPage {
+  readonly data: readonly PollRaw[];
+  readonly nextCursor: string | null;
+}
+
+/** Wire shape returned by `pollVote.get` — derived from `PollVoteDecrypted`. */
+export type PollVoteRaw = Omit<PollVoteDecrypted, keyof PollVoteEncryptedFields | "archived"> & {
+  readonly encryptedData: string | null;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
 
 // ── Validators ────────────────────────────────────────────────────────
 

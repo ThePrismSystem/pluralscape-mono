@@ -3,6 +3,7 @@ import {
   decryptFrontingSession,
   decryptFrontingSessionPage,
 } from "@pluralscape/data/transforms/fronting-session";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -17,6 +18,10 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  FrontingSessionPage as FrontingSessionRawPage,
+  FrontingSessionRaw,
+} from "@pluralscape/data/transforms/fronting-session";
 import type { Archived, FrontingSession, FrontingSessionId } from "@pluralscape/types";
 import type { InfiniteData, UseMutationResult } from "@tanstack/react-query";
 import type { TRPCHookResult } from "@trpc/react-query/shared";
@@ -24,8 +29,8 @@ import type { TRPCHookResult } from "@trpc/react-query/shared";
 type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
   UseMutationResult<TData, TRPCError, TVars, TCtx>;
 
-type RawSession = RouterOutput["frontingSession"]["get"];
-type RawSessionPage = RouterOutput["frontingSession"]["list"];
+// Remains as RouterOutput because getActive returns a composite shape
+// (sessions + isCofronting + entityMemberMap) with no transform-level wire type.
 type RawGetActive = RouterOutput["frontingSession"]["getActive"];
 type SessionPage = {
   readonly data: (FrontingSession | Archived<FrontingSession>)[];
@@ -51,14 +56,19 @@ export function useFrontingSession(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFrontingSession = useCallback(
+    (raw: FrontingSessionRaw): FrontingSession | Archived<FrontingSession> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptFrontingSession(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.frontingSession.get.useQuery(
     { systemId, sessionId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawSession): FrontingSession | Archived<FrontingSession> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptFrontingSession(raw, masterKey);
-      },
+      select: selectFrontingSession,
     },
   );
 }
@@ -70,6 +80,18 @@ export function useFrontingSessionsList(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFrontingSessionsList = useCallback(
+    (data: InfiniteData<FrontingSessionRawPage>): InfiniteData<SessionPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptFrontingSessionPage(page, key)),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.frontingSession.list.useInfiniteQuery(
     {
       systemId,
@@ -79,15 +101,8 @@ export function useFrontingSessionsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawSessionPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawSessionPage>): InfiniteData<SessionPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptFrontingSessionPage(page, key)),
-        };
-      },
+      getNextPageParam: (lastPage: FrontingSessionRawPage) => lastPage.nextCursor,
+      select: selectFrontingSessionsList,
     },
   );
 }
@@ -110,7 +125,7 @@ export function useStartSession(): TRPCMutation<
   });
 }
 
-type EndSessionContext = { readonly previousSession: RawSession | undefined };
+type EndSessionContext = { readonly previousSession: FrontingSessionRaw | undefined };
 
 export function useEndSession(): TRPCMutationCtx<
   RouterOutput["frontingSession"]["end"],
@@ -164,19 +179,24 @@ export function useActiveFronters(): TRPCQuery<ActiveFrontersResult> {
   const systemId = useActiveSystemId();
   const masterKey = useMasterKey();
 
+  const selectActiveFronters = useCallback(
+    (raw: RawGetActive): ActiveFrontersResult => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        sessions: raw.sessions.map((item) => decryptFrontingSession(item, key)),
+        isCofronting: raw.isCofronting,
+        entityMemberMap: raw.entityMemberMap,
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.frontingSession.getActive.useQuery(
     { systemId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawGetActive): ActiveFrontersResult => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          sessions: raw.sessions.map((item) => decryptFrontingSession(item, key)),
-          isCofronting: raw.isCofronting,
-          entityMemberMap: raw.entityMemberMap,
-        };
-      },
+      select: selectActiveFronters,
     },
   );
 }

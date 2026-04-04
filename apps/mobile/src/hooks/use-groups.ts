@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptGroup } from "@pluralscape/data/transforms/group";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -13,12 +14,14 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { GroupDecrypted } from "@pluralscape/data/transforms/group";
+import type {
+  GroupDecrypted,
+  GroupPage as GroupRawPage,
+  GroupRaw,
+} from "@pluralscape/data/transforms/group";
 import type { GroupId, MemberId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
-type RawGroup = RouterOutput["group"]["get"];
-type RawGroupPage = RouterOutput["group"]["list"];
 type GroupPage = { readonly data: GroupDecrypted[]; readonly nextCursor: string | null };
 
 interface GroupListOpts extends SystemIdOverride {
@@ -31,14 +34,19 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): TRPCQuery<G
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectGroup = useCallback(
+    (raw: GroupRaw): GroupDecrypted => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptGroup(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.group.get.useQuery(
     { systemId, groupId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawGroup): GroupDecrypted => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptGroup(raw, masterKey);
-      },
+      select: selectGroup,
     },
   );
 }
@@ -48,6 +56,21 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectGroupsList = useCallback(
+    (data: InfiniteData<GroupRawPage>): InfiniteData<GroupPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item) => decryptGroup(item, key)),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.group.list.useInfiniteQuery(
     {
       systemId,
@@ -56,18 +79,8 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawGroupPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawGroupPage>): InfiniteData<GroupPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptGroup(item, key)),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      getNextPageParam: (lastPage: GroupRawPage) => lastPage.nextCursor,
+      select: selectGroupsList,
     },
   );
 }

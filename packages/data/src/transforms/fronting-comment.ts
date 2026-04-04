@@ -1,38 +1,22 @@
 import { decodeAndDecryptT1, encryptInput, encryptUpdate } from "./decode-blob.js";
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
-import type {
-  Archived,
-  CustomFrontId,
+import type { Archived, FrontingComment, UnixMillis } from "@pluralscape/types";
+
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `frontingComment.get` — derived from the `FrontingComment` domain type. */
+export type FrontingCommentRaw = Omit<
   FrontingComment,
-  FrontingCommentId,
-  FrontingSessionId,
-  MemberId,
-  SystemId,
-  SystemStructureEntityId,
-  UnixMillis,
-} from "@pluralscape/types";
-
-// ── Wire types (API response shapes) ─────────────────────────────────
-
-/** Shape returned by `frontingComment.get` and `frontingComment.list` items. */
-interface FrontingCommentRaw {
-  readonly id: FrontingCommentId;
-  readonly frontingSessionId: FrontingSessionId;
-  readonly systemId: SystemId;
-  readonly memberId: MemberId | null;
-  readonly customFrontId: CustomFrontId | null;
-  readonly structureEntityId: SystemStructureEntityId | null;
+  keyof FrontingCommentEncryptedFields | "archived"
+> & {
   readonly encryptedData: string;
-  readonly version: number;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+};
 
 /** Shape returned by `frontingComment.list`. */
-interface FrontingCommentPage {
+export interface FrontingCommentPage {
   readonly data: readonly FrontingCommentRaw[];
   readonly nextCursor: string | null;
 }

@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingComment } from "@pluralscape/data/transforms/fronting-comment";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -14,15 +15,16 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
+  FrontingCommentPage,
+  FrontingCommentRaw,
+} from "@pluralscape/data/transforms/fronting-comment";
+import type {
   Archived,
   FrontingComment,
   FrontingCommentId,
   FrontingSessionId,
 } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawComment = RouterOutput["frontingComment"]["get"];
-type RawCommentPage = RouterOutput["frontingComment"]["list"];
 type CommentPage = {
   readonly data: (FrontingComment | Archived<FrontingComment>)[];
   readonly nextCursor: string | null;
@@ -42,14 +44,19 @@ export function useFrontingComment(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFrontingComment = useCallback(
+    (raw: FrontingCommentRaw): FrontingComment | Archived<FrontingComment> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptFrontingComment(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.frontingComment.get.useQuery(
     { systemId, sessionId, commentId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawComment): FrontingComment | Archived<FrontingComment> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptFrontingComment(raw, masterKey);
-      },
+      select: selectFrontingComment,
     },
   );
 }
@@ -62,6 +69,21 @@ export function useFrontingCommentsList(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFrontingCommentsList = useCallback(
+    (data: InfiniteData<FrontingCommentPage>): InfiniteData<CommentPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item) => decryptFrontingComment(item, key)),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.frontingComment.list.useInfiniteQuery(
     {
       systemId,
@@ -71,18 +93,8 @@ export function useFrontingCommentsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawCommentPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawCommentPage>): InfiniteData<CommentPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptFrontingComment(item, key)),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      getNextPageParam: (lastPage: FrontingCommentPage) => lastPage.nextCursor,
+      select: selectFrontingCommentsList,
     },
   );
 }

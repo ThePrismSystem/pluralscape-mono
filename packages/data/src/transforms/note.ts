@@ -16,28 +16,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 
-// ── Wire types (API response shapes) ─────────────────────────────────
-
-/** Shape returned by `note.get` and `note.list` items. */
-interface NoteRaw {
-  readonly id: NoteId;
-  readonly systemId: SystemId;
-  readonly authorEntityType: NoteAuthorEntityType | null;
-  readonly authorEntityId: string | null;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-/** Shape returned by `note.list`. */
-interface NotePage {
-  readonly data: readonly NoteRaw[];
-  readonly nextCursor: string | null;
-}
-
 // ── Encrypted payload types ───────────────────────────────────────────
 
 /**
@@ -65,6 +43,21 @@ export interface NoteDecrypted {
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
+}
+
+// ── Wire types (derived from domain types) ──────────────────────────
+
+/** Wire shape returned by `note.get` — derived from the `NoteDecrypted` domain type. */
+export type NoteRaw = Omit<NoteDecrypted, keyof NoteEncryptedFields | "archived"> & {
+  readonly encryptedData: string;
+  readonly archived: boolean;
+  readonly archivedAt: UnixMillis | null;
+};
+
+/** Shape returned by `note.list`. */
+export interface NotePage {
+  readonly data: readonly NoteRaw[];
+  readonly nextCursor: string | null;
 }
 
 // ── Validators ────────────────────────────────────────────────────────
