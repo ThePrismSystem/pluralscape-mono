@@ -34,6 +34,27 @@ function assertCanvasEncryptedFields(raw: unknown): asserts raw is CanvasEncrypt
   if (typeof obj["viewportX"] !== "number") {
     throw new Error("Decrypted innerworldCanvas blob missing required number field: viewportX");
   }
+  if (typeof obj["viewportY"] !== "number") {
+    throw new Error("Decrypted innerworldCanvas blob missing required number field: viewportY");
+  }
+  if (typeof obj["zoom"] !== "number") {
+    throw new Error("Decrypted innerworldCanvas blob missing required number field: zoom");
+  }
+  const dims = obj["dimensions"];
+  if (dims === null || typeof dims !== "object") {
+    throw new Error("Decrypted innerworldCanvas blob missing required object field: dimensions");
+  }
+  const dimsRec = dims as Record<string, unknown>;
+  if (typeof dimsRec["width"] !== "number") {
+    throw new Error(
+      "Decrypted innerworldCanvas blob dimensions missing required number field: width",
+    );
+  }
+  if (typeof dimsRec["height"] !== "number") {
+    throw new Error(
+      "Decrypted innerworldCanvas blob dimensions missing required number field: height",
+    );
+  }
 }
 
 // ── Transforms ──────────────────────────────────────────────────────
