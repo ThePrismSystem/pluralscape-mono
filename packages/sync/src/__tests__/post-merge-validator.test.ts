@@ -28,6 +28,7 @@ import {
   normalizeFriendConnection,
   normalizeFrontingSessions,
   ENTITY_FIELD_MAP,
+  normalizeFrontingCommentAuthors,
 } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
@@ -37,6 +38,7 @@ import {
   asBucketId,
   asCheckInRecordId,
   asFriendConnectionId,
+  asFrontingCommentId,
   asFrontingSessionId,
   asGroupId,
   asInnerWorldRegionId,
@@ -1259,5 +1261,135 @@ describe("runAllValidations (module-level function)", () => {
     // No errors on successful run
     expect(result.errors).toHaveLength(0);
     expect(errorMessages).toHaveLength(0);
+  });
+});
+
+describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("emits notification-only when all author fields are null", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-authorless"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_placeholder"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("test comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    // Null out memberId to simulate CRDT merge artifact
+    session.change((d) => {
+      const target = d.comments[asFrontingCommentId(commentId)];
+      if (target) target.memberId = null;
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]?.resolution).toBe("notification-only");
+    expect(notifications[0]?.entityType).toBe("fronting-comment");
+    expect(notifications[0]?.entityId).toBe(commentId);
+    expect(notifications[0]?.fieldName).toBe("author");
+  });
+
+  it("returns no notifications when at least one author field is set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-valid-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("test comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("detects multiple authorless comments in a single pass", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-multi-authorless"),
+      sodium,
+    });
+
+    const id1 = `fc_${crypto.randomUUID()}`;
+    const id2 = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(id1)] = {
+        id: s(id1),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("comment 1"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.comments[asFrontingCommentId(id2)] = {
+        id: s(id2),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("comment 2"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    session.change((d) => {
+      const c1 = d.comments[asFrontingCommentId(id1)];
+      const c2 = d.comments[asFrontingCommentId(id2)];
+      if (c1) c1.memberId = null;
+      if (c2) c2.memberId = null;
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(2);
+    expect(notifications.every((n) => n.resolution === "notification-only")).toBe(true);
   });
 });

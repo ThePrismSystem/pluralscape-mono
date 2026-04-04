@@ -8,6 +8,7 @@ import type {
   FieldValueId,
   FriendCodeId,
   FriendConnectionId,
+  FrontingCommentId,
   FrontingSessionId,
   GroupId,
   InnerWorldRegionId,
@@ -90,6 +91,9 @@ export function asFriendCodeId(id: string): FriendCodeId {
 }
 export function asFriendConnectionId(id: string): FriendConnectionId {
   return id as FriendConnectionId;
+}
+export function asFrontingCommentId(id: string): FrontingCommentId {
+  return id as FrontingCommentId;
 }
 
 export function nonce(fill: number): AeadNonce {

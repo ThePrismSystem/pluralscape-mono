@@ -575,6 +575,49 @@ export function normalizeFrontingSessions(session: EncryptedSyncSession<unknown>
   return { count: endTimeFixIds.length, notifications, envelope };
 }
 
+interface FrontingCommentLike {
+  memberId: Automerge.ImmutableString | null;
+  customFrontId: Automerge.ImmutableString | null;
+  structureEntityId: Automerge.ImmutableString | null;
+}
+
+/**
+ * Post-merge validation for fronting comment author constraint:
+ * At least one of memberId/customFrontId/structureEntityId must be non-null.
+ *
+ * Mirrors the DB constraint fronting_comments_author_check.
+ * Notification-only — auto-fixing would mean choosing an author, risking data loss.
+ */
+export function normalizeFrontingCommentAuthors(session: EncryptedSyncSession<unknown>): {
+  notifications: ConflictNotification[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+  const now = Date.now();
+  const notifications: ConflictNotification[] = [];
+
+  const comments = getEntityMap<FrontingCommentLike>(doc, "comments");
+  if (!comments) return { notifications, envelope: null };
+
+  for (const [commentId, comment] of Object.entries(comments)) {
+    const hasMember = comment.memberId !== null;
+    const hasCustomFront = comment.customFrontId !== null;
+    const hasStructureEntity = comment.structureEntityId !== null;
+    if (!hasMember && !hasCustomFront && !hasStructureEntity) {
+      notifications.push({
+        entityType: "fronting-comment",
+        entityId: commentId,
+        fieldName: "author",
+        resolution: "notification-only",
+        detectedAt: now,
+        summary: `Fronting comment ${commentId} has no author (memberId, customFrontId, structureEntityId all null)`,
+      });
+    }
+  }
+
+  return { notifications, envelope: null };
+}
+
 /**
  * Post-merge validation for timer configs:
  * - If wakingHoursOnly is true, wakingStart must be before wakingEnd
@@ -866,6 +909,7 @@ export function runAllValidations(
 
   // Fronting documents are identified by having all three of these fields.
   // If a future document type shares these field names, add its detection BEFORE this block.
+  let frontingCommentAuthorIssues = 0;
   if ("sessions" in doc && "comments" in doc && "checkInRecords" in doc) {
     try {
       const frontingResult = normalizeFrontingSessions(session);
@@ -877,6 +921,15 @@ export function runAllValidations(
     } catch (error) {
       errors.push({ validator: "normalizeFrontingSessions", error });
       onError?.("Fronting session normalization failed", error);
+    }
+
+    try {
+      const commentResult = normalizeFrontingCommentAuthors(session);
+      frontingCommentAuthorIssues = commentResult.notifications.length;
+      notifications.push(...commentResult.notifications);
+    } catch (error) {
+      errors.push({ validator: "normalizeFrontingCommentAuthors", error });
+      onError?.("Fronting comment author validation failed", error);
     }
   }
 
@@ -909,6 +962,7 @@ export function runAllValidations(
     checkInNormalizations,
     friendConnectionNormalizations,
     frontingSessionNormalizations,
+    frontingCommentAuthorIssues,
     timerConfigNormalizations,
     webhookConfigIssues,
     correctionEnvelopes,
