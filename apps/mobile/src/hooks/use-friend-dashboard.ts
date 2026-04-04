@@ -2,7 +2,6 @@ import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFriendDashboard } from "@pluralscape/data/transforms/friend-dashboard";
 import { useCallback } from "react";
 
-
 import { useBucketKeys } from "../providers/bucket-key-provider.js";
 
 import type { TRPCQuery } from "./types.js";

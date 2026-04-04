@@ -1,11 +1,11 @@
 ---
 # ps-sxcy
 title: Social data hooks
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:49Z
-updated_at: 2026-04-04T09:04:00Z
+updated_at: 2026-04-04T16:02:24Z
 parent: ps-7j8n
 ---
 
@@ -70,3 +70,5 @@ Tests must run hooks inside the real React lifecycle. Reference implementation: 
 - Use `?.` optional chaining, never `!` non-null assertions
 - Destructure page arrays: `const [firstPage] = pages; const [item0] = firstPage?.data ?? [];`
 - Never use `as any`, `as unknown as`, or `eslint-disable`
+
+## Summary of Changes\n\nAll 5 feature beans completed:\n- T3 hooks: privacy buckets, notification config, device tokens, friend network (connections + codes)\n- T2 hooks: friend dashboard with BucketKeyProvider decryption, friend export with REST ETag caching\n- Infrastructure: listReceivedKeyGrants bulk endpoint (tRPC + REST), BucketKeyProvider, RestClientProvider, T2 decode helpers\n- All transforms, hooks, and tests implemented

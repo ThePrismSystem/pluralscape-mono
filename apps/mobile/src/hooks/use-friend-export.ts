@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 
-
 import { useRestClient } from "../providers/rest-client-provider.js";
 
 import type {

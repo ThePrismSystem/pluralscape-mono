@@ -27,7 +27,12 @@
     "./transforms/innerworld-region": "./src/transforms/innerworld-region.ts",
     "./transforms/innerworld-canvas": "./src/transforms/innerworld-canvas.ts",
     "./transforms/snapshot": "./src/transforms/snapshot.ts",
-    "./transforms/friend-dashboard": "./src/transforms/friend-dashboard.ts"
+    "./transforms/friend-dashboard": "./src/transforms/friend-dashboard.ts",
+    "./transforms/privacy-bucket": "./src/transforms/privacy-bucket.ts",
+    "./transforms/notification-config": "./src/transforms/notification-config.ts",
+    "./transforms/device-token": "./src/transforms/device-token.ts",
+    "./transforms/friend-connection": "./src/transforms/friend-connection.ts",
+    "./transforms/friend-code": "./src/transforms/friend-code.ts"
   },
   "scripts": {
     "test": "vitest run",
