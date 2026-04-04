@@ -19,7 +19,14 @@
     "./transforms/board-message": "./src/transforms/board-message.ts",
     "./transforms/poll": "./src/transforms/poll.ts",
     "./transforms/note": "./src/transforms/note.ts",
-    "./transforms/acknowledgement": "./src/transforms/acknowledgement.ts"
+    "./transforms/acknowledgement": "./src/transforms/acknowledgement.ts",
+    "./transforms/structure-entity-type": "./src/transforms/structure-entity-type.ts",
+    "./transforms/structure-entity": "./src/transforms/structure-entity.ts",
+    "./transforms/relationship": "./src/transforms/relationship.ts",
+    "./transforms/innerworld-entity": "./src/transforms/innerworld-entity.ts",
+    "./transforms/innerworld-region": "./src/transforms/innerworld-region.ts",
+    "./transforms/innerworld-canvas": "./src/transforms/innerworld-canvas.ts",
+    "./transforms/snapshot": "./src/transforms/snapshot.ts"
   },
   "scripts": {
     "test": "vitest run",
