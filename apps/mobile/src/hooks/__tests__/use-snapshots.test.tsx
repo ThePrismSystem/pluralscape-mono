@@ -199,6 +199,18 @@ describe("useSnapshotsList", () => {
     rerender();
     expect(result.current.data).toBe(ref1);
   });
+
+  it("handles empty page", async () => {
+    fixtures.set("snapshot.list", { data: [], nextCursor: null });
+    const { result } = renderHookWithProviders(() => useSnapshotsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    const [firstPage] = pages;
+    expect(firstPage?.data).toHaveLength(0);
+  });
 });
 
 // ── Mutation tests ──────────────────────────────────────────────────

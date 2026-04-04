@@ -319,6 +319,18 @@ describe("useInnerWorldEntitiesList", () => {
     rerender();
     expect(result.current.data).toBe(ref1);
   });
+
+  it("handles empty page", async () => {
+    fixtures.set("innerworld.entity.list", { data: [], nextCursor: null });
+    const { result } = renderHookWithProviders(() => useInnerWorldEntitiesList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    const [firstPage] = pages;
+    expect(firstPage?.data).toHaveLength(0);
+  });
 });
 
 // ── Mutation tests ──────────────────────────────────────────────────
