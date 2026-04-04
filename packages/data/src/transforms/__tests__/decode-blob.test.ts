@@ -14,6 +14,7 @@ import {
   decodeAndDecryptT2,
   encryptAndEncodeT1,
   encryptAndEncodeT2,
+  extractT2BucketId,
 } from "../decode-blob.js";
 
 import { toBase64 } from "./helpers.js";
@@ -103,5 +104,22 @@ describe("encryptAndEncodeT2", () => {
 
     const result = decodeAndDecryptT2(base64, bucketKey);
     expect(result).toEqual(plaintext);
+  });
+});
+
+describe("extractT2BucketId", () => {
+  it("returns the bucket ID from a valid T2 blob", () => {
+    const base64 = encryptAndEncodeT2({ hello: "world" }, bucketKey, bucketId);
+    const result = extractT2BucketId(base64);
+    expect(result).toBe(bucketId);
+  });
+
+  it("throws when given a T1 blob", () => {
+    const base64 = encryptAndEncodeT1({ x: 1 }, masterKey);
+    expect(() => extractT2BucketId(base64)).toThrow("Expected T2 blob, got tier 1");
+  });
+
+  it("throws on malformed base64", () => {
+    expect(() => extractT2BucketId("not-valid-base64!!!")).toThrow();
   });
 });
