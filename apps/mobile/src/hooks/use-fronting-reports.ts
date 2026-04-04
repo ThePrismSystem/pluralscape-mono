@@ -14,11 +14,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  FrontingReportPage,
+  FrontingReportRaw,
+} from "@pluralscape/data/transforms/fronting-report";
 import type { FrontingReport, FrontingReportId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawReport = RouterOutput["frontingReport"]["get"];
-type RawReportPage = RouterOutput["frontingReport"]["list"];
 type ReportPage = { readonly data: FrontingReport[]; readonly nextCursor: string | null };
 
 interface FrontingReportListOpts extends SystemIdOverride {
@@ -34,7 +35,7 @@ export function useFrontingReport(
   const masterKey = useMasterKey();
 
   const selectFrontingReport = useCallback(
-    (raw: RawReport): FrontingReport => {
+    (raw: FrontingReportRaw): FrontingReport => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptFrontingReport(raw, masterKey);
     },
@@ -58,7 +59,7 @@ export function useFrontingReportsList(
   const masterKey = useMasterKey();
 
   const selectFrontingReportsList = useCallback(
-    (data: InfiniteData<RawReportPage>): InfiniteData<ReportPage> => {
+    (data: InfiniteData<FrontingReportPage>): InfiniteData<ReportPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -79,7 +80,7 @@ export function useFrontingReportsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawReportPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: FrontingReportPage) => lastPage.nextCursor,
       select: selectFrontingReportsList,
     },
   );

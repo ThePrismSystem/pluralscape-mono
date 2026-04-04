@@ -14,12 +14,13 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { NoteDecrypted } from "@pluralscape/data/transforms/note";
+import type {
+  NoteDecrypted,
+  NotePage as NoteRawPage,
+  NoteRaw,
+} from "@pluralscape/data/transforms/note";
 import type { Archived, NoteAuthorEntityType, NoteId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawNote = RouterOutput["note"]["get"];
-type RawNotePage = RouterOutput["note"]["list"];
 type NotePage = {
   readonly data: (NoteDecrypted | Archived<NoteDecrypted>)[];
   readonly nextCursor: string | null;
@@ -42,7 +43,7 @@ export function useNote(
   const masterKey = useMasterKey();
 
   const selectNote = useCallback(
-    (raw: RawNote): NoteDecrypted | Archived<NoteDecrypted> => {
+    (raw: NoteRaw): NoteDecrypted | Archived<NoteDecrypted> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptNote(raw, masterKey);
     },
@@ -64,7 +65,7 @@ export function useNotesList(opts?: NoteListOpts): TRPCInfiniteQuery<NotePage> {
   const masterKey = useMasterKey();
 
   const selectNotePage = useCallback(
-    (data: InfiniteData<RawNotePage>): InfiniteData<NotePage> => {
+    (data: InfiniteData<NoteRawPage>): InfiniteData<NotePage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -86,7 +87,7 @@ export function useNotesList(opts?: NoteListOpts): TRPCInfiniteQuery<NotePage> {
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawNotePage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: NoteRawPage) => lastPage.nextCursor,
       select: selectNotePage,
     },
   );

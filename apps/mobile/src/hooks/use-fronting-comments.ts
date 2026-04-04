@@ -15,15 +15,16 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
+  FrontingCommentPage,
+  FrontingCommentRaw,
+} from "@pluralscape/data/transforms/fronting-comment";
+import type {
   Archived,
   FrontingComment,
   FrontingCommentId,
   FrontingSessionId,
 } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawComment = RouterOutput["frontingComment"]["get"];
-type RawCommentPage = RouterOutput["frontingComment"]["list"];
 type CommentPage = {
   readonly data: (FrontingComment | Archived<FrontingComment>)[];
   readonly nextCursor: string | null;
@@ -44,7 +45,7 @@ export function useFrontingComment(
   const masterKey = useMasterKey();
 
   const selectFrontingComment = useCallback(
-    (raw: RawComment): FrontingComment | Archived<FrontingComment> => {
+    (raw: FrontingCommentRaw): FrontingComment | Archived<FrontingComment> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptFrontingComment(raw, masterKey);
     },
@@ -69,7 +70,7 @@ export function useFrontingCommentsList(
   const masterKey = useMasterKey();
 
   const selectFrontingCommentsList = useCallback(
-    (data: InfiniteData<RawCommentPage>): InfiniteData<CommentPage> => {
+    (data: InfiniteData<FrontingCommentPage>): InfiniteData<CommentPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -92,7 +93,7 @@ export function useFrontingCommentsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawCommentPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: FrontingCommentPage) => lastPage.nextCursor,
       select: selectFrontingCommentsList,
     },
   );

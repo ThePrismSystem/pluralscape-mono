@@ -14,11 +14,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  ChannelPage as ChannelRawPage,
+  ChannelRaw,
+} from "@pluralscape/data/transforms/channel";
 import type { Archived, Channel, ChannelId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawChannel = RouterOutput["channel"]["get"];
-type RawChannelPage = RouterOutput["channel"]["list"];
 type ChannelPage = {
   readonly data: (Channel | Archived<Channel>)[];
   readonly nextCursor: string | null;
@@ -38,7 +39,7 @@ export function useChannel(
   const masterKey = useMasterKey();
 
   const selectChannel = useCallback(
-    (raw: RawChannel): Channel | Archived<Channel> => {
+    (raw: ChannelRaw): Channel | Archived<Channel> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptChannel(raw, masterKey);
     },
@@ -60,7 +61,7 @@ export function useChannelsList(opts?: ChannelListOpts): TRPCInfiniteQuery<Chann
   const masterKey = useMasterKey();
 
   const selectChannelPage = useCallback(
-    (data: InfiniteData<RawChannelPage>): InfiniteData<ChannelPage> => {
+    (data: InfiniteData<ChannelRawPage>): InfiniteData<ChannelPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -79,7 +80,7 @@ export function useChannelsList(opts?: ChannelListOpts): TRPCInfiniteQuery<Chann
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawChannelPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: ChannelRawPage) => lastPage.nextCursor,
       select: selectChannelPage,
     },
   );

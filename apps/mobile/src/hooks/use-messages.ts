@@ -14,11 +14,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  MessagePage as MessageRawPage,
+  MessageRaw,
+} from "@pluralscape/data/transforms/message";
 import type { ArchivedChatMessage, ChannelId, ChatMessage, MessageId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawMessage = RouterOutput["message"]["get"];
-type RawMessagePage = RouterOutput["message"]["list"];
 type MessagePage = {
   readonly data: (ChatMessage | ArchivedChatMessage)[];
   readonly nextCursor: string | null;
@@ -45,7 +46,7 @@ export function useMessage(
   const masterKey = useMasterKey();
 
   const selectMessage = useCallback(
-    (raw: RawMessage): ChatMessage | ArchivedChatMessage => {
+    (raw: MessageRaw): ChatMessage | ArchivedChatMessage => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptMessage(raw, masterKey);
     },
@@ -70,7 +71,7 @@ export function useMessagesList(
   const masterKey = useMasterKey();
 
   const selectMessagePage = useCallback(
-    (data: InfiniteData<RawMessagePage>): InfiniteData<MessagePage> => {
+    (data: InfiniteData<MessageRawPage>): InfiniteData<MessagePage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -92,7 +93,7 @@ export function useMessagesList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawMessagePage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: MessageRawPage) => lastPage.nextCursor,
       select: selectMessagePage,
     },
   );

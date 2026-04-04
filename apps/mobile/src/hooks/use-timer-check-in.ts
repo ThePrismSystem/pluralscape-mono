@@ -17,19 +17,21 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  CheckInRecordPage,
+  CheckInRecordRaw,
+  TimerConfigPage,
+  TimerConfigRaw,
+} from "@pluralscape/data/transforms/timer-check-in";
 import type { Archived, TimerConfig, TimerId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
-type RawTimerConfig = RouterOutput["timerConfig"]["get"];
-type RawTimerConfigPage = RouterOutput["timerConfig"]["list"];
-type RawCheckInPage = RouterOutput["checkInRecord"]["list"];
-type CheckInRecord = RouterOutput["checkInRecord"]["get"];
 type TimerPage = {
   readonly data: (TimerConfig | Archived<TimerConfig>)[];
   readonly nextCursor: string | null;
 };
 type CheckInPage = {
-  readonly data: CheckInRecord[];
+  readonly data: CheckInRecordRaw[];
   readonly nextCursor: string | null;
 };
 
@@ -54,7 +56,7 @@ export function useTimerConfig(
   const masterKey = useMasterKey();
 
   const selectTimerConfig = useCallback(
-    (raw: RawTimerConfig): TimerConfig | Archived<TimerConfig> => {
+    (raw: TimerConfigRaw): TimerConfig | Archived<TimerConfig> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptTimerConfig(raw, masterKey);
     },
@@ -76,7 +78,7 @@ export function useTimerConfigsList(opts?: TimerConfigListOpts): TRPCInfiniteQue
   const masterKey = useMasterKey();
 
   const selectTimerConfigsList = useCallback(
-    (data: InfiniteData<RawTimerConfigPage>): InfiniteData<TimerPage> => {
+    (data: InfiniteData<TimerConfigPage>): InfiniteData<TimerPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -95,7 +97,7 @@ export function useTimerConfigsList(opts?: TimerConfigListOpts): TRPCInfiniteQue
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawTimerConfigPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: TimerConfigPage) => lastPage.nextCursor,
       select: selectTimerConfigsList,
     },
   );
@@ -150,7 +152,7 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
   const systemId = opts?.systemId ?? activeSystemId;
 
   const selectCheckInHistory = useCallback(
-    (data: InfiniteData<RawCheckInPage>): InfiniteData<CheckInPage> => ({
+    (data: InfiniteData<CheckInRecordPage>): InfiniteData<CheckInPage> => ({
       ...data,
       pages: data.pages.map((page) => ({
         data: [...page.data],
@@ -169,7 +171,7 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      getNextPageParam: (lastPage: RawCheckInPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: CheckInRecordPage) => lastPage.nextCursor,
       select: selectCheckInHistory,
     },
   );
