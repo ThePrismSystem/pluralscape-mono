@@ -26,7 +26,8 @@
     "./transforms/innerworld-entity": "./src/transforms/innerworld-entity.ts",
     "./transforms/innerworld-region": "./src/transforms/innerworld-region.ts",
     "./transforms/innerworld-canvas": "./src/transforms/innerworld-canvas.ts",
-    "./transforms/snapshot": "./src/transforms/snapshot.ts"
+    "./transforms/snapshot": "./src/transforms/snapshot.ts",
+    "./transforms/friend-dashboard": "./src/transforms/friend-dashboard.ts"
   },
   "scripts": {
     "test": "vitest run",
