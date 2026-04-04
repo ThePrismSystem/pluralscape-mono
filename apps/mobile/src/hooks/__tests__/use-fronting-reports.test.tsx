@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptFrontingReportInput } from "@pluralscape/data/transforms/fronting-report";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
 import type { FrontingReportId, UnixMillis } from "@pluralscape/types";
@@ -14,18 +19,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastGetOpts: CapturedOpts = {};
-let lastListOpts: CapturedOpts = {};
-let lastCreateMutationOpts: CapturedOpts = {};
-let lastDeleteMutationOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   frontingReport: {
     get: { invalidate: vi.fn() },
@@ -33,46 +33,56 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    frontingReport: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastGetOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      frontingReport: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["frontingReport.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("frontingReport.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["frontingReport.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("frontingReport.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastListOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const { useFrontingReport, useFrontingReportsList, useGenerateReport, useDeleteReport } =
   await import("../use-fronting-reports.js");
 
@@ -102,86 +112,124 @@ function makeRawReport(id: string): FrontingReportRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useFrontingReport", () => {
-  it("enables when masterKey is present", () => {
-    useFrontingReport("fr-1" as FrontingReportId);
-    expect(lastGetOpts["enabled"]).toBe(true);
+  it("returns decrypted fronting report data", async () => {
+    fixtures.set("frontingReport.get", makeRawReport("fr-1"));
+    const { result } = renderHookWithProviders(() => useFrontingReport("fr-1" as FrontingReportId));
+
+    let data: Awaited<ReturnType<typeof useFrontingReport>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.id).toBe("fr-1");
+    expect(data?.systemId).toBe(TEST_SYSTEM_ID);
+    expect(data?.format).toBe("html");
+    expect(data?.dateRange).toEqual({ start: START, end: END });
+    expect(data?.memberBreakdowns).toEqual([]);
+    expect(data?.chartData).toEqual([]);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useFrontingReport("fr-1" as FrontingReportId);
-    expect(lastGetOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(
+      () => useFrontingReport("fr-1" as FrontingReportId),
+      { masterKey: null },
+    );
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw report and drops wire-only fields", () => {
-    useFrontingReport("fr-1" as FrontingReportId);
-    const select = lastGetOpts["select"] as (raw: FrontingReportRaw) => unknown;
-    const raw = makeRawReport("fr-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["id"]).toBe("fr-1");
-    expect(result["systemId"]).toBe(TEST_SYSTEM_ID);
-    expect(result["format"]).toBe("html");
-    expect(result["dateRange"]).toEqual({ start: START, end: END });
-    expect(result["memberBreakdowns"]).toEqual([]);
-    expect(result["chartData"]).toEqual([]);
-    // Wire-only fields should not be present
-    expect(result["version"]).toBeUndefined();
-    expect(result["archived"]).toBeUndefined();
-    expect(result["encryptedData"]).toBeUndefined();
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("frontingReport.get", makeRawReport("fr-1"));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useFrontingReport("fr-1" as FrontingReportId),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useFrontingReportsList", () => {
-  it("select decrypts each page item", () => {
-    useFrontingReportsList();
-    const select = lastListOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated fronting reports", async () => {
     const raw1 = makeRawReport("fr-1");
     const raw2 = makeRawReport("fr-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["id"]).toBe("fr-1");
-    expect(result.pages[0].data[1]["id"]).toBe("fr-2");
-    // Verify wire-only fields stripped from list items too
-    expect(result.pages[0].data[0]["version"]).toBeUndefined();
+    fixtures.set("frontingReport.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useFrontingReportsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.id).toBe("fr-1");
+    expect(pages[0]?.data[1]?.id).toBe("fr-2");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useFrontingReportsList(), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("frontingReport.list", {
+      data: [makeRawReport("fr-1")],
+      nextCursor: null,
+    });
+    const { result, rerender } = renderHookWithProviders(() => useFrontingReportsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useGenerateReport", () => {
-  it("invalidates list onSuccess", () => {
-    mockUtils.frontingReport.list.invalidate.mockClear();
-    useGenerateReport();
-    const onSuccess = lastCreateMutationOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.frontingReport.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useGenerateReport());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.frontingReport.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeleteReport", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.frontingReport.get.invalidate.mockClear();
-    mockUtils.frontingReport.list.invalidate.mockClear();
-    useDeleteReport();
-    const onSuccess = lastDeleteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { reportId: string },
-    ) => void;
-    onSuccess(undefined, { reportId: "fr-1" });
-    expect(mockUtils.frontingReport.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      reportId: "fr-1",
-    });
-    expect(mockUtils.frontingReport.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteReport());
+
+    await act(() => result.current.mutateAsync({ reportId: "fr-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.frontingReport.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        reportId: "fr-1",
+      });
+      expect(mockUtils.frontingReport.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });

@@ -1,40 +1,31 @@
 // @vitest-environment happy-dom
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { encryptPollInput } from "@pluralscape/data/transforms/poll";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { encryptPollInput, encryptPollVoteInput } from "@pluralscape/data/transforms/poll";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
-import type { PollRaw } from "@pluralscape/data/transforms/poll";
-import type { PollId, PollOptionId, UnixMillis } from "@pluralscape/types";
+import type { PollRaw, PollVoteRaw } from "@pluralscape/data/transforms/poll";
+import type { PollId, PollOptionId, PollVoteId, UnixMillis } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastQueryOpts: CapturedOpts = {};
-let lastInfiniteOpts: CapturedOpts = {};
-let lastResultsQueryOpts: CapturedOpts = {};
-let lastVotesInfiniteOpts: CapturedOpts = {};
-let lastCreateMutationOpts: CapturedOpts = {};
-let lastUpdateMutationOpts: CapturedOpts = {};
-let lastCloseMutationOpts: CapturedOpts = {};
-let lastArchiveMutationOpts: CapturedOpts = {};
-let lastRestoreMutationOpts: CapturedOpts = {};
-let lastDeleteMutationOpts: CapturedOpts = {};
-let lastCastVoteMutationOpts: CapturedOpts = {};
-let lastUpdateVoteMutationOpts: CapturedOpts = {};
-let lastDeleteVoteMutationOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   poll: {
     get: { invalidate: vi.fn() },
@@ -44,102 +35,139 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    poll: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastQueryOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      poll: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["poll.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("poll.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["poll.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("poll.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        results: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["poll.results", input],
+              queryFn: () => Promise.resolve(fixtures.get("poll.results")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        listVotes: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["poll.listVotes", input],
+              queryFn: () => Promise.resolve(fixtures.get("poll.listVotes")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        update: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        close: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        archive: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        restore: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        castVote: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        updateVote: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        deleteVote: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastInfiniteOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      results: {
-        useQuery: (_input: unknown, opts?: CapturedOpts) => {
-          lastResultsQueryOpts = opts ?? { _called: true };
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-        invalidate: vi.fn(),
-      },
-      listVotes: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastVotesInfiniteOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-        invalidate: vi.fn(),
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      update: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      close: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCloseMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      archive: {
-        useMutation: (opts: CapturedOpts) => {
-          lastArchiveMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      restore: {
-        useMutation: (opts: CapturedOpts) => {
-          lastRestoreMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      castVote: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCastVoteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      updateVote: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateVoteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      deleteVote: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteVoteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   usePoll,
   usePollsList,
@@ -162,7 +190,7 @@ const NOW = 1_700_000_000_000 as UnixMillis;
 function makeRawPoll(id: string): PollRaw {
   const encrypted = encryptPollInput(
     {
-      title: "Vote",
+      title: `Poll ${id}`,
       description: null,
       options: [
         { id: "opt-1" as PollOptionId, label: "Yes", voteCount: 0, color: null, emoji: null },
@@ -191,266 +219,334 @@ function makeRawPoll(id: string): PollRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+function makeRawPollVote(id: string, pollId: string): PollVoteRaw {
+  const encrypted = encryptPollVoteInput({ comment: "My comment" }, TEST_MASTER_KEY);
+  return {
+    id: id as PollVoteId,
+    pollId: pollId as PollId,
+    optionId: "opt-1" as PollOptionId,
+    voter: null,
+    isVeto: false,
+    votedAt: NOW,
+    archived: false,
+    archivedAt: null,
+    ...encrypted,
+  };
+}
+
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ──────────────────────────────────────────────────────
 describe("usePoll", () => {
-  it("enables when masterKey is present", () => {
-    usePoll("poll-1" as PollId);
-    expect(lastQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted poll data", async () => {
+    fixtures.set("poll.get", makeRawPoll("p-1"));
+    const { result } = renderHookWithProviders(() => usePoll("p-1" as PollId));
+
+    let data: Awaited<ReturnType<typeof usePoll>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.title).toBe("Poll p-1");
+    expect(data?.description).toBeNull();
+    expect(data?.kind).toBe("standard");
+    expect(data?.status).toBe("open");
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    usePoll("poll-1" as PollId);
-    expect(lastQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => usePoll("p-1" as PollId), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw poll correctly", () => {
-    usePoll("poll-1" as PollId);
-    const select = lastQueryOpts["select"] as (raw: PollRaw) => unknown;
-    const raw = makeRawPoll("poll-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["title"]).toBe("Vote");
-    expect(result["description"]).toBeNull();
-    expect(result["kind"]).toBe("standard");
-    expect(result["status"]).toBe("open");
-    expect(result["archived"]).toBe(false);
-    const options = result["options"] as Array<Record<string, unknown>>;
-    expect(options).toHaveLength(1);
-    expect(options[0]?.["label"]).toBe("Yes");
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("poll.get", makeRawPoll("p-1"));
+    const { result, rerender } = renderHookWithProviders(() => usePoll("p-1" as PollId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("usePollsList", () => {
-  it("select decrypts each page item", () => {
-    usePollsList();
-    const select = lastInfiniteOpts["select"] as (data: unknown) => unknown;
-    const raw1 = makeRawPoll("poll-1");
-    const raw2 = makeRawPoll("poll-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["title"]).toBe("Vote");
-    expect(result.pages[0].data[1]["title"]).toBe("Vote");
+  it("returns decrypted paginated polls", async () => {
+    const raw1 = makeRawPoll("p-1");
+    const raw2 = makeRawPoll("p-2");
+    fixtures.set("poll.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => usePollsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.title).toBe("Poll p-1");
+    expect(pages[0]?.data[1]?.title).toBe("Poll p-2");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => usePollsList(), { masterKey: null });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("poll.list", { data: [makeRawPoll("p-1")], nextCursor: null });
+    const { result, rerender } = renderHookWithProviders(() => usePollsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("usePollResults", () => {
-  it("calls useQuery without enabled guard", () => {
-    usePollResults("poll-1" as PollId);
-    // usePollResults does not use masterKey or enabled guard
-    expect(lastResultsQueryOpts).toBeDefined();
+  it("returns poll results data", async () => {
+    const resultsFixture = {
+      pollId: "p-1" as PollId,
+      totalVotes: 5,
+      vetoCount: 0,
+      optionCounts: [{ optionId: "opt-1" as PollOptionId, count: 5 }],
+    };
+    fixtures.set("poll.results", resultsFixture);
+
+    const { result } = renderHookWithProviders(() => usePollResults("p-1" as PollId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const data = result.current.data as typeof resultsFixture;
+    expect(data.totalVotes).toBe(5);
+    expect(data.pollId).toBe("p-1");
   });
 });
 
 describe("usePollVotes", () => {
-  it("enables when masterKey is present", () => {
-    usePollVotes("poll-1" as PollId);
-    expect(lastVotesInfiniteOpts["enabled"]).toBe(true);
+  it("returns decrypted paginated votes", async () => {
+    const rawVote = makeRawPollVote("v-1", "p-1");
+    fixtures.set("poll.listVotes", { data: [rawVote], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => usePollVotes("p-1" as PollId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(1);
+    expect(pages[0]?.data[0]?.comment).toBe("My comment");
+    expect(pages[0]?.data[0]?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    usePollVotes("poll-1" as PollId);
-    expect(lastVotesInfiniteOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => usePollVotes("p-1" as PollId), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    const rawVote = makeRawPollVote("v-1", "p-1");
+    fixtures.set("poll.listVotes", { data: [rawVote], nextCursor: null });
+    const { result, rerender } = renderHookWithProviders(() => usePollVotes("p-1" as PollId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ───────────────────────────────────────────────────
 describe("useCreatePoll", () => {
-  it("invalidates list on success", () => {
-    mockUtils.poll.list.invalidate.mockClear();
-    useCreatePoll();
-    const onSuccess = lastCreateMutationOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreatePoll());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUpdatePoll", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.poll.get.invalidate.mockClear();
-    mockUtils.poll.list.invalidate.mockClear();
-    useUpdatePoll();
-    const onSuccess = lastUpdateMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-1" });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-1",
-    });
-    expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdatePoll());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-1",
+      });
+      expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useClosePoll", () => {
-  it("invalidates get, list, and results on success", () => {
-    mockUtils.poll.get.invalidate.mockClear();
-    mockUtils.poll.list.invalidate.mockClear();
-    mockUtils.poll.results.invalidate.mockClear();
-    useClosePoll();
-    const onSuccess = lastCloseMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-1" });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-1",
-    });
-    expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-    });
-    expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-1",
+  it("invalidates get, list, and results on success", async () => {
+    const { result } = renderHookWithProviders(() => useClosePoll());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-1",
+      });
+      expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
+      expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-1",
+      });
     });
   });
 });
 
 describe("useArchivePoll", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.poll.get.invalidate.mockClear();
-    mockUtils.poll.list.invalidate.mockClear();
-    useArchivePoll();
-    const onSuccess = lastArchiveMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-2" });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-2",
-    });
-    expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useArchivePoll());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-2",
+      });
+      expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useRestorePoll", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.poll.get.invalidate.mockClear();
-    mockUtils.poll.list.invalidate.mockClear();
-    useRestorePoll();
-    const onSuccess = lastRestoreMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-3" });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-3",
-    });
-    expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useRestorePoll());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-3" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-3",
+      });
+      expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeletePoll", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.poll.get.invalidate.mockClear();
-    mockUtils.poll.list.invalidate.mockClear();
-    useDeletePoll();
-    const onSuccess = lastDeleteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-4" });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-4",
-    });
-    expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeletePoll());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-4" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-4",
+      });
+      expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useCastVote", () => {
-  it("invalidates results, listVotes, and get on success", () => {
-    mockUtils.poll.results.invalidate.mockClear();
-    mockUtils.poll.listVotes.invalidate.mockClear();
-    mockUtils.poll.get.invalidate.mockClear();
-    useCastVote();
-    const onSuccess = lastCastVoteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-1" });
-    expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-1",
-    });
-    expect(mockUtils.poll.listVotes.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-1",
-    });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-1",
+  it("invalidates results, listVotes, and get on success", async () => {
+    const { result } = renderHookWithProviders(() => useCastVote());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-1",
+      });
+      expect(mockUtils.poll.listVotes.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-1",
+      });
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-1",
+      });
     });
   });
 });
 
 describe("useUpdateVote", () => {
-  it("invalidates results, listVotes, and get on success", () => {
-    mockUtils.poll.results.invalidate.mockClear();
-    mockUtils.poll.listVotes.invalidate.mockClear();
-    mockUtils.poll.get.invalidate.mockClear();
-    useUpdateVote();
-    const onSuccess = lastUpdateVoteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-2" });
-    expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-2",
-    });
-    expect(mockUtils.poll.listVotes.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-2",
-    });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-2",
+  it("invalidates results, listVotes, and get on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateVote());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-2",
+      });
+      expect(mockUtils.poll.listVotes.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-2",
+      });
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-2",
+      });
     });
   });
 });
 
 describe("useDeleteVote", () => {
-  it("invalidates results, listVotes, and get on success", () => {
-    mockUtils.poll.results.invalidate.mockClear();
-    mockUtils.poll.listVotes.invalidate.mockClear();
-    mockUtils.poll.get.invalidate.mockClear();
-    useDeleteVote();
-    const onSuccess = lastDeleteVoteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { pollId: string },
-    ) => void;
-    onSuccess(undefined, { pollId: "poll-3" });
-    expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-3",
-    });
-    expect(mockUtils.poll.listVotes.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-3",
-    });
-    expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      pollId: "poll-3",
+  it("invalidates results, listVotes, and get on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteVote());
+
+    await act(() => result.current.mutateAsync({ pollId: "p-3" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.poll.results.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-3",
+      });
+      expect(mockUtils.poll.listVotes.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-3",
+      });
+      expect(mockUtils.poll.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        pollId: "p-3",
+      });
     });
   });
 });

@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptBoardMessageInput } from "@pluralscape/data/transforms/board-message";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { BoardMessageRaw } from "@pluralscape/data/transforms/board-message";
 import type { BoardMessageId, MemberId, UnixMillis } from "@pluralscape/types";
@@ -14,24 +19,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastQueryOpts: CapturedOpts = {};
-let lastInfiniteOpts: CapturedOpts = {};
-let lastCreateMutationOpts: CapturedOpts = {};
-let lastUpdateMutationOpts: CapturedOpts = {};
-let lastArchiveMutationOpts: CapturedOpts = {};
-let lastRestoreMutationOpts: CapturedOpts = {};
-let lastDeleteMutationOpts: CapturedOpts = {};
-let lastPinMutationOpts: CapturedOpts = {};
-let lastUnpinMutationOpts: CapturedOpts = {};
-let lastReorderMutationOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   boardMessage: {
     get: { invalidate: vi.fn() },
@@ -39,82 +33,108 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    boardMessage: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastQueryOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      boardMessage: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["boardMessage.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("boardMessage.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["boardMessage.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("boardMessage.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        update: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        archive: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        restore: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        pin: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        unpin: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        reorder: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastInfiniteOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      update: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      archive: {
-        useMutation: (opts: CapturedOpts) => {
-          lastArchiveMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      restore: {
-        useMutation: (opts: CapturedOpts) => {
-          lastRestoreMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      pin: {
-        useMutation: (opts: CapturedOpts) => {
-          lastPinMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      unpin: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUnpinMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      reorder: {
-        useMutation: (opts: CapturedOpts) => {
-          lastReorderMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useBoardMessage,
   useBoardMessagesList,
@@ -150,190 +170,224 @@ function makeRawBoardMessage(id: string): BoardMessageRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useBoardMessage", () => {
-  it("enables when masterKey is present", () => {
-    useBoardMessage("bm-1" as BoardMessageId);
-    expect(lastQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted board message data", async () => {
+    fixtures.set("boardMessage.get", makeRawBoardMessage("bm-1"));
+    const { result } = renderHookWithProviders(() => useBoardMessage("bm-1" as BoardMessageId));
+
+    let data: Awaited<ReturnType<typeof useBoardMessage>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.content).toBe("Board post");
+    expect(data?.pinned).toBe(false);
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useBoardMessage("bm-1" as BoardMessageId);
-    expect(lastQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useBoardMessage("bm-1" as BoardMessageId), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw board message correctly", () => {
-    useBoardMessage("bm-1" as BoardMessageId);
-    const select = lastQueryOpts["select"] as (raw: BoardMessageRaw) => unknown;
-    const raw = makeRawBoardMessage("bm-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["content"]).toBe("Board post");
-    expect(result["senderId"]).toBe("m-1");
-    expect(result["pinned"]).toBe(false);
-    expect(result["archived"]).toBe(false);
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("boardMessage.get", makeRawBoardMessage("bm-1"));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useBoardMessage("bm-1" as BoardMessageId),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useBoardMessagesList", () => {
-  it("select decrypts each page item", () => {
-    useBoardMessagesList();
-    const select = lastInfiniteOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated board messages", async () => {
     const raw1 = makeRawBoardMessage("bm-1");
     const raw2 = makeRawBoardMessage("bm-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["content"]).toBe("Board post");
-    expect(result.pages[0].data[1]["content"]).toBe("Board post");
+    fixtures.set("boardMessage.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useBoardMessagesList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0].data).toHaveLength(2);
+    expect(pages[0].data[0].content).toBe("Board post");
+    expect(pages[0].data[1].content).toBe("Board post");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useBoardMessagesList(), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("boardMessage.list", {
+      data: [makeRawBoardMessage("bm-1")],
+      nextCursor: null,
+    });
+    const { result, rerender } = renderHookWithProviders(() => useBoardMessagesList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useCreateBoardMessage", () => {
-  it("invalidates list on success", () => {
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useCreateBoardMessage();
-    const onSuccess = lastCreateMutationOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateBoardMessage());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUpdateBoardMessage", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useUpdateBoardMessage();
-    const onSuccess = lastUpdateMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { boardMessageId: string },
-    ) => void;
-    onSuccess(undefined, { boardMessageId: "bm-1" });
-    expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      boardMessageId: "bm-1",
-    });
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateBoardMessage());
+
+    await act(() => result.current.mutateAsync({ boardMessageId: "bm-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        boardMessageId: "bm-1",
+      });
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useArchiveBoardMessage", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useArchiveBoardMessage();
-    const onSuccess = lastArchiveMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { boardMessageId: string },
-    ) => void;
-    onSuccess(undefined, { boardMessageId: "bm-2" });
-    expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      boardMessageId: "bm-2",
-    });
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useArchiveBoardMessage());
+
+    await act(() => result.current.mutateAsync({ boardMessageId: "bm-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        boardMessageId: "bm-2",
+      });
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useRestoreBoardMessage", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useRestoreBoardMessage();
-    const onSuccess = lastRestoreMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { boardMessageId: string },
-    ) => void;
-    onSuccess(undefined, { boardMessageId: "bm-3" });
-    expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      boardMessageId: "bm-3",
-    });
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useRestoreBoardMessage());
+
+    await act(() => result.current.mutateAsync({ boardMessageId: "bm-3" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        boardMessageId: "bm-3",
+      });
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeleteBoardMessage", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useDeleteBoardMessage();
-    const onSuccess = lastDeleteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { boardMessageId: string },
-    ) => void;
-    onSuccess(undefined, { boardMessageId: "bm-4" });
-    expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      boardMessageId: "bm-4",
-    });
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteBoardMessage());
+
+    await act(() => result.current.mutateAsync({ boardMessageId: "bm-4" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        boardMessageId: "bm-4",
+      });
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("usePinBoardMessage", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    usePinBoardMessage();
-    const onSuccess = lastPinMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { boardMessageId: string },
-    ) => void;
-    onSuccess(undefined, { boardMessageId: "bm-5" });
-    expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      boardMessageId: "bm-5",
-    });
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => usePinBoardMessage());
+
+    await act(() => result.current.mutateAsync({ boardMessageId: "bm-5" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        boardMessageId: "bm-5",
+      });
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUnpinBoardMessage", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useUnpinBoardMessage();
-    const onSuccess = lastUnpinMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { boardMessageId: string },
-    ) => void;
-    onSuccess(undefined, { boardMessageId: "bm-6" });
-    expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      boardMessageId: "bm-6",
-    });
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUnpinBoardMessage());
+
+    await act(() => result.current.mutateAsync({ boardMessageId: "bm-6" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        boardMessageId: "bm-6",
+      });
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useReorderBoardMessages", () => {
-  it("invalidates list on success", () => {
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useReorderBoardMessages();
-    const onSuccess = lastReorderMutationOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useReorderBoardMessages());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });

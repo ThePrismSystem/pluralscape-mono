@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptChannelInput } from "@pluralscape/data/transforms/channel";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { ChannelRaw } from "@pluralscape/data/transforms/channel";
 import type { ChannelId, UnixMillis } from "@pluralscape/types";
@@ -14,21 +19,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastQueryOpts: CapturedOpts = {};
-let lastInfiniteOpts: CapturedOpts = {};
-let lastCreateMutationOpts: CapturedOpts = {};
-let lastUpdateMutationOpts: CapturedOpts = {};
-let lastArchiveMutationOpts: CapturedOpts = {};
-let lastRestoreMutationOpts: CapturedOpts = {};
-let lastDeleteMutationOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   channel: {
     get: { invalidate: vi.fn() },
@@ -36,64 +33,83 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    channel: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastQueryOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      channel: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["channel.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("channel.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["channel.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("channel.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        update: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        archive: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        restore: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastInfiniteOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      update: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      archive: {
-        useMutation: (opts: CapturedOpts) => {
-          lastArchiveMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      restore: {
-        useMutation: (opts: CapturedOpts) => {
-          lastRestoreMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useChannel,
   useChannelsList,
@@ -124,137 +140,166 @@ function makeRawChannel(id: string): ChannelRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useChannel", () => {
-  it("enables when masterKey is present", () => {
-    useChannel("ch-1" as ChannelId);
-    expect(lastQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted channel data", async () => {
+    fixtures.set("channel.get", makeRawChannel("ch-1"));
+    const { result } = renderHookWithProviders(() => useChannel("ch-1" as ChannelId));
+
+    let data: Awaited<ReturnType<typeof useChannel>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.name).toBe("general");
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useChannel("ch-1" as ChannelId);
-    expect(lastQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useChannel("ch-1" as ChannelId), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw channel correctly", () => {
-    useChannel("ch-1" as ChannelId);
-    const select = lastQueryOpts["select"] as (raw: ChannelRaw) => unknown;
-    const raw = makeRawChannel("ch-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["name"]).toBe("general");
-    expect(result["type"]).toBe("channel");
-    expect(result["archived"]).toBe(false);
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("channel.get", makeRawChannel("ch-1"));
+    const { result, rerender } = renderHookWithProviders(() => useChannel("ch-1" as ChannelId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useChannelsList", () => {
-  it("select decrypts each page item", () => {
-    useChannelsList();
-    const select = lastInfiniteOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated channels", async () => {
     const raw1 = makeRawChannel("ch-1");
     const raw2 = makeRawChannel("ch-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["name"]).toBe("general");
-    expect(result.pages[0].data[1]["name"]).toBe("general");
+    fixtures.set("channel.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useChannelsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0].data).toHaveLength(2);
+    expect(pages[0].data[0].name).toBe("general");
+    expect(pages[0].data[1].name).toBe("general");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useChannelsList(), { masterKey: null });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("channel.list", { data: [makeRawChannel("ch-1")], nextCursor: null });
+    const { result, rerender } = renderHookWithProviders(() => useChannelsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useCreateChannel", () => {
-  it("invalidates list on success", () => {
-    mockUtils.channel.list.invalidate.mockClear();
-    useCreateChannel();
-    const onSuccess = lastCreateMutationOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateChannel());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUpdateChannel", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.channel.get.invalidate.mockClear();
-    mockUtils.channel.list.invalidate.mockClear();
-    useUpdateChannel();
-    const onSuccess = lastUpdateMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { channelId: string },
-    ) => void;
-    onSuccess(undefined, { channelId: "ch-1" });
-    expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      channelId: "ch-1",
-    });
-    expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateChannel());
+
+    await act(() => result.current.mutateAsync({ channelId: "ch-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        channelId: "ch-1",
+      });
+      expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useArchiveChannel", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.channel.get.invalidate.mockClear();
-    mockUtils.channel.list.invalidate.mockClear();
-    useArchiveChannel();
-    const onSuccess = lastArchiveMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { channelId: string },
-    ) => void;
-    onSuccess(undefined, { channelId: "ch-2" });
-    expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      channelId: "ch-2",
-    });
-    expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useArchiveChannel());
+
+    await act(() => result.current.mutateAsync({ channelId: "ch-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        channelId: "ch-2",
+      });
+      expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useRestoreChannel", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.channel.get.invalidate.mockClear();
-    mockUtils.channel.list.invalidate.mockClear();
-    useRestoreChannel();
-    const onSuccess = lastRestoreMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { channelId: string },
-    ) => void;
-    onSuccess(undefined, { channelId: "ch-3" });
-    expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      channelId: "ch-3",
-    });
-    expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useRestoreChannel());
+
+    await act(() => result.current.mutateAsync({ channelId: "ch-3" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        channelId: "ch-3",
+      });
+      expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeleteChannel", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.channel.get.invalidate.mockClear();
-    mockUtils.channel.list.invalidate.mockClear();
-    useDeleteChannel();
-    const onSuccess = lastDeleteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { channelId: string },
-    ) => void;
-    onSuccess(undefined, { channelId: "ch-4" });
-    expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      channelId: "ch-4",
-    });
-    expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteChannel());
+
+    await act(() => result.current.mutateAsync({ channelId: "ch-4" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.channel.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        channelId: "ch-4",
+      });
+      expect(mockUtils.channel.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });

@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptFrontingSessionInput } from "@pluralscape/data/transforms/fronting-session";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { FrontingSessionRaw } from "@pluralscape/data/transforms/fronting-session";
 import type { FrontingSessionId, MemberId, UnixMillis } from "@pluralscape/types";
@@ -14,80 +19,104 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastGetOpts: CapturedOpts = {};
-let lastListOpts: CapturedOpts = {};
-let lastGetActiveOpts: CapturedOpts = {};
-let lastCreateMutationOpts: CapturedOpts = {};
-let lastEndMutationOpts: CapturedOpts = {};
-let lastUpdateMutationOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   frontingSession: {
-    get: { invalidate: vi.fn(), cancel: vi.fn(), getData: vi.fn(), setData: vi.fn() },
-    list: { invalidate: vi.fn(), cancel: vi.fn() },
-    getActive: { invalidate: vi.fn() },
+    get: {
+      invalidate: vi.fn(),
+      cancel: vi.fn(() => Promise.resolve()),
+      getData: vi.fn(() => undefined),
+      setData: vi.fn(),
+    },
+    list: {
+      invalidate: vi.fn(),
+      cancel: vi.fn(() => Promise.resolve()),
+    },
+    getActive: {
+      invalidate: vi.fn(),
+    },
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    frontingSession: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastGetOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      frontingSession: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["frontingSession.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("frontingSession.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["frontingSession.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("frontingSession.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        getActive: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["frontingSession.getActive", input],
+              queryFn: () => Promise.resolve(fixtures.get("frontingSession.getActive")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onMutate: opts.onMutate as (() => Promise<void>) | undefined,
+              onSettled: opts.onSettled as (() => void) | undefined,
+            }),
+        },
+        end: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onMutate: opts.onMutate as ((variables: unknown) => Promise<unknown>) | undefined,
+              onError: opts.onError as
+                | ((err: unknown, variables: unknown, context: unknown) => void)
+                | undefined,
+              onSettled: opts.onSettled as
+                | ((data: unknown, err: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        update: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastListOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      getActive: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastGetActiveOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      end: {
-        useMutation: (opts: CapturedOpts) => {
-          lastEndMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      update: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useFrontingSession,
   useFrontingSessionsList,
@@ -127,139 +156,225 @@ function makeRawSession(id: string): FrontingSessionRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+  // Restore default getData return value after clearAllMocks
+  mockUtils.frontingSession.get.getData.mockReturnValue(undefined);
+  mockUtils.frontingSession.get.cancel.mockResolvedValue(undefined);
+  mockUtils.frontingSession.list.cancel.mockResolvedValue(undefined);
+});
+
+// ── Query tests ──────────────────────────────────────────────────────
 describe("useFrontingSession", () => {
-  it("enables when masterKey is present", () => {
-    useFrontingSession("fs-1" as FrontingSessionId);
-    expect(lastGetOpts["enabled"]).toBe(true);
+  it("returns decrypted session data", async () => {
+    fixtures.set("frontingSession.get", makeRawSession("fs-1"));
+    const { result } = renderHookWithProviders(() =>
+      useFrontingSession("fs-1" as FrontingSessionId),
+    );
+
+    let data: Awaited<ReturnType<typeof useFrontingSession>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.comment).toBe("Session fs-1");
+    expect(data?.positionality).toBe("close");
+    expect(data?.outtrigger).toBeNull();
+    expect(data?.archived).toBe(false);
+    expect(data?.endTime).toBeNull();
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useFrontingSession("fs-1" as FrontingSessionId);
-    expect(lastGetOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(
+      () => useFrontingSession("fs-1" as FrontingSessionId),
+      { masterKey: null },
+    );
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw session correctly", () => {
-    useFrontingSession("fs-1" as FrontingSessionId);
-    const select = lastGetOpts["select"] as (raw: FrontingSessionRaw) => unknown;
-    const raw = makeRawSession("fs-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["comment"]).toBe("Session fs-1");
-    expect(result["positionality"]).toBe("close");
-    expect(result["outtrigger"]).toBeNull();
-    expect(result["archived"]).toBe(false);
-    expect(result["endTime"]).toBeNull();
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("frontingSession.get", makeRawSession("fs-1"));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useFrontingSession("fs-1" as FrontingSessionId),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useFrontingSessionsList", () => {
-  it("select decrypts each page item", () => {
-    useFrontingSessionsList();
-    const select = lastListOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated sessions", async () => {
     const raw1 = makeRawSession("fs-1");
     const raw2 = makeRawSession("fs-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["comment"]).toBe("Session fs-1");
-    expect(result.pages[0].data[1]["comment"]).toBe("Session fs-2");
+    fixtures.set("frontingSession.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useFrontingSessionsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.comment).toBe("Session fs-1");
+    expect(pages[0]?.data[1]?.comment).toBe("Session fs-2");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useFrontingSessionsList(), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("frontingSession.list", { data: [makeRawSession("fs-1")], nextCursor: null });
+    const { result, rerender } = renderHookWithProviders(() => useFrontingSessionsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useActiveFronters", () => {
-  it("enables when masterKey is present", () => {
-    useActiveFronters();
-    expect(lastGetActiveOpts["enabled"]).toBe(true);
-  });
-
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useActiveFronters();
-    expect(lastGetActiveOpts["enabled"]).toBe(false);
-  });
-
-  it("select decrypts sessions and passes through isCofronting and entityMemberMap", () => {
-    useActiveFronters();
-    const select = lastGetActiveOpts["select"] as (raw: unknown) => unknown;
+  it("returns decrypted active fronters with composite fields", async () => {
     const raw1 = makeRawSession("fs-1");
-    const rawGetActive = {
+    fixtures.set("frontingSession.getActive", {
       sessions: [raw1],
       isCofronting: true,
       entityMemberMap: { "m-1": ["fs-1"] },
-    };
-    const result = select(rawGetActive) as Record<string, unknown>;
-    expect(result["isCofronting"]).toBe(true);
-    expect(result["entityMemberMap"]).toEqual({ "m-1": ["fs-1"] });
-    const sessions = result["sessions"] as Record<string, unknown>[];
-    expect(sessions).toHaveLength(1);
-    const first = sessions.at(0) ?? {};
-    expect(first["comment"]).toBe("Session fs-1");
+    });
+
+    const { result } = renderHookWithProviders(() => useActiveFronters());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.isCofronting).toBe(true);
+    expect(result.current.data?.entityMemberMap).toEqual({ "m-1": ["fs-1"] });
+    expect(result.current.data?.sessions).toHaveLength(1);
+    expect(result.current.data?.sessions[0]?.comment).toBe("Session fs-1");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useActiveFronters(), { masterKey: null });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it("select is stable across rerenders", async () => {
+    const raw1 = makeRawSession("fs-1");
+    fixtures.set("frontingSession.getActive", {
+      sessions: [raw1],
+      isCofronting: false,
+      entityMemberMap: {},
+    });
+    const { result, rerender } = renderHookWithProviders(() => useActiveFronters());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ────────────────────────────────────────────────────
 describe("useStartSession", () => {
-  it("invalidates list and getActive onSettled", () => {
-    mockUtils.frontingSession.list.invalidate.mockClear();
-    mockUtils.frontingSession.getActive.invalidate.mockClear();
-    useStartSession();
-    const onSettled = lastCreateMutationOpts["onSettled"] as () => void;
-    onSettled();
-    expect(mockUtils.frontingSession.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-    });
-    expect(mockUtils.frontingSession.getActive.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("cancels list onMutate and invalidates list and getActive onSettled", async () => {
+    const { result } = renderHookWithProviders(() => useStartSession());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.frontingSession.list.cancel).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
+      expect(mockUtils.frontingSession.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
+      expect(mockUtils.frontingSession.getActive.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useEndSession", () => {
-  it("invalidates list, get, and getActive onSettled", () => {
-    mockUtils.frontingSession.list.invalidate.mockClear();
-    mockUtils.frontingSession.get.invalidate.mockClear();
-    mockUtils.frontingSession.getActive.invalidate.mockClear();
-    useEndSession();
-    const onSettled = lastEndMutationOpts["onSettled"] as (
-      data: unknown,
-      err: unknown,
-      variables: { sessionId: string },
-    ) => void;
-    onSettled(undefined, undefined, { sessionId: "fs-1" });
-    expect(mockUtils.frontingSession.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("cancels get, snapshots previousSession, and invalidates on settled", async () => {
+    const { result } = renderHookWithProviders(() => useEndSession());
+
+    await act(() =>
+      result.current.mutateAsync({ sessionId: "fs-1" as FrontingSessionId } as never),
+    );
+
+    await waitFor(() => {
+      expect(mockUtils.frontingSession.get.cancel).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: "fs-1",
+      });
+      expect(mockUtils.frontingSession.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
+      expect(mockUtils.frontingSession.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: "fs-1",
+      });
+      expect(mockUtils.frontingSession.getActive.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
-    expect(mockUtils.frontingSession.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      sessionId: "fs-1",
-    });
-    expect(mockUtils.frontingSession.getActive.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  });
+
+  it("restores previousSession via setData on error when context has data", async () => {
+    const rawSession = makeRawSession("fs-1");
+    mockUtils.frontingSession.get.getData.mockReturnValue(rawSession);
+
+    // We need to make mutateAsync fail to trigger onError
+    const { result } = renderHookWithProviders(() => useEndSession());
+
+    // Verify getData is called during onMutate (via cancel step)
+    await act(() =>
+      result.current.mutateAsync({ sessionId: "fs-1" as FrontingSessionId } as never),
+    );
+
+    await waitFor(() => {
+      expect(mockUtils.frontingSession.get.getData).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: "fs-1",
+      });
     });
   });
 });
 
 describe("useUpdateSession", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.frontingSession.get.invalidate.mockClear();
-    mockUtils.frontingSession.list.invalidate.mockClear();
-    useUpdateSession();
-    const onSuccess = lastUpdateMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { sessionId: string },
-    ) => void;
-    onSuccess(undefined, { sessionId: "fs-1" });
-    expect(mockUtils.frontingSession.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      sessionId: "fs-1",
-    });
-    expect(mockUtils.frontingSession.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateSession());
+
+    await act(() =>
+      result.current.mutateAsync({ sessionId: "fs-1" as FrontingSessionId } as never),
+    );
+
+    await waitFor(() => {
+      expect(mockUtils.frontingSession.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: "fs-1",
+      });
+      expect(mockUtils.frontingSession.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });

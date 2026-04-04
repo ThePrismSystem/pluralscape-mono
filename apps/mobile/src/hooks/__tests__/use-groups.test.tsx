@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptGroupInput } from "@pluralscape/data/transforms/group";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { GroupRaw } from "@pluralscape/data/transforms/group";
 import type { GroupId, UnixMillis } from "@pluralscape/types";
@@ -14,22 +19,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastQueryOpts: CapturedOpts = {};
-let lastInfiniteOpts: CapturedOpts = {};
-let lastCreateOpts: CapturedOpts = {};
-let lastUpdateOpts: CapturedOpts = {};
-let lastDeleteOpts: CapturedOpts = {};
-let lastAddMemberOpts: CapturedOpts = {};
-let lastRemoveMemberOpts: CapturedOpts = {};
-let lastReorderOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   group: {
     get: { invalidate: vi.fn() },
@@ -41,70 +37,90 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    group: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastQueryOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      group: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["group.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("group.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["group.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("group.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        update: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        addMember: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        removeMember: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        reorder: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastInfiniteOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      update: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      addMember: {
-        useMutation: (opts: CapturedOpts) => {
-          lastAddMemberOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      removeMember: {
-        useMutation: (opts: CapturedOpts) => {
-          lastRemoveMemberOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      reorder: {
-        useMutation: (opts: CapturedOpts) => {
-          lastReorderOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useGroup,
   useGroupsList,
@@ -135,160 +151,192 @@ function makeRawGroup(id: string): GroupRaw {
     systemId: TEST_SYSTEM_ID,
     parentGroupId: null,
     sortOrder: 0,
-    archived: false,
-    archivedAt: null,
     version: 1,
     createdAt: NOW,
     updatedAt: NOW,
+    archived: false,
+    archivedAt: null,
     ...encrypted,
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useGroup", () => {
-  it("enables when masterKey is present", () => {
-    useGroup("g-1" as GroupId);
-    expect(lastQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted group data", async () => {
+    fixtures.set("group.get", makeRawGroup("g-1"));
+    const { result } = renderHookWithProviders(() => useGroup("g-1" as GroupId));
+
+    let data: Awaited<ReturnType<typeof useGroup>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.name).toBe("Group g-1");
+    expect(data?.description).toBe("A test group");
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useGroup("g-1" as GroupId);
-    expect(lastQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useGroup("g-1" as GroupId), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw group correctly", () => {
-    useGroup("g-1" as GroupId);
-    const select = lastQueryOpts["select"] as (raw: GroupRaw) => unknown;
-    const raw = makeRawGroup("g-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["name"]).toBe("Group g-1");
-    expect(result["description"]).toBe("A test group");
-    expect(result["id"]).toBe("g-1");
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("group.get", makeRawGroup("g-1"));
+    const { result, rerender } = renderHookWithProviders(() => useGroup("g-1" as GroupId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useGroupsList", () => {
-  it("select decrypts each page item", () => {
-    useGroupsList();
-    const select = lastInfiniteOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated groups", async () => {
     const raw1 = makeRawGroup("g-1");
     const raw2 = makeRawGroup("g-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["name"]).toBe("Group g-1");
-    expect(result.pages[0].data[1]["name"]).toBe("Group g-2");
+    fixtures.set("group.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useGroupsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.name).toBe("Group g-1");
+    expect(pages[0]?.data[1]?.name).toBe("Group g-2");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useGroupsList(), { masterKey: null });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("group.list", { data: [makeRawGroup("g-1")], nextCursor: null });
+    const { result, rerender } = renderHookWithProviders(() => useGroupsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useCreateGroup", () => {
-  it("invalidates list on success", () => {
-    mockUtils.group.list.invalidate.mockClear();
-    useCreateGroup();
-    const onSuccess = lastCreateOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateGroup());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUpdateGroup", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.group.get.invalidate.mockClear();
-    mockUtils.group.list.invalidate.mockClear();
-    useUpdateGroup();
-    const onSuccess = lastUpdateOpts["onSuccess"] as (
-      data: unknown,
-      variables: { groupId: string },
-    ) => void;
-    onSuccess(undefined, { groupId: "g-1" });
-    expect(mockUtils.group.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      groupId: "g-1",
-    });
-    expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateGroup());
+
+    await act(() => result.current.mutateAsync({ groupId: "g-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.group.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        groupId: "g-1",
+      });
+      expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeleteGroup", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.group.get.invalidate.mockClear();
-    mockUtils.group.list.invalidate.mockClear();
-    useDeleteGroup();
-    const onSuccess = lastDeleteOpts["onSuccess"] as (
-      data: unknown,
-      variables: { groupId: string },
-    ) => void;
-    onSuccess(undefined, { groupId: "g-2" });
-    expect(mockUtils.group.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      groupId: "g-2",
-    });
-    expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteGroup());
+
+    await act(() => result.current.mutateAsync({ groupId: "g-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.group.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        groupId: "g-2",
+      });
+      expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useAddGroupMembers", () => {
-  it("invalidates listMembers and listMemberships on success", () => {
-    mockUtils.group.listMembers.invalidate.mockClear();
-    mockUtils.member.listMemberships.invalidate.mockClear();
-    useAddGroupMembers();
-    const onSuccess = lastAddMemberOpts["onSuccess"] as (
-      data: unknown,
-      variables: { groupId: string; memberId: string },
-    ) => void;
-    onSuccess(undefined, { groupId: "g-1", memberId: "m-1" });
-    expect(mockUtils.group.listMembers.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      groupId: "g-1",
-    });
-    expect(mockUtils.member.listMemberships.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      memberId: "m-1",
+  it("invalidates listMembers and listMemberships on success", async () => {
+    const { result } = renderHookWithProviders(() => useAddGroupMembers());
+
+    await act(() => result.current.mutateAsync({ groupId: "g-1", memberId: "m-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.group.listMembers.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        groupId: "g-1",
+      });
+      expect(mockUtils.member.listMemberships.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        memberId: "m-1",
+      });
     });
   });
 });
 
 describe("useRemoveGroupMembers", () => {
-  it("invalidates listMembers and listMemberships on success", () => {
-    mockUtils.group.listMembers.invalidate.mockClear();
-    mockUtils.member.listMemberships.invalidate.mockClear();
-    useRemoveGroupMembers();
-    const onSuccess = lastRemoveMemberOpts["onSuccess"] as (
-      data: unknown,
-      variables: { groupId: string; memberId: string },
-    ) => void;
-    onSuccess(undefined, { groupId: "g-2", memberId: "m-2" });
-    expect(mockUtils.group.listMembers.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      groupId: "g-2",
-    });
-    expect(mockUtils.member.listMemberships.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      memberId: "m-2",
+  it("invalidates listMembers and listMemberships on success", async () => {
+    const { result } = renderHookWithProviders(() => useRemoveGroupMembers());
+
+    await act(() => result.current.mutateAsync({ groupId: "g-2", memberId: "m-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.group.listMembers.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        groupId: "g-2",
+      });
+      expect(mockUtils.member.listMemberships.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        memberId: "m-2",
+      });
     });
   });
 });
 
 describe("useReorderGroups", () => {
-  it("invalidates list on success", () => {
-    mockUtils.group.list.invalidate.mockClear();
-    useReorderGroups();
-    const onSuccess = lastReorderOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useReorderGroups());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.group.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });

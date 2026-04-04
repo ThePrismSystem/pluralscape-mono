@@ -5,9 +5,14 @@ import {
   encryptNomenclatureUpdate,
   encryptSystemSettingsUpdate,
 } from "@pluralscape/data/transforms/system-settings";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type {
   NomenclatureSettingsRaw,
@@ -20,21 +25,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastSettingsQueryOpts: CapturedOpts = {};
-let lastNomenclatureQueryOpts: CapturedOpts = {};
-let lastUpdateSettingsOpts: CapturedOpts = {};
-let lastUpdateNomenclatureOpts: CapturedOpts = {};
-let lastSetPinOpts: CapturedOpts = {};
-let lastRemovePinOpts: CapturedOpts = {};
-let lastVerifyPinOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   systemSettings: {
     settings: { get: { invalidate: vi.fn() } },
@@ -42,70 +39,79 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    systemSettings: {
-      settings: {
-        get: {
-          useQuery: (_input: unknown, opts: CapturedOpts) => {
-            lastSettingsQueryOpts = opts;
-            return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      systemSettings: {
+        settings: {
+          get: {
+            useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+              rq.useQuery({
+                queryKey: ["systemSettings.settings.get", input],
+                queryFn: () => Promise.resolve(fixtures.get("systemSettings.settings.get")),
+                enabled: opts.enabled as boolean | undefined,
+                select: opts.select as ((d: unknown) => unknown) | undefined,
+              }),
+          },
+          update: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as (() => void) | undefined,
+              }),
           },
         },
-        update: {
-          useMutation: (opts: CapturedOpts) => {
-            lastUpdateSettingsOpts = opts;
-            return { mutate: vi.fn() };
+        nomenclature: {
+          get: {
+            useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+              rq.useQuery({
+                queryKey: ["systemSettings.nomenclature.get", input],
+                queryFn: () => Promise.resolve(fixtures.get("systemSettings.nomenclature.get")),
+                enabled: opts.enabled as boolean | undefined,
+                select: opts.select as ((d: unknown) => unknown) | undefined,
+              }),
+          },
+          update: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as (() => void) | undefined,
+              }),
+          },
+        },
+        pin: {
+          set: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as (() => void) | undefined,
+              }),
+          },
+          remove: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as (() => void) | undefined,
+              }),
+          },
+          verify: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as (() => void) | undefined,
+              }),
           },
         },
       },
-      nomenclature: {
-        get: {
-          useQuery: (_input: unknown, opts: CapturedOpts) => {
-            lastNomenclatureQueryOpts = opts;
-            return { data: undefined, isLoading: true, status: "loading" };
-          },
-        },
-        update: {
-          useMutation: (opts: CapturedOpts) => {
-            lastUpdateNomenclatureOpts = opts;
-            return { mutate: vi.fn() };
-          },
-        },
-      },
-      pin: {
-        set: {
-          useMutation: (opts?: CapturedOpts) => {
-            lastSetPinOpts = opts ?? {};
-            return { mutate: vi.fn() };
-          },
-        },
-        remove: {
-          useMutation: (opts?: CapturedOpts) => {
-            lastRemovePinOpts = opts ?? {};
-            return { mutate: vi.fn() };
-          },
-        },
-        verify: {
-          useMutation: (opts?: CapturedOpts) => {
-            lastVerifyPinOpts = opts ?? {};
-            return { mutate: vi.fn() };
-          },
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useSystemSettings,
   useNomenclature,
@@ -221,98 +227,143 @@ function makeRawNomenclature(): NomenclatureSettingsRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useSystemSettings", () => {
-  it("enables when masterKey is present", () => {
-    useSystemSettings();
-    expect(lastSettingsQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted system settings data", async () => {
+    fixtures.set("systemSettings.settings.get", makeRawSystemSettings());
+    const { result } = renderHookWithProviders(() => useSystemSettings());
+
+    let data: Awaited<ReturnType<typeof useSystemSettings>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.theme).toBe("dark");
+    expect(data?.id).toBe(SETTINGS_ID);
+    expect(data?.systemId).toBe(TEST_SYSTEM_ID);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useSystemSettings();
-    expect(lastSettingsQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useSystemSettings(), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw system settings correctly", () => {
-    useSystemSettings();
-    const select = lastSettingsQueryOpts["select"] as (raw: SystemSettingsRaw) => unknown;
-    const raw = makeRawSystemSettings();
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["theme"]).toBe("dark");
-    expect(result["id"]).toBe(SETTINGS_ID);
-    expect(result["systemId"]).toBe(TEST_SYSTEM_ID);
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("systemSettings.settings.get", makeRawSystemSettings());
+    const { result, rerender } = renderHookWithProviders(() => useSystemSettings());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useNomenclature", () => {
-  it("enables when masterKey is present", () => {
-    useNomenclature();
-    expect(lastNomenclatureQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted nomenclature data", async () => {
+    fixtures.set("systemSettings.nomenclature.get", makeRawNomenclature());
+    const { result } = renderHookWithProviders(() => useNomenclature());
+
+    let data: Awaited<ReturnType<typeof useNomenclature>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.collective).toBe("System");
+    expect(data?.individual).toBe("Member");
+    expect(data?.version).toBe(1);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useNomenclature();
-    expect(lastNomenclatureQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useNomenclature(), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw nomenclature correctly", () => {
-    useNomenclature();
-    const select = lastNomenclatureQueryOpts["select"] as (raw: NomenclatureSettingsRaw) => unknown;
-    const raw = makeRawNomenclature();
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["collective"]).toBe("System");
-    expect(result["individual"]).toBe("Member");
-    expect(result["version"]).toBe(1);
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("systemSettings.nomenclature.get", makeRawNomenclature());
+    const { result, rerender } = renderHookWithProviders(() => useNomenclature());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useUpdateSettings", () => {
-  it("invalidates settings get on success", () => {
-    mockUtils.systemSettings.settings.get.invalidate.mockClear();
-    useUpdateSettings();
-    const onSuccess = lastUpdateSettingsOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.systemSettings.settings.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates settings.get on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateSettings());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.systemSettings.settings.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUpdateNomenclature", () => {
-  it("invalidates nomenclature get on success", () => {
-    mockUtils.systemSettings.nomenclature.get.invalidate.mockClear();
-    useUpdateNomenclature();
-    const onSuccess = lastUpdateNomenclatureOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.systemSettings.nomenclature.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates nomenclature.get on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateNomenclature());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.systemSettings.nomenclature.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useSetPin", () => {
-  it("returns a mutation object", () => {
-    const result = useSetPin();
-    expect(result).toHaveProperty("mutate");
-    // Pin mutations have no onSuccess invalidation
-    expect(lastSetPinOpts).toEqual({});
+  it("returns a mutation with no onSuccess invalidation", async () => {
+    const { result } = renderHookWithProviders(() => useSetPin());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    // Pin mutations have no onSuccess cache invalidation
+    expect(mockUtils.systemSettings.settings.get.invalidate).not.toHaveBeenCalled();
+    expect(mockUtils.systemSettings.nomenclature.get.invalidate).not.toHaveBeenCalled();
   });
 });
 
 describe("useRemovePin", () => {
-  it("returns a mutation object", () => {
-    const result = useRemovePin();
-    expect(result).toHaveProperty("mutate");
-    expect(lastRemovePinOpts).toEqual({});
+  it("returns a mutation with no onSuccess invalidation", async () => {
+    const { result } = renderHookWithProviders(() => useRemovePin());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    expect(mockUtils.systemSettings.settings.get.invalidate).not.toHaveBeenCalled();
+    expect(mockUtils.systemSettings.nomenclature.get.invalidate).not.toHaveBeenCalled();
   });
 });
 
 describe("useVerifyPin", () => {
-  it("returns a mutation object", () => {
-    const result = useVerifyPin();
-    expect(result).toHaveProperty("mutate");
-    expect(lastVerifyPinOpts).toEqual({});
+  it("returns a mutation with no onSuccess invalidation", async () => {
+    const { result } = renderHookWithProviders(() => useVerifyPin());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    expect(mockUtils.systemSettings.settings.get.invalidate).not.toHaveBeenCalled();
+    expect(mockUtils.systemSettings.nomenclature.get.invalidate).not.toHaveBeenCalled();
   });
 });

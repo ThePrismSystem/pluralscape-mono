@@ -5,9 +5,14 @@ import {
   encryptFieldDefinitionInput,
   encryptFieldValueInput,
 } from "@pluralscape/data/transforms/custom-field";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { FieldDefinitionRaw, FieldValueRaw } from "@pluralscape/data/transforms/custom-field";
 import type { FieldDefinitionId, FieldValueId, MemberId, UnixMillis } from "@pluralscape/types";
@@ -17,21 +22,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastDefQueryOpts: CapturedOpts = {};
-let lastDefInfiniteOpts: CapturedOpts = {};
-let lastCreateOpts: CapturedOpts = {};
-let lastUpdateOpts: CapturedOpts = {};
-let lastDeleteOpts: CapturedOpts = {};
-let lastValueQueryOpts: CapturedOpts = {};
-let lastValueSetOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   field: {
     definition: {
@@ -44,68 +41,87 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    field: {
-      definition: {
-        get: {
-          useQuery: (_input: unknown, opts: CapturedOpts) => {
-            lastDefQueryOpts = opts;
-            return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      field: {
+        definition: {
+          get: {
+            useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+              rq.useQuery({
+                queryKey: ["field.definition.get", input],
+                queryFn: () => Promise.resolve(fixtures.get("field.definition.get")),
+                enabled: opts.enabled as boolean | undefined,
+                select: opts.select as ((d: unknown) => unknown) | undefined,
+              }),
+          },
+          list: {
+            useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+              rq.useInfiniteQuery({
+                queryKey: ["field.definition.list", input],
+                queryFn: () => Promise.resolve(fixtures.get("field.definition.list")),
+                enabled: opts.enabled as boolean | undefined,
+                select: opts.select as ((d: unknown) => unknown) | undefined,
+                getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+                initialPageParam: undefined,
+              }),
+          },
+          create: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as (() => void) | undefined,
+              }),
+          },
+          update: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as
+                  | ((data: unknown, variables: unknown) => void)
+                  | undefined,
+              }),
+          },
+          delete: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as
+                  | ((data: unknown, variables: unknown) => void)
+                  | undefined,
+              }),
           },
         },
-        list: {
-          useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-            lastDefInfiniteOpts = opts;
-            return { data: undefined, isLoading: true, status: "loading" };
+        value: {
+          list: {
+            useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+              rq.useQuery({
+                queryKey: ["field.value.list", input],
+                queryFn: () => Promise.resolve(fixtures.get("field.value.list")),
+                enabled: opts.enabled as boolean | undefined,
+                select: opts.select as ((d: unknown) => unknown) | undefined,
+              }),
           },
-        },
-        create: {
-          useMutation: (opts: CapturedOpts) => {
-            lastCreateOpts = opts;
-            return { mutate: vi.fn() };
-          },
-        },
-        update: {
-          useMutation: (opts: CapturedOpts) => {
-            lastUpdateOpts = opts;
-            return { mutate: vi.fn() };
-          },
-        },
-        delete: {
-          useMutation: (opts: CapturedOpts) => {
-            lastDeleteOpts = opts;
-            return { mutate: vi.fn() };
+          set: {
+            useMutation: (opts: Record<string, unknown> = {}) =>
+              rq.useMutation({
+                mutationFn: () => Promise.resolve({}),
+                onSuccess: opts.onSuccess as
+                  | ((data: unknown, variables: unknown) => void)
+                  | undefined,
+              }),
           },
         },
       },
-      value: {
-        list: {
-          useQuery: (_input: unknown, opts: CapturedOpts) => {
-            lastValueQueryOpts = opts;
-            return { data: undefined, isLoading: true, status: "loading" };
-          },
-        },
-        set: {
-          useMutation: (opts: CapturedOpts) => {
-            lastValueSetOpts = opts;
-            return { mutate: vi.fn() };
-          },
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useFieldDefinition,
   useFieldDefinitionsList,
@@ -155,137 +171,182 @@ function makeRawFieldValue(id: string): FieldValueRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useFieldDefinition", () => {
-  it("enables when masterKey is present", () => {
-    useFieldDefinition("fd-1" as FieldDefinitionId);
-    expect(lastDefQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted field definition data", async () => {
+    fixtures.set("field.definition.get", makeRawFieldDefinition("fd-1"));
+    const { result } = renderHookWithProviders(() =>
+      useFieldDefinition("fd-1" as FieldDefinitionId),
+    );
+
+    let data: Awaited<ReturnType<typeof useFieldDefinition>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.name).toBe("Field fd-1");
+    expect(data?.description).toBe("A test field");
+    expect(data?.fieldType).toBe("text");
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useFieldDefinition("fd-1" as FieldDefinitionId);
-    expect(lastDefQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(
+      () => useFieldDefinition("fd-1" as FieldDefinitionId),
+      { masterKey: null },
+    );
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw field definition correctly", () => {
-    useFieldDefinition("fd-1" as FieldDefinitionId);
-    const select = lastDefQueryOpts["select"] as (raw: FieldDefinitionRaw) => unknown;
-    const raw = makeRawFieldDefinition("fd-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["name"]).toBe("Field fd-1");
-    expect(result["description"]).toBe("A test field");
-    expect(result["fieldType"]).toBe("text");
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("field.definition.get", makeRawFieldDefinition("fd-1"));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useFieldDefinition("fd-1" as FieldDefinitionId),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useFieldDefinitionsList", () => {
-  it("select decrypts each page item", () => {
-    useFieldDefinitionsList();
-    const select = lastDefInfiniteOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated field definitions", async () => {
     const raw1 = makeRawFieldDefinition("fd-1");
     const raw2 = makeRawFieldDefinition("fd-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["name"]).toBe("Field fd-1");
-    expect(result.pages[0].data[1]["name"]).toBe("Field fd-2");
+    fixtures.set("field.definition.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useFieldDefinitionsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.name).toBe("Field fd-1");
+    expect(pages[0]?.data[1]?.name).toBe("Field fd-2");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useFieldDefinitionsList(), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("field.definition.list", {
+      data: [makeRawFieldDefinition("fd-1")],
+      nextCursor: null,
+    });
+    const { result, rerender } = renderHookWithProviders(() => useFieldDefinitionsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+describe("useMemberFieldValues", () => {
+  it("returns decrypted field values array", async () => {
+    const raw = [makeRawFieldValue("fv-1"), makeRawFieldValue("fv-2")];
+    fixtures.set("field.value.list", raw);
+
+    const { result } = renderHookWithProviders(() => useMemberFieldValues("m-1" as MemberId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data).toHaveLength(2);
+    expect(result.current.data?.[0]?.fieldType).toBe("text");
+    expect(result.current.data?.[0]?.value).toBe("hello");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useMemberFieldValues("m-1" as MemberId), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
+  });
+});
+
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useCreateField", () => {
-  it("invalidates definition list on success", () => {
-    mockUtils.field.definition.list.invalidate.mockClear();
-    useCreateField();
-    const onSuccess = lastCreateOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.field.definition.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates definition list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateField());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.field.definition.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUpdateField", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.field.definition.get.invalidate.mockClear();
-    mockUtils.field.definition.list.invalidate.mockClear();
-    useUpdateField();
-    const onSuccess = lastUpdateOpts["onSuccess"] as (
-      data: unknown,
-      variables: { fieldDefinitionId: string },
-    ) => void;
-    onSuccess(undefined, { fieldDefinitionId: "fd-1" });
-    expect(mockUtils.field.definition.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      fieldDefinitionId: "fd-1",
-    });
-    expect(mockUtils.field.definition.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateField());
+
+    await act(() => result.current.mutateAsync({ fieldDefinitionId: "fd-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.field.definition.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        fieldDefinitionId: "fd-1",
+      });
+      expect(mockUtils.field.definition.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeleteField", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.field.definition.get.invalidate.mockClear();
-    mockUtils.field.definition.list.invalidate.mockClear();
-    useDeleteField();
-    const onSuccess = lastDeleteOpts["onSuccess"] as (
-      data: unknown,
-      variables: { fieldDefinitionId: string },
-    ) => void;
-    onSuccess(undefined, { fieldDefinitionId: "fd-2" });
-    expect(mockUtils.field.definition.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      fieldDefinitionId: "fd-2",
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteField());
+
+    await act(() => result.current.mutateAsync({ fieldDefinitionId: "fd-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.field.definition.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        fieldDefinitionId: "fd-2",
+      });
+      expect(mockUtils.field.definition.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
-    expect(mockUtils.field.definition.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-    });
-  });
-});
-
-describe("useMemberFieldValues", () => {
-  it("enables when masterKey is present", () => {
-    useMemberFieldValues("m-1" as MemberId);
-    expect(lastValueQueryOpts["enabled"]).toBe(true);
-  });
-
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useMemberFieldValues("m-1" as MemberId);
-    expect(lastValueQueryOpts["enabled"]).toBe(false);
-  });
-
-  it("select decrypts field value list correctly", () => {
-    useMemberFieldValues("m-1" as MemberId);
-    const select = lastValueQueryOpts["select"] as (raw: readonly FieldValueRaw[]) => unknown;
-    const raw = [makeRawFieldValue("fv-1"), makeRawFieldValue("fv-2")];
-    const result = select(raw) as [Record<string, unknown>, Record<string, unknown>];
-    expect(result).toHaveLength(2);
-    expect(result[0]["fieldType"]).toBe("text");
-    expect(result[0]["value"]).toBe("hello");
   });
 });
 
 describe("useUpdateMemberFieldValues", () => {
-  it("invalidates field value list on success", () => {
-    mockUtils.field.value.list.invalidate.mockClear();
-    useUpdateMemberFieldValues();
-    const onSuccess = lastValueSetOpts["onSuccess"] as (
-      data: unknown,
-      variables: { owner: unknown },
-    ) => void;
+  it("invalidates field value list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateMemberFieldValues());
+
     const owner = { kind: "member" as const, id: "m-1" as MemberId };
-    onSuccess(undefined, { owner });
-    expect(mockUtils.field.value.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      owner,
+    await act(() => result.current.mutateAsync({ owner } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.field.value.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        owner,
+      });
     });
   });
 });

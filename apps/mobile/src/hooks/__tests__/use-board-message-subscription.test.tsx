@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
 // ── Capture subscription calls ───────────────────────────────────────
 type CapturedOpts = Record<string, unknown>;
@@ -27,34 +27,41 @@ vi.mock("@pluralscape/api-client/trpc", () => ({
   },
 }));
 
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
 const { useBoardMessageSubscription } = await import("../use-board-message-subscription.js");
 
 // ── Tests ────────────────────────────────────────────────────────────
 describe("useBoardMessageSubscription", () => {
+  beforeEach(() => {
+    lastSubscriptionOpts = {};
+    vi.clearAllMocks();
+  });
+
   it("enabled defaults to true", () => {
-    useBoardMessageSubscription();
+    renderHookWithProviders(() => {
+      useBoardMessageSubscription();
+    });
     expect(lastSubscriptionOpts["enabled"]).toBe(true);
   });
 
   it("respects enabled: false", () => {
-    useBoardMessageSubscription({ enabled: false });
+    renderHookWithProviders(() => {
+      useBoardMessageSubscription({ enabled: false });
+    });
     expect(lastSubscriptionOpts["enabled"]).toBe(false);
   });
 
   it("onError handler is present", () => {
-    useBoardMessageSubscription();
+    renderHookWithProviders(() => {
+      useBoardMessageSubscription();
+    });
     expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 
   it("onData with boardMessageId invalidates get and list", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useBoardMessageSubscription();
+    renderHookWithProviders(() => {
+      useBoardMessageSubscription();
+    });
     const onData = lastSubscriptionOpts["onData"] as (event: Record<string, unknown>) => void;
     onData({ boardMessageId: "bm-1" });
     expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({
@@ -67,9 +74,9 @@ describe("useBoardMessageSubscription", () => {
   });
 
   it("onData without boardMessageId invalidates only list", () => {
-    mockUtils.boardMessage.get.invalidate.mockClear();
-    mockUtils.boardMessage.list.invalidate.mockClear();
-    useBoardMessageSubscription();
+    renderHookWithProviders(() => {
+      useBoardMessageSubscription();
+    });
     const onData = lastSubscriptionOpts["onData"] as (event: Record<string, unknown>) => void;
     onData({});
     expect(mockUtils.boardMessage.list.invalidate).toHaveBeenCalledWith({

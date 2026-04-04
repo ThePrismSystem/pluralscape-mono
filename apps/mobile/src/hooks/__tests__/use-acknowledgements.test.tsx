@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptAcknowledgementInput } from "@pluralscape/data/transforms/acknowledgement";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { AcknowledgementRaw } from "@pluralscape/data/transforms/acknowledgement";
 import type { AcknowledgementId, MemberId, UnixMillis } from "@pluralscape/types";
@@ -14,21 +19,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastQueryOpts: CapturedOpts = {};
-let lastInfiniteOpts: CapturedOpts = {};
-let lastCreateMutationOpts: CapturedOpts = {};
-let lastConfirmMutationOpts: CapturedOpts = {};
-let lastArchiveMutationOpts: CapturedOpts = {};
-let lastRestoreMutationOpts: CapturedOpts = {};
-let lastDeleteMutationOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   acknowledgement: {
     get: { invalidate: vi.fn() },
@@ -36,64 +33,83 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    acknowledgement: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastQueryOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      acknowledgement: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["acknowledgement.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("acknowledgement.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["acknowledgement.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("acknowledgement.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        confirm: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        archive: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        restore: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastInfiniteOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      confirm: {
-        useMutation: (opts: CapturedOpts) => {
-          lastConfirmMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      archive: {
-        useMutation: (opts: CapturedOpts) => {
-          lastArchiveMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      restore: {
-        useMutation: (opts: CapturedOpts) => {
-          lastRestoreMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useAcknowledgement,
   useAcknowledgementsList,
@@ -130,139 +146,179 @@ function makeRawAcknowledgement(id: string): AcknowledgementRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useAcknowledgement", () => {
-  it("enables when masterKey is present", () => {
-    useAcknowledgement("ack-1" as AcknowledgementId);
-    expect(lastQueryOpts["enabled"]).toBe(true);
+  it("returns decrypted acknowledgement data", async () => {
+    fixtures.set("acknowledgement.get", makeRawAcknowledgement("ack-1"));
+    const { result } = renderHookWithProviders(() =>
+      useAcknowledgement("ack-1" as AcknowledgementId),
+    );
+
+    let data: Awaited<ReturnType<typeof useAcknowledgement>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.message).toBe("Please read");
+    expect(data?.targetMemberId).toBe("m-1");
+    expect(data?.confirmedAt).toBeNull();
+    expect(data?.confirmed).toBe(false);
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useAcknowledgement("ack-1" as AcknowledgementId);
-    expect(lastQueryOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(
+      () => useAcknowledgement("ack-1" as AcknowledgementId),
+      { masterKey: null },
+    );
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw acknowledgement correctly", () => {
-    useAcknowledgement("ack-1" as AcknowledgementId);
-    const select = lastQueryOpts["select"] as (raw: AcknowledgementRaw) => unknown;
-    const raw = makeRawAcknowledgement("ack-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["message"]).toBe("Please read");
-    expect(result["targetMemberId"]).toBe("m-1");
-    expect(result["confirmedAt"]).toBeNull();
-    expect(result["confirmed"]).toBe(false);
-    expect(result["archived"]).toBe(false);
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("acknowledgement.get", makeRawAcknowledgement("ack-1"));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useAcknowledgement("ack-1" as AcknowledgementId),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useAcknowledgementsList", () => {
-  it("select decrypts each page item", () => {
-    useAcknowledgementsList();
-    const select = lastInfiniteOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated acknowledgements", async () => {
     const raw1 = makeRawAcknowledgement("ack-1");
     const raw2 = makeRawAcknowledgement("ack-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["message"]).toBe("Please read");
-    expect(result.pages[0].data[1]["message"]).toBe("Please read");
+    fixtures.set("acknowledgement.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useAcknowledgementsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.message).toBe("Please read");
+    expect(pages[0]?.data[1]?.message).toBe("Please read");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useAcknowledgementsList(), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("acknowledgement.list", {
+      data: [makeRawAcknowledgement("ack-1")],
+      nextCursor: null,
+    });
+    const { result, rerender } = renderHookWithProviders(() => useAcknowledgementsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useCreateAcknowledgement", () => {
-  it("invalidates list on success", () => {
-    mockUtils.acknowledgement.list.invalidate.mockClear();
-    useCreateAcknowledgement();
-    const onSuccess = lastCreateMutationOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateAcknowledgement());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useConfirmAcknowledgement", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.acknowledgement.get.invalidate.mockClear();
-    mockUtils.acknowledgement.list.invalidate.mockClear();
-    useConfirmAcknowledgement();
-    const onSuccess = lastConfirmMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { ackId: string },
-    ) => void;
-    onSuccess(undefined, { ackId: "ack-1" });
-    expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      ackId: "ack-1",
-    });
-    expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useConfirmAcknowledgement());
+
+    await act(() => result.current.mutateAsync({ ackId: "ack-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        ackId: "ack-1",
+      });
+      expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useArchiveAcknowledgement", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.acknowledgement.get.invalidate.mockClear();
-    mockUtils.acknowledgement.list.invalidate.mockClear();
-    useArchiveAcknowledgement();
-    const onSuccess = lastArchiveMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { ackId: string },
-    ) => void;
-    onSuccess(undefined, { ackId: "ack-2" });
-    expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      ackId: "ack-2",
-    });
-    expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useArchiveAcknowledgement());
+
+    await act(() => result.current.mutateAsync({ ackId: "ack-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        ackId: "ack-2",
+      });
+      expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useRestoreAcknowledgement", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.acknowledgement.get.invalidate.mockClear();
-    mockUtils.acknowledgement.list.invalidate.mockClear();
-    useRestoreAcknowledgement();
-    const onSuccess = lastRestoreMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { ackId: string },
-    ) => void;
-    onSuccess(undefined, { ackId: "ack-3" });
-    expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      ackId: "ack-3",
-    });
-    expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useRestoreAcknowledgement());
+
+    await act(() => result.current.mutateAsync({ ackId: "ack-3" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        ackId: "ack-3",
+      });
+      expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeleteAcknowledgement", () => {
-  it("invalidates get and list on success", () => {
-    mockUtils.acknowledgement.get.invalidate.mockClear();
-    mockUtils.acknowledgement.list.invalidate.mockClear();
-    useDeleteAcknowledgement();
-    const onSuccess = lastDeleteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { ackId: string },
-    ) => void;
-    onSuccess(undefined, { ackId: "ack-4" });
-    expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      ackId: "ack-4",
-    });
-    expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteAcknowledgement());
+
+    await act(() => result.current.mutateAsync({ ackId: "ack-4" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.acknowledgement.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        ackId: "ack-4",
+      });
+      expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });

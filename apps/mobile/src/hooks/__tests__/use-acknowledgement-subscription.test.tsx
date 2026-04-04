@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
 // ── Capture subscription calls ───────────────────────────────────────
 type CapturedOpts = Record<string, unknown>;
@@ -27,34 +27,41 @@ vi.mock("@pluralscape/api-client/trpc", () => ({
   },
 }));
 
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
 const { useAcknowledgementSubscription } = await import("../use-acknowledgement-subscription.js");
 
 // ── Tests ────────────────────────────────────────────────────────────
 describe("useAcknowledgementSubscription", () => {
+  beforeEach(() => {
+    lastSubscriptionOpts = {};
+    vi.clearAllMocks();
+  });
+
   it("enabled defaults to true", () => {
-    useAcknowledgementSubscription();
+    renderHookWithProviders(() => {
+      useAcknowledgementSubscription();
+    });
     expect(lastSubscriptionOpts["enabled"]).toBe(true);
   });
 
   it("respects enabled: false", () => {
-    useAcknowledgementSubscription({ enabled: false });
+    renderHookWithProviders(() => {
+      useAcknowledgementSubscription({ enabled: false });
+    });
     expect(lastSubscriptionOpts["enabled"]).toBe(false);
   });
 
   it("onError handler is present", () => {
-    useAcknowledgementSubscription();
+    renderHookWithProviders(() => {
+      useAcknowledgementSubscription();
+    });
     expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 
   it("onData with ackId invalidates get and list", () => {
-    mockUtils.acknowledgement.get.invalidate.mockClear();
-    mockUtils.acknowledgement.list.invalidate.mockClear();
-    useAcknowledgementSubscription();
+    renderHookWithProviders(() => {
+      useAcknowledgementSubscription();
+    });
     const onData = lastSubscriptionOpts["onData"] as (event: Record<string, unknown>) => void;
     onData({ ackId: "ack-1" });
     expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({
@@ -67,9 +74,9 @@ describe("useAcknowledgementSubscription", () => {
   });
 
   it("onData without ackId invalidates only list", () => {
-    mockUtils.acknowledgement.get.invalidate.mockClear();
-    mockUtils.acknowledgement.list.invalidate.mockClear();
-    useAcknowledgementSubscription();
+    renderHookWithProviders(() => {
+      useAcknowledgementSubscription();
+    });
     const onData = lastSubscriptionOpts["onData"] as (event: Record<string, unknown>) => void;
     onData({});
     expect(mockUtils.acknowledgement.list.invalidate).toHaveBeenCalledWith({

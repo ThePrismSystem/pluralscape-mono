@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptTimerConfigInput } from "@pluralscape/data/transforms/timer-check-in";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { CheckInRecordRaw, TimerConfigRaw } from "@pluralscape/data/transforms/timer-check-in";
 import type { CheckInRecordId, TimerId, UnixMillis } from "@pluralscape/types";
@@ -14,23 +19,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastTimerGetOpts: CapturedOpts = {};
-let lastTimerListOpts: CapturedOpts = {};
-let lastCreateTimerOpts: CapturedOpts = {};
-let lastUpdateTimerOpts: CapturedOpts = {};
-let lastDeleteTimerOpts: CapturedOpts = {};
-let lastCheckInListOpts: CapturedOpts = {};
-let lastCreateCheckInOpts: CapturedOpts = {};
-let lastRespondOpts: CapturedOpts = {};
-let lastDismissOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   timerConfig: {
     get: { invalidate: vi.fn() },
@@ -42,78 +37,101 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    timerConfig: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastTimerGetOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastTimerListOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateTimerOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      update: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateTimerOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteTimerOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-    },
-    checkInRecord: {
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastCheckInListOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateCheckInOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      respond: {
-        useMutation: (opts: CapturedOpts) => {
-          lastRespondOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      dismiss: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDismissOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-    },
-    useUtils: () => mockUtils,
-  },
-}));
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
+  return {
+    trpc: {
+      timerConfig: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["timerConfig.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("timerConfig.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["timerConfig.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("timerConfig.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        update: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+      },
+      checkInRecord: {
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["checkInRecord.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("checkInRecord.list")),
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as (() => void) | undefined,
+            }),
+        },
+        respond: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        dismiss: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+      },
+      useUtils: () => mockUtils,
+    },
+  };
+});
 
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useTimerConfig,
   useTimerConfigsList,
@@ -162,170 +180,214 @@ function makeRawCheckIn(id: string): CheckInRecordRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ─────────────────────────────────────────────────────
 describe("useTimerConfig", () => {
-  it("enables when masterKey is present", () => {
-    useTimerConfig("tmr-1" as TimerId);
-    expect(lastTimerGetOpts["enabled"]).toBe(true);
+  it("returns decrypted timer config data", async () => {
+    fixtures.set("timerConfig.get", makeRawTimer("tmr-1"));
+    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId));
+
+    let data: Awaited<ReturnType<typeof useTimerConfig>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.promptText).toBe("How are you?");
+    expect(data?.enabled).toBe(true);
+    expect(data?.intervalMinutes).toBe(60);
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useTimerConfig("tmr-1" as TimerId);
-    expect(lastTimerGetOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw timer correctly", () => {
-    useTimerConfig("tmr-1" as TimerId);
-    const select = lastTimerGetOpts["select"] as (raw: TimerConfigRaw) => unknown;
-    const raw = makeRawTimer("tmr-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["promptText"]).toBe("How are you?");
-    expect(result["enabled"]).toBe(true);
-    expect(result["intervalMinutes"]).toBe(60);
-    expect(result["archived"]).toBe(false);
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("timerConfig.get", makeRawTimer("tmr-1"));
+    const { result, rerender } = renderHookWithProviders(() => useTimerConfig("tmr-1" as TimerId));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useTimerConfigsList", () => {
-  it("select decrypts each page item", () => {
-    useTimerConfigsList();
-    const select = lastTimerListOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated timer configs", async () => {
     const raw1 = makeRawTimer("tmr-1");
     const raw2 = makeRawTimer("tmr-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["promptText"]).toBe("How are you?");
-    expect(result.pages[0].data[1]["promptText"]).toBe("How are you?");
+    fixtures.set("timerConfig.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useTimerConfigsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.promptText).toBe("How are you?");
+    expect(pages[0]?.data[1]?.promptText).toBe("How are you?");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useTimerConfigsList(), { masterKey: null });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("timerConfig.list", { data: [makeRawTimer("tmr-1")], nextCursor: null });
+    const { result, rerender } = renderHookWithProviders(() => useTimerConfigsList());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useCheckInHistory", () => {
-  it("select copies data without crypto", () => {
-    useCheckInHistory();
-    const select = lastCheckInListOpts["select"] as (data: unknown) => unknown;
+  it("returns raw check-in records without decryption", async () => {
     const raw1 = makeRawCheckIn("cir-1");
     const raw2 = makeRawCheckIn("cir-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["id"]).toBe("cir-1");
-    expect(result.pages[0].data[1]["id"]).toBe("cir-2");
-    expect(result.pages[0].data[0]["dismissed"]).toBe(false);
+    fixtures.set("checkInRecord.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useCheckInHistory());
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.id).toBe("cir-1");
+    expect(pages[0]?.data[1]?.id).toBe("cir-2");
+    expect(pages[0]?.data[0]?.dismissed).toBe(false);
+  });
+
+  it("fetches regardless of masterKey (no enabled guard)", async () => {
+    const raw1 = makeRawCheckIn("cir-1");
+    fixtures.set("checkInRecord.list", { data: [raw1], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useCheckInHistory(), { masterKey: null });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.pages[0]?.data[0]?.id).toBe("cir-1");
   });
 });
 
+// ── Mutation tests ──────────────────────────────────────────────────
 describe("useCreateTimer", () => {
-  it("invalidates list onSuccess", () => {
-    mockUtils.timerConfig.list.invalidate.mockClear();
-    useCreateTimer();
-    const onSuccess = lastCreateTimerOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.timerConfig.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates timerConfig.list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateTimer());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.timerConfig.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useUpdateTimer", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.timerConfig.get.invalidate.mockClear();
-    mockUtils.timerConfig.list.invalidate.mockClear();
-    useUpdateTimer();
-    const onSuccess = lastUpdateTimerOpts["onSuccess"] as (
-      data: unknown,
-      variables: { timerId: string },
-    ) => void;
-    onSuccess(undefined, { timerId: "tmr-1" });
-    expect(mockUtils.timerConfig.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      timerId: "tmr-1",
-    });
-    expect(mockUtils.timerConfig.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates timerConfig.get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateTimer());
+
+    await act(() => result.current.mutateAsync({ timerId: "tmr-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.timerConfig.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        timerId: "tmr-1",
+      });
+      expect(mockUtils.timerConfig.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useDeleteTimer", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.timerConfig.get.invalidate.mockClear();
-    mockUtils.timerConfig.list.invalidate.mockClear();
-    useDeleteTimer();
-    const onSuccess = lastDeleteTimerOpts["onSuccess"] as (
-      data: unknown,
-      variables: { timerId: string },
-    ) => void;
-    onSuccess(undefined, { timerId: "tmr-2" });
-    expect(mockUtils.timerConfig.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      timerId: "tmr-2",
-    });
-    expect(mockUtils.timerConfig.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates timerConfig.get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteTimer());
+
+    await act(() => result.current.mutateAsync({ timerId: "tmr-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.timerConfig.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        timerId: "tmr-2",
+      });
+      expect(mockUtils.timerConfig.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useCreateCheckIn", () => {
-  it("invalidates list onSuccess", () => {
-    mockUtils.checkInRecord.list.invalidate.mockClear();
-    useCreateCheckIn();
-    const onSuccess = lastCreateCheckInOpts["onSuccess"] as () => void;
-    onSuccess();
-    expect(mockUtils.checkInRecord.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates checkInRecord.list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateCheckIn());
+
+    await act(() => result.current.mutateAsync({} as never));
+
+    await waitFor(() => {
+      expect(mockUtils.checkInRecord.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useMarkCheckInResponded", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.checkInRecord.get.invalidate.mockClear();
-    mockUtils.checkInRecord.list.invalidate.mockClear();
-    useMarkCheckInResponded();
-    const onSuccess = lastRespondOpts["onSuccess"] as (
-      data: unknown,
-      variables: { recordId: string },
-    ) => void;
-    onSuccess(undefined, { recordId: "cir-1" });
-    expect(mockUtils.checkInRecord.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      recordId: "cir-1",
-    });
-    expect(mockUtils.checkInRecord.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates checkInRecord.get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useMarkCheckInResponded());
+
+    await act(() => result.current.mutateAsync({ recordId: "cir-1" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.checkInRecord.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        recordId: "cir-1",
+      });
+      expect(mockUtils.checkInRecord.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });
 
 describe("useMarkCheckInDismissed", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.checkInRecord.get.invalidate.mockClear();
-    mockUtils.checkInRecord.list.invalidate.mockClear();
-    useMarkCheckInDismissed();
-    const onSuccess = lastDismissOpts["onSuccess"] as (
-      data: unknown,
-      variables: { recordId: string },
-    ) => void;
-    onSuccess(undefined, { recordId: "cir-2" });
-    expect(mockUtils.checkInRecord.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      recordId: "cir-2",
-    });
-    expect(mockUtils.checkInRecord.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
+  it("invalidates checkInRecord.get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useMarkCheckInDismissed());
+
+    await act(() => result.current.mutateAsync({ recordId: "cir-2" } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.checkInRecord.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        recordId: "cir-2",
+      });
+      expect(mockUtils.checkInRecord.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+      });
     });
   });
 });

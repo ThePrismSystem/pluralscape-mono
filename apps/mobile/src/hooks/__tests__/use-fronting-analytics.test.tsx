@@ -1,12 +1,7 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
-
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
-});
+import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
 
 // ── Capture tRPC hook calls ──────────────────────────────────────────
 type CapturedOpts = Record<string, unknown>;
@@ -32,10 +27,6 @@ vi.mock("@pluralscape/api-client/trpc", () => ({
   },
 }));
 
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
 const { useFrontingAnalytics, useCoFrontingAnalytics } =
   await import("../use-fronting-analytics.js");
 
@@ -43,26 +34,44 @@ const { useFrontingAnalytics, useCoFrontingAnalytics } =
 const ANALYTICS_STALE_TIME = 300_000;
 
 describe("useFrontingAnalytics", () => {
+  beforeEach(() => {
+    lastFrontingOpts = {};
+    vi.clearAllMocks();
+  });
+
   it("passes staleTime option", () => {
-    useFrontingAnalytics();
+    renderHookWithProviders(() => {
+      useFrontingAnalytics();
+    });
     expect(lastFrontingOpts["staleTime"]).toBe(ANALYTICS_STALE_TIME);
   });
 
   it("does not require masterKey", () => {
-    useFrontingAnalytics();
+    renderHookWithProviders(() => {
+      useFrontingAnalytics();
+    });
     // No enabled guard — always enabled
     expect(lastFrontingOpts["enabled"]).toBeUndefined();
   });
 });
 
 describe("useCoFrontingAnalytics", () => {
+  beforeEach(() => {
+    lastCoFrontingOpts = {};
+    vi.clearAllMocks();
+  });
+
   it("passes staleTime option", () => {
-    useCoFrontingAnalytics();
+    renderHookWithProviders(() => {
+      useCoFrontingAnalytics();
+    });
     expect(lastCoFrontingOpts["staleTime"]).toBe(ANALYTICS_STALE_TIME);
   });
 
   it("does not require masterKey", () => {
-    useCoFrontingAnalytics();
+    renderHookWithProviders(() => {
+      useCoFrontingAnalytics();
+    });
     expect(lastCoFrontingOpts["enabled"]).toBeUndefined();
   });
 });

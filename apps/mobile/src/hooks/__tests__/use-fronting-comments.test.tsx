@@ -2,9 +2,14 @@
 import { configureSodium, initSodium } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptFrontingCommentInput } from "@pluralscape/data/transforms/fronting-comment";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { act, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_MASTER_KEY, TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import {
+  renderHookWithProviders,
+  TEST_MASTER_KEY,
+  TEST_SYSTEM_ID,
+} from "./helpers/render-hook-with-providers.js";
 
 import type { FrontingCommentRaw } from "@pluralscape/data/transforms/fronting-comment";
 import type {
@@ -19,19 +24,13 @@ beforeAll(async () => {
   await initSodium();
 });
 
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return { ...(actual as object), useCallback: (fn: unknown) => fn };
+// ── Fixture registry (accessible from vi.mock via hoisting) ──────────
+const { fixtures } = vi.hoisted(() => {
+  const store = new Map<string, unknown>();
+  return { fixtures: store };
 });
 
-// ── Capture tRPC hook calls ──────────────────────────────────────────
-type CapturedOpts = Record<string, unknown>;
-let lastGetOpts: CapturedOpts = {};
-let lastListOpts: CapturedOpts = {};
-let lastCreateMutationOpts: CapturedOpts = {};
-let lastUpdateMutationOpts: CapturedOpts = {};
-let lastDeleteMutationOpts: CapturedOpts = {};
-
+// ── Mock utils for mutation invalidation tracking ────────────────────
 const mockUtils = {
   frontingComment: {
     get: { invalidate: vi.fn() },
@@ -39,52 +38,67 @@ const mockUtils = {
   },
 };
 
-vi.mock("@pluralscape/api-client/trpc", () => ({
-  trpc: {
-    frontingComment: {
-      get: {
-        useQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastGetOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
+// ── tRPC mock backed by real React Query ─────────────────────────────
+vi.mock("@pluralscape/api-client/trpc", async () => {
+  const rq = await import("@tanstack/react-query");
+
+  return {
+    trpc: {
+      frontingComment: {
+        get: {
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useQuery({
+              queryKey: ["frontingComment.get", input],
+              queryFn: () => Promise.resolve(fixtures.get("frontingComment.get")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+            }),
+        },
+        list: {
+          useInfiniteQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
+            rq.useInfiniteQuery({
+              queryKey: ["frontingComment.list", input],
+              queryFn: () => Promise.resolve(fixtures.get("frontingComment.list")),
+              enabled: opts.enabled as boolean | undefined,
+              select: opts.select as ((d: unknown) => unknown) | undefined,
+              getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
+              initialPageParam: undefined,
+            }),
+        },
+        create: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        update: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
+        },
+        delete: {
+          useMutation: (opts: Record<string, unknown> = {}) =>
+            rq.useMutation({
+              mutationFn: () => Promise.resolve({}),
+              onSuccess: opts.onSuccess as
+                | ((data: unknown, variables: unknown) => void)
+                | undefined,
+            }),
         },
       },
-      list: {
-        useInfiniteQuery: (_input: unknown, opts: CapturedOpts) => {
-          lastListOpts = opts;
-          return { data: undefined, isLoading: true, status: "loading" };
-        },
-      },
-      create: {
-        useMutation: (opts: CapturedOpts) => {
-          lastCreateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      update: {
-        useMutation: (opts: CapturedOpts) => {
-          lastUpdateMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
-      delete: {
-        useMutation: (opts: CapturedOpts) => {
-          lastDeleteMutationOpts = opts;
-          return { mutate: vi.fn() };
-        },
-      },
+      useUtils: () => mockUtils,
     },
-    useUtils: () => mockUtils,
-  },
-}));
+  };
+});
 
-vi.mock("../../providers/crypto-provider.js", () => ({
-  useMasterKey: vi.fn(() => TEST_MASTER_KEY),
-}));
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
-const { useMasterKey } = await import("../../providers/crypto-provider.js");
+// Must import AFTER vi.mock
 const {
   useFrontingComment,
   useFrontingCommentsList,
@@ -115,105 +129,153 @@ function makeRawComment(id: string): FrontingCommentRaw {
   };
 }
 
-// ── Tests ────────────────────────────────────────────────────────────
+beforeEach(() => {
+  fixtures.clear();
+  vi.clearAllMocks();
+});
+
+// ── Query tests ──────────────────────────────────────────────────────
 describe("useFrontingComment", () => {
-  it("enables when masterKey is present", () => {
-    useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID);
-    expect(lastGetOpts["enabled"]).toBe(true);
+  it("returns decrypted comment data", async () => {
+    fixtures.set("frontingComment.get", makeRawComment("fc-1"));
+    const { result } = renderHookWithProviders(() =>
+      useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID),
+    );
+
+    let data: Awaited<ReturnType<typeof useFrontingComment>>["data"] | undefined;
+    await waitFor(() => {
+      data = result.current.data;
+      expect(data).toBeDefined();
+    });
+    expect(data?.content).toBe("Comment fc-1");
+    expect(data?.frontingSessionId).toBe(SESSION_ID);
+    expect(data?.archived).toBe(false);
   });
 
-  it("disables when masterKey is null", () => {
-    vi.mocked(useMasterKey).mockReturnValueOnce(null);
-    useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID);
-    expect(lastGetOpts["enabled"]).toBe(false);
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(
+      () => useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID),
+      { masterKey: null },
+    );
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 
-  it("select decrypts raw comment correctly", () => {
-    useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID);
-    const select = lastGetOpts["select"] as (raw: FrontingCommentRaw) => unknown;
-    const raw = makeRawComment("fc-1");
-    const result = select(raw) as Record<string, unknown>;
-    expect(result["content"]).toBe("Comment fc-1");
-    expect(result["frontingSessionId"]).toBe(SESSION_ID);
-    expect(result["archived"]).toBe(false);
+  it("select is stable across rerenders (useCallback memoization)", async () => {
+    fixtures.set("frontingComment.get", makeRawComment("fc-1"));
+    const { result, rerender } = renderHookWithProviders(() =>
+      useFrontingComment("fc-1" as FrontingCommentId, SESSION_ID),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
 describe("useFrontingCommentsList", () => {
-  it("select decrypts each page item", () => {
-    useFrontingCommentsList(SESSION_ID);
-    const select = lastListOpts["select"] as (data: unknown) => unknown;
+  it("returns decrypted paginated comments", async () => {
     const raw1 = makeRawComment("fc-1");
     const raw2 = makeRawComment("fc-2");
-    const infiniteData = {
-      pages: [{ data: [raw1, raw2], nextCursor: null }],
-      pageParams: [undefined],
-    };
-    const result = select(infiniteData) as {
-      pages: [{ data: [Record<string, unknown>, Record<string, unknown>] }];
-    };
-    expect(result.pages[0].data).toHaveLength(2);
-    expect(result.pages[0].data[0]["content"]).toBe("Comment fc-1");
-    expect(result.pages[0].data[1]["content"]).toBe("Comment fc-2");
+    fixtures.set("frontingComment.list", { data: [raw1, raw2], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const pages = result.current.data?.pages ?? [];
+    expect(pages).toHaveLength(1);
+    expect(pages[0]?.data).toHaveLength(2);
+    expect(pages[0]?.data[0]?.content).toBe("Comment fc-1");
+    expect(pages[0]?.data[1]?.content).toBe("Comment fc-2");
+  });
+
+  it("does not fetch when masterKey is null", () => {
+    const { result } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID), {
+      masterKey: null,
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+  });
+
+  it("select is stable across rerenders", async () => {
+    fixtures.set("frontingComment.list", { data: [makeRawComment("fc-1")], nextCursor: null });
+    const { result, rerender } = renderHookWithProviders(() => useFrontingCommentsList(SESSION_ID));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const ref1 = result.current.data;
+    rerender();
+    expect(result.current.data).toBe(ref1);
   });
 });
 
+// ── Mutation tests ────────────────────────────────────────────────────
 describe("useCreateComment", () => {
-  it("invalidates list onSuccess", () => {
-    mockUtils.frontingComment.list.invalidate.mockClear();
-    useCreateComment();
-    const onSuccess = lastCreateMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { sessionId: string },
-    ) => void;
-    onSuccess(undefined, { sessionId: SESSION_ID });
-    expect(mockUtils.frontingComment.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      sessionId: SESSION_ID,
+  it("invalidates list on success", async () => {
+    const { result } = renderHookWithProviders(() => useCreateComment());
+
+    await act(() => result.current.mutateAsync({ sessionId: SESSION_ID } as never));
+
+    await waitFor(() => {
+      expect(mockUtils.frontingComment.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: SESSION_ID,
+      });
     });
   });
 });
 
 describe("useUpdateComment", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.frontingComment.get.invalidate.mockClear();
-    mockUtils.frontingComment.list.invalidate.mockClear();
-    useUpdateComment();
-    const onSuccess = lastUpdateMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { commentId: string; sessionId: string },
-    ) => void;
-    onSuccess(undefined, { commentId: "fc-1", sessionId: SESSION_ID });
-    expect(mockUtils.frontingComment.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      sessionId: SESSION_ID,
-      commentId: "fc-1",
-    });
-    expect(mockUtils.frontingComment.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      sessionId: SESSION_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateComment());
+
+    await act(() =>
+      result.current.mutateAsync({
+        commentId: "fc-1" as FrontingCommentId,
+        sessionId: SESSION_ID,
+      } as never),
+    );
+
+    await waitFor(() => {
+      expect(mockUtils.frontingComment.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: SESSION_ID,
+        commentId: "fc-1",
+      });
+      expect(mockUtils.frontingComment.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: SESSION_ID,
+      });
     });
   });
 });
 
 describe("useDeleteComment", () => {
-  it("invalidates get and list onSuccess", () => {
-    mockUtils.frontingComment.get.invalidate.mockClear();
-    mockUtils.frontingComment.list.invalidate.mockClear();
-    useDeleteComment();
-    const onSuccess = lastDeleteMutationOpts["onSuccess"] as (
-      data: unknown,
-      variables: { commentId: string; sessionId: string },
-    ) => void;
-    onSuccess(undefined, { commentId: "fc-2", sessionId: SESSION_ID });
-    expect(mockUtils.frontingComment.get.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      sessionId: SESSION_ID,
-      commentId: "fc-2",
-    });
-    expect(mockUtils.frontingComment.list.invalidate).toHaveBeenCalledWith({
-      systemId: TEST_SYSTEM_ID,
-      sessionId: SESSION_ID,
+  it("invalidates get and list on success", async () => {
+    const { result } = renderHookWithProviders(() => useDeleteComment());
+
+    await act(() =>
+      result.current.mutateAsync({
+        commentId: "fc-2" as FrontingCommentId,
+        sessionId: SESSION_ID,
+      } as never),
+    );
+
+    await waitFor(() => {
+      expect(mockUtils.frontingComment.get.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: SESSION_ID,
+        commentId: "fc-2",
+      });
+      expect(mockUtils.frontingComment.list.invalidate).toHaveBeenCalledWith({
+        systemId: TEST_SYSTEM_ID,
+        sessionId: SESSION_ID,
+      });
     });
   });
 });

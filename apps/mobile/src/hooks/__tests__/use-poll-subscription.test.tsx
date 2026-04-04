@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TEST_SYSTEM_ID } from "./helpers/test-crypto.js";
+import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
 import type { PollId } from "@pluralscape/types";
 
@@ -31,36 +31,41 @@ vi.mock("@pluralscape/api-client/trpc", () => ({
   },
 }));
 
-vi.mock("../../providers/system-provider.js", () => ({
-  useActiveSystemId: vi.fn(() => TEST_SYSTEM_ID),
-}));
-
 const { usePollSubscription } = await import("../use-poll-subscription.js");
 
 // ── Tests ────────────────────────────────────────────────────────────
 describe("usePollSubscription", () => {
+  beforeEach(() => {
+    lastSubscriptionOpts = {};
+    vi.clearAllMocks();
+  });
+
   it("enabled defaults to true", () => {
-    usePollSubscription();
+    renderHookWithProviders(() => {
+      usePollSubscription();
+    });
     expect(lastSubscriptionOpts["enabled"]).toBe(true);
   });
 
   it("respects enabled: false", () => {
-    usePollSubscription("poll-1" as PollId, { enabled: false });
+    renderHookWithProviders(() => {
+      usePollSubscription("poll-1" as PollId, { enabled: false });
+    });
     expect(lastSubscriptionOpts["enabled"]).toBe(false);
   });
 
   it("onError handler is present", () => {
-    usePollSubscription();
+    renderHookWithProviders(() => {
+      usePollSubscription();
+    });
     expect(lastSubscriptionOpts["onError"]).toBeDefined();
     expect(typeof lastSubscriptionOpts["onError"]).toBe("function");
   });
 
   it("onData with pollId invalidates get, list, results, and listVotes", () => {
-    mockUtils.poll.get.invalidate.mockClear();
-    mockUtils.poll.list.invalidate.mockClear();
-    mockUtils.poll.results.invalidate.mockClear();
-    mockUtils.poll.listVotes.invalidate.mockClear();
-    usePollSubscription();
+    renderHookWithProviders(() => {
+      usePollSubscription();
+    });
     const onData = lastSubscriptionOpts["onData"] as (event: Record<string, unknown>) => void;
     onData({ pollId: "poll-1" });
     expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
@@ -81,11 +86,9 @@ describe("usePollSubscription", () => {
   });
 
   it("onData without pollId invalidates only list", () => {
-    mockUtils.poll.get.invalidate.mockClear();
-    mockUtils.poll.list.invalidate.mockClear();
-    mockUtils.poll.results.invalidate.mockClear();
-    mockUtils.poll.listVotes.invalidate.mockClear();
-    usePollSubscription();
+    renderHookWithProviders(() => {
+      usePollSubscription();
+    });
     const onData = lastSubscriptionOpts["onData"] as (event: Record<string, unknown>) => void;
     onData({});
     expect(mockUtils.poll.list.invalidate).toHaveBeenCalledWith({
