@@ -34,7 +34,7 @@ vi.mock("../../providers/rest-client-provider.js", () => ({
 const { useFriendExportManifest, useFriendExportPage } = await import("../use-friend-export.js");
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
 });
 
 describe("useFriendExportManifest", () => {
@@ -74,6 +74,49 @@ describe("useFriendExportManifest", () => {
     });
 
     expect(result.current.error?.message).toContain("manifest request failed");
+  });
+
+  it("returns undefined on 304 Not Modified (React Query keeps previous data)", async () => {
+    // First call returns data
+    mockGet.mockResolvedValueOnce({
+      data: mockManifestData,
+      response: { status: 200, headers: new Headers({ ETag: '"v1"' }) },
+    });
+
+    const { result, rerender } = renderHookWithProviders(() =>
+      useFriendExportManifest(CONNECTION_ID),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Second call returns 304 with no data
+    mockGet.mockResolvedValueOnce({
+      data: undefined,
+      response: { status: 304, headers: new Headers({ ETag: '"v1"' }) },
+    });
+
+    rerender(undefined);
+
+    // Should not error — React Query keeps stale data
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toEqual(mockManifestData);
+  });
+
+  it("propagates network errors to React Query error state", async () => {
+    mockGet.mockRejectedValueOnce(new TypeError("Network request failed"));
+
+    const { result } = renderHookWithProviders(() => useFriendExportManifest(CONNECTION_ID));
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toBeInstanceOf(TypeError);
+    expect(result.current.error?.message).toBe("Network request failed");
   });
 });
 
@@ -151,5 +194,47 @@ describe("useFriendExportPage", () => {
     });
 
     expect(result.current.error?.message).toContain("page request failed");
+  });
+
+  it("returns undefined on 304 Not Modified (React Query keeps previous data)", async () => {
+    mockGet.mockResolvedValueOnce({
+      data: mockPageData,
+      response: { status: 200, headers: new Headers({ ETag: '"p1"' }) },
+    });
+
+    const { result, rerender } = renderHookWithProviders(() =>
+      useFriendExportPage(CONNECTION_ID, { entityType: "member" }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    mockGet.mockResolvedValueOnce({
+      data: undefined,
+      response: { status: 304, headers: new Headers({ ETag: '"p1"' }) },
+    });
+
+    rerender(undefined);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(result.current.data).toEqual(mockPageData);
+  });
+
+  it("propagates network errors to React Query error state", async () => {
+    mockGet.mockRejectedValueOnce(new TypeError("Network request failed"));
+
+    const { result } = renderHookWithProviders(() =>
+      useFriendExportPage(CONNECTION_ID, { entityType: "member" }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toBeInstanceOf(TypeError);
+    expect(result.current.error?.message).toBe("Network request failed");
   });
 });
