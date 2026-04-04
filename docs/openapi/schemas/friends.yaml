@@ -320,6 +320,36 @@ FriendExportEntity:
       format: int64
       description: Unix timestamp in milliseconds
 
+ReceivedKeyGrant:
+  type: object
+  required:
+    - id
+    - bucketId
+    - encryptedKey
+    - keyVersion
+    - grantorSystemId
+    - senderBoxPublicKey
+  properties:
+    id:
+      type: string
+      pattern: ^kg_
+    bucketId:
+      type: string
+      pattern: ^bkt_
+    encryptedKey:
+      type: string
+      description: Base64-encoded encrypted bucket symmetric key
+    keyVersion:
+      type: integer
+      minimum: 1
+    grantorSystemId:
+      type: string
+      pattern: ^sys_
+      description: System ID of the account that granted this key
+    senderBoxPublicKey:
+      type: string
+      description: Base64url-encoded box public key of the grantor account
+
 FriendExportPageResponse:
   type: object
   required: [data, nextCursor, hasMore, etag]

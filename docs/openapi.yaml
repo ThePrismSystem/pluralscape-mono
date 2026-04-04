@@ -14160,35 +14160,6 @@ components:
         keyVersion:
           type: integer
           minimum: 1
-    ReceivedKeyGrant:
-      type: object
-      required:
-        - id
-        - bucketId
-        - encryptedKey
-        - keyVersion
-        - grantorSystemId
-        - senderBoxPublicKey
-      properties:
-        id:
-          type: string
-          pattern: ^kg_
-        bucketId:
-          type: string
-          pattern: ^bkt_
-        encryptedKey:
-          type: string
-          description: Base64-encoded encrypted bucket symmetric key
-        keyVersion:
-          type: integer
-          minimum: 1
-        grantorSystemId:
-          type: string
-          pattern: ^sys_
-          description: System ID of the account that granted this key
-        senderBoxPublicKey:
-          type: string
-          description: Base64url-encoded box public key of the grantor account
     FriendDashboardSyncEntry:
       type: object
       required:
@@ -14468,6 +14439,35 @@ components:
           items:
             $ref: "#/components/schemas/FriendNotificationEventType"
           description: List of event types for which notifications should be enabled
+    ReceivedKeyGrant:
+      type: object
+      required:
+        - id
+        - bucketId
+        - encryptedKey
+        - keyVersion
+        - grantorSystemId
+        - senderBoxPublicKey
+      properties:
+        id:
+          type: string
+          pattern: ^kg_
+        bucketId:
+          type: string
+          pattern: ^bkt_
+        encryptedKey:
+          type: string
+          description: Base64-encoded encrypted bucket symmetric key
+        keyVersion:
+          type: integer
+          minimum: 1
+        grantorSystemId:
+          type: string
+          pattern: ^sys_
+          description: System ID of the account that granted this key
+        senderBoxPublicKey:
+          type: string
+          description: Base64url-encoded box public key of the grantor account
     FriendExportEntityType:
       type: string
       enum:

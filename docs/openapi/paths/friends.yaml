@@ -37,6 +37,45 @@
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
+/account/friends/key-grants:
+  get:
+    operationId: listReceivedKeyGrants
+    tags: [Friends]
+    summary: List all received key grants
+    description: |
+      Returns all active (non-revoked) key grants where the authenticated
+      account is the recipient. Enables eager fetching of bucket encryption
+      keys for the friend dashboard without querying per-connection.
+
+      Grant count is bounded so no pagination is needed.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Active key grants for the authenticated account
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  required:
+                    - grants
+                  properties:
+                    grants:
+                      type: array
+                      items:
+                        $ref: "../openapi.yaml#/components/schemas/ReceivedKeyGrant"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
 /account/friends/{connectionId}:
   get:
     operationId: getFriendConnection

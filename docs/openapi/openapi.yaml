@@ -604,6 +604,8 @@ components:
       $ref: "./schemas/friends.yaml#/FriendNotificationEventType"
     UpdateFriendNotificationPreferenceRequest:
       $ref: "./schemas/friends.yaml#/UpdateFriendNotificationPreferenceRequest"
+    ReceivedKeyGrant:
+      $ref: "./schemas/friends.yaml#/ReceivedKeyGrant"
     FriendExportEntityType:
       $ref: "./schemas/friends.yaml#/FriendExportEntityType"
     FriendExportManifestResponse:
@@ -749,6 +751,8 @@ paths:
   # Friends
   /account/friends:
     $ref: "./paths/friends.yaml#/~1account~1friends"
+  /account/friends/key-grants:
+    $ref: "./paths/friends.yaml#/~1account~1friends~1key-grants"
   /account/friends/{connectionId}:
     $ref: "./paths/friends.yaml#/~1account~1friends~1%7BconnectionId%7D"
   /account/friends/{connectionId}/block:

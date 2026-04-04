@@ -6910,17 +6910,6 @@ export interface components {
       encryptedKey: string;
       keyVersion: number;
     };
-    ReceivedKeyGrant: {
-      id: string;
-      bucketId: string;
-      /** @description Base64-encoded encrypted bucket symmetric key */
-      encryptedKey: string;
-      keyVersion: number;
-      /** @description System ID of the account that granted this key */
-      grantorSystemId: string;
-      /** @description Base64url-encoded box public key of the grantor account */
-      senderBoxPublicKey: string;
-    };
     FriendDashboardSyncEntry: {
       /**
        * @description Entity type this entry covers
@@ -7104,6 +7093,17 @@ export interface components {
     UpdateFriendNotificationPreferenceRequest: {
       /** @description List of event types for which notifications should be enabled */
       enabledEventTypes: components["schemas"]["FriendNotificationEventType"][];
+    };
+    ReceivedKeyGrant: {
+      id: string;
+      bucketId: string;
+      /** @description Base64-encoded encrypted bucket symmetric key */
+      encryptedKey: string;
+      keyVersion: number;
+      /** @description System ID of the account that granted this key */
+      grantorSystemId: string;
+      /** @description Base64url-encoded box public key of the grantor account */
+      senderBoxPublicKey: string;
     };
     /**
      * @description Entity types available for friend-side data export
