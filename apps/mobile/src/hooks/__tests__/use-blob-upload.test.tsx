@@ -25,6 +25,19 @@ const mockUtils = {
 const mockFetch = vi.fn(() => Promise.resolve(new Response(null, { status: 200 })));
 vi.stubGlobal("fetch", mockFetch);
 
+vi.mock("@pluralscape/crypto", () => {
+  return {
+    getSodium: () => ({
+      genericHash: (_len: number, data: Uint8Array) => {
+        // Deterministic fake: return first 32 bytes zero-padded
+        const out = new Uint8Array(32);
+        out.set(data.subarray(0, 32));
+        return out;
+      },
+    }),
+  };
+});
+
 vi.mock("@pluralscape/api-client/trpc", () => {
   return {
     trpc: {
@@ -182,5 +195,65 @@ describe("useBlobUpload", () => {
     expect(result.current.progress).toBe(0);
     expect(result.current.error).toBeNull();
     expect(result.current.result).toBeNull();
+  });
+
+  it("passes checksum to confirmUpload", async () => {
+    const { result } = renderHookWithProviders(() => useBlobUpload());
+
+    act(() => {
+      result.current.upload(TEST_INPUT);
+    });
+
+    await waitFor(() => {
+      expect(result.current.status).toBe("success");
+    });
+
+    // BLAKE2b-256 of "test" produces a 64-char hex string
+    expect(mockConfirmUpload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemId: TEST_SYSTEM_ID,
+        blobId: MOCK_BLOB_ID,
+        checksum: expect.stringMatching(/^[0-9a-f]{64}$/),
+      }),
+    );
+  });
+
+  it("discards stale upload after reset", async () => {
+    // Make createUploadUrl slow so we can reset mid-flight
+    let resolveUrl!: (v: { uploadUrl: string; blobId: string; expiresAt: number }) => void;
+    mockCreateUploadUrl.mockImplementation(
+      () =>
+        new Promise<{ uploadUrl: string; blobId: string; expiresAt: number }>((resolve) => {
+          resolveUrl = resolve;
+        }),
+    );
+
+    const { result } = renderHookWithProviders(() => useBlobUpload());
+
+    // Start upload — it will block on createUploadUrl
+    act(() => {
+      result.current.upload(TEST_INPUT);
+    });
+    expect(result.current.status).toBe("requesting-url");
+
+    // Reset while first upload is in-flight
+    act(() => {
+      result.current.reset();
+    });
+    expect(result.current.status).toBe("idle");
+
+    // Resolve the stale upload — should NOT change state
+    resolveUrl({ uploadUrl: MOCK_UPLOAD_URL, blobId: MOCK_BLOB_ID, expiresAt: 0 });
+    await waitFor(() => {
+      // give the microtask queue a chance to settle
+      expect(result.current.status).not.toBe("requesting-url");
+    });
+
+    // Status should still be idle (stale upload discarded)
+    expect(result.current.status).toBe("idle");
+    expect(result.current.error).toBeNull();
+    // The stale upload should not have proceeded to fetch or confirm
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockConfirmUpload).not.toHaveBeenCalled();
   });
 });

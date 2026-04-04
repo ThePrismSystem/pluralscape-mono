@@ -1,4 +1,5 @@
 import { trpc } from "@pluralscape/api-client/trpc";
+import { getSodium } from "@pluralscape/crypto";
 import { useCallback, useRef, useState } from "react";
 
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -73,6 +74,17 @@ export function useDeleteBlob(): TRPCMutation<
 
 // ── useBlobUpload ────────────────────────────────────────────────────
 
+/** Compute BLAKE2b-256 hex digest of a file for upload confirmation. */
+async function computeChecksum(file: Blob | ArrayBuffer): Promise<string> {
+  const HASH_BYTES = 32;
+  const HEX_BASE = 16;
+  const PAD_LENGTH = 2;
+  const buffer =
+    file instanceof Blob ? new Uint8Array(await file.arrayBuffer()) : new Uint8Array(file);
+  const hash = getSodium().genericHash(HASH_BYTES, buffer);
+  return Array.from(hash, (b) => b.toString(HEX_BASE).padStart(PAD_LENGTH, "0")).join("");
+}
+
 type BlobUploadStatus =
   | "idle"
   | "requesting-url"
@@ -104,6 +116,12 @@ export function useBlobUpload(): BlobUploadState {
   const createUrlMutation = trpc.blob.createUploadUrl.useMutation();
   const confirmMutation = trpc.blob.confirmUpload.useMutation();
 
+  // Stable refs for mutation functions (useMutation returns new objects each render)
+  const createUrlRef = useRef(createUrlMutation.mutateAsync);
+  createUrlRef.current = createUrlMutation.mutateAsync;
+  const confirmRef = useRef(confirmMutation.mutateAsync);
+  confirmRef.current = confirmMutation.mutateAsync;
+
   const [status, setStatus] = useState<BlobUploadStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<Error | null>(null);
@@ -131,7 +149,7 @@ export function useBlobUpload(): BlobUploadState {
       void (async () => {
         try {
           // Step 1: Get presigned upload URL
-          const urlResult = await createUrlMutation.mutateAsync({
+          const urlResult = await createUrlRef.current({
             systemId,
             purpose: input.purpose,
             mimeType: input.mimeType,
@@ -157,11 +175,16 @@ export function useBlobUpload(): BlobUploadState {
           setProgress(1);
           setStatus("confirming");
 
-          // Step 3: Confirm upload
-          const confirmed = await confirmMutation.mutateAsync({
+          // Step 3: Compute checksum and confirm upload
+          const checksum = await computeChecksum(input.file);
+
+          if (gen !== genRef.current) return;
+
+          const confirmed = await confirmRef.current({
             systemId,
             blobId: urlResult.blobId,
-          } as RouterInput["blob"]["confirmUpload"]);
+            checksum,
+          });
 
           if (gen !== genRef.current) return;
           setResult(confirmed);
@@ -175,7 +198,7 @@ export function useBlobUpload(): BlobUploadState {
         }
       })();
     },
-    [systemId, createUrlMutation, confirmMutation, utils.blob.list],
+    [systemId, utils.blob.list],
   );
 
   return { upload, status, progress, error, result, reset };
