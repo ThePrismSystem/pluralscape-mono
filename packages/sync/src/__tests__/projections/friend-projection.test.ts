@@ -17,6 +17,12 @@ import {
   updateFriendConnectionStatusProjection,
   updateFriendConnectionVisibilityProjection,
 } from "../../projections/friend-projection.js";
+import {
+  asBucketId,
+  asFriendCodeId,
+  asFriendConnectionId,
+  asKeyGrantId,
+} from "../test-crypto-helpers.js";
 
 import type {
   FriendCodeInput,
@@ -181,9 +187,9 @@ describe("applyFriendCodeProjection", () => {
     });
 
     expect(Object.keys(doc.friendCodes)).toHaveLength(1);
-    expect(doc.friendCodes["fcode_1"]?.id.val).toBe("fcode_1");
-    expect(doc.friendCodes["fcode_1"]?.code.val).toBe("ABCD-EFGH-1234");
-    expect(doc.friendCodes["fcode_1"]?.archived).toBe(false);
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.id.val).toBe("fcode_1");
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.code.val).toBe("ABCD-EFGH-1234");
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.archived).toBe(false);
   });
 
   it("overwrites existing code with same id", () => {
@@ -199,7 +205,7 @@ describe("applyFriendCodeProjection", () => {
     });
 
     expect(Object.keys(doc.friendCodes)).toHaveLength(1);
-    expect(doc.friendCodes["fcode_1"]?.code.val).toBe("NEW-CODE-9999");
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.code.val).toBe("NEW-CODE-9999");
   });
 });
 
@@ -215,11 +221,11 @@ describe("applyFriendConnectionProjection", () => {
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(1);
-    const fc = doc.friendConnections["fc_1"];
+    const fc = doc.friendConnections[asFriendConnectionId("fc_1")];
     expect(fc?.id.val).toBe("fc_1");
     expect(fc?.status.val).toBe("pending");
-    expect(fc?.assignedBuckets["bkt_1"]).toBe(true);
-    expect(fc?.assignedBuckets["bkt_2"]).toBe(true);
+    expect(fc?.assignedBuckets[asBucketId("bkt_1")]).toBe(true);
+    expect(fc?.assignedBuckets[asBucketId("bkt_2")]).toBe(true);
   });
 });
 
@@ -235,7 +241,7 @@ describe("applyKeyGrantProjection", () => {
     });
 
     expect(Object.keys(doc.keyGrants)).toHaveLength(1);
-    const kg = doc.keyGrants["kg_1"];
+    const kg = doc.keyGrants[asKeyGrantId("kg_1")];
     expect(kg?.id.val).toBe("kg_1");
     expect(kg?.encryptedBucketKey.val).toBe("base64encodedkey==");
     expect(kg?.revokedAt).toBeNull();
@@ -256,7 +262,7 @@ describe("archiveFriendCodeProjection", () => {
       archiveFriendCodeProjection(d, "fcode_1");
     });
 
-    expect(doc.friendCodes["fcode_1"]?.archived).toBe(true);
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.archived).toBe(true);
   });
 
   it("is a no-op if code does not exist", () => {
@@ -284,7 +290,7 @@ describe("updateFriendConnectionStatusProjection", () => {
       updateFriendConnectionStatusProjection(d, "fc_1", "accepted", 2000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.status.val).toBe("accepted");
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.status.val).toBe("accepted");
   });
 
   it("is a no-op if connection does not exist", () => {
@@ -318,7 +324,7 @@ describe("updateFriendConnectionVisibilityProjection", () => {
       updateFriendConnectionVisibilityProjection(d, "fc_1", newVisibility, 2000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.visibility.val).toBe(newVisibility);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.visibility.val).toBe(newVisibility);
   });
 
   it("is a no-op if connection does not exist", () => {
@@ -346,7 +352,9 @@ describe("addBucketAssignmentProjection", () => {
       addBucketAssignmentProjection(d, "fc_1", "bkt_new" as BucketId, 2000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_new"]).toBe(true);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_new")],
+    ).toBe(true);
   });
 
   it("is idempotent when adding existing bucket", () => {
@@ -360,8 +368,12 @@ describe("addBucketAssignmentProjection", () => {
       addBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 2000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBe(true);
-    expect(Object.keys(doc.friendConnections["fc_1"]?.assignedBuckets ?? {})).toHaveLength(1);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_1")],
+    ).toBe(true);
+    expect(
+      Object.keys(doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets ?? {}),
+    ).toHaveLength(1);
   });
 
   it("is a no-op if connection does not exist", () => {
@@ -391,9 +403,13 @@ describe("removeBucketAssignmentProjection", () => {
       removeBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 3000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBeUndefined();
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_2"]).toBe(true);
-    expect(doc.friendConnections["fc_1"]?.updatedAt).toBe(3000);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_1")],
+    ).toBeUndefined();
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_2")],
+    ).toBe(true);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.updatedAt).toBe(3000);
   });
 
   it("is a no-op when removing a bucket that is not assigned", () => {
@@ -407,8 +423,10 @@ describe("removeBucketAssignmentProjection", () => {
       removeBucketAssignmentProjection(d, "fc_1", "bkt_nonexistent" as BucketId, 3000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBe(true);
-    expect(doc.friendConnections["fc_1"]?.updatedAt).toBe(3000);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_1")],
+    ).toBe(true);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.updatedAt).toBe(3000);
   });
 
   it("is a no-op if connection does not exist", () => {
@@ -467,7 +485,7 @@ describe("archiveFriendConnectionProjection", () => {
       archiveFriendConnectionProjection(d, "fc_1");
     });
 
-    expect(doc.friendConnections["fc_1"]?.archived).toBe(true);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.archived).toBe(true);
   });
 
   it("is a no-op if connection does not exist", () => {
@@ -505,7 +523,7 @@ describe("archiveFriendConnectionProjection", () => {
       archiveFriendConnectionProjection(d, "fc_1");
     });
 
-    const fc = doc.friendConnections["fc_1"];
+    const fc = doc.friendConnections[asFriendConnectionId("fc_1")];
     expect(fc?.archived).toBe(true);
     expect(fc?.status.val).toBe("pending");
     expect(fc?.id.val).toBe("fc_1");
@@ -526,7 +544,7 @@ describe("revokeKeyGrantProjection", () => {
       revokeKeyGrantProjection(d, "kg_1", 9999);
     });
 
-    expect(doc.keyGrants["kg_1"]?.revokedAt).toBe(9999);
+    expect(doc.keyGrants[asKeyGrantId("kg_1")]?.revokedAt).toBe(9999);
   });
 
   it("is a no-op if grant does not exist", () => {

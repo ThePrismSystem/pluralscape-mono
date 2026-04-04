@@ -1,4 +1,24 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
+import type {
+  CustomFrontId,
+  FieldDefinitionId,
+  FieldValueId,
+  FrontingReportId,
+  GroupId,
+  InnerWorldEntityId,
+  InnerWorldRegionId,
+  LifecycleEventId,
+  MemberId,
+  MemberPhotoId,
+  RelationshipId,
+  SystemStructureEntityAssociationId,
+  SystemStructureEntityId,
+  SystemStructureEntityLinkId,
+  SystemStructureEntityMemberLinkId,
+  SystemStructureEntityTypeId,
+  TimerId,
+  WebhookId,
+} from "@pluralscape/types";
 
 // ── system ──────────────────────────────────────────────────────────
 
@@ -363,25 +383,31 @@ export interface SystemCoreDocument {
   systemSettings: CrdtSystemSettings;
 
   // Entity maps (keyed by entity ID) — LWW per field
-  members: Record<string, CrdtMember>;
-  memberPhotos: Record<string, CrdtMemberPhoto>;
-  groups: Record<string, CrdtGroup>;
-  structureEntityTypes: Record<string, CrdtStructureEntityType>;
-  structureEntities: Record<string, CrdtStructureEntity>;
-  relationships: Record<string, CrdtRelationship>;
-  customFronts: Record<string, CrdtCustomFront>;
-  fieldDefinitions: Record<string, CrdtFieldDefinition>;
-  fieldValues: Record<string, CrdtFieldValue>;
-  innerWorldEntities: Record<string, CrdtInnerWorldEntity>;
-  innerWorldRegions: Record<string, CrdtInnerWorldRegion>;
-  timers: Record<string, CrdtTimer>;
-  webhookConfigs: Record<string, CrdtWebhookConfig>;
-  frontingReports: Record<string, CrdtFrontingReport>;
+  members: Record<MemberId, CrdtMember>;
+  memberPhotos: Record<MemberPhotoId, CrdtMemberPhoto>;
+  groups: Record<GroupId, CrdtGroup>;
+  structureEntityTypes: Record<SystemStructureEntityTypeId, CrdtStructureEntityType>;
+  structureEntities: Record<SystemStructureEntityId, CrdtStructureEntity>;
+  relationships: Record<RelationshipId, CrdtRelationship>;
+  customFronts: Record<CustomFrontId, CrdtCustomFront>;
+  fieldDefinitions: Record<FieldDefinitionId, CrdtFieldDefinition>;
+  fieldValues: Record<FieldValueId, CrdtFieldValue>;
+  innerWorldEntities: Record<InnerWorldEntityId, CrdtInnerWorldEntity>;
+  innerWorldRegions: Record<InnerWorldRegionId, CrdtInnerWorldRegion>;
+  timers: Record<TimerId, CrdtTimer>;
+  webhookConfigs: Record<WebhookId, CrdtWebhookConfig>;
+  frontingReports: Record<FrontingReportId, CrdtFrontingReport>;
 
   // Entity link maps (keyed by link entity ID) — LWW per field
-  structureEntityLinks: Record<string, CrdtStructureEntityLink>;
-  structureEntityMemberLinks: Record<string, CrdtStructureEntityMemberLink>;
-  structureEntityAssociations: Record<string, CrdtStructureEntityAssociation>;
+  structureEntityLinks: Record<SystemStructureEntityLinkId, CrdtStructureEntityLink>;
+  structureEntityMemberLinks: Record<
+    SystemStructureEntityMemberLinkId,
+    CrdtStructureEntityMemberLink
+  >;
+  structureEntityAssociations: Record<
+    SystemStructureEntityAssociationId,
+    CrdtStructureEntityAssociation
+  >;
 
   /**
    * Junction maps (compound key "{id1}_{id2}" → true).
@@ -391,5 +417,5 @@ export interface SystemCoreDocument {
   groupMemberships: Record<string, true>;
 
   /** Append-LWW lifecycle event map (keyed by event ID) */
-  lifecycleEvents: Record<string, CrdtLifecycleEvent>;
+  lifecycleEvents: Record<LifecycleEventId, CrdtLifecycleEvent>;
 }

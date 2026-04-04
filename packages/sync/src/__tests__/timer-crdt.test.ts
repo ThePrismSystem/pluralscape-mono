@@ -16,7 +16,7 @@ import { EncryptedRelay } from "../relay.js";
 import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import { asCheckInRecordId, asSyncDocId, asTimerId } from "./test-crypto-helpers.js";
 
 import type { CrdtCheckInRecord } from "../schemas/fronting.js";
 import type { CrdtTimer } from "../schemas/system-core.js";
@@ -122,7 +122,7 @@ describe("Timer config merge conflicts", () => {
 
     // Seed a timer config
     const seedEnv = sessionA.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1");
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1");
     });
     await relay.submit(seedEnv);
     const r1 = await relay.getEnvelopesSince(docId, 0);
@@ -130,14 +130,14 @@ describe("Timer config merge conflicts", () => {
 
     // A changes interval to 60, B changes interval to 15 concurrently
     const envA = sessionA.change((d) => {
-      const t = d.timers["tmr_1"];
+      const t = d.timers[asTimerId("tmr_1")];
       if (t) {
         t.intervalMinutes = 60;
         t.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const t = d.timers["tmr_1"];
+      const t = d.timers[asTimerId("tmr_1")];
       if (t) {
         t.intervalMinutes = 15;
         t.updatedAt = 2001;
@@ -149,8 +149,8 @@ describe("Timer config merge conflicts", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // After merge, both sessions should agree on the same value (LWW convergence)
-    const mergedA = sessionA.document.timers["tmr_1"]?.intervalMinutes;
-    const mergedB = sessionB.document.timers["tmr_1"]?.intervalMinutes;
+    const mergedA = sessionA.document.timers[asTimerId("tmr_1")]?.intervalMinutes;
+    const mergedB = sessionB.document.timers[asTimerId("tmr_1")]?.intervalMinutes;
     expect(mergedA).toBe(mergedB);
     // The winner must be one of the two concurrent values
     expect([15, 60]).toContain(mergedA);
@@ -177,7 +177,7 @@ describe("normalizeTimerConfig", () => {
     });
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", { intervalMinutes: -5 });
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -5 });
     });
 
     const result = normalizeTimerConfig(session);
@@ -187,7 +187,7 @@ describe("normalizeTimerConfig", () => {
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("intervalMinutes");
 
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
   });
 
   it("does not disable timer with overnight waking hours (start > end)", () => {
@@ -201,7 +201,7 @@ describe("normalizeTimerConfig", () => {
     });
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: s("22:00"),
         wakingEnd: s("08:00"),
@@ -212,7 +212,7 @@ describe("normalizeTimerConfig", () => {
 
     expect(result.count).toBe(0);
     expect(result.notifications).toHaveLength(0);
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(true);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(true);
   });
 
   it("disables timer when wakingHoursOnly=true but wakingStart equals wakingEnd", () => {
@@ -226,7 +226,7 @@ describe("normalizeTimerConfig", () => {
     });
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: s("10:00"),
         wakingEnd: s("10:00"),
@@ -237,7 +237,7 @@ describe("normalizeTimerConfig", () => {
 
     expect(result.count).toBe(1);
     expect(result.notifications[0]?.fieldName).toBe("wakingHours");
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
   });
 
   it("does not modify valid timer configs", () => {
@@ -251,7 +251,7 @@ describe("normalizeTimerConfig", () => {
     });
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: s("08:00"),
         wakingEnd: s("22:00"),
@@ -275,7 +275,7 @@ describe("normalizeTimerConfig", () => {
     });
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         intervalMinutes: -5,
         archived: true,
       });
@@ -299,7 +299,7 @@ describe("normalizeTimerConfig", () => {
     });
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: null,
         wakingEnd: s("22:00"),
@@ -309,7 +309,7 @@ describe("normalizeTimerConfig", () => {
     const result = normalizeTimerConfig(session);
 
     expect(result.count).toBe(1);
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
   });
 });
 
@@ -333,7 +333,7 @@ describe("Check-in record merge conflicts", () => {
     });
 
     session.change((d) => {
-      d.checkInRecords["cir_1"] = makeCheckIn("cir_1", {
+      d.checkInRecords[asCheckInRecordId("cir_1")] = makeCheckIn("cir_1", {
         respondedByMemberId: s("mem_1"),
         respondedAt: 2000,
         dismissed: true,
@@ -345,7 +345,7 @@ describe("Check-in record merge conflicts", () => {
     // Response takes priority over dismissal
     expect(result.count).toBe(1);
     expect(result.envelope).not.toBeNull();
-    expect(session.document.checkInRecords["cir_1"]?.dismissed).toBe(false);
+    expect(session.document.checkInRecords[asCheckInRecordId("cir_1")]?.dismissed).toBe(false);
   });
 
   it("does not modify check-in that is only responded", () => {
@@ -359,7 +359,7 @@ describe("Check-in record merge conflicts", () => {
     });
 
     session.change((d) => {
-      d.checkInRecords["cir_1"] = makeCheckIn("cir_1", {
+      d.checkInRecords[asCheckInRecordId("cir_1")] = makeCheckIn("cir_1", {
         respondedByMemberId: s("mem_1"),
         respondedAt: 2000,
       });
@@ -381,7 +381,7 @@ describe("Check-in record merge conflicts", () => {
     });
 
     session.change((d) => {
-      d.checkInRecords["cir_1"] = makeCheckIn("cir_1", {
+      d.checkInRecords[asCheckInRecordId("cir_1")] = makeCheckIn("cir_1", {
         dismissed: true,
       });
     });

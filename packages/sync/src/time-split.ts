@@ -147,8 +147,12 @@ export function splitDocument<T>(
 
       if (activeEntries.length > 0) {
         const migrated = Automerge.change(newDoc, (d) => {
+          const sessions = d.sessions as Record<
+            string,
+            (typeof d.sessions)[keyof typeof d.sessions]
+          >;
           for (const [id, fs] of activeEntries) {
-            d.sessions[id] = fs;
+            sessions[id] = fs;
           }
         });
         return { documentType: "fronting", newDocId, newDoc: migrated };

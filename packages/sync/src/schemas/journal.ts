@@ -1,4 +1,5 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
+import type { JournalEntryId, WikiPageId } from "@pluralscape/types";
 
 // ── journal entry ─────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ export interface CrdtWikiPage extends CrdtAuditFields {
  */
 export interface JournalDocument {
   /** Append-lww map: entries keyed by JournalEntryId; content is mutable after creation. */
-  entries: Record<string, CrdtJournalEntry>;
+  entries: Record<JournalEntryId, CrdtJournalEntry>;
   /** LWW map keyed by WikiPageId. */
-  wikiPages: Record<string, CrdtWikiPage>;
+  wikiPages: Record<WikiPageId, CrdtWikiPage>;
 }

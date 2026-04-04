@@ -24,7 +24,7 @@ import { createSystemCoreDocument } from "../factories/document-factory.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import { asMemberId, asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { SystemCoreDocument } from "../schemas/system-core.js";
 import type { BucketKeyCache, KdfMasterKey, SodiumAdapter, SignKeypair } from "@pluralscape/crypto";
@@ -87,7 +87,7 @@ describe("performance", () => {
         });
 
         for (let i = 0; i < CHANGES_THRESHOLD; i++) {
-          const memberId = `mem_${String(i)}`;
+          const memberId = asMemberId(`mem_${String(i)}`);
           const envelope = producer.change((doc) => {
             doc.members[memberId] = {
               id: new Automerge.ImmutableString(memberId),
@@ -154,7 +154,7 @@ describe("performance", () => {
       });
 
       for (let i = 0; i < N; i++) {
-        const mId = `m${String(i)}`;
+        const mId = asMemberId(`m${String(i)}`);
         const envelope = session.change((doc) => {
           doc.members[mId] = {
             id: new Automerge.ImmutableString(mId),

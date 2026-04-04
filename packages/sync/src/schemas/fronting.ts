@@ -1,4 +1,5 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
+import type { CheckInRecordId, FrontingCommentId, FrontingSessionId } from "@pluralscape/types";
 
 // ── fronting session ─────────────────────────────────────────────────
 
@@ -78,9 +79,9 @@ export interface CrdtCheckInRecord extends CrdtAuditFields {
  */
 export interface FrontingDocument {
   /** Append-lww map: sessions are added by ID assignment; endTime/comment are mutable. */
-  sessions: Record<string, CrdtFrontingSession>;
+  sessions: Record<FrontingSessionId, CrdtFrontingSession>;
   /** LWW map keyed by FrontingCommentId. */
-  comments: Record<string, CrdtFrontingComment>;
+  comments: Record<FrontingCommentId, CrdtFrontingComment>;
   /** Append-lww map: records are added by ID assignment; response fields are mutable. */
-  checkInRecords: Record<string, CrdtCheckInRecord>;
+  checkInRecords: Record<CheckInRecordId, CrdtCheckInRecord>;
 }

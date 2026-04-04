@@ -134,7 +134,7 @@ export function archiveFriendCodeProjection(
   codeId: string,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const code = doc.friendCodes[codeId];
+  const code = doc.friendCodes[codeId as FriendCodeId];
   if (code) {
     code.archived = true;
   } else {
@@ -150,7 +150,7 @@ export function updateFriendConnectionStatusProjection(
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId];
+  const connection = doc.friendConnections[connectionId as FriendConnectionId];
   if (connection) {
     connection.status = immStr(status);
     connection.updatedAt = updatedAt;
@@ -167,7 +167,7 @@ export function updateFriendConnectionVisibilityProjection(
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId];
+  const connection = doc.friendConnections[connectionId as FriendConnectionId];
   if (connection) {
     connection.visibility = immStr(visibility);
     connection.updatedAt = updatedAt;
@@ -186,9 +186,9 @@ export function addBucketAssignmentProjection(
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId];
+  const connection = doc.friendConnections[connectionId as FriendConnectionId];
   if (connection) {
-    connection.assignedBuckets[bucketId] = true;
+    (connection.assignedBuckets as Record<string, true>)[bucketId] = true;
     connection.updatedAt = updatedAt;
   } else {
     logger?.warn("addBucketAssignmentProjection: connection not found", { connectionId });
@@ -203,7 +203,7 @@ export function removeBucketAssignmentProjection(
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId];
+  const connection = doc.friendConnections[connectionId as FriendConnectionId];
   if (connection) {
     Reflect.deleteProperty(connection.assignedBuckets, bucketId);
     connection.updatedAt = updatedAt;
@@ -218,7 +218,7 @@ export function archiveFriendConnectionProjection(
   connectionId: string,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId];
+  const connection = doc.friendConnections[connectionId as FriendConnectionId];
   if (connection) {
     connection.archived = true;
   } else {
@@ -233,7 +233,7 @@ export function revokeKeyGrantProjection(
   revokedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const grant = doc.keyGrants[grantId];
+  const grant = doc.keyGrants[grantId as KeyGrantId];
   if (grant) {
     grant.revokedAt = revokedAt;
   } else {

@@ -1,4 +1,5 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
+import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId } from "@pluralscape/types";
 
 // ── privacy bucket ────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ export interface CrdtFriendConnection extends CrdtAuditFields {
    * Nested map keyed by BucketId → true.
    * Add-wins: concurrent add+remove results in the bucket being assigned.
    */
-  assignedBuckets: Record<string, true>;
+  assignedBuckets: Record<BucketId, true>;
   /** JSON-serialized FriendVisibilitySettings */
   visibility: CrdtString;
   archived: boolean;
@@ -95,18 +96,18 @@ export interface CrdtKeyGrant {
  */
 export interface PrivacyConfigDocument {
   /** LWW map keyed by BucketId. */
-  buckets: Record<string, CrdtPrivacyBucket>;
+  buckets: Record<BucketId, CrdtPrivacyBucket>;
   /**
    * LWW map keyed by compound key "{entityType}_{entityId}_{bucketId}".
    * Deleting a key removes the entity-bucket assignment.
    */
   contentTags: Record<string, CrdtBucketContentTag>;
   /** LWW map keyed by FriendConnectionId (with nested assignedBuckets map). */
-  friendConnections: Record<string, CrdtFriendConnection>;
+  friendConnections: Record<FriendConnectionId, CrdtFriendConnection>;
   /** LWW map keyed by FriendCodeId. */
-  friendCodes: Record<string, CrdtFriendCode>;
+  friendCodes: Record<FriendCodeId, CrdtFriendCode>;
   /** Append-lww map keyed by KeyGrantId; revokedAt is the only mutable field. */
-  keyGrants: Record<string, CrdtKeyGrant>;
+  keyGrants: Record<KeyGrantId, CrdtKeyGrant>;
   /**
    * Junction map keyed by "{fieldDefinitionId}_{bucketId}" → true.
    * Controls which custom field definitions are visible in each bucket.

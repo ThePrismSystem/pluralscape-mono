@@ -1,4 +1,5 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
+import type { NoteId } from "@pluralscape/types";
 
 /** CRDT representation of a Note (LWW map, keyed by NoteId). */
 export interface CrdtNote extends CrdtAuditFields {
@@ -24,5 +25,5 @@ export interface CrdtNote extends CrdtAuditFields {
  */
 export interface NoteDocument {
   /** LWW map keyed by NoteId. */
-  notes: Record<string, CrdtNote>;
+  notes: Record<NoteId, CrdtNote>;
 }
