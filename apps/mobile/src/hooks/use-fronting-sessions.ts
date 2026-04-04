@@ -18,6 +18,10 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  FrontingSessionPage as FrontingSessionRawPage,
+  FrontingSessionRaw,
+} from "@pluralscape/data/transforms/fronting-session";
 import type { Archived, FrontingSession, FrontingSessionId } from "@pluralscape/types";
 import type { InfiniteData, UseMutationResult } from "@tanstack/react-query";
 import type { TRPCHookResult } from "@trpc/react-query/shared";
@@ -25,8 +29,6 @@ import type { TRPCHookResult } from "@trpc/react-query/shared";
 type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
   UseMutationResult<TData, TRPCError, TVars, TCtx>;
 
-type RawSession = RouterOutput["frontingSession"]["get"];
-type RawSessionPage = RouterOutput["frontingSession"]["list"];
 type RawGetActive = RouterOutput["frontingSession"]["getActive"];
 type SessionPage = {
   readonly data: (FrontingSession | Archived<FrontingSession>)[];
@@ -53,7 +55,7 @@ export function useFrontingSession(
   const masterKey = useMasterKey();
 
   const selectFrontingSession = useCallback(
-    (raw: RawSession): FrontingSession | Archived<FrontingSession> => {
+    (raw: FrontingSessionRaw): FrontingSession | Archived<FrontingSession> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptFrontingSession(raw, masterKey);
     },
@@ -77,7 +79,7 @@ export function useFrontingSessionsList(
   const masterKey = useMasterKey();
 
   const selectFrontingSessionsList = useCallback(
-    (data: InfiniteData<RawSessionPage>): InfiniteData<SessionPage> => {
+    (data: InfiniteData<FrontingSessionRawPage>): InfiniteData<SessionPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -97,7 +99,7 @@ export function useFrontingSessionsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawSessionPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: FrontingSessionRawPage) => lastPage.nextCursor,
       select: selectFrontingSessionsList,
     },
   );
@@ -121,7 +123,7 @@ export function useStartSession(): TRPCMutation<
   });
 }
 
-type EndSessionContext = { readonly previousSession: RawSession | undefined };
+type EndSessionContext = { readonly previousSession: FrontingSessionRaw | undefined };
 
 export function useEndSession(): TRPCMutationCtx<
   RouterOutput["frontingSession"]["end"],

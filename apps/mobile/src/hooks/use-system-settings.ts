@@ -11,18 +11,19 @@ import { useActiveSystemId } from "../providers/system-provider.js";
 import { type TRPCMutation, type TRPCQuery } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { DecryptedNomenclature } from "@pluralscape/data/transforms/system-settings";
+import type {
+  DecryptedNomenclature,
+  NomenclatureSettingsRaw,
+  SystemSettingsRaw,
+} from "@pluralscape/data/transforms/system-settings";
 import type { SystemSettings } from "@pluralscape/types";
-
-type RawSystemSettings = RouterOutput["systemSettings"]["settings"]["get"];
-type RawNomenclature = RouterOutput["systemSettings"]["nomenclature"]["get"];
 
 export function useSystemSettings(): TRPCQuery<SystemSettings> {
   const systemId = useActiveSystemId();
   const masterKey = useMasterKey();
 
   const selectSystemSettings = useCallback(
-    (raw: RawSystemSettings): SystemSettings => {
+    (raw: SystemSettingsRaw): SystemSettings => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptSystemSettings(raw, masterKey);
     },
@@ -43,7 +44,7 @@ export function useNomenclature(): TRPCQuery<DecryptedNomenclature> {
   const masterKey = useMasterKey();
 
   const selectNomenclature = useCallback(
-    (raw: RawNomenclature): DecryptedNomenclature => {
+    (raw: NomenclatureSettingsRaw): DecryptedNomenclature => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptNomenclature(raw, masterKey);
     },

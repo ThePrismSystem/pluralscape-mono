@@ -19,14 +19,13 @@ import {
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   FieldDefinitionDecrypted,
+  FieldDefinitionPage,
+  FieldDefinitionRaw,
   FieldValueDecrypted,
+  FieldValueRaw,
 } from "@pluralscape/data/transforms/custom-field";
 import type { FieldDefinitionId, MemberId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawFieldDef = RouterOutput["field"]["definition"]["get"];
-type RawFieldDefPage = RouterOutput["field"]["definition"]["list"];
-type RawFieldValueList = RouterOutput["field"]["value"]["list"];
 type FieldDefPage = {
   readonly data: FieldDefinitionDecrypted[];
   readonly nextCursor: string | null;
@@ -46,7 +45,7 @@ export function useFieldDefinition(
   const masterKey = useMasterKey();
 
   const selectFieldDefinition = useCallback(
-    (raw: RawFieldDef): FieldDefinitionDecrypted => {
+    (raw: FieldDefinitionRaw): FieldDefinitionDecrypted => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptFieldDefinition(raw, masterKey);
     },
@@ -70,7 +69,7 @@ export function useFieldDefinitionsList(
   const masterKey = useMasterKey();
 
   const selectFieldDefinitionsList = useCallback(
-    (data: InfiniteData<RawFieldDefPage>): InfiniteData<FieldDefPage> => {
+    (data: InfiniteData<FieldDefinitionPage>): InfiniteData<FieldDefPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -92,7 +91,7 @@ export function useFieldDefinitionsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawFieldDefPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: FieldDefinitionPage) => lastPage.nextCursor,
       select: selectFieldDefinitionsList,
     },
   );
@@ -157,7 +156,7 @@ export function useMemberFieldValues(
   const masterKey = useMasterKey();
 
   const selectFieldValues = useCallback(
-    (raw: RawFieldValueList): FieldValueDecrypted[] => {
+    (raw: readonly FieldValueRaw[]): FieldValueDecrypted[] => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptFieldValueList(raw, masterKey);
     },

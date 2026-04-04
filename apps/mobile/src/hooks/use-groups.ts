@@ -14,12 +14,14 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { GroupDecrypted } from "@pluralscape/data/transforms/group";
+import type {
+  GroupDecrypted,
+  GroupPage as GroupRawPage,
+  GroupRaw,
+} from "@pluralscape/data/transforms/group";
 import type { GroupId, MemberId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
-type RawGroup = RouterOutput["group"]["get"];
-type RawGroupPage = RouterOutput["group"]["list"];
 type GroupPage = { readonly data: GroupDecrypted[]; readonly nextCursor: string | null };
 
 interface GroupListOpts extends SystemIdOverride {
@@ -33,7 +35,7 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): TRPCQuery<G
   const masterKey = useMasterKey();
 
   const selectGroup = useCallback(
-    (raw: RawGroup): GroupDecrypted => {
+    (raw: GroupRaw): GroupDecrypted => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptGroup(raw, masterKey);
     },
@@ -55,7 +57,7 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
   const masterKey = useMasterKey();
 
   const selectGroupsList = useCallback(
-    (data: InfiniteData<RawGroupPage>): InfiniteData<GroupPage> => {
+    (data: InfiniteData<GroupRawPage>): InfiniteData<GroupPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -77,7 +79,7 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawGroupPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: GroupRawPage) => lastPage.nextCursor,
       select: selectGroupsList,
     },
   );

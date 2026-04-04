@@ -14,11 +14,12 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type {
+  CustomFrontPage as CustomFrontRawPage,
+  CustomFrontRaw,
+} from "@pluralscape/data/transforms/custom-front";
 import type { Archived, CustomFront, CustomFrontId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
-
-type RawCustomFront = RouterOutput["customFront"]["get"];
-type RawCustomFrontPage = RouterOutput["customFront"]["list"];
 type CustomFrontPage = {
   readonly data: (CustomFront | Archived<CustomFront>)[];
   readonly nextCursor: string | null;
@@ -37,7 +38,7 @@ export function useCustomFront(
   const masterKey = useMasterKey();
 
   const selectCustomFront = useCallback(
-    (raw: RawCustomFront): CustomFront | Archived<CustomFront> => {
+    (raw: CustomFrontRaw): CustomFront | Archived<CustomFront> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptCustomFront(raw, masterKey);
     },
@@ -61,7 +62,7 @@ export function useCustomFrontsList(
   const masterKey = useMasterKey();
 
   const selectCustomFrontsList = useCallback(
-    (data: InfiniteData<RawCustomFrontPage>): InfiniteData<CustomFrontPage> => {
+    (data: InfiniteData<CustomFrontRawPage>): InfiniteData<CustomFrontPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -82,7 +83,7 @@ export function useCustomFrontsList(
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawCustomFrontPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: CustomFrontRawPage) => lastPage.nextCursor,
       select: selectCustomFrontsList,
     },
   );

@@ -14,11 +14,10 @@ import {
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { MemberPage as MemberRawPage, MemberRaw } from "@pluralscape/data/transforms/member";
 import type { Archived, GroupId, Member, MemberId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
-type RawMember = RouterOutput["member"]["get"];
-type RawMemberPage = RouterOutput["member"]["list"];
 type MemberPage = {
   readonly data: (Member | Archived<Member>)[];
   readonly nextCursor: string | null;
@@ -39,7 +38,7 @@ export function useMember(
   const masterKey = useMasterKey();
 
   const selectMember = useCallback(
-    (raw: RawMember): Member | Archived<Member> => {
+    (raw: MemberRaw): Member | Archived<Member> => {
       if (masterKey === null) throw new Error("masterKey is null");
       return decryptMember(raw, masterKey);
     },
@@ -61,7 +60,7 @@ export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberP
   const masterKey = useMasterKey();
 
   const selectMembersList = useCallback(
-    (data: InfiniteData<RawMemberPage>): InfiniteData<MemberPage> => {
+    (data: InfiniteData<MemberRawPage>): InfiniteData<MemberPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
       const key = masterKey;
       return {
@@ -84,7 +83,7 @@ export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberP
     },
     {
       enabled: masterKey !== null,
-      getNextPageParam: (lastPage: RawMemberPage) => lastPage.nextCursor,
+      getNextPageParam: (lastPage: MemberRawPage) => lastPage.nextCursor,
       select: selectMembersList,
     },
   );
