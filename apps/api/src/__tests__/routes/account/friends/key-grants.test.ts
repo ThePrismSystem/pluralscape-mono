@@ -7,6 +7,8 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
+import type { BucketId, KeyGrantId, ReceivedKeyGrantsResponse, SystemId } from "@pluralscape/types";
+
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/key-grant.service.js", () => ({
@@ -58,14 +60,14 @@ describe("GET /account/friends/key-grants", () => {
   });
 
   it("returns 200 with grants in envelope", async () => {
-    const mockResult = {
+    const mockResult: ReceivedKeyGrantsResponse = {
       grants: [
         {
-          id: "kg_1",
-          bucketId: "bkt_abc",
+          id: "kg_1" as KeyGrantId,
+          bucketId: "bkt_abc" as BucketId,
           encryptedKey: "base64key",
           keyVersion: 1,
-          grantorSystemId: "sys_xyz",
+          grantorSystemId: "sys_xyz" as SystemId,
           senderBoxPublicKey: "base64urlpubkey",
         },
       ],
@@ -75,7 +77,7 @@ describe("GET /account/friends/key-grants", () => {
     const res = await createApp().request("/account/friends/key-grants");
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as { data: ReceivedKeyGrantsResponse };
     expect(body.data).toEqual(mockResult);
   });
 
@@ -96,7 +98,7 @@ describe("GET /account/friends/key-grants", () => {
     const res = await createApp().request("/account/friends/key-grants");
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as { data: ReceivedKeyGrantsResponse };
     expect(body.data.grants).toEqual([]);
   });
 });
