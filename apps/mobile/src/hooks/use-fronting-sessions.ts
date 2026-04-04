@@ -29,6 +29,8 @@ import type { TRPCHookResult } from "@trpc/react-query/shared";
 type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
   UseMutationResult<TData, TRPCError, TVars, TCtx>;
 
+// Remains as RouterOutput because getActive returns a composite shape
+// (sessions + isCofronting + entityMemberMap) with no transform-level wire type.
 type RawGetActive = RouterOutput["frontingSession"]["getActive"];
 type SessionPage = {
   readonly data: (FrontingSession | Archived<FrontingSession>)[];

@@ -23,6 +23,8 @@ import type {
 import type { Archived, PollId, PollStatus } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
+// These remain as RouterOutput derivations because the endpoints return non-standard
+// shapes (aggregated results, paginated votes) with no corresponding transform-level wire types.
 type RawPollResults = RouterOutput["poll"]["results"];
 type RawPollVotePage = RouterOutput["poll"]["listVotes"];
 

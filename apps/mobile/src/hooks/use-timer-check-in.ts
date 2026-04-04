@@ -31,7 +31,7 @@ type TimerPage = {
   readonly nextCursor: string | null;
 };
 type CheckInPage = {
-  readonly data: CheckInRecordRaw[];
+  readonly data: readonly CheckInRecordRaw[];
   readonly nextCursor: string | null;
 };
 
@@ -151,17 +151,6 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
 
-  const selectCheckInHistory = useCallback(
-    (data: InfiniteData<CheckInRecordPage>): InfiniteData<CheckInPage> => ({
-      ...data,
-      pages: data.pages.map((page) => ({
-        data: [...page.data],
-        nextCursor: page.nextCursor,
-      })),
-    }),
-    [],
-  );
-
   return trpc.checkInRecord.list.useInfiniteQuery(
     {
       systemId,
@@ -172,7 +161,6 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
     },
     {
       getNextPageParam: (lastPage: CheckInRecordPage) => lastPage.nextCursor,
-      select: selectCheckInHistory,
     },
   );
 }
