@@ -7,6 +7,7 @@ import { dashboardSyncRoute } from "./dashboard-sync.js";
 import { dashboardRoute } from "./dashboard.js";
 import { exportRoutes } from "./export.js";
 import { getRoute } from "./get.js";
+import { keyGrantsRoute } from "./key-grants.js";
 import { listRoute } from "./list.js";
 import { friendNotificationRoutes } from "./notifications/index.js";
 import { rejectRoute } from "./reject.js";
@@ -20,6 +21,7 @@ export const friendRoutes = new Hono<AuthEnv>();
 
 friendRoutes.route("/", listRoute);
 friendRoutes.route("/", getRoute);
+friendRoutes.route("/key-grants", keyGrantsRoute);
 friendRoutes.route("/", dashboardRoute);
 friendRoutes.route("/", dashboardSyncRoute);
 friendRoutes.route("/", exportRoutes);

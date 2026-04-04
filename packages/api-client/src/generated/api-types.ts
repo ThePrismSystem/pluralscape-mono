@@ -546,6 +546,32 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/account/friends/key-grants": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List all received key grants
+     * @description Returns all active (non-revoked) key grants where the authenticated
+     *     account is the recipient. Enables eager fetching of bucket encryption
+     *     keys for the friend dashboard without querying per-connection.
+     *
+     *     Grant count is bounded so no pagination is needed.
+     *
+     *     Rate limit: 60 req/min (readDefault)
+     */
+    get: operations["listReceivedKeyGrants"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/account/friends/{connectionId}": {
     parameters: {
       query?: never;
@@ -6884,6 +6910,15 @@ export interface components {
       encryptedKey: string;
       keyVersion: number;
     };
+    ReceivedKeyGrant: {
+      id: string;
+      bucketId: string;
+      /** @description Base64-encoded encrypted bucket symmetric key */
+      encryptedKey: string;
+      keyVersion: number;
+      /** @description System ID of the account that granted this key */
+      grantorSystemId: string;
+    };
     FriendDashboardSyncEntry: {
       /**
        * @description Entity type this entry covers
@@ -8881,6 +8916,32 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["FriendConnectionListResponse"];
+        };
+      };
+      401: components["responses"]["Unauthenticated"];
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  listReceivedKeyGrants: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Active key grants for the authenticated account */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: {
+              grants: components["schemas"]["ReceivedKeyGrant"][];
+            };
+          };
         };
       };
       401: components["responses"]["Unauthenticated"];

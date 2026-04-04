@@ -161,6 +161,8 @@ export type {
   ArchivedFriendCode,
   BucketAccessCheck,
   FriendBucketAssignment,
+  ReceivedKeyGrant,
+  ReceivedKeyGrantsResponse,
 } from "./privacy.js";
 export { BUCKET_CONTENT_ENTITY_TYPES, isBucketContentEntityType } from "./privacy.js";
 

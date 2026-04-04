@@ -155,6 +155,7 @@ export {
   AssignBucketBodySchema,
   FriendConnectionQuerySchema,
   FriendCodeQuerySchema,
+  ListReceivedKeyGrantsQuerySchema,
 } from "./friend.js";
 export {
   CreatePollBodySchema,

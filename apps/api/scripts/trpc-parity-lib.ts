@@ -606,6 +606,7 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "GET /v1/account/friends/:connectionId/export/manifest": "friend.exportManifest",
   "GET /v1/account/friends/:connectionId/notifications": "friend.getNotifications",
   "PATCH /v1/account/friends/:connectionId/notifications": "friend.updateNotifications",
+  "GET /v1/account/friends/key-grants": "friend.listReceivedKeyGrants",
 
   // Friend codes
   "POST /v1/account/friend-codes": "friendCode.generate",

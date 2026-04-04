@@ -27,6 +27,7 @@ import {
   getOrCreateFriendNotificationPreference,
   updateFriendNotificationPreference,
 } from "../../services/friend-notification-preference.service.js";
+import { listReceivedKeyGrants } from "../../services/key-grant.service.js";
 import { protectedProcedure } from "../middlewares/auth.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { router } from "../trpc.js";
@@ -220,6 +221,11 @@ export const friendRouter = router({
         ctx.auth,
       );
     }),
+
+  /** List all active (non-revoked) key grants received by the authenticated account. */
+  listReceivedKeyGrants: protectedProcedure.use(readLimiter).query(async ({ ctx }) => {
+    return listReceivedKeyGrants(ctx.db, ctx.auth.accountId);
+  }),
 
   /** Update notification preferences for a friend connection. */
   updateNotifications: protectedProcedure

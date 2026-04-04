@@ -124,6 +124,20 @@ export interface KeyGrant {
   readonly revokedAt: UnixMillis | null;
 }
 
+/** An active key grant as seen by the recipient account (across all friends). */
+export interface ReceivedKeyGrant {
+  readonly id: KeyGrantId;
+  readonly bucketId: BucketId;
+  readonly encryptedKey: string;
+  readonly keyVersion: number;
+  readonly grantorSystemId: SystemId;
+}
+
+/** Response from the bulk listReceivedKeyGrants endpoint. */
+export interface ReceivedKeyGrantsResponse {
+  readonly grants: readonly ReceivedKeyGrant[];
+}
+
 /** Status of a friend connection between two systems. */
 export type FriendConnectionStatus = "pending" | "accepted" | "blocked" | "removed";
 
