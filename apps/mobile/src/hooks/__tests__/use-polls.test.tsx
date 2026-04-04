@@ -216,7 +216,7 @@ describe("usePoll", () => {
     expect(result["archived"]).toBe(false);
     const options = result["options"] as Array<Record<string, unknown>>;
     expect(options).toHaveLength(1);
-    expect(options[0]["label"]).toBe("Yes");
+    expect(options[0]?.["label"]).toBe("Yes");
   });
 });
 
