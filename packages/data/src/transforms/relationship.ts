@@ -9,6 +9,7 @@ import {
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
+  MemberId,
   RelationshipId,
   RelationshipType,
   SystemId,
@@ -22,8 +23,8 @@ export interface RelationshipEncryptedFields {
 export interface RelationshipDecrypted {
   readonly id: RelationshipId;
   readonly systemId: SystemId;
-  readonly sourceMemberId: string | null;
-  readonly targetMemberId: string | null;
+  readonly sourceMemberId: MemberId | null;
+  readonly targetMemberId: MemberId | null;
   readonly type: RelationshipType;
   readonly label: string | null;
   readonly bidirectional: boolean;
@@ -33,8 +34,10 @@ export interface RelationshipDecrypted {
 
 export type RelationshipRaw = Omit<
   RelationshipDecrypted,
-  keyof RelationshipEncryptedFields | "archived"
+  keyof RelationshipEncryptedFields | "archived" | "sourceMemberId" | "targetMemberId"
 > & {
+  readonly sourceMemberId: string | null;
+  readonly targetMemberId: string | null;
   readonly encryptedData: string | null;
   readonly archived: boolean;
   readonly archivedAt: UnixMillis | null;
@@ -66,8 +69,8 @@ export function decryptRelationship(
   const base = {
     id: raw.id,
     systemId: raw.systemId,
-    sourceMemberId: raw.sourceMemberId,
-    targetMemberId: raw.targetMemberId,
+    sourceMemberId: raw.sourceMemberId as MemberId | null,
+    targetMemberId: raw.targetMemberId as MemberId | null,
     type: raw.type,
     label,
     bidirectional: raw.bidirectional,
