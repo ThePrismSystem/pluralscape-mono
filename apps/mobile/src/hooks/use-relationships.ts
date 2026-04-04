@@ -34,7 +34,6 @@ interface RelationshipListOpts extends SystemIdOverride {
   readonly limit?: number;
   readonly memberId?: MemberId;
   readonly type?: RelationshipType;
-  readonly includeArchived?: boolean;
 }
 
 export function useRelationship(

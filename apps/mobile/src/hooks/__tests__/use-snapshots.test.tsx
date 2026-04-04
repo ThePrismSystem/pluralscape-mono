@@ -178,8 +178,9 @@ describe("useSnapshotsList", () => {
     const [firstPage] = pages;
     expect(pages).toHaveLength(1);
     expect(firstPage?.data).toHaveLength(2);
-    expect(firstPage?.data[0]?.content.name).toBe("Test Snapshot");
-    expect(firstPage?.data[1]?.content.name).toBe("Test Snapshot");
+    const [item0, item1] = firstPage?.data ?? [];
+    expect(item0?.content.name).toBe("Test Snapshot");
+    expect(item1?.content.name).toBe("Test Snapshot");
   });
 
   it("does not fetch when masterKey is null", () => {
