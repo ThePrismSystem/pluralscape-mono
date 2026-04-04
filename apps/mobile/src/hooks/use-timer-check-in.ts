@@ -3,6 +3,7 @@ import {
   decryptTimerConfig,
   decryptTimerConfigPage,
 } from "@pluralscape/data/transforms/timer-check-in";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -52,14 +53,19 @@ export function useTimerConfig(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectTimerConfig = useCallback(
+    (raw: RawTimerConfig): TimerConfig | Archived<TimerConfig> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptTimerConfig(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.timerConfig.get.useQuery(
     { systemId, timerId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawTimerConfig): TimerConfig | Archived<TimerConfig> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptTimerConfig(raw, masterKey);
-      },
+      select: selectTimerConfig,
     },
   );
 }
@@ -68,6 +74,18 @@ export function useTimerConfigsList(opts?: TimerConfigListOpts): TRPCInfiniteQue
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
+
+  const selectTimerConfigsList = useCallback(
+    (data: InfiniteData<RawTimerConfigPage>): InfiniteData<TimerPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => decryptTimerConfigPage(page, key)),
+      };
+    },
+    [masterKey],
+  );
 
   return trpc.timerConfig.list.useInfiniteQuery(
     {
@@ -78,14 +96,7 @@ export function useTimerConfigsList(opts?: TimerConfigListOpts): TRPCInfiniteQue
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawTimerConfigPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawTimerConfigPage>): InfiniteData<TimerPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => decryptTimerConfigPage(page, key)),
-        };
-      },
+      select: selectTimerConfigsList,
     },
   );
 }
@@ -138,6 +149,17 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
 
+  const selectCheckInHistory = useCallback(
+    (data: InfiniteData<RawCheckInPage>): InfiniteData<CheckInPage> => ({
+      ...data,
+      pages: data.pages.map((page) => ({
+        data: [...page.data],
+        nextCursor: page.nextCursor,
+      })),
+    }),
+    [],
+  );
+
   return trpc.checkInRecord.list.useInfiniteQuery(
     {
       systemId,
@@ -148,13 +170,7 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
     },
     {
       getNextPageParam: (lastPage: RawCheckInPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawCheckInPage>): InfiniteData<CheckInPage> => ({
-        ...data,
-        pages: data.pages.map((page) => ({
-          data: [...page.data],
-          nextCursor: page.nextCursor,
-        })),
-      }),
+      select: selectCheckInHistory,
     },
   );
 }
