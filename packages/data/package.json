@@ -19,7 +19,10 @@
     "./transforms/board-message": "./src/transforms/board-message.ts",
     "./transforms/poll": "./src/transforms/poll.ts",
     "./transforms/note": "./src/transforms/note.ts",
-    "./transforms/acknowledgement": "./src/transforms/acknowledgement.ts"
+    "./transforms/acknowledgement": "./src/transforms/acknowledgement.ts",
+    "./transforms/snapshot": "./src/transforms/snapshot.ts",
+    "./transforms/innerworld-entity": "./src/transforms/innerworld-entity.ts",
+    "./transforms/innerworld-region": "./src/transforms/innerworld-region.ts"
   },
   "scripts": {
     "test": "vitest run",
