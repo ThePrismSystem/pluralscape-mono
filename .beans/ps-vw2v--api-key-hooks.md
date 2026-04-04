@@ -11,6 +11,15 @@ parent: ps-j47j
 
 CRUD, scope management, last-used tracking
 
-Uses trpc.apiKey.\* (list, get, create, update, delete, rotate).
+Uses trpc.apiKey.\* (list, get, create, revoke).
 
-## Summary of Changes\n\nImplemented API key data hooks following use-device-tokens.ts pattern:\n- useApiKey (single query)\n- useApiKeysList (paginated)\n- useCreateApiKey (mutation, invalidates list)\n- useRevokeApiKey (mutation, invalidates get + list)\n\nAll tests passing.
+## Summary of Changes
+
+Implemented API key data hooks following use-device-tokens.ts pattern:
+
+- useApiKey (single query)
+- useApiKeysList (paginated)
+- useCreateApiKey (mutation, invalidates list)
+- useRevokeApiKey (mutation, invalidates get + list)
+
+All tests passing.
