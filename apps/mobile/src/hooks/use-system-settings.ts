@@ -3,6 +3,7 @@ import {
   decryptNomenclature,
   decryptSystemSettings,
 } from "@pluralscape/data/transforms/system-settings";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -20,14 +21,19 @@ export function useSystemSettings(): TRPCQuery<SystemSettings> {
   const systemId = useActiveSystemId();
   const masterKey = useMasterKey();
 
+  const selectSystemSettings = useCallback(
+    (raw: RawSystemSettings): SystemSettings => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptSystemSettings(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.systemSettings.settings.get.useQuery(
     { systemId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawSystemSettings): SystemSettings => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptSystemSettings(raw, masterKey);
-      },
+      select: selectSystemSettings,
     },
   );
 }
@@ -36,14 +42,19 @@ export function useNomenclature(): TRPCQuery<DecryptedNomenclature> {
   const systemId = useActiveSystemId();
   const masterKey = useMasterKey();
 
+  const selectNomenclature = useCallback(
+    (raw: RawNomenclature): DecryptedNomenclature => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptNomenclature(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.systemSettings.nomenclature.get.useQuery(
     { systemId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawNomenclature): DecryptedNomenclature => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptNomenclature(raw, masterKey);
-      },
+      select: selectNomenclature,
     },
   );
 }

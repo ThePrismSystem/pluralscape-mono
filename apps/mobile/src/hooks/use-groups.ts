@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptGroup } from "@pluralscape/data/transforms/group";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -31,14 +32,19 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): TRPCQuery<G
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectGroup = useCallback(
+    (raw: RawGroup): GroupDecrypted => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptGroup(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.group.get.useQuery(
     { systemId, groupId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawGroup): GroupDecrypted => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptGroup(raw, masterKey);
-      },
+      select: selectGroup,
     },
   );
 }
@@ -47,6 +53,21 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
+
+  const selectGroupsList = useCallback(
+    (data: InfiniteData<RawGroupPage>): InfiniteData<GroupPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item) => decryptGroup(item, key)),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
 
   return trpc.group.list.useInfiniteQuery(
     {
@@ -57,17 +78,7 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawGroupPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawGroupPage>): InfiniteData<GroupPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptGroup(item, key)),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      select: selectGroupsList,
     },
   );
 }

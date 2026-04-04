@@ -3,6 +3,7 @@ import {
   decryptFieldDefinition,
   decryptFieldValueList,
 } from "@pluralscape/data/transforms/custom-field";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -44,14 +45,19 @@ export function useFieldDefinition(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFieldDefinition = useCallback(
+    (raw: RawFieldDef): FieldDefinitionDecrypted => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptFieldDefinition(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.field.definition.get.useQuery(
     { systemId, fieldDefinitionId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawFieldDef): FieldDefinitionDecrypted => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptFieldDefinition(raw, masterKey);
-      },
+      select: selectFieldDefinition,
     },
   );
 }
@@ -63,6 +69,21 @@ export function useFieldDefinitionsList(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFieldDefinitionsList = useCallback(
+    (data: InfiniteData<RawFieldDefPage>): InfiniteData<FieldDefPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item) => decryptFieldDefinition(item, key)),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
+
   return trpc.field.definition.list.useInfiniteQuery(
     {
       systemId,
@@ -72,17 +93,7 @@ export function useFieldDefinitionsList(
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawFieldDefPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawFieldDefPage>): InfiniteData<FieldDefPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptFieldDefinition(item, key)),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      select: selectFieldDefinitionsList,
     },
   );
 }
@@ -145,14 +156,19 @@ export function useMemberFieldValues(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectFieldValues = useCallback(
+    (raw: RawFieldValueList): FieldValueDecrypted[] => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptFieldValueList(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.field.value.list.useQuery(
     { systemId, owner: { kind: "member", id: memberId } },
     {
       enabled: masterKey !== null,
-      select: (raw: RawFieldValueList): FieldValueDecrypted[] => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptFieldValueList(raw, masterKey);
-      },
+      select: selectFieldValues,
     },
   );
 }

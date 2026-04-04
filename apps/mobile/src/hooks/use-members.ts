@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptMember } from "@pluralscape/data/transforms/member";
+import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
@@ -37,14 +38,19 @@ export function useMember(
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
 
+  const selectMember = useCallback(
+    (raw: RawMember): Member | Archived<Member> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      return decryptMember(raw, masterKey);
+    },
+    [masterKey],
+  );
+
   return trpc.member.get.useQuery(
     { systemId, memberId },
     {
       enabled: masterKey !== null,
-      select: (raw: RawMember): Member | Archived<Member> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        return decryptMember(raw, masterKey);
-      },
+      select: selectMember,
     },
   );
 }
@@ -53,6 +59,21 @@ export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberP
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
+
+  const selectMembersList = useCallback(
+    (data: InfiniteData<RawMemberPage>): InfiniteData<MemberPage> => {
+      if (masterKey === null) throw new Error("masterKey is null");
+      const key = masterKey;
+      return {
+        ...data,
+        pages: data.pages.map((page) => ({
+          data: page.data.map((item) => decryptMember(item, key)),
+          nextCursor: page.nextCursor,
+        })),
+      };
+    },
+    [masterKey],
+  );
 
   return trpc.member.list.useInfiniteQuery(
     {
@@ -64,17 +85,7 @@ export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberP
     {
       enabled: masterKey !== null,
       getNextPageParam: (lastPage: RawMemberPage) => lastPage.nextCursor,
-      select: (data: InfiniteData<RawMemberPage>): InfiniteData<MemberPage> => {
-        if (masterKey === null) throw new Error("masterKey is null");
-        const key = masterKey;
-        return {
-          ...data,
-          pages: data.pages.map((page) => ({
-            data: page.data.map((item) => decryptMember(item, key)),
-            nextCursor: page.nextCursor,
-          })),
-        };
-      },
+      select: selectMembersList,
     },
   );
 }
