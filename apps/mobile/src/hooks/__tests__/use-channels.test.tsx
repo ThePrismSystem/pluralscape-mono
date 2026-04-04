@@ -193,10 +193,12 @@ describe("useChannelsList", () => {
       expect(result.current.data).toBeDefined();
     });
     const pages = result.current.data?.pages ?? [];
+    const [firstPage] = pages;
+    const [item0, item1] = firstPage?.data ?? [];
     expect(pages).toHaveLength(1);
-    expect(pages[0].data).toHaveLength(2);
-    expect(pages[0].data[0].name).toBe("general");
-    expect(pages[0].data[1].name).toBe("general");
+    expect(firstPage?.data).toHaveLength(2);
+    expect(item0?.name).toBe("general");
+    expect(item1?.name).toBe("general");
   });
 
   it("does not fetch when masterKey is null", () => {

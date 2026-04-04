@@ -207,10 +207,12 @@ describe("useMessagesList", () => {
       expect(result.current.data).toBeDefined();
     });
     const pages = result.current.data?.pages ?? [];
+    const [firstPage] = pages;
+    const [item0, item1] = firstPage?.data ?? [];
     expect(pages).toHaveLength(1);
-    expect(pages[0].data).toHaveLength(2);
-    expect(pages[0].data[0].content).toBe("hello");
-    expect(pages[0].data[1].content).toBe("hello");
+    expect(firstPage?.data).toHaveLength(2);
+    expect(item0?.content).toBe("hello");
+    expect(item1?.content).toBe("hello");
   });
 
   it("does not fetch when masterKey is null", () => {

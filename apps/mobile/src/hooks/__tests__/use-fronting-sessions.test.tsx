@@ -31,7 +31,7 @@ const mockUtils = {
     get: {
       invalidate: vi.fn(),
       cancel: vi.fn(() => Promise.resolve()),
-      getData: vi.fn(() => undefined),
+      getData: vi.fn((): FrontingSessionRaw | undefined => undefined),
       setData: vi.fn(),
     },
     list: {
