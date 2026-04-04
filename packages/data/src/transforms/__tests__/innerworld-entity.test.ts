@@ -24,6 +24,7 @@ import type {
   MemberId,
   SystemId,
   SystemStructureEntityId,
+  VisualProperties,
 } from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
@@ -34,8 +35,8 @@ beforeAll(async () => {
   masterKey = generateMasterKey();
 });
 
-const VISUAL = {
-  color: "#ff0000",
+const VISUAL: VisualProperties = {
+  color: null,
   icon: null,
   size: null,
   opacity: null,

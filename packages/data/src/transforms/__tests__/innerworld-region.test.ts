@@ -37,7 +37,7 @@ function makeRegionFields(): InnerWorldRegionEncryptedFields {
       { x: 100, y: 100 },
     ],
     visual: {
-      color: "#00ff00",
+      color: null,
       icon: null,
       size: null,
       opacity: null,
