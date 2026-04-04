@@ -9,7 +9,6 @@ import {
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type {
   Archived,
-  MemberId,
   RelationshipId,
   RelationshipType,
   SystemId,
@@ -23,8 +22,8 @@ export interface RelationshipEncryptedFields {
 export interface RelationshipDecrypted {
   readonly id: RelationshipId;
   readonly systemId: SystemId;
-  readonly sourceMemberId: MemberId | null;
-  readonly targetMemberId: MemberId | null;
+  readonly sourceMemberId: string | null;
+  readonly targetMemberId: string | null;
   readonly type: RelationshipType;
   readonly label: string | null;
   readonly bidirectional: boolean;

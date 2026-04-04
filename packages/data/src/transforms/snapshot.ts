@@ -14,7 +14,7 @@ import type { SnapshotContent, SnapshotTrigger } from "@pluralscape/types";
 export interface SnapshotDecrypted {
   readonly id: SystemSnapshotId;
   readonly systemId: SystemId;
-  readonly trigger: SnapshotTrigger;
+  readonly snapshotTrigger: SnapshotTrigger;
   readonly createdAt: UnixMillis;
   readonly content: SnapshotContent;
 }
@@ -24,7 +24,7 @@ export interface SnapshotDecrypted {
 export interface SnapshotRaw {
   readonly id: SystemSnapshotId;
   readonly systemId: SystemId;
-  readonly trigger: SnapshotTrigger;
+  readonly snapshotTrigger: SnapshotTrigger;
   readonly createdAt: UnixMillis;
   readonly encryptedData: string;
 }
@@ -51,7 +51,7 @@ export function decryptSnapshot(raw: SnapshotRaw, masterKey: KdfMasterKey): Snap
   return {
     id: raw.id,
     systemId: raw.systemId,
-    trigger: raw.trigger,
+    snapshotTrigger: raw.snapshotTrigger,
     createdAt: raw.createdAt,
     content: plaintext,
   };

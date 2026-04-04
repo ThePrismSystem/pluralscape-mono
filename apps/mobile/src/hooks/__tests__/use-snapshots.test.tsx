@@ -112,7 +112,7 @@ function makeRawSnapshot(id: string): SnapshotRaw {
   return {
     id: id as SystemSnapshotId,
     systemId: TEST_SYSTEM_ID,
-    trigger: "manual",
+    snapshotTrigger: "manual",
     createdAt: NOW,
     ...encrypted,
   };
@@ -137,7 +137,7 @@ describe("useSnapshot", () => {
     expect(data?.content.name).toBe("Test Snapshot");
     expect(data?.content.members).toEqual([]);
     expect(data?.content.groups).toEqual([]);
-    expect(data?.trigger).toBe("manual");
+    expect(data?.snapshotTrigger).toBe("manual");
   });
 
   it("does not fetch when masterKey is null", () => {

@@ -12,7 +12,7 @@ import {
 } from "./helpers/render-hook-with-providers.js";
 
 import type { RelationshipRaw } from "@pluralscape/data/transforms/relationship";
-import type { MemberId, RelationshipId, RelationshipType, UnixMillis } from "@pluralscape/types";
+import type { RelationshipId, RelationshipType, UnixMillis } from "@pluralscape/types";
 
 beforeAll(async () => {
   configureSodium(new WasmSodiumAdapter());
@@ -130,8 +130,8 @@ function makeRawRelationship(
   return {
     id: id as RelationshipId,
     systemId: TEST_SYSTEM_ID,
-    sourceMemberId: "m-1" as MemberId,
-    targetMemberId: "m-2" as MemberId,
+    sourceMemberId: "m-1",
+    targetMemberId: "m-2",
     type: "sibling" as RelationshipType,
     bidirectional: true,
     createdAt: NOW,
