@@ -115,6 +115,38 @@ switch (status) {
 - **Exhaustive pattern matching** — all `switch` statements on union types must handle every case (use `as never` default)
 - **No magic numbers/strings** — extract to `*.constants.ts` files. Each package/domain has its own (e.g., `crypto.constants.ts`, `middleware.constants.ts`). The ESLint config disables `no-magic-numbers` for this glob. Every constant needs a JSDoc comment and should use numeric underscores for readability (`86_400` not `86400`). When adding a constant, extend the nearest existing `*.constants.ts`; only create a new file when entering a new domain.
 
+### Adding API Endpoints
+
+Every new API feature requires both a REST route and a tRPC procedure. The CI check (`pnpm trpc:parity`) enforces this.
+
+Checklist:
+
+1. Add REST route in `apps/api/src/routes/`
+2. Add tRPC procedure in the matching router under `apps/api/src/trpc/routers/`
+3. Apply matching rate limit middleware on both (see table below)
+4. Apply matching auth level on both
+5. Import input validation from `@pluralscape/validation` — do not define inline Zod schemas
+6. Write unit tests for the procedure and route handler
+7. Write integration tests covering success, not-found, and unauthorized
+8. Run `pnpm trpc:parity` — must pass before opening a PR
+
+If the new endpoint is REST-only by design (SSE, infrastructure), add an entry to `apps/api/scripts/trpc-parity.config.ts` with a documented reason.
+
+#### Rate limit categories
+
+| Category           | Limit      | Use for                               |
+| ------------------ | ---------- | ------------------------------------- |
+| `readDefault`      | 60 req/min | Standard read operations              |
+| `readHeavy`        | 30 req/min | Expensive reads (reports, analytics)  |
+| `write`            | 60 req/min | Standard create/update/delete         |
+| `authHeavy`        | 5 req/min  | Login, password reset, token exchange |
+| `authLight`        | 20 req/min | Session refresh, token validation     |
+| `blobUpload`       | 20 req/min | File and photo uploads                |
+| `auditQuery`       | 10 req/min | Audit log and delivery log reads      |
+| `friendCodeRedeem` | 10 req/min | Friend code redemption                |
+
+Rate limit categories are defined in `@pluralscape/types`. Use the exact same category on the REST route and the tRPC procedure — the parity check flags mismatches.
+
 ### Linting
 
 Zero warnings are tolerated. All ESLint warnings are treated as errors in CI, git hooks, and local scripts (`--max-warnings 0`). If a rule is too noisy, discuss changing its severity — do not leave warnings in the codebase.
