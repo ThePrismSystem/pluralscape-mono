@@ -6918,6 +6918,8 @@ export interface components {
       keyVersion: number;
       /** @description System ID of the account that granted this key */
       grantorSystemId: string;
+      /** @description Base64url-encoded box public key of the grantor account */
+      senderBoxPublicKey: string;
     };
     FriendDashboardSyncEntry: {
       /**
