@@ -20,8 +20,8 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 export const friendRoutes = new Hono<AuthEnv>();
 
 friendRoutes.route("/", listRoute);
-friendRoutes.route("/", getRoute);
 friendRoutes.route("/key-grants", keyGrantsRoute);
+friendRoutes.route("/", getRoute);
 friendRoutes.route("/", dashboardRoute);
 friendRoutes.route("/", dashboardSyncRoute);
 friendRoutes.route("/", exportRoutes);
