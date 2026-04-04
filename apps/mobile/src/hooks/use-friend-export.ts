@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 
 import { useRestClient } from "../providers/rest-client-provider.js";
@@ -29,13 +29,13 @@ const STALE_TIME_MS = 5 * 60 * 1_000;
  */
 export function useFriendExportManifest(
   connectionId: FriendConnectionId,
-): UseQueryResult<ManifestData> {
+): UseQueryResult<ManifestData | undefined> {
   const client = useRestClient();
   const etagRef = useRef<string | null>(null);
 
-  return useQuery<ManifestData>({
-    queryKey: ["friend-export-manifest", connectionId],
-    queryFn: async () => {
+  return useQuery({
+    queryKey: ["friend-export-manifest", connectionId] as const,
+    queryFn: async (): Promise<ManifestData | undefined> => {
       const { data, response } = await client.GET(
         "/account/friends/{connectionId}/export/manifest",
         {
@@ -51,6 +51,11 @@ export function useFriendExportManifest(
         etagRef.current = newEtag;
       }
 
+      if (response.status === 304) {
+        // 304 Not Modified — signal React Query to keep previous data
+        return undefined;
+      }
+
       if (!data) {
         throw new Error(`Friend export manifest request failed: ${String(response.status)}`);
       }
@@ -58,6 +63,7 @@ export function useFriendExportManifest(
       return data;
     },
     staleTime: STALE_TIME_MS,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -76,16 +82,16 @@ interface FriendExportPageOpts {
 export function useFriendExportPage(
   connectionId: FriendConnectionId,
   opts?: FriendExportPageOpts,
-): UseQueryResult<ExportPageData> {
+): UseQueryResult<ExportPageData | undefined> {
   const client = useRestClient();
   const etagRef = useRef<string | null>(null);
   const entityType = opts?.entityType ?? "member";
   const cursor = opts?.cursor;
   const limit = opts?.limit;
 
-  return useQuery<ExportPageData>({
-    queryKey: ["friend-export-page", connectionId, entityType, cursor, limit],
-    queryFn: async () => {
+  return useQuery({
+    queryKey: ["friend-export-page", connectionId, entityType, cursor, limit] as const,
+    queryFn: async (): Promise<ExportPageData | undefined> => {
       const { data, response } = await client.GET("/account/friends/{connectionId}/export", {
         params: {
           path: { connectionId },
@@ -99,6 +105,11 @@ export function useFriendExportPage(
         etagRef.current = newEtag;
       }
 
+      if (response.status === 304) {
+        // 304 Not Modified — signal React Query to keep previous data
+        return undefined;
+      }
+
       if (!data) {
         throw new Error(`Friend export page request failed: ${String(response.status)}`);
       }
@@ -106,6 +117,7 @@ export function useFriendExportPage(
       return data;
     },
     staleTime: STALE_TIME_MS,
+    placeholderData: keepPreviousData,
     enabled: opts?.enabled !== false,
   });
 }
