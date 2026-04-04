@@ -1,11 +1,11 @@
 ---
 # ps-0ph3
 title: Fronting data hooks
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:43Z
-updated_at: 2026-04-04T09:03:41Z
+updated_at: 2026-04-04T09:24:13Z
 parent: ps-7j8n
 ---
 
@@ -69,3 +69,5 @@ Tests must run hooks inside the real React lifecycle. Reference implementation: 
 - Use `?.` optional chaining, never `!` non-null assertions
 - Destructure page arrays: `const [firstPage] = pages; const [item0] = firstPage?.data ?? [];`
 - Never use `as any`, `as unknown as`, or `eslint-disable`
+
+## Summary of Changes\n\nAll fronting data hooks implemented: sessions, comments, reports, analytics, timer & check-in. Hook patterns retrofitted and tests added.

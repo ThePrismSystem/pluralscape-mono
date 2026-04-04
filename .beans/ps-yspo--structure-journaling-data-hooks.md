@@ -1,11 +1,11 @@
 ---
 # ps-yspo
 title: Structure & journaling data hooks
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:51Z
-updated_at: 2026-04-04T09:04:00Z
+updated_at: 2026-04-04T10:27:40Z
 parent: ps-7j8n
 ---
 
@@ -68,3 +68,13 @@ Tests must run hooks inside the real React lifecycle. Reference implementation: 
 - Use `?.` optional chaining, never `!` non-null assertions
 - Destructure page arrays: `const [firstPage] = pages; const [item0] = firstPage?.data ?? [];`
 - Never use `as any`, `as unknown as`, or `eslint-disable`
+
+## Summary of Changes
+
+All 10 hook files, 7 transforms, and 10 test files implemented (84 tests total).
+
+Structure domain: entity types, entities, links, member links, associations, relationships
+Innerworld domain: entities (discriminated union), regions, canvas
+Snapshot domain: immutable point-in-time snapshots
+
+All hooks follow established M8 patterns with encrypted select callbacks, masterKey guards, and React Query integration tests.

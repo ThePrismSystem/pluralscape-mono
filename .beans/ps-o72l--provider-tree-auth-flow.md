@@ -5,7 +5,7 @@ status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:32Z
-updated_at: 2026-04-03T01:16:03Z
+updated_at: 2026-04-04T09:24:13Z
 parent: ps-7j8n
 ---
 
@@ -23,3 +23,5 @@ Provider tree and auth flow implemented in feat/m8-app-foundation (PR #352):
 - SessionRefreshService with platform-aware timeouts
 - React Query provider setup with configured defaults
 - i18n completion: device language detection, RTL, lazy namespace loading, nomenclature wiring
+
+## Summary of Changes\n\nProvider tree fully wired: auth context, React Query provider, i18n, encryption key management, biometric auth. ReactNativeSodiumAdapter validation deferred to M10 (crypto-jz77).
