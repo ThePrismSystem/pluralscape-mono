@@ -312,6 +312,34 @@ describe("decryptFriendDashboard", () => {
     expect(result.visibleCustomFronts).toHaveLength(0);
   });
 
+  it("throws when decryption fails with the correct bucket key (corrupted blob)", () => {
+    const raw: FriendDashboardResponse = {
+      systemId: SYSTEM_ID,
+      memberCount: 1,
+      activeFronting: { sessions: [], isCofronting: false },
+      visibleMembers: [
+        {
+          id: "mem_corrupt" as MemberId,
+          // Valid T2 header with right bucketId but corrupted ciphertext
+          encryptedData:
+            encryptAndEncodeT2({ name: "Valid" }, bucketKey, BUCKET_ID).slice(0, -4) + "AAAA",
+        },
+      ],
+      visibleCustomFronts: [],
+      visibleStructureEntities: [],
+      keyGrants: [
+        {
+          id: "kg_1" as KeyGrantId,
+          bucketId: BUCKET_ID,
+          encryptedKey: "unused",
+          keyVersion: 1,
+        },
+      ],
+    };
+    const resolver = (id: BucketId) => (id === BUCKET_ID ? bucketKey : undefined);
+    expect(() => decryptFriendDashboard(raw, resolver)).toThrow();
+  });
+
   it("handles empty dashboard response", () => {
     const raw: FriendDashboardResponse = {
       systemId: SYSTEM_ID,

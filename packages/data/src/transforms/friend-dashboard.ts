@@ -1,4 +1,9 @@
-import { assertObjectBlob, assertStringField, decodeAndDecryptT2 } from "./decode-blob.js";
+import {
+  assertObjectBlob,
+  assertStringField,
+  decodeAndDecryptT2,
+  extractT2BucketId,
+} from "./decode-blob.js";
 
 import type { AeadKey } from "@pluralscape/crypto";
 import type {
@@ -211,22 +216,19 @@ export function decryptFriendDashboard(
     };
   }
 
-  const keyArray = [...availableKeys.values()];
-
   function decryptAll<TRaw extends { readonly encryptedData: string }, TOut>(
     items: readonly TRaw[],
     fn: (item: TRaw, key: AeadKey) => TOut,
   ): readonly TOut[] {
     const results: TOut[] = [];
     for (const item of items) {
-      for (const key of keyArray) {
-        try {
-          results.push(fn(item, key));
-          break;
-        } catch {
-          // Wrong key — try next
-        }
+      const bucketId = extractT2BucketId(item.encryptedData);
+      const key = availableKeys.get(bucketId);
+      if (!key) {
+        // Bucket key unavailable — entity is in a bucket we lack access to
+        continue;
       }
+      results.push(fn(item, key));
     }
     return results;
   }
