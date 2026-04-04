@@ -1,5 +1,15 @@
 import { trpc } from "@pluralscape/api-client/trpc";
-import { decryptKeyGrant, getSodium } from "@pluralscape/crypto";
+import {
+  BOX_PUBLIC_KEY_BYTES,
+  decryptKeyGrant,
+  DecryptionFailedError,
+  getSodium,
+  InvalidInputError,
+} from "@pluralscape/crypto";
+import {
+  base64ToUint8Array,
+  base64urlToUint8Array,
+} from "@pluralscape/data/transforms/decode-blob";
 import React, { createContext, useContext, useEffect, useMemo, useRef } from "react";
 
 import type { AeadKey, BoxKeypair, BoxPublicKey, EncryptedKeyGrant } from "@pluralscape/crypto";
@@ -20,24 +30,6 @@ interface BucketKeyContextValue {
 
 const BucketKeyContext = createContext<BucketKeyContextValue | null>(null);
 
-/** Standard base64 string to Uint8Array. */
-function base64ToBytes(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-/** Base64url (no padding) to Uint8Array. */
-function base64urlToBytes(b64url: string): Uint8Array {
-  let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
-  const padLength = (4 - (b64.length % 4)) % 4;
-  b64 += "=".repeat(padLength);
-  return base64ToBytes(b64);
-}
-
 interface BucketKeyProviderProps extends PropsWithChildren {
   readonly boxKeypair: BoxKeypair;
 }
@@ -56,8 +48,15 @@ export function BucketKeyProvider({
 
     for (const grant of data.grants) {
       try {
-        const encryptedBucketKey = base64ToBytes(grant.encryptedKey) as EncryptedKeyGrant;
-        const senderPublicKey = base64urlToBytes(grant.senderBoxPublicKey) as BoxPublicKey;
+        const encryptedBucketKey = base64ToUint8Array(grant.encryptedKey) as EncryptedKeyGrant;
+
+        const senderBytes = base64urlToUint8Array(grant.senderBoxPublicKey);
+        if (senderBytes.length !== BOX_PUBLIC_KEY_BYTES) {
+          throw new InvalidInputError(
+            `senderBoxPublicKey has invalid length: expected ${String(BOX_PUBLIC_KEY_BYTES)}, got ${String(senderBytes.length)}`,
+          );
+        }
+        const senderPublicKey = senderBytes as BoxPublicKey;
 
         const aeadKey = decryptKeyGrant({
           encryptedBucketKey,
@@ -71,8 +70,13 @@ export function BucketKeyProvider({
         if (!existing || grant.keyVersion > existing.keyVersion) {
           nextMap.set(grant.bucketId, { key: aeadKey, keyVersion: grant.keyVersion });
         }
-      } catch {
-        // Key rotation or revocation may cause valid decrypt failures — skip silently
+      } catch (err) {
+        if (err instanceof DecryptionFailedError) {
+          // Expected during key rotation or revocation — skip silently
+          continue;
+        }
+        // Unexpected error — log for diagnostics but don't crash the provider
+        globalThis.console.warn(`BucketKeyProvider: failed to decrypt grant ${grant.id}:`, err);
       }
     }
 

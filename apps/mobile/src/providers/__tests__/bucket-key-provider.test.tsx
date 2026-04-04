@@ -25,9 +25,42 @@ const FAKE_AEAD_KEY = new Uint8Array(32).fill(0xcc);
 
 const mockMemzero = vi.fn();
 
+class MockDecryptionFailedError extends Error {
+  override readonly name = "DecryptionFailedError" as const;
+}
+
+class MockInvalidInputError extends Error {
+  override readonly name = "InvalidInputError" as const;
+}
+
 vi.mock("@pluralscape/crypto", () => ({
   decryptKeyGrant: vi.fn(() => FAKE_AEAD_KEY),
   getSodium: () => ({ memzero: mockMemzero }),
+  DecryptionFailedError: MockDecryptionFailedError,
+  InvalidInputError: MockInvalidInputError,
+  BOX_PUBLIC_KEY_BYTES: 32,
+}));
+
+vi.mock("@pluralscape/data/transforms/decode-blob", () => ({
+  base64ToUint8Array: vi.fn((b64: string) => {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }),
+  base64urlToUint8Array: vi.fn((b64url: string) => {
+    let b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+    const padLength = (4 - (b64.length % 4)) % 4;
+    b64 += "=".repeat(padLength);
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }),
 }));
 
 let queryData: { grants: readonly Record<string, unknown>[] } | undefined;
@@ -125,10 +158,10 @@ describe("BucketKeyProvider", () => {
     expect(result.current?.keyVersion).toBe(2);
   });
 
-  it("skips grants that fail to decrypt", async () => {
+  it("skips grants that fail to decrypt with DecryptionFailedError", async () => {
     const { decryptKeyGrant } = await import("@pluralscape/crypto");
     vi.mocked(decryptKeyGrant).mockImplementationOnce(() => {
-      throw new Error("decryption failed");
+      throw new MockDecryptionFailedError("wrong key");
     });
 
     queryData = {
@@ -188,5 +221,88 @@ describe("BucketKeyProvider", () => {
     });
 
     expect(result.current?.get(TEST_BUCKET_ID)?.keyVersion).toBe(3);
+  });
+
+  it("logs unexpected errors via console.warn", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { decryptKeyGrant } = await import("@pluralscape/crypto");
+    vi.mocked(decryptKeyGrant).mockImplementationOnce(() => {
+      throw new TypeError("unexpected internal error");
+    });
+
+    queryData = {
+      grants: [
+        {
+          id: "kg_err",
+          bucketId: "bucket_err" as BucketId,
+          encryptedKey: btoa(String.fromCharCode(...new Uint8Array(100))),
+          keyVersion: 1,
+          grantorSystemId: "sys_friend1",
+          senderBoxPublicKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useBucketKeys(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+
+    expect(result.current?.size).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("kg_err"), expect.any(TypeError));
+    warnSpy.mockRestore();
+  });
+
+  it("logs warning when senderBoxPublicKey has invalid length", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    queryData = {
+      grants: [
+        {
+          id: "kg_badkey",
+          bucketId: TEST_BUCKET_ID,
+          encryptedKey: btoa(String.fromCharCode(...new Uint8Array(100))),
+          keyVersion: 1,
+          grantorSystemId: "sys_friend1",
+          senderBoxPublicKey: btoa("short"), // Only 5 bytes, not 32
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useBucketKeys(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+
+    expect(result.current?.size).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("kg_badkey"), expect.any(Error));
+    warnSpy.mockRestore();
+  });
+
+  it("calls memzero on all keys when unmounted", async () => {
+    queryData = {
+      grants: [
+        {
+          id: "kg_1",
+          bucketId: TEST_BUCKET_ID,
+          encryptedKey: btoa(String.fromCharCode(...new Uint8Array(100))),
+          keyVersion: 1,
+          grantorSystemId: "sys_friend1",
+          senderBoxPublicKey: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        },
+      ],
+    };
+
+    const { result, unmount } = renderHook(() => useBucketKeys(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+
+    unmount();
+
+    expect(mockMemzero).toHaveBeenCalledWith(FAKE_AEAD_KEY);
   });
 });

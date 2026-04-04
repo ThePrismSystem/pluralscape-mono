@@ -32,7 +32,8 @@
     "./transforms/notification-config": "./src/transforms/notification-config.ts",
     "./transforms/device-token": "./src/transforms/device-token.ts",
     "./transforms/friend-connection": "./src/transforms/friend-connection.ts",
-    "./transforms/friend-code": "./src/transforms/friend-code.ts"
+    "./transforms/friend-code": "./src/transforms/friend-code.ts",
+    "./transforms/decode-blob": "./src/transforms/decode-blob.ts"
   },
   "scripts": {
     "test": "vitest run",
