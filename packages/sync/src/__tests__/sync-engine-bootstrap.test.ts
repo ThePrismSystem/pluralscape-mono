@@ -9,6 +9,7 @@ import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { SyncEngine } from "../engine/sync-engine.js";
+import { NoActiveSessionError } from "../errors.js";
 
 import { asSyncDocId, pubkey, sysId } from "./test-crypto-helpers.js";
 
@@ -258,6 +259,47 @@ describe("SyncEngine bootstrap", () => {
     await engine.bootstrap();
 
     expect(fetchChangesSince).toHaveBeenCalledWith("system-core-sys_test", 0);
+  });
+
+  it("getDocumentSnapshot returns the Automerge document for a hydrated session", async () => {
+    const manifest: SyncManifest = {
+      systemId: sysId("sys_test"),
+      documents: [
+        {
+          docId: asSyncDocId("system-core-sys_test"),
+          docType: "system-core",
+          keyType: "derived",
+          bucketId: null,
+          channelId: null,
+          timePeriod: null,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
+          sizeBytes: 100,
+          snapshotVersion: 0,
+          lastSeq: 0,
+          archived: false,
+        },
+      ],
+    };
+
+    const networkAdapter = mockNetworkAdapter({
+      fetchManifest: vi.fn().mockResolvedValue(manifest),
+    });
+
+    const engine = createEngine({ networkAdapter });
+    await engine.bootstrap();
+
+    const doc = engine.getDocumentSnapshot(asSyncDocId("system-core-sys_test"));
+    expect(doc).toBeDefined();
+    expect(typeof doc).toBe("object");
+  });
+
+  it("getDocumentSnapshot throws NoActiveSessionError for unknown document", () => {
+    const engine = createEngine();
+
+    expect(() => engine.getDocumentSnapshot(asSyncDocId("nonexistent-doc"))).toThrow(
+      NoActiveSessionError,
+    );
   });
 
   it("disposes cleanly by unsubscribing all", async () => {
