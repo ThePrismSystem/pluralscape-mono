@@ -1,5 +1,6 @@
 import {
   assertObjectBlob,
+  assertStringField,
   decodeAndDecryptT1,
   encryptInput,
   encryptUpdate,
@@ -64,6 +65,19 @@ function assertInnerWorldEntityPayload(
   if (typeof obj["entityType"] !== "string") {
     throw new Error("Decrypted innerworldEntity blob missing required string field: entityType");
   }
+  switch (obj["entityType"]) {
+    case "member":
+      assertStringField(obj, "innerworldEntity(member)", "linkedMemberId");
+      break;
+    case "landmark":
+      assertStringField(obj, "innerworldEntity(landmark)", "name");
+      break;
+    case "structure-entity":
+      assertStringField(obj, "innerworldEntity(structure-entity)", "linkedStructureEntityId");
+      break;
+    default:
+      throw new Error(`Unknown innerworld entity type: ${obj["entityType"]}`);
+  }
 }
 
 // ── Transforms ────────────────────────────────────────────────────────
@@ -87,46 +101,39 @@ export function decryptInnerWorldEntity(
     updatedAt: raw.updatedAt,
   };
 
-  let entity: InnerWorldEntityDecrypted;
+  function withArchive<T>(
+    base: T,
+  ): (T & { archived: false }) | (T & { archived: true; archivedAt: UnixMillis }) {
+    if (raw.archived) {
+      if (raw.archivedAt === null) throw new Error("Archived innerworldEntity missing archivedAt");
+      return { ...base, archived: true as const, archivedAt: raw.archivedAt };
+    }
+    return { ...base, archived: false as const };
+  }
+
   switch (plaintext.entityType) {
     case "member":
-      entity = {
+      return withArchive({
         ...shared,
         entityType: "member" as const,
         linkedMemberId: plaintext.linkedMemberId as MemberId,
-        archived: false as const,
-      };
-      break;
+      });
     case "landmark":
-      entity = {
+      return withArchive({
         ...shared,
         entityType: "landmark" as const,
         name: plaintext.name as string,
         description: (plaintext.description as string | null) ?? null,
-        archived: false as const,
-      };
-      break;
+      });
     case "structure-entity":
-      entity = {
+      return withArchive({
         ...shared,
         entityType: "structure-entity" as const,
         linkedStructureEntityId: plaintext.linkedStructureEntityId as SystemStructureEntityId,
-        archived: false as const,
-      };
-      break;
+      });
     default:
       throw new Error(`Unknown innerworld entity type: ${String(plaintext.entityType)}`);
   }
-
-  if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived innerworldEntity missing archivedAt");
-    return {
-      ...entity,
-      archived: true as const,
-      archivedAt: raw.archivedAt,
-    } as Archived<InnerWorldEntityDecrypted>;
-  }
-  return entity;
 }
 
 export function decryptInnerWorldEntityPage(
