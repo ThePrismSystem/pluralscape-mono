@@ -1,5 +1,5 @@
 import { authKeys, keyGrants, systems } from "@pluralscape/db/pg";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 
 import type {
   AccountId,
@@ -18,11 +18,27 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  *
  * Joins through systems and auth_keys to include the grantor's box public key,
  * which the client needs for crypto_box decryption.
+ *
+ * Uses a subquery to select the latest encryption key per account, avoiding
+ * duplicate rows when multiple encryption keys exist after key rotation.
  */
 export async function listReceivedKeyGrants(
   db: PostgresJsDatabase,
   accountId: AccountId,
 ): Promise<ReceivedKeyGrantsResponse> {
+  // Subquery: latest encryption auth key per account (highest createdAt).
+  // After key rotation, accounts can have multiple "encryption" rows —
+  // we always want the most recent one.
+  const latestEncryptionKey = db
+    .selectDistinctOn([authKeys.accountId], {
+      accountId: authKeys.accountId,
+      publicKey: authKeys.publicKey,
+    })
+    .from(authKeys)
+    .where(eq(authKeys.keyType, "encryption"))
+    .orderBy(authKeys.accountId, desc(authKeys.createdAt))
+    .as("latest_encryption_key");
+
   const rows = await db
     .select({
       id: keyGrants.id,
@@ -30,14 +46,11 @@ export async function listReceivedKeyGrants(
       encryptedKey: keyGrants.encryptedKey,
       keyVersion: keyGrants.keyVersion,
       systemId: keyGrants.systemId,
-      senderBoxPublicKey: authKeys.publicKey,
+      senderBoxPublicKey: latestEncryptionKey.publicKey,
     })
     .from(keyGrants)
     .innerJoin(systems, eq(keyGrants.systemId, systems.id))
-    .innerJoin(
-      authKeys,
-      and(eq(authKeys.accountId, systems.accountId), eq(authKeys.keyType, "encryption")),
-    )
+    .innerJoin(latestEncryptionKey, eq(latestEncryptionKey.accountId, systems.accountId))
     .where(and(eq(keyGrants.friendAccountId, accountId), isNull(keyGrants.revokedAt)));
 
   return {
@@ -47,7 +60,7 @@ export async function listReceivedKeyGrants(
       encryptedKey: Buffer.from(r.encryptedKey).toString("base64"),
       keyVersion: r.keyVersion,
       grantorSystemId: r.systemId as SystemId,
-      senderBoxPublicKey: new TextDecoder().decode(r.senderBoxPublicKey),
+      senderBoxPublicKey: Buffer.from(r.senderBoxPublicKey).toString("base64url"),
     })),
   };
 }
