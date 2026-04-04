@@ -26,6 +26,7 @@
     "./transforms/innerworld-entity": "./src/transforms/innerworld-entity.ts",
     "./transforms/innerworld-region": "./src/transforms/innerworld-region.ts",
     "./transforms/innerworld-canvas": "./src/transforms/innerworld-canvas.ts",
+    "./transforms/lifecycle-event": "./src/transforms/lifecycle-event.ts",
     "./transforms/snapshot": "./src/transforms/snapshot.ts",
     "./transforms/friend-dashboard": "./src/transforms/friend-dashboard.ts",
     "./transforms/privacy-bucket": "./src/transforms/privacy-bucket.ts",

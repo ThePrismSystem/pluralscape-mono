@@ -1,11 +1,11 @@
 ---
 # ps-j47j
 title: Utility data hooks
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:12:54Z
-updated_at: 2026-04-04T09:04:00Z
+updated_at: 2026-04-04T19:58:14Z
 parent: ps-7j8n
 ---
 
@@ -70,3 +70,15 @@ Tests must run hooks inside the real React lifecycle. Reference implementation: 
 - Use `?.` optional chaining, never `!` non-null assertions
 - Destructure page arrays: `const [firstPage] = pages; const [item0] = firstPage?.data ?? [];`
 - Never use `as any`, `as unknown as`, or `eslint-disable`
+
+## Summary of Changes
+
+All 5 child features completed:
+
+- ps-vw2v: API key hooks (use-api-keys.ts)
+- ps-0lcl: Audit log hooks (use-audit-log.ts)
+- ps-tid8: Lifecycle event hooks (use-lifecycle-events.ts) + transform (lifecycle-event.ts)
+- ps-h7nj: Account management hooks (use-account.ts, use-account-security.ts, use-device-transfer.ts)
+- ps-p97u: Media upload hooks (use-blobs.ts) with composite useBlobUpload workflow
+
+Search hooks (ps-w5o7) moved to new local data layer epic (ps-vegi).
