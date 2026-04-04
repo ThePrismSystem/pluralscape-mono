@@ -22,7 +22,7 @@ import type {
   LifecycleEventRaw,
   LifecycleEventWithArchive,
 } from "@pluralscape/data/transforms/lifecycle-event";
-import type { LifecycleEventId } from "@pluralscape/types";
+import type { LifecycleEventId, LifecycleEventType } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type LifecycleEventPage = {
@@ -32,7 +32,7 @@ type LifecycleEventPage = {
 
 interface LifecycleEventListOpts extends SystemIdOverride {
   readonly limit?: number;
-  readonly eventType?: string;
+  readonly eventType?: LifecycleEventType;
   readonly includeArchived?: boolean;
 }
 
@@ -71,10 +71,9 @@ export function useLifecycleEventsList(
   const selectPage = useCallback(
     (data: InfiniteData<LifecycleEventRawPage>): InfiniteData<LifecycleEventPage> => {
       if (masterKey === null) throw new Error("masterKey is null");
-      const key = masterKey;
       return {
         ...data,
-        pages: data.pages.map((page) => decryptLifecycleEventPage(page, key)),
+        pages: data.pages.map((page) => decryptLifecycleEventPage(page, masterKey)),
       };
     },
     [masterKey],

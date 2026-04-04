@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders } from "./helpers/render-hook-with-providers.js";
 
+import type { UnixMillis } from "@pluralscape/types";
+
 type CapturedInput = Record<string, unknown>;
 type CapturedOpts = Record<string, unknown>;
 let lastQueryInput: CapturedInput = {};
@@ -57,8 +59,8 @@ describe("useAuditLog", () => {
   });
 
   it("maps eventType to event_type in input", () => {
-    renderHookWithProviders(() => useAuditLog({ eventType: "member.create" }));
-    expect(lastQueryInput["event_type"]).toBe("member.create");
+    renderHookWithProviders(() => useAuditLog({ eventType: "member.created" }));
+    expect(lastQueryInput["event_type"]).toBe("member.created");
   });
 
   it("maps resourceType to resource_type in input", () => {
@@ -67,7 +69,9 @@ describe("useAuditLog", () => {
   });
 
   it("passes from and to date filters", () => {
-    renderHookWithProviders(() => useAuditLog({ from: 1000, to: 2000 }));
+    renderHookWithProviders(() =>
+      useAuditLog({ from: 1000 as UnixMillis, to: 2000 as UnixMillis }),
+    );
     expect(lastQueryInput["from"]).toBe(1000);
     expect(lastQueryInput["to"]).toBe(2000);
   });
