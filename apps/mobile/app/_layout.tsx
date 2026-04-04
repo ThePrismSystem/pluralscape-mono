@@ -12,7 +12,9 @@ import { getApiBaseUrl } from "../src/config.js";
 import { ConnectionManager, ConnectionProvider } from "../src/connection/index.js";
 import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
+import { BucketKeyProvider } from "../src/providers/bucket-key-provider.js";
 import { CryptoProvider } from "../src/providers/crypto-provider.js";
+import { RestClientProvider } from "../src/providers/rest-client-provider.js";
 import { SystemProvider } from "../src/providers/system-provider.js";
 import { TRPCProvider } from "../src/providers/trpc-provider.js";
 import { SyncProvider } from "../src/sync/index.js";
@@ -120,10 +122,17 @@ function AuthBridgeProviders({ children }: { readonly children: ReactNode }): Re
   const { snapshot } = useAuth();
   const systemId = snapshot.credentials?.systemId ?? null;
   const masterKey = snapshot.state === "unlocked" ? snapshot.session.masterKey : null;
+  const boxKeypair = snapshot.state === "unlocked" ? snapshot.session.identityKeys.box : null;
 
   return (
     <SystemProvider systemId={systemId}>
-      <CryptoProvider masterKey={masterKey}>{children}</CryptoProvider>
+      <CryptoProvider masterKey={masterKey}>
+        {boxKeypair ? (
+          <BucketKeyProvider boxKeypair={boxKeypair}>{children}</BucketKeyProvider>
+        ) : (
+          children
+        )}
+      </CryptoProvider>
     </SystemProvider>
   );
 }
@@ -222,17 +231,19 @@ export default function RootLayout(): React.JSX.Element {
             getToken={getToken}
             onUnauthorized={() => authMachineRef.current?.dispatch({ type: "LOGOUT" })}
           >
-            <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
-              <AuthBridgeProviders>
-                <ConnectionProvider manager={connectionManagerRef.current}>
-                  <SyncProvider>
-                    <AuthGate>
-                      <Slot />
-                    </AuthGate>
-                  </SyncProvider>
-                </ConnectionProvider>
-              </AuthBridgeProviders>
-            </AuthProvider>
+            <RestClientProvider getToken={getToken}>
+              <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
+                <AuthBridgeProviders>
+                  <ConnectionProvider manager={connectionManagerRef.current}>
+                    <SyncProvider>
+                      <AuthGate>
+                        <Slot />
+                      </AuthGate>
+                    </SyncProvider>
+                  </ConnectionProvider>
+                </AuthBridgeProviders>
+              </AuthProvider>
+            </RestClientProvider>
           </TRPCProvider>
         </QueryClientProvider>
       </I18nProvider>

@@ -1,4 +1,4 @@
-import { keyGrants } from "@pluralscape/db/pg";
+import { authKeys, keyGrants, systems } from "@pluralscape/db/pg";
 import { and, eq, isNull } from "drizzle-orm";
 
 import type {
@@ -15,6 +15,9 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  *
  * Unlike `queryActiveKeyGrants` (which is scoped to a single system+friend pair),
  * this returns grants across ALL friends for eager client-side key loading.
+ *
+ * Joins through systems and auth_keys to include the grantor's box public key,
+ * which the client needs for crypto_box decryption.
  */
 export async function listReceivedKeyGrants(
   db: PostgresJsDatabase,
@@ -27,8 +30,14 @@ export async function listReceivedKeyGrants(
       encryptedKey: keyGrants.encryptedKey,
       keyVersion: keyGrants.keyVersion,
       systemId: keyGrants.systemId,
+      senderBoxPublicKey: authKeys.publicKey,
     })
     .from(keyGrants)
+    .innerJoin(systems, eq(keyGrants.systemId, systems.id))
+    .innerJoin(
+      authKeys,
+      and(eq(authKeys.accountId, systems.accountId), eq(authKeys.keyType, "encryption")),
+    )
     .where(and(eq(keyGrants.friendAccountId, accountId), isNull(keyGrants.revokedAt)));
 
   return {
@@ -38,6 +47,7 @@ export async function listReceivedKeyGrants(
       encryptedKey: Buffer.from(r.encryptedKey).toString("base64"),
       keyVersion: r.keyVersion,
       grantorSystemId: r.systemId as SystemId,
+      senderBoxPublicKey: new TextDecoder().decode(r.senderBoxPublicKey),
     })),
   };
 }

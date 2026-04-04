@@ -131,6 +131,8 @@ export interface ReceivedKeyGrant {
   readonly encryptedKey: string;
   readonly keyVersion: number;
   readonly grantorSystemId: SystemId;
+  /** Base64url-encoded box public key of the grantor account (needed for decryption). */
+  readonly senderBoxPublicKey: string;
 }
 
 /** Response from the bulk listReceivedKeyGrants endpoint. */
