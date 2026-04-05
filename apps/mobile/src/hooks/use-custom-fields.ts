@@ -209,7 +209,7 @@ export function useMemberFieldValues(
       if (localDb === null) throw new Error("localDb is null");
       return localDb
         .queryAll("SELECT * FROM field_values WHERE member_id = ?", [memberId])
-        .map(rowToFieldValue);
+        .map((row) => rowToFieldValue(row, systemId));
     },
     enabled: source === "local",
   });

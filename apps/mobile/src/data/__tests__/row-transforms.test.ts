@@ -696,7 +696,8 @@ describe("rowToNote", () => {
     const result = rowToNote(row);
 
     expect(result.id).toBe("note-1");
-    expect(result.author).toEqual({ entityType: "member", entityId: "mem-1" });
+    expect(result.authorEntityType).toBe("member");
+    expect(result.authorEntityId).toBe("mem-1");
     expect(result.title).toBe("Shopping list");
     expect(result.content).toBe("Eggs, milk, bread");
     expect(result.backgroundColor).toBe("#ffffcc");
@@ -719,7 +720,8 @@ describe("rowToNote", () => {
     };
 
     const result = rowToNote(row);
-    expect(result.author).toBeNull();
+    expect(result.authorEntityType).toBeNull();
+    expect(result.authorEntityId).toBeNull();
   });
 });
 
@@ -933,25 +935,26 @@ describe("rowToFieldDefinition", () => {
 // ── field-value (system-core) ─────────────────────────────────────────────────
 
 describe("rowToFieldValue", () => {
-  it("maps field value row with JSON-serialized value", () => {
+  it("maps field value row with JSON-serialized FieldValueUnion", () => {
     const row: Record<string, unknown> = {
       id: "fv-1",
       field_definition_id: "fd-1",
       member_id: "mem-1",
       structure_entity_id: null,
       group_id: null,
-      value: '"18+"',
+      value: '{"fieldType":"text","value":"18+"}',
       created_at: 1_700_000_000_000,
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFieldValue(row);
+    const result = rowToFieldValue(row, "sys-1" as import("@pluralscape/types").SystemId);
 
     expect(result.id).toBe("fv-1");
     expect(result.fieldDefinitionId).toBe("fd-1");
     expect(result.memberId).toBe("mem-1");
     expect(result.structureEntityId).toBeNull();
     expect(result.groupId).toBeNull();
+    expect(result.fieldType).toBe("text");
     expect(result.value).toBe("18+");
     expect(result.createdAt).toBe(1_700_000_000_000);
     expect(result.version).toBe(0);

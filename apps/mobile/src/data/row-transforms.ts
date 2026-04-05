@@ -19,7 +19,14 @@
  * directly, matching the decrypted domain shape.
  */
 
+import type {
+  FieldDefinitionDecrypted,
+  FieldValueDecrypted,
+} from "@pluralscape/data/transforms/custom-field";
 import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
+import type { GroupDecrypted } from "@pluralscape/data/transforms/group";
+import type { LifecycleEventWithArchive } from "@pluralscape/data/transforms/lifecycle-event";
+import type { NoteDecrypted } from "@pluralscape/data/transforms/note";
 import type {
   AcknowledgementRequest,
   Archived,
@@ -29,18 +36,15 @@ import type {
   ArchivedChatMessage,
   ArchivedCheckInRecord,
   ArchivedCustomFront,
-  ArchivedFieldDefinition,
   ArchivedFriendCode,
   ArchivedFriendConnection,
   ArchivedFrontingComment,
   ArchivedFrontingSession,
-  ArchivedGroup,
   ArchivedInnerWorldEntity,
   ArchivedInnerWorldRegion,
   ArchivedJournalEntry,
   ArchivedMember,
   ArchivedMemberPhoto,
-  ArchivedNote,
   ArchivedPoll,
   ArchivedPrivacyBucket,
   ArchivedRelationship,
@@ -54,30 +58,30 @@ import type {
   CheckInRecord,
   CustomFront,
   EntityReference,
-  FieldDefinition,
-  FieldValue,
+  FieldValueUnion,
   FriendCode,
   FriendConnection,
   FriendVisibilitySettings,
   FrontingComment,
   FrontingSession,
-  Group,
   InnerWorldEntity,
   InnerWorldRegion,
   JournalEntry,
   LifecycleEvent,
   Member,
+  MemberId,
   MemberPhoto,
-  Note,
   NoteAuthorEntityType,
   Poll,
   PrivacyBucket,
   Relationship,
+  SystemId,
   SystemSettings,
   SystemStructureEntity,
   SystemStructureEntityAssociation,
   SystemStructureEntityLink,
   SystemStructureEntityMemberLink,
+  SystemStructureEntityId,
   SystemStructureEntityType,
   TimerConfig,
   UnixMillis,
@@ -382,7 +386,7 @@ export function rowToMemberPhoto(row: Record<string, unknown>): MemberPhoto | Ar
       "member_id",
       id,
     ) as MemberPhoto["memberId"],
-    imageSource: guardedStr(
+    imageSource: parseJsonSafe(
       row["image_source"],
       "member_photos",
       "image_source",
@@ -400,13 +404,13 @@ export function rowToMemberPhoto(row: Record<string, unknown>): MemberPhoto | Ar
   return base;
 }
 
-export function rowToGroup(row: Record<string, unknown>): Group | ArchivedGroup {
+export function rowToGroup(row: Record<string, unknown>): GroupDecrypted {
   const id = rid(row);
   const archived = intToBool(row["archived"]);
   const updatedAt = guardedToMs(row["updated_at"], "groups", "updated_at", id);
-  const base: Group = {
-    id: guardedStr(row["id"], "groups", "id", id) as Group["id"],
-    systemId: guardedStr(row["system_id"], "groups", "system_id", id) as Group["systemId"],
+  return {
+    id: guardedStr(row["id"], "groups", "id", id) as GroupDecrypted["id"],
+    systemId: guardedStr(row["system_id"], "groups", "system_id", id) as GroupDecrypted["systemId"],
     name: guardedStr(row["name"], "groups", "name", id),
     description: strOrNull(row["description"], "groups", "description", id),
     parentGroupId: strOrNull(
@@ -414,22 +418,22 @@ export function rowToGroup(row: Record<string, unknown>): Group | ArchivedGroup 
       "groups",
       "parent_group_id",
       id,
-    ) as Group["parentGroupId"],
+    ) as GroupDecrypted["parentGroupId"],
     imageSource: parseJsonSafe(
       row["image_source"],
       "groups",
       "image_source",
       id,
-    ) as Group["imageSource"],
-    color: strOrNull(row["color"], "groups", "color", id) as Group["color"],
+    ) as GroupDecrypted["imageSource"],
+    color: strOrNull(row["color"], "groups", "color", id) as GroupDecrypted["color"],
     emoji: strOrNull(row["emoji"], "groups", "emoji", id),
     sortOrder: guardedNum(row["sort_order"], "groups", "sort_order", id),
-    archived: false,
+    archived,
+    archivedAt: archived ? updatedAt : null,
     createdAt: guardedToMs(row["created_at"], "groups", "created_at", id),
     updatedAt,
     version: 0,
   };
-  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
 export function rowToStructureEntityType(
@@ -697,20 +701,18 @@ export function rowToCustomFront(row: Record<string, unknown>): CustomFront | Ar
   return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFieldDefinition(
-  row: Record<string, unknown>,
-): FieldDefinition | ArchivedFieldDefinition {
+export function rowToFieldDefinition(row: Record<string, unknown>): FieldDefinitionDecrypted {
   const id = rid(row);
   const archived = intToBool(row["archived"]);
   const updatedAt = guardedToMs(row["updated_at"], "field_definitions", "updated_at", id);
-  const base: FieldDefinition = {
-    id: guardedStr(row["id"], "field_definitions", "id", id) as FieldDefinition["id"],
+  return {
+    id: guardedStr(row["id"], "field_definitions", "id", id) as FieldDefinitionDecrypted["id"],
     systemId: guardedStr(
       row["system_id"],
       "field_definitions",
       "system_id",
       id,
-    ) as FieldDefinition["systemId"],
+    ) as FieldDefinitionDecrypted["systemId"],
     name: guardedStr(row["name"], "field_definitions", "name", id),
     description: strOrNull(row["description"], "field_definitions", "description", id),
     fieldType: guardedStr(
@@ -718,46 +720,62 @@ export function rowToFieldDefinition(
       "field_definitions",
       "field_type",
       id,
-    ) as FieldDefinition["fieldType"],
+    ) as FieldDefinitionDecrypted["fieldType"],
     options: parseStringArrayOrNull(row["options"], "field_definitions", "options", id),
     required: intToBool(row["required"]),
     sortOrder: guardedNum(row["sort_order"], "field_definitions", "sort_order", id),
-    archived: false,
+    archived,
+    archivedAt: archived ? updatedAt : null,
     createdAt: guardedToMs(row["created_at"], "field_definitions", "created_at", id),
     updatedAt,
     version: 0,
   };
-  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFieldValue(row: Record<string, unknown>): FieldValue {
+/**
+ * The local `field_values` table stores the full `FieldValueUnion` as a
+ * JSON-serialized string in the `value` column, and does not have a
+ * `system_id` column. Pass the owning system's ID from the query context.
+ */
+export function rowToFieldValue(
+  row: Record<string, unknown>,
+  systemId: SystemId,
+): FieldValueDecrypted {
   const id = rid(row);
+  const valueUnion = parseJsonSafe(row["value"], "field_values", "value", id) as FieldValueUnion;
   return {
-    id: guardedStr(row["id"], "field_values", "id", id) as FieldValue["id"],
+    id: guardedStr(row["id"], "field_values", "id", id) as FieldValueDecrypted["id"],
     fieldDefinitionId: guardedStr(
       row["field_definition_id"],
       "field_values",
       "field_definition_id",
       id,
-    ) as FieldValue["fieldDefinitionId"],
+    ) as FieldValueDecrypted["fieldDefinitionId"],
     memberId: strOrNull(
       row["member_id"],
       "field_values",
       "member_id",
       id,
-    ) as FieldValue["memberId"],
+    ) as FieldValueDecrypted["memberId"],
     structureEntityId: strOrNull(
       row["structure_entity_id"],
       "field_values",
       "structure_entity_id",
       id,
-    ) as FieldValue["structureEntityId"],
-    groupId: strOrNull(row["group_id"], "field_values", "group_id", id) as FieldValue["groupId"],
-    value: parseJsonSafe(row["value"], "field_values", "value", id) as FieldValue["value"],
+    ) as FieldValueDecrypted["structureEntityId"],
+    groupId: strOrNull(
+      row["group_id"],
+      "field_values",
+      "group_id",
+      id,
+    ) as FieldValueDecrypted["groupId"],
+    systemId,
+    fieldType: valueUnion.fieldType,
+    value: valueUnion.value,
     createdAt: guardedToMs(row["created_at"], "field_values", "created_at", id),
     updatedAt: guardedToMs(row["updated_at"], "field_values", "updated_at", id),
     version: 0,
-  };
+  } as FieldValueDecrypted;
 }
 
 export function rowToInnerWorldEntity(
@@ -800,38 +818,39 @@ export function rowToInnerWorldEntity(
     version: 0,
   };
 
-  let base: InnerWorldEntity;
   if (entityType === "member") {
-    base = {
+    const memberEntity = {
       ...baseCommon,
-      entityType: "member",
+      entityType: "member" as const,
       linkedMemberId: guardedStr(
         row["linked_member_id"],
         "innerworld_entities",
         "linked_member_id",
         id,
-      ) as InnerWorldEntity["id"],
+      ) as MemberId,
     };
-  } else if (entityType === "landmark") {
-    base = {
+    return archived ? wrapArchived(memberEntity, updatedAt) : memberEntity;
+  }
+  if (entityType === "landmark") {
+    const landmarkEntity = {
       ...baseCommon,
-      entityType: "landmark",
+      entityType: "landmark" as const,
       name: strOrNull(row["name"], "innerworld_entities", "name", id) ?? "",
       description: strOrNull(row["description"], "innerworld_entities", "description", id),
     };
-  } else {
-    base = {
-      ...baseCommon,
-      entityType: "structure-entity",
-      linkedStructureEntityId: guardedStr(
-        row["linked_structure_entity_id"],
-        "innerworld_entities",
-        "linked_structure_entity_id",
-        id,
-      ) as InnerWorldEntity["id"],
-    };
+    return archived ? wrapArchived(landmarkEntity, updatedAt) : landmarkEntity;
   }
-  return archived ? wrapArchived(base, updatedAt) : base;
+  const structureEntity = {
+    ...baseCommon,
+    entityType: "structure-entity" as const,
+    linkedStructureEntityId: guardedStr(
+      row["linked_structure_entity_id"],
+      "innerworld_entities",
+      "linked_structure_entity_id",
+      id,
+    ) as SystemStructureEntityId,
+  };
+  return archived ? wrapArchived(structureEntity, updatedAt) : structureEntity;
 }
 
 export function rowToInnerWorldRegion(
@@ -918,8 +937,18 @@ export function rowToTimer(row: Record<string, unknown>): TimerConfig | Archived
   return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToLifecycleEvent(row: Record<string, unknown>): LifecycleEvent {
+/**
+ * Type assertion: the CRDT materializer validated the LifecycleEvent payload
+ * shape at write time, so the assembled object is a valid discriminated union
+ * member. TS cannot verify this statically across a generic payload spread.
+ */
+function assertLifecycleEvent(_v: unknown): asserts _v is LifecycleEvent {
+  // Validated by CRDT materializer at write time
+}
+
+export function rowToLifecycleEvent(row: Record<string, unknown>): LifecycleEventWithArchive {
   const id = rid(row);
+  const archived = intToBool(row["archived"]);
   const eventType = guardedStr(
     row["event_type"],
     "lifecycle_events",
@@ -930,6 +959,7 @@ export function rowToLifecycleEvent(row: Record<string, unknown>): LifecycleEven
     string,
     unknown
   >;
+  const recordedAt = guardedToMs(row["recorded_at"], "lifecycle_events", "recorded_at", id);
   const base = {
     id: guardedStr(row["id"], "lifecycle_events", "id", id) as LifecycleEvent["id"],
     systemId: guardedStr(
@@ -939,19 +969,15 @@ export function rowToLifecycleEvent(row: Record<string, unknown>): LifecycleEven
       id,
     ) as LifecycleEvent["systemId"],
     occurredAt: guardedToMs(row["occurred_at"], "lifecycle_events", "occurred_at", id),
-    recordedAt: guardedToMs(row["recorded_at"], "lifecycle_events", "recorded_at", id),
+    recordedAt,
     notes: strOrNull(row["notes"], "lifecycle_events", "notes", id),
   };
-  // Spread the typed base + eventType discriminant + payload fields.
-  // The result satisfies every LifecycleEvent variant by construction;
-  // a single (non-unknown) cast is required because TS cannot verify the
-  // discriminated union match statically across a generic payload spread.
-  const assembled: typeof base & { eventType: typeof eventType } & Record<string, unknown> = {
-    ...base,
-    eventType,
-    ...payload,
-  };
-  return assembled as LifecycleEvent;
+  const assembled = { ...base, eventType, ...payload };
+  assertLifecycleEvent(assembled);
+  if (archived) {
+    return { ...assembled, archived: true as const, archivedAt: recordedAt };
+  }
+  return { ...assembled, archived: false as const };
 }
 
 // ── fronting document ────────────────────────────────────────────────────────
@@ -1374,25 +1400,20 @@ export function rowToWikiPage(row: Record<string, unknown>): WikiPage | Archived
   return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToNote(row: Record<string, unknown>): Note | ArchivedNote {
+export function rowToNote(row: Record<string, unknown>): NoteDecrypted | Archived<NoteDecrypted> {
   const id = rid(row);
   const archived = intToBool(row["archived"]);
   const updatedAt = guardedToMs(row["updated_at"], "notes", "updated_at", id);
-  const authorEntityType = strOrNull(
-    row["author_entity_type"],
-    "notes",
-    "author_entity_type",
-    id,
-  ) as NoteAuthorEntityType | null;
-  const authorEntityId = strOrNull(row["author_entity_id"], "notes", "author_entity_id", id);
-  const author: EntityReference<NoteAuthorEntityType> | null =
-    authorEntityType !== null && authorEntityId !== null
-      ? { entityType: authorEntityType, entityId: authorEntityId }
-      : null;
-  const base: Note = {
-    id: guardedStr(row["id"], "notes", "id", id) as Note["id"],
-    systemId: guardedStr(row["system_id"], "notes", "system_id", id) as Note["systemId"],
-    author,
+  const base: NoteDecrypted = {
+    id: guardedStr(row["id"], "notes", "id", id) as NoteDecrypted["id"],
+    systemId: guardedStr(row["system_id"], "notes", "system_id", id) as NoteDecrypted["systemId"],
+    authorEntityType: strOrNull(
+      row["author_entity_type"],
+      "notes",
+      "author_entity_type",
+      id,
+    ) as NoteAuthorEntityType | null,
+    authorEntityId: strOrNull(row["author_entity_id"], "notes", "author_entity_id", id),
     title: guardedStr(row["title"], "notes", "title", id),
     content: guardedStr(row["content"], "notes", "content", id),
     backgroundColor: strOrNull(
@@ -1400,13 +1421,13 @@ export function rowToNote(row: Record<string, unknown>): Note | ArchivedNote {
       "notes",
       "background_color",
       id,
-    ) as Note["backgroundColor"],
+    ) as NoteDecrypted["backgroundColor"],
     archived: false,
+    version: 0,
     createdAt: guardedToMs(row["created_at"], "notes", "created_at", id),
     updatedAt,
-    version: 0,
   };
-  return archived ? wrapArchived(base, updatedAt) : base;
+  return archived ? { ...base, archived: true as const, archivedAt: updatedAt } : base;
 }
 
 // ── privacy-config document ──────────────────────────────────────────────────
