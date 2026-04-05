@@ -8,6 +8,7 @@ import {
   createJournalDocument,
   createNoteDocument,
 } from "./factories/document-factory.js";
+import { entityEntries } from "./schemas/schema-utils.js";
 import { TIME_SPLIT_CONFIGS } from "./types.js";
 
 import type { ParsedDocumentId } from "./document-types.js";
@@ -141,18 +142,14 @@ export function splitDocument<T>(
       }
 
       const newDoc = createFrontingDocument();
-      const activeEntries = Object.entries(currentDoc.sessions).filter(
+      const activeEntries = entityEntries(currentDoc.sessions).filter(
         ([, fs]) => fs.endTime === null,
       );
 
       if (activeEntries.length > 0) {
         const migrated = Automerge.change(newDoc, (d) => {
-          const sessions = d.sessions as Record<
-            string,
-            (typeof d.sessions)[keyof typeof d.sessions]
-          >;
           for (const [id, fs] of activeEntries) {
-            sessions[id] = fs;
+            d.sessions[id] = fs;
           }
         });
         return { documentType: "fronting", newDocId, newDoc: migrated };
