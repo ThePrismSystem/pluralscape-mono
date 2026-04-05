@@ -1262,6 +1262,41 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.errors).toHaveLength(0);
     expect(errorMessages).toHaveLength(0);
   });
+
+  it("counts frontingCommentAuthorIssues for authorless comments in fronting doc", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-run-comment-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("authorless after merge"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    session.change((d) => {
+      const target = d.comments[asFrontingCommentId(commentId)];
+      if (target) target.memberId = null;
+    });
+
+    const result = runAllValidations(session);
+
+    expect(result.frontingCommentAuthorIssues).toBe(1);
+    expect(result.notifications.some((n) => n.entityType === "fronting-comment")).toBe(true);
+  });
 });
 
 describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
@@ -1391,5 +1426,145 @@ describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
     expect(envelope).toBeNull();
     expect(notifications).toHaveLength(2);
     expect(notifications.every((n) => n.resolution === "notification-only")).toBe(true);
+  });
+
+  it("returns no notifications when document has no comments field", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sysCore-no-comments"),
+      sodium,
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("returns no notifications when only customFrontId is set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-customfront-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: null,
+        customFrontId: s("cf_1"),
+        structureEntityId: null,
+        content: s("custom front comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("returns no notifications when only structureEntityId is set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-entity-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: null,
+        customFrontId: null,
+        structureEntityId: s("ste_1"),
+        content: s("entity comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("detects only authorless comments in a mixed set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-mixed-authors"),
+      sodium,
+    });
+
+    const validMemberId = `fc_${crypto.randomUUID()}`;
+    const validCustomFrontId = `fc_${crypto.randomUUID()}`;
+    const authorlessId = `fc_${crypto.randomUUID()}`;
+
+    session.change((d) => {
+      d.comments[asFrontingCommentId(validMemberId)] = {
+        id: s(validMemberId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("member comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.comments[asFrontingCommentId(validCustomFrontId)] = {
+        id: s(validCustomFrontId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: null,
+        customFrontId: s("cf_1"),
+        structureEntityId: null,
+        content: s("custom front comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.comments[asFrontingCommentId(authorlessId)] = {
+        id: s(authorlessId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("will become authorless"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    session.change((d) => {
+      const target = d.comments[asFrontingCommentId(authorlessId)];
+      if (target) target.memberId = null;
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]?.entityId).toBe(authorlessId);
   });
 });
