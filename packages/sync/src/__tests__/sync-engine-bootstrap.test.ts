@@ -17,6 +17,7 @@ import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapt
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
+import type { SystemCoreDocument } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { AeadKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
 
@@ -289,9 +290,11 @@ describe("SyncEngine bootstrap", () => {
     const engine = createEngine({ networkAdapter });
     await engine.bootstrap();
 
-    const doc = engine.getDocumentSnapshot(asSyncDocId("system-core-sys_test"));
-    expect(doc).toBeDefined();
-    expect(typeof doc).toBe("object");
+    const doc = engine.getDocumentSnapshot(
+      asSyncDocId("system-core-sys_test"),
+    ) as SystemCoreDocument;
+    expect(doc.members).toBeDefined();
+    expect(doc.system).toBeDefined();
   });
 
   it("getDocumentSnapshot throws NoActiveSessionError for unknown document", () => {
