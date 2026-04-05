@@ -2,6 +2,12 @@ import Constants from "expo-constants";
 
 const DEV_API_BASE_URL = "http://localhost:3000";
 
+export function getWsUrl(): string {
+  const base = getApiBaseUrl();
+  const wsBase = base.replace(/^http/, "ws");
+  return `${wsBase}/sync`;
+}
+
 export function getApiBaseUrl(): string {
   const extra: Record<string, unknown> | undefined = Constants.expoConfig?.extra;
   const configured: unknown = extra?.apiBaseUrl;

@@ -237,6 +237,29 @@ describe("WsManager", () => {
     });
   });
 
+  describe("getAdapter", () => {
+    it("returns null before connect", () => {
+      const eventBus = createEventBus<DataLayerEventMap>();
+      const manager = makeManager(eventBus);
+      expect(manager.getAdapter()).toBeNull();
+    });
+
+    it("returns the adapter after connect", () => {
+      const eventBus = createEventBus<DataLayerEventMap>();
+      const manager = makeManager(eventBus);
+      manager.connect("token", asSystemId("sys_123"));
+      expect(manager.getAdapter()).not.toBeNull();
+    });
+
+    it("returns null after disconnect", () => {
+      const eventBus = createEventBus<DataLayerEventMap>();
+      const manager = makeManager(eventBus);
+      manager.connect("token", asSystemId("sys_123"));
+      manager.disconnect();
+      expect(manager.getAdapter()).toBeNull();
+    });
+  });
+
   describe("intentional disconnect", () => {
     it("does not trigger reconnect when disconnected intentionally", () => {
       vi.useFakeTimers();
