@@ -28,6 +28,9 @@ const UNAUTHENTICATED_SNAPSHOT: AuthStateSnapshot = {
 
 const Ctx = createContext<AuthContextValue | null>(null);
 
+/** Exported for use in tests — inject a stub auth context without AuthStateMachine. */
+export const AuthCtx = Ctx;
+
 export function AuthProvider({
   machine,
   tokenStore,

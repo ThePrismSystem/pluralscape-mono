@@ -1,6 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { useQuery } from "@tanstack/react-query";
 
+import { useAuth } from "../auth/index.js";
 import { rowToFriendConnection } from "../data/row-transforms.js";
 
 import {
@@ -32,16 +33,22 @@ export function useFriendConnection(
 ): DataQuery<FriendConnection | ArchivedFriendConnection | FriendConnectionRemote> {
   const source = useQuerySource();
   const localDb = useLocalDb();
+  const auth = useAuth();
+  const accountId = auth.snapshot.credentials?.accountId ?? null;
 
   const localQuery = useQuery({
-    queryKey: ["friend_connections", connectionId],
+    queryKey: ["friend_connections", connectionId, accountId],
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
-      const row = localDb.queryOne("SELECT * FROM friend_connections WHERE id = ?", [connectionId]);
+      if (accountId === null) throw new Error("accountId is null");
+      const row = localDb.queryOne(
+        "SELECT * FROM friend_connections WHERE id = ? AND account_id = ?",
+        [connectionId, accountId],
+      );
       if (!row) throw new Error("Friend connection not found");
       return rowToFriendConnection(row);
     },
-    enabled: source === "local" && localDb !== null,
+    enabled: source === "local" && localDb !== null && accountId !== null,
   });
 
   const remoteQuery = trpc.friend.get.useQuery({ connectionId }, { enabled: source === "remote" });
@@ -56,16 +63,25 @@ export function useFriendConnectionsList(
   | ReturnType<typeof trpc.friend.list.useInfiniteQuery> {
   const source = useQuerySource();
   const localDb = useLocalDb();
+  const auth = useAuth();
+  const accountId = auth.snapshot.credentials?.accountId ?? null;
 
   const localQuery = useQuery({
-    queryKey: ["friend_connections", "list", opts?.includeArchived ?? false, opts?.status ?? null],
+    queryKey: [
+      "friend_connections",
+      "list",
+      accountId,
+      opts?.includeArchived ?? false,
+      opts?.status ?? null,
+    ],
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
+      if (accountId === null) throw new Error("accountId is null");
       const includeArchived = opts?.includeArchived ?? false;
       const status = opts?.status;
 
-      let sql = "SELECT * FROM friend_connections WHERE 1=1";
-      const params: unknown[] = [];
+      let sql = "SELECT * FROM friend_connections WHERE account_id = ?";
+      const params: unknown[] = [accountId];
 
       if (status !== undefined) {
         sql += " AND status = ?";
@@ -77,7 +93,7 @@ export function useFriendConnectionsList(
 
       return localDb.queryAll(sql, params).map(rowToFriendConnection);
     },
-    enabled: source === "local" && localDb !== null,
+    enabled: source === "local" && localDb !== null && accountId !== null,
   });
 
   const remoteQuery = trpc.friend.list.useInfiniteQuery(

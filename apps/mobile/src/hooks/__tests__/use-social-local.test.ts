@@ -17,6 +17,16 @@ vi.mock("../../providers/system-provider.js", () => ({
   useActiveSystemId: vi.fn().mockReturnValue("sys-1"),
 }));
 
+vi.mock("../../auth/index.js", () => ({
+  useAuth: vi.fn().mockReturnValue({
+    snapshot: {
+      state: "unlocked",
+      credentials: { accountId: "test-account-0000000" },
+      session: null,
+    },
+  }),
+}));
+
 vi.mock("@pluralscape/api-client/trpc", () => ({
   trpc: {
     friend: {
@@ -194,6 +204,32 @@ describe("useFriendConnection — local mode", () => {
     expect(result.current.isError).toBe(false);
   });
 
+  it("scopes the local query by account_id", () => {
+    const row = {
+      id: "fc-1",
+      account_id: "test-account-0000000",
+      friend_account_id: "acc-2",
+      status: "accepted",
+      assigned_buckets: "[]",
+      visibility: "{}",
+      archived: 0,
+      archived_at: null,
+      version: 1,
+      created_at: 1_000_000,
+      updated_at: 2_000_000,
+    };
+    const { db, queryOneMock } = makeLocalDb(row);
+    mockUseQuerySource.mockReturnValue("local");
+    mockUseLocalDb.mockReturnValue(db);
+
+    renderHook(() => useFriendConnection("fc-1" as never), { wrapper: makeWrapper() });
+
+    expect(queryOneMock).toHaveBeenCalledWith(
+      expect.stringContaining("account_id"),
+      expect.arrayContaining(["fc-1", "test-account-0000000"]),
+    );
+  });
+
   it("does not call localDb.queryOne on first render when source is remote", () => {
     const { db, queryOneMock } = makeLocalDb(undefined);
     mockUseQuerySource.mockReturnValue("remote");
@@ -230,6 +266,19 @@ describe("useFriendConnectionsList — local mode", () => {
 
     expect(result.current).toBeDefined();
     expect(result.current.isError).toBe(false);
+  });
+
+  it("scopes the local query by account_id", () => {
+    const { db, queryAllMock } = makeLocalDb(undefined, []);
+    mockUseQuerySource.mockReturnValue("local");
+    mockUseLocalDb.mockReturnValue(db);
+
+    renderHook(() => useFriendConnectionsList(), { wrapper: makeWrapper() });
+
+    expect(queryAllMock).toHaveBeenCalledWith(
+      expect.stringContaining("account_id"),
+      expect.arrayContaining(["test-account-0000000"]),
+    );
   });
 
   it("does not call localDb.queryAll when source is remote", () => {

@@ -4,7 +4,7 @@ const DEV_API_BASE_URL = "http://localhost:3000";
 
 export function getWsUrl(): string {
   const base = getApiBaseUrl();
-  const wsBase = base.replace(/^http/, "ws");
+  const wsBase = base.replace(/^http(s?)/, "ws$1");
   return `${wsBase}/sync`;
 }
 

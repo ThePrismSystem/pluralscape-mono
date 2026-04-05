@@ -31,6 +31,7 @@ type CustomFrontPage = {
 
 interface CustomFrontListOpts extends SystemIdOverride {
   readonly limit?: number;
+  readonly includeArchived?: boolean;
 }
 
 export function useCustomFront(
@@ -97,13 +98,16 @@ export function useCustomFrontsList(
     [masterKey],
   );
 
+  const includeArchived = opts?.includeArchived ?? false;
+
   const localQuery = useQuery({
-    queryKey: ["custom_fronts", "list", systemId],
+    queryKey: ["custom_fronts", "list", systemId, includeArchived],
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
-      return localDb
-        .queryAll("SELECT * FROM custom_fronts WHERE system_id = ? AND archived = 0", [systemId])
-        .map(rowToCustomFront);
+      const sql = includeArchived
+        ? "SELECT * FROM custom_fronts WHERE system_id = ?"
+        : "SELECT * FROM custom_fronts WHERE system_id = ? AND archived = 0";
+      return localDb.queryAll(sql, [systemId]).map(rowToCustomFront);
     },
     enabled: source === "local" && localDb !== null,
   });

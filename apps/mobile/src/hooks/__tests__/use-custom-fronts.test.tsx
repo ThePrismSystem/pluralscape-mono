@@ -210,6 +210,46 @@ describe("useCustomFrontsList", () => {
     rerender();
     expect(result.current.data).toBe(ref1);
   });
+
+  it("local query excludes archived when includeArchived is false", () => {
+    const queryAllMock = vi.fn().mockReturnValue([]);
+    const localDb = {
+      initialize: vi.fn(),
+      queryOne: vi.fn(),
+      queryAll: queryAllMock,
+      execute: vi.fn(),
+      transaction: vi.fn((fn: () => unknown) => fn()),
+      close: vi.fn(),
+    };
+    renderHookWithProviders(() => useCustomFrontsList(), {
+      querySource: "local",
+      localDb: localDb as never,
+    });
+    expect(queryAllMock).toHaveBeenCalledWith(
+      expect.stringContaining("AND archived = 0"),
+      expect.any(Array),
+    );
+  });
+
+  it("local query includes archived when includeArchived is true", () => {
+    const queryAllMock = vi.fn().mockReturnValue([]);
+    const localDb = {
+      initialize: vi.fn(),
+      queryOne: vi.fn(),
+      queryAll: queryAllMock,
+      execute: vi.fn(),
+      transaction: vi.fn((fn: () => unknown) => fn()),
+      close: vi.fn(),
+    };
+    renderHookWithProviders(() => useCustomFrontsList({ includeArchived: true }), {
+      querySource: "local",
+      localDb: localDb as never,
+    });
+    expect(queryAllMock).toHaveBeenCalledWith(
+      expect.not.stringContaining("AND archived = 0"),
+      expect.any(Array),
+    );
+  });
 });
 
 // ── Mutation tests ──────────────────────────────────────────────────

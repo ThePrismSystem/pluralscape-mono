@@ -46,4 +46,9 @@ describe("getWsUrl", () => {
     mockConstants.expoConfig = { extra: { apiBaseUrl: "https://api.example.com" } };
     expect(getWsUrl()).toBe("wss://api.example.com/sync");
   });
+
+  it("handles base URL with hostname starting with http", () => {
+    mockConstants.expoConfig = { extra: { apiBaseUrl: "https://httpbin.example.com" } };
+    expect(getWsUrl()).toBe("wss://httpbin.example.com/sync");
+  });
 });
