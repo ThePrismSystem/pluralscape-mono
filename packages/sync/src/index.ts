@@ -216,12 +216,3 @@ export type {
   CompactionReason,
   CompactionSkipReason,
 } from "./engine/compaction-handler.js";
-
-// ── Event bus ───────────────────────────────────────────────────────
-export { createEventBus } from "./event-bus/index.js";
-export type {
-  EventBus,
-  DataLayerEventMap,
-  DataLayerEventType,
-  DataLayerEvent,
-} from "./event-bus/index.js";
