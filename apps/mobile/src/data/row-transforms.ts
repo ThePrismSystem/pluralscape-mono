@@ -1,13 +1,15 @@
 /**
  * Row transform functions for local SQLite reads.
  *
- * Converts snake_case SQLite row objects (from `LocalDatabase.queryAll` /
- * `queryOne`) to camelCase typed shapes that hooks can consume.
+ * Each transform accepts a raw `Record<string, unknown>` SQLite row and
+ * returns a strongly-typed domain object. Guarded primitive helpers validate
+ * every field at runtime and throw `RowTransformError` with table/field/rowId
+ * context on type mismatches, making corrupt rows debuggable.
  *
  * Conventions:
  * - INTEGER columns storing booleans (0/1) are converted to `boolean`.
  * - TEXT columns storing JSON-serialized arrays or objects are parsed.
- * - Timestamps (INTEGER, Unix ms) pass through as-is.
+ * - Timestamps (INTEGER, Unix ms) are validated as numbers and branded.
  * - `archivedAt` is not stored in SQLite; always `null` in local rows.
  * - `version` is not stored in SQLite; always `0` in local rows.
  *
@@ -21,66 +23,176 @@ import type { UnixMillis } from "@pluralscape/types";
 
 // ── Primitive helpers ────────────────────────────────────────────────────────
 
+/** Error thrown when a SQLite row field fails a runtime type guard. */
+export class RowTransformError extends Error {
+  readonly table: string;
+  readonly field: string;
+  readonly rowId: string | null;
+
+  constructor(table: string, field: string, rowId: string | null, message: string) {
+    super(`${table}.${field}${rowId !== null ? " (row " + rowId + ")" : ""}: ${message}`);
+    this.name = "RowTransformError";
+    this.table = table;
+    this.field = field;
+    this.rowId = rowId;
+  }
+}
+
 /** Coerce a 0/1 INTEGER column to boolean. */
 function intToBool(v: unknown): boolean {
   return v === 1 || v === true;
 }
 
-/** Parse a JSON-serialized TEXT column. Returns `null` when value is null/undefined. */
-function parseJson(v: unknown): unknown {
-  if (v === null || v === undefined) return null;
-  if (typeof v !== "string") return v;
-  return JSON.parse(v) as unknown;
+/**
+ * Coerce a 0/1 INTEGER column to boolean, fail-closed for privacy fields.
+ * Returns `true` when value is null or undefined (maximum restriction).
+ */
+export function intToBoolFailClosed(v: unknown): boolean {
+  if (v === null || v === undefined) return true;
+  return intToBool(v);
 }
 
-/** Parse a JSON-serialized TEXT column that is guaranteed non-null in the schema. */
-function parseJsonRequired(v: unknown): unknown {
+/**
+ * Parse a JSON-serialized TEXT column. Returns `null` for null/undefined.
+ * Non-strings pass through. Throws `RowTransformError` for malformed JSON.
+ */
+export function parseJsonSafe(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): unknown {
+  if (v === null || v === undefined) return null;
   if (typeof v !== "string") return v;
-  return JSON.parse(v) as unknown;
+  try {
+    return JSON.parse(v) as unknown;
+  } catch {
+    const truncated = v.length > 80 ? v.slice(0, 80) + "…" : v;
+    throw new RowTransformError(table, field, rowId ?? null, `invalid JSON: ${truncated}`);
+  }
+}
+
+/**
+ * Parse a JSON-serialized TEXT column that is guaranteed non-null in the schema.
+ * Non-strings pass through. Throws `RowTransformError` for malformed JSON.
+ */
+function parseJsonRequired(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): unknown {
+  if (typeof v !== "string") return v;
+  try {
+    return JSON.parse(v) as unknown;
+  } catch {
+    const truncated = v.length > 80 ? v.slice(0, 80) + "…" : v;
+    throw new RowTransformError(table, field, rowId ?? null, `invalid JSON: ${truncated}`);
+  }
 }
 
 /** Parse a JSON-serialized TEXT column as a string array. */
-function parseStringArray(v: unknown): readonly string[] {
-  return parseJsonRequired(v) as readonly string[];
+function parseStringArray(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): readonly string[] {
+  return parseJsonRequired(v, table, field, rowId) as readonly string[];
 }
 
 /** Parse a nullable JSON-serialized TEXT column as a string array. */
-function parseStringArrayOrNull(v: unknown): readonly string[] | null {
-  return parseJson(v) as readonly string[] | null;
+function parseStringArrayOrNull(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): readonly string[] | null {
+  return parseJsonSafe(v, table, field, rowId) as readonly string[] | null;
 }
 
-/** Cast to UnixMillis (branded number). */
-function toMs(v: unknown): UnixMillis {
+/**
+ * Validate and cast to `UnixMillis`. Throws `RowTransformError` if the value
+ * is not a number.
+ */
+export function guardedToMs(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): UnixMillis {
+  if (typeof v !== "number") {
+    throw new RowTransformError(table, field, rowId ?? null, `expected number, got ${typeof v}`);
+  }
   return v as UnixMillis;
 }
 
-/** Cast to UnixMillis or null. */
-function toMsOrNull(v: unknown): UnixMillis | null {
+/** Cast to `UnixMillis` or null. */
+function toMsOrNull(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): UnixMillis | null {
   if (v === null || v === undefined) return null;
-  return v as UnixMillis;
+  return guardedToMs(v, table, field, rowId);
 }
 
-/** Cast to string. */
-function str(v: unknown): string {
-  return v as string;
+/** Validate and cast to `string`. Throws `RowTransformError` if not a string. */
+export function guardedStr(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): string {
+  if (typeof v !== "string") {
+    throw new RowTransformError(table, field, rowId ?? null, `expected string, got ${typeof v}`);
+  }
+  return v;
 }
 
 /** Cast to string or null. */
-function strOrNull(v: unknown): string | null {
+function strOrNull(v: unknown, table: string, field: string, rowId?: string | null): string | null {
   if (v === null || v === undefined) return null;
-  return v as string;
+  return guardedStr(v, table, field, rowId);
 }
 
-/** Cast to number. */
-function num(v: unknown): number {
-  return v as number;
+/** Validate and cast to `number`. Throws `RowTransformError` if not a number. */
+export function guardedNum(
+  v: unknown,
+  table: string,
+  field: string,
+  rowId?: string | null,
+): number {
+  if (typeof v !== "number") {
+    throw new RowTransformError(table, field, rowId ?? null, `expected number, got ${typeof v}`);
+  }
+  return v;
 }
 
 /** Cast to number or null. */
-function numOrNull(v: unknown): number | null {
+function numOrNull(v: unknown, table: string, field: string, rowId?: string | null): number | null {
   if (v === null || v === undefined) return null;
-  return v as number;
+  return guardedNum(v, table, field, rowId);
 }
+
+// ── Legacy unguarded aliases (used by existing transforms; replaced in Task 2) ─
+
+/** @internal Cast to UnixMillis without validation. */
+const toMs = (v: unknown): UnixMillis => v as UnixMillis;
+
+/** @internal Cast to string without validation. */
+const str = (v: unknown): string => v as string;
+
+/** @internal Cast to number without validation. */
+const num = (v: unknown): number => v as number;
+
+/** @internal Parse nullable JSON without table/field context (legacy). */
+const parseJson = (v: unknown): unknown => {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== "string") return v;
+  return JSON.parse(v) as unknown;
+};
 
 // ── Local row types ──────────────────────────────────────────────────────────
 // These are the camelCase shapes returned by each transform function.
