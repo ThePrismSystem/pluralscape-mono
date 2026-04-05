@@ -2,9 +2,33 @@
 //
 // Root barrel exports core types, session, engine, document factory, and
 // protocol messages. Specialized exports live behind sub-entry points:
-//   @pluralscape/sync/adapters  — storage/network adapters and SQLite drivers
-//   @pluralscape/sync/schemas   — CRDT document schema types
-//   @pluralscape/sync/protocol  — full protocol message taxonomy
+//   @pluralscape/sync/adapters    — storage/network adapters and SQLite drivers
+//   @pluralscape/sync/schemas     — CRDT document schema types
+//   @pluralscape/sync/protocol    — full protocol message taxonomy
+//   @pluralscape/sync/materializer — entity registry and document materializers
+
+// ── Event bus ────────────────────────────────────────────────────────
+export { createEventBus } from "./event-bus/index.js";
+export type {
+  EventBus,
+  DataLayerEvent,
+  DataLayerEventMap,
+  DataLayerEventType,
+  EntityOperation,
+  FriendDataChangedEvent,
+  FriendIndexedEvent,
+  MaterializedDocumentEvent,
+  MaterializedEntityEvent,
+  SearchIndexUpdatedEvent,
+  SearchScope,
+  SyncChangesMergedEvent,
+  SyncErrorEvent,
+  SyncSnapshotAppliedEvent,
+  WsConnectedEvent,
+  WsDisconnectedEvent,
+  WsNotificationEvent,
+  WsSyncMessageEvent,
+} from "./event-bus/index.js";
 
 // ── Core types ───────────────────────────────────────────────────────
 export type {
