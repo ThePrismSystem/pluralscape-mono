@@ -2,8 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { NotificationBridge } from "../notification-bridge.js";
 
-function makeConnection(readyState = 1): { send: ReturnType<typeof vi.fn>; readyState: number } {
-  return { send: vi.fn(), readyState };
+interface TestConnection {
+  send: ReturnType<typeof vi.fn<(data: string) => undefined>>;
+  readyState: number;
+}
+
+function makeConnection(readyState = 1): TestConnection {
+  return { send: vi.fn<(data: string) => undefined>(), readyState };
 }
 
 describe("NotificationBridge", () => {
@@ -13,7 +18,9 @@ describe("NotificationBridge", () => {
     bridge.register("acc-1", conn);
     bridge.notify("acc-1", { hello: "world" });
     expect(conn.send).toHaveBeenCalledOnce();
-    expect(JSON.parse(conn.send.mock.calls[0][0] as string)).toEqual({
+    const firstCallArg = conn.send.mock.calls[0]?.[0];
+    if (firstCallArg === undefined) throw new Error("send was not called");
+    expect(JSON.parse(firstCallArg)).toEqual({
       type: "Notification",
       payload: { hello: "world" },
     });
