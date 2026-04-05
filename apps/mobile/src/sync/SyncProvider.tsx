@@ -1,7 +1,7 @@
 import { createBucketKeyCache } from "@pluralscape/crypto";
 import { DocumentKeyResolver, SyncEngine } from "@pluralscape/sync";
 import { SqliteStorageAdapter } from "@pluralscape/sync/adapters";
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "../auth/index.js";
 import { getWsUrl } from "../config.js";
@@ -10,6 +10,9 @@ import { createWsManager } from "../connection/ws-manager.js";
 import { useDataLayer } from "../data/DataLayerProvider.js";
 import { usePlatform } from "../platform/index.js";
 
+import { SyncCtx } from "./sync-context.js";
+
+import type { SyncContextValue } from "./sync-context.js";
 import type { WsManager } from "../connection/ws-manager.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
 import type { DataLayerEventMap, EventBus, ReplicationProfile } from "@pluralscape/sync";
@@ -17,11 +20,8 @@ import type { SqliteDriver } from "@pluralscape/sync/adapters";
 import type { SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
-export interface SyncContextValue {
-  readonly engine: SyncEngine | null;
-  readonly isBootstrapped: boolean;
-  readonly progress: { synced: number; total: number } | null;
-}
+export type { SyncContextValue } from "./sync-context.js";
+export { SyncCtx, useSync } from "./sync-context.js";
 
 /** Extracted config when all prerequisites for engine creation are met. */
 interface EngineReadyConfig {
@@ -34,7 +34,7 @@ interface EngineReadyConfig {
   readonly sqliteDriver: SqliteDriver;
 }
 
-const Ctx = createContext<SyncContextValue | null>(null);
+const Ctx = SyncCtx;
 
 /**
  * Wires the SyncEngine to the event bus and upstream providers.
@@ -246,12 +246,4 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
-
-export function useSync(): SyncContextValue {
-  const ctx = useContext(Ctx);
-  if (ctx === null) {
-    throw new Error("useSync must be used within SyncProvider");
-  }
-  return ctx;
 }

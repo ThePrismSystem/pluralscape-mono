@@ -86,6 +86,27 @@ function numOrNull(v: unknown): number | null {
 // These are the camelCase shapes returned by each transform function.
 // They match the plaintext content of each entity as stored in SQLite.
 
+export interface SystemSettingsLocalRow {
+  readonly id: string;
+  readonly systemId: string;
+  readonly theme: string;
+  readonly fontScale: number;
+  readonly locale: string | null;
+  readonly defaultBucketId: string | null;
+  readonly appLock: unknown;
+  readonly notifications: unknown;
+  readonly syncPreferences: unknown;
+  readonly privacyDefaults: unknown;
+  readonly littlesSafeMode: unknown;
+  readonly nomenclature: unknown;
+  readonly saturationLevelsEnabled: boolean;
+  readonly autoCaptureFrontingOnJournal: boolean;
+  readonly snapshotSchedule: unknown;
+  readonly onboardingComplete: boolean;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}
+
 export interface MemberLocalRow {
   readonly id: string;
   readonly systemId: string;
@@ -151,6 +172,38 @@ export interface StructureEntityLocalRow {
   readonly imageSource: string | null;
   readonly emoji: string | null;
   readonly sortOrder: number;
+  readonly archived: boolean;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}
+
+export interface StructureEntityLinkLocalRow {
+  readonly id: string;
+  readonly systemId: string;
+  readonly entityId: string;
+  readonly parentEntityId: string | null;
+  readonly sortOrder: number;
+  readonly archived: boolean;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}
+
+export interface StructureEntityMemberLinkLocalRow {
+  readonly id: string;
+  readonly systemId: string;
+  readonly memberId: string;
+  readonly parentEntityId: string | null;
+  readonly sortOrder: number;
+  readonly archived: boolean;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
+}
+
+export interface StructureEntityAssociationLocalRow {
+  readonly id: string;
+  readonly systemId: string;
+  readonly sourceEntityId: string;
+  readonly targetEntityId: string;
   readonly archived: boolean;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
@@ -467,6 +520,29 @@ export interface FriendCodeLocalRow {
 
 // ── system-core ──────────────────────────────────────────────────────────────
 
+export function rowToSystemSettingsRow(row: Record<string, unknown>): SystemSettingsLocalRow {
+  return {
+    id: str(row["id"]),
+    systemId: str(row["system_id"]),
+    theme: str(row["theme"]),
+    fontScale: num(row["font_scale"]),
+    locale: strOrNull(row["locale"]),
+    defaultBucketId: strOrNull(row["default_bucket_id"]),
+    appLock: parseJsonRequired(row["app_lock"]),
+    notifications: parseJsonRequired(row["notifications"]),
+    syncPreferences: parseJsonRequired(row["sync_preferences"]),
+    privacyDefaults: parseJsonRequired(row["privacy_defaults"]),
+    littlesSafeMode: parseJsonRequired(row["littles_safe_mode"]),
+    nomenclature: parseJsonRequired(row["nomenclature"]),
+    saturationLevelsEnabled: intToBool(row["saturation_levels_enabled"]),
+    autoCaptureFrontingOnJournal: intToBool(row["auto_capture_fronting_on_journal"]),
+    snapshotSchedule: parseJsonRequired(row["snapshot_schedule"]),
+    onboardingComplete: intToBool(row["onboarding_complete"]),
+    createdAt: toMs(row["created_at"]),
+    updatedAt: toMs(row["updated_at"]),
+  };
+}
+
 export function rowToMemberRow(row: Record<string, unknown>): MemberLocalRow {
   return {
     id: str(row["id"]),
@@ -543,6 +619,50 @@ export function rowToStructureEntityRow(row: Record<string, unknown>): Structure
     imageSource: strOrNull(row["image_source"]),
     emoji: strOrNull(row["emoji"]),
     sortOrder: num(row["sort_order"]),
+    archived: intToBool(row["archived"]),
+    createdAt: toMs(row["created_at"]),
+    updatedAt: toMs(row["updated_at"]),
+  };
+}
+
+export function rowToStructureEntityLinkRow(
+  row: Record<string, unknown>,
+): StructureEntityLinkLocalRow {
+  return {
+    id: str(row["id"]),
+    systemId: str(row["system_id"]),
+    entityId: str(row["entity_id"]),
+    parentEntityId: strOrNull(row["parent_entity_id"]),
+    sortOrder: num(row["sort_order"]),
+    archived: intToBool(row["archived"]),
+    createdAt: toMs(row["created_at"]),
+    updatedAt: toMs(row["updated_at"]),
+  };
+}
+
+export function rowToStructureEntityMemberLinkRow(
+  row: Record<string, unknown>,
+): StructureEntityMemberLinkLocalRow {
+  return {
+    id: str(row["id"]),
+    systemId: str(row["system_id"]),
+    memberId: str(row["member_id"]),
+    parentEntityId: strOrNull(row["parent_entity_id"]),
+    sortOrder: num(row["sort_order"]),
+    archived: intToBool(row["archived"]),
+    createdAt: toMs(row["created_at"]),
+    updatedAt: toMs(row["updated_at"]),
+  };
+}
+
+export function rowToStructureEntityAssociationRow(
+  row: Record<string, unknown>,
+): StructureEntityAssociationLocalRow {
+  return {
+    id: str(row["id"]),
+    systemId: str(row["system_id"]),
+    sourceEntityId: str(row["source_entity_id"]),
+    targetEntityId: str(row["target_entity_id"]),
     archived: intToBool(row["archived"]),
     createdAt: toMs(row["created_at"]),
     updatedAt: toMs(row["updated_at"]),

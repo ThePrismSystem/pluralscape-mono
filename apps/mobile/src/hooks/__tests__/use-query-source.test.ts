@@ -6,8 +6,9 @@ vi.mock("../../platform/PlatformProvider.js", () => ({
   usePlatform: vi.fn(),
 }));
 
-vi.mock("../../sync/SyncProvider.js", () => ({
+vi.mock("../../sync/sync-context.js", () => ({
   useSync: vi.fn(),
+  SyncCtx: { Provider: ({ children }: { children: unknown }) => children },
 }));
 
 vi.mock("../../data/DataLayerProvider.js", () => ({
@@ -16,12 +17,12 @@ vi.mock("../../data/DataLayerProvider.js", () => ({
 
 import { useDataLayerOptional } from "../../data/DataLayerProvider.js";
 import { usePlatform } from "../../platform/PlatformProvider.js";
-import { useSync } from "../../sync/SyncProvider.js";
-import { useQuerySource, useLocalDb } from "../use-query-source.js";
+import { useSync } from "../../sync/sync-context.js";
+import { useLocalDb, useQuerySource } from "../use-query-source.js";
 
 import type { DataLayerContextValue } from "../../data/DataLayerProvider.js";
 import type { PlatformContext } from "../../platform/types.js";
-import type { SyncContextValue } from "../../sync/SyncProvider.js";
+import type { SyncContextValue } from "../../sync/sync-context.js";
 
 const mockUsePlatform = vi.mocked(usePlatform);
 const mockUseSync = vi.mocked(useSync);

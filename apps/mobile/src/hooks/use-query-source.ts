@@ -1,6 +1,6 @@
 import { useDataLayerOptional } from "../data/DataLayerProvider.js";
 import { usePlatform } from "../platform/PlatformProvider.js";
-import { useSync } from "../sync/SyncProvider.js";
+import { useSync } from "../sync/sync-context.js";
 
 import type { LocalDatabase } from "../data/local-database.js";
 

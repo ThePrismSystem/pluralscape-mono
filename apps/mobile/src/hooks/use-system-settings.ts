@@ -3,22 +3,28 @@ import {
   decryptNomenclature,
   decryptSystemSettings,
 } from "@pluralscape/data/transforms/system-settings";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToSystemSettingsRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
-import { type TRPCMutation, type TRPCQuery } from "./types.js";
+import { type DataQuery, type TRPCMutation } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { SystemSettingsLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   DecryptedNomenclature,
   NomenclatureSettingsRaw,
   SystemSettingsRaw,
 } from "@pluralscape/data/transforms/system-settings";
-import type { SystemSettings } from "@pluralscape/types";
+import type { NomenclatureSettings, SystemSettings } from "@pluralscape/types";
 
-export function useSystemSettings(): TRPCQuery<SystemSettings> {
+export function useSystemSettings(): DataQuery<SystemSettings | SystemSettingsLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const systemId = useActiveSystemId();
   const masterKey = useMasterKey();
 
@@ -30,16 +36,31 @@ export function useSystemSettings(): TRPCQuery<SystemSettings> {
     [masterKey],
   );
 
-  return trpc.systemSettings.settings.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["system_settings", systemId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM system_settings WHERE system_id = ?", [systemId]);
+      if (!row) throw new Error("System settings not found");
+      return rowToSystemSettingsRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.systemSettings.settings.get.useQuery(
     { systemId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectSystemSettings,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useNomenclature(): TRPCQuery<DecryptedNomenclature> {
+export function useNomenclature(): DataQuery<DecryptedNomenclature | NomenclatureSettings> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const systemId = useActiveSystemId();
   const masterKey = useMasterKey();
 
@@ -51,13 +72,30 @@ export function useNomenclature(): TRPCQuery<DecryptedNomenclature> {
     [masterKey],
   );
 
-  return trpc.systemSettings.nomenclature.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["system_settings", "nomenclature", systemId],
+    queryFn: (): NomenclatureSettings => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT nomenclature FROM system_settings WHERE system_id = ?", [
+        systemId,
+      ]);
+      if (!row) throw new Error("System settings not found");
+      const raw = row["nomenclature"];
+      if (typeof raw === "string") return JSON.parse(raw) as NomenclatureSettings;
+      return raw as NomenclatureSettings;
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.systemSettings.nomenclature.get.useQuery(
     { systemId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectNomenclature,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useUpdateSettings(): TRPCMutation<

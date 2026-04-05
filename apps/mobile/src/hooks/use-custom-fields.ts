@@ -3,19 +3,23 @@ import {
   decryptFieldDefinition,
   decryptFieldValueList,
 } from "@pluralscape/data/transforms/custom-field";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToFieldDefinitionRow, rowToFieldValueRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { FieldDefinitionLocalRow, FieldValueLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   FieldDefinitionDecrypted,
@@ -26,6 +30,7 @@ import type {
 } from "@pluralscape/data/transforms/custom-field";
 import type { FieldDefinitionId, MemberId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type FieldDefPage = {
   readonly data: FieldDefinitionDecrypted[];
   readonly nextCursor: string | null;
@@ -39,7 +44,9 @@ interface FieldDefinitionListOpts extends SystemIdOverride {
 export function useFieldDefinition(
   fieldDefinitionId: FieldDefinitionId,
   opts?: SystemIdOverride,
-): TRPCQuery<FieldDefinitionDecrypted> {
+): DataQuery<FieldDefinitionDecrypted | FieldDefinitionLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -52,18 +59,35 @@ export function useFieldDefinition(
     [masterKey],
   );
 
-  return trpc.field.definition.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["field_definitions", fieldDefinitionId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM field_definitions WHERE id = ?", [
+        fieldDefinitionId,
+      ]);
+      if (!row) throw new Error("Field definition not found");
+      return rowToFieldDefinitionRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.field.definition.get.useQuery(
     { systemId, fieldDefinitionId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectFieldDefinition,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useFieldDefinitionsList(
   opts?: FieldDefinitionListOpts,
-): TRPCInfiniteQuery<FieldDefPage> {
+): DataListQuery<FieldDefinitionDecrypted | FieldDefinitionLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -83,18 +107,33 @@ export function useFieldDefinitionsList(
     [masterKey],
   );
 
-  return trpc.field.definition.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["field_definitions", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM field_definitions WHERE system_id = ?"
+        : "SELECT * FROM field_definitions WHERE system_id = ? AND archived = 0";
+      return localDb.queryAll(sql, [systemId]).map(rowToFieldDefinitionRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.field.definition.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: FieldDefinitionPage) => lastPage.nextCursor,
       select: selectFieldDefinitionsList,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateField(): TRPCMutation<
@@ -150,7 +189,9 @@ export function useDeleteField(): TRPCMutation<
 export function useMemberFieldValues(
   memberId: MemberId,
   opts?: SystemIdOverride,
-): TRPCQuery<FieldValueDecrypted[]> {
+): DataQuery<ReadonlyArray<FieldValueDecrypted | FieldValueLocalRow>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -163,13 +204,26 @@ export function useMemberFieldValues(
     [masterKey],
   );
 
-  return trpc.field.value.list.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["field_values", "member", memberId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      return localDb
+        .queryAll("SELECT * FROM field_values WHERE member_id = ?", [memberId])
+        .map(rowToFieldValueRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.field.value.list.useQuery(
     { systemId, owner: { kind: "member", id: memberId } },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectFieldValues,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useUpdateMemberFieldValues(): TRPCMutation<

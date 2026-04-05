@@ -16,6 +16,25 @@ export type TRPCInfiniteQuery<T> = TRPCHookResult &
 export type TRPCMutation<TData, TVars> = TRPCHookResult &
   UseMutationResult<TData, TRPCError, TVars>;
 
+/**
+ * Query result for hooks that read from either local SQLite or remote tRPC.
+ * Uses a broad error union so both plain `Error` (local) and
+ * `TRPCClientErrorLike` (remote) are assignable.
+ */
+export type DataQuery<T> = UseQueryResult<T, Error | TRPCError>;
+
+/**
+ * List query that returns a flat array from local SQLite
+ * or paginated infinite data from remote tRPC.
+ */
+export type DataListQuery<TItem> =
+  | UseQueryResult<readonly TItem[], Error | TRPCError>
+  | (TRPCHookResult &
+      UseInfiniteQueryResult<
+        InfiniteData<{ readonly data: TItem[]; readonly nextCursor: string | null }>,
+        TRPCError
+      >);
+
 export interface SystemIdOverride {
   readonly systemId?: SystemId;
 }

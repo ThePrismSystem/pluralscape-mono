@@ -18,6 +18,9 @@ export interface DataLayerContextValue {
 
 const Ctx = createContext<DataLayerContextValue | null>(null);
 
+/** Exported for test helpers only — use {@link useDataLayer} in production code. */
+export const DataLayerCtx = Ctx;
+
 export function DataLayerProvider({
   children,
 }: {

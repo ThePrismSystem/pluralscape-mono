@@ -203,13 +203,14 @@ describe("useMembersList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     const [firstPage] = pages;
-    const [item0, item1] = firstPage?.data ?? [];
+    const items = firstPage && "data" in firstPage ? firstPage.data : [];
     expect(pages).toHaveLength(1);
-    expect(firstPage?.data).toHaveLength(2);
-    expect(item0?.name).toBe("Member m-1");
-    expect(item1?.name).toBe("Member m-2");
+    expect(items).toHaveLength(2);
+    expect(items[0]?.name).toBe("Member m-1");
+    expect(items[1]?.name).toBe("Member m-2");
   });
 
   it("does not fetch when masterKey is null", () => {
@@ -310,5 +311,122 @@ describe("useDuplicateMember", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_MEMBER_ROW: Record<string, unknown> = {
+  id: "m-local-1",
+  system_id: TEST_SYSTEM_ID,
+  name: "Local Member",
+  pronouns: '["she/her"]',
+  description: "From SQLite",
+  avatar_source: null,
+  colors: "[]",
+  saturation_level: "highly-elaborated",
+  tags: "[]",
+  suppress_friend_front_notification: 0,
+  board_message_notification_on_front: 1,
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useMember (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_MEMBER_ROW]);
+    const { result } = renderHookWithProviders(() => useMember("m-local-1" as MemberId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("members"), [
+      "m-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "m-local-1",
+      name: "Local Member",
+      pronouns: ["she/her"],
+      description: "From SQLite",
+      archived: false,
+      boardMessageNotificationOnFront: true,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_MEMBER_ROW]);
+    const { result } = renderHookWithProviders(() => useMember("m-local-1" as MemberId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    // The tRPC mock is backed by fixtures — if fixture is unset, data would
+    // be undefined. Local mode should have data without setting a fixture.
+    expect(result.current.data?.name).toBe("Local Member");
+  });
+});
+
+describe("useMembersList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_MEMBER_ROW, id: "m-local-2", name: "Second Member" };
+    const localDb = createMockLocalDb([LOCAL_MEMBER_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useMembersList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("members"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    // Narrow to array — local mode returns a flat readonly array
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ name: "Local Member" });
+    expect(items[1]).toMatchObject({ name: "Second Member" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_MEMBER_ROW]);
+    const { result } = renderHookWithProviders(() => useMembersList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });

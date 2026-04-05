@@ -230,11 +230,13 @@ describe("useFieldDefinitionsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     expect(pages).toHaveLength(1);
-    expect(pages[0]?.data).toHaveLength(2);
-    expect(pages[0]?.data[0]?.name).toBe("Field fd-1");
-    expect(pages[0]?.data[1]?.name).toBe("Field fd-2");
+    const items = pages[0] && "data" in pages[0] ? pages[0].data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]?.name).toBe("Field fd-1");
+    expect(items[1]?.name).toBe("Field fd-2");
   });
 
   it("does not fetch when masterKey is null", () => {
@@ -271,8 +273,7 @@ describe("useMemberFieldValues", () => {
       expect(result.current.data).toBeDefined();
     });
     expect(result.current.data).toHaveLength(2);
-    expect(result.current.data?.[0]?.fieldType).toBe("text");
-    expect(result.current.data?.[0]?.value).toBe("hello");
+    expect(result.current.data?.[0]).toMatchObject({ fieldType: "text", value: "hello" });
   });
 
   it("does not fetch when masterKey is null", () => {

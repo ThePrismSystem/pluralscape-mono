@@ -3,19 +3,23 @@ import {
   decryptRelationship,
   decryptRelationshipPage,
 } from "@pluralscape/data/transforms/relationship";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToRelationshipRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { RelationshipLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   RelationshipDecrypted,
@@ -39,7 +43,9 @@ interface RelationshipListOpts extends SystemIdOverride {
 export function useRelationship(
   relationshipId: RelationshipId,
   opts?: SystemIdOverride,
-): TRPCQuery<RelationshipDecrypted | Archived<RelationshipDecrypted>> {
+): DataQuery<RelationshipDecrypted | Archived<RelationshipDecrypted> | RelationshipLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -52,18 +58,33 @@ export function useRelationship(
     [masterKey],
   );
 
-  return trpc.relationship.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["relationships", relationshipId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM relationships WHERE id = ?", [relationshipId]);
+      if (!row) throw new Error("Relationship not found");
+      return rowToRelationshipRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.relationship.get.useQuery(
     { systemId, relationshipId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectRelationship,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useRelationshipsList(
   opts?: RelationshipListOpts,
-): TRPCInfiniteQuery<RelationshipPage> {
+): DataListQuery<RelationshipDecrypted | Archived<RelationshipDecrypted> | RelationshipLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -80,7 +101,26 @@ export function useRelationshipsList(
     [masterKey],
   );
 
-  return trpc.relationship.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["relationships", "list", systemId, opts?.memberId, opts?.type],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      let sql = "SELECT * FROM relationships WHERE system_id = ? AND archived = 0";
+      const params: unknown[] = [systemId];
+      if (opts?.memberId !== undefined) {
+        sql += " AND (source_member_id = ? OR target_member_id = ?)";
+        params.push(opts.memberId, opts.memberId);
+      }
+      if (opts?.type !== undefined) {
+        sql += " AND type = ?";
+        params.push(opts.type);
+      }
+      return localDb.queryAll(sql, params).map(rowToRelationshipRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.relationship.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -88,11 +128,13 @@ export function useRelationshipsList(
       type: opts?.type,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: RelationshipRawPage) => lastPage.nextCursor,
       select: selectPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateRelationship(): TRPCMutation<
