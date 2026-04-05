@@ -121,8 +121,8 @@ export function usePollsList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM own_polls WHERE system_id = ?"
-        : "SELECT * FROM own_polls WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM own_polls WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM own_polls WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToPoll);
     },
     enabled: source === "local" && localDb !== null,

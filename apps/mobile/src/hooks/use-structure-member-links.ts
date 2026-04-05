@@ -36,7 +36,7 @@ export function useStructureMemberLinksList(
       if (localDb === null) throw new Error("localDb is null");
       return localDb
         .queryAll(
-          "SELECT * FROM structure_entity_member_links WHERE system_id = ? AND archived = 0",
+          "SELECT * FROM structure_entity_member_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC",
           [systemId],
         )
         .map(rowToStructureEntityMemberLink);

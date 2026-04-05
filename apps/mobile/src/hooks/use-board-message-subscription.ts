@@ -12,8 +12,7 @@ interface BoardMessageSubscriptionOpts {
  * Subscribe to real-time board message changes.
  * Automatically invalidates board message queries when events are received.
  *
- * In local mode, real-time updates are handled by the sync engine → event bus → QueryInvalidator
- * pipeline, so the tRPC subscription is disabled.
+ * @see {@link useQuerySource} for local-mode real-time update behavior.
  */
 export function useBoardMessageSubscription(opts?: BoardMessageSubscriptionOpts): void {
   const source = useQuerySource();

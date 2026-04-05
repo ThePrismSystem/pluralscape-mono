@@ -97,8 +97,8 @@ export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypte
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM groups WHERE system_id = ?"
-        : "SELECT * FROM groups WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM groups WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM groups WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToGroup);
     },
     enabled: source === "local" && localDb !== null,

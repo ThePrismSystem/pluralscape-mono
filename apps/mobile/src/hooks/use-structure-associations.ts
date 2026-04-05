@@ -36,7 +36,7 @@ export function useStructureAssociationsList(
       if (localDb === null) throw new Error("localDb is null");
       return localDb
         .queryAll(
-          "SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0",
+          "SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC",
           [systemId],
         )
         .map(rowToStructureEntityAssociation);

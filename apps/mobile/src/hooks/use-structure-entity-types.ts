@@ -109,8 +109,8 @@ export function useStructureEntityTypesList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM structure_entity_types WHERE system_id = ?"
-        : "SELECT * FROM structure_entity_types WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM structure_entity_types WHERE system_id = ? ORDER BY sort_order ASC"
+        : "SELECT * FROM structure_entity_types WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC";
       return localDb.queryAll(sql, [systemId]).map(rowToStructureEntityType);
     },
     enabled: source === "local" && localDb !== null,

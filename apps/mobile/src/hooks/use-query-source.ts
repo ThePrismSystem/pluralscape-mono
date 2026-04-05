@@ -18,6 +18,14 @@ export function useQuerySource(): QuerySource {
 }
 
 /**
+ * Local-mode real-time update note:
+ *
+ * When the query source is "local", real-time updates are handled by the
+ * sync engine → event bus → QueryInvalidator pipeline. tRPC subscriptions
+ * are disabled in local mode since the sync engine pushes changes directly.
+ */
+
+/**
  * Returns the local SQLite database when the DataLayer context is available,
  * null otherwise (non-sqlite platforms or before provider mounts).
  */

@@ -127,8 +127,8 @@ export function useStructureEntitiesList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       let sql = includeArchived
-        ? "SELECT * FROM structure_entities WHERE system_id = ?"
-        : "SELECT * FROM structure_entities WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM structure_entities WHERE system_id = ? ORDER BY sort_order ASC"
+        : "SELECT * FROM structure_entities WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC";
       const params: unknown[] = [systemId];
       if (opts?.entityTypeId !== undefined) {
         sql += " AND entity_type_id = ?";

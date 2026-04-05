@@ -105,8 +105,8 @@ export function useInnerWorldRegionsList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM innerworld_regions WHERE system_id = ?"
-        : "SELECT * FROM innerworld_regions WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM innerworld_regions WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM innerworld_regions WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldRegion);
     },
     enabled: source === "local" && localDb !== null,

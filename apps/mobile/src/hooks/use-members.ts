@@ -100,8 +100,8 @@ export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Ar
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM members WHERE system_id = ?"
-        : "SELECT * FROM members WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM members WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM members WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToMember);
     },
     enabled: source === "local" && localDb !== null,

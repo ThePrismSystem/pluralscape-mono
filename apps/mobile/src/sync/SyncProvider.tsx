@@ -91,7 +91,6 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
   const masterKey = auth.snapshot.state === "unlocked" ? auth.snapshot.session.masterKey : null;
   const signingKeys =
     auth.snapshot.state === "unlocked" ? auth.snapshot.session.identityKeys.sign : null;
-  const storageBackend = platform.storage.backend;
   const sqliteDriver = platform.storage.backend === "sqlite" ? platform.storage.driver : null;
 
   // Memoize engine creation config — excludes isConnected to avoid tearing
@@ -117,17 +116,9 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       signingKeys,
       sqliteDriver,
     };
-  }, [
-    isUnlocked,
-    systemId,
-    sodium,
-    eventBus,
-    sessionToken,
-    masterKey,
-    signingKeys,
-    sqliteDriver,
-    storageBackend,
-  ]);
+    // storageBackend intentionally excluded: sqliteDriver is null on non-sqlite
+    // platforms, so the null check above already gates on backend type.
+  }, [isUnlocked, systemId, sodium, eventBus, sessionToken, masterKey, signingKeys, sqliteDriver]);
 
   // Engine lifecycle effect — creates or tears down the sync pipeline.
   // Uses a ref-based cleanup strategy so state updates in the effect body
@@ -155,14 +146,12 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       return;
     }
 
-    // 1. Create BucketKeyCache
+    // Create sync pipeline resources
     const bucketKeyCache = createBucketKeyCache();
     bucketKeyCacheRef.current = bucketKeyCache;
 
-    // 2. Create SqliteStorageAdapter from platform driver
     const storageAdapter = new SqliteStorageAdapter(engineConfig.sqliteDriver);
 
-    // 3. Create DocumentKeyResolver
     const keyResolver = DocumentKeyResolver.create({
       masterKey: engineConfig.masterKey,
       signingKeys: engineConfig.signingKeys,
@@ -171,7 +160,6 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
     });
     keyResolverRef.current = keyResolver;
 
-    // 4. Create WsManager and connect
     const wsManager = createWsManager({
       url: getWsUrl(),
       eventBus: engineConfig.eventBus,
@@ -179,17 +167,15 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
     wsManagerRef.current = wsManager;
     wsManager.connect(engineConfig.sessionToken, engineConfig.systemId);
 
-    // 5. Get network adapter from WsManager (available immediately after connect)
     const networkAdapter = wsManager.getAdapter();
     if (networkAdapter === null) {
       // Should not happen since connect() sets it synchronously, but guard
       return;
     }
 
-    // 6. Select replication profile based on storage backend
     const profile: ReplicationProfile = { profileType: "owner-full" };
 
-    // 7. Create SyncEngine — errors are emitted via the event bus
+    // Create SyncEngine — errors are emitted via the event bus
     const bus = engineConfig.eventBus;
     const newEngine = new SyncEngine({
       networkAdapter,

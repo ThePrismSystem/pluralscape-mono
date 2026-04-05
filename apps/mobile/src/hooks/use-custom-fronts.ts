@@ -105,8 +105,8 @@ export function useCustomFrontsList(
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
       const sql = includeArchived
-        ? "SELECT * FROM custom_fronts WHERE system_id = ?"
-        : "SELECT * FROM custom_fronts WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM custom_fronts WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM custom_fronts WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToCustomFront);
     },
     enabled: source === "local" && localDb !== null,

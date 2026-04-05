@@ -112,8 +112,8 @@ export function useMessagesList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ?"
-        : "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? AND archived = 0";
+        ? "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? ORDER BY timestamp DESC"
+        : "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? AND archived = 0 ORDER BY timestamp DESC";
       return localDb.queryAll(sql, [systemId, channelId]).map(rowToMessage);
     },
     enabled: source === "local" && localDb !== null,

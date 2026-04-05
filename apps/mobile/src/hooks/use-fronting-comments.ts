@@ -111,8 +111,8 @@ export function useFrontingCommentsList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM fronting_comments WHERE fronting_session_id = ?"
-        : "SELECT * FROM fronting_comments WHERE fronting_session_id = ? AND archived = 0";
+        ? "SELECT * FROM fronting_comments WHERE fronting_session_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM fronting_comments WHERE fronting_session_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [sessionId]).map(rowToFrontingComment);
     },
     enabled: source === "local" && localDb !== null,

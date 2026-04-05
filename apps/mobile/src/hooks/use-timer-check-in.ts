@@ -118,8 +118,8 @@ export function useTimerConfigsList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM timer_configs WHERE system_id = ?"
-        : "SELECT * FROM timer_configs WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM timer_configs WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM timer_configs WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToTimer);
     },
     enabled: source === "local" && localDb !== null,
@@ -217,6 +217,7 @@ export function useCheckInHistory(
       if (!includeArchived) {
         sql += " AND archived = 0";
       }
+      sql += " ORDER BY created_at DESC";
       return localDb.queryAll(sql, params).map(rowToCheckInRecord);
     },
     enabled: source === "local" && localDb !== null,

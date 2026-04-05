@@ -15,8 +15,7 @@ interface MessageSubscriptionOpts {
  * Automatically invalidates message queries when events are received.
  * Mount this in the chat screen component — subscriptions are only active while mounted.
  *
- * In local mode, real-time updates are handled by the sync engine → event bus → QueryInvalidator
- * pipeline, so the tRPC subscription is disabled.
+ * @see {@link useQuerySource} for local-mode real-time update behavior.
  */
 export function useMessageSubscription(channelId: ChannelId, opts?: MessageSubscriptionOpts): void {
   const source = useQuerySource();

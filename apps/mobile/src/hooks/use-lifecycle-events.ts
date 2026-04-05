@@ -105,8 +105,8 @@ export function useLifecycleEventsList(
       if (localDb === null) throw new Error("localDb is null");
       const includeArchived = opts?.includeArchived ?? false;
       const sql = includeArchived
-        ? "SELECT * FROM lifecycle_events WHERE system_id = ?"
-        : "SELECT * FROM lifecycle_events WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM lifecycle_events WHERE system_id = ? ORDER BY occurred_at DESC"
+        : "SELECT * FROM lifecycle_events WHERE system_id = ? AND archived = 0 ORDER BY occurred_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToLifecycleEvent);
     },
     enabled: source === "local" && localDb !== null,

@@ -28,7 +28,7 @@ export function useFriendCodesList(
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
       return localDb
-        .queryAll("SELECT * FROM friend_codes WHERE archived = 0", [])
+        .queryAll("SELECT * FROM friend_codes WHERE archived = 0 ORDER BY created_at DESC", [])
         .map(rowToFriendCode);
     },
     enabled: source === "local" && localDb !== null,

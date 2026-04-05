@@ -114,13 +114,13 @@ export function useInnerWorldEntitiesList(
       const regionId = opts?.regionId ?? null;
       if (regionId !== null) {
         const sql = includeArchived
-          ? "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ?"
-          : "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? AND archived = 0";
+          ? "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? ORDER BY created_at DESC"
+          : "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? AND archived = 0 ORDER BY created_at DESC";
         return localDb.queryAll(sql, [systemId, regionId]).map(rowToInnerWorldEntity);
       }
       const sql = includeArchived
-        ? "SELECT * FROM innerworld_entities WHERE system_id = ?"
-        : "SELECT * FROM innerworld_entities WHERE system_id = ? AND archived = 0";
+        ? "SELECT * FROM innerworld_entities WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM innerworld_entities WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldEntity);
     },
     enabled: source === "local" && localDb !== null,

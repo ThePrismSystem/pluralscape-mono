@@ -35,9 +35,10 @@ export function useStructureLinksList(
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
       return localDb
-        .queryAll("SELECT * FROM structure_entity_links WHERE system_id = ? AND archived = 0", [
-          systemId,
-        ])
+        .queryAll(
+          "SELECT * FROM structure_entity_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC",
+          [systemId],
+        )
         .map(rowToStructureEntityLink);
     },
     enabled: source === "local" && localDb !== null,

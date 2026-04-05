@@ -104,7 +104,8 @@ export function useRelationshipsList(
     queryKey: ["relationships", "list", systemId, opts?.memberId, opts?.type],
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
-      let sql = "SELECT * FROM relationships WHERE system_id = ? AND archived = 0";
+      let sql =
+        "SELECT * FROM relationships WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
       const params: unknown[] = [systemId];
       if (opts?.memberId !== undefined) {
         sql += " AND (source_member_id = ? OR target_member_id = ?)";

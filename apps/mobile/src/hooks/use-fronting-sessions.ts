@@ -131,6 +131,7 @@ export function useFrontingSessionsList(
       } else if (!includeArchived) {
         sql += " AND archived = 0";
       }
+      sql += " ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToFrontingSession);
     },
     enabled: source === "local" && localDb !== null,

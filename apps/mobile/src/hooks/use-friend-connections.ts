@@ -90,6 +90,7 @@ export function useFriendConnectionsList(
       if (!includeArchived) {
         sql += " AND archived = 0";
       }
+      sql += " ORDER BY created_at DESC";
 
       return localDb.queryAll(sql, params).map(rowToFriendConnection);
     },

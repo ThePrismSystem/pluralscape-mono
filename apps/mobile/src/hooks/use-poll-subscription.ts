@@ -14,8 +14,7 @@ interface PollSubscriptionOpts {
  * Subscribe to real-time poll changes.
  * If pollId is provided, scopes to that poll only. Otherwise system-wide.
  *
- * In local mode, real-time updates are handled by the sync engine → event bus → QueryInvalidator
- * pipeline, so the tRPC subscription is disabled.
+ * @see {@link useQuerySource} for local-mode real-time update behavior.
  */
 export function usePollSubscription(pollId?: PollId, opts?: PollSubscriptionOpts): void {
   const source = useQuerySource();
