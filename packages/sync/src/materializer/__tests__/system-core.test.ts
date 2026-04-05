@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createEventBus } from "../../event-bus/index.js";
-import { systemCoreMaterializer } from "../materializers/system-core.js";
+import { getMaterializer } from "../index.js";
 
 import type { DataLayerEventMap } from "../../event-bus/index.js";
 import type { MaterializerDb, EntityRow } from "../base-materializer.js";
+import type { DocumentMaterializer } from "../materializer-registry.js";
 
 // ── Test helpers ────────────────────────────────────────────────────
 
@@ -43,11 +44,17 @@ function makeEventBus() {
   };
 }
 
+function getSystemCoreMaterializer(): DocumentMaterializer {
+  const m = getMaterializer("system-core");
+  if (!m) throw new Error("system-core materializer not registered");
+  return m;
+}
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 describe("systemCoreMaterializer", () => {
   it("has documentType 'system-core'", () => {
-    expect(systemCoreMaterializer.documentType).toBe("system-core");
+    expect(getSystemCoreMaterializer().documentType).toBe("system-core");
   });
 
   it("materializes members from an Automerge doc", () => {
@@ -74,7 +81,7 @@ describe("systemCoreMaterializer", () => {
       },
     };
 
-    systemCoreMaterializer.materialize(doc, db, eventBus);
+    getSystemCoreMaterializer().materialize(doc, db, eventBus);
 
     // Should have emitted materialized:document
     expect(emitSpy).toHaveBeenCalledWith("materialized:document", {
@@ -117,7 +124,7 @@ describe("systemCoreMaterializer", () => {
       },
     };
 
-    systemCoreMaterializer.materialize(doc, db, eventBus);
+    getSystemCoreMaterializer().materialize(doc, db, eventBus);
 
     const groupInserts = db.calls.filter((c) => c.sql.includes("groups"));
     expect(groupInserts.length).toBeGreaterThan(0);
@@ -128,7 +135,7 @@ describe("systemCoreMaterializer", () => {
     const db = makeDb();
     const { eventBus, emitSpy } = makeEventBus();
 
-    systemCoreMaterializer.materialize({}, db, eventBus);
+    getSystemCoreMaterializer().materialize({}, db, eventBus);
 
     expect(emitSpy).toHaveBeenCalledWith("materialized:document", {
       type: "materialized:document",
@@ -142,7 +149,7 @@ describe("systemCoreMaterializer", () => {
 
     // Should not throw with an empty doc
     expect(() => {
-      systemCoreMaterializer.materialize({}, db, eventBus);
+      getSystemCoreMaterializer().materialize({}, db, eventBus);
     }).not.toThrow();
 
     // Should still emit document-level events
@@ -201,7 +208,7 @@ describe("systemCoreMaterializer", () => {
       },
     };
 
-    systemCoreMaterializer.materialize(doc, db, eventBus);
+    getSystemCoreMaterializer().materialize(doc, db, eventBus);
 
     const memberWrites = db.calls.filter((c) => c.sql.includes("members"));
     expect(memberWrites).toHaveLength(0);
@@ -224,7 +231,7 @@ describe("systemCoreMaterializer", () => {
       },
     };
 
-    systemCoreMaterializer.materialize(doc, db, eventBus);
+    getSystemCoreMaterializer().materialize(doc, db, eventBus);
 
     const systemInserts = db.calls.filter((c) => c.sql.includes("INSERT OR REPLACE INTO system "));
     expect(systemInserts.length).toBeGreaterThan(0);
@@ -241,7 +248,7 @@ describe("systemCoreMaterializer", () => {
       },
     };
 
-    systemCoreMaterializer.materialize(doc, db, eventBus);
+    getSystemCoreMaterializer().materialize(doc, db, eventBus);
 
     const junctionInserts = db.calls.filter((c) => c.sql.includes("group_memberships"));
     expect(junctionInserts.length).toBeGreaterThan(0);

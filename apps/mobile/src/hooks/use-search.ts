@@ -14,11 +14,19 @@ import type { UseQueryResult } from "@tanstack/react-query";
 export type SearchScope = "self" | "friends" | "all";
 
 export interface SearchResult {
-  readonly type: string;
+  readonly type: SyncedEntityType | `friend-${SyncedEntityType}`;
   readonly id: string;
   readonly rank: number;
   readonly data: Record<string, unknown>;
 }
+
+// ── Constants ─────────────────────────────────────────────────────────
+
+/** Debounce delay for search input (ms). */
+const SEARCH_DEBOUNCE_MS = 300;
+
+/** Maximum results per entity type per FTS5 query. */
+const SEARCH_RESULTS_LIMIT = 20;
 
 // ── Searchable entity lists ───────────────────────────────────────────
 
@@ -48,7 +56,7 @@ function buildFtsQuery(query: string): string {
  */
 function searchTable(
   db: LocalDatabase,
-  entityType: string,
+  entityType: SyncedEntityType | `friend-${SyncedEntityType}`,
   tableName: string,
   ftsName: string,
   ftsQuery: string,
@@ -59,11 +67,11 @@ function searchTable(
     `JOIN ${tableName} ON ${tableName}.rowid = ${ftsName}.rowid ` +
     `WHERE ${ftsName} MATCH ? ` +
     `ORDER BY ${ftsName}.rank ` +
-    `LIMIT 20`;
+    `LIMIT ${String(SEARCH_RESULTS_LIMIT)}`;
 
   const rows = db.queryAll(sql, [ftsQuery]);
 
-  return rows.map((row) => {
+  return rows.map((row): SearchResult => {
     const { rank, ...data } = row;
     const id = typeof row["id"] === "string" ? row["id"] : String(row["id"]);
     return {
@@ -112,7 +120,7 @@ export function executeSearch(
       FRIEND_EXPORTABLE_ENTITY_TYPES.has(entityType)
     ) {
       const ftsName = `fts_friend_${tableName}`;
-      const friendEntityType = `friend-${entityType}`;
+      const friendEntityType: `friend-${SyncedEntityType}` = `friend-${entityType}`;
       const friendTableName = `friend_${tableName}`;
       const rows = searchTable(db, friendEntityType, friendTableName, ftsName, ftsQuery);
       results.push(...rows);
@@ -155,7 +163,7 @@ export function useSearch(
   query: string,
   scope: SearchScope = "all",
 ): UseQueryResult<SearchResult[]> {
-  const debouncedQuery = useDebouncedValue(query, 300);
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
 
   return useQuery({
     queryKey: ["search", debouncedQuery, scope],

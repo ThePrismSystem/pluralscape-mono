@@ -1,5 +1,6 @@
 import type { SyncDocumentType } from "../document-types.js";
 import type { EntityTableDef } from "./entity-registry.js";
+import type { EntityOperation } from "../event-bus/event-map.js";
 import type { EventBus, DataLayerEventMap } from "../event-bus/index.js";
 import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
 
@@ -112,6 +113,25 @@ export function entityToRow(
 
 // ── applyDiff ─────────────────────────────────────────────────────────
 
+/** Emit materialized:entity events for hot-path entity types. */
+function emitEntityEvents(
+  eventBus: EventBus<DataLayerEventMap>,
+  documentType: SyncDocumentType,
+  entityType: SyncedEntityType,
+  ids: readonly string[],
+  op: EntityOperation,
+): void {
+  for (const entityId of ids) {
+    eventBus.emit("materialized:entity", {
+      type: "materialized:entity",
+      documentType,
+      entityType,
+      entityId,
+      op,
+    });
+  }
+}
+
 /**
  * Apply a `DiffResult` to the local SQLite database.
  *
@@ -150,33 +170,21 @@ export function applyDiff(
   });
 
   if (tableDef.hotPath) {
-    for (const row of diff.inserts) {
-      eventBus.emit("materialized:entity", {
-        type: "materialized:entity",
-        documentType,
-        entityType,
-        entityId: row.id,
-        op: "create",
-      });
-    }
-    for (const row of diff.updates) {
-      eventBus.emit("materialized:entity", {
-        type: "materialized:entity",
-        documentType,
-        entityType,
-        entityId: row.id,
-        op: "update",
-      });
-    }
-    for (const id of diff.deletes) {
-      eventBus.emit("materialized:entity", {
-        type: "materialized:entity",
-        documentType,
-        entityType,
-        entityId: id,
-        op: "delete",
-      });
-    }
+    emitEntityEvents(
+      eventBus,
+      documentType,
+      entityType,
+      diff.inserts.map((r) => r.id),
+      "create",
+    );
+    emitEntityEvents(
+      eventBus,
+      documentType,
+      entityType,
+      diff.updates.map((r) => r.id),
+      "update",
+    );
+    emitEntityEvents(eventBus, documentType, entityType, diff.deletes, "delete");
   }
 }
 

@@ -1,3 +1,5 @@
+import { materializeDocument } from "./materializers/materialize-document.js";
+
 import type { SyncDocumentType } from "../document-types.js";
 import type { MaterializerDb } from "./base-materializer.js";
 import type { EventBus, DataLayerEventMap } from "../event-bus/index.js";
@@ -31,4 +33,21 @@ export function registerMaterializer(m: DocumentMaterializer): void {
 /** Look up the materializer for a specific document type. */
 export function getMaterializer(dt: SyncDocumentType): DocumentMaterializer | undefined {
   return registry.get(dt);
+}
+
+/**
+ * Creates a DocumentMaterializer that delegates to the shared
+ * materializeDocument function.
+ */
+export function createMaterializer(documentType: SyncDocumentType): DocumentMaterializer {
+  return {
+    documentType,
+    materialize(
+      doc: Record<string, unknown>,
+      db: MaterializerDb,
+      eventBus: EventBus<DataLayerEventMap>,
+    ): void {
+      materializeDocument(documentType, doc, db, eventBus);
+    },
+  };
 }

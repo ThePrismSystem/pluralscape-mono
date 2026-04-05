@@ -1,9 +1,6 @@
-import { registerMaterializer } from "./materializer-registry.js";
-import { chatMaterializer } from "./materializers/chat.js";
-import { frontingMaterializer } from "./materializers/fronting.js";
-import { journalMaterializer } from "./materializers/journal.js";
-import { privacyConfigMaterializer } from "./materializers/privacy-config.js";
-import { systemCoreMaterializer } from "./materializers/system-core.js";
+import { createMaterializer, registerMaterializer } from "./materializer-registry.js";
+
+import type { SyncDocumentType } from "../document-types.js";
 
 // ── Core materializer infrastructure ────────────────────────────────
 export {
@@ -30,22 +27,21 @@ export { generateSchemaStatements, generateFtsStatements, generateAllDdl } from 
 export {
   registerMaterializer,
   getMaterializer,
+  createMaterializer,
   type DocumentMaterializer,
 } from "./materializer-registry.js";
 
 export { extractEntities } from "./materializers/extract-entities.js";
 export { materializeDocument } from "./materializers/materialize-document.js";
 
-// ── Document materializers ──────────────────────────────────────────
-export { systemCoreMaterializer } from "./materializers/system-core.js";
-export { frontingMaterializer } from "./materializers/fronting.js";
-export { chatMaterializer } from "./materializers/chat.js";
-export { journalMaterializer } from "./materializers/journal.js";
-export { privacyConfigMaterializer } from "./materializers/privacy-config.js";
-
 // ── Auto-register all materializers on import ───────────────────────
-registerMaterializer(systemCoreMaterializer);
-registerMaterializer(frontingMaterializer);
-registerMaterializer(chatMaterializer);
-registerMaterializer(journalMaterializer);
-registerMaterializer(privacyConfigMaterializer);
+const DOCUMENT_TYPES: SyncDocumentType[] = [
+  "system-core",
+  "fronting",
+  "chat",
+  "journal",
+  "privacy-config",
+];
+for (const docType of DOCUMENT_TYPES) {
+  registerMaterializer(createMaterializer(docType));
+}
