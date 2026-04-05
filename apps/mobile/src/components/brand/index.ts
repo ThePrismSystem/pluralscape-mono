@@ -1,0 +1,1 @@
+export { PluralscapeLogo } from "./PluralscapeLogo";

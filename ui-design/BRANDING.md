@@ -14,10 +14,32 @@
 
 A constellation of connected nodes — 6 dots of varying sizes linked by thin gradient lines. Each node represents a member/identity within a system. The varying sizes and colors express individuality; the connecting lines express relationships and co-consciousness. The overall shape is organic and asymmetric, like a real constellation.
 
+The logo intentionally uses only Lavender and Teal from the accent palette. Pale Rose is reserved for personal/intimate UI elements and is not part of the abstract brand mark.
+
 ### Files
 
 - `logo/pluralscape-icon.svg` — Icon only, suitable for app icons, favicons
-- `logo/pluralscape-wordmark.svg` — Icon + "Pluralscape" wordmark, for headers, splash screens
+- `logo/pluralscape-wordmark.svg` — Icon + "Pluralscape" wordmark, transparent background, for dark surfaces
+- `logo/pluralscape-wordmark-dark.svg` — Wordmark with built-in Deep Space Blue background
+- `logo/pluralscape-wordmark-light.svg` — Wordmark with darkened colors for light backgrounds
+- `logo/png/` — Pre-rendered PNG exports at standard sizes
+
+SVG gradient IDs are namespaced per variant to prevent collisions when multiple logos are inlined: no prefix for icon, `wm_` for wordmark, `wmd_` for dark wordmark, `wml_` for light wordmark. Maintain this convention for new variants.
+
+### Light-Background Variant Colors
+
+When the logo is used on light surfaces, darkened accent colors maintain WCAG AA contrast:
+
+| Dark variant            | Light variant             | Role             |
+| ----------------------- | ------------------------- | ---------------- |
+| Moonlight `#e8e4f0`     | Deep Space Blue `#0f0f23` | Primary nodes    |
+| Lavender `#b8a9c9`      | Dark Lavender `#6b5d87`   | Accent nodes     |
+| Teal `#7ecbc0`          | Dark Teal `#2d7a72`       | Active nodes     |
+| Lavender→Teal gradients | Dark Lavender→Dark Teal   | Connecting lines |
+
+### Small-Size Guidance
+
+Below 32px, the smallest interior nodes (2.5px radius in the 100px viewBox) may not render visibly. Consider using the pre-rendered PNGs from `logo/png/` for very small sizes, or use only the outer constellation ring.
 
 ### Usage Rules
 
