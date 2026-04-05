@@ -192,7 +192,8 @@ describe("useChannelsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     const [firstPage] = pages;
     const [item0, item1] = firstPage?.data ?? [];
     expect(pages).toHaveLength(1);
@@ -303,5 +304,112 @@ describe("useDeleteChannel", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_CHANNEL_ROW: Record<string, unknown> = {
+  id: "ch-local-1",
+  system_id: TEST_SYSTEM_ID,
+  name: "general",
+  type: "channel",
+  parent_id: null,
+  sort_order: 0,
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useChannel (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_CHANNEL_ROW]);
+    const { result } = renderHookWithProviders(() => useChannel("ch-local-1" as ChannelId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_channels"), [
+      "ch-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "ch-local-1",
+      name: "general",
+      type: "channel",
+      archived: false,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_CHANNEL_ROW]);
+    const { result } = renderHookWithProviders(() => useChannel("ch-local-1" as ChannelId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.name).toBe("general");
+  });
+});
+
+describe("useChannelsList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_CHANNEL_ROW, id: "ch-local-2", name: "announcements" };
+    const localDb = createMockLocalDb([LOCAL_CHANNEL_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useChannelsList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("own_channels"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ name: "general" });
+    expect(items[1]).toMatchObject({ name: "announcements" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_CHANNEL_ROW]);
+    const { result } = renderHookWithProviders(() => useChannelsList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });

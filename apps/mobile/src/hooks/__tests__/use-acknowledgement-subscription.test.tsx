@@ -84,4 +84,14 @@ describe("useAcknowledgementSubscription", () => {
     });
     expect(mockUtils.acknowledgement.get.invalidate).not.toHaveBeenCalled();
   });
+
+  it("is disabled in local source mode", () => {
+    renderHookWithProviders(
+      () => {
+        useAcknowledgementSubscription();
+      },
+      { querySource: "local" },
+    );
+    expect(lastSubscriptionOpts["enabled"]).toBe(false);
+  });
 });

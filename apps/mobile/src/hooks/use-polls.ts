@@ -1,18 +1,24 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptPoll, decryptPollPage, decryptPollVote } from "@pluralscape/data/transforms/poll";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToPollRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
   type TRPCInfiniteQuery,
   type TRPCMutation,
   type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { PollLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   PollDecrypted,
@@ -52,7 +58,9 @@ interface PollVoteListOpts extends SystemIdOverride {
 export function usePoll(
   pollId: PollId,
   opts?: SystemIdOverride,
-): TRPCQuery<PollDecrypted | Archived<PollDecrypted>> {
+): DataQuery<PollDecrypted | Archived<PollDecrypted> | PollLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -65,16 +73,33 @@ export function usePoll(
     [masterKey],
   );
 
-  return trpc.poll.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["polls", pollId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM own_polls WHERE id = ?", [pollId]);
+      if (!row) throw new Error("Poll not found");
+      return rowToPollRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.poll.get.useQuery(
     { systemId, pollId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectPoll,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
-export function usePollsList(opts?: PollListOpts): TRPCInfiniteQuery<PollPage> {
+export function usePollsList(
+  opts?: PollListOpts,
+): DataListQuery<PollDecrypted | Archived<PollDecrypted> | PollLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -91,7 +116,20 @@ export function usePollsList(opts?: PollListOpts): TRPCInfiniteQuery<PollPage> {
     [masterKey],
   );
 
-  return trpc.poll.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["polls", "list", systemId, opts?.includeArchived ?? false, opts?.status],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM own_polls WHERE system_id = ?"
+        : "SELECT * FROM own_polls WHERE system_id = ? AND archived = 0";
+      return localDb.queryAll(sql, [systemId]).map(rowToPollRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.poll.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -99,11 +137,13 @@ export function usePollsList(opts?: PollListOpts): TRPCInfiniteQuery<PollPage> {
       status: opts?.status,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: PollRawPage) => lastPage.nextCursor,
       select: selectPollPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function usePollResults(pollId: PollId, opts?: SystemIdOverride): TRPCQuery<RawPollResults> {

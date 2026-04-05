@@ -289,7 +289,8 @@ describe("usePollsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     expect(pages).toHaveLength(1);
     expect(pages[0]?.data).toHaveLength(2);
     expect(pages[0]?.data[0]?.title).toBe("Poll p-1");
@@ -548,5 +549,120 @@ describe("useDeleteVote", () => {
         pollId: "p-3",
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_POLL_ROW: Record<string, unknown> = {
+  id: "poll-local-1",
+  system_id: TEST_SYSTEM_ID,
+  created_by_member_id: null,
+  title: "Favorite color?",
+  description: null,
+  kind: "single-choice",
+  status: "open",
+  closed_at: null,
+  ends_at: null,
+  allow_multiple_votes: 0,
+  max_votes_per_member: 1,
+  allow_abstain: 0,
+  allow_veto: 0,
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("usePoll (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_POLL_ROW]);
+    const { result } = renderHookWithProviders(() => usePoll("poll-local-1" as PollId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_polls"), [
+      "poll-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "poll-local-1",
+      title: "Favorite color?",
+      status: "open",
+      archived: false,
+      allowMultipleVotes: false,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_POLL_ROW]);
+    const { result } = renderHookWithProviders(() => usePoll("poll-local-1" as PollId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.title).toBe("Favorite color?");
+  });
+});
+
+describe("usePollsList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_POLL_ROW, id: "poll-local-2", title: "Favorite food?" };
+    const localDb = createMockLocalDb([LOCAL_POLL_ROW, row2]);
+    const { result } = renderHookWithProviders(() => usePollsList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("own_polls"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ title: "Favorite color?" });
+    expect(items[1]).toMatchObject({ title: "Favorite food?" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_POLL_ROW]);
+    const { result } = renderHookWithProviders(() => usePollsList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });

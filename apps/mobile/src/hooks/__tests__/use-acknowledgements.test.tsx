@@ -206,7 +206,8 @@ describe("useAcknowledgementsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     expect(pages).toHaveLength(1);
     expect(pages[0]?.data).toHaveLength(2);
     expect(pages[0]?.data[0]?.message).toBe("Please read");
@@ -320,5 +321,114 @@ describe("useDeleteAcknowledgement", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_ACK_ROW: Record<string, unknown> = {
+  id: "ack-local-1",
+  system_id: TEST_SYSTEM_ID,
+  created_by_member_id: null,
+  target_member_id: "m-2",
+  message: "Please acknowledge this",
+  confirmed: 0,
+  confirmed_at: null,
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useAcknowledgement (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_ACK_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useAcknowledgement("ack-local-1" as AcknowledgementId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_acknowledgements"), [
+      "ack-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "ack-local-1",
+      message: "Please acknowledge this",
+      targetMemberId: "m-2",
+      confirmed: false,
+      archived: false,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_ACK_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useAcknowledgement("ack-local-1" as AcknowledgementId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.message).toBe("Please acknowledge this");
+  });
+});
+
+describe("useAcknowledgementsList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_ACK_ROW, id: "ack-local-2", message: "Second ack" };
+    const localDb = createMockLocalDb([LOCAL_ACK_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useAcknowledgementsList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("own_acknowledgements"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ message: "Please acknowledge this" });
+    expect(items[1]).toMatchObject({ message: "Second ack" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_ACK_ROW]);
+    const { result } = renderHookWithProviders(() => useAcknowledgementsList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });

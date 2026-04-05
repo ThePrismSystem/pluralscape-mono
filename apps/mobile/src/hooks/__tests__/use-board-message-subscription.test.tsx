@@ -84,4 +84,14 @@ describe("useBoardMessageSubscription", () => {
     });
     expect(mockUtils.boardMessage.get.invalidate).not.toHaveBeenCalled();
   });
+
+  it("is disabled in local source mode", () => {
+    renderHookWithProviders(
+      () => {
+        useBoardMessageSubscription();
+      },
+      { querySource: "local" },
+    );
+    expect(lastSubscriptionOpts["enabled"]).toBe(false);
+  });
 });

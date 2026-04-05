@@ -3,19 +3,23 @@ import {
   decryptAcknowledgement,
   decryptAcknowledgementPage,
 } from "@pluralscape/data/transforms/acknowledgement";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToAcknowledgementRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { AcknowledgementLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   AcknowledgementDecrypted,
@@ -24,6 +28,7 @@ import type {
 } from "@pluralscape/data/transforms/acknowledgement";
 import type { AcknowledgementId, Archived } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type AcknowledgementPage = {
   readonly data: (AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>)[];
   readonly nextCursor: string | null;
@@ -38,7 +43,11 @@ interface AcknowledgementListOpts extends SystemIdOverride {
 export function useAcknowledgement(
   ackId: AcknowledgementId,
   opts?: SystemIdOverride,
-): TRPCQuery<AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>> {
+): DataQuery<
+  AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> | AcknowledgementLocalRow
+> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -51,18 +60,35 @@ export function useAcknowledgement(
     [masterKey],
   );
 
-  return trpc.acknowledgement.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["acknowledgements", ackId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM own_acknowledgements WHERE id = ?", [ackId]);
+      if (!row) throw new Error("Acknowledgement not found");
+      return rowToAcknowledgementRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.acknowledgement.get.useQuery(
     { systemId, ackId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectAcknowledgement,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useAcknowledgementsList(
   opts?: AcknowledgementListOpts,
-): TRPCInfiniteQuery<AcknowledgementPage> {
+): DataListQuery<
+  AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> | AcknowledgementLocalRow
+> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -79,7 +105,26 @@ export function useAcknowledgementsList(
     [masterKey],
   );
 
-  return trpc.acknowledgement.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: [
+      "acknowledgements",
+      "list",
+      systemId,
+      opts?.includeArchived ?? false,
+      opts?.confirmed,
+    ],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM own_acknowledgements WHERE system_id = ?"
+        : "SELECT * FROM own_acknowledgements WHERE system_id = ? AND archived = 0";
+      return localDb.queryAll(sql, [systemId]).map(rowToAcknowledgementRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.acknowledgement.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -87,11 +132,13 @@ export function useAcknowledgementsList(
       confirmed: opts?.confirmed,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: AcknowledgementRawPage) => lastPage.nextCursor,
       select: selectAcknowledgementPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateAcknowledgement(): TRPCMutation<

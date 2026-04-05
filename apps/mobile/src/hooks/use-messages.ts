@@ -1,18 +1,22 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptMessage, decryptMessagePage } from "@pluralscape/data/transforms/message";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToMessageRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { MessageLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   MessagePage as MessageRawPage,
@@ -20,6 +24,7 @@ import type {
 } from "@pluralscape/data/transforms/message";
 import type { ArchivedChatMessage, ChannelId, ChatMessage, MessageId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type MessagePage = {
   readonly data: (ChatMessage | ArchivedChatMessage)[];
   readonly nextCursor: string | null;
@@ -40,7 +45,9 @@ export function useMessage(
   channelId: ChannelId,
   messageId: MessageId,
   opts?: MessageOpts,
-): TRPCQuery<ChatMessage | ArchivedChatMessage> {
+): DataQuery<ChatMessage | ArchivedChatMessage | MessageLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -53,19 +60,37 @@ export function useMessage(
     [masterKey],
   );
 
-  return trpc.message.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["messages", channelId, messageId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM own_messages WHERE id = ? AND channel_id = ?", [
+        messageId,
+        channelId,
+      ]);
+      if (!row) throw new Error("Message not found");
+      return rowToMessageRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.message.get.useQuery(
     { systemId, channelId, messageId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectMessage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useMessagesList(
   channelId: ChannelId,
   opts?: MessageListOpts,
-): TRPCInfiniteQuery<MessagePage> {
+): DataListQuery<ChatMessage | ArchivedChatMessage | MessageLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -82,7 +107,20 @@ export function useMessagesList(
     [masterKey],
   );
 
-  return trpc.message.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["messages", "list", systemId, channelId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ?"
+        : "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? AND archived = 0";
+      return localDb.queryAll(sql, [systemId, channelId]).map(rowToMessageRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.message.list.useInfiniteQuery(
     {
       systemId,
       channelId,
@@ -92,11 +130,13 @@ export function useMessagesList(
       after: opts?.after,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: MessageRawPage) => lastPage.nextCursor,
       select: selectMessagePage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateMessage(): TRPCMutation<
