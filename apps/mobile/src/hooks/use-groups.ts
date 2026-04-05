@@ -55,7 +55,7 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): DataQuery<G
       if (!row) throw new Error("Group not found");
       return rowToGroup(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.group.get.useQuery(
@@ -101,7 +101,7 @@ export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypte
         : "SELECT * FROM groups WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToGroup);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.group.list.useInfiniteQuery(

@@ -60,7 +60,7 @@ export function useChannel(
       if (!row) throw new Error("Channel not found");
       return rowToChannel(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.channel.get.useQuery(
@@ -105,7 +105,7 @@ export function useChannelsList(
         : "SELECT * FROM own_channels WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToChannel);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.channel.list.useInfiniteQuery(

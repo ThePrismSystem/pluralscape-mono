@@ -80,7 +80,7 @@ export function usePoll(
       if (!row) throw new Error("Poll not found");
       return rowToPoll(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.poll.get.useQuery(
@@ -125,7 +125,7 @@ export function usePollsList(
         : "SELECT * FROM own_polls WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToPoll);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.poll.list.useInfiniteQuery(

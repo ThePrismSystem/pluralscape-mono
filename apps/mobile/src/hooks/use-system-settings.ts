@@ -43,7 +43,7 @@ export function useSystemSettings(): DataQuery<SystemSettings> {
       if (!row) throw new Error("System settings not found");
       return rowToSystemSettings(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.systemSettings.settings.get.useQuery(
@@ -83,7 +83,7 @@ export function useNomenclature(): DataQuery<DecryptedNomenclature | Nomenclatur
       if (typeof raw === "string") return JSON.parse(raw) as NomenclatureSettings;
       return raw as NomenclatureSettings;
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.systemSettings.nomenclature.get.useQuery(

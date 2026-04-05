@@ -68,7 +68,7 @@ export function useStructureEntityType(
       if (!row) throw new Error("Structure entity type not found");
       return rowToStructureEntityType(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.structure.entityType.get.useQuery(
@@ -113,7 +113,7 @@ export function useStructureEntityTypesList(
         : "SELECT * FROM structure_entity_types WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToStructureEntityType);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.structure.entityType.list.useInfiniteQuery(

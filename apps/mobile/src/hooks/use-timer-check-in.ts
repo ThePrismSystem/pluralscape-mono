@@ -77,7 +77,7 @@ export function useTimerConfig(
       if (!row) throw new Error("Timer config not found");
       return rowToTimer(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.timerConfig.get.useQuery(
@@ -122,7 +122,7 @@ export function useTimerConfigsList(
         : "SELECT * FROM timer_configs WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToTimer);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.timerConfig.list.useInfiniteQuery(
@@ -219,7 +219,7 @@ export function useCheckInHistory(
       }
       return localDb.queryAll(sql, params).map(rowToCheckInRecord);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.checkInRecord.list.useInfiniteQuery(

@@ -78,7 +78,7 @@ export function useFrontingSession(
       if (!row) throw new Error("Fronting session not found");
       return rowToFrontingSession(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.frontingSession.get.useQuery(
@@ -133,7 +133,7 @@ export function useFrontingSessionsList(
       }
       return localDb.queryAll(sql, [systemId]).map(rowToFrontingSession);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.frontingSession.list.useInfiniteQuery(

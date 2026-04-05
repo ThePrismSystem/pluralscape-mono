@@ -59,7 +59,7 @@ export function useCustomFront(
       if (!row) throw new Error("Custom front not found");
       return rowToCustomFront(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.customFront.get.useQuery(
@@ -105,7 +105,7 @@ export function useCustomFrontsList(
         .queryAll("SELECT * FROM custom_fronts WHERE system_id = ? AND archived = 0", [systemId])
         .map(rowToCustomFront);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.customFront.list.useInfiniteQuery(

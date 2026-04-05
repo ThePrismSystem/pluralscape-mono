@@ -65,7 +65,7 @@ export function useLifecycleEvent(
       if (!row) throw new Error("LifecycleEvent not found");
       return rowToLifecycleEvent(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.lifecycleEvent.get.useQuery(
@@ -109,7 +109,7 @@ export function useLifecycleEventsList(
         : "SELECT * FROM lifecycle_events WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToLifecycleEvent);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.lifecycleEvent.list.useInfiniteQuery(

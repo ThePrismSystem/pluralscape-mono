@@ -65,7 +65,7 @@ export function useInnerWorldEntity(
       if (!row) throw new Error("InnerWorldEntity not found");
       return rowToInnerWorldEntity(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.innerworld.entity.get.useQuery(
@@ -123,7 +123,7 @@ export function useInnerWorldEntitiesList(
         : "SELECT * FROM innerworld_entities WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldEntity);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.innerworld.entity.list.useInfiniteQuery(

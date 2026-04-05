@@ -41,7 +41,7 @@ export function usePrivacyBucket(
       if (!row) throw new Error("Privacy bucket not found");
       return rowToPrivacyBucket(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.bucket.get.useQuery(
@@ -72,7 +72,7 @@ export function usePrivacyBucketsList(
         : "SELECT * FROM buckets WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToPrivacyBucket);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.bucket.list.useInfiniteQuery(

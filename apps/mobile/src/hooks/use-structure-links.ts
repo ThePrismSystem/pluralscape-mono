@@ -40,7 +40,7 @@ export function useStructureLinksList(
         ])
         .map(rowToStructureEntityLink);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.structure.link.list.useInfiniteQuery(

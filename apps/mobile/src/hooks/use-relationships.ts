@@ -65,7 +65,7 @@ export function useRelationship(
       if (!row) throw new Error("Relationship not found");
       return rowToRelationship(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.relationship.get.useQuery(
@@ -116,7 +116,7 @@ export function useRelationshipsList(
       }
       return localDb.queryAll(sql, params).map(rowToRelationship);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.relationship.list.useInfiniteQuery(

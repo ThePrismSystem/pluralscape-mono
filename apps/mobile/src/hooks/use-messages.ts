@@ -70,7 +70,7 @@ export function useMessage(
       if (!row) throw new Error("Message not found");
       return rowToMessage(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.message.get.useQuery(
@@ -116,7 +116,7 @@ export function useMessagesList(
         : "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId, channelId]).map(rowToMessage);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.message.list.useInfiniteQuery(

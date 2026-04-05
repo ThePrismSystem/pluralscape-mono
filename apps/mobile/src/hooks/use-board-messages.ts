@@ -65,7 +65,7 @@ export function useBoardMessage(
       if (!row) throw new Error("Board message not found");
       return rowToBoardMessage(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.boardMessage.get.useQuery(
@@ -110,7 +110,7 @@ export function useBoardMessagesList(
         : "SELECT * FROM own_board_messages WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToBoardMessage);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.boardMessage.list.useInfiniteQuery(

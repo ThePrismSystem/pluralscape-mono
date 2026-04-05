@@ -64,7 +64,7 @@ export function useInnerWorldRegion(
       if (!row) throw new Error("InnerWorldRegion not found");
       return rowToInnerWorldRegion(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.innerworld.region.get.useQuery(
@@ -109,7 +109,7 @@ export function useInnerWorldRegionsList(
         : "SELECT * FROM innerworld_regions WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldRegion);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.innerworld.region.list.useInfiniteQuery(

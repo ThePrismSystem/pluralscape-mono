@@ -41,7 +41,7 @@ export function useFriendConnection(
       if (!row) throw new Error("Friend connection not found");
       return rowToFriendConnection(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.friend.get.useQuery({ connectionId }, { enabled: source === "remote" });
@@ -77,7 +77,7 @@ export function useFriendConnectionsList(
 
       return localDb.queryAll(sql, params).map(rowToFriendConnection);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.friend.list.useInfiniteQuery(

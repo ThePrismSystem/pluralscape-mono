@@ -66,7 +66,7 @@ export function useFrontingComment(
       if (!row) throw new Error("Fronting comment not found");
       return rowToFrontingComment(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.frontingComment.get.useQuery(
@@ -115,7 +115,7 @@ export function useFrontingCommentsList(
         : "SELECT * FROM fronting_comments WHERE fronting_session_id = ? AND archived = 0";
       return localDb.queryAll(sql, [sessionId]).map(rowToFrontingComment);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.frontingComment.list.useInfiniteQuery(

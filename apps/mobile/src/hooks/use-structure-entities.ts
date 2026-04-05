@@ -70,7 +70,7 @@ export function useStructureEntity(
       if (!row) throw new Error("Structure entity not found");
       return rowToStructureEntity(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.structure.entity.get.useQuery(
@@ -136,7 +136,7 @@ export function useStructureEntitiesList(
       }
       return localDb.queryAll(sql, params).map(rowToStructureEntity);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.structure.entity.list.useInfiniteQuery(

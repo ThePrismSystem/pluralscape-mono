@@ -65,7 +65,7 @@ export function useAcknowledgement(
       if (!row) throw new Error("Acknowledgement not found");
       return rowToAcknowledgement(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.acknowledgement.get.useQuery(
@@ -116,7 +116,7 @@ export function useAcknowledgementsList(
         : "SELECT * FROM own_acknowledgements WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToAcknowledgement);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.acknowledgement.list.useInfiniteQuery(

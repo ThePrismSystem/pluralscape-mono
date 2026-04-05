@@ -68,7 +68,7 @@ export function useFieldDefinition(
       if (!row) throw new Error("Field definition not found");
       return rowToFieldDefinition(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.field.definition.get.useQuery(
@@ -116,7 +116,7 @@ export function useFieldDefinitionsList(
         : "SELECT * FROM field_definitions WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToFieldDefinition);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.field.definition.list.useInfiniteQuery(
@@ -211,7 +211,7 @@ export function useMemberFieldValues(
         .queryAll("SELECT * FROM field_values WHERE member_id = ?", [memberId])
         .map((row) => rowToFieldValue(row, systemId));
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.field.value.list.useQuery(

@@ -64,7 +64,7 @@ export function useNote(
       if (!row) throw new Error("Note not found");
       return rowToNote(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.note.get.useQuery(
@@ -117,7 +117,7 @@ export function useNotesList(
         : "SELECT * FROM own_notes WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToNote);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.note.list.useInfiniteQuery(

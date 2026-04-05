@@ -31,7 +31,7 @@ export function useFriendCodesList(
         .queryAll("SELECT * FROM friend_codes WHERE archived = 0", [])
         .map(rowToFriendCode);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.friendCode.list.useInfiniteQuery(

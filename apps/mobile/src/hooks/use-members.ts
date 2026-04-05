@@ -58,7 +58,7 @@ export function useMember(
       if (!row) throw new Error("Member not found");
       return rowToMember(row);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.member.get.useQuery(
@@ -104,7 +104,7 @@ export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Ar
         : "SELECT * FROM members WHERE system_id = ? AND archived = 0";
       return localDb.queryAll(sql, [systemId]).map(rowToMember);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.member.list.useInfiniteQuery(

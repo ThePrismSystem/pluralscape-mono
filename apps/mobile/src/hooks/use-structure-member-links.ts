@@ -41,7 +41,7 @@ export function useStructureMemberLinksList(
         )
         .map(rowToStructureEntityMemberLink);
     },
-    enabled: source === "local",
+    enabled: source === "local" && localDb !== null,
   });
 
   const remoteQuery = trpc.structure.memberLink.list.useInfiniteQuery(
