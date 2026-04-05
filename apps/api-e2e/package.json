@@ -11,15 +11,15 @@
     "test:report": "playwright show-report"
   },
   "devDependencies": {
-    "@playwright/test": "^1.52.0",
+    "@playwright/test": "^1.59.1",
     "@pluralscape/api": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "@types/node": "^24.0.0",
+    "@types/node": "^24.12.2",
     "drizzle-orm": "^0.45.1",
-    "postgres": "^3.4.5",
+    "postgres": "^3.4.9",
     "typescript": "^6.0.0"
   },
   "dependencies": {
