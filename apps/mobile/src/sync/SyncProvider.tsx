@@ -1,7 +1,7 @@
 import { createBucketKeyCache } from "@pluralscape/crypto";
 import { DocumentKeyResolver, SyncEngine } from "@pluralscape/sync";
 import { SqliteStorageAdapter } from "@pluralscape/sync/adapters";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "../auth/index.js";
 import { getWsUrl } from "../config.js";
@@ -20,8 +20,11 @@ import type { SqliteDriver } from "@pluralscape/sync/adapters";
 import type { SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
-export type { SyncContextValue } from "./sync-context.js";
+export type { SyncContextValue, SyncProgress } from "./sync-context.js";
 export { SyncCtx, useSync } from "./sync-context.js";
+
+/** Maximum number of bootstrap attempts before falling back to remote. */
+const MAX_BOOTSTRAP_ATTEMPTS = 3;
 
 /** Extracted config when all prerequisites for engine creation are met. */
 interface EngineReadyConfig {
@@ -47,7 +50,8 @@ const Ctx = SyncCtx;
  * WsManager (WebSocket network adapter), and SyncEngine.
  *
  * Bootstraps sync when the SSE connection reports "connected", then exposes
- * engine and bootstrap state via context.
+ * engine and bootstrap state via context. Retries up to MAX_BOOTSTRAP_ATTEMPTS
+ * times on failure before falling back to remote-only mode.
  *
  * Disposes all resources on auth state transitions (lock/logout) or unmount.
  */
@@ -59,11 +63,20 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
 
   const [engine, setEngine] = useState<SyncEngine | null>(null);
   const [isBootstrapped, setIsBootstrapped] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState<Error | null>(null);
+  const [bootstrapAttempts, setBootstrapAttempts] = useState(0);
+  const [fallbackToRemote, setFallbackToRemote] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   // Refs for resources that need cleanup but don't drive renders
   const wsManagerRef = useRef<WsManager | null>(null);
   const keyResolverRef = useRef<DocumentKeyResolver | null>(null);
   const bucketKeyCacheRef = useRef<BucketKeyCache | null>(null);
+
+  const retryBootstrap = useCallback(() => {
+    setBootstrapError(null);
+    setRetryNonce((n) => n + 1);
+  }, []);
 
   // Derive readiness from auth state — sync requires an unlocked session
   const isUnlocked = auth.snapshot.state === "unlocked";
@@ -206,9 +219,10 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
   }, [engineConfig]);
 
   // Bootstrap effect — runs when connection becomes available after engine creation.
+  // Retries are triggered via retryNonce. Falls back to remote after MAX_BOOTSTRAP_ATTEMPTS.
   // Uses a cancelled flag to guard against React dev-mode double-invocation.
   useEffect(() => {
-    if (engine === null || !isConnected || isBootstrapped) {
+    if (engine === null || !isConnected || isBootstrapped || fallbackToRemote) {
       return;
     }
 
@@ -219,14 +233,24 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
       .then(() => {
         if (!cancelled) {
           setIsBootstrapped(true);
+          setBootstrapError(null);
         }
       })
-      .catch((error: unknown) => {
+      .catch((err: unknown) => {
         if (!cancelled) {
+          const error = err instanceof Error ? err : new Error(String(err));
           bus.emit("sync:error", {
             type: "sync:error",
             message: "Bootstrap failed",
             error,
+          });
+          setBootstrapError(error);
+          setBootstrapAttempts((prev) => {
+            const next = prev + 1;
+            if (next >= MAX_BOOTSTRAP_ATTEMPTS) {
+              setFallbackToRemote(true);
+            }
+            return next;
           });
         }
       });
@@ -234,15 +258,19 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
     return () => {
       cancelled = true;
     };
-  }, [engine, isConnected, isBootstrapped, eventBus]);
+  }, [engine, isConnected, isBootstrapped, fallbackToRemote, eventBus, retryNonce]);
 
   const value = useMemo<SyncContextValue>(
     () => ({
       engine,
       isBootstrapped,
       progress: null,
+      bootstrapError,
+      bootstrapAttempts,
+      retryBootstrap,
+      fallbackToRemote,
     }),
-    [engine, isBootstrapped],
+    [engine, isBootstrapped, bootstrapError, bootstrapAttempts, retryBootstrap, fallbackToRemote],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

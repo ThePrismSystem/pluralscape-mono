@@ -138,6 +138,10 @@ export function renderHookWithProviders<TResult>(
     engine: null,
     isBootstrapped: isLocal,
     progress: null,
+    bootstrapError: null,
+    bootstrapAttempts: 0,
+    retryBootstrap: vi.fn(),
+    fallbackToRemote: false,
   };
 
   const dataLayerValue: DataLayerContextValue | null = isLocal

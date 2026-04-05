@@ -2,10 +2,19 @@ import { createContext, useContext } from "react";
 
 import type { SyncEngine } from "@pluralscape/sync";
 
+export interface SyncProgress {
+  readonly synced: number;
+  readonly total: number;
+}
+
 export interface SyncContextValue {
   readonly engine: SyncEngine | null;
   readonly isBootstrapped: boolean;
-  readonly progress: { synced: number; total: number } | null;
+  readonly progress: SyncProgress | null;
+  readonly bootstrapError: Error | null;
+  readonly bootstrapAttempts: number;
+  readonly retryBootstrap: () => void;
+  readonly fallbackToRemote: boolean;
 }
 
 /**

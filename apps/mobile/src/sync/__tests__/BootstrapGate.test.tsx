@@ -1,161 +1,130 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import React from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { PlatformContext, PlatformStorage } from "../../platform/types.js";
-import type { SyncContextValue } from "../SyncProvider.js";
-import type { SqliteDriver } from "@pluralscape/sync/adapters";
+import { BootstrapGate } from "../BootstrapGate.js";
 
-// ── Mutable mock state ─────────────────────────────────────────────
+import type { SyncContextValue } from "../sync-context.js";
 
-let mockPlatformStorage: PlatformStorage = {
-  backend: "sqlite",
-  driver: {
-    exec: vi.fn(),
-    prepare: vi.fn(),
-    transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
-    close: vi.fn(),
-  },
-};
+afterEach(() => {
+  cleanup();
+});
 
-let mockSyncValue: SyncContextValue = {
-  engine: null,
-  isBootstrapped: false,
-  progress: null,
-};
+function makeSyncValue(overrides: Partial<SyncContextValue> = {}): SyncContextValue {
+  return {
+    engine: null,
+    isBootstrapped: false,
+    progress: null,
+    bootstrapError: null,
+    bootstrapAttempts: 0,
+    retryBootstrap: vi.fn(),
+    fallbackToRemote: false,
+    ...overrides,
+  };
+}
 
-// ── Module mocks ────────────────────────────────────────────────────
+let mockSyncValue: SyncContextValue = makeSyncValue();
 
-vi.mock("../../platform/index.js", () => ({
-  usePlatform: (): PlatformContext => ({
-    capabilities: {
-      hasSecureStorage: false,
-      hasBiometric: false,
-      hasBackgroundSync: false,
-      hasNativeMemzero: false,
-      storageBackend: "sqlite",
-    },
-    storage: mockPlatformStorage,
-    crypto: {} as PlatformContext["crypto"],
-  }),
+vi.mock("../sync-context.js", () => ({
+  useSync: () => mockSyncValue,
 }));
-
-vi.mock("../SyncProvider.js", () => ({
-  useSync: (): SyncContextValue => mockSyncValue,
-}));
-
-// Dynamic import after mocks
-const { BootstrapGate } = await import("../BootstrapGate.js");
-
-// ── Tests ───────────────────────────────────────────────────────────
 
 describe("BootstrapGate", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockPlatformStorage = {
-      backend: "sqlite",
-      driver: {
-        exec: vi.fn(),
-        prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
-        close: vi.fn(),
-      },
-    };
-    mockSyncValue = { engine: null, isBootstrapped: false, progress: null };
-  });
-
-  it("renders children immediately when no local DB (tRPC mode / indexeddb backend)", () => {
-    mockPlatformStorage = {
-      backend: "indexeddb",
-      storageAdapter: {} as PlatformStorage & { backend: "indexeddb" } extends {
-        storageAdapter: infer T;
-      }
-        ? T
-        : never,
-      offlineQueueAdapter: {} as PlatformStorage & { backend: "indexeddb" } extends {
-        offlineQueueAdapter: infer T;
-      }
-        ? T
-        : never,
-    };
-    mockSyncValue = { engine: null, isBootstrapped: false, progress: null };
+  it("renders loading indicator text when not bootstrapped and no error", () => {
+    mockSyncValue = makeSyncValue({ isBootstrapped: false });
 
     render(
       <BootstrapGate>
-        <div>App Content</div>
+        <span>child content</span>
       </BootstrapGate>,
     );
 
-    expect(screen.getByText("App Content")).toBeDefined();
+    expect(screen.queryByText("child content")).toBeNull();
+    expect(screen.getByText(/Setting up offline data/)).toBeDefined();
   });
 
-  it("shows loading screen when local DB exists but not bootstrapped", () => {
-    mockPlatformStorage = {
-      backend: "sqlite",
-      driver: {
-        exec: vi.fn(),
-        prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
-        close: vi.fn(),
-      },
-    };
-    mockSyncValue = { engine: null, isBootstrapped: false, progress: null };
+  it("renders children when bootstrapped", () => {
+    mockSyncValue = makeSyncValue({ isBootstrapped: true });
 
     render(
       <BootstrapGate>
-        <div>App Content</div>
+        <span>child content</span>
       </BootstrapGate>,
     );
 
-    expect(screen.queryByText("App Content")).toBeNull();
-    expect(screen.getByText("Setting up your data...")).toBeDefined();
+    expect(screen.getByText("child content")).toBeDefined();
   });
 
-  it("shows progress in loading screen when progress is available", () => {
-    mockPlatformStorage = {
-      backend: "sqlite",
-      driver: {
-        exec: vi.fn(),
-        prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
-        close: vi.fn(),
-      },
-    };
-    mockSyncValue = { engine: null, isBootstrapped: false, progress: { synced: 3, total: 10 } };
+  it("renders error state with retry button when bootstrapError is set", () => {
+    const retryFn = vi.fn();
+    mockSyncValue = makeSyncValue({
+      isBootstrapped: false,
+      bootstrapError: new Error("disk full"),
+      bootstrapAttempts: 1,
+      retryBootstrap: retryFn,
+    });
 
     render(
       <BootstrapGate>
-        <div>App Content</div>
+        <span>child content</span>
       </BootstrapGate>,
     );
 
-    expect(screen.queryByText("App Content")).toBeNull();
-    expect(screen.getByText("Setting up (3/10)...")).toBeDefined();
+    expect(screen.queryByText("child content")).toBeNull();
+    expect(screen.getByText(/disk full/)).toBeDefined();
+    expect(screen.getByText(/attempt 1/)).toBeDefined();
+    const retryBtn = screen.getByRole("button", { name: "Retry offline setup" });
+    expect(retryBtn).toBeDefined();
   });
 
-  it("renders children when local DB exists and is bootstrapped", () => {
-    mockPlatformStorage = {
-      backend: "sqlite",
-      driver: {
-        exec: vi.fn(),
-        prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
-        close: vi.fn(),
-      },
-    };
-    mockSyncValue = { engine: null, isBootstrapped: true, progress: null };
+  it("retry button calls retryBootstrap on press", () => {
+    const retryFn = vi.fn();
+    mockSyncValue = makeSyncValue({
+      isBootstrapped: false,
+      bootstrapError: new Error("timeout"),
+      bootstrapAttempts: 2,
+      retryBootstrap: retryFn,
+    });
 
     render(
       <BootstrapGate>
-        <div>App Content</div>
+        <span>child content</span>
       </BootstrapGate>,
     );
 
-    expect(screen.getByText("App Content")).toBeDefined();
-    expect(screen.queryByText("Setting up your data...")).toBeNull();
+    screen.getByRole("button", { name: "Retry offline setup" }).click();
+    expect(retryFn).toHaveBeenCalledOnce();
+  });
+
+  it("renders children with fallback banner when fallbackToRemote is true", () => {
+    mockSyncValue = makeSyncValue({ fallbackToRemote: true, isBootstrapped: false });
+
+    render(
+      <BootstrapGate>
+        <span>child content</span>
+      </BootstrapGate>,
+    );
+
+    expect(screen.getByText("child content")).toBeDefined();
+    expect(screen.getByText(/Couldn't set up offline data/)).toBeDefined();
+  });
+
+  it("error state is not shown when fallbackToRemote is true (fallback takes priority)", () => {
+    mockSyncValue = makeSyncValue({
+      fallbackToRemote: true,
+      bootstrapError: new Error("fail"),
+      bootstrapAttempts: 3,
+      isBootstrapped: false,
+    });
+
+    render(
+      <BootstrapGate>
+        <span>child content</span>
+      </BootstrapGate>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Retry offline setup" })).toBeNull();
+    expect(screen.getByText("child content")).toBeDefined();
   });
 });

@@ -13,6 +13,7 @@ export type QuerySource = "local" | "remote";
 export function useQuerySource(): QuerySource {
   const platform = usePlatform();
   const sync = useSync();
+  if (sync.fallbackToRemote) return "remote";
   return platform.storage.backend === "sqlite" && sync.isBootstrapped ? "local" : "remote";
 }
 

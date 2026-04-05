@@ -1,53 +1,112 @@
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import { usePlatform } from "../platform/index.js";
-
-import { useSync } from "./SyncProvider.js";
+import {
+  BOOTSTRAP_INDICATOR_MARGIN,
+  BOOTSTRAP_TEXT_COLOR,
+  BOOTSTRAP_TEXT_SIZE,
+  MIN_TOUCH_TARGET,
+} from "./bootstrap-gate.constants.js";
+import { useSync } from "./sync-context.js";
 
 import type { ReactNode } from "react";
 
-/**
- * Gates app content behind sync bootstrap when local SQLite is available.
- *
- * On first launch, the sync engine must complete its initial bootstrap before
- * data hooks are safe to use. This component shows a progress indicator while
- * that bootstrap is in progress.
- *
- * When the platform has no SQLite backend (tRPC-only mode), the gate is
- * bypassed immediately and children render without any loading screen.
- */
-export function BootstrapGate({ children }: { readonly children: ReactNode }): React.JSX.Element {
-  const platform = usePlatform();
+interface Props {
+  readonly children: ReactNode;
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  indicator: {
+    marginBottom: BOOTSTRAP_INDICATOR_MARGIN,
+  },
+  text: {
+    fontSize: BOOTSTRAP_TEXT_SIZE,
+    color: BOOTSTRAP_TEXT_COLOR,
+  },
+  errorText: {
+    fontSize: BOOTSTRAP_TEXT_SIZE,
+    color: BOOTSTRAP_TEXT_COLOR,
+    textAlign: "center",
+    marginBottom: BOOTSTRAP_INDICATOR_MARGIN,
+  },
+  retryButton: {
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: BOOTSTRAP_INDICATOR_MARGIN,
+  },
+  retryText: {
+    fontSize: BOOTSTRAP_TEXT_SIZE,
+    color: "#007AFF",
+  },
+  banner: {
+    backgroundColor: "#FFF3CD",
+    padding: BOOTSTRAP_INDICATOR_MARGIN,
+  },
+  bannerText: {
+    fontSize: BOOTSTRAP_TEXT_SIZE,
+    color: BOOTSTRAP_TEXT_COLOR,
+  },
+});
+
+export function BootstrapGate({ children }: Props): React.JSX.Element {
   const sync = useSync();
 
-  // No local DB → tRPC mode, no bootstrap needed
-  if (platform.storage.backend !== "sqlite") {
-    return <>{children}</>;
+  if (sync.fallbackToRemote) {
+    return (
+      <>
+        <View
+          style={styles.banner}
+          accessible={true}
+          accessibilityRole="alert"
+          accessibilityLabel="Offline data unavailable banner"
+        >
+          <Text style={styles.bannerText}>
+            {"Couldn't set up offline data \u2014 using online mode"}
+          </Text>
+        </View>
+        {children}
+      </>
+    );
   }
 
-  // Local DB exists but sync not ready → show loading screen
-  if (!sync.isBootstrapped) {
-    const progressText =
-      sync.progress !== null
-        ? `Setting up (${String(sync.progress.synced)}/${String(sync.progress.total)})...`
-        : "Setting up your data...";
-
+  if (sync.bootstrapError !== null && !sync.isBootstrapped) {
     return (
-      <View
-        style={styles.container}
-        accessibilityLabel="Loading your data"
-        accessibilityRole="none"
-      >
-        <ActivityIndicator size="large" accessibilityLabel="Loading indicator" />
-        <Text style={styles.text}>{progressText}</Text>
+      <View style={styles.container} accessible={true} accessibilityRole="none">
+        <Text style={styles.errorText} accessibilityRole="text">
+          {`Offline setup failed (attempt ${sync.bootstrapAttempts.toString()}): ${sync.bootstrapError.message}`}
+        </Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={sync.retryBootstrap}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Retry offline setup"
+          hitSlop={{ top: 0, bottom: 0, left: 0, right: 0 }}
+        >
+          <Text style={styles.retryText}>{"Retry"}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!sync.isBootstrapped) {
+    return (
+      <View style={styles.container} accessible={true} accessibilityRole="none">
+        <ActivityIndicator
+          style={styles.indicator}
+          accessible={true}
+          accessibilityLabel="Setting up offline data"
+        />
+        <Text style={styles.text}>{"Setting up offline data\u2026"}</Text>
       </View>
     );
   }
 
   return <>{children}</>;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  text: { marginTop: 16, fontSize: 16, color: "#666" },
-});
