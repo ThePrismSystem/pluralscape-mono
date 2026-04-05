@@ -110,7 +110,7 @@ importers:
         version: 11.16.0(typescript@6.0.2)
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.2(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
+        version: 0.45.2(@electric-sql/pglite@0.4.3)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
       hono:
         specifier: ^4.12.8
         version: 4.12.9
@@ -129,7 +129,7 @@ importers:
     devDependencies:
       '@electric-sql/pglite':
         specifier: ^0.4.2
-        version: 0.4.2
+        version: 0.4.3
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config
@@ -182,7 +182,7 @@ importers:
         version: 24.12.0
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.2(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
+        version: 0.45.2(@electric-sql/pglite@0.4.3)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
       postgres:
         specifier: ^3.4.5
         version: 3.4.8
@@ -404,14 +404,14 @@ importers:
         version: 12.8.0
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.2(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
+        version: 0.45.2(@electric-sql/pglite@0.4.3)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
       postgres:
         specifier: ^3.4.5
         version: 3.4.8
     devDependencies:
       '@electric-sql/pglite':
         specifier: ^0.4.2
-        version: 0.4.2
+        version: 0.4.3
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config
@@ -518,7 +518,7 @@ importers:
         version: 5.71.1
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.2(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
+        version: 0.45.2(@electric-sql/pglite@0.4.3)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
       ioredis:
         specifier: 5.10.1
         version: 5.10.1
@@ -702,10 +702,10 @@ importers:
     dependencies:
       '@electric-sql/pglite':
         specifier: ^0.4.2
-        version: 0.4.2
+        version: 0.4.3
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.2(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
+        version: 0.45.2(@electric-sql/pglite@0.4.3)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8)
       vitest:
         specifier: '>=4.0.0'
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@25.5.0)(happy-dom@20.8.9)(vite@8.0.1(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
@@ -1472,8 +1472,8 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
-  '@electric-sql/pglite@0.4.2':
-    resolution: {integrity: sha512-1GUUl/MZpy5QWgWisD3Epho3GkJrZ1MzVgQpo2pifQWUs96F9rXKZxeVLPhkwFYck34CH/kQ8lis6wX9ifn3kg==}
+  '@electric-sql/pglite@0.4.3':
+    resolution: {integrity: sha512-ichuWTgtd4mOM1G4SpyGJa5trT03lWbMypDV0fUXUCXg5hiHqVAz/bZyV68NqmkLB7WcYmj1RMJVSp8HV/v/ZQ==}
 
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
@@ -8326,7 +8326,7 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
-  '@electric-sql/pglite@0.4.2': {}
+  '@electric-sql/pglite@0.4.3': {}
 
   '@emnapi/core@1.9.1':
     dependencies:
@@ -11277,9 +11277,9 @@ snapshots:
       esbuild: 0.27.4
       tsx: 4.21.0
 
-  drizzle-orm@0.45.2(@electric-sql/pglite@0.4.2)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8):
+  drizzle-orm@0.45.2(@electric-sql/pglite@0.4.3)(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(better-sqlite3-multiple-ciphers@12.8.0)(bun-types@1.3.11)(expo-sqlite@16.0.10(expo@55.0.9)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4))(postgres@3.4.8):
     optionalDependencies:
-      '@electric-sql/pglite': 0.4.2
+      '@electric-sql/pglite': 0.4.3
       '@opentelemetry/api': 1.9.1
       '@types/better-sqlite3': 7.6.13
       better-sqlite3: better-sqlite3-multiple-ciphers@12.8.0
