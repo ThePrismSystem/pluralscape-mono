@@ -1,3 +1,9 @@
+/** Options for creating an event bus. */
+export interface EventBusOptions {
+  /** Called when a listener throws. Defaults to rethrowing asynchronously. */
+  readonly onError?: (error: unknown) => void;
+}
+
 /** A typed, synchronous, in-process event emitter. */
 export interface EventBus<TMap> {
   /** Subscribe to an event type. Returns an unsubscribe function. */
@@ -9,8 +15,15 @@ export interface EventBus<TMap> {
 }
 
 /** Create a new typed event bus with no external dependencies. */
-export function createEventBus<TMap>(): EventBus<TMap> {
+export function createEventBus<TMap>(options?: EventBusOptions): EventBus<TMap> {
   const listeners = new Map<string, Set<(event: unknown) => void>>();
+  const handleError: (error: unknown) => void =
+    options?.onError ??
+    ((err) => {
+      queueMicrotask(() => {
+        throw err;
+      });
+    });
 
   return {
     on(type, listener) {
@@ -33,8 +46,8 @@ export function createEventBus<TMap>(): EventBus<TMap> {
       for (const fn of set) {
         try {
           fn(event);
-        } catch {
-          // Listener errors must not break other listeners
+        } catch (err: unknown) {
+          handleError(err);
         }
       }
     },

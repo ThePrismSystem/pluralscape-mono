@@ -5,6 +5,11 @@ import { createWsManager } from "../ws-manager.js";
 
 import type { WsManager } from "../ws-manager.js";
 import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
+
+function asSystemId(id: string): SystemId {
+  return id as SystemId;
+}
 
 // ── Mock createWsClientAdapter ──────────────────────────────────────
 
@@ -52,8 +57,8 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
-      expect(manager.getStatus()).toBe("connecting");
+      manager.connect("tok", asSystemId("sys_abc"));
+      expect(manager.getSnapshot()).toBe("connecting");
     });
 
     it("creates a WsClientAdapter with the given token and systemId", async () => {
@@ -61,7 +66,7 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("my-token", "sys_xyz");
+      manager.connect("my-token", asSystemId("sys_xyz"));
 
       expect(createWsClientAdapter).toHaveBeenCalledWith(
         expect.objectContaining({ token: "my-token", systemId: "sys_xyz" }),
@@ -75,17 +80,17 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       manager.disconnect();
 
-      expect(manager.getStatus()).toBe("disconnected");
+      expect(manager.getSnapshot()).toBe("disconnected");
     });
 
     it("calls disconnect on the adapter", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       manager.disconnect();
 
       expect(mockDisconnect).toHaveBeenCalledTimes(1);
@@ -98,7 +103,7 @@ describe("WsManager", () => {
       const manager = makeManager(eventBus);
 
       expect(manager.getSnapshot()).toBe("disconnected");
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       expect(manager.getSnapshot()).toBe("connecting");
     });
 
@@ -108,7 +113,7 @@ describe("WsManager", () => {
       const listener = vi.fn();
       manager.subscribe(listener);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
@@ -119,15 +124,8 @@ describe("WsManager", () => {
       const unsub = manager.subscribe(listener);
       unsub();
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       expect(listener).not.toHaveBeenCalled();
-    });
-
-    it("getSnapshot is the same reference as getStatus", () => {
-      const eventBus = createEventBus<DataLayerEventMap>();
-      const manager = makeManager(eventBus);
-
-      expect(manager.getSnapshot()).toBe(manager.getStatus());
     });
   });
 
@@ -136,11 +134,11 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
-      expect(manager.getStatus()).toBe("connecting");
+      manager.connect("tok", asSystemId("sys_abc"));
+      expect(manager.getSnapshot()).toBe("connecting");
 
       eventBus.emit("ws:connected", { type: "ws:connected" });
-      expect(manager.getStatus()).toBe("connected");
+      expect(manager.getSnapshot()).toBe("connected");
     });
 
     it("resets retry count and stays connected on ws:connected", () => {
@@ -148,7 +146,7 @@ describe("WsManager", () => {
       const manager = makeManager(eventBus);
       const listener = vi.fn();
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       eventBus.emit("ws:connected", { type: "ws:connected" });
 
       manager.subscribe(listener);
@@ -164,15 +162,15 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       eventBus.emit("ws:connected", { type: "ws:connected" });
-      expect(manager.getStatus()).toBe("connected");
+      expect(manager.getSnapshot()).toBe("connected");
 
       eventBus.emit("ws:disconnected", { type: "ws:disconnected", reason: "network" });
-      expect(manager.getStatus()).toBe("backoff");
+      expect(manager.getSnapshot()).toBe("backoff");
 
       vi.advanceTimersByTime(200); // past baseBackoffMs * jitter max (100 * 1.25)
-      expect(manager.getStatus()).toBe("reconnecting");
+      expect(manager.getSnapshot()).toBe("reconnecting");
 
       vi.useRealTimers();
     });
@@ -183,15 +181,15 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       eventBus.emit("ws:connected", { type: "ws:connected" });
 
       eventBus.emit("ws:disconnected", { type: "ws:disconnected", reason: "network" });
-      expect(manager.getStatus()).toBe("backoff");
+      expect(manager.getSnapshot()).toBe("backoff");
 
       // Advance past backoff, new adapter created and connect called again
       vi.advanceTimersByTime(200);
-      expect(manager.getStatus()).toBe("reconnecting");
+      expect(manager.getSnapshot()).toBe("reconnecting");
       expect(mockConnect).toHaveBeenCalledTimes(2);
 
       vi.useRealTimers();
@@ -203,14 +201,37 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       eventBus.emit("ws:connected", { type: "ws:connected" });
 
       eventBus.emit("ws:disconnected", { type: "ws:disconnected", reason: "network" });
       vi.advanceTimersByTime(200);
 
       eventBus.emit("ws:connected", { type: "ws:connected" });
-      expect(manager.getStatus()).toBe("connected");
+      expect(manager.getSnapshot()).toBe("connected");
+
+      vi.useRealTimers();
+    });
+
+    it("caps backoff delay at maxBackoffMs", () => {
+      vi.useFakeTimers();
+
+      const eventBus = createEventBus<DataLayerEventMap>();
+      const manager = makeManager(eventBus);
+
+      manager.connect("tok", asSystemId("sys_abc"));
+      eventBus.emit("ws:connected", { type: "ws:connected" });
+
+      // Trigger many disconnects to increase retry count
+      for (let i = 0; i < 10; i++) {
+        eventBus.emit("ws:disconnected", { type: "ws:disconnected", reason: "network" });
+        vi.advanceTimersByTime(2_000); // past maxBackoffMs (1000) * jitter max
+        eventBus.emit("ws:connected", { type: "ws:connected" });
+      }
+
+      // After 10 retries, all should have reconnected (backoff capped at 1000ms)
+      // initial connect + 10 reconnects = 11
+      expect(mockConnect).toHaveBeenCalledTimes(11);
 
       vi.useRealTimers();
     });
@@ -223,19 +244,19 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       eventBus.emit("ws:connected", { type: "ws:connected" });
-      expect(manager.getStatus()).toBe("connected");
+      expect(manager.getSnapshot()).toBe("connected");
 
       manager.disconnect();
-      expect(manager.getStatus()).toBe("disconnected");
+      expect(manager.getSnapshot()).toBe("disconnected");
 
       // Even if the adapter fires ws:disconnected after our explicit close
       eventBus.emit("ws:disconnected", { type: "ws:disconnected", reason: "client disconnected" });
-      expect(manager.getStatus()).toBe("disconnected");
+      expect(manager.getSnapshot()).toBe("disconnected");
 
       vi.advanceTimersByTime(10_000);
-      expect(manager.getStatus()).toBe("disconnected");
+      expect(manager.getSnapshot()).toBe("disconnected");
       // Should not have called connect again
       expect(mockConnect).toHaveBeenCalledTimes(1);
 
@@ -248,18 +269,18 @@ describe("WsManager", () => {
       const eventBus = createEventBus<DataLayerEventMap>();
       const manager = makeManager(eventBus);
 
-      manager.connect("tok", "sys_abc");
+      manager.connect("tok", asSystemId("sys_abc"));
       eventBus.emit("ws:connected", { type: "ws:connected" });
 
       eventBus.emit("ws:disconnected", { type: "ws:disconnected", reason: "network" });
-      expect(manager.getStatus()).toBe("backoff");
+      expect(manager.getSnapshot()).toBe("backoff");
 
       manager.disconnect();
-      expect(manager.getStatus()).toBe("disconnected");
+      expect(manager.getSnapshot()).toBe("disconnected");
 
       // Advance past backoff — should NOT reconnect
       vi.advanceTimersByTime(10_000);
-      expect(manager.getStatus()).toBe("disconnected");
+      expect(manager.getSnapshot()).toBe("disconnected");
       expect(mockConnect).toHaveBeenCalledTimes(1);
 
       vi.useRealTimers();

@@ -1,36 +1,11 @@
-import { ENTITY_TABLE_REGISTRY, type ColumnDef, type EntityTableDef } from "./entity-registry.js";
+import {
+  ENTITY_TABLE_REGISTRY,
+  FRIEND_EXPORTABLE_ENTITY_TYPES,
+  type ColumnDef,
+  type EntityTableDef,
+} from "./entity-registry.js";
 
 import type { SyncedEntityType } from "../strategies/crdt-strategies.js";
-
-// ── Constants ─────────────────────────────────────────────────────────
-
-/**
- * Entity types whose data is shared with friends and therefore require
- * a parallel `friend_<tableName>` table that carries a `connection_id`.
- */
-const FRIEND_EXPORTABLE_ENTITY_TYPES = new Set<SyncedEntityType>([
-  "member",
-  "group",
-  "channel",
-  "message",
-  "note",
-  "poll",
-  "relationship",
-  "structure-entity-type",
-  "structure-entity",
-  "journal-entry",
-  "wiki-page",
-  "custom-front",
-  "fronting-session",
-  "board-message",
-  "acknowledgement",
-  "innerworld-entity",
-  "innerworld-region",
-  "field-definition",
-  "field-value",
-  "member-photo",
-  "fronting-comment",
-]);
 
 /** Column injected at position 0 for every friend_ table. */
 const CONNECTION_ID_COLUMN: ColumnDef = {

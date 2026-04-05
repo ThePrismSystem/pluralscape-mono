@@ -340,6 +340,43 @@ describe("createFriendIndexer", () => {
       });
     });
 
+    it("coalesces concurrent indexing for the same connectionId", async () => {
+      let resolveFirst: (() => void) | undefined;
+      const firstCallPromise = new Promise<void>((r) => {
+        resolveFirst = r;
+      });
+
+      let callCount = 0;
+      fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          await firstCallPromise;
+        }
+        return { data: [], hasMore: false };
+      });
+
+      createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
+
+      // Emit two events for the same connection rapidly
+      eventBus.emit("friend:data-changed", {
+        type: "friend:data-changed",
+        connectionId: "conn-dup",
+      });
+      eventBus.emit("friend:data-changed", {
+        type: "friend:data-changed",
+        connectionId: "conn-dup",
+      });
+
+      // Let the first complete
+      if (!resolveFirst) throw new Error("resolveFirst was not set");
+      resolveFirst();
+
+      await vi.waitFor(() => {
+        // Should have been called exactly twice (first run + one coalesced re-run), not three times
+        expect(fetchExport).toHaveBeenCalledTimes(2);
+      });
+    });
+
     it("skips entities with unknown entityType", async () => {
       fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
         data: [{ id: "e-1", entityType: "unknown-type", encryptedData: "e-1", updatedAt: 1000 }],

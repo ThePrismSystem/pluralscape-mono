@@ -20,6 +20,7 @@ export {
   getTableDef,
   getEntityTypesForDocument,
   ENTITY_TABLE_REGISTRY,
+  FRIEND_EXPORTABLE_ENTITY_TYPES,
   type ColumnDef,
   type EntityTableDef,
 } from "./entity-registry.js";

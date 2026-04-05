@@ -781,3 +781,32 @@ export function getEntityTypesForDocument(documentType: string): SyncedEntityTyp
     (entityType) => ENTITY_CRDT_STRATEGIES[entityType].document === documentType,
   );
 }
+
+/**
+ * Entity types whose data is shared with friends. Used by local-schema
+ * (friend_ table generation), friend-indexer (re-indexing), and search
+ * (friend scope queries).
+ */
+export const FRIEND_EXPORTABLE_ENTITY_TYPES = new Set<SyncedEntityType>([
+  "member",
+  "group",
+  "channel",
+  "message",
+  "note",
+  "poll",
+  "relationship",
+  "structure-entity-type",
+  "structure-entity",
+  "journal-entry",
+  "wiki-page",
+  "custom-front",
+  "fronting-session",
+  "board-message",
+  "acknowledgement",
+  "innerworld-entity",
+  "innerworld-region",
+  "field-definition",
+  "field-value",
+  "member-photo",
+  "fronting-comment",
+]);

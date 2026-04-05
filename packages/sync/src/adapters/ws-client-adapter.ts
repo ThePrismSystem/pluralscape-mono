@@ -43,7 +43,7 @@ export type WebSocketConstructor = new (url: string) => MinimalWebSocket;
 export interface WsClientAdapterConfig {
   readonly url: string;
   readonly token: string;
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly eventBus: EventBus<DataLayerEventMap>;
   readonly WebSocketImpl?: WebSocketConstructor;
 }
@@ -121,6 +121,7 @@ export function createWsClientAdapter(config: WsClientAdapterConfig): WsClientAd
   let authReady: Promise<void> | null = null;
   let resolveAuth: (() => void) | null = null;
   let rejectAuth: ((err: Error) => void) | null = null;
+  let authCorrelationId: string | null = null;
 
   // ── Helpers ──────────────────────────────────────────────────────
 
@@ -154,6 +155,8 @@ export function createWsClientAdapter(config: WsClientAdapterConfig): WsClientAd
 
     // Auth response — resolve handshake promise and emit ws:connected
     if (msg.type === "AuthenticateResponse") {
+      if (msg.correlationId !== authCorrelationId) return;
+      authCorrelationId = null;
       resolveAuth?.();
       eventBus.emit("ws:connected", { type: "ws:connected" });
       return;
@@ -175,8 +178,12 @@ export function createWsClientAdapter(config: WsClientAdapterConfig): WsClientAd
         for (const cb of callbacks) {
           try {
             cb(msg.changes);
-          } catch {
-            // Listener errors must not break other listeners
+          } catch (err: unknown) {
+            eventBus.emit("sync:error", {
+              type: "sync:error",
+              message: `DocumentUpdate subscriber error for ${msg.docId}`,
+              error: err,
+            });
           }
         }
       }
@@ -394,13 +401,13 @@ export function createWsClientAdapter(config: WsClientAdapterConfig): WsClientAd
 
     ws.onopen = () => {
       if (disposed) return;
-      // Send auth handshake immediately
+      authCorrelationId = crypto.randomUUID();
       sendRaw({
         type: "AuthenticateRequest",
-        correlationId: crypto.randomUUID(),
+        correlationId: authCorrelationId,
         protocolVersion: SYNC_PROTOCOL_VERSION,
         sessionToken: token,
-        systemId: systemId as SystemId,
+        systemId,
         profileType: "owner-full",
       });
     };
@@ -410,8 +417,12 @@ export function createWsClientAdapter(config: WsClientAdapterConfig): WsClientAd
       try {
         const parsed = JSON.parse(String(event.data)) as IncomingMessage;
         handleMessage(parsed);
-      } catch {
-        // Malformed message — silently ignore
+      } catch (err: unknown) {
+        eventBus.emit("sync:error", {
+          type: "sync:error",
+          message: "Failed to parse incoming WebSocket message",
+          error: err,
+        });
       }
     };
 

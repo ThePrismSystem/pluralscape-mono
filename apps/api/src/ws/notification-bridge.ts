@@ -44,7 +44,12 @@ export class NotificationBridge {
     for (const conn of set) {
       if (conn.readyState === WS_OPEN) {
         conn.send(message);
+      } else {
+        set.delete(conn);
       }
+    }
+    if (set.size === 0) {
+      this.connections.delete(accountId);
     }
   }
 }

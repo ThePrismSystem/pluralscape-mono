@@ -101,7 +101,7 @@ function createTestHarness(): TestHarness {
   const config: WsClientAdapterConfig = {
     url: "wss://test.example.com/sync",
     token: "test-session-token",
-    systemId: "sys_test123",
+    systemId: asSystemId("sys_test123"),
     eventBus,
     WebSocketImpl: MockWebSocket,
   };
@@ -155,6 +155,27 @@ describe("createWsClientAdapter", () => {
         profileType: "owner-full",
       });
       expect(sent["correlationId"]).toEqual(expect.any(String));
+    });
+
+    it("ignores AuthenticateResponse with mismatched correlationId", () => {
+      const harness = createTestHarness();
+      const connectedEvents: unknown[] = [];
+      harness.eventBus.on("ws:connected", (event) => connectedEvents.push(event));
+
+      harness.adapter.connect();
+      const mock = getLastMock();
+      mock.simulateOpen();
+
+      // Send response with wrong correlationId
+      mock.simulateMessage({
+        type: "AuthenticateResponse",
+        correlationId: "wrong-id",
+        syncSessionId: "sess_bad",
+        serverTime: Date.now(),
+      });
+
+      // Should NOT have emitted ws:connected
+      expect(connectedEvents).toHaveLength(0);
     });
 
     it("emits ws:connected after successful auth response", () => {
@@ -416,6 +437,57 @@ describe("createWsClientAdapter", () => {
       });
 
       expect(notifications).toHaveLength(0);
+    });
+  });
+
+  describe("error emission", () => {
+    it("emits sync:error when a DocumentUpdate subscriber throws", () => {
+      const harness = createTestHarness();
+      const errors: { message: string }[] = [];
+      harness.eventBus.on("sync:error", (event) => errors.push(event));
+
+      const mock = harness.connectAndAuth();
+      const docId = asSyncDocId("doc-err");
+
+      harness.adapter.subscribe(docId, () => {
+        throw new Error("subscriber kaboom");
+      });
+
+      mock.simulateMessage({
+        type: "DocumentUpdate",
+        correlationId: null,
+        docId,
+        changes: [
+          {
+            ciphertext: [],
+            nonce: [],
+            signature: [],
+            authorPublicKey: [],
+            documentId: docId,
+            seq: 1,
+          },
+        ],
+      });
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?.message).toContain("DocumentUpdate subscriber error");
+    });
+
+    it("emits sync:error on malformed WebSocket message", () => {
+      const harness = createTestHarness();
+      const errors: { message: string }[] = [];
+      harness.eventBus.on("sync:error", (event) => errors.push(event));
+
+      harness.adapter.connect();
+      const mock = getLastMock();
+      mock.simulateOpen();
+
+      // Send invalid JSON
+      const rawEvent = { data: "not-valid-json{{{" } as MessageEvent;
+      mock.onmessage?.(rawEvent);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]?.message).toContain("Failed to parse");
     });
   });
 });

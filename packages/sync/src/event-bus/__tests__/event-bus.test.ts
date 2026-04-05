@@ -85,7 +85,7 @@ describe("createEventBus", () => {
   });
 
   it("listener throwing does not break other listeners", () => {
-    const bus = createEventBus<TestEventMap>();
+    const bus = createEventBus<TestEventMap>({ onError: () => {} });
     const good = vi.fn();
 
     bus.on("test:alpha", () => {
@@ -95,5 +95,43 @@ describe("createEventBus", () => {
     bus.emit("test:alpha", { type: "test:alpha", value: 5 });
 
     expect(good).toHaveBeenCalledOnce();
+  });
+
+  it("calls onError when a listener throws", () => {
+    const onError = vi.fn();
+    const bus = createEventBus<TestEventMap>({ onError });
+
+    bus.on("test:alpha", () => {
+      throw new Error("listener boom");
+    });
+    bus.emit("test:alpha", { type: "test:alpha", value: 1 });
+
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error));
+  });
+
+  it("rethrows asynchronously when no onError provided", () => {
+    const bus = createEventBus<TestEventMap>();
+    const thrown: unknown[] = [];
+
+    // Capture the async rethrow via queueMicrotask
+    const original = globalThis.queueMicrotask;
+    globalThis.queueMicrotask = (fn) => {
+      try {
+        fn();
+      } catch (e: unknown) {
+        thrown.push(e);
+      }
+    };
+
+    bus.on("test:alpha", () => {
+      throw new Error("async boom");
+    });
+    bus.emit("test:alpha", { type: "test:alpha", value: 1 });
+
+    expect(thrown).toHaveLength(1);
+    expect(thrown[0]).toBeInstanceOf(Error);
+
+    globalThis.queueMicrotask = original;
   });
 });

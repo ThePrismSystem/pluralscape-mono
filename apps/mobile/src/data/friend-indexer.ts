@@ -1,37 +1,11 @@
-import { ENTITY_TABLE_REGISTRY, entityToRow } from "@pluralscape/sync/materializer";
+import {
+  ENTITY_TABLE_REGISTRY,
+  FRIEND_EXPORTABLE_ENTITY_TYPES,
+  entityToRow,
+} from "@pluralscape/sync/materializer";
 
 import type { DataLayerEventMap, EventBus, SyncedEntityType } from "@pluralscape/sync";
 import type { MaterializerDb } from "@pluralscape/sync/materializer";
-
-// ── Friend-exportable entity types ────────────────────────────────────
-
-/**
- * The set of entity types whose data is shared with friends.
- * Mirrors FRIEND_EXPORTABLE_ENTITY_TYPES in local-schema.ts.
- */
-const FRIEND_EXPORTABLE_ENTITY_TYPES = new Set<SyncedEntityType>([
-  "member",
-  "group",
-  "channel",
-  "message",
-  "note",
-  "poll",
-  "relationship",
-  "structure-entity-type",
-  "structure-entity",
-  "journal-entry",
-  "wiki-page",
-  "custom-front",
-  "fronting-session",
-  "board-message",
-  "acknowledgement",
-  "innerworld-entity",
-  "innerworld-region",
-  "field-definition",
-  "field-value",
-  "member-photo",
-  "fronting-comment",
-]);
 
 // ── Public types ──────────────────────────────────────────────────────
 
@@ -125,6 +99,41 @@ async function indexFriend(connectionId: string, config: FriendIndexerConfig): P
 export function createFriendIndexer(config: FriendIndexerConfig): () => void {
   const { eventBus } = config;
 
+  /** Tracks in-flight indexing per connectionId to prevent concurrent races. */
+  const inflight = new Map<string, { pending: boolean }>();
+
+  function scheduleIndex(connectionId: string): void {
+    const existing = inflight.get(connectionId);
+
+    if (existing) {
+      existing.pending = true;
+      return;
+    }
+
+    const state = { pending: false };
+    inflight.set(connectionId, state);
+
+    const run = (): Promise<void> =>
+      indexFriend(connectionId, config)
+        .catch((err: unknown) => {
+          eventBus.emit("sync:error", {
+            type: "sync:error",
+            message: `Failed to index friend data for connection ${connectionId}`,
+            error: err,
+          });
+        })
+        .then(() => {
+          if (state.pending) {
+            state.pending = false;
+            return run();
+          }
+          inflight.delete(connectionId);
+          return;
+        });
+
+    void run();
+  }
+
   const unsubNotification = eventBus.on("ws:notification", (event) => {
     const payload = event.payload;
     if (!isRecord(payload)) return;
@@ -136,13 +145,7 @@ export function createFriendIndexer(config: FriendIndexerConfig): () => void {
   });
 
   const unsubDataChanged = eventBus.on("friend:data-changed", (event) => {
-    void indexFriend(event.connectionId, config).catch((err: unknown) => {
-      eventBus.emit("sync:error", {
-        type: "sync:error",
-        message: `Failed to index friend data for connection ${event.connectionId}`,
-        error: err,
-      });
-    });
+    scheduleIndex(event.connectionId);
   });
 
   return () => {

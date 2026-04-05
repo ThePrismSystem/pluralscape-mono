@@ -1,4 +1,7 @@
-import { ENTITY_TABLE_REGISTRY } from "@pluralscape/sync/materializer";
+import {
+  ENTITY_TABLE_REGISTRY,
+  FRIEND_EXPORTABLE_ENTITY_TYPES,
+} from "@pluralscape/sync/materializer";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
@@ -25,34 +28,6 @@ export interface SearchResult {
 const SEARCHABLE_ENTITY_TYPES: readonly SyncedEntityType[] = (
   Object.keys(ENTITY_TABLE_REGISTRY) as SyncedEntityType[]
 ).filter((entityType) => ENTITY_TABLE_REGISTRY[entityType].ftsColumns.length > 0);
-
-/**
- * The set of entity types whose data is shared with friends.
- * Mirrors FRIEND_EXPORTABLE_ENTITY_TYPES in friend-indexer.ts.
- */
-const FRIEND_SEARCHABLE_ENTITY_TYPES = new Set<SyncedEntityType>([
-  "member",
-  "group",
-  "channel",
-  "message",
-  "note",
-  "poll",
-  "relationship",
-  "structure-entity-type",
-  "structure-entity",
-  "journal-entry",
-  "wiki-page",
-  "custom-front",
-  "fronting-session",
-  "board-message",
-  "acknowledgement",
-  "innerworld-entity",
-  "innerworld-region",
-  "field-definition",
-  "field-value",
-  "member-photo",
-  "fronting-comment",
-]);
 
 // ── Query builder ─────────────────────────────────────────────────────
 
@@ -134,7 +109,7 @@ export function executeSearch(
 
     if (
       (scope === "friends" || scope === "all") &&
-      FRIEND_SEARCHABLE_ENTITY_TYPES.has(entityType)
+      FRIEND_EXPORTABLE_ENTITY_TYPES.has(entityType)
     ) {
       const ftsName = `fts_friend_${tableName}`;
       const friendEntityType = `friend-${entityType}`;

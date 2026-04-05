@@ -2,6 +2,7 @@ import { createWsClientAdapter } from "@pluralscape/sync/adapters";
 
 import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
 import type { WsClientAdapter } from "@pluralscape/sync/adapters";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Constants ─────────────────────────────────────────────────────────
 
@@ -28,9 +29,8 @@ export interface WsManagerConfig {
 }
 
 export interface WsManager {
-  connect(token: string, systemId: string): void;
+  connect(token: string, systemId: SystemId): void;
   disconnect(): void;
-  getStatus(): ConnectionStatus;
   /** For useSyncExternalStore — returns current status. */
   getSnapshot(): ConnectionStatus;
   /** For useSyncExternalStore — returns an unsubscribe function. */
@@ -57,7 +57,7 @@ export function createWsManager(config: WsManagerConfig): WsManager {
   let retryCount = 0;
   let backoffTimer: ReturnType<typeof setTimeout> | null = null;
   let lastToken: string | null = null;
-  let lastSystemId: string | null = null;
+  let lastSystemId: SystemId | null = null;
 
   const listeners = new Set<() => void>();
 
@@ -124,6 +124,11 @@ export function createWsManager(config: WsManagerConfig): WsManager {
   function reconnect(): void {
     if (lastToken === null || lastSystemId === null) return;
 
+    if (adapter !== null) {
+      adapter.disconnect();
+      adapter = null;
+    }
+
     adapter = createWsClientAdapter({
       url: config.url,
       token: lastToken,
@@ -134,7 +139,7 @@ export function createWsManager(config: WsManagerConfig): WsManager {
   }
 
   return {
-    connect(token: string, systemId: string): void {
+    connect(token: string, systemId: SystemId): void {
       intentionalDisconnect = false;
       lastToken = token;
       lastSystemId = systemId;
@@ -162,10 +167,6 @@ export function createWsManager(config: WsManagerConfig): WsManager {
       }
 
       setStatus("disconnected");
-    },
-
-    getStatus(): ConnectionStatus {
-      return status;
     },
 
     getSnapshot(): ConnectionStatus {
