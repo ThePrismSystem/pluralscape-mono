@@ -18,7 +18,7 @@
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@types/bun": "^1.2.4",
-    "@types/nodemailer": "^7.0.0",
+    "@types/nodemailer": "^8.0.0",
     "eslint": "^10.0.3",
     "typescript": "^6.0.0"
   },
