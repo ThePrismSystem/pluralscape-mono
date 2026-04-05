@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { cleanup, render, screen } from "@testing-library/react";
-import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlatformContext, PlatformStorage } from "../../platform/types.js";
 import type { SyncContextValue } from "../SyncProvider.js";
+import type { SqliteDriver } from "@pluralscape/sync/adapters";
 
 // ── Mutable mock state ─────────────────────────────────────────────
 
@@ -13,7 +13,7 @@ let mockPlatformStorage: PlatformStorage = {
   driver: {
     exec: vi.fn(),
     prepare: vi.fn(),
-    transaction: vi.fn((fn: () => unknown) => fn()),
+    transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
     close: vi.fn(),
   },
 };
@@ -61,7 +61,7 @@ describe("BootstrapGate", () => {
       driver: {
         exec: vi.fn(),
         prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()),
+        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
         close: vi.fn(),
       },
     };
@@ -99,7 +99,7 @@ describe("BootstrapGate", () => {
       driver: {
         exec: vi.fn(),
         prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()),
+        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
         close: vi.fn(),
       },
     };
@@ -121,7 +121,7 @@ describe("BootstrapGate", () => {
       driver: {
         exec: vi.fn(),
         prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()),
+        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
         close: vi.fn(),
       },
     };
@@ -143,7 +143,7 @@ describe("BootstrapGate", () => {
       driver: {
         exec: vi.fn(),
         prepare: vi.fn(),
-        transaction: vi.fn((fn: () => unknown) => fn()),
+        transaction: vi.fn((fn: () => unknown) => fn()) as SqliteDriver["transaction"],
         close: vi.fn(),
       },
     };
