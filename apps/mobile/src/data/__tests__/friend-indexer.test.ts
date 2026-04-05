@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createFriendIndexer } from "../friend-indexer.js";
 
+import type { FriendExportPage, FriendIndexerConfig } from "../friend-indexer.js";
 import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
 import type { MaterializerDb } from "@pluralscape/sync/materializer";
 
@@ -21,19 +22,26 @@ function makeDb(): MaterializerDb {
   };
 }
 
-function makeFetchExport(pages: { data: unknown[]; hasMore: boolean; nextCursor?: string }[]) {
+function makeFetchExport(pages: FriendExportPage[]): FriendIndexerConfig["fetchExport"] {
   let call = 0;
-  return vi.fn().mockImplementation(() => {
+  return vi.fn<FriendIndexerConfig["fetchExport"]>().mockImplementation(() => {
     const page = pages[call] ?? { data: [], hasMore: false };
     call++;
     return Promise.resolve(page);
   });
 }
 
-function makeDecryptEntity() {
-  return vi.fn().mockImplementation((encryptedData: string) => {
-    return { id: encryptedData, name: "Test" };
-  });
+function makeDecryptEntity(): FriendIndexerConfig["decryptEntity"] {
+  return vi
+    .fn<FriendIndexerConfig["decryptEntity"]>()
+    .mockImplementation((encryptedData: string) => {
+      return { id: encryptedData, name: "Test" };
+    });
+}
+
+/** Read mock.calls from the db.execute mock. */
+function getExecuteCalls(db: MaterializerDb): [string, unknown[]][] {
+  return vi.mocked(db).execute.mock.calls;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -41,8 +49,8 @@ function makeDecryptEntity() {
 describe("createFriendIndexer", () => {
   let eventBus: EventBus<DataLayerEventMap>;
   let db: MaterializerDb;
-  let fetchExport: ReturnType<typeof vi.fn>;
-  let decryptEntity: ReturnType<typeof vi.fn>;
+  let fetchExport: FriendIndexerConfig["fetchExport"];
+  let decryptEntity: FriendIndexerConfig["decryptEntity"];
 
   beforeEach(() => {
     eventBus = makeEventBus();
@@ -117,7 +125,7 @@ describe("createFriendIndexer", () => {
 
   describe("friend:data-changed indexing", () => {
     it("fetches and indexes friend data on friend:data-changed event", async () => {
-      fetchExport = vi.fn().mockResolvedValue({
+      fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
         data: [{ id: "e-1", entityType: "member", encryptedData: "e-1", updatedAt: 1000 }],
         hasMore: false,
       });
@@ -134,7 +142,10 @@ describe("createFriendIndexer", () => {
     });
 
     it("deletes existing friend data before re-indexing (scoped by connection_id)", async () => {
-      fetchExport = vi.fn().mockResolvedValue({ data: [], hasMore: false });
+      fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
+        data: [],
+        hasMore: false,
+      });
       createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
 
       eventBus.emit("friend:data-changed", {
@@ -143,18 +154,21 @@ describe("createFriendIndexer", () => {
       });
 
       await vi.waitFor(() => {
-        const calls = (db.execute as ReturnType<typeof vi.fn>).mock.calls;
-        const deleteCalls = calls.filter(([sql]: [string]) => sql.includes("DELETE FROM"));
+        const calls = getExecuteCalls(db);
+        const deleteCalls = calls.filter((call) => call[0].includes("DELETE FROM"));
         expect(deleteCalls.length).toBeGreaterThan(0);
-        for (const [sql, params] of deleteCalls) {
-          expect(sql).toMatch(/DELETE FROM friend_\w+ WHERE connection_id = \?/);
-          expect(params).toEqual(["conn-xyz"]);
+        for (const call of deleteCalls) {
+          expect(call[0]).toMatch(/DELETE FROM friend_\w+ WHERE connection_id = \?/);
+          expect(call[1]).toEqual(["conn-xyz"]);
         }
       });
     });
 
     it("deletes from all friend-exportable tables", async () => {
-      fetchExport = vi.fn().mockResolvedValue({ data: [], hasMore: false });
+      fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
+        data: [],
+        hasMore: false,
+      });
       createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
 
       eventBus.emit("friend:data-changed", {
@@ -163,11 +177,11 @@ describe("createFriendIndexer", () => {
       });
 
       await vi.waitFor(() => {
-        const executeCalls = (db.execute as ReturnType<typeof vi.fn>).mock.calls;
+        const executeCalls = getExecuteCalls(db);
         const deletedTables = executeCalls
-          .filter(([sql]: [string]) => sql.includes("DELETE FROM"))
-          .map(([sql]: [string]) => {
-            const match = /DELETE FROM (friend_\w+)/.exec(sql);
+          .filter((call) => call[0].includes("DELETE FROM"))
+          .map((call) => {
+            const match = /DELETE FROM (friend_\w+)/.exec(call[0]);
             return match?.[1];
           });
 
@@ -183,7 +197,7 @@ describe("createFriendIndexer", () => {
 
     it("fetches all pages when hasMore is true", async () => {
       fetchExport = vi
-        .fn()
+        .fn<FriendIndexerConfig["fetchExport"]>()
         .mockResolvedValueOnce({
           data: [{ id: "e-1", entityType: "member", encryptedData: "e-1", updatedAt: 1000 }],
           hasMore: true,
@@ -209,11 +223,13 @@ describe("createFriendIndexer", () => {
     });
 
     it("decrypts each entity and inserts into the friend table", async () => {
-      fetchExport = vi.fn().mockResolvedValue({
+      fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
         data: [{ id: "e-1", entityType: "member", encryptedData: "e-1", updatedAt: 1000 }],
         hasMore: false,
       });
-      decryptEntity = vi.fn().mockReturnValue({ id: "e-1", name: "Alice" });
+      decryptEntity = vi
+        .fn<FriendIndexerConfig["decryptEntity"]>()
+        .mockReturnValue({ id: "e-1", name: "Alice" });
 
       createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
 
@@ -224,19 +240,21 @@ describe("createFriendIndexer", () => {
 
       await vi.waitFor(() => {
         expect(decryptEntity).toHaveBeenCalledWith("e-1", "member");
-        const insertCalls = (db.execute as ReturnType<typeof vi.fn>).mock.calls.filter(
-          ([sql]: [string]) => sql.includes("INSERT OR REPLACE INTO friend_members"),
+        const insertCalls = getExecuteCalls(db).filter((call) =>
+          call[0].includes("INSERT OR REPLACE INTO friend_members"),
         );
         expect(insertCalls.length).toBeGreaterThan(0);
       });
     });
 
     it("inserts connection_id as first column in every row", async () => {
-      fetchExport = vi.fn().mockResolvedValue({
+      fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
         data: [{ id: "e-1", entityType: "member", encryptedData: "e-1", updatedAt: 1000 }],
         hasMore: false,
       });
-      decryptEntity = vi.fn().mockReturnValue({ id: "e-1", name: "Alice" });
+      decryptEntity = vi
+        .fn<FriendIndexerConfig["decryptEntity"]>()
+        .mockReturnValue({ id: "e-1", name: "Alice" });
 
       createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
 
@@ -246,17 +264,21 @@ describe("createFriendIndexer", () => {
       });
 
       await vi.waitFor(() => {
-        const insertCalls = (db.execute as ReturnType<typeof vi.fn>).mock.calls.filter(
-          ([sql]: [string]) => sql.includes("INSERT OR REPLACE INTO friend_members"),
+        const insertCalls = getExecuteCalls(db).filter((call) =>
+          call[0].includes("INSERT OR REPLACE INTO friend_members"),
         );
         expect(insertCalls.length).toBeGreaterThan(0);
-        const [, params] = insertCalls[0];
+        const firstInsert = insertCalls[0];
+        if (!firstInsert) throw new Error("Expected at least one insert call");
+        const params = firstInsert[1];
         expect(params[0]).toBe("conn-99");
       });
     });
 
     it("emits friend:indexed after indexing", async () => {
-      fetchExport = vi.fn().mockResolvedValue({ data: [], hasMore: false });
+      fetchExport = vi
+        .fn<FriendIndexerConfig["fetchExport"]>()
+        .mockResolvedValue({ data: [], hasMore: false });
       const indexedListener = vi.fn();
       createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
       eventBus.on("friend:indexed", indexedListener);
@@ -275,7 +297,9 @@ describe("createFriendIndexer", () => {
     });
 
     it("emits search:index-updated with scope 'friend' after indexing", async () => {
-      fetchExport = vi.fn().mockResolvedValue({ data: [], hasMore: false });
+      fetchExport = vi
+        .fn<FriendIndexerConfig["fetchExport"]>()
+        .mockResolvedValue({ data: [], hasMore: false });
       const searchListener = vi.fn();
       createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
       eventBus.on("search:index-updated", searchListener);
@@ -294,7 +318,7 @@ describe("createFriendIndexer", () => {
     });
 
     it("skips entities with unknown entityType", async () => {
-      fetchExport = vi.fn().mockResolvedValue({
+      fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
         data: [{ id: "e-1", entityType: "unknown-type", encryptedData: "e-1", updatedAt: 1000 }],
         hasMore: false,
       });
@@ -315,7 +339,9 @@ describe("createFriendIndexer", () => {
 
   describe("cleanup", () => {
     it("unsubscribes all listeners when cleanup is called", async () => {
-      fetchExport = vi.fn().mockResolvedValue({ data: [], hasMore: false });
+      fetchExport = vi
+        .fn<FriendIndexerConfig["fetchExport"]>()
+        .mockResolvedValue({ data: [], hasMore: false });
       const cleanup = createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
       cleanup();
 
