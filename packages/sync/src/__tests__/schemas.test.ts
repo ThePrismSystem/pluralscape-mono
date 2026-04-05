@@ -15,6 +15,7 @@ import {
   asKeyGrantId,
   asLifecycleEventId,
   asMemberId,
+  asGroupMembershipKey,
   asNoteId,
   asSystemStructureEntityAssociationId,
   asSystemStructureEntityLinkId,
@@ -291,11 +292,11 @@ describe("SystemCoreDocument schema", () => {
   it("adds junction map entries with compound keys", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.groupMemberships["g1_m1"] = true;
-      d.groupMemberships["g1_m2"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m1")] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m2")] = true;
     });
-    expect(doc.groupMemberships["g1_m1"]).toBe(true);
-    expect(doc.groupMemberships["g1_m2"]).toBe(true);
+    expect(doc.groupMemberships[asGroupMembershipKey("g1_m1")]).toBe(true);
+    expect(doc.groupMemberships[asGroupMembershipKey("g1_m2")]).toBe(true);
     expect(Object.keys(doc.groupMemberships)).toHaveLength(2);
   });
 

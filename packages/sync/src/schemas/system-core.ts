@@ -5,6 +5,7 @@ import type {
   FieldValueId,
   FrontingReportId,
   GroupId,
+  GroupMembershipKey,
   InnerWorldEntityId,
   InnerWorldRegionId,
   LifecycleEventId,
@@ -414,7 +415,7 @@ export interface SystemCoreDocument {
    * Add-wins semantics: concurrent add+remove results in the junction being present.
    */
   /** Key format: "{groupId}_{memberId}" */
-  groupMemberships: Record<string, true>;
+  groupMemberships: Record<GroupMembershipKey, true>;
 
   /** Append-LWW lifecycle event map (keyed by event ID) */
   lifecycleEvents: Record<LifecycleEventId, CrdtLifecycleEvent>;

@@ -17,6 +17,7 @@ import {
   asFriendConnectionId,
   asFrontingSessionId,
   asGroupId,
+  asGroupMembershipKey,
   asInnerWorldRegionId,
   asKeyGrantId,
   asMemberId,
@@ -428,14 +429,14 @@ describe("Category 6: junction add-wins semantics", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-001"));
 
     const envA = sessionA.change((d) => {
-      d.groupMemberships["g1_m1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m1")] = true;
     });
 
     // B does not add anything — just receives A's change
     await relay.submit(envA);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionB.document.groupMemberships["g1_m1"]).toBe(true);
+    expect(sessionB.document.groupMemberships[asGroupMembershipKey("g1_m1")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -444,18 +445,18 @@ describe("Category 6: junction add-wins semantics", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-001"));
 
     const envA = sessionA.change((d) => {
-      d.groupMemberships["g1_m1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m1")] = true;
     });
     const envB = sessionB.change((d) => {
-      d.groupMemberships["g1_m2"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m2")] = true;
     });
 
     await relay.submit(envA);
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionA.document.groupMemberships["g1_m1"]).toBe(true);
-    expect(sessionA.document.groupMemberships["g1_m2"]).toBe(true);
+    expect(sessionA.document.groupMemberships[asGroupMembershipKey("g1_m1")]).toBe(true);
+    expect(sessionA.document.groupMemberships[asGroupMembershipKey("g1_m2")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 });
@@ -1089,7 +1090,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.groupMemberships["g1_mem_1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_mem_1")] = true;
     });
     await relay.submit(seedEnv);
     const _r12 = await relay.getEnvelopesSince(asSyncDocId("doc-tomb-005"), 0);
@@ -1105,7 +1106,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
 
     // Junction still present even though member is archived
     expect(sessionB.document.members[asMemberId("mem_1")]?.archived).toBe(true);
-    expect(sessionB.document.groupMemberships["g1_mem_1"]).toBe(true);
+    expect(sessionB.document.groupMemberships[asGroupMembershipKey("g1_mem_1")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -1141,7 +1142,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
       if (m) m.archived = true;
     });
     const envB = sessionB.change((d) => {
-      d.groupMemberships["g2_mem_1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g2_mem_1")] = true;
     });
 
     await relay.submit(envA);
@@ -1149,7 +1150,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.members[asMemberId("mem_1")]?.archived).toBe(true);
-    expect(sessionA.document.groupMemberships["g2_mem_1"]).toBe(true);
+    expect(sessionA.document.groupMemberships[asGroupMembershipKey("g2_mem_1")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 });

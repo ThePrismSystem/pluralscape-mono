@@ -7,6 +7,7 @@ export type {
   SystemId,
   MemberId,
   GroupId,
+  GroupMembershipKey,
   BucketId,
   ChannelId,
   MessageId,

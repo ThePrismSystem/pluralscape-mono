@@ -11,6 +11,7 @@ import type {
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
+  GroupMembershipKey,
   InnerWorldRegionId,
   JournalEntryId,
   KeyGrantId,
@@ -94,6 +95,9 @@ export function asFriendConnectionId(id: string): FriendConnectionId {
 }
 export function asFrontingCommentId(id: string): FrontingCommentId {
   return id as FrontingCommentId;
+}
+export function asGroupMembershipKey(id: string): GroupMembershipKey {
+  return id as GroupMembershipKey;
 }
 
 export function nonce(fill: number): AeadNonce {

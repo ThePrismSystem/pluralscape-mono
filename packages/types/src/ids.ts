@@ -12,6 +12,8 @@ export type Brand<T, B extends string> = T & { readonly [__brand]: B };
 export type SystemId = Brand<string, "SystemId">;
 export type MemberId = Brand<string, "MemberId">;
 export type GroupId = Brand<string, "GroupId">;
+/** Compound junction key for group memberships, format: "{groupId}_{memberId}". */
+export type GroupMembershipKey = Brand<string, "GroupMembershipKey">;
 export type BucketId = Brand<string, "BucketId">;
 export type ChannelId = Brand<string, "ChannelId">;
 export type MessageId = Brand<string, "MessageId">;
