@@ -1,16 +1,21 @@
 import { trpc } from "@pluralscape/api-client/trpc";
+import { useQuery } from "@tanstack/react-query";
+
+import { rowToFriendConnectionRow, type FriendConnectionLocalRow } from "../data/row-transforms.js";
 
 import {
   DEFAULT_LIST_LIMIT,
-  type TRPCInfiniteQuery,
+  type DataListQuery,
+  type DataQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { FriendConnectionId } from "@pluralscape/types";
 
-type FriendConnectionPage = RouterOutput["friend"]["list"];
 type FriendConnection = RouterOutput["friend"]["get"];
+type FriendConnectionPage = RouterOutput["friend"]["list"];
 
 interface FriendConnectionListOpts {
   readonly limit?: number;
@@ -19,24 +24,69 @@ interface FriendConnectionListOpts {
 }
 
 export function useFriendConnection(
-  connectionId: RouterInput["friend"]["get"]["connectionId"],
-): TRPCQuery<FriendConnection> {
-  return trpc.friend.get.useQuery({ connectionId });
+  connectionId: FriendConnectionId,
+): DataQuery<FriendConnection | FriendConnectionLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
+
+  const localQuery = useQuery({
+    queryKey: ["friend_connections", connectionId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM friend_connections WHERE id = ?", [connectionId]);
+      if (!row) throw new Error("Friend connection not found");
+      return rowToFriendConnectionRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.friend.get.useQuery({ connectionId }, { enabled: source === "remote" });
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useFriendConnectionsList(
   opts?: FriendConnectionListOpts,
-): TRPCInfiniteQuery<FriendConnectionPage> {
-  return trpc.friend.list.useInfiniteQuery(
+): DataListQuery<FriendConnectionLocalRow> | ReturnType<typeof trpc.friend.list.useInfiniteQuery> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
+
+  const localQuery = useQuery({
+    queryKey: ["friend_connections", "list", opts?.includeArchived ?? false, opts?.status ?? null],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const status = opts?.status;
+
+      let sql = "SELECT * FROM friend_connections WHERE 1=1";
+      const params: unknown[] = [];
+
+      if (status !== undefined) {
+        sql += " AND status = ?";
+        params.push(status);
+      }
+      if (!includeArchived) {
+        sql += " AND archived = 0";
+      }
+
+      return localDb.queryAll(sql, params).map(rowToFriendConnectionRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.friend.list.useInfiniteQuery(
     {
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
       status: opts?.status,
     },
     {
+      enabled: source === "remote",
       getNextPageParam: (lastPage: FriendConnectionPage) => lastPage.nextCursor,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useAcceptFriendConnection(): TRPCMutation<
