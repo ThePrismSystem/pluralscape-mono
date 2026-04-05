@@ -1,10 +1,11 @@
 ---
 # ps-gfs3
 title: "Hook refactoring: read path from local SQLite"
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-05T05:51:13Z
-updated_at: 2026-04-05T05:51:13Z
+updated_at: 2026-04-05T09:53:12Z
 parent: ps-vegi
 ---
 
