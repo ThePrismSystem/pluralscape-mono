@@ -78,3 +78,7 @@ export function useDataLayer(): DataLayerContextValue {
   }
   return ctx;
 }
+
+export function useDataLayerOptional(): DataLayerContextValue | null {
+  return useContext(Ctx);
+}

@@ -1,0 +1,26 @@
+import { useDataLayerOptional } from "../data/DataLayerProvider.js";
+import { usePlatform } from "../platform/PlatformProvider.js";
+import { useSync } from "../sync/SyncProvider.js";
+
+import type { LocalDatabase } from "../data/local-database.js";
+
+export type QuerySource = "local" | "remote";
+
+/**
+ * Returns the read path for data hooks: "local" when SQLite is initialized
+ * and sync has bootstrapped, "remote" otherwise (tRPC).
+ */
+export function useQuerySource(): QuerySource {
+  const platform = usePlatform();
+  const sync = useSync();
+  return platform.storage.backend === "sqlite" && sync.isBootstrapped ? "local" : "remote";
+}
+
+/**
+ * Returns the local SQLite database when the DataLayer context is available,
+ * null otherwise (non-sqlite platforms or before provider mounts).
+ */
+export function useLocalDb(): LocalDatabase | null {
+  const ctx = useDataLayerOptional();
+  return ctx?.localDb ?? null;
+}
