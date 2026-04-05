@@ -18,7 +18,7 @@ import { CryptoProvider } from "../src/providers/crypto-provider.js";
 import { RestClientProvider } from "../src/providers/rest-client-provider.js";
 import { SystemProvider } from "../src/providers/system-provider.js";
 import { TRPCProvider } from "../src/providers/trpc-provider.js";
-import { SyncProvider } from "../src/sync/index.js";
+import { BootstrapGate, SyncProvider } from "../src/sync/index.js";
 
 import type { TokenStore } from "../src/auth/index.js";
 import type { PlatformContext } from "../src/platform/index.js";
@@ -238,9 +238,11 @@ export default function RootLayout(): React.JSX.Element {
                   <DataLayerProvider>
                     <ConnectionProvider manager={connectionManagerRef.current}>
                       <SyncProvider>
-                        <AuthGate>
-                          <Slot />
-                        </AuthGate>
+                        <BootstrapGate>
+                          <AuthGate>
+                            <Slot />
+                          </AuthGate>
+                        </BootstrapGate>
                       </SyncProvider>
                     </ConnectionProvider>
                   </DataLayerProvider>

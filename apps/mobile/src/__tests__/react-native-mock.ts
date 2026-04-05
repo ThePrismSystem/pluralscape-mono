@@ -15,4 +15,13 @@ export function NativeEventEmitter(): void {
 export const AppState = {
   addEventListener: (): { remove: () => undefined } => ({ remove: () => undefined }),
 };
+
+// UI component stubs for happy-dom tests
+export const StyleSheet = {
+  create: <T extends Record<string, unknown>>(styles: T): T => styles,
+};
+export const View = "View";
+export const Text = "Text";
+export const ActivityIndicator = "ActivityIndicator";
+
 export default {};
