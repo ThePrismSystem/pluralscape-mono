@@ -220,7 +220,8 @@ describe("useFrontingSessionsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     expect(pages).toHaveLength(1);
     expect(pages[0]?.data).toHaveLength(2);
     expect(pages[0]?.data[0]?.comment).toBe("Session fs-1");
@@ -256,7 +257,8 @@ describe("useActiveFronters", () => {
       entityMemberMap: { "m-1": ["fs-1"] },
     });
 
-    const { result } = renderHookWithProviders(() => useActiveFronters());
+    const hook = (): ReturnType<typeof useActiveFronters> => useActiveFronters();
+    const { result } = renderHookWithProviders(hook);
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -268,7 +270,8 @@ describe("useActiveFronters", () => {
   });
 
   it("does not fetch when masterKey is null", () => {
-    const { result } = renderHookWithProviders(() => useActiveFronters(), { masterKey: null });
+    const hook = (): ReturnType<typeof useActiveFronters> => useActiveFronters();
+    const { result } = renderHookWithProviders(hook, { masterKey: null });
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
   });
@@ -280,7 +283,8 @@ describe("useActiveFronters", () => {
       isCofronting: false,
       entityMemberMap: {},
     });
-    const { result, rerender } = renderHookWithProviders(() => useActiveFronters());
+    const hook = (): ReturnType<typeof useActiveFronters> => useActiveFronters();
+    const { result, rerender } = renderHookWithProviders(hook);
 
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
@@ -288,6 +292,120 @@ describe("useActiveFronters", () => {
     const ref1 = result.current.data;
     rerender();
     expect(result.current.data).toBe(ref1);
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_SESSION_ROW: Record<string, unknown> = {
+  id: "fs-local-1",
+  system_id: TEST_SYSTEM_ID,
+  member_id: "m-1",
+  start_time: 1_700_000_000_000,
+  end_time: null,
+  comment: "Local session",
+  custom_front_id: null,
+  structure_entity_id: null,
+  positionality: "close",
+  outtrigger: null,
+  outtrigger_sentiment: null,
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useFrontingSession (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_SESSION_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useFrontingSession("fs-local-1" as FrontingSessionId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("fronting_sessions"), [
+      "fs-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "fs-local-1",
+      memberId: "m-1",
+      comment: "Local session",
+      positionality: "close",
+      endTime: null,
+      archived: false,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_SESSION_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useFrontingSession("fs-local-1" as FrontingSessionId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.comment).toBe("Local session");
+  });
+});
+
+describe("useFrontingSessionsList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_SESSION_ROW, id: "fs-local-2", comment: "Second session" };
+    const localDb = createMockLocalDb([LOCAL_SESSION_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useFrontingSessionsList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("fronting_sessions"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ comment: "Local session" });
+    expect(items[1]).toMatchObject({ comment: "Second session" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_SESSION_ROW]);
+    const { result } = renderHookWithProviders(() => useFrontingSessionsList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });
 

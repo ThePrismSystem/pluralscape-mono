@@ -205,13 +205,14 @@ describe("useStructureEntityTypesList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
-    const [firstPage] = pages;
-    const [item0, item1] = firstPage?.data ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
+    const firstPage = pages[0];
+    const items = firstPage && "data" in firstPage ? firstPage.data : [];
     expect(pages).toHaveLength(1);
-    expect(firstPage?.data).toHaveLength(2);
-    expect(item0?.name).toBe("Type stet_1");
-    expect(item1?.name).toBe("Type stet_2");
+    expect(items).toHaveLength(2);
+    expect(items[0]?.name).toBe("Type stet_1");
+    expect(items[1]?.name).toBe("Type stet_2");
   });
 
   it("does not fetch when masterKey is null", () => {

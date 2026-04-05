@@ -1,17 +1,20 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptGroup } from "@pluralscape/data/transforms/group";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToGroup } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -29,7 +32,9 @@ interface GroupListOpts extends SystemIdOverride {
   readonly includeArchived?: boolean;
 }
 
-export function useGroup(groupId: GroupId, opts?: SystemIdOverride): TRPCQuery<GroupDecrypted> {
+export function useGroup(groupId: GroupId, opts?: SystemIdOverride): DataQuery<GroupDecrypted> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -42,16 +47,31 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): TRPCQuery<G
     [masterKey],
   );
 
-  return trpc.group.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["groups", groupId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM groups WHERE id = ?", [groupId]);
+      if (!row) throw new Error("Group not found");
+      return rowToGroup(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.group.get.useQuery(
     { systemId, groupId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectGroup,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage> {
+export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypted> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -71,18 +91,33 @@ export function useGroupsList(opts?: GroupListOpts): TRPCInfiniteQuery<GroupPage
     [masterKey],
   );
 
-  return trpc.group.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["groups", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM groups WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM groups WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToGroup);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.group.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: GroupRawPage) => lastPage.nextCursor,
       select: selectGroupsList,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateGroup(): TRPCMutation<

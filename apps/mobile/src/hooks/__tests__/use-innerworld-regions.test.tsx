@@ -227,7 +227,8 @@ describe("useInnerWorldRegionsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const listData = result.current.data;
+    const pages = listData && "pages" in listData ? listData.pages : [];
     const [firstPage] = pages;
     const [item0, item1] = firstPage?.data ?? [];
     expect(pages).toHaveLength(1);
@@ -343,5 +344,117 @@ describe("useDeleteInnerWorldRegion", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_REGION_ROW: Record<string, unknown> = {
+  id: "r-local-1",
+  system_id: TEST_SYSTEM_ID,
+  name: "Local Region",
+  description: "From SQLite",
+  parent_region_id: null,
+  visual:
+    '{"color":null,"icon":null,"size":null,"opacity":null,"imageSource":null,"externalUrl":null}',
+  boundary_data: '[{"x":0,"y":0}]',
+  access_type: "open",
+  gatekeeper_member_ids: "[]",
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useInnerWorldRegion (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_REGION_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useInnerWorldRegion("r-local-1" as InnerWorldRegionId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("innerworld_regions"), [
+      "r-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "r-local-1",
+      name: "Local Region",
+      description: "From SQLite",
+      accessType: "open",
+      archived: false,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_REGION_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useInnerWorldRegion("r-local-1" as InnerWorldRegionId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toMatchObject({ id: "r-local-1" });
+  });
+});
+
+describe("useInnerWorldRegionsList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_REGION_ROW, id: "r-local-2", name: "Second Region" };
+    const localDb = createMockLocalDb([LOCAL_REGION_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useInnerWorldRegionsList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("innerworld_regions"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ name: "Local Region" });
+    expect(items[1]).toMatchObject({ name: "Second Region" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_REGION_ROW]);
+    const { result } = renderHookWithProviders(() => useInnerWorldRegionsList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });

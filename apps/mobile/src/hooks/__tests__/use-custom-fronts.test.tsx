@@ -180,11 +180,13 @@ describe("useCustomFrontsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     expect(pages).toHaveLength(1);
-    expect(pages[0]?.data).toHaveLength(2);
-    expect(pages[0]?.data[0]?.name).toBe("Front cf-1");
-    expect(pages[0]?.data[1]?.name).toBe("Front cf-2");
+    const items = pages[0] && "data" in pages[0] ? pages[0].data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]?.name).toBe("Front cf-1");
+    expect(items[1]?.name).toBe("Front cf-2");
   });
 
   it("does not fetch when masterKey is null", () => {
@@ -207,6 +209,46 @@ describe("useCustomFrontsList", () => {
     const ref1 = result.current.data;
     rerender();
     expect(result.current.data).toBe(ref1);
+  });
+
+  it("local query excludes archived when includeArchived is false", () => {
+    const queryAllMock = vi.fn().mockReturnValue([]);
+    const localDb = {
+      initialize: vi.fn(),
+      queryOne: vi.fn(),
+      queryAll: queryAllMock,
+      execute: vi.fn(),
+      transaction: vi.fn((fn: () => unknown) => fn()),
+      close: vi.fn(),
+    };
+    renderHookWithProviders(() => useCustomFrontsList(), {
+      querySource: "local",
+      localDb: localDb as never,
+    });
+    expect(queryAllMock).toHaveBeenCalledWith(
+      expect.stringContaining("AND archived = 0"),
+      expect.any(Array),
+    );
+  });
+
+  it("local query includes archived when includeArchived is true", () => {
+    const queryAllMock = vi.fn().mockReturnValue([]);
+    const localDb = {
+      initialize: vi.fn(),
+      queryOne: vi.fn(),
+      queryAll: queryAllMock,
+      execute: vi.fn(),
+      transaction: vi.fn((fn: () => unknown) => fn()),
+      close: vi.fn(),
+    };
+    renderHookWithProviders(() => useCustomFrontsList({ includeArchived: true }), {
+      querySource: "local",
+      localDb: localDb as never,
+    });
+    expect(queryAllMock).toHaveBeenCalledWith(
+      expect.not.stringContaining("AND archived = 0"),
+      expect.any(Array),
+    );
   });
 });
 

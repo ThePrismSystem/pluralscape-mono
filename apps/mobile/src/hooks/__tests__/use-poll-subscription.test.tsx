@@ -98,4 +98,14 @@ describe("usePollSubscription", () => {
     expect(mockUtils.poll.results.invalidate).not.toHaveBeenCalled();
     expect(mockUtils.poll.listVotes.invalidate).not.toHaveBeenCalled();
   });
+
+  it("is disabled in local source mode", () => {
+    renderHookWithProviders(
+      () => {
+        usePollSubscription();
+      },
+      { querySource: "local" },
+    );
+    expect(lastSubscriptionOpts["enabled"]).toBe(false);
+  });
 });

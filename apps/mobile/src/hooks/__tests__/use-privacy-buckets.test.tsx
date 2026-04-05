@@ -91,9 +91,9 @@ describe("usePrivacyBucket", () => {
 });
 
 describe("usePrivacyBucketsList", () => {
-  it("does not require masterKey (no enabled guard)", () => {
-    renderHookWithProviders(() => usePrivacyBucketsList());
-    expect(lastListOpts["enabled"]).toBeUndefined();
+  it("is enabled in remote mode without requiring a masterKey", () => {
+    renderHookWithProviders(() => usePrivacyBucketsList(), { querySource: "remote" });
+    expect(lastListOpts["enabled"]).toBe(true);
   });
 
   it("passes getNextPageParam", () => {

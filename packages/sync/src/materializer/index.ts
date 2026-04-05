@@ -40,7 +40,9 @@ const DOCUMENT_TYPES: SyncDocumentType[] = [
   "fronting",
   "chat",
   "journal",
+  "note",
   "privacy-config",
+  "bucket",
 ];
 for (const docType of DOCUMENT_TYPES) {
   registerMaterializer(createMaterializer(docType));

@@ -91,4 +91,14 @@ describe("useMessageSubscription", () => {
     });
     expect(mockUtils.message.get.invalidate).not.toHaveBeenCalled();
   });
+
+  it("is disabled in local source mode", () => {
+    renderHookWithProviders(
+      () => {
+        useMessageSubscription(CHANNEL_ID);
+      },
+      { querySource: "local" },
+    );
+    expect(lastSubscriptionOpts["enabled"]).toBe(false);
+  });
 });

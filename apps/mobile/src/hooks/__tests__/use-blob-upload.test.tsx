@@ -25,8 +25,10 @@ const mockUtils = {
 const mockFetch = vi.fn(() => Promise.resolve(new Response(null, { status: 200 })));
 vi.stubGlobal("fetch", mockFetch);
 
-vi.mock("@pluralscape/crypto", () => {
+vi.mock("@pluralscape/crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/crypto")>();
   return {
+    ...actual,
     getSodium: () => ({
       genericHash: (_len: number, data: Uint8Array) => {
         // Deterministic fake: return first 32 bytes zero-padded

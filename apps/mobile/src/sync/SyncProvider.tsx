@@ -1,45 +1,59 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createBucketKeyCache } from "@pluralscape/crypto";
+import { DocumentKeyResolver, SyncEngine } from "@pluralscape/sync";
+import { SqliteStorageAdapter } from "@pluralscape/sync/adapters";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "../auth/index.js";
+import { getWsUrl } from "../config.js";
 import { useConnection } from "../connection/index.js";
+import { createWsManager } from "../connection/ws-manager.js";
 import { useDataLayer } from "../data/DataLayerProvider.js";
 import { usePlatform } from "../platform/index.js";
 
-import type { SyncEngine } from "@pluralscape/sync";
+import { SyncCtx } from "./sync-context.js";
+
+import type { SyncContextValue } from "./sync-context.js";
+import type { WsManager } from "../connection/ws-manager.js";
+import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
+import type { DataLayerEventMap, EventBus, ReplicationProfile } from "@pluralscape/sync";
+import type { SqliteDriver } from "@pluralscape/sync/adapters";
+import type { SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
-export interface SyncContextValue {
-  readonly engine: SyncEngine | null;
-  readonly isBootstrapped: boolean;
+export type { SyncContextValue, SyncProgress } from "./sync-context.js";
+export { SyncCtx, useSync } from "./sync-context.js";
+
+/** Maximum number of bootstrap attempts before falling back to remote. */
+const MAX_BOOTSTRAP_ATTEMPTS = 3;
+
+/** Extracted config when all prerequisites for engine creation are met. */
+interface EngineReadyConfig {
+  readonly systemId: SystemId;
+  readonly sodium: SodiumAdapter;
+  readonly eventBus: EventBus<DataLayerEventMap>;
+  readonly sessionToken: string;
+  readonly masterKey: KdfMasterKey;
+  readonly signingKeys: SignKeypair;
+  readonly sqliteDriver: SqliteDriver;
 }
 
-const Ctx = createContext<SyncContextValue | null>(null);
+const Ctx = SyncCtx;
 
 /**
  * Wires the SyncEngine to the event bus and upstream providers.
  *
- * Currently creates no engine — the required adapters (SyncNetworkAdapter,
- * SyncStorageAdapter, DocumentKeyResolver) are not yet instantiated in the
- * mobile provider tree. Once they are, the engine will be constructed here
- * when the user reaches the "unlocked" auth state.
+ * Creates the full sync pipeline when:
+ * 1. Auth state reaches "unlocked" (session with master key available)
+ * 2. Platform storage backend is "sqlite" (full device)
  *
- * What IS wired today:
- * - Auth state detection (unlocked = ready to sync)
- * - Event bus reference from DataLayerProvider
- * - SodiumAdapter from PlatformProvider
- * - Connection status awareness
- * - SystemId extraction from auth credentials
- * - Cleanup on auth state transitions (logout/lock)
+ * Constructs: SqliteStorageAdapter, DocumentKeyResolver (with BucketKeyCache),
+ * WsManager (WebSocket network adapter), and SyncEngine.
  *
- * TODO: To complete the sync pipeline, the following must be provided:
- * 1. SyncNetworkAdapter — wrap the WsClientAdapter from ws-manager or expose
- *    it via ConnectionProvider so the SyncEngine can issue protocol requests
- * 2. SyncStorageAdapter — instantiate SqliteStorageAdapter with the platform
- *    sqlite driver (or use platform.storage.storageAdapter for IndexedDB)
- * 3. DocumentKeyResolver — requires a BucketKeyCache instance, which needs
- *    bucket key grant fetching/caching infrastructure
- * 4. ReplicationProfile — determine profile type from device capabilities
- *    and user preferences (owner-full vs owner-lite)
+ * Bootstraps sync when the SSE connection reports "connected", then exposes
+ * engine and bootstrap state via context. Retries up to MAX_BOOTSTRAP_ATTEMPTS
+ * times on failure before falling back to remote-only mode.
+ *
+ * Disposes all resources on auth state transitions (lock/logout) or unmount.
  */
 export function SyncProvider({ children }: { readonly children: ReactNode }): React.JSX.Element {
   const auth = useAuth();
@@ -47,88 +61,203 @@ export function SyncProvider({ children }: { readonly children: ReactNode }): Re
   const platform = usePlatform();
   const connection = useConnection();
 
-  const engineRef = useRef<SyncEngine | null>(null);
+  const [engine, setEngine] = useState<SyncEngine | null>(null);
   const [isBootstrapped, setIsBootstrapped] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState<Error | null>(null);
+  const [bootstrapAttempts, setBootstrapAttempts] = useState(0);
+  const [fallbackToRemote, setFallbackToRemote] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
+
+  // Refs for resources that need cleanup but don't drive renders
+  const wsManagerRef = useRef<WsManager | null>(null);
+  const keyResolverRef = useRef<DocumentKeyResolver | null>(null);
+  const bucketKeyCacheRef = useRef<BucketKeyCache | null>(null);
+
+  const retryBootstrap = useCallback(() => {
+    setBootstrapError(null);
+    setRetryNonce((n) => n + 1);
+  }, []);
 
   // Derive readiness from auth state — sync requires an unlocked session
   const isUnlocked = auth.snapshot.state === "unlocked";
   const systemId = auth.snapshot.credentials?.systemId ?? null;
   const sodium = platform.crypto;
-
-  // Track whether connection is usable for sync bootstrap
   const isConnected = connection.status === "connected";
 
-  // Memoize the available config to avoid spurious effect re-runs
-  const availableConfig = useMemo(
-    () => (isUnlocked && systemId !== null ? { systemId, sodium, eventBus, isConnected } : null),
-    [isUnlocked, systemId, sodium, eventBus, isConnected],
-  );
+  // Extract stable primitives for the memo — avoids re-firing the effect
+  // when hook wrappers return fresh container objects on each render.
+  const sessionToken =
+    auth.snapshot.state === "unlocked" ? auth.snapshot.credentials.sessionToken : null;
+  const masterKey = auth.snapshot.state === "unlocked" ? auth.snapshot.session.masterKey : null;
+  const signingKeys =
+    auth.snapshot.state === "unlocked" ? auth.snapshot.session.identityKeys.sign : null;
+  const sqliteDriver = platform.storage.backend === "sqlite" ? platform.storage.driver : null;
 
+  // Memoize engine creation config — excludes isConnected to avoid tearing
+  // down and re-creating the engine on every connection status change.
+  const engineConfig = useMemo<EngineReadyConfig | null>(() => {
+    if (
+      !isUnlocked ||
+      systemId === null ||
+      sessionToken === null ||
+      masterKey === null ||
+      signingKeys === null ||
+      sqliteDriver === null
+    ) {
+      return null;
+    }
+
+    return {
+      systemId,
+      sodium,
+      eventBus,
+      sessionToken,
+      masterKey,
+      signingKeys,
+      sqliteDriver,
+    };
+    // storageBackend intentionally excluded: sqliteDriver is null on non-sqlite
+    // platforms, so the null check above already gates on backend type.
+  }, [isUnlocked, systemId, sodium, eventBus, sessionToken, masterKey, signingKeys, sqliteDriver]);
+
+  // Engine lifecycle effect — creates or tears down the sync pipeline.
+  // Uses a ref-based cleanup strategy so state updates in the effect body
+  // don't cause the memo/effect to re-evaluate spuriously.
   useEffect(() => {
-    if (availableConfig === null) {
-      // Auth not ready — tear down any existing engine
-      if (engineRef.current !== null) {
-        engineRef.current.dispose();
-        engineRef.current = null;
-        setIsBootstrapped(false);
+    if (engineConfig === null) {
+      // Auth not ready or wrong platform — tear down any existing resources
+      setEngine((prev) => {
+        prev?.dispose();
+        return null;
+      });
+      if (keyResolverRef.current !== null) {
+        keyResolverRef.current.dispose();
+        keyResolverRef.current = null;
       }
+      if (bucketKeyCacheRef.current !== null) {
+        bucketKeyCacheRef.current.clearAll();
+        bucketKeyCacheRef.current = null;
+      }
+      if (wsManagerRef.current !== null) {
+        wsManagerRef.current.disconnect();
+        wsManagerRef.current = null;
+      }
+      setIsBootstrapped(false);
       return;
     }
 
-    // TODO: Create SyncEngine once adapters are available:
-    //
-    // const storageAdapter = new SqliteStorageAdapter(sqliteDriver);
-    // const keyResolver = DocumentKeyResolver.create({
-    //   masterKey: auth.snapshot.session.masterKey,
-    //   signingKeys: auth.snapshot.session.identityKeys.sign,
-    //   bucketKeyCache,
-    //   sodium: availableConfig.sodium,
-    // });
-    // const networkAdapter = /* WsClientAdapter from connection layer */;
-    // const profile: ReplicationProfile = { profileType: "owner-full" };
-    //
-    // const engine = new SyncEngine({
-    //   networkAdapter,
-    //   storageAdapter,
-    //   keyResolver,
-    //   sodium: availableConfig.sodium,
-    //   profile,
-    //   systemId: availableConfig.systemId,
-    //   onError: (message, error) => console.error(`[SyncEngine] ${message}`, error),
-    //   eventBus: availableConfig.eventBus,
-    // });
-    //
-    // engineRef.current = engine;
-    //
-    // if (availableConfig.isConnected) {
-    //   engine.bootstrap().then(() => setIsBootstrapped(true));
-    // }
+    // Create sync pipeline resources
+    const bucketKeyCache = createBucketKeyCache();
+    bucketKeyCacheRef.current = bucketKeyCache;
+
+    const storageAdapter = new SqliteStorageAdapter(engineConfig.sqliteDriver);
+
+    const keyResolver = DocumentKeyResolver.create({
+      masterKey: engineConfig.masterKey,
+      signingKeys: engineConfig.signingKeys,
+      bucketKeyCache,
+      sodium: engineConfig.sodium,
+    });
+    keyResolverRef.current = keyResolver;
+
+    const wsManager = createWsManager({
+      url: getWsUrl(),
+      eventBus: engineConfig.eventBus,
+    });
+    wsManagerRef.current = wsManager;
+    wsManager.connect(engineConfig.sessionToken, engineConfig.systemId);
+
+    const networkAdapter = wsManager.getAdapter();
+    if (networkAdapter === null) {
+      // Should not happen since connect() sets it synchronously, but guard
+      return;
+    }
+
+    const profile: ReplicationProfile = { profileType: "owner-full" };
+
+    // Create SyncEngine — errors are emitted via the event bus
+    const bus = engineConfig.eventBus;
+    const newEngine = new SyncEngine({
+      networkAdapter,
+      storageAdapter,
+      keyResolver,
+      sodium: engineConfig.sodium,
+      profile,
+      systemId: engineConfig.systemId,
+      onError: (message, error) => {
+        bus.emit("sync:error", { type: "sync:error", message, error });
+      },
+      eventBus: bus,
+    });
+    setEngine(newEngine);
 
     return () => {
-      if (engineRef.current !== null) {
-        engineRef.current.dispose();
-        engineRef.current = null;
-        setIsBootstrapped(false);
-      }
+      newEngine.dispose();
+      setEngine(null);
+      keyResolver.dispose();
+      keyResolverRef.current = null;
+      bucketKeyCache.clearAll();
+      bucketKeyCacheRef.current = null;
+      wsManager.disconnect();
+      wsManagerRef.current = null;
+      setIsBootstrapped(false);
     };
-  }, [availableConfig]);
+  }, [engineConfig]);
+
+  // Bootstrap effect — runs when connection becomes available after engine creation.
+  // Retries are triggered via retryNonce. Falls back to remote after MAX_BOOTSTRAP_ATTEMPTS.
+  // Uses a cancelled flag to guard against React dev-mode double-invocation.
+  useEffect(() => {
+    if (engine === null || !isConnected || isBootstrapped || fallbackToRemote) {
+      return;
+    }
+
+    let cancelled = false;
+    const bus = eventBus;
+    engine
+      .bootstrap()
+      .then(() => {
+        if (!cancelled) {
+          setIsBootstrapped(true);
+          setBootstrapError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          bus.emit("sync:error", {
+            type: "sync:error",
+            message: "Bootstrap failed",
+            error,
+          });
+          setBootstrapError(error);
+          setBootstrapAttempts((prev) => {
+            const next = prev + 1;
+            if (next >= MAX_BOOTSTRAP_ATTEMPTS) {
+              setFallbackToRemote(true);
+            }
+            return next;
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [engine, isConnected, isBootstrapped, fallbackToRemote, eventBus, retryNonce]);
 
   const value = useMemo<SyncContextValue>(
     () => ({
-      engine: engineRef.current,
+      engine,
       isBootstrapped,
+      progress: null,
+      bootstrapError,
+      bootstrapAttempts,
+      retryBootstrap,
+      fallbackToRemote,
     }),
-    // engineRef.current changes are captured via isBootstrapped state updates
-    [isBootstrapped],
+    [engine, isBootstrapped, bootstrapError, bootstrapAttempts, retryBootstrap, fallbackToRemote],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
-
-export function useSync(): SyncContextValue {
-  const ctx = useContext(Ctx);
-  if (ctx === null) {
-    throw new Error("useSync must be used within SyncProvider");
-  }
-  return ctx;
 }

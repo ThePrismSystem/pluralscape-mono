@@ -78,9 +78,9 @@ describe("useFriendConnection", () => {
 });
 
 describe("useFriendConnectionsList", () => {
-  it("does not require masterKey (no enabled guard)", () => {
-    renderHookWithProviders(() => useFriendConnectionsList());
-    expect(lastListOpts["enabled"]).toBeUndefined();
+  it("is enabled in remote mode without requiring a masterKey", () => {
+    renderHookWithProviders(() => useFriendConnectionsList(), { querySource: "remote" });
+    expect(lastListOpts["enabled"]).toBe(true);
   });
 
   it("passes getNextPageParam", () => {

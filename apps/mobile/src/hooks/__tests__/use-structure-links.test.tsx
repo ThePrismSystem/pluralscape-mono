@@ -77,9 +77,9 @@ beforeEach(() => {
 // ── Query tests ─────────────────────────────────────────────────────
 
 describe("useStructureLinksList", () => {
-  it("does not require masterKey (no enabled guard)", () => {
+  it("does not require masterKey (enabled in remote mode)", () => {
     renderHookWithProviders(() => useStructureLinksList());
-    expect(lastListOpts["enabled"]).toBeUndefined();
+    expect(lastListOpts["enabled"]).toBe(true);
   });
 
   it("passes getNextPageParam", () => {

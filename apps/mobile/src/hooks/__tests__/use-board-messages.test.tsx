@@ -225,7 +225,8 @@ describe("useBoardMessagesList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     const [firstPage] = pages;
     const [item0, item1] = firstPage?.data ?? [];
     expect(pages).toHaveLength(1);
@@ -391,5 +392,112 @@ describe("useReorderBoardMessages", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_BOARD_MESSAGE_ROW: Record<string, unknown> = {
+  id: "bm-local-1",
+  system_id: TEST_SYSTEM_ID,
+  sender_id: "m-1",
+  content: "Board message content",
+  pinned: 0,
+  sort_order: 0,
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useBoardMessage (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useBoardMessage("bm-local-1" as BoardMessageId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("own_board_messages"), [
+      "bm-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "bm-local-1",
+      content: "Board message content",
+      pinned: false,
+      archived: false,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useBoardMessage("bm-local-1" as BoardMessageId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.content).toBe("Board message content");
+  });
+});
+
+describe("useBoardMessagesList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_BOARD_MESSAGE_ROW, id: "bm-local-2", content: "Second board msg" };
+    const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useBoardMessagesList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("own_board_messages"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ content: "Board message content" });
+    expect(items[1]).toMatchObject({ content: "Second board msg" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_BOARD_MESSAGE_ROW]);
+    const { result } = renderHookWithProviders(() => useBoardMessagesList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });

@@ -1,17 +1,20 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptCustomFront } from "@pluralscape/data/transforms/custom-front";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToCustomFront } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -20,6 +23,7 @@ import type {
 } from "@pluralscape/data/transforms/custom-front";
 import type { Archived, CustomFront, CustomFrontId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type CustomFrontPage = {
   readonly data: (CustomFront | Archived<CustomFront>)[];
   readonly nextCursor: string | null;
@@ -27,12 +31,15 @@ type CustomFrontPage = {
 
 interface CustomFrontListOpts extends SystemIdOverride {
   readonly limit?: number;
+  readonly includeArchived?: boolean;
 }
 
 export function useCustomFront(
   customFrontId: CustomFrontId,
   opts?: SystemIdOverride,
-): TRPCQuery<CustomFront | Archived<CustomFront>> {
+): DataQuery<CustomFront | Archived<CustomFront>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -45,18 +52,33 @@ export function useCustomFront(
     [masterKey],
   );
 
-  return trpc.customFront.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["custom_fronts", customFrontId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM custom_fronts WHERE id = ?", [customFrontId]);
+      if (!row) throw new Error("Custom front not found");
+      return rowToCustomFront(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.customFront.get.useQuery(
     { systemId, customFrontId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectCustomFront,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCustomFrontsList(
   opts?: CustomFrontListOpts,
-): TRPCInfiniteQuery<CustomFrontPage> {
+): DataListQuery<CustomFront | Archived<CustomFront>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -76,17 +98,33 @@ export function useCustomFrontsList(
     [masterKey],
   );
 
-  return trpc.customFront.list.useInfiniteQuery(
+  const includeArchived = opts?.includeArchived ?? false;
+
+  const localQuery = useQuery({
+    queryKey: ["custom_fronts", "list", systemId, includeArchived],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const sql = includeArchived
+        ? "SELECT * FROM custom_fronts WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM custom_fronts WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToCustomFront);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.customFront.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: CustomFrontRawPage) => lastPage.nextCursor,
       select: selectCustomFrontsList,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateCustomFront(): TRPCMutation<

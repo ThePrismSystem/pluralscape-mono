@@ -1,17 +1,22 @@
 import { trpc } from "@pluralscape/api-client/trpc";
+import { useQuery } from "@tanstack/react-query";
 
+import { rowToStructureEntityAssociation } from "../data/row-transforms.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { SystemStructureEntityAssociation } from "@pluralscape/types";
 
 type AssociationPage = RouterOutput["structure"]["association"]["list"];
+type AssociationItem = AssociationPage["data"][number];
 
 interface StructureAssociationListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -19,19 +24,38 @@ interface StructureAssociationListOpts extends SystemIdOverride {
 
 export function useStructureAssociationsList(
   opts?: StructureAssociationListOpts,
-): TRPCInfiniteQuery<AssociationPage> {
+): DataListQuery<SystemStructureEntityAssociation | AssociationItem> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
 
-  return trpc.structure.association.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["structure_entity_associations", "list", systemId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      return localDb
+        .queryAll(
+          "SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC",
+          [systemId],
+        )
+        .map(rowToStructureEntityAssociation);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.structure.association.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
     },
     {
+      enabled: source === "remote",
       getNextPageParam: (lastPage: AssociationPage) => lastPage.nextCursor,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateStructureAssociation(): TRPCMutation<

@@ -1,17 +1,20 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptChannel, decryptChannelPage } from "@pluralscape/data/transforms/channel";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToChannel } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -20,6 +23,7 @@ import type {
 } from "@pluralscape/data/transforms/channel";
 import type { Archived, Channel, ChannelId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type ChannelPage = {
   readonly data: (Channel | Archived<Channel>)[];
   readonly nextCursor: string | null;
@@ -33,7 +37,9 @@ interface ChannelListOpts extends SystemIdOverride {
 export function useChannel(
   channelId: ChannelId,
   opts?: SystemIdOverride,
-): TRPCQuery<Channel | Archived<Channel>> {
+): DataQuery<Channel | Archived<Channel>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -46,16 +52,33 @@ export function useChannel(
     [masterKey],
   );
 
-  return trpc.channel.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["channels", channelId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM own_channels WHERE id = ?", [channelId]);
+      if (!row) throw new Error("Channel not found");
+      return rowToChannel(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.channel.get.useQuery(
     { systemId, channelId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectChannel,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useChannelsList(opts?: ChannelListOpts): TRPCInfiniteQuery<ChannelPage> {
+export function useChannelsList(
+  opts?: ChannelListOpts,
+): DataListQuery<Channel | Archived<Channel>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -72,18 +95,33 @@ export function useChannelsList(opts?: ChannelListOpts): TRPCInfiniteQuery<Chann
     [masterKey],
   );
 
-  return trpc.channel.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["channels", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM own_channels WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM own_channels WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToChannel);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.channel.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: ChannelRawPage) => lastPage.nextCursor,
       select: selectChannelPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateChannel(): TRPCMutation<

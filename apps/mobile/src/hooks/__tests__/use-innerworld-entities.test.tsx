@@ -17,6 +17,7 @@ import type {
 } from "@pluralscape/data/transforms/innerworld-entity";
 import type {
   InnerWorldEntityId,
+  InnerWorldRegionId,
   MemberId,
   SystemStructureEntityId,
   UnixMillis,
@@ -289,7 +290,8 @@ describe("useInnerWorldEntitiesList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const listData = result.current.data;
+    const pages = listData && "pages" in listData ? listData.pages : [];
     const [firstPage] = pages;
     const [item0, item1] = firstPage?.data ?? [];
     expect(pages).toHaveLength(1);
@@ -327,7 +329,8 @@ describe("useInnerWorldEntitiesList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const listData = result.current.data;
+    const pages = listData && "pages" in listData ? listData.pages : [];
     const [firstPage] = pages;
     expect(firstPage?.data).toHaveLength(0);
   });
@@ -417,5 +420,139 @@ describe("useDeleteInnerWorldEntity", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_ENTITY_ROW: Record<string, unknown> = {
+  id: "e-local-1",
+  system_id: TEST_SYSTEM_ID,
+  entity_type: "landmark",
+  position_x: 100,
+  position_y: 200,
+  visual:
+    '{"color":null,"icon":null,"size":null,"opacity":null,"imageSource":null,"externalUrl":null}',
+  region_id: null,
+  linked_member_id: null,
+  linked_structure_entity_id: null,
+  name: "Local Landmark",
+  description: "From SQLite",
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useInnerWorldEntity (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_ENTITY_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useInnerWorldEntity("e-local-1" as InnerWorldEntityId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("innerworld_entities"), [
+      "e-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "e-local-1",
+      entityType: "landmark",
+      positionX: 100,
+      positionY: 200,
+      name: "Local Landmark",
+      description: "From SQLite",
+      archived: false,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_ENTITY_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useInnerWorldEntity("e-local-1" as InnerWorldEntityId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toMatchObject({ id: "e-local-1" });
+  });
+});
+
+describe("useInnerWorldEntitiesList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_ENTITY_ROW, id: "e-local-2", name: "Second Entity" };
+    const localDb = createMockLocalDb([LOCAL_ENTITY_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useInnerWorldEntitiesList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("innerworld_entities"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ name: "Local Landmark" });
+    expect(items[1]).toMatchObject({ name: "Second Entity" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_ENTITY_ROW]);
+    const { result } = renderHookWithProviders(() => useInnerWorldEntitiesList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
+  });
+
+  it("filters by regionId when provided", async () => {
+    const regionRow = { ...LOCAL_ENTITY_ROW, id: "e-local-3", region_id: "r-1" };
+    const localDb = createMockLocalDb([regionRow]);
+    const { result } = renderHookWithProviders(
+      () => useInnerWorldEntitiesList({ regionId: "r-1" as InnerWorldRegionId }),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("region_id"),
+      expect.arrayContaining(["r-1"]),
+    );
   });
 });

@@ -3,35 +3,39 @@ import {
   decryptTimerConfig,
   decryptTimerConfigPage,
 } from "@pluralscape/data/transforms/timer-check-in";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToCheckInRecord, rowToTimer } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   CheckInRecordPage,
-  CheckInRecordRaw,
   TimerConfigPage,
   TimerConfigRaw,
 } from "@pluralscape/data/transforms/timer-check-in";
-import type { Archived, TimerConfig, TimerId } from "@pluralscape/types";
+import type {
+  ArchivedCheckInRecord,
+  Archived,
+  CheckInRecord,
+  TimerConfig,
+  TimerId,
+} from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type TimerPage = {
   readonly data: (TimerConfig | Archived<TimerConfig>)[];
-  readonly nextCursor: string | null;
-};
-type CheckInPage = {
-  readonly data: readonly CheckInRecordRaw[];
   readonly nextCursor: string | null;
 };
 
@@ -50,7 +54,9 @@ interface CheckInHistoryOpts extends SystemIdOverride {
 export function useTimerConfig(
   timerId: TimerId,
   opts?: SystemIdOverride,
-): TRPCQuery<TimerConfig | Archived<TimerConfig>> {
+): DataQuery<TimerConfig | Archived<TimerConfig>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -63,16 +69,33 @@ export function useTimerConfig(
     [masterKey],
   );
 
-  return trpc.timerConfig.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["timer_configs", timerId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM timer_configs WHERE id = ?", [timerId]);
+      if (!row) throw new Error("Timer config not found");
+      return rowToTimer(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.timerConfig.get.useQuery(
     { systemId, timerId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectTimerConfig,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useTimerConfigsList(opts?: TimerConfigListOpts): TRPCInfiniteQuery<TimerPage> {
+export function useTimerConfigsList(
+  opts?: TimerConfigListOpts,
+): DataListQuery<TimerConfig | Archived<TimerConfig>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -89,18 +112,33 @@ export function useTimerConfigsList(opts?: TimerConfigListOpts): TRPCInfiniteQue
     [masterKey],
   );
 
-  return trpc.timerConfig.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["timer_configs", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM timer_configs WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM timer_configs WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToTimer);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.timerConfig.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: TimerConfigPage) => lastPage.nextCursor,
       select: selectTimerConfigsList,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateTimer(): TRPCMutation<
@@ -147,11 +185,45 @@ export function useDeleteTimer(): TRPCMutation<
   });
 }
 
-export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<CheckInPage> {
+export function useCheckInHistory(
+  opts?: CheckInHistoryOpts,
+): DataListQuery<CheckInRecord | ArchivedCheckInRecord> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
 
-  return trpc.checkInRecord.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: [
+      "check_in_records",
+      "list",
+      systemId,
+      opts?.timerConfigId ?? null,
+      opts?.pending ?? null,
+      opts?.includeArchived ?? false,
+    ],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const params: unknown[] = [systemId];
+      let sql = "SELECT * FROM check_in_records WHERE system_id = ?";
+      if (opts?.timerConfigId !== undefined) {
+        sql += " AND timer_config_id = ?";
+        params.push(opts.timerConfigId);
+      }
+      if (opts?.pending === true) {
+        sql += " AND responded_at IS NULL AND dismissed = 0";
+      }
+      if (!includeArchived) {
+        sql += " AND archived = 0";
+      }
+      sql += " ORDER BY created_at DESC";
+      return localDb.queryAll(sql, params).map(rowToCheckInRecord);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.checkInRecord.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -160,9 +232,17 @@ export function useCheckInHistory(opts?: CheckInHistoryOpts): TRPCInfiniteQuery<
       includeArchived: opts?.includeArchived ?? false,
     },
     {
+      enabled: source === "remote",
       getNextPageParam: (lastPage: CheckInRecordPage) => lastPage.nextCursor,
     },
   );
+
+  // The remote query returns the raw wire type (CheckInRecordRaw) which is
+  // structurally compatible with CheckInRecord at runtime. A select transform
+  // will be added when check-in record encryption is implemented.
+  return (source === "local" ? localQuery : remoteQuery) as DataListQuery<
+    CheckInRecord | ArchivedCheckInRecord
+  >;
 }
 
 export function useCreateCheckIn(): TRPCMutation<

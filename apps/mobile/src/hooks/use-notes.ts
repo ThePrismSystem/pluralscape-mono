@@ -1,17 +1,20 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptNote, decryptNotePage } from "@pluralscape/data/transforms/note";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToNote } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -21,6 +24,7 @@ import type {
 } from "@pluralscape/data/transforms/note";
 import type { Archived, NoteAuthorEntityType, NoteId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type NotePage = {
   readonly data: (NoteDecrypted | Archived<NoteDecrypted>)[];
   readonly nextCursor: string | null;
@@ -37,7 +41,9 @@ interface NoteListOpts extends SystemIdOverride {
 export function useNote(
   noteId: NoteId,
   opts?: SystemIdOverride,
-): TRPCQuery<NoteDecrypted | Archived<NoteDecrypted>> {
+): DataQuery<NoteDecrypted | Archived<NoteDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -50,16 +56,33 @@ export function useNote(
     [masterKey],
   );
 
-  return trpc.note.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["notes", noteId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM own_notes WHERE id = ?", [noteId]);
+      if (!row) throw new Error("Note not found");
+      return rowToNote(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.note.get.useQuery(
     { systemId, noteId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectNote,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useNotesList(opts?: NoteListOpts): TRPCInfiniteQuery<NotePage> {
+export function useNotesList(
+  opts?: NoteListOpts,
+): DataListQuery<NoteDecrypted | Archived<NoteDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -76,7 +99,28 @@ export function useNotesList(opts?: NoteListOpts): TRPCInfiniteQuery<NotePage> {
     [masterKey],
   );
 
-  return trpc.note.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: [
+      "notes",
+      "list",
+      systemId,
+      opts?.includeArchived ?? false,
+      opts?.authorEntityType,
+      opts?.authorEntityId,
+      opts?.systemWide ?? false,
+    ],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM own_notes WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM own_notes WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToNote);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.note.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -86,11 +130,13 @@ export function useNotesList(opts?: NoteListOpts): TRPCInfiniteQuery<NotePage> {
       systemWide: opts?.systemWide,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: NoteRawPage) => lastPage.nextCursor,
       select: selectNotePage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateNote(): TRPCMutation<

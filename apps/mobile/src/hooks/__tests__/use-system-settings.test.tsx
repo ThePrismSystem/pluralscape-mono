@@ -279,9 +279,7 @@ describe("useNomenclature", () => {
       data = result.current.data;
       expect(data).toBeDefined();
     });
-    expect(data?.collective).toBe("System");
-    expect(data?.individual).toBe("Member");
-    expect(data?.version).toBe(1);
+    expect(data).toMatchObject({ collective: "System", individual: "Member", version: 1 });
   });
 
   it("does not fetch when masterKey is null", () => {

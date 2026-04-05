@@ -3,18 +3,21 @@ import {
   decryptBoardMessage,
   decryptBoardMessagePage,
 } from "@pluralscape/data/transforms/board-message";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToBoardMessage } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -23,6 +26,7 @@ import type {
 } from "@pluralscape/data/transforms/board-message";
 import type { Archived, BoardMessage, BoardMessageId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type BoardMessagePage = {
   readonly data: (BoardMessage | Archived<BoardMessage>)[];
   readonly nextCursor: string | null;
@@ -36,7 +40,9 @@ interface BoardMessageListOpts extends SystemIdOverride {
 export function useBoardMessage(
   boardMessageId: BoardMessageId,
   opts?: SystemIdOverride,
-): TRPCQuery<BoardMessage | Archived<BoardMessage>> {
+): DataQuery<BoardMessage | Archived<BoardMessage>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -49,18 +55,35 @@ export function useBoardMessage(
     [masterKey],
   );
 
-  return trpc.boardMessage.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["boardMessages", boardMessageId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM own_board_messages WHERE id = ?", [
+        boardMessageId,
+      ]);
+      if (!row) throw new Error("Board message not found");
+      return rowToBoardMessage(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.boardMessage.get.useQuery(
     { systemId, boardMessageId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectBoardMessage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useBoardMessagesList(
   opts?: BoardMessageListOpts,
-): TRPCInfiniteQuery<BoardMessagePage> {
+): DataListQuery<BoardMessage | Archived<BoardMessage>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -77,18 +100,33 @@ export function useBoardMessagesList(
     [masterKey],
   );
 
-  return trpc.boardMessage.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["boardMessages", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM own_board_messages WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM own_board_messages WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToBoardMessage);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.boardMessage.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: BoardMessageRawPage) => lastPage.nextCursor,
       select: selectBoardMessagePage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateBoardMessage(): TRPCMutation<

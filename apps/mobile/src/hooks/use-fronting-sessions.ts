@@ -3,19 +3,23 @@ import {
   decryptFrontingSession,
   decryptFrontingSessionPage,
 } from "@pluralscape/data/transforms/fronting-session";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToFrontingSession } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
   type TRPCError,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
   type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -51,7 +55,9 @@ interface FrontingSessionListOpts extends SystemIdOverride {
 export function useFrontingSession(
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
-): TRPCQuery<FrontingSession | Archived<FrontingSession>> {
+): DataQuery<FrontingSession | Archived<FrontingSession>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -64,18 +70,33 @@ export function useFrontingSession(
     [masterKey],
   );
 
-  return trpc.frontingSession.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["fronting_sessions", sessionId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM fronting_sessions WHERE id = ?", [sessionId]);
+      if (!row) throw new Error("Fronting session not found");
+      return rowToFrontingSession(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.frontingSession.get.useQuery(
     { systemId, sessionId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectFrontingSession,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useFrontingSessionsList(
   opts?: FrontingSessionListOpts,
-): TRPCInfiniteQuery<SessionPage> {
+): DataListQuery<FrontingSession | Archived<FrontingSession>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -92,7 +113,31 @@ export function useFrontingSessionsList(
     [masterKey],
   );
 
-  return trpc.frontingSession.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: [
+      "fronting_sessions",
+      "list",
+      systemId,
+      opts?.activeOnly ?? false,
+      opts?.includeArchived ?? false,
+    ],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const activeOnly = opts?.activeOnly ?? false;
+      const includeArchived = opts?.includeArchived ?? false;
+      let sql = "SELECT * FROM fronting_sessions WHERE system_id = ?";
+      if (activeOnly) {
+        sql += " AND end_time IS NULL AND archived = 0";
+      } else if (!includeArchived) {
+        sql += " AND archived = 0";
+      }
+      sql += " ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToFrontingSession);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.frontingSession.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -100,11 +145,13 @@ export function useFrontingSessionsList(
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: FrontingSessionRawPage) => lastPage.nextCursor,
       select: selectFrontingSessionsList,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useStartSession(): TRPCMutation<

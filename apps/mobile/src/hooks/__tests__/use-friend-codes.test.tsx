@@ -52,9 +52,9 @@ beforeEach(() => {
 });
 
 describe("useFriendCodesList", () => {
-  it("does not require masterKey (no enabled guard)", () => {
-    renderHookWithProviders(() => useFriendCodesList());
-    expect(lastListOpts["enabled"]).toBeUndefined();
+  it("is enabled in remote mode without requiring a masterKey", () => {
+    renderHookWithProviders(() => useFriendCodesList(), { querySource: "remote" });
+    expect(lastListOpts["enabled"]).toBe(true);
   });
 
   it("passes getNextPageParam", () => {

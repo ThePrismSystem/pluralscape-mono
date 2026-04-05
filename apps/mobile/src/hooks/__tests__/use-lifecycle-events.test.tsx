@@ -170,7 +170,8 @@ describe("useLifecycleEvent", () => {
     });
     const data = result.current.data;
     expect(data?.eventType).toBe("discovery");
-    if (data?.eventType === "discovery") {
+    // Narrow away the local row type to access decrypted fields
+    if (data && "memberId" in data && data.eventType === "discovery") {
       expect(data.memberId).toBe("mem-1");
     }
     expect(data?.archived).toBe(false);
@@ -211,17 +212,18 @@ describe("useLifecycleEventsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const listData = result.current.data;
+    const pages = listData && "pages" in listData ? listData.pages : [];
     const [firstPage] = pages;
     const [item0, item1] = firstPage?.data ?? [];
     expect(pages).toHaveLength(1);
     expect(firstPage?.data).toHaveLength(2);
     expect(item0?.eventType).toBe("discovery");
     expect(item1?.eventType).toBe("discovery");
-    if (item0?.eventType === "discovery") {
+    if (item0 && "memberId" in item0 && item0.eventType === "discovery") {
       expect(item0.memberId).toBe("mem-1");
     }
-    if (item1?.eventType === "discovery") {
+    if (item1 && "memberId" in item1 && item1.eventType === "discovery") {
       expect(item1.memberId).toBe("mem-2");
     }
   });
@@ -255,7 +257,8 @@ describe("useLifecycleEventsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const listData = result.current.data;
+    const pages = listData && "pages" in listData ? listData.pages : [];
     const [firstPage] = pages;
     expect(firstPage?.data).toHaveLength(0);
   });
@@ -345,5 +348,110 @@ describe("useDeleteLifecycleEvent", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_LIFECYCLE_EVENT_ROW: Record<string, unknown> = {
+  id: "evt-local-1",
+  system_id: TEST_SYSTEM_ID,
+  event_type: "discovery",
+  occurred_at: 1_700_000_000_000,
+  recorded_at: 1_700_000_000_000,
+  notes: "Some notes",
+  payload: "{}",
+  archived: 0,
+};
+
+describe("useLifecycleEvent (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_LIFECYCLE_EVENT_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useLifecycleEvent("evt-local-1" as LifecycleEventId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("lifecycle_events"), [
+      "evt-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "evt-local-1",
+      eventType: "discovery",
+      notes: "Some notes",
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_LIFECYCLE_EVENT_ROW]);
+    const { result } = renderHookWithProviders(
+      () => useLifecycleEvent("evt-local-1" as LifecycleEventId),
+      { querySource: "local", localDb },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toMatchObject({ id: "evt-local-1" });
+  });
+});
+
+describe("useLifecycleEventsList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_LIFECYCLE_EVENT_ROW, id: "evt-local-2", event_type: "switch" };
+    const localDb = createMockLocalDb([LOCAL_LIFECYCLE_EVENT_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useLifecycleEventsList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("lifecycle_events"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ eventType: "discovery" });
+    expect(items[1]).toMatchObject({ eventType: "switch" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_LIFECYCLE_EVENT_ROW]);
+    const { result } = renderHookWithProviders(() => useLifecycleEventsList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });

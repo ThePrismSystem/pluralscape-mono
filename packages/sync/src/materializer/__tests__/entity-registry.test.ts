@@ -6,6 +6,19 @@ import {
   getEntityTypesForDocument,
   getTableDef,
 } from "../entity-registry.js";
+import "../index.js"; // trigger auto-registration
+import { generateAllDdl } from "../local-schema.js";
+import { getMaterializer } from "../materializer-registry.js";
+
+const ALL_DOC_TYPES = [
+  "system-core",
+  "fronting",
+  "chat",
+  "journal",
+  "note",
+  "privacy-config",
+  "bucket",
+] as const;
 
 const ALL_ENTITY_TYPES = Object.keys(ENTITY_CRDT_STRATEGIES);
 
@@ -145,5 +158,32 @@ describe("getEntityTypesForDocument", () => {
   it("returns empty array for unknown document type", () => {
     const types = getEntityTypesForDocument("unknown-document");
     expect(types).toEqual([]);
+  });
+});
+
+describe("materializer registration", () => {
+  it.each(ALL_DOC_TYPES)("registers a materializer for %s", (docType) => {
+    expect(getMaterializer(docType)).toBeDefined();
+  });
+});
+
+describe("generateAllDdl", () => {
+  it("produces DDL for all 7 document types", () => {
+    const ddl = generateAllDdl();
+    expect(ddl.length).toBeGreaterThan(0);
+    const joined = ddl.join(" ");
+    // system-core entities
+    expect(joined).toContain("members");
+    // fronting entities
+    expect(joined).toContain("fronting_sessions");
+    // chat entities
+    expect(joined).toContain("channels");
+    // journal entities
+    expect(joined).toContain("journal_entries");
+    // note entity (document: "journal")
+    expect(joined).toContain("notes");
+    // privacy-config entities
+    expect(joined).toContain("buckets");
+    expect(joined).toContain("friend_connections");
   });
 });

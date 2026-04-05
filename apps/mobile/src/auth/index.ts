@@ -1,4 +1,4 @@
-export { AuthProvider, useAuth } from "./AuthProvider.js";
+export { AuthCtx, AuthProvider, useAuth } from "./AuthProvider.js";
 export type { AuthContextValue } from "./AuthProvider.js";
 export { AuthStateMachine } from "./auth-state-machine.js";
 export type {

@@ -1,19 +1,245 @@
+// @vitest-environment happy-dom
+import { renderHook, act } from "@testing-library/react";
 import React from "react";
-import { renderToString } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-
-import { SyncProvider, useSync } from "../SyncProvider.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthContextValue } from "../../auth/AuthProvider.js";
 import type { ConnectionContextValue } from "../../connection/ConnectionProvider.js";
 import type { DataLayerContextValue } from "../../data/DataLayerProvider.js";
-import type { PlatformContext } from "../../platform/types.js";
+import type { PlatformContext, PlatformStorage } from "../../platform/types.js";
+import type {
+  BoxKeypair,
+  BoxPublicKey,
+  BoxSecretKey,
+  BucketKeyCache,
+  KdfMasterKey,
+  PwhashSalt,
+  SignKeypair,
+  SignPublicKey,
+  SignSecretKey,
+} from "@pluralscape/crypto";
+import type { ReplicationProfile } from "@pluralscape/sync";
+import type { AccountId, SystemId } from "@pluralscape/types";
+import type { ReactNode } from "react";
 
-// ── Minimal context mocks ────────────────────────────────────────────
+// ── Branded type helpers (assertion-based, no double-cast) ──────────
+
+const KDF_MASTER_KEY_BYTES = 32;
+const SIGN_PUBLIC_KEY_BYTES = 32;
+const SIGN_SECRET_KEY_BYTES = 64;
+const BOX_KEY_BYTES = 32;
+const SALT_BYTES = 16;
+
+function makeKdfMasterKey(): KdfMasterKey {
+  const raw = new Uint8Array(KDF_MASTER_KEY_BYTES).fill(0x01);
+  function assertKey(k: Uint8Array): asserts k is KdfMasterKey {
+    if (k.length !== KDF_MASTER_KEY_BYTES) throw new Error("bad key");
+  }
+  assertKey(raw);
+  return raw;
+}
+
+function makeSignKeypair(): SignKeypair {
+  const pub = new Uint8Array(SIGN_PUBLIC_KEY_BYTES).fill(0x02);
+  const sec = new Uint8Array(SIGN_SECRET_KEY_BYTES).fill(0x03);
+  function assertPub(k: Uint8Array): asserts k is SignPublicKey {
+    if (k.length !== SIGN_PUBLIC_KEY_BYTES) throw new Error("bad pub");
+  }
+  function assertSec(k: Uint8Array): asserts k is SignSecretKey {
+    if (k.length !== SIGN_SECRET_KEY_BYTES) throw new Error("bad sec");
+  }
+  assertPub(pub);
+  assertSec(sec);
+  return { publicKey: pub, secretKey: sec };
+}
+
+function makeBoxKeypair(): BoxKeypair {
+  const pub = new Uint8Array(BOX_KEY_BYTES).fill(0x04);
+  const sec = new Uint8Array(BOX_KEY_BYTES).fill(0x05);
+  function assertPub(k: Uint8Array): asserts k is BoxPublicKey {
+    if (k.length !== BOX_KEY_BYTES) throw new Error("bad pub");
+  }
+  function assertSec(k: Uint8Array): asserts k is BoxSecretKey {
+    if (k.length !== BOX_KEY_BYTES) throw new Error("bad sec");
+  }
+  assertPub(pub);
+  assertSec(sec);
+  return { publicKey: pub, secretKey: sec };
+}
+
+function makeSalt(): PwhashSalt {
+  const raw = new Uint8Array(SALT_BYTES).fill(0x06);
+  function assertSalt(k: Uint8Array): asserts k is PwhashSalt {
+    if (k.length !== SALT_BYTES) throw new Error("bad salt");
+  }
+  assertSalt(raw);
+  return raw;
+}
+
+function makeAccountId(s: string): AccountId {
+  return s as AccountId;
+}
+
+function makeSystemId(s: string): SystemId {
+  return s as SystemId;
+}
+
+// ── Test fixtures ───────────────────────────────────────────────────
+
+const TEST_SYSTEM_ID = makeSystemId("sys_test123");
+const TEST_ACCOUNT_ID = makeAccountId("acc_test");
+const TEST_MASTER_KEY = makeKdfMasterKey();
+const TEST_SIGN_KEYS = makeSignKeypair();
+const TEST_BOX_KEYS = makeBoxKeypair();
+const TEST_SALT = makeSalt();
+const TEST_TOKEN = "test-session-token";
+
+// ── Mutable mock state ─────────────────────────────────────────────
+
+let mockAuthState: AuthContextValue["snapshot"] = {
+  state: "unauthenticated",
+  session: null,
+  credentials: null,
+};
+
+let mockConnectionStatus: ConnectionContextValue["status"] = "disconnected";
+
+function makeSqliteDriver(): PlatformStorage & { backend: "sqlite" } {
+  return {
+    backend: "sqlite" as const,
+    driver: {
+      exec: vi.fn(),
+      prepare: vi.fn(() => ({
+        all: vi.fn(() => []),
+        get: vi.fn(),
+        run: vi.fn(),
+      })),
+      transaction<T>(fn: () => T): T {
+        return fn();
+      },
+      close: vi.fn(),
+    },
+  };
+}
+
+let mockPlatformStorage: PlatformStorage = makeSqliteDriver();
+
+// Mock SodiumAdapter — the provider passes this reference through without
+// calling methods directly, so all methods are stubs.
+const mockSodium: PlatformContext["crypto"] = {
+  memzero: vi.fn(),
+  init: vi.fn(),
+  isReady: vi.fn(() => true),
+  constants: {} as PlatformContext["crypto"]["constants"],
+  supportsSecureMemzero: false,
+  aeadEncrypt: vi.fn(),
+  aeadDecrypt: vi.fn(),
+  aeadKeygen: vi.fn(),
+  boxKeypair: vi.fn(),
+  boxSeedKeypair: vi.fn(),
+  boxEasy: vi.fn(),
+  boxOpenEasy: vi.fn(),
+  randomBytes: vi.fn(),
+  signKeypair: vi.fn(),
+  signSeedKeypair: vi.fn(),
+  signDetached: vi.fn(),
+  signVerifyDetached: vi.fn(),
+  pwhash: vi.fn(),
+  pwhashStr: vi.fn(),
+  pwhashStrVerify: vi.fn(),
+  kdfDeriveFromKey: vi.fn(),
+  kdfKeygen: vi.fn(),
+  genericHash: vi.fn(),
+};
+
+// ── Mock SyncEngine ─────────────────────────────────────────────────
+
+const mockBootstrap = vi.fn(() => Promise.resolve());
+const mockDispose = vi.fn();
+
+// Use a function declaration so it can be called with `new`
+const MockSyncEngine = vi.fn(function MockSyncEngineImpl(this: Record<string, unknown>) {
+  this.bootstrap = mockBootstrap;
+  this.dispose = mockDispose;
+});
+
+// ── Mock DocumentKeyResolver ────────────────────────────────────────
+
+const mockKeyResolverDispose = vi.fn();
+
+const MockDocumentKeyResolver = {
+  create: vi.fn(() => ({
+    resolveKeys: vi.fn(),
+    dispose: mockKeyResolverDispose,
+  })),
+};
+
+// ── Mock BucketKeyCache ─────────────────────────────────────────────
+
+const mockClearAll = vi.fn();
+const mockBucketKeyCache: BucketKeyCache = {
+  get: vi.fn(),
+  set: vi.fn(),
+  delete: vi.fn(),
+  has: vi.fn(),
+  clearAll: mockClearAll,
+  size: 0,
+  getByVersion: vi.fn(),
+  setVersioned: vi.fn(),
+  deleteVersion: vi.fn(),
+};
+
+const mockCreateBucketKeyCache = vi.fn(() => mockBucketKeyCache);
+
+// ── Mock SqliteStorageAdapter ───────────────────────────────────────
+
+const MockSqliteStorageAdapter = vi.fn(function MockSqliteStorageAdapterImpl(
+  this: Record<string, unknown>,
+) {
+  this.loadSnapshot = vi.fn();
+  this.saveSnapshot = vi.fn();
+  this.loadChanges = vi.fn();
+  this.appendChange = vi.fn();
+  this.pruneChanges = vi.fn();
+  this.listDocuments = vi.fn(() => []);
+  this.deleteDocument = vi.fn();
+});
+
+// ── Mock WsManager ──────────────────────────────────────────────────
+
+const mockWsConnect = vi.fn();
+const mockWsDisconnect = vi.fn();
+const mockWsGetAdapter = vi.fn(() => ({
+  submitChange: vi.fn(),
+  fetchChangesSince: vi.fn(),
+  submitSnapshot: vi.fn(),
+  fetchLatestSnapshot: vi.fn(),
+  subscribe: vi.fn(),
+  fetchManifest: vi.fn(),
+  close: vi.fn(),
+}));
+
+const mockCreateWsManager = vi.fn(() => ({
+  connect: mockWsConnect,
+  disconnect: mockWsDisconnect,
+  getSnapshot: vi.fn(() => "disconnected" as const),
+  subscribe: vi.fn(() => vi.fn()),
+  getAdapter: mockWsGetAdapter,
+}));
+
+// ── Mock event bus (real createEventBus from sync) ──────────────────
+
+// We use a real event bus from @pluralscape/sync so event wiring works
+// naturally. It is created per-test in beforeEach.
+let mockEventBus: import("@pluralscape/sync").EventBus<
+  import("@pluralscape/sync").DataLayerEventMap
+>;
+
+// ── Module mocks ────────────────────────────────────────────────────
 
 vi.mock("../../auth/index.js", () => ({
   useAuth: (): AuthContextValue => ({
-    snapshot: { state: "unauthenticated", session: null, credentials: null },
+    snapshot: mockAuthState,
     login: vi.fn(),
     logout: vi.fn(),
     lock: vi.fn(),
@@ -23,103 +249,285 @@ vi.mock("../../auth/index.js", () => ({
 
 vi.mock("../../connection/index.js", () => ({
   useConnection: (): ConnectionContextValue => ({
-    status: "disconnected",
+    status: mockConnectionStatus,
     manager: {} as ConnectionContextValue["manager"],
   }),
 }));
 
-vi.mock("../../data/DataLayerProvider.js", async () => {
-  const { createEventBus } = await import("@pluralscape/sync");
+vi.mock("../../data/DataLayerProvider.js", () => ({
+  useDataLayer: (): DataLayerContextValue => ({
+    eventBus: mockEventBus,
+    localDb: {} as DataLayerContextValue["localDb"],
+  }),
+}));
+
+vi.mock("../../platform/index.js", () => ({
+  usePlatform: (): PlatformContext => ({
+    capabilities: {
+      hasSecureStorage: false,
+      hasBiometric: false,
+      hasBackgroundSync: false,
+      hasNativeMemzero: false,
+      storageBackend: "sqlite",
+    },
+    storage: mockPlatformStorage,
+    crypto: mockSodium,
+  }),
+}));
+
+vi.mock("@pluralscape/sync", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/sync")>();
   return {
-    useDataLayer: (): DataLayerContextValue => ({
-      eventBus: createEventBus(),
-      localDb: {} as DataLayerContextValue["localDb"],
-    }),
+    ...actual,
+    SyncEngine: MockSyncEngine,
+    DocumentKeyResolver: MockDocumentKeyResolver,
   };
 });
 
-vi.mock("../../platform/index.js", () => ({
-  usePlatform: (): PlatformContext =>
-    ({
-      capabilities: {
-        hasSecureStorage: false,
-        hasBiometric: false,
-        hasBackgroundSync: false,
-        hasNativeMemzero: false,
-        storageBackend: "sqlite",
-      },
-      storage: {} as PlatformContext["storage"],
-      crypto: {} as PlatformContext["crypto"],
-    }) satisfies PlatformContext,
+vi.mock("@pluralscape/crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/crypto")>();
+  return {
+    ...actual,
+    createBucketKeyCache: mockCreateBucketKeyCache,
+  };
+});
+
+vi.mock("@pluralscape/sync/adapters", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/sync/adapters")>();
+  return {
+    ...actual,
+    SqliteStorageAdapter: MockSqliteStorageAdapter,
+  };
+});
+
+vi.mock("../../connection/ws-manager.js", () => ({
+  createWsManager: mockCreateWsManager,
 }));
 
-// ── Tests ────────────────────────────────────────────────────────────
+vi.mock("../../config.js", () => ({
+  getWsUrl: () => "ws://localhost:3000/sync",
+}));
+
+// Dynamic import after all mocks
+const { createEventBus } = await import("@pluralscape/sync");
+const { SyncProvider, useSync } = await import("../SyncProvider.js");
+
+// ── Test helpers ────────────────────────────────────────────────────
+
+function setUnlocked(): void {
+  mockAuthState = {
+    state: "unlocked",
+    session: {
+      credentials: {
+        sessionToken: TEST_TOKEN,
+        accountId: TEST_ACCOUNT_ID,
+        systemId: TEST_SYSTEM_ID,
+        salt: TEST_SALT,
+      },
+      masterKey: TEST_MASTER_KEY,
+      identityKeys: {
+        sign: TEST_SIGN_KEYS,
+        box: TEST_BOX_KEYS,
+      },
+    },
+    credentials: {
+      sessionToken: TEST_TOKEN,
+      accountId: TEST_ACCOUNT_ID,
+      systemId: TEST_SYSTEM_ID,
+      salt: TEST_SALT,
+    },
+  };
+}
+
+function setUnauthenticated(): void {
+  mockAuthState = {
+    state: "unauthenticated",
+    session: null,
+    credentials: null,
+  };
+}
+
+function makeWrapper(): ({ children }: { readonly children: ReactNode }) => React.JSX.Element {
+  return function Wrapper({ children }: { readonly children: ReactNode }): React.JSX.Element {
+    return <SyncProvider>{children}</SyncProvider>;
+  };
+}
+
+// ── Tests ───────────────────────────────────────────────────────────
 
 describe("SyncProvider", () => {
-  it("provides null engine and isBootstrapped:false when not ready", () => {
-    const snapshots: ReturnType<typeof useSync>[] = [];
-
-    function Consumer(): React.JSX.Element {
-      snapshots.push(useSync());
-      return <span>ok</span>;
-    }
-
-    renderToString(
-      <SyncProvider>
-        <Consumer />
-      </SyncProvider>,
-    );
-
-    expect(snapshots).toHaveLength(1);
-    const captured = snapshots[0] as ReturnType<typeof useSync>;
-    expect(captured.engine).toBeNull();
-    expect(captured.isBootstrapped).toBe(false);
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setUnauthenticated();
+    mockConnectionStatus = "disconnected";
+    mockPlatformStorage = makeSqliteDriver();
+    mockEventBus = createEventBus();
   });
 
-  it("provides isBootstrapped as false initially", () => {
-    const snapshots: ReturnType<typeof useSync>[] = [];
-
-    function Consumer(): React.JSX.Element {
-      snapshots.push(useSync());
-      return <span>ok</span>;
-    }
-
-    renderToString(
-      <SyncProvider>
-        <Consumer />
-      </SyncProvider>,
-    );
-
-    expect(snapshots).toHaveLength(1);
-    expect((snapshots[0] as ReturnType<typeof useSync>).isBootstrapped).toBe(false);
+  it("provides null engine and isBootstrapped:false when auth is unauthenticated", () => {
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    expect(result.current.engine).toBeNull();
+    expect(result.current.isBootstrapped).toBe(false);
   });
 
-  it("provides engine as null when auth is not unlocked", () => {
-    const snapshots: ReturnType<typeof useSync>[] = [];
+  it("provides progress as null initially", () => {
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+    expect(result.current.progress).toBeNull();
+  });
 
-    function Consumer(): React.JSX.Element {
-      snapshots.push(useSync());
-      return <span>ok</span>;
-    }
+  it("creates engine when auth is unlocked with sqlite platform", () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
 
-    renderToString(
-      <SyncProvider>
-        <Consumer />
-      </SyncProvider>,
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    // Engine should be created
+    expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+    expect(MockSyncEngine).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemId: TEST_SYSTEM_ID,
+        sodium: mockSodium,
+      }),
     );
 
-    expect(snapshots).toHaveLength(1);
-    expect((snapshots[0] as ReturnType<typeof useSync>).engine).toBeNull();
+    // Adapters should be created
+    expect(MockSqliteStorageAdapter).toHaveBeenCalledTimes(1);
+    expect(MockDocumentKeyResolver.create).toHaveBeenCalledTimes(1);
+    expect(mockCreateBucketKeyCache).toHaveBeenCalledTimes(1);
+    expect(mockCreateWsManager).toHaveBeenCalledTimes(1);
+
+    // WsManager should be connected
+    expect(mockWsConnect).toHaveBeenCalledWith(TEST_TOKEN, TEST_SYSTEM_ID);
+
+    // Engine should not be null in context
+    expect(result.current.engine).not.toBeNull();
+  });
+
+  it("does not create engine when platform storage is indexeddb", () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+    mockPlatformStorage = {
+      backend: "indexeddb",
+      storageAdapter: {} as PlatformStorage & { backend: "indexeddb" } extends {
+        storageAdapter: infer T;
+      }
+        ? T
+        : never,
+      offlineQueueAdapter: {} as PlatformStorage & { backend: "indexeddb" } extends {
+        offlineQueueAdapter: infer T;
+      }
+        ? T
+        : never,
+    };
+
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    expect(MockSyncEngine).not.toHaveBeenCalled();
+    expect(result.current.engine).toBeNull();
+  });
+
+  it("selects owner-full profile for sqlite backend", () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    expect(MockSyncEngine).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profile: { profileType: "owner-full" } satisfies ReplicationProfile,
+      }),
+    );
+  });
+
+  it("bootstraps engine when connected and sets isBootstrapped", async () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    // Bootstrap should have been called since we're connected
+    expect(mockBootstrap).toHaveBeenCalled();
+
+    // Wait for bootstrap promise to resolve and state to update
+    await act(() => Promise.resolve());
+
+    expect(result.current.isBootstrapped).toBe(true);
+  });
+
+  it("does not bootstrap when not connected", () => {
+    setUnlocked();
+    mockConnectionStatus = "disconnected";
+
+    renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    expect(MockSyncEngine).toHaveBeenCalled();
+    expect(mockBootstrap).not.toHaveBeenCalled();
+  });
+
+  it("disposes engine on cleanup (unmount)", () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    const { unmount } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    unmount();
+
+    expect(mockDispose).toHaveBeenCalledTimes(1);
+    expect(mockKeyResolverDispose).toHaveBeenCalledTimes(1);
+    expect(mockClearAll).toHaveBeenCalledTimes(1);
+    expect(mockWsDisconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("disposes engine when auth transitions to unauthenticated", () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    const { rerender } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    expect(MockSyncEngine).toHaveBeenCalledTimes(1);
+
+    // Simulate logout
+    setUnauthenticated();
+    mockConnectionStatus = "disconnected";
+
+    rerender();
+
+    expect(mockDispose).toHaveBeenCalled();
+    expect(mockKeyResolverDispose).toHaveBeenCalled();
+    expect(mockClearAll).toHaveBeenCalled();
+    expect(mockWsDisconnect).toHaveBeenCalled();
+  });
+
+  it("passes eventBus to SyncEngine config", () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    expect(MockSyncEngine).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventBus: mockEventBus,
+      }),
+    );
+  });
+
+  it("passes correct DocumentKeyResolver config", () => {
+    setUnlocked();
+    mockConnectionStatus = "connected";
+
+    renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+    expect(MockDocumentKeyResolver.create).toHaveBeenCalledWith({
+      masterKey: TEST_MASTER_KEY,
+      signingKeys: TEST_SIGN_KEYS,
+      bucketKeyCache: mockBucketKeyCache,
+      sodium: mockSodium,
+    });
   });
 
   it("throws when useSync is used outside SyncProvider", () => {
-    function BadConsumer(): React.JSX.Element {
-      useSync();
-      return <span>bad</span>;
-    }
-
     expect(() => {
-      renderToString(<BadConsumer />);
+      renderHook(() => useSync());
     }).toThrow("useSync must be used within SyncProvider");
   });
 });

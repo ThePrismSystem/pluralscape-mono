@@ -1,17 +1,20 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingComment } from "@pluralscape/data/transforms/fronting-comment";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToFrontingComment } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -25,6 +28,7 @@ import type {
   FrontingSessionId,
 } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
+
 type CommentPage = {
   readonly data: (FrontingComment | Archived<FrontingComment>)[];
   readonly nextCursor: string | null;
@@ -39,7 +43,9 @@ export function useFrontingComment(
   commentId: FrontingCommentId,
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
-): TRPCQuery<FrontingComment | Archived<FrontingComment>> {
+): DataQuery<FrontingComment | Archived<FrontingComment>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -52,19 +58,34 @@ export function useFrontingComment(
     [masterKey],
   );
 
-  return trpc.frontingComment.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["fronting_comments", commentId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM fronting_comments WHERE id = ?", [commentId]);
+      if (!row) throw new Error("Fronting comment not found");
+      return rowToFrontingComment(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.frontingComment.get.useQuery(
     { systemId, sessionId, commentId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectFrontingComment,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useFrontingCommentsList(
   sessionId: FrontingSessionId,
   opts?: FrontingCommentListOpts,
-): TRPCInfiniteQuery<CommentPage> {
+): DataListQuery<FrontingComment | Archived<FrontingComment>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -84,7 +105,20 @@ export function useFrontingCommentsList(
     [masterKey],
   );
 
-  return trpc.frontingComment.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["fronting_comments", "list", sessionId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM fronting_comments WHERE fronting_session_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM fronting_comments WHERE fronting_session_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [sessionId]).map(rowToFrontingComment);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.frontingComment.list.useInfiniteQuery(
     {
       systemId,
       sessionId,
@@ -92,11 +126,13 @@ export function useFrontingCommentsList(
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: FrontingCommentPage) => lastPage.nextCursor,
       select: selectFrontingCommentsList,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateComment(): TRPCMutation<

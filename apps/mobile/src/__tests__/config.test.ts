@@ -8,7 +8,7 @@ vi.mock("expo-constants", () => ({
   default: mockConstants,
 }));
 
-import { getApiBaseUrl } from "../config.js";
+import { getApiBaseUrl, getWsUrl } from "../config.js";
 
 describe("getApiBaseUrl", () => {
   beforeEach(() => {
@@ -33,5 +33,22 @@ describe("getApiBaseUrl", () => {
   it("returns DEV fallback when expoConfig is null", () => {
     mockConstants.expoConfig = null;
     expect(getApiBaseUrl()).toBe("http://localhost:3000");
+  });
+});
+
+describe("getWsUrl", () => {
+  it("converts http to ws and appends /sync", () => {
+    mockConstants.expoConfig = { extra: { apiBaseUrl: "http://localhost:3000" } };
+    expect(getWsUrl()).toBe("ws://localhost:3000/sync");
+  });
+
+  it("converts https to wss and appends /sync", () => {
+    mockConstants.expoConfig = { extra: { apiBaseUrl: "https://api.example.com" } };
+    expect(getWsUrl()).toBe("wss://api.example.com/sync");
+  });
+
+  it("handles base URL with hostname starting with http", () => {
+    mockConstants.expoConfig = { extra: { apiBaseUrl: "https://httpbin.example.com" } };
+    expect(getWsUrl()).toBe("wss://httpbin.example.com/sync");
   });
 });

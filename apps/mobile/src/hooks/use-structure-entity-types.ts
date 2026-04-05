@@ -3,18 +3,21 @@ import {
   decryptStructureEntityType,
   decryptStructureEntityTypePage,
 } from "@pluralscape/data/transforms/structure-entity-type";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToStructureEntityType } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -38,7 +41,9 @@ interface StructureEntityTypeListOpts extends SystemIdOverride {
 export function useStructureEntityType(
   entityTypeId: SystemStructureEntityTypeId,
   opts?: SystemIdOverride,
-): TRPCQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>> {
+): DataQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -53,18 +58,35 @@ export function useStructureEntityType(
     [masterKey],
   );
 
-  return trpc.structure.entityType.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["structure_entity_types", entityTypeId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM structure_entity_types WHERE id = ?", [
+        entityTypeId,
+      ]);
+      if (!row) throw new Error("Structure entity type not found");
+      return rowToStructureEntityType(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.structure.entityType.get.useQuery(
     { systemId, entityTypeId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectEntityType,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useStructureEntityTypesList(
   opts?: StructureEntityTypeListOpts,
-): TRPCInfiniteQuery<StructureEntityTypePage> {
+): DataListQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -81,18 +103,33 @@ export function useStructureEntityTypesList(
     [masterKey],
   );
 
-  return trpc.structure.entityType.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["structure_entity_types", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM structure_entity_types WHERE system_id = ? ORDER BY sort_order ASC"
+        : "SELECT * FROM structure_entity_types WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC";
+      return localDb.queryAll(sql, [systemId]).map(rowToStructureEntityType);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.structure.entityType.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: StructureEntityTypeRawPage) => lastPage.nextCursor,
       select: selectPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateStructureEntityType(): TRPCMutation<

@@ -1,8 +1,13 @@
 import { trpc } from "@pluralscape/api-client/trpc";
+import { useQuery } from "@tanstack/react-query";
 
-import { DEFAULT_LIST_LIMIT, type TRPCInfiniteQuery, type TRPCMutation } from "./types.js";
+import { rowToFriendCode } from "../data/row-transforms.js";
+
+import { DEFAULT_LIST_LIMIT, type DataListQuery, type TRPCMutation } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { ArchivedFriendCode, FriendCode } from "@pluralscape/types";
 
 type FriendCodePage = RouterOutput["friendCode"]["list"];
 
@@ -10,15 +15,36 @@ interface FriendCodeListOpts {
   readonly limit?: number;
 }
 
-export function useFriendCodesList(opts?: FriendCodeListOpts): TRPCInfiniteQuery<FriendCodePage> {
-  return trpc.friendCode.list.useInfiniteQuery(
+export function useFriendCodesList(
+  opts?: FriendCodeListOpts,
+):
+  | DataListQuery<FriendCode | ArchivedFriendCode>
+  | ReturnType<typeof trpc.friendCode.list.useInfiniteQuery> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
+
+  const localQuery = useQuery({
+    queryKey: ["friend_codes", "list"],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      return localDb
+        .queryAll("SELECT * FROM friend_codes WHERE archived = 0 ORDER BY created_at DESC", [])
+        .map(rowToFriendCode);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.friendCode.list.useInfiniteQuery(
     {
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
     },
     {
+      enabled: source === "remote",
       getNextPageParam: (lastPage: FriendCodePage) => lastPage.nextCursor,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useGenerateFriendCode(): TRPCMutation<

@@ -3,18 +3,21 @@ import {
   decryptInnerWorldRegion,
   decryptInnerWorldRegionPage,
 } from "@pluralscape/data/transforms/innerworld-region";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToInnerWorldRegion } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -38,7 +41,9 @@ interface InnerWorldRegionListOpts extends SystemIdOverride {
 export function useInnerWorldRegion(
   regionId: InnerWorldRegionId,
   opts?: SystemIdOverride,
-): TRPCQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>> {
+): DataQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -51,18 +56,33 @@ export function useInnerWorldRegion(
     [masterKey],
   );
 
-  return trpc.innerworld.region.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["innerworld-regions", regionId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM innerworld_regions WHERE id = ?", [regionId]);
+      if (!row) throw new Error("InnerWorldRegion not found");
+      return rowToInnerWorldRegion(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.innerworld.region.get.useQuery(
     { systemId, regionId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectRegion,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useInnerWorldRegionsList(
   opts?: InnerWorldRegionListOpts,
-): TRPCInfiniteQuery<InnerWorldRegionPage> {
+): DataListQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -79,18 +99,33 @@ export function useInnerWorldRegionsList(
     [masterKey],
   );
 
-  return trpc.innerworld.region.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["innerworld-regions", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM innerworld_regions WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM innerworld_regions WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldRegion);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.innerworld.region.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: InnerWorldRegionRawPage) => lastPage.nextCursor,
       select: selectPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateInnerWorldRegion(): TRPCMutation<

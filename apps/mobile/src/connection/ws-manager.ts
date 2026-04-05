@@ -35,6 +35,8 @@ export interface WsManager {
   getSnapshot(): ConnectionStatus;
   /** For useSyncExternalStore — returns an unsubscribe function. */
   subscribe(listener: () => void): () => void;
+  /** Returns the underlying WsClientAdapter, or null if not connected. */
+  getAdapter(): WsClientAdapter | null;
 }
 
 // ── Factory ──────────────────────────────────────────────────────────
@@ -178,6 +180,10 @@ export function createWsManager(config: WsManagerConfig): WsManager {
       return () => {
         listeners.delete(listener);
       };
+    },
+
+    getAdapter(): WsClientAdapter | null {
+      return adapter;
     },
   };
 }

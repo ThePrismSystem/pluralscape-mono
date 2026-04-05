@@ -1,17 +1,20 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptMember } from "@pluralscape/data/transforms/member";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToMember } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { MemberPage as MemberRawPage, MemberRaw } from "@pluralscape/data/transforms/member";
@@ -32,7 +35,9 @@ interface MemberListOpts extends SystemIdOverride {
 export function useMember(
   memberId: MemberId,
   opts?: SystemIdOverride,
-): TRPCQuery<Member | Archived<Member>> {
+): DataQuery<Member | Archived<Member>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -45,16 +50,31 @@ export function useMember(
     [masterKey],
   );
 
-  return trpc.member.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["members", memberId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM members WHERE id = ?", [memberId]);
+      if (!row) throw new Error("Member not found");
+      return rowToMember(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.member.get.useQuery(
     { systemId, memberId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectMember,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberPage> {
+export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Archived<Member>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -74,7 +94,20 @@ export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberP
     [masterKey],
   );
 
-  return trpc.member.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["members", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM members WHERE system_id = ? ORDER BY created_at DESC"
+        : "SELECT * FROM members WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      return localDb.queryAll(sql, [systemId]).map(rowToMember);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.member.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -82,11 +115,13 @@ export function useMembersList(opts?: MemberListOpts): TRPCInfiniteQuery<MemberP
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: MemberRawPage) => lastPage.nextCursor,
       select: selectMembersList,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateMember(): TRPCMutation<

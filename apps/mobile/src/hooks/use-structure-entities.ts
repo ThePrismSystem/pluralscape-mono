@@ -3,18 +3,22 @@ import {
   decryptStructureEntity,
   decryptStructureEntityPage,
 } from "@pluralscape/data/transforms/structure-entity";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToStructureEntity } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
   type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
@@ -43,7 +47,9 @@ interface StructureEntityListOpts extends SystemIdOverride {
 export function useStructureEntity(
   entityId: SystemStructureEntityId,
   opts?: SystemIdOverride,
-): TRPCQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>> {
+): DataQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -56,13 +62,26 @@ export function useStructureEntity(
     [masterKey],
   );
 
-  return trpc.structure.entity.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["structure_entities", entityId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM structure_entities WHERE id = ?", [entityId]);
+      if (!row) throw new Error("Structure entity not found");
+      return rowToStructureEntity(row);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.structure.entity.get.useQuery(
     { systemId, entityId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectEntity,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useStructureEntityHierarchy(
@@ -77,7 +96,9 @@ export function useStructureEntityHierarchy(
 
 export function useStructureEntitiesList(
   opts?: StructureEntityListOpts,
-): TRPCInfiniteQuery<StructureEntityPage> {
+): DataListQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -94,7 +115,31 @@ export function useStructureEntitiesList(
     [masterKey],
   );
 
-  return trpc.structure.entity.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: [
+      "structure_entities",
+      "list",
+      systemId,
+      opts?.includeArchived ?? false,
+      opts?.entityTypeId,
+    ],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      let sql = includeArchived
+        ? "SELECT * FROM structure_entities WHERE system_id = ? ORDER BY sort_order ASC"
+        : "SELECT * FROM structure_entities WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC";
+      const params: unknown[] = [systemId];
+      if (opts?.entityTypeId !== undefined) {
+        sql += " AND entity_type_id = ?";
+        params.push(opts.entityTypeId);
+      }
+      return localDb.queryAll(sql, params).map(rowToStructureEntity);
+    },
+    enabled: source === "local" && localDb !== null,
+  });
+
+  const remoteQuery = trpc.structure.entity.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -102,11 +147,13 @@ export function useStructureEntitiesList(
       entityTypeId: opts?.entityTypeId,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: StructureEntityRawPage) => lastPage.nextCursor,
       select: selectPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateStructureEntity(): TRPCMutation<

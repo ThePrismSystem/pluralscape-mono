@@ -96,6 +96,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             rq.useInfiniteQuery({
               queryKey: ["checkInRecord.list", input],
               queryFn: () => Promise.resolve(fixtures.get("checkInRecord.list")),
+              enabled: opts.enabled as boolean | undefined,
               getNextPageParam: opts.getNextPageParam as (lp: unknown) => unknown,
               initialPageParam: undefined,
             }),
@@ -234,7 +235,8 @@ describe("useTimerConfigsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const timerData = result.current.data;
+    const pages = timerData && "pages" in timerData ? timerData.pages : [];
     expect(pages).toHaveLength(1);
     expect(pages[0]?.data).toHaveLength(2);
     expect(pages[0]?.data[0]?.promptText).toBe("How are you?");
@@ -270,7 +272,8 @@ describe("useCheckInHistory", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const checkInData = result.current.data;
+    const pages = checkInData && "pages" in checkInData ? checkInData.pages : [];
     expect(pages).toHaveLength(1);
     expect(pages[0]?.data).toHaveLength(2);
     expect(pages[0]?.data[0]?.id).toBe("cir-1");
@@ -287,7 +290,174 @@ describe("useCheckInHistory", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    expect(result.current.data?.pages[0]?.data[0]?.id).toBe("cir-1");
+    const d = result.current.data;
+    expect(d && "pages" in d ? d.pages[0]?.data[0]?.id : undefined).toBe("cir-1");
+  });
+});
+
+// ── Local source mode tests ───────────────────────────────────────────
+function createMockLocalDb(rows: Record<string, unknown>[]) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(rows),
+    queryOne: vi.fn().mockImplementation((_sql: string, params: unknown[]) => {
+      const id = params[0];
+      return rows.find((r) => r["id"] === id);
+    }),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
+const LOCAL_TIMER_ROW: Record<string, unknown> = {
+  id: "tmr-local-1",
+  system_id: TEST_SYSTEM_ID,
+  interval_minutes: 30,
+  waking_hours_only: 1,
+  waking_start: "08:00",
+  waking_end: "22:00",
+  prompt_text: "Local timer prompt",
+  enabled: 1,
+  archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+const LOCAL_CHECK_IN_ROW: Record<string, unknown> = {
+  id: "cir-local-1",
+  timer_config_id: "tmr-local-1",
+  system_id: TEST_SYSTEM_ID,
+  scheduled_at: 1_700_000_000_000,
+  responded_by_member_id: null,
+  responded_at: null,
+  dismissed: 0,
+  archived: 0,
+  archived_at: null,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
+};
+
+describe("useTimerConfig (local source)", () => {
+  it("returns transformed local row data", async () => {
+    const localDb = createMockLocalDb([LOCAL_TIMER_ROW]);
+    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-local-1" as TimerId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryOne).toHaveBeenCalledWith(expect.stringContaining("timer_configs"), [
+      "tmr-local-1",
+    ]);
+    expect(result.current.data).toMatchObject({
+      id: "tmr-local-1",
+      promptText: "Local timer prompt",
+      enabled: true,
+      intervalMinutes: 30,
+      wakingHoursOnly: true,
+    });
+  });
+
+  it("does not call tRPC in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_TIMER_ROW]);
+    const { result } = renderHookWithProviders(() => useTimerConfig("tmr-local-1" as TimerId), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.promptText).toBe("Local timer prompt");
+  });
+});
+
+describe("useTimerConfigsList (local source)", () => {
+  it("returns flat array of transformed rows", async () => {
+    const row2 = { ...LOCAL_TIMER_ROW, id: "tmr-local-2", prompt_text: "Second timer" };
+    const localDb = createMockLocalDb([LOCAL_TIMER_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useTimerConfigsList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("timer_configs"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ promptText: "Local timer prompt" });
+    expect(items[1]).toMatchObject({ promptText: "Second timer" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_TIMER_ROW]);
+    const { result } = renderHookWithProviders(() => useTimerConfigsList(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
+  });
+});
+
+describe("useCheckInHistory (local source)", () => {
+  it("returns flat array of transformed check-in records", async () => {
+    const row2 = { ...LOCAL_CHECK_IN_ROW, id: "cir-local-2" };
+    const localDb = createMockLocalDb([LOCAL_CHECK_IN_ROW, row2]);
+    const { result } = renderHookWithProviders(() => useCheckInHistory(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("check_in_records"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+
+    const data = result.current.data;
+    expect(Array.isArray(data)).toBe(true);
+    const items = Array.isArray(data) ? data : [];
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({ id: "cir-local-1", dismissed: false });
+    expect(items[1]).toMatchObject({ id: "cir-local-2" });
+  });
+
+  it("does not require masterKey in local mode", async () => {
+    const localDb = createMockLocalDb([LOCAL_CHECK_IN_ROW]);
+    const { result } = renderHookWithProviders(() => useCheckInHistory(), {
+      querySource: "local",
+      localDb,
+      masterKey: null,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toHaveLength(1);
   });
 });
 
