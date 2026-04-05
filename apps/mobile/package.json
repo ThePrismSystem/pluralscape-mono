@@ -31,7 +31,7 @@
     "expo-localization": "~55.0.8",
     "expo-modules-core": "~55.0.15",
     "expo-router": "~55.0.4",
-    "expo-secure-store": "~14.0.1",
+    "expo-secure-store": "~14.2.0",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~55.0.4",
     "react": "^19.2.4",
