@@ -6,6 +6,7 @@ import { SyncProvider, useSync } from "../SyncProvider.js";
 
 import type { AuthContextValue } from "../../auth/AuthProvider.js";
 import type { ConnectionContextValue } from "../../connection/ConnectionProvider.js";
+import type { DataLayerContextValue } from "../../data/DataLayerProvider.js";
 import type { PlatformContext } from "../../platform/types.js";
 
 // ── Minimal context mocks ────────────────────────────────────────────
@@ -26,6 +27,16 @@ vi.mock("../../connection/index.js", () => ({
     manager: {} as ConnectionContextValue["manager"],
   }),
 }));
+
+vi.mock("../../data/DataLayerProvider.js", async () => {
+  const { createEventBus } = await import("@pluralscape/sync");
+  return {
+    useDataLayer: (): DataLayerContextValue => ({
+      eventBus: createEventBus(),
+      localDb: {} as DataLayerContextValue["localDb"],
+    }),
+  };
+});
 
 vi.mock("../../platform/index.js", () => ({
   usePlatform: (): PlatformContext =>
