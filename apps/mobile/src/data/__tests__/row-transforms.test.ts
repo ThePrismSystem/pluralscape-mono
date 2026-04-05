@@ -32,6 +32,7 @@ import {
   rowToRelationship,
   rowToStructureEntity,
   rowToStructureEntityType,
+  rowToSystemSettings,
   rowToTimer,
   rowToWikiPage,
 } from "../row-transforms.js";
@@ -1123,5 +1124,112 @@ describe("rowToWikiPage", () => {
     expect(result.linkedEntities).toEqual([]);
     expect(result.archived).toBe(false);
     expect(result.version).toBe(0);
+  });
+});
+
+// ── Row transform error handling ──────────────────────────────────────────────
+
+function baseMemberRow(): Record<string, unknown> {
+  return {
+    id: "mem-edge",
+    system_id: "sys-1",
+    name: "Edge",
+    pronouns: '["they","them"]',
+    description: null,
+    avatar_source: null,
+    colors: "[]",
+    saturation_level: '{"kind":"known","level":"fragment"}',
+    tags: "[]",
+    suppress_friend_front_notification: 0,
+    board_message_notification_on_front: 0,
+    archived: 0,
+    created_at: 1_700_000_000_000,
+    updated_at: 1_700_000_001_000,
+  };
+}
+
+function baseSystemSettingsRow(): Record<string, unknown> {
+  return {
+    id: "ss-edge",
+    system_id: "sys-1",
+    theme: "dark",
+    font_scale: 1,
+    locale: null,
+    default_bucket_id: null,
+    app_lock: '{"enabled":false}',
+    notifications: "{}",
+    sync_preferences: "{}",
+    privacy_defaults: "{}",
+    littles_safe_mode: '{"enabled":false}',
+    nomenclature: "{}",
+    saturation_levels_enabled: 0,
+    auto_capture_fronting_on_journal: 0,
+    snapshot_schedule: "{}",
+    onboarding_complete: 0,
+    created_at: 1_700_000_000_000,
+    updated_at: 1_700_000_001_000,
+  };
+}
+
+describe("row transform error handling", () => {
+  describe("malformed JSON", () => {
+    it("throws RowTransformError for invalid JSON in member pronouns", () => {
+      const row = { ...baseMemberRow(), pronouns: "{not-valid-json" };
+      expect(() => rowToMember(row)).toThrow(RowTransformError);
+      expect(() => rowToMember(row)).toThrow(/members\.pronouns/);
+    });
+
+    it("throws RowTransformError for invalid JSON in system settings appLock", () => {
+      const row = { ...baseSystemSettingsRow(), app_lock: "{broken" };
+      expect(() => rowToSystemSettings(row)).toThrow(RowTransformError);
+      expect(() => rowToSystemSettings(row)).toThrow(/system_settings\.app_lock/);
+    });
+  });
+
+  describe("wrong column types", () => {
+    it("throws RowTransformError when string column receives a number", () => {
+      const row = { ...baseMemberRow(), id: 123 };
+      expect(() => rowToMember(row)).toThrow(RowTransformError);
+      expect(() => rowToMember(row)).toThrow(/members\.id.*expected string/i);
+    });
+
+    it("throws RowTransformError when timestamp column receives a string", () => {
+      const row = { ...baseMemberRow(), created_at: "not-a-timestamp" };
+      expect(() => rowToMember(row)).toThrow(RowTransformError);
+      expect(() => rowToMember(row)).toThrow(/members\.created_at.*expected number/i);
+    });
+  });
+
+  describe("privacy fail-closed", () => {
+    it("defaults suppressFriendFrontNotification to true when column is null", () => {
+      const row = { ...baseMemberRow(), suppress_friend_front_notification: null };
+      const result = rowToMember(row);
+      expect(result.suppressFriendFrontNotification).toBe(true);
+    });
+
+    it("defaults boardMessageNotificationOnFront to true when column is undefined", () => {
+      const row = baseMemberRow();
+      delete row["board_message_notification_on_front"];
+      const result = rowToMember(row);
+      expect(result.boardMessageNotificationOnFront).toBe(true);
+    });
+  });
+
+  describe("archived handling", () => {
+    it("returns archived member with archivedAt equal to updatedAt", () => {
+      const row = { ...baseMemberRow(), archived: 1, updated_at: 1_700_000_005_000 };
+      const result = rowToMember(row);
+      expect(result.archived).toBe(true);
+      if (result.archived) {
+        expect(result.archivedAt).toBe(1_700_000_005_000);
+      }
+    });
+
+    it("returns non-archived member with version 0", () => {
+      const row = baseMemberRow();
+      const result = rowToMember(row);
+      expect(result.archived).toBe(false);
+      expect(result.version).toBe(0);
+    });
   });
 });
