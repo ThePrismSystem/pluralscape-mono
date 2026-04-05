@@ -30,13 +30,23 @@ function intToBool(v: unknown): boolean {
 function parseJson(v: unknown): unknown {
   if (v === null || v === undefined) return null;
   if (typeof v !== "string") return v;
-  return JSON.parse(v);
+  return JSON.parse(v) as unknown;
 }
 
 /** Parse a JSON-serialized TEXT column that is guaranteed non-null in the schema. */
 function parseJsonRequired(v: unknown): unknown {
   if (typeof v !== "string") return v;
-  return JSON.parse(v);
+  return JSON.parse(v) as unknown;
+}
+
+/** Parse a JSON-serialized TEXT column as a string array. */
+function parseStringArray(v: unknown): readonly string[] {
+  return parseJsonRequired(v) as readonly string[];
+}
+
+/** Parse a nullable JSON-serialized TEXT column as a string array. */
+function parseStringArrayOrNull(v: unknown): readonly string[] | null {
+  return parseJson(v) as readonly string[] | null;
 }
 
 /** Cast to UnixMillis (branded number). */
@@ -462,12 +472,12 @@ export function rowToMemberRow(row: Record<string, unknown>): MemberLocalRow {
     id: str(row["id"]),
     systemId: str(row["system_id"]),
     name: str(row["name"]),
-    pronouns: parseJsonRequired<readonly string[]>(row["pronouns"]),
+    pronouns: parseStringArray(row["pronouns"]),
     description: strOrNull(row["description"]),
     avatarSource: row["avatar_source"] ?? null,
-    colors: parseJsonRequired<readonly string[]>(row["colors"]),
+    colors: parseStringArray(row["colors"]),
     saturationLevel: str(row["saturation_level"]),
-    tags: parseJsonRequired<readonly string[]>(row["tags"]),
+    tags: parseStringArray(row["tags"]),
     suppressFriendFrontNotification: intToBool(row["suppress_friend_front_notification"]),
     boardMessageNotificationOnFront: intToBool(row["board_message_notification_on_front"]),
     archived: intToBool(row["archived"]),
@@ -574,10 +584,10 @@ export function rowToFieldDefinitionRow(row: Record<string, unknown>): FieldDefi
     name: str(row["name"]),
     description: strOrNull(row["description"]),
     fieldType: str(row["field_type"]),
-    options: parseJson<readonly string[]>(row["options"]),
+    options: parseStringArrayOrNull(row["options"]),
     required: intToBool(row["required"]),
     sortOrder: num(row["sort_order"]),
-    scopes: parseJsonRequired<readonly string[]>(row["scopes"]),
+    scopes: parseStringArray(row["scopes"]),
     archived: intToBool(row["archived"]),
     createdAt: toMs(row["created_at"]),
     updatedAt: toMs(row["updated_at"]),
@@ -591,7 +601,7 @@ export function rowToFieldValueRow(row: Record<string, unknown>): FieldValueLoca
     memberId: strOrNull(row["member_id"]),
     structureEntityId: strOrNull(row["structure_entity_id"]),
     groupId: strOrNull(row["group_id"]),
-    value: parseJson<unknown>(row["value"]),
+    value: parseJson(row["value"]),
     createdAt: toMs(row["created_at"]),
     updatedAt: toMs(row["updated_at"]),
   };
@@ -604,7 +614,7 @@ export function rowToInnerWorldEntityRow(row: Record<string, unknown>): InnerWor
     entityType: str(row["entity_type"]),
     positionX: num(row["position_x"]),
     positionY: num(row["position_y"]),
-    visual: parseJsonRequired<unknown>(row["visual"]),
+    visual: parseJsonRequired(row["visual"]),
     regionId: strOrNull(row["region_id"]),
     linkedMemberId: strOrNull(row["linked_member_id"]),
     linkedStructureEntityId: strOrNull(row["linked_structure_entity_id"]),
@@ -623,10 +633,10 @@ export function rowToInnerWorldRegionRow(row: Record<string, unknown>): InnerWor
     name: str(row["name"]),
     description: strOrNull(row["description"]),
     parentRegionId: strOrNull(row["parent_region_id"]),
-    visual: parseJsonRequired<unknown>(row["visual"]),
-    boundaryData: parseJsonRequired<unknown>(row["boundary_data"]),
+    visual: parseJsonRequired(row["visual"]),
+    boundaryData: parseJsonRequired(row["boundary_data"]),
     accessType: str(row["access_type"]),
-    gatekeeperMemberIds: parseJsonRequired<readonly string[]>(row["gatekeeper_member_ids"]),
+    gatekeeperMemberIds: parseStringArray(row["gatekeeper_member_ids"]),
     archived: intToBool(row["archived"]),
     createdAt: toMs(row["created_at"]),
     updatedAt: toMs(row["updated_at"]),
@@ -661,7 +671,7 @@ export function rowToLifecycleEventRow(row: Record<string, unknown>): LifecycleE
     occurredAt: toMs(row["occurred_at"]),
     recordedAt: toMs(row["recorded_at"]),
     notes: strOrNull(row["notes"]),
-    payload: parseJsonRequired<unknown>(row["payload"]),
+    payload: parseJsonRequired(row["payload"]),
     archived: intToBool(row["archived"]),
   };
 }
@@ -751,8 +761,8 @@ export function rowToMessageRow(row: Record<string, unknown>): MessageLocalRow {
     systemId: str(row["system_id"]),
     senderId: str(row["sender_id"]),
     content: str(row["content"]),
-    attachments: parseJsonRequired<readonly string[]>(row["attachments"]),
-    mentions: parseJsonRequired<readonly string[]>(row["mentions"]),
+    attachments: parseStringArray(row["attachments"]),
+    mentions: parseStringArray(row["mentions"]),
     replyToId: strOrNull(row["reply_to_id"]),
     timestamp: toMs(row["timestamp"]),
     editOf: strOrNull(row["edit_of"]),
@@ -819,10 +829,10 @@ export function rowToJournalEntryRow(row: Record<string, unknown>): JournalEntry
     author: strOrNull(row["author"]),
     frontingSessionId: strOrNull(row["fronting_session_id"]),
     title: str(row["title"]),
-    blocks: parseJsonRequired<unknown>(row["blocks"]),
-    tags: parseJsonRequired<readonly string[]>(row["tags"]),
-    linkedEntities: parseJsonRequired<unknown>(row["linked_entities"]),
-    frontingSnapshots: parseJson<unknown>(row["fronting_snapshots"]),
+    blocks: parseJsonRequired(row["blocks"]),
+    tags: parseStringArray(row["tags"]),
+    linkedEntities: parseJsonRequired(row["linked_entities"]),
+    frontingSnapshots: parseJson(row["fronting_snapshots"]),
     archived: intToBool(row["archived"]),
     createdAt: toMs(row["created_at"]),
     updatedAt: toMs(row["updated_at"]),
@@ -835,10 +845,10 @@ export function rowToWikiPageRow(row: Record<string, unknown>): WikiPageLocalRow
     systemId: str(row["system_id"]),
     title: str(row["title"]),
     slug: str(row["slug"]),
-    blocks: parseJsonRequired<unknown>(row["blocks"]),
-    linkedFromPages: parseJsonRequired<readonly string[]>(row["linked_from_pages"]),
-    tags: parseJsonRequired<readonly string[]>(row["tags"]),
-    linkedEntities: parseJsonRequired<unknown>(row["linked_entities"]),
+    blocks: parseJsonRequired(row["blocks"]),
+    linkedFromPages: parseStringArray(row["linked_from_pages"]),
+    tags: parseStringArray(row["tags"]),
+    linkedEntities: parseJsonRequired(row["linked_entities"]),
     archived: intToBool(row["archived"]),
     createdAt: toMs(row["created_at"]),
     updatedAt: toMs(row["updated_at"]),
@@ -882,8 +892,8 @@ export function rowToFriendConnectionRow(row: Record<string, unknown>): FriendCo
     accountId: str(row["account_id"]),
     friendAccountId: str(row["friend_account_id"]),
     status: str(row["status"]),
-    assignedBuckets: parseJsonRequired<readonly string[]>(row["assigned_buckets"]),
-    visibility: parseJsonRequired<unknown>(row["visibility"]),
+    assignedBuckets: parseStringArray(row["assigned_buckets"]),
+    visibility: parseJsonRequired(row["visibility"]),
     archived: intToBool(row["archived"]),
     archivedAt: null,
     version: 0,
