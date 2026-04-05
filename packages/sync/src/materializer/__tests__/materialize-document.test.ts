@@ -167,6 +167,32 @@ describe("materializeDocument", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("materializes note document type without errors (no entity types map to it)", () => {
+    const { db, calls } = makeDb();
+    const { eventBus, emitSpy } = makeEventBus();
+
+    // No entity has document: "note" — result is zero DB writes
+    materializeDocument("note", {}, db, eventBus);
+
+    expect(calls).toHaveLength(0);
+    const eventTypes = emitSpy.mock.calls.map((c) => c[0]);
+    expect(eventTypes).toContain("materialized:document");
+    expect(eventTypes).toContain("search:index-updated");
+  });
+
+  it("materializes bucket document type without errors (no entity types map to it)", () => {
+    const { db, calls } = makeDb();
+    const { eventBus, emitSpy } = makeEventBus();
+
+    // No entity has document: "bucket" — result is zero DB writes
+    materializeDocument("bucket", {}, db, eventBus);
+
+    expect(calls).toHaveLength(0);
+    const eventTypes = emitSpy.mock.calls.map((c) => c[0]);
+    expect(eventTypes).toContain("materialized:document");
+    expect(eventTypes).toContain("search:index-updated");
+  });
+
   it("materializes chat document type entities", () => {
     const { db, calls } = makeDb();
     const { eventBus } = makeEventBus();
