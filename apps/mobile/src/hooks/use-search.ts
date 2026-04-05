@@ -2,7 +2,6 @@ import { ENTITY_TABLE_REGISTRY } from "@pluralscape/sync/materializer";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-
 import type { LocalDatabase } from "../data/local-database.js";
 import type { SyncedEntityType } from "@pluralscape/sync";
 import type { UseQueryResult } from "@tanstack/react-query";
@@ -139,7 +138,8 @@ export function executeSearch(
     ) {
       const ftsName = `fts_friend_${tableName}`;
       const friendEntityType = `friend-${entityType}`;
-      const rows = searchTable(db, friendEntityType, tableName, ftsName, ftsQuery);
+      const friendTableName = `friend_${tableName}`;
+      const rows = searchTable(db, friendEntityType, friendTableName, ftsName, ftsQuery);
       results.push(...rows);
     }
   }

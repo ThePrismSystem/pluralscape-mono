@@ -136,7 +136,13 @@ export function createFriendIndexer(config: FriendIndexerConfig): () => void {
   });
 
   const unsubDataChanged = eventBus.on("friend:data-changed", (event) => {
-    void indexFriend(event.connectionId, config);
+    void indexFriend(event.connectionId, config).catch((err: unknown) => {
+      eventBus.emit("sync:error", {
+        type: "sync:error",
+        message: `Failed to index friend data for connection ${event.connectionId}`,
+        error: err,
+      });
+    });
   });
 
   return () => {

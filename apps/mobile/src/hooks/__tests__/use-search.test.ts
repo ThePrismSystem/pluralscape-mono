@@ -99,6 +99,20 @@ describe("executeSearch", () => {
       }
     });
 
+    it("uses friend_ base table for friend scope JOIN (not base table)", () => {
+      executeSearch(fixture.db, "alice", "friends");
+
+      const calls = fixture.queryAllMock.mock.calls as [string, unknown[]][];
+      for (const [sql] of calls) {
+        // The SELECT and JOIN should reference friend_<table>, not the bare table
+        const joinMatch = /JOIN\s+(\w+)\s+ON/.exec(sql);
+        expect(joinMatch).not.toBeNull();
+        if (joinMatch === null) return;
+        const joinedTable = joinMatch[1] ?? "";
+        expect(joinedTable).toMatch(/^friend_/);
+      }
+    });
+
     it("only queries entity types with non-empty ftsColumns", () => {
       executeSearch(fixture.db, "test", "self");
 

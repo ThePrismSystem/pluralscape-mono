@@ -317,6 +317,29 @@ describe("createFriendIndexer", () => {
       });
     });
 
+    it("emits sync:error when fetchExport rejects", async () => {
+      fetchExport = vi
+        .fn<FriendIndexerConfig["fetchExport"]>()
+        .mockRejectedValue(new Error("network down"));
+      const errorListener = vi.fn();
+      createFriendIndexer({ eventBus, db, fetchExport, decryptEntity });
+      eventBus.on("sync:error", errorListener);
+
+      eventBus.emit("friend:data-changed", {
+        type: "friend:data-changed",
+        connectionId: "conn-err",
+      });
+
+      await vi.waitFor(() => {
+        expect(errorListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "sync:error",
+            message: expect.stringContaining("conn-err"),
+          }),
+        );
+      });
+    });
+
     it("skips entities with unknown entityType", async () => {
       fetchExport = vi.fn<FriendIndexerConfig["fetchExport"]>().mockResolvedValue({
         data: [{ id: "e-1", entityType: "unknown-type", encryptedData: "e-1", updatedAt: 1000 }],
