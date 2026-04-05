@@ -17,6 +17,12 @@ import {
   updateFriendConnectionStatusProjection,
   updateFriendConnectionVisibilityProjection,
 } from "../../projections/friend-projection.js";
+import {
+  asBucketId,
+  asFriendCodeId,
+  asFriendConnectionId,
+  asKeyGrantId,
+} from "../test-crypto-helpers.js";
 
 import type {
   FriendCodeInput,
@@ -181,9 +187,9 @@ describe("applyFriendCodeProjection", () => {
     });
 
     expect(Object.keys(doc.friendCodes)).toHaveLength(1);
-    expect(doc.friendCodes["fcode_1"]?.id.val).toBe("fcode_1");
-    expect(doc.friendCodes["fcode_1"]?.code.val).toBe("ABCD-EFGH-1234");
-    expect(doc.friendCodes["fcode_1"]?.archived).toBe(false);
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.id.val).toBe("fcode_1");
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.code.val).toBe("ABCD-EFGH-1234");
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.archived).toBe(false);
   });
 
   it("overwrites existing code with same id", () => {
@@ -199,7 +205,7 @@ describe("applyFriendCodeProjection", () => {
     });
 
     expect(Object.keys(doc.friendCodes)).toHaveLength(1);
-    expect(doc.friendCodes["fcode_1"]?.code.val).toBe("NEW-CODE-9999");
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.code.val).toBe("NEW-CODE-9999");
   });
 });
 
@@ -215,11 +221,11 @@ describe("applyFriendConnectionProjection", () => {
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(1);
-    const fc = doc.friendConnections["fc_1"];
+    const fc = doc.friendConnections[asFriendConnectionId("fc_1")];
     expect(fc?.id.val).toBe("fc_1");
     expect(fc?.status.val).toBe("pending");
-    expect(fc?.assignedBuckets["bkt_1"]).toBe(true);
-    expect(fc?.assignedBuckets["bkt_2"]).toBe(true);
+    expect(fc?.assignedBuckets[asBucketId("bkt_1")]).toBe(true);
+    expect(fc?.assignedBuckets[asBucketId("bkt_2")]).toBe(true);
   });
 });
 
@@ -235,7 +241,7 @@ describe("applyKeyGrantProjection", () => {
     });
 
     expect(Object.keys(doc.keyGrants)).toHaveLength(1);
-    const kg = doc.keyGrants["kg_1"];
+    const kg = doc.keyGrants[asKeyGrantId("kg_1")];
     expect(kg?.id.val).toBe("kg_1");
     expect(kg?.encryptedBucketKey.val).toBe("base64encodedkey==");
     expect(kg?.revokedAt).toBeNull();
@@ -253,17 +259,17 @@ describe("archiveFriendCodeProjection", () => {
       applyFriendCodeProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      archiveFriendCodeProjection(d, "fcode_1");
+      archiveFriendCodeProjection(d, asFriendCodeId("fcode_1"));
     });
 
-    expect(doc.friendCodes["fcode_1"]?.archived).toBe(true);
+    expect(doc.friendCodes[asFriendCodeId("fcode_1")]?.archived).toBe(true);
   });
 
   it("is a no-op if code does not exist", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      archiveFriendCodeProjection(d, "nonexistent_code");
+      archiveFriendCodeProjection(d, asFriendCodeId("nonexistent_code"));
     });
 
     expect(Object.keys(doc.friendCodes)).toHaveLength(0);
@@ -281,17 +287,22 @@ describe("updateFriendConnectionStatusProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionStatusProjection(d, "fc_1", "accepted", 2000);
+      updateFriendConnectionStatusProjection(d, asFriendConnectionId("fc_1"), "accepted", 2000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.status.val).toBe("accepted");
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.status.val).toBe("accepted");
   });
 
   it("is a no-op if connection does not exist", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionStatusProjection(d, "nonexistent_fc", "accepted", 2000);
+      updateFriendConnectionStatusProjection(
+        d,
+        asFriendConnectionId("nonexistent_fc"),
+        "accepted",
+        2000,
+      );
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
@@ -315,17 +326,27 @@ describe("updateFriendConnectionVisibilityProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionVisibilityProjection(d, "fc_1", newVisibility, 2000);
+      updateFriendConnectionVisibilityProjection(
+        d,
+        asFriendConnectionId("fc_1"),
+        newVisibility,
+        2000,
+      );
     });
 
-    expect(doc.friendConnections["fc_1"]?.visibility.val).toBe(newVisibility);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.visibility.val).toBe(newVisibility);
   });
 
   it("is a no-op if connection does not exist", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      updateFriendConnectionVisibilityProjection(d, "nonexistent_fc", "{}", 2000);
+      updateFriendConnectionVisibilityProjection(
+        d,
+        asFriendConnectionId("nonexistent_fc"),
+        "{}",
+        2000,
+      );
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
@@ -343,10 +364,12 @@ describe("addBucketAssignmentProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      addBucketAssignmentProjection(d, "fc_1", "bkt_new" as BucketId, 2000);
+      addBucketAssignmentProjection(d, asFriendConnectionId("fc_1"), asBucketId("bkt_new"), 2000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_new"]).toBe(true);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_new")],
+    ).toBe(true);
   });
 
   it("is idempotent when adding existing bucket", () => {
@@ -357,18 +380,27 @@ describe("addBucketAssignmentProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      addBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 2000);
+      addBucketAssignmentProjection(d, asFriendConnectionId("fc_1"), asBucketId("bkt_1"), 2000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBe(true);
-    expect(Object.keys(doc.friendConnections["fc_1"]?.assignedBuckets ?? {})).toHaveLength(1);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_1")],
+    ).toBe(true);
+    expect(
+      Object.keys(doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets ?? {}),
+    ).toHaveLength(1);
   });
 
   it("is a no-op if connection does not exist", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      addBucketAssignmentProjection(d, "nonexistent_fc", "bkt_1" as BucketId, 2000);
+      addBucketAssignmentProjection(
+        d,
+        asFriendConnectionId("nonexistent_fc"),
+        asBucketId("bkt_1"),
+        2000,
+      );
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
@@ -388,12 +420,16 @@ describe("removeBucketAssignmentProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      removeBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 3000);
+      removeBucketAssignmentProjection(d, asFriendConnectionId("fc_1"), asBucketId("bkt_1"), 3000);
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBeUndefined();
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_2"]).toBe(true);
-    expect(doc.friendConnections["fc_1"]?.updatedAt).toBe(3000);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_1")],
+    ).toBeUndefined();
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_2")],
+    ).toBe(true);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.updatedAt).toBe(3000);
   });
 
   it("is a no-op when removing a bucket that is not assigned", () => {
@@ -404,18 +440,30 @@ describe("removeBucketAssignmentProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      removeBucketAssignmentProjection(d, "fc_1", "bkt_nonexistent" as BucketId, 3000);
+      removeBucketAssignmentProjection(
+        d,
+        asFriendConnectionId("fc_1"),
+        asBucketId("bkt_nonexistent"),
+        3000,
+      );
     });
 
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBe(true);
-    expect(doc.friendConnections["fc_1"]?.updatedAt).toBe(3000);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_1")],
+    ).toBe(true);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.updatedAt).toBe(3000);
   });
 
   it("is a no-op if connection does not exist", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      removeBucketAssignmentProjection(d, "nonexistent_fc", "bkt_1" as BucketId, 3000);
+      removeBucketAssignmentProjection(
+        d,
+        asFriendConnectionId("nonexistent_fc"),
+        asBucketId("bkt_1"),
+        3000,
+      );
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
@@ -432,7 +480,13 @@ describe("removeBucketAssignmentProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     Automerge.change(doc, (d) => {
-      removeBucketAssignmentProjection(d, "fc_1", "bkt_1" as BucketId, 3000, logger);
+      removeBucketAssignmentProjection(
+        d,
+        asFriendConnectionId("fc_1"),
+        asBucketId("bkt_1"),
+        3000,
+        logger,
+      );
     });
 
     expect(logger.warn).not.toHaveBeenCalled();
@@ -443,7 +497,13 @@ describe("removeBucketAssignmentProjection", () => {
     const logger = { warn: vi.fn() };
 
     Automerge.change(doc, (d) => {
-      removeBucketAssignmentProjection(d, "nonexistent_fc", "bkt_1" as BucketId, 3000, logger);
+      removeBucketAssignmentProjection(
+        d,
+        asFriendConnectionId("nonexistent_fc"),
+        asBucketId("bkt_1"),
+        3000,
+        logger,
+      );
     });
 
     expect(logger.warn).toHaveBeenCalledWith(
@@ -464,17 +524,17 @@ describe("archiveFriendConnectionProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      archiveFriendConnectionProjection(d, "fc_1");
+      archiveFriendConnectionProjection(d, asFriendConnectionId("fc_1"));
     });
 
-    expect(doc.friendConnections["fc_1"]?.archived).toBe(true);
+    expect(doc.friendConnections[asFriendConnectionId("fc_1")]?.archived).toBe(true);
   });
 
   it("is a no-op if connection does not exist", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      archiveFriendConnectionProjection(d, "nonexistent_fc");
+      archiveFriendConnectionProjection(d, asFriendConnectionId("nonexistent_fc"));
     });
 
     expect(Object.keys(doc.friendConnections)).toHaveLength(0);
@@ -485,7 +545,7 @@ describe("archiveFriendConnectionProjection", () => {
     const logger = { warn: vi.fn() };
 
     Automerge.change(doc, (d) => {
-      archiveFriendConnectionProjection(d, "nonexistent_fc", logger);
+      archiveFriendConnectionProjection(d, asFriendConnectionId("nonexistent_fc"), logger);
     });
 
     expect(logger.warn).toHaveBeenCalledWith(
@@ -502,10 +562,10 @@ describe("archiveFriendConnectionProjection", () => {
       applyFriendConnectionProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      archiveFriendConnectionProjection(d, "fc_1");
+      archiveFriendConnectionProjection(d, asFriendConnectionId("fc_1"));
     });
 
-    const fc = doc.friendConnections["fc_1"];
+    const fc = doc.friendConnections[asFriendConnectionId("fc_1")];
     expect(fc?.archived).toBe(true);
     expect(fc?.status.val).toBe("pending");
     expect(fc?.id.val).toBe("fc_1");
@@ -523,17 +583,17 @@ describe("revokeKeyGrantProjection", () => {
       applyKeyGrantProjection(d, input);
     });
     doc = Automerge.change(doc, (d) => {
-      revokeKeyGrantProjection(d, "kg_1", 9999);
+      revokeKeyGrantProjection(d, asKeyGrantId("kg_1"), 9999);
     });
 
-    expect(doc.keyGrants["kg_1"]?.revokedAt).toBe(9999);
+    expect(doc.keyGrants[asKeyGrantId("kg_1")]?.revokedAt).toBe(9999);
   });
 
   it("is a no-op if grant does not exist", () => {
     let doc = makePrivacyConfigDoc();
 
     doc = Automerge.change(doc, (d) => {
-      revokeKeyGrantProjection(d, "nonexistent_kg", 9999);
+      revokeKeyGrantProjection(d, asKeyGrantId("nonexistent_kg"), 9999);
     });
 
     expect(Object.keys(doc.keyGrants)).toHaveLength(0);

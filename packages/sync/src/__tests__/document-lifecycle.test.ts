@@ -18,7 +18,13 @@ import {
   TIME_SPLIT_CONFIGS,
 } from "../types.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import {
+  asFrontingSessionId,
+  asGroupId,
+  asJournalEntryId,
+  asMemberId,
+  asSyncDocId,
+} from "./test-crypto-helpers.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -72,7 +78,7 @@ describe("Compaction: snapshot roundtrip", () => {
     });
 
     session.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Alice"),
@@ -93,7 +99,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const snapshot = session.createSnapshot(1);
     const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium);
 
-    expect(restored.document.members["mem_1"]?.name.val).toBe("Alice");
+    expect(restored.document.members[asMemberId("mem_1")]?.name.val).toBe("Alice");
     expect(restored.documentId).toBe("doc-lc-001");
   });
 
@@ -109,7 +115,7 @@ describe("Compaction: snapshot roundtrip", () => {
     // Produce many changes to build up history
     for (let i = 0; i < 50; i++) {
       session.change((d) => {
-        d.sessions[`fs_${i.toString()}`] = {
+        d.sessions[asFrontingSessionId(`fs_${i.toString()}`)] = {
           id: s(`fs_${i.toString()}`),
           systemId: s("sys_1"),
           memberId: s("mem_1"),
@@ -147,7 +153,7 @@ describe("Compaction: snapshot roundtrip", () => {
     });
 
     session.change((d) => {
-      d.members["mem_archived"] = {
+      d.members[asMemberId("mem_archived")] = {
         id: s("mem_archived"),
         systemId: s("sys_1"),
         name: s("Archived Member"),
@@ -168,8 +174,8 @@ describe("Compaction: snapshot roundtrip", () => {
     const snapshot = session.createSnapshot(1);
     const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium);
 
-    expect(restored.document.members["mem_archived"]?.archived).toBe(true);
-    expect(restored.document.members["mem_archived"]?.description?.val).toBe(
+    expect(restored.document.members[asMemberId("mem_archived")]?.archived).toBe(true);
+    expect(restored.document.members[asMemberId("mem_archived")]?.description?.val).toBe(
       "still here after compaction",
     );
   });
@@ -180,7 +186,7 @@ describe("Compaction: snapshot roundtrip", () => {
 
     // Both sessions produce changes independently
     sessionA.change((d) => {
-      d.members["mem_a"] = {
+      d.members[asMemberId("mem_a")] = {
         id: s("mem_a"),
         systemId: s("sys_1"),
         name: s("From A"),
@@ -199,7 +205,7 @@ describe("Compaction: snapshot roundtrip", () => {
     });
 
     sessionB.change((d) => {
-      d.members["mem_b"] = {
+      d.members[asMemberId("mem_b")] = {
         id: s("mem_b"),
         systemId: s("sys_1"),
         name: s("From B"),
@@ -228,7 +234,7 @@ describe("Compaction: snapshot roundtrip", () => {
 
     // The restored session from snapB has B's data
     const restoredB = EncryptedSyncSession.fromSnapshot<typeof base>(snapB, keys, sodium);
-    expect(restoredB.document.members["mem_b"]?.name.val).toBe("From B");
+    expect(restoredB.document.members[asMemberId("mem_b")]?.name.val).toBe("From B");
   });
 
   it("change count tracking: snapshot + new changes roundtrip", async () => {
@@ -243,7 +249,7 @@ describe("Compaction: snapshot roundtrip", () => {
     // Pre-snapshot changes
     for (let i = 0; i < 5; i++) {
       session.change((d) => {
-        d.sessions[`fs_pre_${i.toString()}`] = {
+        d.sessions[asFrontingSessionId(`fs_pre_${i.toString()}`)] = {
           id: s(`fs_pre_${i.toString()}`),
           systemId: s("sys_1"),
           memberId: s("mem_1"),
@@ -269,7 +275,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const newSession = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium, 1);
 
     const postChange = newSession.change((d) => {
-      d.sessions["fs_post_1"] = {
+      d.sessions[asFrontingSessionId("fs_post_1")] = {
         id: s("fs_post_1"),
         systemId: s("sys_1"),
         memberId: s("mem_2"),
@@ -317,7 +323,7 @@ describe("Compaction: snapshot roundtrip", () => {
 
     // Add a change so the document has some state
     session.change((d) => {
-      d.members["mem_mono"] = {
+      d.members[asMemberId("mem_mono")] = {
         id: s("mem_mono"),
         systemId: s("sys_1"),
         name: s("Monotone"),
@@ -355,7 +361,7 @@ describe("Compaction: snapshot roundtrip", () => {
     });
 
     const env1 = session.change((d) => {
-      d.sessions["fs_1"] = {
+      d.sessions[asFrontingSessionId("fs_1")] = {
         id: s("fs_1"),
         systemId: s("sys_1"),
         memberId: s("mem_1"),
@@ -447,7 +453,7 @@ describe("Time-split configuration", () => {
 
     // Q1 has a historical session
     sessionQ1.change((d) => {
-      d.sessions["fs_q1"] = {
+      d.sessions[asFrontingSessionId("fs_q1")] = {
         id: s("fs_q1"),
         systemId: s("sys_abc"),
         memberId: s("mem_1"),
@@ -467,7 +473,7 @@ describe("Time-split configuration", () => {
 
     // Q2 has a new session
     sessionQ2.change((d) => {
-      d.sessions["fs_q2"] = {
+      d.sessions[asFrontingSessionId("fs_q2")] = {
         id: s("fs_q2"),
         systemId: s("sys_abc"),
         memberId: s("mem_1"),
@@ -488,8 +494,8 @@ describe("Time-split configuration", () => {
     // Each period doc is independent
     expect(Object.keys(sessionQ1.document.sessions)).toHaveLength(1);
     expect(Object.keys(sessionQ2.document.sessions)).toHaveLength(1);
-    expect(sessionQ1.document.sessions["fs_q1"]?.id.val).toBe("fs_q1");
-    expect(sessionQ2.document.sessions["fs_q2"]?.id.val).toBe("fs_q2");
+    expect(sessionQ1.document.sessions[asFrontingSessionId("fs_q1")]?.id.val).toBe("fs_q1");
+    expect(sessionQ2.document.sessions[asFrontingSessionId("fs_q2")]?.id.val).toBe("fs_q2");
   });
 
   it("cross-split query: concatenate and sort fronting sessions from multiple periods", () => {
@@ -511,7 +517,7 @@ describe("Time-split configuration", () => {
     });
 
     sessionQ1.change((d) => {
-      d.sessions["fs_q4"] = {
+      d.sessions[asFrontingSessionId("fs_q4")] = {
         id: s("fs_q4"),
         systemId: s("sys_1"),
         memberId: s("mem_1"),
@@ -530,7 +536,7 @@ describe("Time-split configuration", () => {
     });
 
     sessionQ2.change((d) => {
-      d.sessions["fs_q1"] = {
+      d.sessions[asFrontingSessionId("fs_q1")] = {
         id: s("fs_q1"),
         systemId: s("sys_1"),
         memberId: s("mem_1"),
@@ -578,7 +584,7 @@ describe("Purging: post-compaction state", () => {
     });
 
     session.change((d) => {
-      d.entries["entry_1"] = {
+      d.entries[asJournalEntryId("entry_1")] = {
         id: s("entry_1"),
         systemId: s("sys_1"),
         author: s("mem_1"),
@@ -618,7 +624,7 @@ describe("Purging: post-compaction state", () => {
     // Pre-snapshot changes
     for (let i = 0; i < 3; i++) {
       session.change((d) => {
-        d.sessions[`fs_pre_${i.toString()}`] = {
+        d.sessions[asFrontingSessionId(`fs_pre_${i.toString()}`)] = {
           id: s(`fs_pre_${i.toString()}`),
           systemId: s("sys_1"),
           memberId: s("mem_1"),
@@ -641,7 +647,7 @@ describe("Purging: post-compaction state", () => {
 
     // Post-snapshot changes
     const postChange = session.change((d) => {
-      d.sessions["fs_post"] = {
+      d.sessions[asFrontingSessionId("fs_post")] = {
         id: s("fs_post"),
         systemId: s("sys_1"),
         memberId: s("mem_2"),
@@ -681,7 +687,7 @@ describe("Purging: post-compaction state", () => {
     });
 
     const env1 = session.change((d) => {
-      d.sessions["fs_1"] = {
+      d.sessions[asFrontingSessionId("fs_1")] = {
         id: s("fs_1"),
         systemId: s("sys_1"),
         memberId: s("mem_1"),
@@ -704,7 +710,7 @@ describe("Purging: post-compaction state", () => {
     session.createSnapshot(1);
 
     const env2 = session.change((d) => {
-      d.sessions["fs_2"] = {
+      d.sessions[asFrontingSessionId("fs_2")] = {
         id: s("fs_2"),
         systemId: s("sys_1"),
         memberId: s("mem_2"),
@@ -742,7 +748,7 @@ describe("Purging: post-compaction state", () => {
 
     // Build some history
     const preEnv = session.change((d) => {
-      d.groups["grp_1"] = {
+      d.groups[asGroupId("grp_1")] = {
         id: s("grp_1"),
         systemId: s("sys_1"),
         name: s("Group 1"),
@@ -763,7 +769,7 @@ describe("Purging: post-compaction state", () => {
 
     // New change after snapshot
     const postEnv = session.change((d) => {
-      const g = d.groups["grp_1"];
+      const g = d.groups[asGroupId("grp_1")];
       if (g) {
         g.name = s("Renamed Group");
         g.updatedAt = 2000;
@@ -778,7 +784,7 @@ describe("Purging: post-compaction state", () => {
     const postSnapshotChanges = _postSnapshotChangesPg.envelopes;
     recovered.applyEncryptedChanges(postSnapshotChanges);
 
-    expect(recovered.document.groups["grp_1"]?.name.val).toBe("Renamed Group");
+    expect(recovered.document.groups[asGroupId("grp_1")]?.name.val).toBe("Renamed Group");
   });
 });
 
@@ -840,7 +846,7 @@ describe("Archive: cold document behavior", () => {
 
     // Add historical data
     session.change((d) => {
-      d.sessions["fs_old"] = {
+      d.sessions[asFrontingSessionId("fs_old")] = {
         id: s("fs_old"),
         systemId: s("sys_1"),
         memberId: s("mem_1"),
@@ -859,7 +865,7 @@ describe("Archive: cold document behavior", () => {
     });
 
     // The document is readable and writable regardless of server-side archive flag
-    expect(session.document.sessions["fs_old"]?.archived).toBe(false);
+    expect(session.document.sessions[asFrontingSessionId("fs_old")]?.archived).toBe(false);
     expect(Object.keys(session.document.sessions)).toHaveLength(1);
   });
 
@@ -869,7 +875,7 @@ describe("Archive: cold document behavior", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-archive-ondemand"));
 
     const env = sessionA.change((d) => {
-      d.members["mem_history"] = {
+      d.members[asMemberId("mem_history")] = {
         id: s("mem_history"),
         systemId: s("sys_1"),
         name: s("Historical Member"),
@@ -890,7 +896,9 @@ describe("Archive: cold document behavior", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions have the data — simulates on-demand load working correctly
-    expect(sessionB.document.members["mem_history"]?.name.val).toBe("Historical Member");
+    expect(sessionB.document.members[asMemberId("mem_history")]?.name.val).toBe(
+      "Historical Member",
+    );
     expect(sessionA.document).toEqual(sessionB.document);
   });
 

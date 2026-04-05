@@ -12,7 +12,7 @@ import {
   splitDocument,
 } from "../time-split.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import { asFrontingSessionId, asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { FrontingDocument } from "../schemas/fronting.js";
 import type { DocumentKeys } from "../types.js";
@@ -157,7 +157,7 @@ describe("splitDocument", () => {
     let doc = createFrontingDocument();
 
     doc = Automerge.change(doc, (d) => {
-      d.sessions["active_1"] = {
+      d.sessions[asFrontingSessionId("active_1")] = {
         id: new Automerge.ImmutableString("active_1"),
         systemId: new Automerge.ImmutableString("sys_test"),
         memberId: new Automerge.ImmutableString("mem_a"),
@@ -173,7 +173,7 @@ describe("splitDocument", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.sessions["closed_1"] = {
+      d.sessions[asFrontingSessionId("closed_1")] = {
         id: new Automerge.ImmutableString("closed_1"),
         systemId: new Automerge.ImmutableString("sys_test"),
         memberId: new Automerge.ImmutableString("mem_b"),
@@ -227,7 +227,7 @@ describe("splitDocument", () => {
     let doc = createFrontingDocument();
 
     doc = Automerge.change(doc, (d) => {
-      d.sessions["active_1"] = {
+      d.sessions[asFrontingSessionId("active_1")] = {
         id: new Automerge.ImmutableString("active_1"),
         systemId: new Automerge.ImmutableString("sys_test"),
         memberId: new Automerge.ImmutableString("mem_a"),

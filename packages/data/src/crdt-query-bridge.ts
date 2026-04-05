@@ -1,6 +1,3 @@
-// SyncEngine in @pluralscape/sync needs to add a getDocumentSnapshot() method
-// to implement DocumentSnapshotProvider before this bridge can be wired (see sync-f5f8).
-
 import type { SyncDocumentId } from "@pluralscape/types";
 import type { QueryKey } from "@tanstack/react-query";
 

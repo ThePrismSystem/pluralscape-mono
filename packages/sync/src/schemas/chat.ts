@@ -1,4 +1,5 @@
 import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
+import type { AcknowledgementId, BoardMessageId, PollId, PollOptionId } from "@pluralscape/types";
 
 // ── channel ──────────────────────────────────────────────────────────
 
@@ -150,13 +151,13 @@ export interface ChatDocument {
   /** Singleton channel metadata (LWW per field). */
   channel: CrdtChannel;
   /** Append-lww map: board messages keyed by ID; pinned/sortOrder are mutable. */
-  boardMessages: Record<string, CrdtBoardMessage>;
+  boardMessages: Record<BoardMessageId, CrdtBoardMessage>;
   /** LWW map keyed by PollId. */
-  polls: Record<string, CrdtPoll>;
+  polls: Record<PollId, CrdtPoll>;
   /** LWW map keyed by PollOptionId. Each option stores its pollId for lookup. */
-  pollOptions: Record<string, CrdtPollOption>;
+  pollOptions: Record<PollOptionId, CrdtPollOption>;
   /** LWW map keyed by AcknowledgementId. */
-  acknowledgements: Record<string, CrdtAcknowledgementRequest>;
+  acknowledgements: Record<AcknowledgementId, CrdtAcknowledgementRequest>;
   /** Append-only list of chat messages. Immutable once appended. */
   messages: CrdtChatMessage[];
   /** Append-only list of poll votes. Immutable once appended. */

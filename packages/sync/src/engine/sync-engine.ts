@@ -208,6 +208,16 @@ export class SyncEngine {
     return [...this.sessions.keys()];
   }
 
+  /**
+   * Get the current Automerge document snapshot for a document.
+   * Structurally satisfies DocumentSnapshotProvider from @pluralscape/data.
+   */
+  getDocumentSnapshot(documentId: SyncDocumentId): unknown {
+    const session = this.sessions.get(documentId);
+    if (!session) throw new NoActiveSessionError(documentId);
+    return session.document;
+  }
+
   // ── Steady-state: outbound ──────────────────────────────────────────
 
   /**

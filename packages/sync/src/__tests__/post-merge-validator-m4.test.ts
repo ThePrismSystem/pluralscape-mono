@@ -20,7 +20,7 @@ import {
 } from "../post-merge-validator.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import { asSyncDocId, asTimerId } from "./test-crypto-helpers.js";
 
 import type { CrdtTimer } from "../schemas/system-core.js";
 import type { SystemCoreDocument } from "../schemas/system-core.js";
@@ -129,7 +129,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
       const session = createTimerSession(keys, `doc-m4-timer-interval-${String(interval)}`);
 
       session.change((d) => {
-        d.timers["tmr_1"] = makeTimer("tmr_1", { intervalMinutes: interval });
+        d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: interval });
       });
 
       const result = normalizeTimerConfig(session);
@@ -139,7 +139,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
       expect(result.notifications).toHaveLength(1);
       expect(result.notifications[0]?.fieldName).toBe("intervalMinutes");
       expect(result.notifications[0]?.resolution).toBe("post-merge-timer-normalize");
-      expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+      expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
     },
   );
 
@@ -147,7 +147,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-null-interval");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", { intervalMinutes: null });
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: null });
     });
 
     const result = normalizeTimerConfig(session);
@@ -161,21 +161,21 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-already-disabled");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", { intervalMinutes: -10, enabled: false });
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -10, enabled: false });
     });
 
     const result = normalizeTimerConfig(session);
 
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
   });
 
   it("does not disable timer with overnight waking hours (start=22:00, end=08:00)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-hours-overnight");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: s("22:00"),
         wakingEnd: s("08:00"),
@@ -187,14 +187,14 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     expect(result.count).toBe(0);
     expect(result.envelope).toBeNull();
     expect(result.notifications).toHaveLength(0);
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(true);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(true);
   });
 
   it("disables timer with wakingHoursOnly=true and start equals end", () => {
     const session = createTimerSession(keys, "doc-m4-timer-hours-eq");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: s("10:00"),
         wakingEnd: s("10:00"),
@@ -206,7 +206,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     expect(result.count).toBe(1);
     expect(result.notifications).toHaveLength(1);
     expect(result.notifications[0]?.fieldName).toBe("wakingHours");
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
   });
 
   it.each([
@@ -218,7 +218,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
       const session = createTimerSession(keys, `doc-m4-timer-${suffix}`);
 
       session.change((d) => {
-        d.timers["tmr_1"] = makeTimer("tmr_1", {
+        d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
           wakingHoursOnly: true,
           wakingStart: start !== null ? s(start) : null,
           wakingEnd: end !== null ? s(end) : null,
@@ -230,7 +230,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
       expect(result.count).toBe(1);
       expect(result.notifications).toHaveLength(1);
       expect(result.notifications[0]?.fieldName).toBe("wakingHours");
-      expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+      expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
     },
   );
 
@@ -238,7 +238,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-valid-h");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: true,
         wakingStart: s("08:00"),
         wakingEnd: s("22:00"),
@@ -256,7 +256,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-wh-false");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: false,
         wakingStart: s("22:00"),
         wakingEnd: s("08:00"),
@@ -273,7 +273,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-wh-null");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         wakingHoursOnly: null,
         wakingStart: null,
         wakingEnd: null,
@@ -290,11 +290,11 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-arch");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         intervalMinutes: -10,
         archived: true,
       });
-      d.timers["tmr_2"] = makeTimer("tmr_2", {
+      d.timers[asTimerId("tmr_2")] = makeTimer("tmr_2", {
         wakingHoursOnly: true,
         wakingStart: null,
         wakingEnd: null,
@@ -313,7 +313,7 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-all-ok");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", {
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", {
         intervalMinutes: 60,
         wakingHoursOnly: true,
         wakingStart: s("09:00"),
@@ -332,19 +332,19 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
     const session = createTimerSession(keys, "doc-m4-timer-mixed");
 
     session.change((d) => {
-      d.timers["tmr_valid"] = makeTimer("tmr_valid", {
+      d.timers[asTimerId("tmr_valid")] = makeTimer("tmr_valid", {
         intervalMinutes: 30,
         wakingHoursOnly: true,
         wakingStart: s("08:00"),
         wakingEnd: s("22:00"),
       });
-      d.timers["tmr_zero"] = makeTimer("tmr_zero", { intervalMinutes: 0 });
-      d.timers["tmr_hours"] = makeTimer("tmr_hours", {
+      d.timers[asTimerId("tmr_zero")] = makeTimer("tmr_zero", { intervalMinutes: 0 });
+      d.timers[asTimerId("tmr_hours")] = makeTimer("tmr_hours", {
         wakingHoursOnly: true,
         wakingStart: s("20:00"),
         wakingEnd: s("06:00"),
       });
-      d.timers["tmr_equal"] = makeTimer("tmr_equal", {
+      d.timers[asTimerId("tmr_equal")] = makeTimer("tmr_equal", {
         wakingHoursOnly: true,
         wakingStart: s("12:00"),
         wakingEnd: s("12:00"),
@@ -355,10 +355,10 @@ describe("normalizeTimerConfig (M4 extended coverage)", () => {
 
     expect(result.count).toBe(2);
     expect(result.notifications).toHaveLength(2);
-    expect(session.document.timers["tmr_valid"]?.enabled).toBe(true);
-    expect(session.document.timers["tmr_zero"]?.enabled).toBe(false);
-    expect(session.document.timers["tmr_hours"]?.enabled).toBe(true);
-    expect(session.document.timers["tmr_equal"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_valid")]?.enabled).toBe(true);
+    expect(session.document.timers[asTimerId("tmr_zero")]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_hours")]?.enabled).toBe(true);
+    expect(session.document.timers[asTimerId("tmr_equal")]?.enabled).toBe(false);
   });
 
   it("returns count=0 for empty timers map", () => {
@@ -603,7 +603,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     const session = createTimerSession(keys, "doc-m4-run-timer");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", { intervalMinutes: -1 });
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -1 });
     });
 
     const result = runAllValidations(session);
@@ -612,7 +612,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     expect(result.notifications.some((n) => n.resolution === "post-merge-timer-normalize")).toBe(
       true,
     );
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
   });
 
   it("triggers normalizeWebhookConfigs when document has webhookConfigs field", () => {
@@ -634,7 +634,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     const session = createSessionWithWebhookConfigs(keys, "doc-m4-run-both");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", { intervalMinutes: -5 });
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -5 });
       d.webhookConfigs["wh_1"] = makeWebhookConfig("not-valid", ["member.created"]);
     });
 
@@ -668,7 +668,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
 
     session.change((d) => {
       // @ts-expect-error -- deliberately corrupting the timers map to test error handling
-      d.timers["tmr_broken"] = null;
+      d.timers[asTimerId("tmr_broken")] = null;
       d.webhookConfigs["wh_1"] = makeWebhookConfig("ftp://bad.com/hook", ["member.created"]);
     });
 
@@ -693,7 +693,7 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     const session = createSessionWithWebhookConfigs(keys, "doc-m4-run-error-rev");
 
     session.change((d) => {
-      d.timers["tmr_1"] = makeTimer("tmr_1", { intervalMinutes: -5 });
+      d.timers[asTimerId("tmr_1")] = makeTimer("tmr_1", { intervalMinutes: -5 });
       // @ts-expect-error -- deliberately corrupting the webhookConfigs map to test error handling
       d.webhookConfigs["wh_broken"] = null;
     });
@@ -715,6 +715,6 @@ describe("runAllValidations (M4 timer + webhook integration)", () => {
     expect(result.notifications.some((n) => n.resolution === "post-merge-timer-normalize")).toBe(
       true,
     );
-    expect(session.document.timers["tmr_1"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_1")]?.enabled).toBe(false);
   });
 });

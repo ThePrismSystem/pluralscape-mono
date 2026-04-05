@@ -209,6 +209,7 @@ export interface PostMergeValidationResult {
   readonly checkInNormalizations: number;
   readonly friendConnectionNormalizations: number;
   readonly frontingSessionNormalizations: number;
+  readonly frontingCommentAuthorIssues: number;
   readonly timerConfigNormalizations: number;
   readonly webhookConfigIssues: number;
   readonly correctionEnvelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[];

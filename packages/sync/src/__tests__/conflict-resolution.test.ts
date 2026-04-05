@@ -11,7 +11,20 @@ import {
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import {
+  asBucketId,
+  asCheckInRecordId,
+  asFriendConnectionId,
+  asFrontingSessionId,
+  asGroupId,
+  asGroupMembershipKey,
+  asInnerWorldRegionId,
+  asKeyGrantId,
+  asMemberId,
+  asSyncDocId,
+  asSystemStructureEntityLinkId,
+  asSystemStructureEntityMemberLinkId,
+} from "./test-crypto-helpers.js";
 
 import type { CrdtGroup, CrdtInnerWorldRegion } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
@@ -85,7 +98,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
 
     // Seed a member in both sessions
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Original"),
@@ -108,11 +121,11 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
 
     // Concurrent edits to different fields
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.name = s("New Name");
     });
     const envB = sessionB.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.description = s("New description");
     });
 
@@ -120,8 +133,10 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionA.document.members["mem_1"]?.name.val).toBe("New Name");
-    expect(sessionA.document.members["mem_1"]?.description?.val).toBe("New description");
+    expect(sessionA.document.members[asMemberId("mem_1")]?.name.val).toBe("New Name");
+    expect(sessionA.document.members[asMemberId("mem_1")]?.description?.val).toBe(
+      "New description",
+    );
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -130,7 +145,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-001"));
 
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Original"),
@@ -152,11 +167,11 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     sessionB.applyEncryptedChanges(_r2.envelopes);
 
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.name = s("Name from A");
     });
     const envB = sessionB.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.name = s("Name from B");
     });
 
@@ -165,11 +180,11 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions must converge to the same value
-    expect(sessionA.document.members["mem_1"]?.name.val).toBe(
-      sessionB.document.members["mem_1"]?.name.val,
+    expect(sessionA.document.members[asMemberId("mem_1")]?.name.val).toBe(
+      sessionB.document.members[asMemberId("mem_1")]?.name.val,
     );
     // The winning value must be one of the two candidates
-    const winner = sessionA.document.members["mem_1"]?.name.val;
+    const winner = sessionA.document.members[asMemberId("mem_1")]?.name.val;
     expect(["Name from A", "Name from B"]).toContain(winner);
   });
 
@@ -178,7 +193,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-001"));
 
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Before"),
@@ -201,11 +216,11 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
 
     // A archives, B edits name — both should apply
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.archived = true;
     });
     const envB = sessionB.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.name = s("Edited while archived");
     });
 
@@ -214,8 +229,8 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Entity is archived AND has the edited name
-    expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
-    expect(sessionA.document.members["mem_1"]?.name.val).toBe("Edited while archived");
+    expect(sessionA.document.members[asMemberId("mem_1")]?.archived).toBe(true);
+    expect(sessionA.document.members[asMemberId("mem_1")]?.name.val).toBe("Edited while archived");
     expect(sessionA.document).toEqual(sessionB.document);
   });
 });
@@ -236,7 +251,7 @@ describe("Category 3: concurrent FrontingSession end time", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-fronting-001"));
 
     const seedEnv = sessionA.change((d) => {
-      d.sessions["fs_1"] = {
+      d.sessions[asFrontingSessionId("fs_1")] = {
         id: s("fs_1"),
         systemId: s("sys_1"),
         memberId: s("mem_1"),
@@ -259,14 +274,14 @@ describe("Category 3: concurrent FrontingSession end time", () => {
 
     // Both sessions try to end the session concurrently
     const envA = sessionA.change((d) => {
-      const fs = d.sessions["fs_1"];
+      const fs = d.sessions[asFrontingSessionId("fs_1")];
       if (fs) {
         fs.endTime = 2000;
         fs.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const fs = d.sessions["fs_1"];
+      const fs = d.sessions[asFrontingSessionId("fs_1")];
       if (fs) {
         fs.endTime = 2100;
         fs.updatedAt = 2100;
@@ -278,8 +293,8 @@ describe("Category 3: concurrent FrontingSession end time", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions converge to the same endTime (LWW picks one)
-    const endA = sessionA.document.sessions["fs_1"]?.endTime;
-    const endB = sessionB.document.sessions["fs_1"]?.endTime;
+    const endA = sessionA.document.sessions[asFrontingSessionId("fs_1")]?.endTime;
+    const endB = sessionB.document.sessions[asFrontingSessionId("fs_1")]?.endTime;
     expect(endA).not.toBeNull();
     expect(endA).toBe(endB);
     // The winner is one of the two candidates
@@ -308,8 +323,8 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
 
     // Seed two root groups (no parent)
     const seedEnv = sessionA.change((d) => {
-      d.groups["groupA"] = makeGroup("groupA", 1);
-      d.groups["groupB"] = makeGroup("groupB", 2);
+      d.groups[asGroupId("groupA")] = makeGroup("groupA", 1);
+      d.groups[asGroupId("groupB")] = makeGroup("groupB", 2);
     });
     await relay.submit(seedEnv);
     const _r5 = await relay.getEnvelopesSince(asSyncDocId("doc-cr-004"), 0);
@@ -317,7 +332,7 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
 
     // A: groupA.parentGroupId = groupB
     const envA = sessionA.change((d) => {
-      const g = d.groups["groupA"];
+      const g = d.groups[asGroupId("groupA")];
       if (g) {
         g.parentGroupId = s("groupB");
         g.updatedAt = 2000;
@@ -325,7 +340,7 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
     });
     // B: groupB.parentGroupId = groupA (concurrent — cycle-forming)
     const envB = sessionB.change((d) => {
-      const g = d.groups["groupB"];
+      const g = d.groups[asGroupId("groupB")];
       if (g) {
         g.parentGroupId = s("groupA");
         g.updatedAt = 2001;
@@ -341,8 +356,8 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
 
     // Both parentGroupId values are set — cycle is present in merged state.
     // Post-merge cycle detection (DFS traversal) is application-layer.
-    expect(sessionA.document.groups["groupA"]?.parentGroupId?.val).toBe("groupB");
-    expect(sessionA.document.groups["groupB"]?.parentGroupId?.val).toBe("groupA");
+    expect(sessionA.document.groups[asGroupId("groupA")]?.parentGroupId?.val).toBe("groupB");
+    expect(sessionA.document.groups[asGroupId("groupB")]?.parentGroupId?.val).toBe("groupA");
   });
 });
 
@@ -362,7 +377,7 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-privacy-001"));
 
     const seedEnv = sessionA.change((d) => {
-      d.keyGrants["kg_1"] = {
+      d.keyGrants[asKeyGrantId("kg_1")] = {
         id: s("kg_1"),
         bucketId: s("bkt_1"),
         friendAccountId: s("acc_2"),
@@ -378,11 +393,11 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
 
     // Both devices revoke concurrently
     const envA = sessionA.change((d) => {
-      const kg = d.keyGrants["kg_1"];
+      const kg = d.keyGrants[asKeyGrantId("kg_1")];
       if (kg) kg.revokedAt = 2000;
     });
     const envB = sessionB.change((d) => {
-      const kg = d.keyGrants["kg_1"];
+      const kg = d.keyGrants[asKeyGrantId("kg_1")];
       if (kg) kg.revokedAt = 2001;
     });
 
@@ -391,8 +406,8 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both converge and grant is revoked regardless of which timestamp won
-    const revokedAtA = sessionA.document.keyGrants["kg_1"]?.revokedAt;
-    const revokedAtB = sessionB.document.keyGrants["kg_1"]?.revokedAt;
+    const revokedAtA = sessionA.document.keyGrants[asKeyGrantId("kg_1")]?.revokedAt;
+    const revokedAtB = sessionB.document.keyGrants[asKeyGrantId("kg_1")]?.revokedAt;
     expect(revokedAtA).not.toBeNull();
     expect(revokedAtA).toBe(revokedAtB);
   });
@@ -414,14 +429,14 @@ describe("Category 6: junction add-wins semantics", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-001"));
 
     const envA = sessionA.change((d) => {
-      d.groupMemberships["g1_m1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m1")] = true;
     });
 
     // B does not add anything — just receives A's change
     await relay.submit(envA);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionB.document.groupMemberships["g1_m1"]).toBe(true);
+    expect(sessionB.document.groupMemberships[asGroupMembershipKey("g1_m1")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -430,18 +445,18 @@ describe("Category 6: junction add-wins semantics", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-001"));
 
     const envA = sessionA.change((d) => {
-      d.groupMemberships["g1_m1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m1")] = true;
     });
     const envB = sessionB.change((d) => {
-      d.groupMemberships["g1_m2"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m2")] = true;
     });
 
     await relay.submit(envA);
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionA.document.groupMemberships["g1_m1"]).toBe(true);
-    expect(sessionA.document.groupMemberships["g1_m2"]).toBe(true);
+    expect(sessionA.document.groupMemberships[asGroupMembershipKey("g1_m1")]).toBe(true);
+    expect(sessionA.document.groupMemberships[asGroupMembershipKey("g1_m2")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 });
@@ -463,7 +478,7 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
 
     // Seed a structure entity link
     const seedEnv = sessionA.change((d) => {
-      d.structureEntityLinks["stel_1"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")] = {
         id: s("stel_1"),
         systemId: s("sys_1"),
         entityId: s("ste_1"),
@@ -480,14 +495,14 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
 
     // Concurrent edits to sortOrder
     const envA = sessionA.change((d) => {
-      const link = d.structureEntityLinks["stel_1"];
+      const link = d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")];
       if (link) {
         link.sortOrder = 10;
         link.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const link = d.structureEntityLinks["stel_1"];
+      const link = d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")];
       if (link) {
         link.sortOrder = 20;
         link.updatedAt = 2000;
@@ -499,8 +514,10 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // LWW resolves to one value — both sessions agree
-    const resultA = sessionA.document.structureEntityLinks["stel_1"]?.sortOrder;
-    const resultB = sessionB.document.structureEntityLinks["stel_1"]?.sortOrder;
+    const resultA =
+      sessionA.document.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.sortOrder;
+    const resultB =
+      sessionB.document.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.sortOrder;
     expect(resultA).toBe(resultB);
     expect([10, 20]).toContain(resultA);
     expect(sessionA.document).toEqual(sessionB.document);
@@ -512,7 +529,7 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
 
     // Seed two links
     const seedEnv = sessionA.change((d) => {
-      d.structureEntityLinks["stel_1"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")] = {
         id: s("stel_1"),
         systemId: s("sys_1"),
         entityId: s("ste_1"),
@@ -522,7 +539,7 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.structureEntityLinks["stel_2"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_2")] = {
         id: s("stel_2"),
         systemId: s("sys_1"),
         entityId: s("ste_2"),
@@ -539,11 +556,11 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
 
     // A edits link 1, B edits link 2
     const envA = sessionA.change((d) => {
-      const link = d.structureEntityLinks["stel_1"];
+      const link = d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")];
       if (link) link.sortOrder = 99;
     });
     const envB = sessionB.change((d) => {
-      const link = d.structureEntityLinks["stel_2"];
+      const link = d.structureEntityLinks[asSystemStructureEntityLinkId("stel_2")];
       if (link) link.sortOrder = 77;
     });
 
@@ -551,8 +568,12 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionA.document.structureEntityLinks["stel_1"]?.sortOrder).toBe(99);
-    expect(sessionA.document.structureEntityLinks["stel_2"]?.sortOrder).toBe(77);
+    expect(
+      sessionA.document.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.sortOrder,
+    ).toBe(99);
+    expect(
+      sessionA.document.structureEntityLinks[asSystemStructureEntityLinkId("stel_2")]?.sortOrder,
+    ).toBe(77);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -561,7 +582,7 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cr-6b-c"));
 
     const seedEnv = sessionA.change((d) => {
-      d.structureEntityMemberLinks["steml_1"] = {
+      d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")] = {
         id: s("steml_1"),
         systemId: s("sys_1"),
         parentEntityId: s("ste_1"),
@@ -578,10 +599,13 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
 
     // A deletes, B edits concurrently
     const envA = sessionA.change((d) => {
-      delete d.structureEntityMemberLinks["steml_1"];
+      Reflect.deleteProperty(
+        d.structureEntityMemberLinks,
+        asSystemStructureEntityMemberLinkId("steml_1"),
+      );
     });
     const envB = sessionB.change((d) => {
-      const link = d.structureEntityMemberLinks["steml_1"];
+      const link = d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")];
       if (link) link.sortOrder = 50;
     });
 
@@ -590,7 +614,9 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Automerge: delete wins over concurrent field edit in a map
-    expect(sessionA.document.structureEntityMemberLinks["steml_1"]).toBeUndefined();
+    expect(
+      sessionA.document.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")],
+    ).toBeUndefined();
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -600,7 +626,7 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
 
     // Both create steml_1 with different memberId
     const envA = sessionA.change((d) => {
-      d.structureEntityMemberLinks["steml_1"] = {
+      d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")] = {
         id: s("steml_1"),
         systemId: s("sys_1"),
         parentEntityId: s("ste_1"),
@@ -612,7 +638,7 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
       };
     });
     const envB = sessionB.change((d) => {
-      d.structureEntityMemberLinks["steml_1"] = {
+      d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")] = {
         id: s("steml_1"),
         systemId: s("sys_1"),
         parentEntityId: s("ste_1"),
@@ -629,8 +655,12 @@ describe("Category 6b: LWW structure entity link merge semantics", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions converge to same value
-    const resultA = sessionA.document.structureEntityMemberLinks["steml_1"]?.memberId.val;
-    const resultB = sessionB.document.structureEntityMemberLinks["steml_1"]?.memberId.val;
+    const resultA =
+      sessionA.document.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")]
+        ?.memberId.val;
+    const resultB =
+      sessionB.document.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")]
+        ?.memberId.val;
     expect(resultA).toBe(resultB);
     expect(["mem_a", "mem_b"]).toContain(resultA);
     expect(sessionA.document).toEqual(sessionB.document);
@@ -653,7 +683,7 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-fronting-001"));
 
     const seedEnv = sessionA.change((d) => {
-      d.checkInRecords["cr_1"] = {
+      d.checkInRecords[asCheckInRecordId("cr_1")] = {
         id: s("cr_1"),
         timerConfigId: s("t_1"),
         systemId: s("sys_1"),
@@ -672,7 +702,7 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
 
     // A responds, B dismisses concurrently
     const envA = sessionA.change((d) => {
-      const cr = d.checkInRecords["cr_1"];
+      const cr = d.checkInRecords[asCheckInRecordId("cr_1")];
       if (cr) {
         cr.respondedByMemberId = s("mem_1");
         cr.respondedAt = 1100;
@@ -680,7 +710,7 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
       }
     });
     const envB = sessionB.change((d) => {
-      const cr = d.checkInRecords["cr_1"];
+      const cr = d.checkInRecords[asCheckInRecordId("cr_1")];
       if (cr) {
         cr.dismissed = true;
         cr.updatedAt = 1100;
@@ -698,7 +728,7 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
     // dismissed should be false (response takes priority). In this test we verify
     // that both sessions see the same final state — the application layer would
     // then apply the normalization rule as a follow-up change.
-    const cr = sessionA.document.checkInRecords["cr_1"];
+    const cr = sessionA.document.checkInRecords[asCheckInRecordId("cr_1")];
     expect(cr).toBeDefined();
     // Verify response data is present (LWW on each field independently)
     // The exact winner of `dismissed` depends on Automerge's LWW ordering
@@ -733,7 +763,7 @@ describe("Category 8: sort order conflicts", () => {
         ["grp_2", 2],
         ["grp_3", 3],
       ] as const) {
-        d.groups[id] = makeGroup(id, order);
+        d.groups[asGroupId(id)] = makeGroup(id, order);
       }
     });
     await relay.submit(seedEnv);
@@ -742,15 +772,15 @@ describe("Category 8: sort order conflicts", () => {
 
     // Session A: swap grp_1 and grp_3 (3→1, 1→3)
     const envA = sessionA.change((d) => {
-      const g1 = d.groups["grp_1"];
-      const g3 = d.groups["grp_3"];
+      const g1 = d.groups[asGroupId("grp_1")];
+      const g3 = d.groups[asGroupId("grp_3")];
       if (g1) g1.sortOrder = 3;
       if (g3) g3.sortOrder = 1;
     });
     // Session B: swap grp_2 and grp_1 (2→1, 1→2) — concurrent
     const envB = sessionB.change((d) => {
-      const g1 = d.groups["grp_1"];
-      const g2 = d.groups["grp_2"];
+      const g1 = d.groups[asGroupId("grp_1")];
+      const g2 = d.groups[asGroupId("grp_2")];
       if (g1) g1.sortOrder = 2;
       if (g2) g2.sortOrder = 1;
     });
@@ -765,7 +795,9 @@ describe("Category 8: sort order conflicts", () => {
     // Each group has some sortOrder — LWW picked a winner per field.
     // Ties or inversions may exist; post-merge normalization (re-numbering)
     // is application-layer.
-    const orders = ["grp_1", "grp_2", "grp_3"].map((id) => sessionA.document.groups[id]?.sortOrder);
+    const orders = ["grp_1", "grp_2", "grp_3"].map(
+      (id) => sessionA.document.groups[asGroupId(id)]?.sortOrder,
+    );
     expect(orders).toEqual([expect.any(Number), expect.any(Number), expect.any(Number)]);
   });
 });
@@ -886,7 +918,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     });
 
     session.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Archived Member"),
@@ -908,9 +940,9 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     const snapshot = session.createSnapshot(1);
     const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium);
 
-    expect(restored.document.members["mem_1"]?.archived).toBe(true);
-    expect(restored.document.members["mem_1"]?.name.val).toBe("Archived Member");
-    expect(restored.document.members["mem_1"]?.description?.val).toBe("Still here");
+    expect(restored.document.members[asMemberId("mem_1")]?.archived).toBe(true);
+    expect(restored.document.members[asMemberId("mem_1")]?.name.val).toBe("Archived Member");
+    expect(restored.document.members[asMemberId("mem_1")]?.description?.val).toBe("Still here");
   });
 
   it("concurrent archive on both devices converges to archived", async () => {
@@ -918,7 +950,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-tomb-002"));
 
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Active"),
@@ -940,14 +972,14 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     sessionB.applyEncryptedChanges(_r10.envelopes);
 
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) {
         m.archived = true;
         m.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) {
         m.archived = true;
         m.updatedAt = 2001;
@@ -958,7 +990,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
+    expect(sessionA.document.members[asMemberId("mem_1")]?.archived).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -967,7 +999,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-tomb-003"));
 
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Was Archived"),
@@ -990,7 +1022,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
 
     // A un-archives
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) {
         m.archived = false;
         m.updatedAt = 2000;
@@ -999,7 +1031,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     await relay.submit(envA);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionB.document.members["mem_1"]?.archived).toBe(false);
+    expect(sessionB.document.members[asMemberId("mem_1")]?.archived).toBe(false);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -1014,7 +1046,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
 
     // Seed a member and archive it
     session.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Archived Member"),
@@ -1033,8 +1065,8 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     });
 
     // The archived member's data is still accessible for last-known-data fallback
-    expect(session.document.members["mem_1"]?.archived).toBe(true);
-    expect(session.document.members["mem_1"]?.name.val).toBe("Archived Member");
+    expect(session.document.members[asMemberId("mem_1")]?.archived).toBe(true);
+    expect(session.document.members[asMemberId("mem_1")]?.name.val).toBe("Archived Member");
   });
 
   it("junction referencing archived member remains valid after archive", async () => {
@@ -1042,7 +1074,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-tomb-005"));
 
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Member"),
@@ -1058,7 +1090,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.groupMemberships["g1_mem_1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_mem_1")] = true;
     });
     await relay.submit(seedEnv);
     const _r12 = await relay.getEnvelopesSince(asSyncDocId("doc-tomb-005"), 0);
@@ -1066,15 +1098,15 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
 
     // A archives the member; B does nothing
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.archived = true;
     });
     await relay.submit(envA);
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // Junction still present even though member is archived
-    expect(sessionB.document.members["mem_1"]?.archived).toBe(true);
-    expect(sessionB.document.groupMemberships["g1_mem_1"]).toBe(true);
+    expect(sessionB.document.members[asMemberId("mem_1")]?.archived).toBe(true);
+    expect(sessionB.document.groupMemberships[asGroupMembershipKey("g1_mem_1")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
@@ -1083,7 +1115,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-tomb-006"));
 
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Member"),
@@ -1106,19 +1138,19 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
 
     // A archives member, B adds a group junction for member concurrently
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) m.archived = true;
     });
     const envB = sessionB.change((d) => {
-      d.groupMemberships["g2_mem_1"] = true;
+      d.groupMemberships[asGroupMembershipKey("g2_mem_1")] = true;
     });
 
     await relay.submit(envA);
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
-    expect(sessionA.document.groupMemberships["g2_mem_1"]).toBe(true);
+    expect(sessionA.document.members[asMemberId("mem_1")]?.archived).toBe(true);
+    expect(sessionA.document.groupMemberships[asGroupMembershipKey("g2_mem_1")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 });
@@ -1156,22 +1188,22 @@ describe("Hierarchy cycles: groups and innerworld regions", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cycle-grp"));
 
     const seedEnv = sessionA.change((d) => {
-      d.groups["grp_a"] = makeGroup("grp_a", 1);
-      d.groups["grp_b"] = makeGroup("grp_b", 2);
+      d.groups[asGroupId("grp_a")] = makeGroup("grp_a", 1);
+      d.groups[asGroupId("grp_b")] = makeGroup("grp_b", 2);
     });
     await relay.submit(seedEnv);
     const _r14 = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-grp"), 0);
     sessionB.applyEncryptedChanges(_r14.envelopes);
 
     const envA = sessionA.change((d) => {
-      const g = d.groups["grp_a"];
+      const g = d.groups[asGroupId("grp_a")];
       if (g) {
         g.parentGroupId = s("grp_b");
         g.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const g = d.groups["grp_b"];
+      const g = d.groups[asGroupId("grp_b")];
       if (g) {
         g.parentGroupId = s("grp_a");
         g.updatedAt = 2001;
@@ -1183,8 +1215,8 @@ describe("Hierarchy cycles: groups and innerworld regions", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
-    expect(sessionA.document.groups["grp_a"]?.parentGroupId?.val).toBe("grp_b");
-    expect(sessionA.document.groups["grp_b"]?.parentGroupId?.val).toBe("grp_a");
+    expect(sessionA.document.groups[asGroupId("grp_a")]?.parentGroupId?.val).toBe("grp_b");
+    expect(sessionA.document.groups[asGroupId("grp_b")]?.parentGroupId?.val).toBe("grp_a");
   });
 
   it("concurrent cross-reparenting of innerworld regions produces a detectable cycle", async () => {
@@ -1192,22 +1224,22 @@ describe("Hierarchy cycles: groups and innerworld regions", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cycle-iw"));
 
     const seedEnv = sessionA.change((d) => {
-      d.innerWorldRegions["rg_a"] = makeRegion("rg_a");
-      d.innerWorldRegions["rg_b"] = makeRegion("rg_b");
+      d.innerWorldRegions[asInnerWorldRegionId("rg_a")] = makeRegion("rg_a");
+      d.innerWorldRegions[asInnerWorldRegionId("rg_b")] = makeRegion("rg_b");
     });
     await relay.submit(seedEnv);
     const _r15 = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-iw"), 0);
     sessionB.applyEncryptedChanges(_r15.envelopes);
 
     const envA = sessionA.change((d) => {
-      const rg = d.innerWorldRegions["rg_a"];
+      const rg = d.innerWorldRegions[asInnerWorldRegionId("rg_a")];
       if (rg) {
         rg.parentRegionId = s("rg_b");
         rg.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const rg = d.innerWorldRegions["rg_b"];
+      const rg = d.innerWorldRegions[asInnerWorldRegionId("rg_b")];
       if (rg) {
         rg.parentRegionId = s("rg_a");
         rg.updatedAt = 2001;
@@ -1219,8 +1251,12 @@ describe("Hierarchy cycles: groups and innerworld regions", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
-    expect(sessionA.document.innerWorldRegions["rg_a"]?.parentRegionId?.val).toBe("rg_b");
-    expect(sessionA.document.innerWorldRegions["rg_b"]?.parentRegionId?.val).toBe("rg_a");
+    expect(
+      sessionA.document.innerWorldRegions[asInnerWorldRegionId("rg_a")]?.parentRegionId?.val,
+    ).toBe("rg_b");
+    expect(
+      sessionA.document.innerWorldRegions[asInnerWorldRegionId("rg_b")]?.parentRegionId?.val,
+    ).toBe("rg_a");
   });
 });
 
@@ -1382,8 +1418,8 @@ describe("Sort order tie detection", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-sort-tie"));
 
     const seedEnv = sessionA.change((d) => {
-      d.groups["grp_1"] = makeGroup("grp_1", 1);
-      d.groups["grp_2"] = makeGroup("grp_2", 2);
+      d.groups[asGroupId("grp_1")] = makeGroup("grp_1", 1);
+      d.groups[asGroupId("grp_2")] = makeGroup("grp_2", 2);
     });
     await relay.submit(seedEnv);
     const _r17 = await relay.getEnvelopesSince(asSyncDocId("doc-sort-tie"), 0);
@@ -1391,11 +1427,11 @@ describe("Sort order tie detection", () => {
 
     // Both set the same sortOrder value
     const envA = sessionA.change((d) => {
-      const g = d.groups["grp_1"];
+      const g = d.groups[asGroupId("grp_1")];
       if (g) g.sortOrder = 5;
     });
     const envB = sessionB.change((d) => {
-      const g = d.groups["grp_2"];
+      const g = d.groups[asGroupId("grp_2")];
       if (g) g.sortOrder = 5;
     });
 
@@ -1405,8 +1441,8 @@ describe("Sort order tie detection", () => {
 
     expect(sessionA.document).toEqual(sessionB.document);
     // Both groups have sortOrder 5 — a tie requiring post-merge normalization
-    expect(sessionA.document.groups["grp_1"]?.sortOrder).toBe(5);
-    expect(sessionA.document.groups["grp_2"]?.sortOrder).toBe(5);
+    expect(sessionA.document.groups[asGroupId("grp_1")]?.sortOrder).toBe(5);
+    expect(sessionA.document.groups[asGroupId("grp_2")]?.sortOrder).toBe(5);
   });
 
   it("three groups with concurrent reorders all converge", async () => {
@@ -1414,9 +1450,9 @@ describe("Sort order tie detection", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-sort-three"));
 
     const seedEnv = sessionA.change((d) => {
-      d.groups["grp_1"] = makeGroup("grp_1", 1);
-      d.groups["grp_2"] = makeGroup("grp_2", 2);
-      d.groups["grp_3"] = makeGroup("grp_3", 3);
+      d.groups[asGroupId("grp_1")] = makeGroup("grp_1", 1);
+      d.groups[asGroupId("grp_2")] = makeGroup("grp_2", 2);
+      d.groups[asGroupId("grp_3")] = makeGroup("grp_3", 3);
     });
     await relay.submit(seedEnv);
     const _r18 = await relay.getEnvelopesSince(asSyncDocId("doc-sort-three"), 0);
@@ -1424,18 +1460,18 @@ describe("Sort order tie detection", () => {
 
     // A: reverse order
     const envA = sessionA.change((d) => {
-      const g1 = d.groups["grp_1"];
-      const g2 = d.groups["grp_2"];
-      const g3 = d.groups["grp_3"];
+      const g1 = d.groups[asGroupId("grp_1")];
+      const g2 = d.groups[asGroupId("grp_2")];
+      const g3 = d.groups[asGroupId("grp_3")];
       if (g1) g1.sortOrder = 3;
       if (g2) g2.sortOrder = 2;
       if (g3) g3.sortOrder = 1;
     });
     // B: all to same value
     const envB = sessionB.change((d) => {
-      const g1 = d.groups["grp_1"];
-      const g2 = d.groups["grp_2"];
-      const g3 = d.groups["grp_3"];
+      const g1 = d.groups[asGroupId("grp_1")];
+      const g2 = d.groups[asGroupId("grp_2")];
+      const g3 = d.groups[asGroupId("grp_3")];
       if (g1) g1.sortOrder = 10;
       if (g2) g2.sortOrder = 10;
       if (g3) g3.sortOrder = 10;
@@ -1448,7 +1484,7 @@ describe("Sort order tie detection", () => {
     expect(sessionA.document).toEqual(sessionB.document);
     // Each group has a sortOrder value — LWW picked winners
     for (const id of ["grp_1", "grp_2", "grp_3"]) {
-      expect(typeof sessionA.document.groups[id]?.sortOrder).toBe("number");
+      expect(typeof sessionA.document.groups[asGroupId(id)]?.sortOrder).toBe("number");
     }
   });
 });
@@ -1469,7 +1505,7 @@ describe("Category 10: FriendConnection nested assignedBuckets", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-privacy-001"));
 
     const seedEnv = sessionA.change((d) => {
-      d.friendConnections["fc_1"] = {
+      d.friendConnections[asFriendConnectionId("fc_1")] = {
         id: s("fc_1"),
         accountId: s("acc_1"),
         friendAccountId: s("acc_2"),
@@ -1488,21 +1524,22 @@ describe("Category 10: FriendConnection nested assignedBuckets", () => {
     sessionB.applyEncryptedChanges(_r19.envelopes);
 
     const envA = sessionA.change((d) => {
-      const fc = d.friendConnections["fc_1"];
-      if (fc) fc.assignedBuckets["bkt_1"] = true;
+      const fc = d.friendConnections[asFriendConnectionId("fc_1")];
+      if (fc) fc.assignedBuckets[asBucketId("bkt_1")] = true;
     });
     const envB = sessionB.change((d) => {
-      const fc = d.friendConnections["fc_1"];
-      if (fc) fc.assignedBuckets["bkt_2"] = true;
+      const fc = d.friendConnections[asFriendConnectionId("fc_1")];
+      if (fc) fc.assignedBuckets[asBucketId("bkt_2")] = true;
     });
 
     await relay.submit(envA);
     await relay.submit(envB);
     await syncThroughRelay([sessionA, sessionB], relay);
 
-    const assigned = sessionA.document.friendConnections["fc_1"]?.assignedBuckets;
-    expect(assigned?.["bkt_1"]).toBe(true);
-    expect(assigned?.["bkt_2"]).toBe(true);
+    const assigned =
+      sessionA.document.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets;
+    expect(assigned?.[asBucketId("bkt_1")]).toBe(true);
+    expect(assigned?.[asBucketId("bkt_2")]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 });

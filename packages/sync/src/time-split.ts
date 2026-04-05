@@ -8,6 +8,7 @@ import {
   createJournalDocument,
   createNoteDocument,
 } from "./factories/document-factory.js";
+import { entityEntries } from "./schemas/schema-utils.js";
 import { TIME_SPLIT_CONFIGS } from "./types.js";
 
 import type { ParsedDocumentId } from "./document-types.js";
@@ -141,7 +142,7 @@ export function splitDocument<T>(
       }
 
       const newDoc = createFrontingDocument();
-      const activeEntries = Object.entries(currentDoc.sessions).filter(
+      const activeEntries = entityEntries(currentDoc.sessions).filter(
         ([, fs]) => fs.endTime === null,
       );
 

@@ -3,6 +3,25 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { fromDoc } from "../factories/document-factory.js";
 
+import {
+  asBoardMessageId,
+  asBucketId,
+  asCheckInRecordId,
+  asFieldDefinitionId,
+  asFieldValueId,
+  asFriendConnectionId,
+  asFrontingSessionId,
+  asJournalEntryId,
+  asKeyGrantId,
+  asLifecycleEventId,
+  asMemberId,
+  asGroupMembershipKey,
+  asNoteId,
+  asSystemStructureEntityAssociationId,
+  asSystemStructureEntityLinkId,
+  asSystemStructureEntityMemberLinkId,
+} from "./test-crypto-helpers.js";
+
 import type { BucketProjectionDocument } from "../schemas/bucket.js";
 import type { ChatDocument } from "../schemas/chat.js";
 import type { FrontingDocument } from "../schemas/fronting.js";
@@ -164,7 +183,7 @@ describe("SystemCoreDocument schema", () => {
   it("adds and reads a member via map CRUD", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_test"),
         name: s("Luna"),
@@ -181,14 +200,14 @@ describe("SystemCoreDocument schema", () => {
         updatedAt: 2000,
       };
     });
-    expect(doc.members["mem_1"]?.name.val).toBe("Luna");
-    expect(doc.members["mem_1"]?.description?.val).toBe("Host");
+    expect(doc.members[asMemberId("mem_1")]?.name.val).toBe("Luna");
+    expect(doc.members[asMemberId("mem_1")]?.description?.val).toBe("Host");
   });
 
   it("updates a member field with LWW semantics", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_test"),
         name: s("Original"),
@@ -206,19 +225,19 @@ describe("SystemCoreDocument schema", () => {
       };
     });
     doc = Automerge.change(doc, (d) => {
-      const member = d.members["mem_1"];
+      const member = d.members[asMemberId("mem_1")];
       if (member) {
         member.name = s("Updated");
         member.updatedAt = 2000;
       }
     });
-    expect(doc.members["mem_1"]?.name.val).toBe("Updated");
+    expect(doc.members[asMemberId("mem_1")]?.name.val).toBe("Updated");
   });
 
   it("adds lifecycle events to the append-lww map", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.lifecycleEvents["le_1"] = {
+      d.lifecycleEvents[asLifecycleEventId("le_1")] = {
         id: s("le_1"),
         systemId: s("sys_test"),
         eventType: s("discovery"),
@@ -230,7 +249,7 @@ describe("SystemCoreDocument schema", () => {
       };
     });
     doc = Automerge.change(doc, (d) => {
-      d.lifecycleEvents["le_2"] = {
+      d.lifecycleEvents[asLifecycleEventId("le_2")] = {
         id: s("le_2"),
         systemId: s("sys_test"),
         eventType: s("split"),
@@ -242,14 +261,14 @@ describe("SystemCoreDocument schema", () => {
       };
     });
     expect(Object.keys(doc.lifecycleEvents)).toHaveLength(2);
-    expect(doc.lifecycleEvents["le_1"]?.eventType.val).toBe("discovery");
-    expect(doc.lifecycleEvents["le_2"]?.eventType.val).toBe("split");
+    expect(doc.lifecycleEvents[asLifecycleEventId("le_1")]?.eventType.val).toBe("discovery");
+    expect(doc.lifecycleEvents[asLifecycleEventId("le_2")]?.eventType.val).toBe("split");
   });
 
   it("supports LWW mutation of archived field on lifecycle events", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.lifecycleEvents["le_1"] = {
+      d.lifecycleEvents[asLifecycleEventId("le_1")] = {
         id: s("le_1"),
         systemId: s("sys_test"),
         eventType: s("discovery"),
@@ -260,24 +279,24 @@ describe("SystemCoreDocument schema", () => {
         archived: false,
       };
     });
-    expect(doc.lifecycleEvents["le_1"]?.archived).toBe(false);
+    expect(doc.lifecycleEvents[asLifecycleEventId("le_1")]?.archived).toBe(false);
     doc = Automerge.change(doc, (d) => {
-      const event = d.lifecycleEvents["le_1"];
+      const event = d.lifecycleEvents[asLifecycleEventId("le_1")];
       if (event) {
         event.archived = true;
       }
     });
-    expect(doc.lifecycleEvents["le_1"]?.archived).toBe(true);
+    expect(doc.lifecycleEvents[asLifecycleEventId("le_1")]?.archived).toBe(true);
   });
 
   it("adds junction map entries with compound keys", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.groupMemberships["g1_m1"] = true;
-      d.groupMemberships["g1_m2"] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m1")] = true;
+      d.groupMemberships[asGroupMembershipKey("g1_m2")] = true;
     });
-    expect(doc.groupMemberships["g1_m1"]).toBe(true);
-    expect(doc.groupMemberships["g1_m2"]).toBe(true);
+    expect(doc.groupMemberships[asGroupMembershipKey("g1_m1")]).toBe(true);
+    expect(doc.groupMemberships[asGroupMembershipKey("g1_m2")]).toBe(true);
     expect(Object.keys(doc.groupMemberships)).toHaveLength(2);
   });
 
@@ -289,7 +308,7 @@ describe("SystemCoreDocument schema", () => {
 
     it("creates entity links with all fields", () => {
       doc = Automerge.change(doc, (d) => {
-        d.structureEntityLinks["stel_1"] = {
+        d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")] = {
           id: s("stel_1"),
           systemId: s("sys_test"),
           entityId: s("ste_1"),
@@ -300,16 +319,24 @@ describe("SystemCoreDocument schema", () => {
           updatedAt: 1000,
         };
       });
-      expect(doc.structureEntityLinks["stel_1"]?.entityId.val).toBe("ste_1");
-      expect(doc.structureEntityLinks["stel_1"]?.parentEntityId?.val).toBe("ste_parent");
-      expect(doc.structureEntityLinks["stel_1"]?.sortOrder).toBe(0);
-      expect(doc.structureEntityLinks["stel_1"]?.archived).toBe(false);
-      expect(doc.structureEntityLinks["stel_1"]?.updatedAt).toBe(1000);
+      expect(doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.entityId.val).toBe(
+        "ste_1",
+      );
+      expect(
+        doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.parentEntityId?.val,
+      ).toBe("ste_parent");
+      expect(doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.sortOrder).toBe(0);
+      expect(doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.archived).toBe(
+        false,
+      );
+      expect(doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.updatedAt).toBe(
+        1000,
+      );
     });
 
     it("entity link supports null parentEntityId (root)", () => {
       doc = Automerge.change(doc, (d) => {
-        d.structureEntityLinks["stel_root"] = {
+        d.structureEntityLinks[asSystemStructureEntityLinkId("stel_root")] = {
           id: s("stel_root"),
           systemId: s("sys_test"),
           entityId: s("ste_root"),
@@ -320,13 +347,17 @@ describe("SystemCoreDocument schema", () => {
           updatedAt: 1000,
         };
       });
-      expect(doc.structureEntityLinks["stel_root"]?.parentEntityId).toBeNull();
-      expect(doc.structureEntityLinks["stel_root"]?.entityId.val).toBe("ste_root");
+      expect(
+        doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_root")]?.parentEntityId,
+      ).toBeNull();
+      expect(
+        doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_root")]?.entityId.val,
+      ).toBe("ste_root");
     });
 
     it("entity link sortOrder is mutable via LWW", () => {
       doc = Automerge.change(doc, (d) => {
-        d.structureEntityLinks["stel_1"] = {
+        d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")] = {
           id: s("stel_1"),
           systemId: s("sys_test"),
           entityId: s("ste_1"),
@@ -338,19 +369,21 @@ describe("SystemCoreDocument schema", () => {
         };
       });
       doc = Automerge.change(doc, (d) => {
-        const link = d.structureEntityLinks["stel_1"];
+        const link = d.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")];
         if (link) {
           link.sortOrder = 42;
           link.updatedAt = 2000;
         }
       });
-      expect(doc.structureEntityLinks["stel_1"]?.sortOrder).toBe(42);
-      expect(doc.structureEntityLinks["stel_1"]?.updatedAt).toBe(2000);
+      expect(doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.sortOrder).toBe(42);
+      expect(doc.structureEntityLinks[asSystemStructureEntityLinkId("stel_1")]?.updatedAt).toBe(
+        2000,
+      );
     });
 
     it("creates member links with all fields", () => {
       doc = Automerge.change(doc, (d) => {
-        d.structureEntityMemberLinks["steml_1"] = {
+        d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")] = {
           id: s("steml_1"),
           systemId: s("sys_test"),
           parentEntityId: s("ste_1"),
@@ -361,15 +394,25 @@ describe("SystemCoreDocument schema", () => {
           updatedAt: 2000,
         };
       });
-      expect(doc.structureEntityMemberLinks["steml_1"]?.memberId.val).toBe("mem_1");
-      expect(doc.structureEntityMemberLinks["steml_1"]?.parentEntityId?.val).toBe("ste_1");
-      expect(doc.structureEntityMemberLinks["steml_1"]?.sortOrder).toBe(100);
-      expect(doc.structureEntityMemberLinks["steml_1"]?.archived).toBe(false);
+      expect(
+        doc.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")]?.memberId
+          .val,
+      ).toBe("mem_1");
+      expect(
+        doc.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")]
+          ?.parentEntityId?.val,
+      ).toBe("ste_1");
+      expect(
+        doc.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")]?.sortOrder,
+      ).toBe(100);
+      expect(
+        doc.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")]?.archived,
+      ).toBe(false);
     });
 
     it("member link parentEntityId mutable via LWW", () => {
       doc = Automerge.change(doc, (d) => {
-        d.structureEntityMemberLinks["steml_1"] = {
+        d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")] = {
           id: s("steml_1"),
           systemId: s("sys_test"),
           parentEntityId: s("ste_1"),
@@ -381,18 +424,21 @@ describe("SystemCoreDocument schema", () => {
         };
       });
       doc = Automerge.change(doc, (d) => {
-        const link = d.structureEntityMemberLinks["steml_1"];
+        const link = d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")];
         if (link) {
           link.parentEntityId = s("ste_2");
           link.updatedAt = 2000;
         }
       });
-      expect(doc.structureEntityMemberLinks["steml_1"]?.parentEntityId?.val).toBe("ste_2");
+      expect(
+        doc.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_1")]
+          ?.parentEntityId?.val,
+      ).toBe("ste_2");
     });
 
     it("creates associations with all fields including archived", () => {
       doc = Automerge.change(doc, (d) => {
-        d.structureEntityAssociations["stea_1"] = {
+        d.structureEntityAssociations[asSystemStructureEntityAssociationId("stea_1")] = {
           id: s("stea_1"),
           systemId: s("sys_test"),
           sourceEntityId: s("ste_1"),
@@ -402,15 +448,25 @@ describe("SystemCoreDocument schema", () => {
           updatedAt: 3000,
         };
       });
-      expect(doc.structureEntityAssociations["stea_1"]?.sourceEntityId.val).toBe("ste_1");
-      expect(doc.structureEntityAssociations["stea_1"]?.targetEntityId.val).toBe("ste_2");
-      expect(doc.structureEntityAssociations["stea_1"]?.archived).toBe(false);
-      expect(doc.structureEntityAssociations["stea_1"]?.updatedAt).toBe(3000);
+      expect(
+        doc.structureEntityAssociations[asSystemStructureEntityAssociationId("stea_1")]
+          ?.sourceEntityId.val,
+      ).toBe("ste_1");
+      expect(
+        doc.structureEntityAssociations[asSystemStructureEntityAssociationId("stea_1")]
+          ?.targetEntityId.val,
+      ).toBe("ste_2");
+      expect(
+        doc.structureEntityAssociations[asSystemStructureEntityAssociationId("stea_1")]?.archived,
+      ).toBe(false);
+      expect(
+        doc.structureEntityAssociations[asSystemStructureEntityAssociationId("stea_1")]?.updatedAt,
+      ).toBe(3000);
     });
 
     it("link entities survive Automerge binary round-trip", () => {
       doc = Automerge.change(doc, (d) => {
-        d.structureEntityLinks["stel_rt"] = {
+        d.structureEntityLinks[asSystemStructureEntityLinkId("stel_rt")] = {
           id: s("stel_rt"),
           systemId: s("sys_test"),
           entityId: s("ste_rt"),
@@ -420,7 +476,7 @@ describe("SystemCoreDocument schema", () => {
           createdAt: 1000,
           updatedAt: 1000,
         };
-        d.structureEntityMemberLinks["steml_rt"] = {
+        d.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_rt")] = {
           id: s("steml_rt"),
           systemId: s("sys_test"),
           parentEntityId: s("ste_rt"),
@@ -430,7 +486,7 @@ describe("SystemCoreDocument schema", () => {
           createdAt: 1000,
           updatedAt: 1000,
         };
-        d.structureEntityAssociations["stea_rt"] = {
+        d.structureEntityAssociations[asSystemStructureEntityAssociationId("stea_rt")] = {
           id: s("stea_rt"),
           systemId: s("sys_test"),
           sourceEntityId: s("ste_1"),
@@ -442,9 +498,17 @@ describe("SystemCoreDocument schema", () => {
       });
       const bytes = Automerge.save(doc);
       const loaded = Automerge.load<SystemCoreDocument>(bytes);
-      expect(loaded.structureEntityLinks["stel_rt"]?.entityId.val).toBe("ste_rt");
-      expect(loaded.structureEntityMemberLinks["steml_rt"]?.memberId.val).toBe("mem_rt");
-      expect(loaded.structureEntityAssociations["stea_rt"]?.sourceEntityId.val).toBe("ste_1");
+      expect(
+        loaded.structureEntityLinks[asSystemStructureEntityLinkId("stel_rt")]?.entityId.val,
+      ).toBe("ste_rt");
+      expect(
+        loaded.structureEntityMemberLinks[asSystemStructureEntityMemberLinkId("steml_rt")]?.memberId
+          .val,
+      ).toBe("mem_rt");
+      expect(
+        loaded.structureEntityAssociations[asSystemStructureEntityAssociationId("stea_rt")]
+          ?.sourceEntityId.val,
+      ).toBe("ste_1");
     });
   });
 
@@ -455,7 +519,7 @@ describe("SystemCoreDocument schema", () => {
       { scopeType: "all-structure-entity-types" },
     ]);
     doc = Automerge.change(doc, (d) => {
-      d.fieldDefinitions["fd_1"] = {
+      d.fieldDefinitions[asFieldDefinitionId("fd_1")] = {
         id: s("fd_1"),
         systemId: s("sys_test"),
         name: s("Pronouns"),
@@ -470,14 +534,14 @@ describe("SystemCoreDocument schema", () => {
         updatedAt: 1000,
       };
     });
-    expect(doc.fieldDefinitions["fd_1"]?.scopes.val).toBe(scopesJson);
+    expect(doc.fieldDefinitions[asFieldDefinitionId("fd_1")]?.scopes.val).toBe(scopesJson);
   });
 
   describe("CrdtFieldValue polymorphic owner", () => {
     it("supports structureEntityId owner", () => {
       let doc = makeSystemCoreDoc();
       doc = Automerge.change(doc, (d) => {
-        d.fieldValues["fv_se"] = {
+        d.fieldValues[asFieldValueId("fv_se")] = {
           id: s("fv_se"),
           fieldDefinitionId: s("fd_1"),
           memberId: null,
@@ -488,15 +552,15 @@ describe("SystemCoreDocument schema", () => {
           updatedAt: 1000,
         };
       });
-      expect(doc.fieldValues["fv_se"]?.structureEntityId?.val).toBe("ste_1");
-      expect(doc.fieldValues["fv_se"]?.memberId).toBeNull();
-      expect(doc.fieldValues["fv_se"]?.groupId).toBeNull();
+      expect(doc.fieldValues[asFieldValueId("fv_se")]?.structureEntityId?.val).toBe("ste_1");
+      expect(doc.fieldValues[asFieldValueId("fv_se")]?.memberId).toBeNull();
+      expect(doc.fieldValues[asFieldValueId("fv_se")]?.groupId).toBeNull();
     });
 
     it("supports memberId owner", () => {
       let doc = makeSystemCoreDoc();
       doc = Automerge.change(doc, (d) => {
-        d.fieldValues["fv_mem"] = {
+        d.fieldValues[asFieldValueId("fv_mem")] = {
           id: s("fv_mem"),
           fieldDefinitionId: s("fd_1"),
           memberId: s("mem_1"),
@@ -507,15 +571,15 @@ describe("SystemCoreDocument schema", () => {
           updatedAt: 1000,
         };
       });
-      expect(doc.fieldValues["fv_mem"]?.memberId?.val).toBe("mem_1");
-      expect(doc.fieldValues["fv_mem"]?.structureEntityId).toBeNull();
-      expect(doc.fieldValues["fv_mem"]?.groupId).toBeNull();
+      expect(doc.fieldValues[asFieldValueId("fv_mem")]?.memberId?.val).toBe("mem_1");
+      expect(doc.fieldValues[asFieldValueId("fv_mem")]?.structureEntityId).toBeNull();
+      expect(doc.fieldValues[asFieldValueId("fv_mem")]?.groupId).toBeNull();
     });
 
     it("supports groupId owner", () => {
       let doc = makeSystemCoreDoc();
       doc = Automerge.change(doc, (d) => {
-        d.fieldValues["fv_grp"] = {
+        d.fieldValues[asFieldValueId("fv_grp")] = {
           id: s("fv_grp"),
           fieldDefinitionId: s("fd_1"),
           memberId: null,
@@ -526,16 +590,16 @@ describe("SystemCoreDocument schema", () => {
           updatedAt: 1000,
         };
       });
-      expect(doc.fieldValues["fv_grp"]?.groupId?.val).toBe("grp_1");
-      expect(doc.fieldValues["fv_grp"]?.memberId).toBeNull();
-      expect(doc.fieldValues["fv_grp"]?.structureEntityId).toBeNull();
+      expect(doc.fieldValues[asFieldValueId("fv_grp")]?.groupId?.val).toBe("grp_1");
+      expect(doc.fieldValues[asFieldValueId("fv_grp")]?.memberId).toBeNull();
+      expect(doc.fieldValues[asFieldValueId("fv_grp")]?.structureEntityId).toBeNull();
     });
   });
 
   it("saves and loads via Automerge binary serialization", () => {
     let doc = makeSystemCoreDoc();
     doc = Automerge.change(doc, (d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_test"),
         name: s("Kai"),
@@ -554,7 +618,7 @@ describe("SystemCoreDocument schema", () => {
     });
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<SystemCoreDocument>(bytes);
-    expect(loaded.members["mem_1"]?.name.val).toBe("Kai");
+    expect(loaded.members[asMemberId("mem_1")]?.name.val).toBe("Kai");
     expect(loaded.system.name.val).toBe("Test System");
     expect(Object.keys(loaded.lifecycleEvents)).toHaveLength(0);
   });
@@ -572,7 +636,7 @@ describe("FrontingDocument schema", () => {
   it("adds a fronting session and updates endTime (append-lww)", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
-      d.sessions["fs_1"] = {
+      d.sessions[asFrontingSessionId("fs_1")] = {
         id: s("fs_1"),
         systemId: s("sys_test"),
         memberId: s("mem_1"),
@@ -589,22 +653,22 @@ describe("FrontingDocument schema", () => {
         updatedAt: 1000,
       };
     });
-    expect(doc.sessions["fs_1"]?.endTime).toBeNull();
+    expect(doc.sessions[asFrontingSessionId("fs_1")]?.endTime).toBeNull();
 
     doc = Automerge.change(doc, (d) => {
-      const session = d.sessions["fs_1"];
+      const session = d.sessions[asFrontingSessionId("fs_1")];
       if (session) {
         session.endTime = 2000;
         session.updatedAt = 2000;
       }
     });
-    expect(doc.sessions["fs_1"]?.endTime).toBe(2000);
+    expect(doc.sessions[asFrontingSessionId("fs_1")]?.endTime).toBe(2000);
   });
 
   it("sets and updates outtrigger and outtriggerSentiment fields", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
-      d.sessions["fs_ot"] = {
+      d.sessions[asFrontingSessionId("fs_ot")] = {
         id: s("fs_ot"),
         systemId: s("sys_test"),
         memberId: s("mem_1"),
@@ -621,34 +685,34 @@ describe("FrontingDocument schema", () => {
         updatedAt: 3000,
       };
     });
-    expect(doc.sessions["fs_ot"]?.outtrigger).toBeNull();
-    expect(doc.sessions["fs_ot"]?.outtriggerSentiment).toBeNull();
+    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtrigger).toBeNull();
+    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtriggerSentiment).toBeNull();
 
     doc = Automerge.change(doc, (d) => {
-      const session = d.sessions["fs_ot"];
+      const session = d.sessions[asFrontingSessionId("fs_ot")];
       if (session) {
         session.outtrigger = s("stress from work");
         session.outtriggerSentiment = s("negative");
         session.updatedAt = 3500;
       }
     });
-    expect(doc.sessions["fs_ot"]?.outtrigger?.val).toBe("stress from work");
-    expect(doc.sessions["fs_ot"]?.outtriggerSentiment?.val).toBe("negative");
+    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtrigger?.val).toBe("stress from work");
+    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtriggerSentiment?.val).toBe("negative");
 
     doc = Automerge.change(doc, (d) => {
-      const session = d.sessions["fs_ot"];
+      const session = d.sessions[asFrontingSessionId("fs_ot")];
       if (session) {
         session.outtriggerSentiment = s("neutral");
         session.updatedAt = 4000;
       }
     });
-    expect(doc.sessions["fs_ot"]?.outtriggerSentiment?.val).toBe("neutral");
+    expect(doc.sessions[asFrontingSessionId("fs_ot")]?.outtriggerSentiment?.val).toBe("neutral");
   });
 
   it("adds and responds to a check-in record (mutable fields)", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
-      d.checkInRecords["cr_1"] = {
+      d.checkInRecords[asCheckInRecordId("cr_1")] = {
         id: s("cr_1"),
         timerConfigId: s("t_1"),
         systemId: s("sys_test"),
@@ -661,24 +725,24 @@ describe("FrontingDocument schema", () => {
         updatedAt: 1000,
       };
     });
-    expect(doc.checkInRecords["cr_1"]?.respondedByMemberId).toBeNull();
+    expect(doc.checkInRecords[asCheckInRecordId("cr_1")]?.respondedByMemberId).toBeNull();
 
     doc = Automerge.change(doc, (d) => {
-      const record = d.checkInRecords["cr_1"];
+      const record = d.checkInRecords[asCheckInRecordId("cr_1")];
       if (record) {
         record.respondedByMemberId = s("mem_1");
         record.respondedAt = 1100;
         record.updatedAt = 1100;
       }
     });
-    expect(doc.checkInRecords["cr_1"]?.respondedByMemberId?.val).toBe("mem_1");
-    expect(doc.checkInRecords["cr_1"]?.respondedAt).toBe(1100);
+    expect(doc.checkInRecords[asCheckInRecordId("cr_1")]?.respondedByMemberId?.val).toBe("mem_1");
+    expect(doc.checkInRecords[asCheckInRecordId("cr_1")]?.respondedAt).toBe(1100);
   });
 
   it("saves and loads via binary serialization with session data", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
-      d.sessions["fs_rt"] = {
+      d.sessions[asFrontingSessionId("fs_rt")] = {
         id: s("fs_rt"),
         systemId: s("sys_test"),
         memberId: s("mem_1"),
@@ -698,7 +762,7 @@ describe("FrontingDocument schema", () => {
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<FrontingDocument>(bytes);
     expect(Object.keys(loaded.sessions)).toHaveLength(1);
-    const session = loaded.sessions["fs_rt"];
+    const session = loaded.sessions[asFrontingSessionId("fs_rt")];
     expect(session?.id.val).toBe("fs_rt");
     expect(session?.startTime).toBe(5000);
     expect(session?.endTime).toBe(6000);
@@ -759,7 +823,7 @@ describe("ChatDocument schema", () => {
   it("adds board message and mutates pinned field (append-lww)", () => {
     let doc = makeChatDoc();
     doc = Automerge.change(doc, (d) => {
-      d.boardMessages["bm_1"] = {
+      d.boardMessages[asBoardMessageId("bm_1")] = {
         id: s("bm_1"),
         systemId: s("sys_test"),
         senderId: s("mem_1"),
@@ -771,13 +835,13 @@ describe("ChatDocument schema", () => {
         updatedAt: 1000,
       };
     });
-    expect(doc.boardMessages["bm_1"]?.pinned).toBe(false);
+    expect(doc.boardMessages[asBoardMessageId("bm_1")]?.pinned).toBe(false);
 
     doc = Automerge.change(doc, (d) => {
-      const bm = d.boardMessages["bm_1"];
+      const bm = d.boardMessages[asBoardMessageId("bm_1")];
       if (bm) bm.pinned = true;
     });
-    expect(doc.boardMessages["bm_1"]?.pinned).toBe(true);
+    expect(doc.boardMessages[asBoardMessageId("bm_1")]?.pinned).toBe(true);
   });
 
   it("saves and loads via binary serialization", () => {
@@ -803,7 +867,7 @@ describe("JournalDocument schema", () => {
   it("adds a journal entry with mutable content (append-lww)", () => {
     let doc = makeJournalDoc();
     doc = Automerge.change(doc, (d) => {
-      d.entries["je_1"] = {
+      d.entries[asJournalEntryId("je_1")] = {
         id: s("je_1"),
         systemId: s("sys_test"),
         author: s('{"entityType":"member","entityId":"mem_1"}'),
@@ -818,22 +882,22 @@ describe("JournalDocument schema", () => {
         updatedAt: 1000,
       };
     });
-    expect(doc.entries["je_1"]?.title.val).toBe("My first entry");
+    expect(doc.entries[asJournalEntryId("je_1")]?.title.val).toBe("My first entry");
 
     doc = Automerge.change(doc, (d) => {
-      const entry = d.entries["je_1"];
+      const entry = d.entries[asJournalEntryId("je_1")];
       if (entry) {
         entry.title = s("Updated title");
         entry.updatedAt = 2000;
       }
     });
-    expect(doc.entries["je_1"]?.title.val).toBe("Updated title");
+    expect(doc.entries[asJournalEntryId("je_1")]?.title.val).toBe("Updated title");
   });
 
   it("saves and loads via binary serialization", () => {
     let doc = makeJournalDoc();
     doc = Automerge.change(doc, (d) => {
-      d.entries["je_1"] = {
+      d.entries[asJournalEntryId("je_1")] = {
         id: s("je_1"),
         systemId: s("sys_test"),
         author: null,
@@ -850,7 +914,7 @@ describe("JournalDocument schema", () => {
     });
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<JournalDocument>(bytes);
-    expect(loaded.entries["je_1"]?.title.val).toBe("Roundtrip entry");
+    expect(loaded.entries[asJournalEntryId("je_1")]?.title.val).toBe("Roundtrip entry");
   });
 });
 
@@ -865,7 +929,7 @@ describe("NoteDocument schema", () => {
   it("adds and reads a note", () => {
     let doc = makeNoteDoc();
     doc = Automerge.change(doc, (d) => {
-      d.notes["note_1"] = {
+      d.notes[asNoteId("note_1")] = {
         id: s("note_1"),
         systemId: s("sys_test"),
         authorEntityType: s("member"),
@@ -878,15 +942,15 @@ describe("NoteDocument schema", () => {
         updatedAt: 1000,
       };
     });
-    expect(doc.notes["note_1"]?.title.val).toBe("My note");
-    expect(doc.notes["note_1"]?.authorEntityType?.val).toBe("member");
-    expect(doc.notes["note_1"]?.backgroundColor?.val).toBe("#FFEB3B");
+    expect(doc.notes[asNoteId("note_1")]?.title.val).toBe("My note");
+    expect(doc.notes[asNoteId("note_1")]?.authorEntityType?.val).toBe("member");
+    expect(doc.notes[asNoteId("note_1")]?.backgroundColor?.val).toBe("#FFEB3B");
   });
 
   it("saves and loads via binary serialization", () => {
     let doc = makeNoteDoc();
     doc = Automerge.change(doc, (d) => {
-      d.notes["note_1"] = {
+      d.notes[asNoteId("note_1")] = {
         id: s("note_1"),
         systemId: s("sys_test"),
         authorEntityType: null,
@@ -901,8 +965,8 @@ describe("NoteDocument schema", () => {
     });
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<NoteDocument>(bytes);
-    expect(loaded.notes["note_1"]?.title.val).toBe("Quick note");
-    expect(loaded.notes["note_1"]?.authorEntityType).toBeNull();
+    expect(loaded.notes[asNoteId("note_1")]?.title.val).toBe("Quick note");
+    expect(loaded.notes[asNoteId("note_1")]?.authorEntityType).toBeNull();
   });
 });
 
@@ -918,7 +982,7 @@ describe("PrivacyConfigDocument schema", () => {
   it("adds a friend connection with nested assignedBuckets map", () => {
     let doc = makePrivacyConfigDoc();
     doc = Automerge.change(doc, (d) => {
-      d.friendConnections["fc_1"] = {
+      d.friendConnections[asFriendConnectionId("fc_1")] = {
         id: s("fc_1"),
         accountId: s("acc_1"),
         friendAccountId: s("acc_2"),
@@ -933,19 +997,23 @@ describe("PrivacyConfigDocument schema", () => {
       };
     });
     doc = Automerge.change(doc, (d) => {
-      const fc = d.friendConnections["fc_1"];
+      const fc = d.friendConnections[asFriendConnectionId("fc_1")];
       if (fc) {
-        fc.assignedBuckets["bkt_1"] = true;
+        fc.assignedBuckets[asBucketId("bkt_1")] = true;
       }
     });
-    expect(doc.friendConnections["fc_1"]?.assignedBuckets["bkt_1"]).toBe(true);
-    expect(Object.keys(doc.friendConnections["fc_1"]?.assignedBuckets ?? {})).toHaveLength(1);
+    expect(
+      doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets[asBucketId("bkt_1")],
+    ).toBe(true);
+    expect(
+      Object.keys(doc.friendConnections[asFriendConnectionId("fc_1")]?.assignedBuckets ?? {}),
+    ).toHaveLength(1);
   });
 
   it("adds a key grant and mutates revokedAt (append-lww)", () => {
     let doc = makePrivacyConfigDoc();
     doc = Automerge.change(doc, (d) => {
-      d.keyGrants["kg_1"] = {
+      d.keyGrants[asKeyGrantId("kg_1")] = {
         id: s("kg_1"),
         bucketId: s("bkt_1"),
         friendAccountId: s("acc_2"),
@@ -955,19 +1023,19 @@ describe("PrivacyConfigDocument schema", () => {
         revokedAt: null,
       };
     });
-    expect(doc.keyGrants["kg_1"]?.revokedAt).toBeNull();
+    expect(doc.keyGrants[asKeyGrantId("kg_1")]?.revokedAt).toBeNull();
 
     doc = Automerge.change(doc, (d) => {
-      const kg = d.keyGrants["kg_1"];
+      const kg = d.keyGrants[asKeyGrantId("kg_1")];
       if (kg) kg.revokedAt = 9999;
     });
-    expect(doc.keyGrants["kg_1"]?.revokedAt).toBe(9999);
+    expect(doc.keyGrants[asKeyGrantId("kg_1")]?.revokedAt).toBe(9999);
   });
 
   it("saves and loads via binary serialization", () => {
     let doc = makePrivacyConfigDoc();
     doc = Automerge.change(doc, (d) => {
-      d.buckets["bkt_1"] = {
+      d.buckets[asBucketId("bkt_1")] = {
         id: s("bkt_1"),
         systemId: s("sys_test"),
         name: s("Friends"),
@@ -979,7 +1047,7 @@ describe("PrivacyConfigDocument schema", () => {
     });
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<PrivacyConfigDocument>(bytes);
-    expect(loaded.buckets["bkt_1"]?.name.val).toBe("Friends");
+    expect(loaded.buckets[asBucketId("bkt_1")]?.name.val).toBe("Friends");
   });
 });
 
@@ -995,7 +1063,7 @@ describe("BucketProjectionDocument schema", () => {
   it("saves and loads via binary serialization", () => {
     let doc = makeBucketDoc();
     doc = Automerge.change(doc, (d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_test"),
         name: s("Projected Member"),
@@ -1014,6 +1082,6 @@ describe("BucketProjectionDocument schema", () => {
     });
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<BucketProjectionDocument>(bytes);
-    expect(loaded.members["mem_1"]?.name.val).toBe("Projected Member");
+    expect(loaded.members[asMemberId("mem_1")]?.name.val).toBe("Projected Member");
   });
 });

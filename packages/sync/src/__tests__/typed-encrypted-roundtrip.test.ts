@@ -33,7 +33,12 @@ import {
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import {
+  asFrontingSessionId,
+  asGroupMembershipKey,
+  asMemberId,
+  asSyncDocId,
+} from "./test-crypto-helpers.js";
 
 import type { ChatDocument } from "../schemas/chat.js";
 import type { FrontingDocument } from "../schemas/fronting.js";
@@ -88,7 +93,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
       });
 
       const envelope = sessionA.change((doc) => {
-        doc.members["mem_1"] = {
+        doc.members[asMemberId("mem_1")] = {
           id: s("mem_1"),
           systemId: s("sys_typed1"),
           name: s("Luna"),
@@ -110,8 +115,8 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
       const _r1 = await relay.getEnvelopesSince(testDocId, 0);
       sessionB.applyEncryptedChanges(_r1.envelopes);
 
-      expect(sessionB.document.members["mem_1"]).toBeDefined();
-      expect(String(sessionB.document.members["mem_1"]?.name)).toBe("Luna");
+      expect(sessionB.document.members[asMemberId("mem_1")]).toBeDefined();
+      expect(String(sessionB.document.members[asMemberId("mem_1")]?.name)).toBe("Luna");
     } finally {
       resolver.dispose();
     }
@@ -153,7 +158,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
       };
 
       const envA = sessionA.change((doc) => {
-        doc.members["mem_a"] = {
+        doc.members[asMemberId("mem_a")] = {
           id: s("mem_a"),
           systemId: s("sys_typed2"),
           name: s("Kai"),
@@ -161,7 +166,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
         };
       });
       const envB = sessionB.change((doc) => {
-        doc.members["mem_b"] = {
+        doc.members[asMemberId("mem_b")] = {
           id: s("mem_b"),
           systemId: s("sys_typed2"),
           name: s("River"),
@@ -183,10 +188,10 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
       const _r2 = await relay.getEnvelopesSince(testDocId, 0);
       sessionC.applyEncryptedChanges(_r2.envelopes);
 
-      expect(sessionC.document.members["mem_a"]).toBeDefined();
-      expect(sessionC.document.members["mem_b"]).toBeDefined();
-      expect(String(sessionC.document.members["mem_a"]?.name)).toBe("Kai");
-      expect(String(sessionC.document.members["mem_b"]?.name)).toBe("River");
+      expect(sessionC.document.members[asMemberId("mem_a")]).toBeDefined();
+      expect(sessionC.document.members[asMemberId("mem_b")]).toBeDefined();
+      expect(String(sessionC.document.members[asMemberId("mem_a")]?.name)).toBe("Kai");
+      expect(String(sessionC.document.members[asMemberId("mem_b")]?.name)).toBe("River");
     } finally {
       resolver.dispose();
     }
@@ -215,16 +220,16 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
 
       const envelope = sessionA.change((doc) => {
         // junction key: {groupId}_{memberId}
-        doc.groupMemberships["grp_a_mem_1"] = true;
-        doc.groupMemberships["grp_a_mem_2"] = true;
+        doc.groupMemberships[asGroupMembershipKey("grp_a_mem_1")] = true;
+        doc.groupMemberships[asGroupMembershipKey("grp_a_mem_2")] = true;
       });
       await relay.submit(envelope);
 
       const _r3 = await relay.getEnvelopesSince(testDocId, 0);
       sessionB.applyEncryptedChanges(_r3.envelopes);
 
-      expect(sessionB.document.groupMemberships["grp_a_mem_1"]).toBe(true);
-      expect(sessionB.document.groupMemberships["grp_a_mem_2"]).toBe(true);
+      expect(sessionB.document.groupMemberships[asGroupMembershipKey("grp_a_mem_1")]).toBe(true);
+      expect(sessionB.document.groupMemberships[asGroupMembershipKey("grp_a_mem_2")]).toBe(true);
       expect(Object.keys(sessionB.document.groupMemberships)).toHaveLength(2);
     } finally {
       resolver.dispose();
@@ -288,7 +293,7 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
       });
 
       const envelope = sessionA.change((doc) => {
-        doc.sessions["fs_1"] = {
+        doc.sessions[asFrontingSessionId("fs_1")] = {
           id: s("fs_1"),
           systemId: s("sys_typed1"),
           memberId: s("mem_1"),
@@ -310,8 +315,10 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
       const _r4 = await relay.getEnvelopesSince(testDocId, 0);
       sessionB.applyEncryptedChanges(_r4.envelopes);
 
-      expect(sessionB.document.sessions["fs_1"]).toBeDefined();
-      expect(String(sessionB.document.sessions["fs_1"]?.memberId)).toBe("mem_1");
+      expect(sessionB.document.sessions[asFrontingSessionId("fs_1")]).toBeDefined();
+      expect(String(sessionB.document.sessions[asFrontingSessionId("fs_1")]?.memberId)).toBe(
+        "mem_1",
+      );
     } finally {
       resolver.dispose();
     }

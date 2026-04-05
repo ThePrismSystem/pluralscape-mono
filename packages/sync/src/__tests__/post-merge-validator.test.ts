@@ -28,12 +28,25 @@ import {
   normalizeFriendConnection,
   normalizeFrontingSessions,
   ENTITY_FIELD_MAP,
+  normalizeFrontingCommentAuthors,
 } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
-import { asSyncDocId } from "./test-crypto-helpers.js";
+import {
+  asBucketId,
+  asCheckInRecordId,
+  asFriendConnectionId,
+  asFrontingCommentId,
+  asFrontingSessionId,
+  asGroupId,
+  asInnerWorldRegionId,
+  asMemberId,
+  asSyncDocId,
+  asSystemStructureEntityLinkId,
+  asTimerId,
+} from "./test-crypto-helpers.js";
 
 import type { CrdtGroup, CrdtInnerWorldRegion } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
@@ -151,7 +164,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
 
     // Seed an active member
     const seedEnv = sessionA.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Test"),
@@ -174,14 +187,14 @@ describe("PostMergeValidator: enforceTombstones", () => {
 
     // A archives. B makes an unrelated edit concurrently (does not un-archive).
     const envA = sessionA.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) {
         m.archived = true;
         m.updatedAt = 2000;
       }
     });
     const envB = sessionB.change((d) => {
-      const m = d.members["mem_1"];
+      const m = d.members[asMemberId("mem_1")];
       if (m) {
         m.name = s("Edited Name");
         m.updatedAt = 2001;
@@ -193,13 +206,13 @@ describe("PostMergeValidator: enforceTombstones", () => {
     await syncThroughRelay([sessionA, sessionB], relay);
 
     // After merge, entity should be archived (A's archive + B's edit both apply)
-    expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
+    expect(sessionA.document.members[asMemberId("mem_1")]?.archived).toBe(true);
 
     // Run tombstone enforcement — re-stamps to ensure archive wins future merges
     const { notifications } = enforceTombstones(sessionA);
 
     // After enforcement, archived should still be true
-    expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
+    expect(sessionA.document.members[asMemberId("mem_1")]?.archived).toBe(true);
     // Should have generated a notification for the re-stamp
     expect(notifications.length).toBeGreaterThan(0);
     expect(notifications[0]?.resolution).toBe("lww-field");
@@ -215,7 +228,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
     });
 
     session.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Active"),
@@ -236,7 +249,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
     const { notifications } = enforceTombstones(session);
 
     expect(notifications).toHaveLength(0);
-    expect(session.document.members["mem_1"]?.archived).toBe(false);
+    expect(session.document.members[asMemberId("mem_1")]?.archived).toBe(false);
   });
 });
 
@@ -256,8 +269,8 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cycle-fix"));
 
     const seedEnv = sessionA.change((d) => {
-      d.groups["groupA"] = makeGroup("groupA", 1);
-      d.groups["groupB"] = makeGroup("groupB", 2);
+      d.groups[asGroupId("groupA")] = makeGroup("groupA", 1);
+      d.groups[asGroupId("groupB")] = makeGroup("groupB", 2);
     });
     await relay.submit(seedEnv);
     const _r2 = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-fix"), 0);
@@ -265,11 +278,11 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
     // Create mutual parent cycle
     const envA = sessionA.change((d) => {
-      const g = d.groups["groupA"];
+      const g = d.groups[asGroupId("groupA")];
       if (g) g.parentGroupId = s("groupB");
     });
     const envB = sessionB.change((d) => {
-      const g = d.groups["groupB"];
+      const g = d.groups[asGroupId("groupB")];
       if (g) g.parentGroupId = s("groupA");
     });
 
@@ -283,8 +296,8 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     expect(breaks.length).toBeGreaterThan(0);
 
     // The lowest ID entity ("groupA" < "groupB") should have its parent nulled
-    expect(sessionA.document.groups["groupA"]?.parentGroupId).toBeNull();
-    expect(sessionA.document.groups["groupB"]?.parentGroupId?.val).toBe("groupA");
+    expect(sessionA.document.groups[asGroupId("groupA")]?.parentGroupId).toBeNull();
+    expect(sessionA.document.groups[asGroupId("groupB")]?.parentGroupId?.val).toBe("groupA");
   });
 
   it("breaks a second group cycle (independent from the first)", async () => {
@@ -292,19 +305,19 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-grp-cycle-2"));
 
     const seedEnv = sessionA.change((d) => {
-      d.groups["grpX"] = makeGroup("grpX", 1);
-      d.groups["grpY"] = makeGroup("grpY", 2);
+      d.groups[asGroupId("grpX")] = makeGroup("grpX", 1);
+      d.groups[asGroupId("grpY")] = makeGroup("grpY", 2);
     });
     await relay.submit(seedEnv);
     const _r3 = await relay.getEnvelopesSince(asSyncDocId("doc-grp-cycle-2"), 0);
     sessionB.applyEncryptedChanges(_r3.envelopes);
 
     const envA = sessionA.change((d) => {
-      const g = d.groups["grpX"];
+      const g = d.groups[asGroupId("grpX")];
       if (g) g.parentGroupId = s("grpY");
     });
     const envB = sessionB.change((d) => {
-      const g = d.groups["grpY"];
+      const g = d.groups[asGroupId("grpY")];
       if (g) g.parentGroupId = s("grpX");
     });
 
@@ -316,7 +329,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
     expect(breaks.length).toBeGreaterThan(0);
     // grpX < grpY alphabetically, so grpX's parent gets nulled
-    expect(sessionA.document.groups["grpX"]?.parentGroupId).toBeNull();
+    expect(sessionA.document.groups[asGroupId("grpX")]?.parentGroupId).toBeNull();
   });
 
   it("breaks innerworld region cycles", async () => {
@@ -324,19 +337,19 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-rg-cycle"));
 
     const seedEnv = sessionA.change((d) => {
-      d.innerWorldRegions["rg_a"] = makeRegion("rg_a");
-      d.innerWorldRegions["rg_b"] = makeRegion("rg_b");
+      d.innerWorldRegions[asInnerWorldRegionId("rg_a")] = makeRegion("rg_a");
+      d.innerWorldRegions[asInnerWorldRegionId("rg_b")] = makeRegion("rg_b");
     });
     await relay.submit(seedEnv);
     const _r4 = await relay.getEnvelopesSince(asSyncDocId("doc-rg-cycle"), 0);
     sessionB.applyEncryptedChanges(_r4.envelopes);
 
     const envA = sessionA.change((d) => {
-      const rg = d.innerWorldRegions["rg_a"];
+      const rg = d.innerWorldRegions[asInnerWorldRegionId("rg_a")];
       if (rg) rg.parentRegionId = s("rg_b");
     });
     const envB = sessionB.change((d) => {
-      const rg = d.innerWorldRegions["rg_b"];
+      const rg = d.innerWorldRegions[asInnerWorldRegionId("rg_b")];
       if (rg) rg.parentRegionId = s("rg_a");
     });
 
@@ -347,7 +360,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     const { breaks } = detectHierarchyCycles(sessionA);
 
     expect(breaks.length).toBeGreaterThan(0);
-    expect(sessionA.document.innerWorldRegions["rg_a"]?.parentRegionId).toBeNull();
+    expect(
+      sessionA.document.innerWorldRegions[asInnerWorldRegionId("rg_a")]?.parentRegionId,
+    ).toBeNull();
   });
 
   it("breaks a 3-node group cycle (A->B->C->A) by nulling parent of lowest-ID entity", async () => {
@@ -355,9 +370,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-3-cycle"));
 
     const seedEnv = sessionA.change((d) => {
-      d.groups["grpA"] = makeGroup("grpA", 1);
-      d.groups["grpB"] = makeGroup("grpB", 2);
-      d.groups["grpC"] = makeGroup("grpC", 3);
+      d.groups[asGroupId("grpA")] = makeGroup("grpA", 1);
+      d.groups[asGroupId("grpB")] = makeGroup("grpB", 2);
+      d.groups[asGroupId("grpC")] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
     const seedResult = await relay.getEnvelopesSince(asSyncDocId("doc-3-cycle"), 0);
@@ -365,13 +380,13 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
     // A sets grpA->grpB, grpB->grpC. B sets grpC->grpA. After merge: A->B->C->A cycle.
     const envA = sessionA.change((d) => {
-      const gA = d.groups["grpA"];
+      const gA = d.groups[asGroupId("grpA")];
       if (gA) gA.parentGroupId = s("grpB");
-      const gB = d.groups["grpB"];
+      const gB = d.groups[asGroupId("grpB")];
       if (gB) gB.parentGroupId = s("grpC");
     });
     const envB = sessionB.change((d) => {
-      const gC = d.groups["grpC"];
+      const gC = d.groups[asGroupId("grpC")];
       if (gC) gC.parentGroupId = s("grpA");
     });
 
@@ -383,10 +398,10 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
     expect(breaks.length).toBeGreaterThan(0);
     // "grpA" is the lowest-ID in the cycle, so its parent gets nulled
-    expect(sessionA.document.groups["grpA"]?.parentGroupId).toBeNull();
+    expect(sessionA.document.groups[asGroupId("grpA")]?.parentGroupId).toBeNull();
     // The rest of the chain should remain intact
-    expect(sessionA.document.groups["grpB"]?.parentGroupId?.val).toBe("grpC");
-    expect(sessionA.document.groups["grpC"]?.parentGroupId?.val).toBe("grpA");
+    expect(sessionA.document.groups[asGroupId("grpB")]?.parentGroupId?.val).toBe("grpC");
+    expect(sessionA.document.groups[asGroupId("grpC")]?.parentGroupId?.val).toBe("grpA");
   });
 
   it("returns empty array when no cycles exist", () => {
@@ -399,8 +414,8 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     });
 
     session.change((d) => {
-      d.groups["grp_1"] = makeGroup("grp_1", 1);
-      d.groups["grp_2"] = makeGroup("grp_2", 2, { parentGroupId: "grp_1" });
+      d.groups[asGroupId("grp_1")] = makeGroup("grp_1", 1);
+      d.groups[asGroupId("grp_2")] = makeGroup("grp_2", 2, { parentGroupId: "grp_1" });
     });
 
     const { breaks } = detectHierarchyCycles(session);
@@ -427,9 +442,10 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
     });
 
     session.change((d) => {
-      d.groups["grp_1"] = makeGroup("grp_1", 5);
-      d.groups["grp_2"] = makeGroup("grp_2", 5);
-      d.groups["grp_2"].createdAt = 900;
+      d.groups[asGroupId("grp_1")] = makeGroup("grp_1", 5);
+      const grp2 = makeGroup("grp_2", 5);
+      grp2.createdAt = 900;
+      d.groups[asGroupId("grp_2")] = grp2;
     });
 
     const { patches } = normalizeSortOrder(session);
@@ -452,8 +468,8 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
     });
 
     session.change((d) => {
-      d.groups["grp_1"] = makeGroup("grp_1", 1);
-      d.groups["grp_2"] = makeGroup("grp_2", 2);
+      d.groups[asGroupId("grp_1")] = makeGroup("grp_1", 1);
+      d.groups[asGroupId("grp_2")] = makeGroup("grp_2", 2);
     });
 
     const { patches } = normalizeSortOrder(session);
@@ -471,7 +487,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
 
     session.change((d) => {
       // Two links under different parents, both sortOrder 1 — no tie within each group
-      d.structureEntityLinks["stel_a"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_a")] = {
         id: s("stel_a"),
         systemId: s("sys_1"),
         entityId: s("ste_a"),
@@ -481,7 +497,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.structureEntityLinks["stel_b"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_b")] = {
         id: s("stel_b"),
         systemId: s("sys_1"),
         entityId: s("ste_b"),
@@ -507,7 +523,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
     });
 
     session.change((d) => {
-      d.structureEntityLinks["stel_a"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_a")] = {
         id: s("stel_a"),
         systemId: s("sys_1"),
         entityId: s("ste_a"),
@@ -517,7 +533,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.structureEntityLinks["stel_b"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_b")] = {
         id: s("stel_b"),
         systemId: s("sys_1"),
         entityId: s("ste_b"),
@@ -533,8 +549,8 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
     expect(patches.length).toBeGreaterThan(0);
 
     // After normalization, sort orders should be unique within the parent group
-    const linkA = session.document.structureEntityLinks["stel_a"];
-    const linkB = session.document.structureEntityLinks["stel_b"];
+    const linkA = session.document.structureEntityLinks[asSystemStructureEntityLinkId("stel_a")];
+    const linkB = session.document.structureEntityLinks[asSystemStructureEntityLinkId("stel_b")];
     expect(linkA?.sortOrder).not.toBe(linkB?.sortOrder);
   });
 
@@ -549,7 +565,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
 
     session.change((d) => {
       // Root-level link (null parent)
-      d.structureEntityLinks["stel_root"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_root")] = {
         id: s("stel_root"),
         systemId: s("sys_1"),
         entityId: s("ste_root"),
@@ -560,7 +576,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
         updatedAt: 1000,
       };
       // Child under a parent with same sortOrder as root — no conflict across groups
-      d.structureEntityLinks["stel_child"] = {
+      d.structureEntityLinks[asSystemStructureEntityLinkId("stel_child")] = {
         id: s("stel_child"),
         systemId: s("sys_1"),
         entityId: s("ste_child"),
@@ -594,7 +610,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-checkin-norm"));
 
     const seedEnv = sessionA.change((d) => {
-      d.checkInRecords["cr_1"] = {
+      d.checkInRecords[asCheckInRecordId("cr_1")] = {
         id: s("cr_1"),
         timerConfigId: s("t_1"),
         systemId: s("sys_1"),
@@ -613,14 +629,14 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
 
     // A responds, B dismisses concurrently
     const envA = sessionA.change((d) => {
-      const cr = d.checkInRecords["cr_1"];
+      const cr = d.checkInRecords[asCheckInRecordId("cr_1")];
       if (cr) {
         cr.respondedByMemberId = s("mem_1");
         cr.respondedAt = 1100;
       }
     });
     const envB = sessionB.change((d) => {
-      const cr = d.checkInRecords["cr_1"];
+      const cr = d.checkInRecords[asCheckInRecordId("cr_1")];
       if (cr) {
         cr.dismissed = true;
       }
@@ -632,7 +648,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
 
     const { count } = normalizeCheckInRecord(sessionA);
 
-    const cr = sessionA.document.checkInRecords["cr_1"];
+    const cr = sessionA.document.checkInRecords[asCheckInRecordId("cr_1")];
     expect(cr?.respondedByMemberId).not.toBeNull();
     expect(cr?.dismissed).toBe(false);
     expect(count).toBe(1);
@@ -648,7 +664,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
     });
 
     session.change((d) => {
-      d.checkInRecords["cr_1"] = {
+      d.checkInRecords[asCheckInRecordId("cr_1")] = {
         id: s("cr_1"),
         timerConfigId: s("t_1"),
         systemId: s("sys_1"),
@@ -684,19 +700,17 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
 
     // Seed with accepted status and assigned buckets (evidence of prior acceptance)
     const seedEnv = sessionA.change((d) => {
-      d.friendConnections["fc_1"] = {
+      d.friendConnections[asFriendConnectionId("fc_1")] = {
         id: s("fc_1"),
         accountId: s("acc_1"),
         friendAccountId: s("acc_2"),
         status: s("accepted"),
-        assignedBuckets: {},
+        assignedBuckets: { [asBucketId("bkt_1")]: true },
         visibility: s('{"showMembers":true}'),
         archived: false,
         createdAt: 1000,
         updatedAt: 1000,
       };
-      // Add a bucket assignment as evidence of prior acceptance
-      d.friendConnections["fc_1"].assignedBuckets["bkt_1"] = true;
     });
     await relay.submit(seedEnv);
     const _r6 = await relay.getEnvelopesSince(asSyncDocId("doc-friend-norm"), 0);
@@ -704,11 +718,11 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
 
     // B sets status to pending while A keeps accepted
     const envA = sessionA.change((d) => {
-      const fc = d.friendConnections["fc_1"];
+      const fc = d.friendConnections[asFriendConnectionId("fc_1")];
       if (fc) fc.updatedAt = 2000;
     });
     const envB = sessionB.change((d) => {
-      const fc = d.friendConnections["fc_1"];
+      const fc = d.friendConnections[asFriendConnectionId("fc_1")];
       if (fc) {
         fc.status = s("pending");
         fc.updatedAt = 2001;
@@ -724,7 +738,9 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
 
     // After normalization, status should be accepted
     // (the normalizer detects pending with assigned buckets and re-stamps)
-    expect(sessionA.document.friendConnections["fc_1"]?.status.val).toBe("accepted");
+    expect(sessionA.document.friendConnections[asFriendConnectionId("fc_1")]?.status.val).toBe(
+      "accepted",
+    );
     expect(count).toBe(1);
   });
 
@@ -738,7 +754,7 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
     });
 
     session.change((d) => {
-      d.friendConnections["fc_1"] = {
+      d.friendConnections[asFriendConnectionId("fc_1")] = {
         id: s("fc_1"),
         accountId: s("acc_1"),
         friendAccountId: s("acc_2"),
@@ -774,7 +790,7 @@ describe("PostMergeValidator: normalizeFrontingSessions", () => {
       sodium,
     });
 
-    const sessionId = `fs_${crypto.randomUUID()}`;
+    const sessionId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
     session.change((d) => {
       d.sessions[sessionId] = {
         id: s(sessionId),
@@ -817,7 +833,7 @@ describe("PostMergeValidator: normalizeFrontingSessions", () => {
       sodium,
     });
 
-    const sessionId = `fs_${crypto.randomUUID()}`;
+    const sessionId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
     session.change((d) => {
       d.sessions[sessionId] = {
         id: s(sessionId),
@@ -865,7 +881,7 @@ describe("PostMergeValidator: normalizeFrontingSessions", () => {
       sodium,
     });
 
-    const sessionId = `fs_${crypto.randomUUID()}`;
+    const sessionId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
     session.change((d) => {
       d.sessions[sessionId] = {
         id: s(sessionId),
@@ -917,9 +933,9 @@ describe("PostMergeValidator: normalizeFrontingSessions", () => {
       sodium,
     });
 
-    const validId = `fs_${crypto.randomUUID()}`;
-    const invalidId = `fs_${crypto.randomUUID()}`;
-    const noSubjectId = `fs_${crypto.randomUUID()}`;
+    const validId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+    const invalidId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
+    const noSubjectId = asFrontingSessionId(`fs_${crypto.randomUUID()}`);
 
     session.change((d) => {
       // Valid session: endTime > startTime, has subject
@@ -1052,7 +1068,7 @@ describe("runAllValidations (module-level function)", () => {
 
     // Add an archived member (will trigger tombstone enforcement)
     session.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Test"),
@@ -1086,20 +1102,20 @@ describe("runAllValidations (module-level function)", () => {
     const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-notif-test"));
 
     const seedEnv = sessionA.change((d) => {
-      d.groups["grpA"] = makeGroup("grpA", 5);
-      d.groups["grpB"] = makeGroup("grpB", 5);
-      d.groups["grpC"] = makeGroup("grpC", 3);
+      d.groups[asGroupId("grpA")] = makeGroup("grpA", 5);
+      d.groups[asGroupId("grpB")] = makeGroup("grpB", 5);
+      d.groups[asGroupId("grpC")] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
     const _r7 = await relay.getEnvelopesSince(asSyncDocId("doc-notif-test"), 0);
     sessionB.applyEncryptedChanges(_r7.envelopes);
 
     const envA = sessionA.change((d) => {
-      const g = d.groups["grpA"];
+      const g = d.groups[asGroupId("grpA")];
       if (g) g.parentGroupId = s("grpC");
     });
     const envB = sessionB.change((d) => {
-      const g = d.groups["grpC"];
+      const g = d.groups[asGroupId("grpC")];
       if (g) g.parentGroupId = s("grpA");
     });
 
@@ -1134,9 +1150,9 @@ describe("runAllValidations (module-level function)", () => {
 
     // Seed groups with sort order ties and potential cycle
     const seedEnv = sessionA.change((d) => {
-      d.groups["grpA"] = makeGroup("grpA", 5);
-      d.groups["grpB"] = makeGroup("grpB", 5); // tie with grpA
-      d.groups["grpC"] = makeGroup("grpC", 3);
+      d.groups[asGroupId("grpA")] = makeGroup("grpA", 5);
+      d.groups[asGroupId("grpB")] = makeGroup("grpB", 5); // tie with grpA
+      d.groups[asGroupId("grpC")] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
     const _r8 = await relay.getEnvelopesSince(asSyncDocId("doc-multi-validator"), 0);
@@ -1144,11 +1160,11 @@ describe("runAllValidations (module-level function)", () => {
 
     // Create a cycle between grpA and grpC
     const envA = sessionA.change((d) => {
-      const g = d.groups["grpA"];
+      const g = d.groups[asGroupId("grpA")];
       if (g) g.parentGroupId = s("grpC");
     });
     const envB = sessionB.change((d) => {
-      const g = d.groups["grpC"];
+      const g = d.groups[asGroupId("grpC")];
       if (g) g.parentGroupId = s("grpA");
     });
 
@@ -1175,7 +1191,7 @@ describe("runAllValidations (module-level function)", () => {
 
     // Add a timer with invalid intervalMinutes
     session.change((d) => {
-      d.timers["tmr_invalid"] = {
+      d.timers[asTimerId("tmr_invalid")] = {
         id: s("tmr_invalid"),
         systemId: s("sys_1"),
         intervalMinutes: -5,
@@ -1198,7 +1214,7 @@ describe("runAllValidations (module-level function)", () => {
       true,
     );
     // Timer should be disabled
-    expect(session.document.timers["tmr_invalid"]?.enabled).toBe(false);
+    expect(session.document.timers[asTimerId("tmr_invalid")]?.enabled).toBe(false);
   });
 
   it("populates errors array and calls onError when no callback swallows", () => {
@@ -1212,7 +1228,7 @@ describe("runAllValidations (module-level function)", () => {
 
     // Set up archived member + sort order ties to trigger multiple validators
     session.change((d) => {
-      d.members["mem_1"] = {
+      d.members[asMemberId("mem_1")] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
         name: s("Test"),
@@ -1228,9 +1244,10 @@ describe("runAllValidations (module-level function)", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-      d.groups["grp_1"] = makeGroup("grp_1", 5);
-      d.groups["grp_2"] = makeGroup("grp_2", 5);
-      d.groups["grp_2"].createdAt = 900;
+      d.groups[asGroupId("grp_1")] = makeGroup("grp_1", 5);
+      const grp2 = makeGroup("grp_2", 5);
+      grp2.createdAt = 900;
+      d.groups[asGroupId("grp_2")] = grp2;
     });
 
     const errorMessages: string[] = [];
@@ -1244,5 +1261,310 @@ describe("runAllValidations (module-level function)", () => {
     // No errors on successful run
     expect(result.errors).toHaveLength(0);
     expect(errorMessages).toHaveLength(0);
+  });
+
+  it("counts frontingCommentAuthorIssues for authorless comments in fronting doc", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-run-comment-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("authorless after merge"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    session.change((d) => {
+      const target = d.comments[asFrontingCommentId(commentId)];
+      if (target) target.memberId = null;
+    });
+
+    const result = runAllValidations(session);
+
+    expect(result.frontingCommentAuthorIssues).toBe(1);
+    expect(result.notifications.some((n) => n.entityType === "fronting-comment")).toBe(true);
+  });
+});
+
+describe("PostMergeValidator: normalizeFrontingCommentAuthors", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("emits notification-only when all author fields are null", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-authorless"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_placeholder"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("test comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    // Null out memberId to simulate CRDT merge artifact
+    session.change((d) => {
+      const target = d.comments[asFrontingCommentId(commentId)];
+      if (target) target.memberId = null;
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]?.resolution).toBe("notification-only");
+    expect(notifications[0]?.entityType).toBe("fronting-comment");
+    expect(notifications[0]?.entityId).toBe(commentId);
+    expect(notifications[0]?.fieldName).toBe("author");
+  });
+
+  it("returns no notifications when at least one author field is set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-valid-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("test comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("detects multiple authorless comments in a single pass", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-multi-authorless"),
+      sodium,
+    });
+
+    const id1 = `fc_${crypto.randomUUID()}`;
+    const id2 = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(id1)] = {
+        id: s(id1),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("comment 1"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.comments[asFrontingCommentId(id2)] = {
+        id: s(id2),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("comment 2"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    session.change((d) => {
+      const c1 = d.comments[asFrontingCommentId(id1)];
+      const c2 = d.comments[asFrontingCommentId(id2)];
+      if (c1) c1.memberId = null;
+      if (c2) c2.memberId = null;
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(2);
+    expect(notifications.every((n) => n.resolution === "notification-only")).toBe(true);
+  });
+
+  it("returns no notifications when document has no comments field", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sysCore-no-comments"),
+      sodium,
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("returns no notifications when only customFrontId is set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-customfront-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: null,
+        customFrontId: s("cf_1"),
+        structureEntityId: null,
+        content: s("custom front comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("returns no notifications when only structureEntityId is set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-entity-author"),
+      sodium,
+    });
+
+    const commentId = `fc_${crypto.randomUUID()}`;
+    session.change((d) => {
+      d.comments[asFrontingCommentId(commentId)] = {
+        id: s(commentId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: null,
+        customFrontId: null,
+        structureEntityId: s("ste_1"),
+        content: s("entity comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(0);
+  });
+
+  it("detects only authorless comments in a mixed set", () => {
+    const base = createFrontingDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-fronting-mixed-authors"),
+      sodium,
+    });
+
+    const validMemberId = `fc_${crypto.randomUUID()}`;
+    const validCustomFrontId = `fc_${crypto.randomUUID()}`;
+    const authorlessId = `fc_${crypto.randomUUID()}`;
+
+    session.change((d) => {
+      d.comments[asFrontingCommentId(validMemberId)] = {
+        id: s(validMemberId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_1"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("member comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.comments[asFrontingCommentId(validCustomFrontId)] = {
+        id: s(validCustomFrontId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: null,
+        customFrontId: s("cf_1"),
+        structureEntityId: null,
+        content: s("custom front comment"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.comments[asFrontingCommentId(authorlessId)] = {
+        id: s(authorlessId),
+        frontingSessionId: s("fs_1"),
+        systemId: s("sys_1"),
+        memberId: s("mem_tmp"),
+        customFrontId: null,
+        structureEntityId: null,
+        content: s("will become authorless"),
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    session.change((d) => {
+      const target = d.comments[asFrontingCommentId(authorlessId)];
+      if (target) target.memberId = null;
+    });
+
+    const { notifications, envelope } = normalizeFrontingCommentAuthors(session);
+
+    expect(envelope).toBeNull();
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]?.entityId).toBe(authorlessId);
   });
 });

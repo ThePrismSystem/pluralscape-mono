@@ -10,6 +10,18 @@ import type {
   CrdtMember,
   CrdtMemberPhoto,
 } from "./system-core.js";
+import type {
+  ChannelId,
+  CustomFrontId,
+  FieldDefinitionId,
+  FieldValueId,
+  FrontingSessionId,
+  GroupId,
+  JournalEntryId,
+  MemberId,
+  MemberPhotoId,
+  NoteId,
+} from "@pluralscape/types";
 
 /**
  * Automerge document schema for a bucket projection document.
@@ -27,25 +39,25 @@ import type {
  */
 export interface BucketProjectionDocument {
   /** scope: "members" — projected member profiles (filtered fields). */
-  members: Record<string, CrdtMember>;
+  members: Record<MemberId, CrdtMember>;
   /** scope: "member-photos" — projected member photo metadata. */
-  memberPhotos: Record<string, CrdtMemberPhoto>;
+  memberPhotos: Record<MemberPhotoId, CrdtMemberPhoto>;
   /** scope: "groups" — projected groups. */
-  groups: Record<string, CrdtGroup>;
+  groups: Record<GroupId, CrdtGroup>;
   /** scope: "custom-fronts" — projected custom fronts. */
-  customFronts: Record<string, CrdtCustomFront>;
+  customFronts: Record<CustomFrontId, CrdtCustomFront>;
   /** scope: "custom-fields" — projected field definitions. */
-  fieldDefinitions: Record<string, CrdtFieldDefinition>;
+  fieldDefinitions: Record<FieldDefinitionId, CrdtFieldDefinition>;
   /** scope: "custom-fields" — projected field values. */
-  fieldValues: Record<string, CrdtFieldValue>;
+  fieldValues: Record<FieldValueId, CrdtFieldValue>;
   /** scope: "fronting-status" — active fronting sessions only. */
-  frontingSessions: Record<string, CrdtFrontingSession>;
+  frontingSessions: Record<FrontingSessionId, CrdtFrontingSession>;
   /** scope: "notes" — projected notes. */
-  notes: Record<string, CrdtNote>;
+  notes: Record<NoteId, CrdtNote>;
   /** scope: "journal-entries" — projected journal entries. */
-  journalEntries: Record<string, CrdtJournalEntry>;
+  journalEntries: Record<JournalEntryId, CrdtJournalEntry>;
   /** scope: "chat" — projected channel metadata. */
-  channels: Record<string, CrdtChannel>;
+  channels: Record<ChannelId, CrdtChannel>;
   /** scope: "chat" — projected chat messages (append-only). */
   messages: CrdtChatMessage[];
   /** Friend dashboard snapshot for offline client cache. */
