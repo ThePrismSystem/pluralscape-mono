@@ -62,8 +62,8 @@ function immStr(val: string): ImmutableString {
  * Convert an array of bucket IDs into the CRDT add-wins map format.
  * Each bucket ID becomes a key mapped to `true`.
  */
-function bucketArrayToMap(bucketIds: readonly BucketId[]): Record<string, true> {
-  return Object.fromEntries(bucketIds.map((id) => [id, true])) as Record<string, true>;
+function bucketArrayToMap(bucketIds: readonly BucketId[]): Record<BucketId, true> {
+  return Object.fromEntries(bucketIds.map((id) => [id, true])) as Record<BucketId, true>;
 }
 
 // ── pure projection functions ────────────────────────────────────────
@@ -131,10 +131,10 @@ export function applyKeyGrantProjection(doc: PrivacyConfigDocument, grant: KeyGr
 /** Mark a friend code as archived in the CRDT document. */
 export function archiveFriendCodeProjection(
   doc: PrivacyConfigDocument,
-  codeId: string,
+  codeId: FriendCodeId,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const code = doc.friendCodes[codeId as FriendCodeId];
+  const code = doc.friendCodes[codeId];
   if (code) {
     code.archived = true;
   } else {
@@ -145,12 +145,12 @@ export function archiveFriendCodeProjection(
 /** Update friend connection status in the CRDT document. */
 export function updateFriendConnectionStatusProjection(
   doc: PrivacyConfigDocument,
-  connectionId: string,
+  connectionId: FriendConnectionId,
   status: FriendConnectionStatus,
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId as FriendConnectionId];
+  const connection = doc.friendConnections[connectionId];
   if (connection) {
     connection.status = immStr(status);
     connection.updatedAt = updatedAt;
@@ -162,12 +162,12 @@ export function updateFriendConnectionStatusProjection(
 /** Update friend connection visibility in the CRDT document. */
 export function updateFriendConnectionVisibilityProjection(
   doc: PrivacyConfigDocument,
-  connectionId: string,
+  connectionId: FriendConnectionId,
   visibility: string,
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId as FriendConnectionId];
+  const connection = doc.friendConnections[connectionId];
   if (connection) {
     connection.visibility = immStr(visibility);
     connection.updatedAt = updatedAt;
@@ -181,14 +181,14 @@ export function updateFriendConnectionVisibilityProjection(
 /** Add bucket assignment to friend connection in the CRDT document. */
 export function addBucketAssignmentProjection(
   doc: PrivacyConfigDocument,
-  connectionId: string,
-  bucketId: string,
+  connectionId: FriendConnectionId,
+  bucketId: BucketId,
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId as FriendConnectionId];
+  const connection = doc.friendConnections[connectionId];
   if (connection) {
-    (connection.assignedBuckets as Record<string, true>)[bucketId] = true;
+    connection.assignedBuckets[bucketId] = true;
     connection.updatedAt = updatedAt;
   } else {
     logger?.warn("addBucketAssignmentProjection: connection not found", { connectionId });
@@ -198,12 +198,12 @@ export function addBucketAssignmentProjection(
 /** Remove bucket assignment from friend connection in the CRDT document. */
 export function removeBucketAssignmentProjection(
   doc: PrivacyConfigDocument,
-  connectionId: string,
-  bucketId: string,
+  connectionId: FriendConnectionId,
+  bucketId: BucketId,
   updatedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId as FriendConnectionId];
+  const connection = doc.friendConnections[connectionId];
   if (connection) {
     Reflect.deleteProperty(connection.assignedBuckets, bucketId);
     connection.updatedAt = updatedAt;
@@ -215,10 +215,10 @@ export function removeBucketAssignmentProjection(
 /** Mark a friend connection as archived in the CRDT document. */
 export function archiveFriendConnectionProjection(
   doc: PrivacyConfigDocument,
-  connectionId: string,
+  connectionId: FriendConnectionId,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const connection = doc.friendConnections[connectionId as FriendConnectionId];
+  const connection = doc.friendConnections[connectionId];
   if (connection) {
     connection.archived = true;
   } else {
@@ -229,11 +229,11 @@ export function archiveFriendConnectionProjection(
 /** Revoke a key grant in the CRDT document. */
 export function revokeKeyGrantProjection(
   doc: PrivacyConfigDocument,
-  grantId: string,
+  grantId: KeyGrantId,
   revokedAt: number,
   logger?: Pick<Logger, "warn">,
 ): void {
-  const grant = doc.keyGrants[grantId as KeyGrantId];
+  const grant = doc.keyGrants[grantId];
   if (grant) {
     grant.revokedAt = revokedAt;
   } else {
