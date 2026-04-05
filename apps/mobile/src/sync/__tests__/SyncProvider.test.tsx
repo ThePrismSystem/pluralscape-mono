@@ -6,6 +6,7 @@ import { SyncProvider, useSync } from "../SyncProvider.js";
 
 import type { AuthContextValue } from "../../auth/AuthProvider.js";
 import type { ConnectionContextValue } from "../../connection/ConnectionProvider.js";
+import type { DataLayerContextValue } from "../../data/DataLayerProvider.js";
 import type { PlatformContext } from "../../platform/types.js";
 
 // ── Minimal context mocks ────────────────────────────────────────────
@@ -26,6 +27,16 @@ vi.mock("../../connection/index.js", () => ({
     manager: {} as ConnectionContextValue["manager"],
   }),
 }));
+
+vi.mock("../../data/DataLayerProvider.js", async () => {
+  const { createEventBus } = await import("@pluralscape/sync");
+  return {
+    useDataLayer: (): DataLayerContextValue => ({
+      eventBus: createEventBus(),
+      localDb: {} as DataLayerContextValue["localDb"],
+    }),
+  };
+});
 
 vi.mock("../../platform/index.js", () => ({
   usePlatform: (): PlatformContext =>
@@ -63,6 +74,42 @@ describe("SyncProvider", () => {
     const captured = snapshots[0] as ReturnType<typeof useSync>;
     expect(captured.engine).toBeNull();
     expect(captured.isBootstrapped).toBe(false);
+  });
+
+  it("provides isBootstrapped as false initially", () => {
+    const snapshots: ReturnType<typeof useSync>[] = [];
+
+    function Consumer(): React.JSX.Element {
+      snapshots.push(useSync());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <SyncProvider>
+        <Consumer />
+      </SyncProvider>,
+    );
+
+    expect(snapshots).toHaveLength(1);
+    expect((snapshots[0] as ReturnType<typeof useSync>).isBootstrapped).toBe(false);
+  });
+
+  it("provides engine as null when auth is not unlocked", () => {
+    const snapshots: ReturnType<typeof useSync>[] = [];
+
+    function Consumer(): React.JSX.Element {
+      snapshots.push(useSync());
+      return <span>ok</span>;
+    }
+
+    renderToString(
+      <SyncProvider>
+        <Consumer />
+      </SyncProvider>,
+    );
+
+    expect(snapshots).toHaveLength(1);
+    expect((snapshots[0] as ReturnType<typeof useSync>).engine).toBeNull();
   });
 
   it("throws when useSync is used outside SyncProvider", () => {

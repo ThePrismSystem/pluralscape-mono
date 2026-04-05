@@ -10,6 +10,7 @@ import { resources } from "../locales";
 import { AuthProvider, AuthStateMachine, createTokenStore, useAuth } from "../src/auth/index.js";
 import { getApiBaseUrl } from "../src/config.js";
 import { ConnectionManager, ConnectionProvider } from "../src/connection/index.js";
+import { DataLayerProvider } from "../src/data/index.js";
 import { applyLayoutDirection, detectLocale } from "../src/i18n/index.js";
 import { detectPlatform, PlatformProvider } from "../src/platform/index.js";
 import { BucketKeyProvider } from "../src/providers/bucket-key-provider.js";
@@ -234,13 +235,15 @@ export default function RootLayout(): React.JSX.Element {
             <RestClientProvider getToken={getToken}>
               <AuthProvider machine={authMachineRef.current} tokenStore={tokenStore}>
                 <AuthBridgeProviders>
-                  <ConnectionProvider manager={connectionManagerRef.current}>
-                    <SyncProvider>
-                      <AuthGate>
-                        <Slot />
-                      </AuthGate>
-                    </SyncProvider>
-                  </ConnectionProvider>
+                  <DataLayerProvider>
+                    <ConnectionProvider manager={connectionManagerRef.current}>
+                      <SyncProvider>
+                        <AuthGate>
+                          <Slot />
+                        </AuthGate>
+                      </SyncProvider>
+                    </ConnectionProvider>
+                  </DataLayerProvider>
                 </AuthBridgeProviders>
               </AuthProvider>
             </RestClientProvider>

@@ -5,6 +5,7 @@
  * and outbound change submission. Uses EncryptedSyncSession for CRDT
  * operations and the adapter interfaces for I/O.
  */
+import { parseDocumentId } from "../document-types.js";
 import { NoActiveSessionError } from "../errors.js";
 import { createDocument } from "../factories/document-factory.js";
 import { mapConcurrent } from "../map-concurrent.js";
@@ -25,6 +26,8 @@ import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncDocumentType } from "../document-types.js";
+import type { EventBus } from "../event-bus/event-bus.js";
+import type { DataLayerEventMap } from "../event-bus/event-map.js";
 import type { ReplayResult } from "../offline-queue-manager.js";
 import type { DocumentSyncState, ReplicationProfile } from "../replication-profiles.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
@@ -49,6 +52,8 @@ export interface SyncEngineConfig {
   readonly offlineQueueAdapter?: OfflineQueueAdapter;
   /** Maximum failed conflict persistence batches to retain for retry. Defaults to 100. */
   readonly maxConflictRetryBatches?: number;
+  /** Optional event bus for emitting sync lifecycle events. */
+  readonly eventBus?: EventBus<DataLayerEventMap>;
 }
 
 /**
@@ -71,6 +76,16 @@ export class SyncEngine {
 
   constructor(config: SyncEngineConfig) {
     this.config = config;
+  }
+
+  /** Call the onError callback and emit a sync:error event if an event bus is configured. */
+  private handleError(message: string, error: unknown): void {
+    this.config.onError(message, error);
+    this.config.eventBus?.emit("sync:error", {
+      type: "sync:error",
+      message,
+      error,
+    });
   }
 
   /** Number of documents with in-flight queued operations. */
@@ -102,7 +117,7 @@ export class SyncEngine {
       const result = evictionResults[i];
       if (result?.status === "rejected") {
         const docId = subscriptionSet.evict[i];
-        this.config.onError(`Failed to evict document ${docId ?? "unknown"}`, result.reason);
+        this.handleError(`Failed to evict document ${docId ?? "unknown"}`, result.reason);
       }
     }
 
@@ -116,10 +131,7 @@ export class SyncEngine {
       const result = results[i];
       if (result?.status === "rejected") {
         const entry = subscriptionSet.active[i];
-        this.config.onError(
-          `Failed to hydrate document ${entry?.docId ?? "unknown"}`,
-          result.reason,
-        );
+        this.handleError(`Failed to hydrate document ${entry?.docId ?? "unknown"}`, result.reason);
       }
     }
 
@@ -131,7 +143,7 @@ export class SyncEngine {
         this.enqueueDocumentOperation(entry.docId, () =>
           this.applyIncomingChanges(entry.docId, changes),
         ).catch((err: unknown) => {
-          this.config.onError(`Error handling incoming changes for ${entry.docId}`, err);
+          this.handleError(`Error handling incoming changes for ${entry.docId}`, err);
         });
       });
       this.subscriptions.push(sub);
@@ -176,13 +188,13 @@ export class SyncEngine {
       }
 
       if (result.failed > 0) {
-        this.config.onError(
+        this.handleError(
           `Offline queue replay completed with failures: ${String(result.failed)} failed, ${String(result.skipped)} skipped`,
           null,
         );
       }
     } catch (error) {
-      this.config.onError("Offline queue replay failed", error);
+      this.handleError("Offline queue replay failed", error);
     }
   }
 
@@ -287,7 +299,7 @@ export class SyncEngine {
       try {
         sub.unsubscribe();
       } catch (error) {
-        this.config.onError("Failed to unsubscribe during dispose", error);
+        this.handleError("Failed to unsubscribe during dispose", error);
       }
     }
     this.subscriptions.length = 0;
@@ -299,11 +311,11 @@ export class SyncEngine {
         const result = this.config.networkAdapter.close();
         if (result instanceof Promise) {
           result.catch((error: unknown) => {
-            this.config.onError("Failed to close network adapter during dispose", error);
+            this.handleError("Failed to close network adapter during dispose", error);
           });
         }
       } catch (error) {
-        this.config.onError("Failed to close network adapter during dispose", error);
+        this.handleError("Failed to close network adapter during dispose", error);
       }
     }
     if (typeof this.config.storageAdapter.close === "function") {
@@ -311,11 +323,11 @@ export class SyncEngine {
         const result = this.config.storageAdapter.close();
         if (result instanceof Promise) {
           result.catch((error: unknown) => {
-            this.config.onError("Failed to close storage adapter during dispose", error);
+            this.handleError("Failed to close storage adapter during dispose", error);
           });
         }
       } catch (error) {
-        this.config.onError("Failed to close storage adapter during dispose", error);
+        this.handleError("Failed to close storage adapter during dispose", error);
       }
     }
   }
@@ -362,7 +374,18 @@ export class SyncEngine {
     session.applyEncryptedChanges(newChanges);
 
     // Run post-merge validation to correct merge artifacts
-    await this.runPostMergeValidation(docId, session);
+    const postMergeResult = await this.runPostMergeValidation(docId, session);
+
+    // Emit sync:changes-merged event
+    if (this.config.eventBus) {
+      const { documentType } = parseDocumentId(docId);
+      this.config.eventBus.emit("sync:changes-merged", {
+        type: "sync:changes-merged",
+        documentId: docId,
+        documentType,
+        conflicts: postMergeResult.notifications,
+      });
+    }
 
     // THEN persist (if this fails, data is still correct in memory; server will re-send)
     await this.persistChanges(docId, newChanges);
@@ -431,6 +454,13 @@ export class SyncEngine {
       if (serverSnapshot && serverSnapshotSeq > localSnapshotSeq) {
         await this.config.storageAdapter.saveSnapshot(docId, serverSnapshot);
       }
+
+      // Emit sync:snapshot-applied event
+      this.config.eventBus?.emit("sync:snapshot-applied", {
+        type: "sync:snapshot-applied",
+        documentId: docId,
+        documentType: docType,
+      });
     } else {
       // Fresh document — create empty
       session = new EncryptedSyncSession({
@@ -459,7 +489,15 @@ export class SyncEngine {
         session.applyEncryptedChanges(changes);
 
         // Run post-merge validation to correct merge artifacts
-        await this.runPostMergeValidation(docId, session);
+        const postMergeResult = await this.runPostMergeValidation(docId, session);
+
+        // Emit sync:changes-merged event
+        this.config.eventBus?.emit("sync:changes-merged", {
+          type: "sync:changes-merged",
+          documentId: docId,
+          documentType: docType,
+          conflicts: postMergeResult.notifications,
+        });
 
         await this.persistChanges(docId, changes);
       }
@@ -477,7 +515,7 @@ export class SyncEngine {
   private async runPostMergeValidation(
     docId: SyncDocumentId,
     session: EncryptedSyncSession<unknown>,
-  ): Promise<void> {
+  ): Promise<{ readonly notifications: readonly ConflictNotification[] }> {
     // runAllValidations never throws — each validator is independently try/caught
     const result = runAllValidations(session, this.config.onError);
     const { correctionEnvelopes, notifications } = result;
@@ -494,6 +532,8 @@ export class SyncEngine {
 
     // Persist conflict records (best-effort, with retry of previously failed)
     await this.persistConflicts(docId, notifications);
+
+    return { notifications };
   }
 
   private async persistConflicts(
@@ -517,7 +557,7 @@ export class SyncEngine {
           batch.notifications,
         );
       } catch (error) {
-        this.config.onError("Failed to persist conflict records", error);
+        this.handleError("Failed to persist conflict records", error);
         this.failedConflictPersistence.push(batch);
       }
     }
@@ -527,7 +567,7 @@ export class SyncEngine {
     if (this.failedConflictPersistence.length > cap) {
       const dropped = this.failedConflictPersistence.length - cap;
       this.failedConflictPersistence = this.failedConflictPersistence.slice(dropped);
-      this.config.onError(
+      this.handleError(
         `Conflict retry buffer exceeded cap (${String(cap)}), dropped ${String(dropped)} oldest entries`,
         null,
       );
