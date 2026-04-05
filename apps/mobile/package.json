@@ -31,8 +31,8 @@
     "expo-localization": "~55.0.8",
     "expo-modules-core": "~55.0.15",
     "expo-router": "~55.0.4",
-    "expo-secure-store": "~14.2.0",
-    "expo-sqlite": "~16.0.10",
+    "expo-secure-store": "~55.0.0",
+    "expo-sqlite": "~55.0.0",
     "expo-status-bar": "~55.0.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -50,9 +50,9 @@
     "@testing-library/react-native": "^13.3.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^10.0.3",
+    "eslint": "^10.2.0",
     "fake-indexeddb": "^6.2.5",
     "typescript": "^6.0.0",
-    "vitest-mock-extended": "^3.1.0"
+    "vitest-mock-extended": "^3.1.1"
   }
 }
