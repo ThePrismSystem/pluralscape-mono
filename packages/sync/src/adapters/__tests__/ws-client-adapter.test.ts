@@ -157,6 +157,42 @@ describe("createWsClientAdapter", () => {
       expect(sent["correlationId"]).toEqual(expect.any(String));
     });
 
+    it("rejects fetchManifest with timeout when auth never completes", async () => {
+      vi.useFakeTimers();
+
+      const harness = createTestHarness();
+      harness.adapter.connect();
+      const mock = getLastMock();
+      mock.simulateOpen();
+
+      // Complete auth so fetchManifest gets past the authReady gate
+      const authMsg = mock.sentMessages[0] as { correlationId: string };
+      mock.simulateMessage({
+        type: "AuthenticateResponse",
+        correlationId: authMsg.correlationId,
+        syncSessionId: "sess_abc",
+        serverTime: Date.now(),
+      });
+
+      // Start the manifest request — it will pend waiting for a response
+      const manifestPromise = harness.adapter.fetchManifest(asSystemId("sys_test123"));
+
+      // Allow the authReady microtask to flush so the request is sent
+      await vi.waitFor(() => {
+        const req = mock.sentMessages.find(
+          (m) => (m as { type: string }).type === "ManifestRequest",
+        );
+        expect(req).toBeDefined();
+      });
+
+      // Advance past the 30s request timeout
+      vi.advanceTimersByTime(31_000);
+
+      await expect(manifestPromise).rejects.toThrow("timed out");
+
+      vi.useRealTimers();
+    });
+
     it("ignores AuthenticateResponse with mismatched correlationId", () => {
       const harness = createTestHarness();
       const connectedEvents: unknown[] = [];
