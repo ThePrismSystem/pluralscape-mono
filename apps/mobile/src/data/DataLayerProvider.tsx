@@ -11,7 +11,6 @@ import type { LocalDatabase } from "./local-database.js";
 import type { DataLayerEventMap, EventBus } from "@pluralscape/sync";
 import type { ReactNode } from "react";
 
-
 export interface DataLayerContextValue {
   readonly eventBus: EventBus<DataLayerEventMap>;
   readonly localDb: LocalDatabase;
