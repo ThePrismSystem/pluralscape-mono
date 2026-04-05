@@ -10,3 +10,8 @@
 export function entityKeys<K extends string>(record: Record<K, unknown>): K[] {
   return Object.keys(record) as K[];
 }
+
+/** Returns the entries of a Record while preserving the branded key type. */
+export function entityEntries<K extends string, V>(record: Record<K, V>): [K, V][] {
+  return Object.entries(record) as [K, V][];
+}
