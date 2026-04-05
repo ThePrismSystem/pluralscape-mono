@@ -38,7 +38,7 @@ export function TouchableOpacity({
   ...rest
 }: {
   readonly onPress?: () => void;
-  readonly children?: unknown;
+  readonly children?: Parameters<typeof createElement>[2];
   readonly accessibilityLabel?: string;
   readonly accessibilityRole?: string;
   readonly style?: unknown;

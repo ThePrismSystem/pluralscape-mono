@@ -59,8 +59,16 @@ function makePlatform(backend: "sqlite" | "indexeddb"): PlatformContext {
   };
 }
 
-function makeSync(isBootstrapped: boolean): SyncContextValue {
-  return { engine: null, isBootstrapped, progress: null };
+function makeSync(isBootstrapped: boolean, fallbackToRemote = false): SyncContextValue {
+  return {
+    engine: null,
+    isBootstrapped,
+    progress: null,
+    bootstrapError: null,
+    bootstrapAttempts: 0,
+    retryBootstrap: () => {},
+    fallbackToRemote,
+  };
 }
 
 beforeEach(() => {
