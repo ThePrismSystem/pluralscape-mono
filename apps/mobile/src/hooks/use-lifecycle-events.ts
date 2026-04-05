@@ -3,19 +3,23 @@ import {
   decryptLifecycleEvent,
   decryptLifecycleEventPage,
 } from "@pluralscape/data/transforms/lifecycle-event";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToLifecycleEventRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { LifecycleEventLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   LifecycleEventPage as LifecycleEventRawPage,
@@ -39,7 +43,9 @@ interface LifecycleEventListOpts extends SystemIdOverride {
 export function useLifecycleEvent(
   eventId: LifecycleEventId,
   opts?: SystemIdOverride,
-): TRPCQuery<LifecycleEventWithArchive> {
+): DataQuery<LifecycleEventWithArchive | LifecycleEventLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -52,18 +58,33 @@ export function useLifecycleEvent(
     [masterKey],
   );
 
-  return trpc.lifecycleEvent.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["lifecycle-events", eventId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM lifecycle_events WHERE id = ?", [eventId]);
+      if (!row) throw new Error("LifecycleEvent not found");
+      return rowToLifecycleEventRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.lifecycleEvent.get.useQuery(
     { systemId, eventId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectEvent,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useLifecycleEventsList(
   opts?: LifecycleEventListOpts,
-): TRPCInfiniteQuery<LifecycleEventPage> {
+): DataListQuery<LifecycleEventWithArchive | LifecycleEventLocalRow> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -79,7 +100,20 @@ export function useLifecycleEventsList(
     [masterKey],
   );
 
-  return trpc.lifecycleEvent.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: ["lifecycle-events", "list", systemId, opts?.includeArchived ?? false],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const sql = includeArchived
+        ? "SELECT * FROM lifecycle_events WHERE system_id = ?"
+        : "SELECT * FROM lifecycle_events WHERE system_id = ? AND archived = 0";
+      return localDb.queryAll(sql, [systemId]).map(rowToLifecycleEventRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.lifecycleEvent.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -87,11 +121,13 @@ export function useLifecycleEventsList(
       includeArchived: opts?.includeArchived ?? false,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: LifecycleEventRawPage) => lastPage.nextCursor,
       select: selectPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateLifecycleEvent(): TRPCMutation<

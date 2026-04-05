@@ -3,19 +3,23 @@ import {
   decryptInnerWorldEntity,
   decryptInnerWorldEntityPage,
 } from "@pluralscape/data/transforms/innerworld-entity";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { rowToInnerWorldEntityRow } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
+import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { InnerWorldEntityLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   InnerWorldEntityDecrypted,
@@ -39,7 +43,11 @@ interface InnerWorldEntityListOpts extends SystemIdOverride {
 export function useInnerWorldEntity(
   entityId: InnerWorldEntityId,
   opts?: SystemIdOverride,
-): TRPCQuery<InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>> {
+): DataQuery<
+  InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted> | InnerWorldEntityLocalRow
+> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -52,18 +60,35 @@ export function useInnerWorldEntity(
     [masterKey],
   );
 
-  return trpc.innerworld.entity.get.useQuery(
+  const localQuery = useQuery({
+    queryKey: ["innerworld-entities", entityId],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const row = localDb.queryOne("SELECT * FROM innerworld_entities WHERE id = ?", [entityId]);
+      if (!row) throw new Error("InnerWorldEntity not found");
+      return rowToInnerWorldEntityRow(row);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.innerworld.entity.get.useQuery(
     { systemId, entityId },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       select: selectEntity,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useInnerWorldEntitiesList(
   opts?: InnerWorldEntityListOpts,
-): TRPCInfiniteQuery<InnerWorldEntityPage> {
+): DataListQuery<
+  InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted> | InnerWorldEntityLocalRow
+> {
+  const source = useQuerySource();
+  const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
   const masterKey = useMasterKey();
@@ -80,7 +105,33 @@ export function useInnerWorldEntitiesList(
     [masterKey],
   );
 
-  return trpc.innerworld.entity.list.useInfiniteQuery(
+  const localQuery = useQuery({
+    queryKey: [
+      "innerworld-entities",
+      "list",
+      systemId,
+      opts?.includeArchived ?? false,
+      opts?.regionId ?? null,
+    ],
+    queryFn: () => {
+      if (localDb === null) throw new Error("localDb is null");
+      const includeArchived = opts?.includeArchived ?? false;
+      const regionId = opts?.regionId ?? null;
+      if (regionId !== null) {
+        const sql = includeArchived
+          ? "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ?"
+          : "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? AND archived = 0";
+        return localDb.queryAll(sql, [systemId, regionId]).map(rowToInnerWorldEntityRow);
+      }
+      const sql = includeArchived
+        ? "SELECT * FROM innerworld_entities WHERE system_id = ?"
+        : "SELECT * FROM innerworld_entities WHERE system_id = ? AND archived = 0";
+      return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldEntityRow);
+    },
+    enabled: source === "local",
+  });
+
+  const remoteQuery = trpc.innerworld.entity.list.useInfiniteQuery(
     {
       systemId,
       limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
@@ -88,11 +139,13 @@ export function useInnerWorldEntitiesList(
       regionId: opts?.regionId,
     },
     {
-      enabled: masterKey !== null,
+      enabled: source === "remote" && masterKey !== null,
       getNextPageParam: (lastPage: InnerWorldEntityRawPage) => lastPage.nextCursor,
       select: selectPage,
     },
   );
+
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useCreateInnerWorldEntity(): TRPCMutation<
