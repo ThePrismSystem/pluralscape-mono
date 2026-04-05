@@ -5,6 +5,7 @@
     "version": "0.0.1",
     "scheme": "pluralscape",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
     "platforms": ["ios", "android", "web"],
     "web": {
       "bundler": "metro",
