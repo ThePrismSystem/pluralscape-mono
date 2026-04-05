@@ -6,6 +6,18 @@ import {
   getEntityTypesForDocument,
   getTableDef,
 } from "../entity-registry.js";
+import "../index.js"; // trigger auto-registration
+import { getMaterializer } from "../materializer-registry.js";
+
+const ALL_DOC_TYPES = [
+  "system-core",
+  "fronting",
+  "chat",
+  "journal",
+  "note",
+  "privacy-config",
+  "bucket",
+] as const;
 
 const ALL_ENTITY_TYPES = Object.keys(ENTITY_CRDT_STRATEGIES);
 
@@ -145,5 +157,11 @@ describe("getEntityTypesForDocument", () => {
   it("returns empty array for unknown document type", () => {
     const types = getEntityTypesForDocument("unknown-document");
     expect(types).toEqual([]);
+  });
+});
+
+describe("materializer registration", () => {
+  it.each(ALL_DOC_TYPES)("registers a materializer for %s", (docType) => {
+    expect(getMaterializer(docType)).toBeDefined();
   });
 });
