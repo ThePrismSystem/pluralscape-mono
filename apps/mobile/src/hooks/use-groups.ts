@@ -3,7 +3,7 @@ import { decryptGroup } from "@pluralscape/data/transforms/group";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToGroupRow } from "../data/row-transforms.js";
+import { rowToGroup } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -16,7 +16,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { GroupLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   GroupDecrypted,
@@ -33,10 +32,7 @@ interface GroupListOpts extends SystemIdOverride {
   readonly includeArchived?: boolean;
 }
 
-export function useGroup(
-  groupId: GroupId,
-  opts?: SystemIdOverride,
-): DataQuery<GroupDecrypted | GroupLocalRow> {
+export function useGroup(groupId: GroupId, opts?: SystemIdOverride): DataQuery<GroupDecrypted> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -57,7 +53,7 @@ export function useGroup(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM groups WHERE id = ?", [groupId]);
       if (!row) throw new Error("Group not found");
-      return rowToGroupRow(row);
+      return rowToGroup(row);
     },
     enabled: source === "local",
   });
@@ -73,7 +69,7 @@ export function useGroup(
   return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypted | GroupLocalRow> {
+export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypted> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -103,7 +99,7 @@ export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypte
       const sql = includeArchived
         ? "SELECT * FROM groups WHERE system_id = ?"
         : "SELECT * FROM groups WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToGroupRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToGroup);
     },
     enabled: source === "local",
   });

@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToFieldDefinitionRow, rowToFieldValueRow } from "../data/row-transforms.js";
+import { rowToFieldDefinition, rowToFieldValue } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { FieldDefinitionLocalRow, FieldValueLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   FieldDefinitionDecrypted,
@@ -44,7 +43,7 @@ interface FieldDefinitionListOpts extends SystemIdOverride {
 export function useFieldDefinition(
   fieldDefinitionId: FieldDefinitionId,
   opts?: SystemIdOverride,
-): DataQuery<FieldDefinitionDecrypted | FieldDefinitionLocalRow> {
+): DataQuery<FieldDefinitionDecrypted> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -67,7 +66,7 @@ export function useFieldDefinition(
         fieldDefinitionId,
       ]);
       if (!row) throw new Error("Field definition not found");
-      return rowToFieldDefinitionRow(row);
+      return rowToFieldDefinition(row);
     },
     enabled: source === "local",
   });
@@ -85,7 +84,7 @@ export function useFieldDefinition(
 
 export function useFieldDefinitionsList(
   opts?: FieldDefinitionListOpts,
-): DataListQuery<FieldDefinitionDecrypted | FieldDefinitionLocalRow> {
+): DataListQuery<FieldDefinitionDecrypted> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -115,7 +114,7 @@ export function useFieldDefinitionsList(
       const sql = includeArchived
         ? "SELECT * FROM field_definitions WHERE system_id = ?"
         : "SELECT * FROM field_definitions WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToFieldDefinitionRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToFieldDefinition);
     },
     enabled: source === "local",
   });
@@ -189,7 +188,7 @@ export function useDeleteField(): TRPCMutation<
 export function useMemberFieldValues(
   memberId: MemberId,
   opts?: SystemIdOverride,
-): DataQuery<ReadonlyArray<FieldValueDecrypted | FieldValueLocalRow>> {
+): DataQuery<ReadonlyArray<FieldValueDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -210,7 +209,7 @@ export function useMemberFieldValues(
       if (localDb === null) throw new Error("localDb is null");
       return localDb
         .queryAll("SELECT * FROM field_values WHERE member_id = ?", [memberId])
-        .map(rowToFieldValueRow);
+        .map(rowToFieldValue);
     },
     enabled: source === "local",
   });

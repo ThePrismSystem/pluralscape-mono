@@ -7,33 +7,33 @@ import {
   guardedToMs,
   intToBoolFailClosed,
   parseJsonSafe,
-  rowToAcknowledgementRow,
-  rowToBoardMessageRow,
-  rowToChannelRow,
-  rowToCheckInRecordRow,
-  rowToCustomFrontRow,
-  rowToFieldDefinitionRow,
-  rowToFieldValueRow,
-  rowToFriendCodeRow,
-  rowToFriendConnectionRow,
-  rowToFrontingCommentRow,
-  rowToFrontingReportRow,
-  rowToFrontingSessionRow,
-  rowToGroupRow,
-  rowToInnerWorldEntityRow,
-  rowToInnerWorldRegionRow,
-  rowToJournalEntryRow,
-  rowToLifecycleEventRow,
-  rowToMemberRow,
-  rowToMessageRow,
-  rowToNoteRow,
-  rowToPollRow,
-  rowToPrivacyBucketRow,
-  rowToRelationshipRow,
-  rowToStructureEntityRow,
-  rowToStructureEntityTypeRow,
-  rowToTimerRow,
-  rowToWikiPageRow,
+  rowToAcknowledgement,
+  rowToBoardMessage,
+  rowToChannel,
+  rowToCheckInRecord,
+  rowToCustomFront,
+  rowToFieldDefinition,
+  rowToFieldValue,
+  rowToFriendCode,
+  rowToFriendConnection,
+  rowToFrontingComment,
+  rowToFrontingReport,
+  rowToFrontingSession,
+  rowToGroup,
+  rowToInnerWorldEntity,
+  rowToInnerWorldRegion,
+  rowToJournalEntry,
+  rowToLifecycleEvent,
+  rowToMember,
+  rowToMessage,
+  rowToNote,
+  rowToPoll,
+  rowToPrivacyBucket,
+  rowToRelationship,
+  rowToStructureEntity,
+  rowToStructureEntityType,
+  rowToTimer,
+  rowToWikiPage,
 } from "../row-transforms.js";
 
 // ── Guarded primitive helpers ─────────────────────────────────────────────────
@@ -171,7 +171,7 @@ describe("guardedToMs", () => {
 
 // ── member (system-core, encrypted in API, plaintext in SQLite) ───────────────
 
-describe("rowToMemberRow", () => {
+describe("rowToMember", () => {
   it("maps snake_case SQLite columns to camelCase and converts boolean integers", () => {
     const row: Record<string, unknown> = {
       id: "mem-1",
@@ -181,7 +181,7 @@ describe("rowToMemberRow", () => {
       description: "A member",
       avatar_source: null,
       colors: '["#ff0000"]',
-      saturation_level: "high",
+      saturation_level: '{"kind":"known","level":"highly-elaborated"}',
       tags: "[]",
       suppress_friend_front_notification: 0,
       board_message_notification_on_front: 1,
@@ -190,7 +190,7 @@ describe("rowToMemberRow", () => {
       updated_at: 1_700_000_001_000,
     };
 
-    const result = rowToMemberRow(row);
+    const result = rowToMember(row);
 
     expect(result.id).toBe("mem-1");
     expect(result.systemId).toBe("sys-1");
@@ -199,16 +199,15 @@ describe("rowToMemberRow", () => {
     expect(result.description).toBe("A member");
     expect(result.avatarSource).toBeNull();
     expect(result.colors).toEqual(["#ff0000"]);
-    expect(result.saturationLevel).toBe("high");
-    expect(result.tags).toEqual([]);
     expect(result.suppressFriendFrontNotification).toBe(false);
     expect(result.boardMessageNotificationOnFront).toBe(true);
     expect(result.archived).toBe(false);
     expect(result.createdAt).toBe(1_700_000_000_000);
     expect(result.updatedAt).toBe(1_700_000_001_000);
+    expect(result.version).toBe(0);
   });
 
-  it("sets archived to true when integer is 1", () => {
+  it("returns Archived<Member> with archivedAt when archived = 1", () => {
     const row: Record<string, unknown> = {
       id: "mem-2",
       system_id: "sys-1",
@@ -217,7 +216,7 @@ describe("rowToMemberRow", () => {
       description: null,
       avatar_source: null,
       colors: "[]",
-      saturation_level: "medium",
+      saturation_level: '{"kind":"known","level":"fragment"}',
       tags: "[]",
       suppress_friend_front_notification: 0,
       board_message_notification_on_front: 0,
@@ -226,14 +225,17 @@ describe("rowToMemberRow", () => {
       updated_at: 1_700_000_001_000,
     };
 
-    const result = rowToMemberRow(row);
+    const result = rowToMember(row);
     expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_001_000);
+    }
   });
 });
 
 // ── fronting-session (fronting, encrypted in API, plaintext in SQLite) ────────
 
-describe("rowToFrontingSessionRow", () => {
+describe("rowToFrontingSession", () => {
   it("maps a complete fronting session row", () => {
     const row: Record<string, unknown> = {
       id: "fs-1",
@@ -252,7 +254,7 @@ describe("rowToFrontingSessionRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFrontingSessionRow(row);
+    const result = rowToFrontingSession(row);
 
     expect(result.id).toBe("fs-1");
     expect(result.systemId).toBe("sys-1");
@@ -266,6 +268,7 @@ describe("rowToFrontingSessionRow", () => {
     expect(result.outtrigger).toBeNull();
     expect(result.outtriggerSentiment).toBeNull();
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 
   it("handles null end_time for active sessions", () => {
@@ -286,14 +289,14 @@ describe("rowToFrontingSessionRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFrontingSessionRow(row);
+    const result = rowToFrontingSession(row);
     expect(result.endTime).toBeNull();
   });
 });
 
 // ── message (chat, encrypted in API, plaintext in SQLite) ─────────────────────
 
-describe("rowToMessageRow", () => {
+describe("rowToMessage", () => {
   it("maps a chat message row with JSON arrays", () => {
     const row: Record<string, unknown> = {
       id: "msg-1",
@@ -305,11 +308,13 @@ describe("rowToMessageRow", () => {
       mentions: '["mem-2"]',
       reply_to_id: null,
       timestamp: 1_700_000_000_000,
-      edit_of: null,
+      edited_at: null,
       archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToMessageRow(row);
+    const result = rowToMessage(row);
 
     expect(result.id).toBe("msg-1");
     expect(result.channelId).toBe("chan-1");
@@ -320,14 +325,15 @@ describe("rowToMessageRow", () => {
     expect(result.mentions).toEqual(["mem-2"]);
     expect(result.replyToId).toBeNull();
     expect(result.timestamp).toBe(1_700_000_000_000);
-    expect(result.editOf).toBeNull();
+    expect(result.editedAt).toBeNull();
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── journal-entry (journal document) ──────────────────────────────────────────
 
-describe("rowToJournalEntryRow", () => {
+describe("rowToJournalEntry", () => {
   it("maps a journal entry row with JSON-serialized blocks", () => {
     const row: Record<string, unknown> = {
       id: "je-1",
@@ -344,11 +350,11 @@ describe("rowToJournalEntryRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToJournalEntryRow(row);
+    const result = rowToJournalEntry(row);
 
     expect(result.id).toBe("je-1");
     expect(result.systemId).toBe("sys-1");
-    expect(result.author).toBe("mem-1");
+    expect(result.author).toEqual({ entityType: "member", entityId: "mem-1" });
     expect(result.frontingSessionId).toBeNull();
     expect(result.title).toBe("First entry");
     expect(result.blocks).toEqual([{ type: "paragraph", text: "Hello" }]);
@@ -356,13 +362,34 @@ describe("rowToJournalEntryRow", () => {
     expect(result.linkedEntities).toEqual([]);
     expect(result.frontingSnapshots).toBeNull();
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
+  });
+
+  it("returns null author when author column is null", () => {
+    const row: Record<string, unknown> = {
+      id: "je-2",
+      system_id: "sys-1",
+      author: null,
+      fronting_session_id: null,
+      title: "Anonymous entry",
+      blocks: "[]",
+      tags: "[]",
+      linked_entities: "[]",
+      fronting_snapshots: null,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+    };
+
+    const result = rowToJournalEntry(row);
+    expect(result.author).toBeNull();
   });
 });
 
 // ── privacy-bucket / bucket (privacy-config, boolean archived) ────────────────
 
-describe("rowToPrivacyBucketRow", () => {
-  it("maps bucket row to PrivacyBucketRaw shape", () => {
+describe("rowToPrivacyBucket", () => {
+  it("maps bucket row to PrivacyBucket domain type", () => {
     const row: Record<string, unknown> = {
       id: "bkt-1",
       system_id: "sys-1",
@@ -373,19 +400,19 @@ describe("rowToPrivacyBucketRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToPrivacyBucketRow(row);
+    const result = rowToPrivacyBucket(row);
 
     expect(result.id).toBe("bkt-1");
     expect(result.systemId).toBe("sys-1");
     expect(result.name).toBe("Friends Only");
     expect(result.description).toBe("Visible to close friends");
     expect(result.archived).toBe(false);
-    expect(result.archivedAt).toBeNull();
     expect(result.createdAt).toBe(1_700_000_000_000);
     expect(result.updatedAt).toBe(1_700_000_000_000);
+    expect(result.version).toBe(0);
   });
 
-  it("sets archived to true for archived buckets", () => {
+  it("returns Archived<PrivacyBucket> with archivedAt when archived = 1", () => {
     const row: Record<string, unknown> = {
       id: "bkt-2",
       system_id: "sys-1",
@@ -396,15 +423,17 @@ describe("rowToPrivacyBucketRow", () => {
       updated_at: 1_700_000_001_000,
     };
 
-    const result = rowToPrivacyBucketRow(row);
+    const result = rowToPrivacyBucket(row);
     expect(result.archived).toBe(true);
-    expect(result.archivedAt).toBeNull();
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_001_000);
+    }
   });
 });
 
 // ── friend-connection (privacy-config, no encryption) ────────────────────────
 
-describe("rowToFriendConnectionRow", () => {
+describe("rowToFriendConnection", () => {
   it("maps friend connection row with JSON-serialized arrays", () => {
     const row: Record<string, unknown> = {
       id: "fc-1",
@@ -412,28 +441,28 @@ describe("rowToFriendConnectionRow", () => {
       friend_account_id: "acct-2",
       status: "accepted",
       assigned_buckets: '["bkt-1","bkt-2"]',
-      visibility: '"all"',
+      visibility:
+        '{"showMembers":true,"showGroups":true,"showStructure":false,"allowFrontingNotifications":true}',
       archived: 0,
       created_at: 1_700_000_000_000,
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFriendConnectionRow(row);
+    const result = rowToFriendConnection(row);
 
     expect(result.id).toBe("fc-1");
     expect(result.accountId).toBe("acct-1");
     expect(result.friendAccountId).toBe("acct-2");
     expect(result.status).toBe("accepted");
-    expect(result.assignedBuckets).toEqual(["bkt-1", "bkt-2"]);
-    expect(result.visibility).toBe("all");
+    expect(result.assignedBucketIds).toEqual(["bkt-1", "bkt-2"]);
     expect(result.archived).toBe(false);
-    expect(result.archivedAt).toBeNull();
+    expect(result.version).toBe(0);
   });
 });
 
 // ── group (system-core, encrypted in API, boolean archived) ──────────────────
 
-describe("rowToGroupRow", () => {
+describe("rowToGroup", () => {
   it("maps group row with nullable fields", () => {
     const row: Record<string, unknown> = {
       id: "grp-1",
@@ -450,7 +479,7 @@ describe("rowToGroupRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToGroupRow(row);
+    const result = rowToGroup(row);
 
     expect(result.id).toBe("grp-1");
     expect(result.systemId).toBe("sys-1");
@@ -462,12 +491,13 @@ describe("rowToGroupRow", () => {
     expect(result.emoji).toBe("✨");
     expect(result.sortOrder).toBe(1.0);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── channel (chat, boolean archived) ─────────────────────────────────────────
 
-describe("rowToChannelRow", () => {
+describe("rowToChannel", () => {
   it("maps channel row", () => {
     const row: Record<string, unknown> = {
       id: "chan-1",
@@ -481,7 +511,7 @@ describe("rowToChannelRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToChannelRow(row);
+    const result = rowToChannel(row);
 
     expect(result.id).toBe("chan-1");
     expect(result.name).toBe("General");
@@ -489,12 +519,13 @@ describe("rowToChannelRow", () => {
     expect(result.parentId).toBeNull();
     expect(result.sortOrder).toBe(0.5);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── custom-front (system-core, boolean archived) ──────────────────────────────
 
-describe("rowToCustomFrontRow", () => {
+describe("rowToCustomFront", () => {
   it("maps custom front row", () => {
     const row: Record<string, unknown> = {
       id: "cf-1",
@@ -508,7 +539,7 @@ describe("rowToCustomFrontRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToCustomFrontRow(row);
+    const result = rowToCustomFront(row);
 
     expect(result.id).toBe("cf-1");
     expect(result.name).toBe("Dissociated");
@@ -516,12 +547,13 @@ describe("rowToCustomFrontRow", () => {
     expect(result.color).toBe("#aabbcc");
     expect(result.emoji).toBe("🌫️");
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── board-message (chat, boolean archived, pinned) ────────────────────────────
 
-describe("rowToBoardMessageRow", () => {
+describe("rowToBoardMessage", () => {
   it("maps board message row with boolean pinned", () => {
     const row: Record<string, unknown> = {
       id: "bm-1",
@@ -535,7 +567,7 @@ describe("rowToBoardMessageRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToBoardMessageRow(row);
+    const result = rowToBoardMessage(row);
 
     expect(result.id).toBe("bm-1");
     expect(result.senderId).toBe("mem-1");
@@ -543,12 +575,13 @@ describe("rowToBoardMessageRow", () => {
     expect(result.pinned).toBe(true);
     expect(result.sortOrder).toBe(1.0);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── poll (chat, multiple boolean columns) ─────────────────────────────────────
 
-describe("rowToPollRow", () => {
+describe("rowToPoll", () => {
   it("maps poll row with multiple boolean fields", () => {
     const row: Record<string, unknown> = {
       id: "poll-1",
@@ -556,7 +589,7 @@ describe("rowToPollRow", () => {
       created_by_member_id: "mem-1",
       title: "Which day?",
       description: null,
-      kind: "decision",
+      kind: "standard",
       status: "open",
       closed_at: null,
       ends_at: null,
@@ -569,23 +602,24 @@ describe("rowToPollRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToPollRow(row);
+    const result = rowToPoll(row);
 
     expect(result.id).toBe("poll-1");
     expect(result.title).toBe("Which day?");
-    expect(result.kind).toBe("decision");
+    expect(result.kind).toBe("standard");
     expect(result.status).toBe("open");
     expect(result.allowMultipleVotes).toBe(false);
     expect(result.maxVotesPerMember).toBe(1);
     expect(result.allowAbstain).toBe(true);
     expect(result.allowVeto).toBe(false);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── acknowledgement (chat, confirmed boolean) ─────────────────────────────────
 
-describe("rowToAcknowledgementRow", () => {
+describe("rowToAcknowledgement", () => {
   it("maps acknowledgement row with confirmed boolean", () => {
     const row: Record<string, unknown> = {
       id: "ack-1",
@@ -600,7 +634,7 @@ describe("rowToAcknowledgementRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToAcknowledgementRow(row);
+    const result = rowToAcknowledgement(row);
 
     expect(result.id).toBe("ack-1");
     expect(result.createdByMemberId).toBe("mem-1");
@@ -609,12 +643,13 @@ describe("rowToAcknowledgementRow", () => {
     expect(result.confirmed).toBe(false);
     expect(result.confirmedAt).toBeNull();
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── relationship (system-core, boolean bidirectional) ─────────────────────────
 
-describe("rowToRelationshipRow", () => {
+describe("rowToRelationship", () => {
   it("maps relationship row with bidirectional boolean", () => {
     const row: Record<string, unknown> = {
       id: "rel-1",
@@ -628,7 +663,7 @@ describe("rowToRelationshipRow", () => {
       archived: 0,
     };
 
-    const result = rowToRelationshipRow(row);
+    const result = rowToRelationship(row);
 
     expect(result.id).toBe("rel-1");
     expect(result.sourceMemberId).toBe("mem-1");
@@ -643,8 +678,8 @@ describe("rowToRelationshipRow", () => {
 
 // ── note (journal document, boolean archived) ─────────────────────────────────
 
-describe("rowToNoteRow", () => {
-  it("maps note row with author entity fields", () => {
+describe("rowToNote", () => {
+  it("maps note row — builds EntityReference from author_entity_type + author_entity_id", () => {
     const row: Record<string, unknown> = {
       id: "note-1",
       system_id: "sys-1",
@@ -658,21 +693,39 @@ describe("rowToNoteRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToNoteRow(row);
+    const result = rowToNote(row);
 
     expect(result.id).toBe("note-1");
-    expect(result.authorEntityType).toBe("member");
-    expect(result.authorEntityId).toBe("mem-1");
+    expect(result.author).toEqual({ entityType: "member", entityId: "mem-1" });
     expect(result.title).toBe("Shopping list");
     expect(result.content).toBe("Eggs, milk, bread");
     expect(result.backgroundColor).toBe("#ffffcc");
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
+  });
+
+  it("returns null author when both author fields are null", () => {
+    const row: Record<string, unknown> = {
+      id: "note-2",
+      system_id: "sys-1",
+      author_entity_type: null,
+      author_entity_id: null,
+      title: "Anonymous note",
+      content: "Content",
+      background_color: null,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+    };
+
+    const result = rowToNote(row);
+    expect(result.author).toBeNull();
   });
 });
 
 // ── structure-entity (system-core, boolean archived) ──────────────────────────
 
-describe("rowToStructureEntityRow", () => {
+describe("rowToStructureEntity", () => {
   it("maps structure entity row", () => {
     const row: Record<string, unknown> = {
       id: "se-1",
@@ -689,19 +742,20 @@ describe("rowToStructureEntityRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToStructureEntityRow(row);
+    const result = rowToStructureEntity(row);
 
     expect(result.id).toBe("se-1");
     expect(result.entityTypeId).toBe("set-1");
     expect(result.name).toBe("Root");
     expect(result.description).toBeNull();
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── structure-entity-type (system-core, boolean archived) ─────────────────────
 
-describe("rowToStructureEntityTypeRow", () => {
+describe("rowToStructureEntityType", () => {
   it("maps structure entity type row", () => {
     const row: Record<string, unknown> = {
       id: "set-1",
@@ -717,18 +771,19 @@ describe("rowToStructureEntityTypeRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToStructureEntityTypeRow(row);
+    const result = rowToStructureEntityType(row);
 
     expect(result.id).toBe("set-1");
     expect(result.name).toBe("Body");
     expect(result.emoji).toBe("🧬");
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── timer (system-core, multiple booleans) ────────────────────────────────────
 
-describe("rowToTimerRow", () => {
+describe("rowToTimer", () => {
   it("maps timer row with waking_hours_only and enabled booleans", () => {
     const row: Record<string, unknown> = {
       id: "tmr-1",
@@ -744,7 +799,7 @@ describe("rowToTimerRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToTimerRow(row);
+    const result = rowToTimer(row);
 
     expect(result.id).toBe("tmr-1");
     expect(result.intervalMinutes).toBe(60);
@@ -754,13 +809,14 @@ describe("rowToTimerRow", () => {
     expect(result.promptText).toBe("How are you feeling?");
     expect(result.enabled).toBe(true);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
-// ── lifecycle-event (system-core, boolean archived) ───────────────────────────
+// ── lifecycle-event (append-only, no archived handling) ───────────────────────
 
-describe("rowToLifecycleEventRow", () => {
-  it("maps lifecycle event row with JSON payload", () => {
+describe("rowToLifecycleEvent", () => {
+  it("maps lifecycle event row with JSON payload spread into result", () => {
     const row: Record<string, unknown> = {
       id: "le-1",
       system_id: "sys-1",
@@ -772,21 +828,19 @@ describe("rowToLifecycleEventRow", () => {
       archived: 0,
     };
 
-    const result = rowToLifecycleEventRow(row);
+    const result = rowToLifecycleEvent(row);
 
     expect(result.id).toBe("le-1");
     expect(result.eventType).toBe("discovery");
     expect(result.occurredAt).toBe(1_700_000_000_000);
     expect(result.recordedAt).toBe(1_700_000_001_000);
     expect(result.notes).toBe("Found a new member");
-    expect(result.payload).toEqual({ memberId: "mem-1" });
-    expect(result.archived).toBe(false);
   });
 });
 
 // ── check-in-record (fronting document, dismissed + archived booleans) ────────
 
-describe("rowToCheckInRecordRow", () => {
+describe("rowToCheckInRecord", () => {
   it("maps check-in record row", () => {
     const row: Record<string, unknown> = {
       id: "cir-1",
@@ -797,11 +851,12 @@ describe("rowToCheckInRecordRow", () => {
       responded_at: 1_700_000_001_000,
       dismissed: 0,
       archived: 0,
+      archived_at: null,
       created_at: 1_700_000_000_000,
       updated_at: 1_700_000_001_000,
     };
 
-    const result = rowToCheckInRecordRow(row);
+    const result = rowToCheckInRecord(row);
 
     expect(result.id).toBe("cir-1");
     expect(result.timerConfigId).toBe("tmr-1");
@@ -817,7 +872,7 @@ describe("rowToCheckInRecordRow", () => {
 
 // ── fronting-comment (fronting document, boolean archived) ────────────────────
 
-describe("rowToFrontingCommentRow", () => {
+describe("rowToFrontingComment", () => {
   it("maps fronting comment row", () => {
     const row: Record<string, unknown> = {
       id: "fco-1",
@@ -832,20 +887,21 @@ describe("rowToFrontingCommentRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFrontingCommentRow(row);
+    const result = rowToFrontingComment(row);
 
     expect(result.id).toBe("fco-1");
     expect(result.frontingSessionId).toBe("fs-1");
     expect(result.memberId).toBe("mem-1");
     expect(result.content).toBe("Felt anxious");
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── field-definition (system-core, required + archived booleans) ──────────────
 
-describe("rowToFieldDefinitionRow", () => {
-  it("maps field definition row with options JSON and scopes JSON", () => {
+describe("rowToFieldDefinition", () => {
+  it("maps field definition row with options JSON", () => {
     const row: Record<string, unknown> = {
       id: "fd-1",
       system_id: "sys-1",
@@ -861,7 +917,7 @@ describe("rowToFieldDefinitionRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFieldDefinitionRow(row);
+    const result = rowToFieldDefinition(row);
 
     expect(result.id).toBe("fd-1");
     expect(result.name).toBe("Age Range");
@@ -869,14 +925,14 @@ describe("rowToFieldDefinitionRow", () => {
     expect(result.options).toEqual(["0-10", "11-17", "18+"]);
     expect(result.required).toBe(false);
     expect(result.sortOrder).toBe(2.0);
-    expect(result.scopes).toEqual(["member"]);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── field-value (system-core) ─────────────────────────────────────────────────
 
-describe("rowToFieldValueRow", () => {
+describe("rowToFieldValue", () => {
   it("maps field value row with JSON-serialized value", () => {
     const row: Record<string, unknown> = {
       id: "fv-1",
@@ -889,7 +945,7 @@ describe("rowToFieldValueRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFieldValueRow(row);
+    const result = rowToFieldValue(row);
 
     expect(result.id).toBe("fv-1");
     expect(result.fieldDefinitionId).toBe("fd-1");
@@ -898,20 +954,22 @@ describe("rowToFieldValueRow", () => {
     expect(result.groupId).toBeNull();
     expect(result.value).toBe("18+");
     expect(result.createdAt).toBe(1_700_000_000_000);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── innerworld-entity (system-core, boolean archived) ────────────────────────
 
-describe("rowToInnerWorldEntityRow", () => {
-  it("maps innerworld entity row with JSON visual", () => {
+describe("rowToInnerWorldEntity", () => {
+  it("maps innerworld member entity row with JSON visual", () => {
     const row: Record<string, unknown> = {
       id: "iwe-1",
       system_id: "sys-1",
       entity_type: "member",
       position_x: 100.5,
       position_y: 200.0,
-      visual: '{"shape":"circle","color":"#ff0000"}',
+      visual:
+        '{"color":"#ff0000","icon":null,"size":null,"opacity":null,"imageSource":null,"externalUrl":null}',
       region_id: "iwr-1",
       linked_member_id: "mem-1",
       linked_structure_entity_id: null,
@@ -922,22 +980,24 @@ describe("rowToInnerWorldEntityRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToInnerWorldEntityRow(row);
+    const result = rowToInnerWorldEntity(row);
 
     expect(result.id).toBe("iwe-1");
     expect(result.entityType).toBe("member");
     expect(result.positionX).toBe(100.5);
     expect(result.positionY).toBe(200.0);
-    expect(result.visual).toEqual({ shape: "circle", color: "#ff0000" });
     expect(result.regionId).toBe("iwr-1");
-    expect(result.linkedMemberId).toBe("mem-1");
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
+    if (result.entityType === "member") {
+      expect(result.linkedMemberId).toBe("mem-1");
+    }
   });
 });
 
 // ── innerworld-region (system-core, boolean archived) ────────────────────────
 
-describe("rowToInnerWorldRegionRow", () => {
+describe("rowToInnerWorldRegion", () => {
   it("maps innerworld region row with JSON fields", () => {
     const row: Record<string, unknown> = {
       id: "iwr-1",
@@ -945,7 +1005,8 @@ describe("rowToInnerWorldRegionRow", () => {
       name: "Forest",
       description: "A peaceful place",
       parent_region_id: null,
-      visual: '{"background":"green"}',
+      visual:
+        '{"color":null,"icon":null,"size":null,"opacity":null,"imageSource":null,"externalUrl":null}',
       boundary_data: '[{"x":0,"y":0},{"x":100,"y":0}]',
       access_type: "open",
       gatekeeper_member_ids: "[]",
@@ -954,12 +1015,11 @@ describe("rowToInnerWorldRegionRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToInnerWorldRegionRow(row);
+    const result = rowToInnerWorldRegion(row);
 
     expect(result.id).toBe("iwr-1");
     expect(result.name).toBe("Forest");
     expect(result.parentRegionId).toBeNull();
-    expect(result.visual).toEqual({ background: "green" });
     expect(result.boundaryData).toEqual([
       { x: 0, y: 0 },
       { x: 100, y: 0 },
@@ -967,12 +1027,13 @@ describe("rowToInnerWorldRegionRow", () => {
     expect(result.accessType).toBe("open");
     expect(result.gatekeeperMemberIds).toEqual([]);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });
 
 // ── friend-code (privacy-config, no version) ─────────────────────────────────
 
-describe("rowToFriendCodeRow", () => {
+describe("rowToFriendCode", () => {
   it("maps friend code row", () => {
     const row: Record<string, unknown> = {
       id: "frc-1",
@@ -983,7 +1044,7 @@ describe("rowToFriendCodeRow", () => {
       archived: 0,
     };
 
-    const result = rowToFriendCodeRow(row);
+    const result = rowToFriendCode(row);
 
     expect(result.id).toBe("frc-1");
     expect(result.accountId).toBe("acct-1");
@@ -991,13 +1052,29 @@ describe("rowToFriendCodeRow", () => {
     expect(result.createdAt).toBe(1_700_000_000_000);
     expect(result.expiresAt).toBe(1_700_086_400_000);
     expect(result.archived).toBe(false);
-    expect(result.archivedAt).toBeNull();
+  });
+
+  it("returns Archived<FriendCode> with archivedAt when archived = 1", () => {
+    const row: Record<string, unknown> = {
+      id: "frc-2",
+      account_id: "acct-1",
+      code: "OLD123",
+      created_at: 1_700_000_000_000,
+      expires_at: null,
+      archived: 1,
+    };
+
+    const result = rowToFriendCode(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_000_000);
+    }
   });
 });
 
-// ── fronting-report (fronting document) ───────────────────────────────────────
+// ── fronting-report (fronting document, locally encrypted) ───────────────────
 
-describe("rowToFrontingReportRow", () => {
+describe("rowToFrontingReport", () => {
   it("maps fronting report row", () => {
     const row: Record<string, unknown> = {
       id: "fr-1",
@@ -1007,19 +1084,16 @@ describe("rowToFrontingReportRow", () => {
       generated_at: 1_700_000_000_000,
     };
 
-    const result = rowToFrontingReportRow(row);
+    const result = rowToFrontingReport(row);
 
     expect(result.id).toBe("fr-1");
     expect(result.systemId).toBe("sys-1");
-    expect(result.encryptedData).toBe("base64encodedblob");
-    expect(result.format).toBe("json");
-    expect(result.generatedAt).toBe(1_700_000_000_000);
   });
 });
 
 // ── wiki-page (journal document, boolean archived) ────────────────────────────
 
-describe("rowToWikiPageRow", () => {
+describe("rowToWikiPage", () => {
   it("maps wiki page row with JSON blocks", () => {
     const row: Record<string, unknown> = {
       id: "wp-1",
@@ -1035,7 +1109,7 @@ describe("rowToWikiPageRow", () => {
       updated_at: 1_700_000_000_000,
     };
 
-    const result = rowToWikiPageRow(row);
+    const result = rowToWikiPage(row);
 
     expect(result.id).toBe("wp-1");
     expect(result.title).toBe("System Overview");
@@ -1045,5 +1119,6 @@ describe("rowToWikiPageRow", () => {
     expect(result.tags).toEqual(["overview"]);
     expect(result.linkedEntities).toEqual([]);
     expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
   });
 });

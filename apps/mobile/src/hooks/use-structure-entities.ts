@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToStructureEntityRow } from "../data/row-transforms.js";
+import { rowToStructureEntity } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -20,7 +20,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { StructureEntityLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   StructureEntityDecrypted,
@@ -48,9 +47,7 @@ interface StructureEntityListOpts extends SystemIdOverride {
 export function useStructureEntity(
   entityId: SystemStructureEntityId,
   opts?: SystemIdOverride,
-): DataQuery<
-  StructureEntityDecrypted | Archived<StructureEntityDecrypted> | StructureEntityLocalRow
-> {
+): DataQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -71,7 +68,7 @@ export function useStructureEntity(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM structure_entities WHERE id = ?", [entityId]);
       if (!row) throw new Error("Structure entity not found");
-      return rowToStructureEntityRow(row);
+      return rowToStructureEntity(row);
     },
     enabled: source === "local",
   });
@@ -99,9 +96,7 @@ export function useStructureEntityHierarchy(
 
 export function useStructureEntitiesList(
   opts?: StructureEntityListOpts,
-): DataListQuery<
-  StructureEntityDecrypted | Archived<StructureEntityDecrypted> | StructureEntityLocalRow
-> {
+): DataListQuery<StructureEntityDecrypted | Archived<StructureEntityDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -139,7 +134,7 @@ export function useStructureEntitiesList(
         sql += " AND entity_type_id = ?";
         params.push(opts.entityTypeId);
       }
-      return localDb.queryAll(sql, params).map(rowToStructureEntityRow);
+      return localDb.queryAll(sql, params).map(rowToStructureEntity);
     },
     enabled: source === "local",
   });

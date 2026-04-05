@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToStructureEntityTypeRow } from "../data/row-transforms.js";
+import { rowToStructureEntityType } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { StructureEntityTypeLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   StructureEntityTypeDecrypted,
@@ -42,11 +41,7 @@ interface StructureEntityTypeListOpts extends SystemIdOverride {
 export function useStructureEntityType(
   entityTypeId: SystemStructureEntityTypeId,
   opts?: SystemIdOverride,
-): DataQuery<
-  | StructureEntityTypeDecrypted
-  | Archived<StructureEntityTypeDecrypted>
-  | StructureEntityTypeLocalRow
-> {
+): DataQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -71,7 +66,7 @@ export function useStructureEntityType(
         entityTypeId,
       ]);
       if (!row) throw new Error("Structure entity type not found");
-      return rowToStructureEntityTypeRow(row);
+      return rowToStructureEntityType(row);
     },
     enabled: source === "local",
   });
@@ -89,11 +84,7 @@ export function useStructureEntityType(
 
 export function useStructureEntityTypesList(
   opts?: StructureEntityTypeListOpts,
-): DataListQuery<
-  | StructureEntityTypeDecrypted
-  | Archived<StructureEntityTypeDecrypted>
-  | StructureEntityTypeLocalRow
-> {
+): DataListQuery<StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -120,7 +111,7 @@ export function useStructureEntityTypesList(
       const sql = includeArchived
         ? "SELECT * FROM structure_entity_types WHERE system_id = ?"
         : "SELECT * FROM structure_entity_types WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToStructureEntityTypeRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToStructureEntityType);
     },
     enabled: source === "local",
   });

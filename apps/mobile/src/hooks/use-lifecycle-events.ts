@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToLifecycleEventRow } from "../data/row-transforms.js";
+import { rowToLifecycleEvent } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { LifecycleEventLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   LifecycleEventPage as LifecycleEventRawPage,
@@ -43,7 +42,7 @@ interface LifecycleEventListOpts extends SystemIdOverride {
 export function useLifecycleEvent(
   eventId: LifecycleEventId,
   opts?: SystemIdOverride,
-): DataQuery<LifecycleEventWithArchive | LifecycleEventLocalRow> {
+): DataQuery<LifecycleEventWithArchive> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -64,7 +63,7 @@ export function useLifecycleEvent(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM lifecycle_events WHERE id = ?", [eventId]);
       if (!row) throw new Error("LifecycleEvent not found");
-      return rowToLifecycleEventRow(row);
+      return rowToLifecycleEvent(row);
     },
     enabled: source === "local",
   });
@@ -82,7 +81,7 @@ export function useLifecycleEvent(
 
 export function useLifecycleEventsList(
   opts?: LifecycleEventListOpts,
-): DataListQuery<LifecycleEventWithArchive | LifecycleEventLocalRow> {
+): DataListQuery<LifecycleEventWithArchive> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -108,7 +107,7 @@ export function useLifecycleEventsList(
       const sql = includeArchived
         ? "SELECT * FROM lifecycle_events WHERE system_id = ?"
         : "SELECT * FROM lifecycle_events WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToLifecycleEventRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToLifecycleEvent);
     },
     enabled: source === "local",
   });

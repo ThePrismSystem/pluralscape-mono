@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { useQuery } from "@tanstack/react-query";
 
-import { rowToFriendConnectionRow, type FriendConnectionLocalRow } from "../data/row-transforms.js";
+import { rowToFriendConnection } from "../data/row-transforms.js";
 
 import {
   DEFAULT_LIST_LIMIT,
@@ -12,9 +12,13 @@ import {
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { FriendConnectionId } from "@pluralscape/types";
+import type {
+  ArchivedFriendConnection,
+  FriendConnection,
+  FriendConnectionId,
+} from "@pluralscape/types";
 
-type FriendConnection = RouterOutput["friend"]["get"];
+type FriendConnectionRemote = RouterOutput["friend"]["get"];
 type FriendConnectionPage = RouterOutput["friend"]["list"];
 
 interface FriendConnectionListOpts {
@@ -25,7 +29,7 @@ interface FriendConnectionListOpts {
 
 export function useFriendConnection(
   connectionId: FriendConnectionId,
-): DataQuery<FriendConnection | FriendConnectionLocalRow> {
+): DataQuery<FriendConnection | ArchivedFriendConnection | FriendConnectionRemote> {
   const source = useQuerySource();
   const localDb = useLocalDb();
 
@@ -35,7 +39,7 @@ export function useFriendConnection(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM friend_connections WHERE id = ?", [connectionId]);
       if (!row) throw new Error("Friend connection not found");
-      return rowToFriendConnectionRow(row);
+      return rowToFriendConnection(row);
     },
     enabled: source === "local",
   });
@@ -47,7 +51,9 @@ export function useFriendConnection(
 
 export function useFriendConnectionsList(
   opts?: FriendConnectionListOpts,
-): DataListQuery<FriendConnectionLocalRow> | ReturnType<typeof trpc.friend.list.useInfiniteQuery> {
+):
+  | DataListQuery<FriendConnection | ArchivedFriendConnection>
+  | ReturnType<typeof trpc.friend.list.useInfiniteQuery> {
   const source = useQuerySource();
   const localDb = useLocalDb();
 
@@ -69,7 +75,7 @@ export function useFriendConnectionsList(
         sql += " AND archived = 0";
       }
 
-      return localDb.queryAll(sql, params).map(rowToFriendConnectionRow);
+      return localDb.queryAll(sql, params).map(rowToFriendConnection);
     },
     enabled: source === "local",
   });

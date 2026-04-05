@@ -1,12 +1,13 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { useQuery } from "@tanstack/react-query";
 
-import { rowToFriendCodeRow, type FriendCodeLocalRow } from "../data/row-transforms.js";
+import { rowToFriendCode } from "../data/row-transforms.js";
 
 import { DEFAULT_LIST_LIMIT, type DataListQuery, type TRPCMutation } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { ArchivedFriendCode, FriendCode } from "@pluralscape/types";
 
 type FriendCodePage = RouterOutput["friendCode"]["list"];
 
@@ -16,7 +17,9 @@ interface FriendCodeListOpts {
 
 export function useFriendCodesList(
   opts?: FriendCodeListOpts,
-): DataListQuery<FriendCodeLocalRow> | ReturnType<typeof trpc.friendCode.list.useInfiniteQuery> {
+):
+  | DataListQuery<FriendCode | ArchivedFriendCode>
+  | ReturnType<typeof trpc.friendCode.list.useInfiniteQuery> {
   const source = useQuerySource();
   const localDb = useLocalDb();
 
@@ -26,7 +29,7 @@ export function useFriendCodesList(
       if (localDb === null) throw new Error("localDb is null");
       return localDb
         .queryAll("SELECT * FROM friend_codes WHERE archived = 0", [])
-        .map(rowToFriendCodeRow);
+        .map(rowToFriendCode);
     },
     enabled: source === "local",
   });

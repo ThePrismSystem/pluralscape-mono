@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToBoardMessageRow } from "../data/row-transforms.js";
+import { rowToBoardMessage } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { BoardMessageLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   BoardMessagePage as BoardMessageRawPage,
@@ -41,7 +40,7 @@ interface BoardMessageListOpts extends SystemIdOverride {
 export function useBoardMessage(
   boardMessageId: BoardMessageId,
   opts?: SystemIdOverride,
-): DataQuery<BoardMessage | Archived<BoardMessage> | BoardMessageLocalRow> {
+): DataQuery<BoardMessage | Archived<BoardMessage>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -64,7 +63,7 @@ export function useBoardMessage(
         boardMessageId,
       ]);
       if (!row) throw new Error("Board message not found");
-      return rowToBoardMessageRow(row);
+      return rowToBoardMessage(row);
     },
     enabled: source === "local",
   });
@@ -82,7 +81,7 @@ export function useBoardMessage(
 
 export function useBoardMessagesList(
   opts?: BoardMessageListOpts,
-): DataListQuery<BoardMessage | Archived<BoardMessage> | BoardMessageLocalRow> {
+): DataListQuery<BoardMessage | Archived<BoardMessage>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -109,7 +108,7 @@ export function useBoardMessagesList(
       const sql = includeArchived
         ? "SELECT * FROM own_board_messages WHERE system_id = ?"
         : "SELECT * FROM own_board_messages WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToBoardMessageRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToBoardMessage);
     },
     enabled: source === "local",
   });

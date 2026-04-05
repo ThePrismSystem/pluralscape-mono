@@ -342,7 +342,7 @@ function createMockLocalDb(rows: Record<string, unknown>[]) {
 const LOCAL_ACK_ROW: Record<string, unknown> = {
   id: "ack-local-1",
   system_id: TEST_SYSTEM_ID,
-  created_by_member_id: null,
+  created_by_member_id: "m-1",
   target_member_id: "m-2",
   message: "Please acknowledge this",
   confirmed: 0,

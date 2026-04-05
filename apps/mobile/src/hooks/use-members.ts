@@ -3,7 +3,7 @@ import { decryptMember } from "@pluralscape/data/transforms/member";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToMemberRow } from "../data/row-transforms.js";
+import { rowToMember } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -16,7 +16,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { MemberLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { MemberPage as MemberRawPage, MemberRaw } from "@pluralscape/data/transforms/member";
 import type { Archived, GroupId, Member, MemberId } from "@pluralscape/types";
@@ -36,7 +35,7 @@ interface MemberListOpts extends SystemIdOverride {
 export function useMember(
   memberId: MemberId,
   opts?: SystemIdOverride,
-): DataQuery<Member | Archived<Member> | MemberLocalRow> {
+): DataQuery<Member | Archived<Member>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -57,7 +56,7 @@ export function useMember(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM members WHERE id = ?", [memberId]);
       if (!row) throw new Error("Member not found");
-      return rowToMemberRow(row);
+      return rowToMember(row);
     },
     enabled: source === "local",
   });
@@ -73,9 +72,7 @@ export function useMember(
   return source === "local" ? localQuery : remoteQuery;
 }
 
-export function useMembersList(
-  opts?: MemberListOpts,
-): DataListQuery<Member | Archived<Member> | MemberLocalRow> {
+export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Archived<Member>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -105,7 +102,7 @@ export function useMembersList(
       const sql = includeArchived
         ? "SELECT * FROM members WHERE system_id = ?"
         : "SELECT * FROM members WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToMemberRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToMember);
     },
     enabled: source === "local",
   });

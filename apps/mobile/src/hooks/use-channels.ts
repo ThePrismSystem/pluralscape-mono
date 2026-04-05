@@ -3,7 +3,7 @@ import { decryptChannel, decryptChannelPage } from "@pluralscape/data/transforms
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToChannelRow } from "../data/row-transforms.js";
+import { rowToChannel } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -16,7 +16,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { ChannelLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   ChannelPage as ChannelRawPage,
@@ -38,7 +37,7 @@ interface ChannelListOpts extends SystemIdOverride {
 export function useChannel(
   channelId: ChannelId,
   opts?: SystemIdOverride,
-): DataQuery<Channel | Archived<Channel> | ChannelLocalRow> {
+): DataQuery<Channel | Archived<Channel>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -59,7 +58,7 @@ export function useChannel(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM own_channels WHERE id = ?", [channelId]);
       if (!row) throw new Error("Channel not found");
-      return rowToChannelRow(row);
+      return rowToChannel(row);
     },
     enabled: source === "local",
   });
@@ -77,7 +76,7 @@ export function useChannel(
 
 export function useChannelsList(
   opts?: ChannelListOpts,
-): DataListQuery<Channel | Archived<Channel> | ChannelLocalRow> {
+): DataListQuery<Channel | Archived<Channel>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -104,7 +103,7 @@ export function useChannelsList(
       const sql = includeArchived
         ? "SELECT * FROM own_channels WHERE system_id = ?"
         : "SELECT * FROM own_channels WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToChannelRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToChannel);
     },
     enabled: source === "local",
   });

@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { useQuery } from "@tanstack/react-query";
 
-import { rowToPrivacyBucketRow, type PrivacyBucketLocalRow } from "../data/row-transforms.js";
+import { rowToPrivacyBucket } from "../data/row-transforms.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
@@ -14,9 +14,9 @@ import {
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
-import type { BucketId } from "@pluralscape/types";
+import type { ArchivedPrivacyBucket, BucketId, PrivacyBucket } from "@pluralscape/types";
 
-type Bucket = RouterOutput["bucket"]["get"];
+type BucketRemote = RouterOutput["bucket"]["get"];
 type BucketPage = RouterOutput["bucket"]["list"];
 
 interface BucketListOpts extends SystemIdOverride {
@@ -27,7 +27,7 @@ interface BucketListOpts extends SystemIdOverride {
 export function usePrivacyBucket(
   bucketId: BucketId,
   opts?: SystemIdOverride,
-): DataQuery<Bucket | PrivacyBucketLocalRow> {
+): DataQuery<PrivacyBucket | ArchivedPrivacyBucket | BucketRemote> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -39,7 +39,7 @@ export function usePrivacyBucket(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM buckets WHERE id = ?", [bucketId]);
       if (!row) throw new Error("Privacy bucket not found");
-      return rowToPrivacyBucketRow(row);
+      return rowToPrivacyBucket(row);
     },
     enabled: source === "local",
   });
@@ -54,7 +54,9 @@ export function usePrivacyBucket(
 
 export function usePrivacyBucketsList(
   opts?: BucketListOpts,
-): DataListQuery<PrivacyBucketLocalRow> | ReturnType<typeof trpc.bucket.list.useInfiniteQuery> {
+):
+  | DataListQuery<PrivacyBucket | ArchivedPrivacyBucket>
+  | ReturnType<typeof trpc.bucket.list.useInfiniteQuery> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -68,7 +70,7 @@ export function usePrivacyBucketsList(
       const sql = includeArchived
         ? "SELECT * FROM buckets WHERE system_id = ?"
         : "SELECT * FROM buckets WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToPrivacyBucketRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToPrivacyBucket);
     },
     enabled: source === "local",
   });

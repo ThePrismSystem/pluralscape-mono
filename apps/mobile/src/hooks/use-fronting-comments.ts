@@ -3,7 +3,7 @@ import { decryptFrontingComment } from "@pluralscape/data/transforms/fronting-co
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToFrontingCommentRow, type FrontingCommentLocalRow } from "../data/row-transforms.js";
+import { rowToFrontingComment } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -43,7 +43,7 @@ export function useFrontingComment(
   commentId: FrontingCommentId,
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
-): DataQuery<FrontingComment | Archived<FrontingComment> | FrontingCommentLocalRow> {
+): DataQuery<FrontingComment | Archived<FrontingComment>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -64,7 +64,7 @@ export function useFrontingComment(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM fronting_comments WHERE id = ?", [commentId]);
       if (!row) throw new Error("Fronting comment not found");
-      return rowToFrontingCommentRow(row);
+      return rowToFrontingComment(row);
     },
     enabled: source === "local",
   });
@@ -83,7 +83,7 @@ export function useFrontingComment(
 export function useFrontingCommentsList(
   sessionId: FrontingSessionId,
   opts?: FrontingCommentListOpts,
-): DataListQuery<FrontingComment | Archived<FrontingComment> | FrontingCommentLocalRow> {
+): DataListQuery<FrontingComment | Archived<FrontingComment>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -113,7 +113,7 @@ export function useFrontingCommentsList(
       const sql = includeArchived
         ? "SELECT * FROM fronting_comments WHERE fronting_session_id = ?"
         : "SELECT * FROM fronting_comments WHERE fronting_session_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [sessionId]).map(rowToFrontingCommentRow);
+      return localDb.queryAll(sql, [sessionId]).map(rowToFrontingComment);
     },
     enabled: source === "local",
   });

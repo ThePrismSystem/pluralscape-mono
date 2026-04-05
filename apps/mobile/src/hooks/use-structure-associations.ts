@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { useQuery } from "@tanstack/react-query";
 
-import { rowToStructureEntityAssociationRow } from "../data/row-transforms.js";
+import { rowToStructureEntityAssociation } from "../data/row-transforms.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
@@ -12,8 +12,8 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { StructureEntityAssociationLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { SystemStructureEntityAssociation } from "@pluralscape/types";
 
 type AssociationPage = RouterOutput["structure"]["association"]["list"];
 type AssociationItem = AssociationPage["data"][number];
@@ -24,7 +24,7 @@ interface StructureAssociationListOpts extends SystemIdOverride {
 
 export function useStructureAssociationsList(
   opts?: StructureAssociationListOpts,
-): DataListQuery<AssociationItem | StructureEntityAssociationLocalRow> {
+): DataListQuery<SystemStructureEntityAssociation | AssociationItem> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -39,7 +39,7 @@ export function useStructureAssociationsList(
           "SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0",
           [systemId],
         )
-        .map(rowToStructureEntityAssociationRow);
+        .map(rowToStructureEntityAssociation);
     },
     enabled: source === "local",
   });

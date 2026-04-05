@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToRelationshipRow } from "../data/row-transforms.js";
+import { rowToRelationship } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { RelationshipLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   RelationshipDecrypted,
@@ -43,7 +42,7 @@ interface RelationshipListOpts extends SystemIdOverride {
 export function useRelationship(
   relationshipId: RelationshipId,
   opts?: SystemIdOverride,
-): DataQuery<RelationshipDecrypted | Archived<RelationshipDecrypted> | RelationshipLocalRow> {
+): DataQuery<RelationshipDecrypted | Archived<RelationshipDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -64,7 +63,7 @@ export function useRelationship(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM relationships WHERE id = ?", [relationshipId]);
       if (!row) throw new Error("Relationship not found");
-      return rowToRelationshipRow(row);
+      return rowToRelationship(row);
     },
     enabled: source === "local",
   });
@@ -82,7 +81,7 @@ export function useRelationship(
 
 export function useRelationshipsList(
   opts?: RelationshipListOpts,
-): DataListQuery<RelationshipDecrypted | Archived<RelationshipDecrypted> | RelationshipLocalRow> {
+): DataListQuery<RelationshipDecrypted | Archived<RelationshipDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -115,7 +114,7 @@ export function useRelationshipsList(
         sql += " AND type = ?";
         params.push(opts.type);
       }
-      return localDb.queryAll(sql, params).map(rowToRelationshipRow);
+      return localDb.queryAll(sql, params).map(rowToRelationship);
     },
     enabled: source === "local",
   });

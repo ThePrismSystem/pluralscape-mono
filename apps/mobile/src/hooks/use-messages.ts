@@ -3,7 +3,7 @@ import { decryptMessage, decryptMessagePage } from "@pluralscape/data/transforms
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToMessageRow } from "../data/row-transforms.js";
+import { rowToMessage } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -16,7 +16,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { MessageLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   MessagePage as MessageRawPage,
@@ -45,7 +44,7 @@ export function useMessage(
   channelId: ChannelId,
   messageId: MessageId,
   opts?: MessageOpts,
-): DataQuery<ChatMessage | ArchivedChatMessage | MessageLocalRow> {
+): DataQuery<ChatMessage | ArchivedChatMessage> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -69,7 +68,7 @@ export function useMessage(
         channelId,
       ]);
       if (!row) throw new Error("Message not found");
-      return rowToMessageRow(row);
+      return rowToMessage(row);
     },
     enabled: source === "local",
   });
@@ -88,7 +87,7 @@ export function useMessage(
 export function useMessagesList(
   channelId: ChannelId,
   opts?: MessageListOpts,
-): DataListQuery<ChatMessage | ArchivedChatMessage | MessageLocalRow> {
+): DataListQuery<ChatMessage | ArchivedChatMessage> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -115,7 +114,7 @@ export function useMessagesList(
       const sql = includeArchived
         ? "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ?"
         : "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId, channelId]).map(rowToMessageRow);
+      return localDb.queryAll(sql, [systemId, channelId]).map(rowToMessage);
     },
     enabled: source === "local",
   });

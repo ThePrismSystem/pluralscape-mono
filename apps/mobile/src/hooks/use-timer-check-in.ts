@@ -6,12 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import {
-  rowToCheckInRecordRow,
-  rowToTimerRow,
-  type CheckInRecordLocalRow,
-  type TimerLocalRow,
-} from "../data/row-transforms.js";
+import { rowToCheckInRecord, rowToTimer } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -27,11 +22,16 @@ import { useLocalDb, useQuerySource } from "./use-query-source.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   CheckInRecordPage,
-  CheckInRecordRaw,
   TimerConfigPage,
   TimerConfigRaw,
 } from "@pluralscape/data/transforms/timer-check-in";
-import type { Archived, TimerConfig, TimerId } from "@pluralscape/types";
+import type {
+  ArchivedCheckInRecord,
+  Archived,
+  CheckInRecord,
+  TimerConfig,
+  TimerId,
+} from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
 type TimerPage = {
@@ -54,7 +54,7 @@ interface CheckInHistoryOpts extends SystemIdOverride {
 export function useTimerConfig(
   timerId: TimerId,
   opts?: SystemIdOverride,
-): DataQuery<TimerConfig | Archived<TimerConfig> | TimerLocalRow> {
+): DataQuery<TimerConfig | Archived<TimerConfig>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -75,7 +75,7 @@ export function useTimerConfig(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM timer_configs WHERE id = ?", [timerId]);
       if (!row) throw new Error("Timer config not found");
-      return rowToTimerRow(row);
+      return rowToTimer(row);
     },
     enabled: source === "local",
   });
@@ -93,7 +93,7 @@ export function useTimerConfig(
 
 export function useTimerConfigsList(
   opts?: TimerConfigListOpts,
-): DataListQuery<TimerConfig | Archived<TimerConfig> | TimerLocalRow> {
+): DataListQuery<TimerConfig | Archived<TimerConfig>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -120,7 +120,7 @@ export function useTimerConfigsList(
       const sql = includeArchived
         ? "SELECT * FROM timer_configs WHERE system_id = ?"
         : "SELECT * FROM timer_configs WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToTimerRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToTimer);
     },
     enabled: source === "local",
   });
@@ -187,7 +187,7 @@ export function useDeleteTimer(): TRPCMutation<
 
 export function useCheckInHistory(
   opts?: CheckInHistoryOpts,
-): DataListQuery<CheckInRecordRaw | CheckInRecordLocalRow> {
+): DataListQuery<CheckInRecord | ArchivedCheckInRecord> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -217,7 +217,7 @@ export function useCheckInHistory(
       if (!includeArchived) {
         sql += " AND archived = 0";
       }
-      return localDb.queryAll(sql, params).map(rowToCheckInRecordRow);
+      return localDb.queryAll(sql, params).map(rowToCheckInRecord);
     },
     enabled: source === "local",
   });

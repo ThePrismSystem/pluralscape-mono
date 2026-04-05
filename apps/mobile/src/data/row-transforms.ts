@@ -19,8 +19,70 @@
  * directly, matching the decrypted domain shape.
  */
 
-import type { UnixMillis } from "@pluralscape/types";
-
+import type { FrontingReportRaw } from "@pluralscape/data/transforms/fronting-report";
+import type {
+  AcknowledgementRequest,
+  Archived,
+  ArchivedAcknowledgementRequest,
+  ArchivedBoardMessage,
+  ArchivedChannel,
+  ArchivedChatMessage,
+  ArchivedCheckInRecord,
+  ArchivedCustomFront,
+  ArchivedFieldDefinition,
+  ArchivedFriendCode,
+  ArchivedFriendConnection,
+  ArchivedFrontingComment,
+  ArchivedFrontingSession,
+  ArchivedGroup,
+  ArchivedInnerWorldEntity,
+  ArchivedInnerWorldRegion,
+  ArchivedJournalEntry,
+  ArchivedMember,
+  ArchivedMemberPhoto,
+  ArchivedNote,
+  ArchivedPoll,
+  ArchivedPrivacyBucket,
+  ArchivedRelationship,
+  ArchivedSystemStructureEntity,
+  ArchivedSystemStructureEntityType,
+  ArchivedTimerConfig,
+  ArchivedWikiPage,
+  BoardMessage,
+  Channel,
+  ChatMessage,
+  CheckInRecord,
+  CustomFront,
+  EntityReference,
+  FieldDefinition,
+  FieldValue,
+  FriendCode,
+  FriendConnection,
+  FriendVisibilitySettings,
+  FrontingComment,
+  FrontingSession,
+  Group,
+  InnerWorldEntity,
+  InnerWorldRegion,
+  JournalEntry,
+  LifecycleEvent,
+  Member,
+  MemberPhoto,
+  Note,
+  NoteAuthorEntityType,
+  Poll,
+  PrivacyBucket,
+  Relationship,
+  SystemSettings,
+  SystemStructureEntity,
+  SystemStructureEntityAssociation,
+  SystemStructureEntityLink,
+  SystemStructureEntityMemberLink,
+  SystemStructureEntityType,
+  TimerConfig,
+  UnixMillis,
+  WikiPage,
+} from "@pluralscape/types";
 // ── Primitive helpers ────────────────────────────────────────────────────────
 
 /** Error thrown when a SQLite row field fails a runtime type guard. */
@@ -176,972 +238,1265 @@ function numOrNull(v: unknown, table: string, field: string, rowId?: string | nu
   return guardedNum(v, table, field, rowId);
 }
 
-// ── Legacy unguarded aliases (used by existing transforms; replaced in Task 2) ─
+// ── ID extractor ─────────────────────────────────────────────────────────────
 
-/** @internal Cast to UnixMillis without validation. */
-const toMs = (v: unknown): UnixMillis => v as UnixMillis;
-
-/** @internal Cast to string without validation. */
-const str = (v: unknown): string => v as string;
-
-/** @internal Cast to number without validation. */
-const num = (v: unknown): number => v as number;
-
-/** @internal Parse nullable JSON without table/field context (legacy). */
-const parseJson = (v: unknown): unknown => {
-  if (v === null || v === undefined) return null;
-  if (typeof v !== "string") return v;
-  return JSON.parse(v) as unknown;
-};
-
-// ── Local row types ──────────────────────────────────────────────────────────
-// These are the camelCase shapes returned by each transform function.
-// They match the plaintext content of each entity as stored in SQLite.
-
-export interface SystemSettingsLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly theme: string;
-  readonly fontScale: number;
-  readonly locale: string | null;
-  readonly defaultBucketId: string | null;
-  readonly appLock: unknown;
-  readonly notifications: unknown;
-  readonly syncPreferences: unknown;
-  readonly privacyDefaults: unknown;
-  readonly littlesSafeMode: unknown;
-  readonly nomenclature: unknown;
-  readonly saturationLevelsEnabled: boolean;
-  readonly autoCaptureFrontingOnJournal: boolean;
-  readonly snapshotSchedule: unknown;
-  readonly onboardingComplete: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
+/** Extract the row's primary key as a string for error context. */
+function rid(row: Record<string, unknown>): string | null {
+  const v = row["id"];
+  return typeof v === "string" ? v : null;
 }
 
-export interface MemberLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly pronouns: readonly string[];
-  readonly description: string | null;
-  readonly avatarSource: unknown;
-  readonly colors: readonly string[];
-  readonly saturationLevel: string;
-  readonly tags: readonly string[];
-  readonly suppressFriendFrontNotification: boolean;
-  readonly boardMessageNotificationOnFront: boolean;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+// ── Archived wrapping helpers ─────────────────────────────────────────────────
 
-export interface MemberPhotoLocalRow {
-  readonly id: string;
-  readonly memberId: string;
-  readonly imageSource: string;
-  readonly sortOrder: number;
-  readonly caption: string | null;
-  readonly archived: boolean;
-}
-
-export interface GroupLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly parentGroupId: string | null;
-  readonly imageSource: string | null;
-  readonly color: string | null;
-  readonly emoji: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface StructureEntityTypeLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: string | null;
-  readonly imageSource: string | null;
-  readonly emoji: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface StructureEntityLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly entityTypeId: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: string | null;
-  readonly imageSource: string | null;
-  readonly emoji: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface StructureEntityLinkLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly entityId: string;
-  readonly parentEntityId: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface StructureEntityMemberLinkLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly memberId: string;
-  readonly parentEntityId: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface StructureEntityAssociationLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly sourceEntityId: string;
-  readonly targetEntityId: string;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface RelationshipLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly sourceMemberId: string | null;
-  readonly targetMemberId: string | null;
-  readonly type: string;
-  readonly label: string | null;
-  readonly bidirectional: boolean;
-  readonly createdAt: UnixMillis;
-  readonly archived: boolean;
-}
-
-export interface CustomFrontLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: string | null;
-  readonly emoji: string | null;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface FrontingReportLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly encryptedData: string;
-  readonly format: string;
-  readonly generatedAt: UnixMillis;
-}
-
-export interface FieldDefinitionLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly fieldType: string;
-  readonly options: readonly string[] | null;
-  readonly required: boolean;
-  readonly sortOrder: number;
-  readonly scopes: readonly string[];
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface FieldValueLocalRow {
-  readonly id: string;
-  readonly fieldDefinitionId: string;
-  readonly memberId: string | null;
-  readonly structureEntityId: string | null;
-  readonly groupId: string | null;
-  readonly value: unknown;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface InnerWorldEntityLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly entityType: string;
-  readonly positionX: number;
-  readonly positionY: number;
-  readonly visual: unknown;
-  readonly regionId: string | null;
-  readonly linkedMemberId: string | null;
-  readonly linkedStructureEntityId: string | null;
-  readonly name: string | null;
-  readonly description: string | null;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface InnerWorldRegionLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly parentRegionId: string | null;
-  readonly visual: unknown;
-  readonly boundaryData: unknown;
-  readonly accessType: string;
-  readonly gatekeeperMemberIds: readonly string[];
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface TimerLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly intervalMinutes: number | null;
-  readonly wakingHoursOnly: boolean | null;
-  readonly wakingStart: string | null;
-  readonly wakingEnd: string | null;
-  readonly promptText: string;
-  readonly enabled: boolean;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface LifecycleEventLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly eventType: string;
-  readonly occurredAt: UnixMillis;
-  readonly recordedAt: UnixMillis;
-  readonly notes: string | null;
-  readonly payload: unknown;
-  readonly archived: boolean;
-}
-
-export interface FrontingSessionLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly memberId: string;
-  readonly startTime: UnixMillis;
-  readonly endTime: UnixMillis | null;
-  readonly comment: string | null;
-  readonly customFrontId: string | null;
-  readonly structureEntityId: string | null;
-  readonly positionality: string | null;
-  readonly outtrigger: string | null;
-  readonly outtriggerSentiment: string | null;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface FrontingCommentLocalRow {
-  readonly id: string;
-  readonly frontingSessionId: string;
-  readonly systemId: string;
-  readonly memberId: string | null;
-  readonly customFrontId: string | null;
-  readonly structureEntityId: string | null;
-  readonly content: string;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface CheckInRecordLocalRow {
-  readonly id: string;
-  readonly timerConfigId: string;
-  readonly systemId: string;
-  readonly scheduledAt: UnixMillis;
-  readonly respondedByMemberId: string | null;
-  readonly respondedAt: UnixMillis | null;
-  readonly dismissed: boolean;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface ChannelLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly type: string;
-  readonly parentId: string | null;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface MessageLocalRow {
-  readonly id: string;
-  readonly channelId: string;
-  readonly systemId: string;
-  readonly senderId: string;
-  readonly content: string;
-  readonly attachments: readonly string[];
-  readonly mentions: readonly string[];
-  readonly replyToId: string | null;
-  readonly timestamp: UnixMillis;
-  readonly editOf: string | null;
-  readonly archived: boolean;
-}
-
-export interface BoardMessageLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly senderId: string;
-  readonly content: string;
-  readonly pinned: boolean;
-  readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface PollLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly createdByMemberId: string | null;
-  readonly title: string;
-  readonly description: string | null;
-  readonly kind: string;
-  readonly status: string;
-  readonly closedAt: UnixMillis | null;
-  readonly endsAt: UnixMillis | null;
-  readonly allowMultipleVotes: boolean;
-  readonly maxVotesPerMember: number;
-  readonly allowAbstain: boolean;
-  readonly allowVeto: boolean;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface AcknowledgementLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly createdByMemberId: string | null;
-  readonly targetMemberId: string;
-  readonly message: string;
-  readonly confirmed: boolean;
-  readonly confirmedAt: UnixMillis | null;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface JournalEntryLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly author: string | null;
-  readonly frontingSessionId: string | null;
-  readonly title: string;
-  readonly blocks: unknown;
-  readonly tags: readonly string[];
-  readonly linkedEntities: unknown;
-  readonly frontingSnapshots: unknown;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface WikiPageLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly title: string;
-  readonly slug: string;
-  readonly blocks: unknown;
-  readonly linkedFromPages: readonly string[];
-  readonly tags: readonly string[];
-  readonly linkedEntities: unknown;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface NoteLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly authorEntityType: string | null;
-  readonly authorEntityId: string | null;
-  readonly title: string;
-  readonly content: string;
-  readonly backgroundColor: string | null;
-  readonly archived: boolean;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface PrivacyBucketLocalRow {
-  readonly id: string;
-  readonly systemId: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface FriendConnectionLocalRow {
-  readonly id: string;
-  readonly accountId: string;
-  readonly friendAccountId: string;
-  readonly status: string;
-  readonly assignedBuckets: readonly string[];
-  readonly visibility: unknown;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
-
-export interface FriendCodeLocalRow {
-  readonly id: string;
-  readonly accountId: string;
-  readonly code: string;
-  readonly createdAt: UnixMillis;
-  readonly expiresAt: UnixMillis | null;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
+/**
+ * Wrap a domain object as Archived<T> using the row's updated_at as
+ * archivedAt proxy. Only call when the row's `archived` column is 1.
+ */
+function wrapArchived<T extends { readonly archived: false }>(
+  base: T,
+  archivedAt: UnixMillis,
+): Archived<T> {
+  // Object.assign overwrites `archived: false` with `archived: true` without
+  // needing a destructure (which would produce an unused-var lint error).
+  return Object.assign({}, base, { archived: true as const, archivedAt }) as Archived<T>;
 }
 
 // ── Transform functions ──────────────────────────────────────────────────────
 
 // ── system-core ──────────────────────────────────────────────────────────────
 
-export function rowToSystemSettingsRow(row: Record<string, unknown>): SystemSettingsLocalRow {
+export function rowToSystemSettings(row: Record<string, unknown>): SystemSettings {
+  const id = rid(row);
   return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    theme: str(row["theme"]),
-    fontScale: num(row["font_scale"]),
-    locale: strOrNull(row["locale"]),
-    defaultBucketId: strOrNull(row["default_bucket_id"]),
-    appLock: parseJsonRequired(row["app_lock"]),
-    notifications: parseJsonRequired(row["notifications"]),
-    syncPreferences: parseJsonRequired(row["sync_preferences"]),
-    privacyDefaults: parseJsonRequired(row["privacy_defaults"]),
-    littlesSafeMode: parseJsonRequired(row["littles_safe_mode"]),
-    nomenclature: parseJsonRequired(row["nomenclature"]),
+    id: guardedStr(row["id"], "system_settings", "id", id) as SystemSettings["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "system_settings",
+      "system_id",
+      id,
+    ) as SystemSettings["systemId"],
+    theme: guardedStr(row["theme"], "system_settings", "theme", id) as SystemSettings["theme"],
+    fontScale: guardedNum(row["font_scale"], "system_settings", "font_scale", id),
+    locale: strOrNull(row["locale"], "system_settings", "locale", id) as SystemSettings["locale"],
+    defaultBucketId: strOrNull(
+      row["default_bucket_id"],
+      "system_settings",
+      "default_bucket_id",
+      id,
+    ) as SystemSettings["defaultBucketId"],
+    appLock: parseJsonRequired(
+      row["app_lock"],
+      "system_settings",
+      "app_lock",
+      id,
+    ) as SystemSettings["appLock"],
+    notifications: parseJsonRequired(
+      row["notifications"],
+      "system_settings",
+      "notifications",
+      id,
+    ) as SystemSettings["notifications"],
+    syncPreferences: parseJsonRequired(
+      row["sync_preferences"],
+      "system_settings",
+      "sync_preferences",
+      id,
+    ) as SystemSettings["syncPreferences"],
+    privacyDefaults: parseJsonRequired(
+      row["privacy_defaults"],
+      "system_settings",
+      "privacy_defaults",
+      id,
+    ) as SystemSettings["privacyDefaults"],
+    littlesSafeMode: parseJsonRequired(
+      row["littles_safe_mode"],
+      "system_settings",
+      "littles_safe_mode",
+      id,
+    ) as SystemSettings["littlesSafeMode"],
+    nomenclature: parseJsonRequired(
+      row["nomenclature"],
+      "system_settings",
+      "nomenclature",
+      id,
+    ) as SystemSettings["nomenclature"],
     saturationLevelsEnabled: intToBool(row["saturation_levels_enabled"]),
     autoCaptureFrontingOnJournal: intToBool(row["auto_capture_fronting_on_journal"]),
-    snapshotSchedule: parseJsonRequired(row["snapshot_schedule"]),
+    snapshotSchedule: parseJsonRequired(
+      row["snapshot_schedule"],
+      "system_settings",
+      "snapshot_schedule",
+      id,
+    ) as SystemSettings["snapshotSchedule"],
     onboardingComplete: intToBool(row["onboarding_complete"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    createdAt: guardedToMs(row["created_at"], "system_settings", "created_at", id),
+    updatedAt: guardedToMs(row["updated_at"], "system_settings", "updated_at", id),
+    version: 0,
   };
 }
 
-export function rowToMemberRow(row: Record<string, unknown>): MemberLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    pronouns: parseStringArray(row["pronouns"]),
-    description: strOrNull(row["description"]),
-    avatarSource: row["avatar_source"] ?? null,
-    colors: parseStringArray(row["colors"]),
-    saturationLevel: str(row["saturation_level"]),
-    tags: parseStringArray(row["tags"]),
-    suppressFriendFrontNotification: intToBool(row["suppress_friend_front_notification"]),
-    boardMessageNotificationOnFront: intToBool(row["board_message_notification_on_front"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToMember(row: Record<string, unknown>): Member | ArchivedMember {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "members", "updated_at", id);
+  const base: Member = {
+    id: guardedStr(row["id"], "members", "id", id) as Member["id"],
+    systemId: guardedStr(row["system_id"], "members", "system_id", id) as Member["systemId"],
+    name: guardedStr(row["name"], "members", "name", id),
+    pronouns: parseStringArray(row["pronouns"], "members", "pronouns", id),
+    description: strOrNull(row["description"], "members", "description", id),
+    avatarSource: parseJsonSafe(
+      row["avatar_source"],
+      "members",
+      "avatar_source",
+      id,
+    ) as Member["avatarSource"],
+    colors: parseStringArray(row["colors"], "members", "colors", id) as Member["colors"],
+    saturationLevel: parseJsonRequired(
+      row["saturation_level"],
+      "members",
+      "saturation_level",
+      id,
+    ) as Member["saturationLevel"],
+    tags: parseJsonRequired(row["tags"], "members", "tags", id) as Member["tags"],
+    suppressFriendFrontNotification: intToBoolFailClosed(row["suppress_friend_front_notification"]),
+    boardMessageNotificationOnFront: intToBoolFailClosed(
+      row["board_message_notification_on_front"],
+    ),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "members", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToMemberPhotoRow(row: Record<string, unknown>): MemberPhotoLocalRow {
-  return {
-    id: str(row["id"]),
-    memberId: str(row["member_id"]),
-    imageSource: str(row["image_source"]),
-    sortOrder: num(row["sort_order"]),
-    caption: strOrNull(row["caption"]),
-    archived: intToBool(row["archived"]),
+export function rowToMemberPhoto(row: Record<string, unknown>): MemberPhoto | ArchivedMemberPhoto {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const base: MemberPhoto = {
+    id: guardedStr(row["id"], "member_photos", "id", id) as MemberPhoto["id"],
+    memberId: guardedStr(
+      row["member_id"],
+      "member_photos",
+      "member_id",
+      id,
+    ) as MemberPhoto["memberId"],
+    imageSource: guardedStr(
+      row["image_source"],
+      "member_photos",
+      "image_source",
+      id,
+    ) as MemberPhoto["imageSource"],
+    sortOrder: guardedNum(row["sort_order"], "member_photos", "sort_order", id),
+    caption: strOrNull(row["caption"], "member_photos", "caption", id),
+    archived: false,
   };
+  if (archived) {
+    // MemberPhoto has no updatedAt; use createdAt as proxy
+    const createdAt = guardedToMs(row["created_at"], "member_photos", "created_at", id);
+    return wrapArchived(base, createdAt);
+  }
+  return base;
 }
 
-export function rowToGroupRow(row: Record<string, unknown>): GroupLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    description: strOrNull(row["description"]),
-    parentGroupId: strOrNull(row["parent_group_id"]),
-    imageSource: strOrNull(row["image_source"]),
-    color: strOrNull(row["color"]),
-    emoji: strOrNull(row["emoji"]),
-    sortOrder: num(row["sort_order"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToGroup(row: Record<string, unknown>): Group | ArchivedGroup {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "groups", "updated_at", id);
+  const base: Group = {
+    id: guardedStr(row["id"], "groups", "id", id) as Group["id"],
+    systemId: guardedStr(row["system_id"], "groups", "system_id", id) as Group["systemId"],
+    name: guardedStr(row["name"], "groups", "name", id),
+    description: strOrNull(row["description"], "groups", "description", id),
+    parentGroupId: strOrNull(
+      row["parent_group_id"],
+      "groups",
+      "parent_group_id",
+      id,
+    ) as Group["parentGroupId"],
+    imageSource: parseJsonSafe(
+      row["image_source"],
+      "groups",
+      "image_source",
+      id,
+    ) as Group["imageSource"],
+    color: strOrNull(row["color"], "groups", "color", id) as Group["color"],
+    emoji: strOrNull(row["emoji"], "groups", "emoji", id),
+    sortOrder: guardedNum(row["sort_order"], "groups", "sort_order", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "groups", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToStructureEntityTypeRow(
+export function rowToStructureEntityType(
   row: Record<string, unknown>,
-): StructureEntityTypeLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    description: strOrNull(row["description"]),
-    color: strOrNull(row["color"]),
-    imageSource: strOrNull(row["image_source"]),
-    emoji: strOrNull(row["emoji"]),
-    sortOrder: num(row["sort_order"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+): SystemStructureEntityType | ArchivedSystemStructureEntityType {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(
+    row["updated_at"],
+    "system_structure_entity_types",
+    "updated_at",
+    id,
+  );
+  const base: SystemStructureEntityType = {
+    id: guardedStr(
+      row["id"],
+      "system_structure_entity_types",
+      "id",
+      id,
+    ) as SystemStructureEntityType["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "system_structure_entity_types",
+      "system_id",
+      id,
+    ) as SystemStructureEntityType["systemId"],
+    name: guardedStr(row["name"], "system_structure_entity_types", "name", id),
+    description: strOrNull(row["description"], "system_structure_entity_types", "description", id),
+    color: strOrNull(
+      row["color"],
+      "system_structure_entity_types",
+      "color",
+      id,
+    ) as SystemStructureEntityType["color"],
+    imageSource: parseJsonSafe(
+      row["image_source"],
+      "system_structure_entity_types",
+      "image_source",
+      id,
+    ) as SystemStructureEntityType["imageSource"],
+    emoji: strOrNull(row["emoji"], "system_structure_entity_types", "emoji", id),
+    sortOrder: guardedNum(row["sort_order"], "system_structure_entity_types", "sort_order", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "system_structure_entity_types", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToStructureEntityRow(row: Record<string, unknown>): StructureEntityLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    entityTypeId: str(row["entity_type_id"]),
-    name: str(row["name"]),
-    description: strOrNull(row["description"]),
-    color: strOrNull(row["color"]),
-    imageSource: strOrNull(row["image_source"]),
-    emoji: strOrNull(row["emoji"]),
-    sortOrder: num(row["sort_order"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
-  };
-}
-
-export function rowToStructureEntityLinkRow(
+export function rowToStructureEntity(
   row: Record<string, unknown>,
-): StructureEntityLinkLocalRow {
+): SystemStructureEntity | ArchivedSystemStructureEntity {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "system_structure_entities", "updated_at", id);
+  const base: SystemStructureEntity = {
+    id: guardedStr(row["id"], "system_structure_entities", "id", id) as SystemStructureEntity["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "system_structure_entities",
+      "system_id",
+      id,
+    ) as SystemStructureEntity["systemId"],
+    entityTypeId: guardedStr(
+      row["entity_type_id"],
+      "system_structure_entities",
+      "entity_type_id",
+      id,
+    ) as SystemStructureEntity["entityTypeId"],
+    name: guardedStr(row["name"], "system_structure_entities", "name", id),
+    description: strOrNull(row["description"], "system_structure_entities", "description", id),
+    color: strOrNull(
+      row["color"],
+      "system_structure_entities",
+      "color",
+      id,
+    ) as SystemStructureEntity["color"],
+    imageSource: parseJsonSafe(
+      row["image_source"],
+      "system_structure_entities",
+      "image_source",
+      id,
+    ) as SystemStructureEntity["imageSource"],
+    emoji: strOrNull(row["emoji"], "system_structure_entities", "emoji", id),
+    sortOrder: guardedNum(row["sort_order"], "system_structure_entities", "sort_order", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "system_structure_entities", "created_at", id),
+    updatedAt,
+    version: 0,
+  };
+  return archived ? wrapArchived(base, updatedAt) : base;
+}
+
+export function rowToStructureEntityLink(row: Record<string, unknown>): SystemStructureEntityLink {
+  const id = rid(row);
   return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    entityId: str(row["entity_id"]),
-    parentEntityId: strOrNull(row["parent_entity_id"]),
-    sortOrder: num(row["sort_order"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    id: guardedStr(
+      row["id"],
+      "system_structure_entity_links",
+      "id",
+      id,
+    ) as SystemStructureEntityLink["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "system_structure_entity_links",
+      "system_id",
+      id,
+    ) as SystemStructureEntityLink["systemId"],
+    entityId: guardedStr(
+      row["entity_id"],
+      "system_structure_entity_links",
+      "entity_id",
+      id,
+    ) as SystemStructureEntityLink["entityId"],
+    parentEntityId: strOrNull(
+      row["parent_entity_id"],
+      "system_structure_entity_links",
+      "parent_entity_id",
+      id,
+    ) as SystemStructureEntityLink["parentEntityId"],
+    sortOrder: guardedNum(row["sort_order"], "system_structure_entity_links", "sort_order", id),
+    createdAt: guardedToMs(row["created_at"], "system_structure_entity_links", "created_at", id),
   };
 }
 
-export function rowToStructureEntityMemberLinkRow(
+export function rowToStructureEntityMemberLink(
   row: Record<string, unknown>,
-): StructureEntityMemberLinkLocalRow {
+): SystemStructureEntityMemberLink {
+  const id = rid(row);
   return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    memberId: str(row["member_id"]),
-    parentEntityId: strOrNull(row["parent_entity_id"]),
-    sortOrder: num(row["sort_order"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    id: guardedStr(
+      row["id"],
+      "system_structure_entity_member_links",
+      "id",
+      id,
+    ) as SystemStructureEntityMemberLink["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "system_structure_entity_member_links",
+      "system_id",
+      id,
+    ) as SystemStructureEntityMemberLink["systemId"],
+    memberId: guardedStr(
+      row["member_id"],
+      "system_structure_entity_member_links",
+      "member_id",
+      id,
+    ) as SystemStructureEntityMemberLink["memberId"],
+    parentEntityId: strOrNull(
+      row["parent_entity_id"],
+      "system_structure_entity_member_links",
+      "parent_entity_id",
+      id,
+    ) as SystemStructureEntityMemberLink["parentEntityId"],
+    sortOrder: guardedNum(
+      row["sort_order"],
+      "system_structure_entity_member_links",
+      "sort_order",
+      id,
+    ),
+    createdAt: guardedToMs(
+      row["created_at"],
+      "system_structure_entity_member_links",
+      "created_at",
+      id,
+    ),
   };
 }
 
-export function rowToStructureEntityAssociationRow(
+export function rowToStructureEntityAssociation(
   row: Record<string, unknown>,
-): StructureEntityAssociationLocalRow {
+): SystemStructureEntityAssociation {
+  const id = rid(row);
   return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    sourceEntityId: str(row["source_entity_id"]),
-    targetEntityId: str(row["target_entity_id"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    id: guardedStr(
+      row["id"],
+      "system_structure_entity_associations",
+      "id",
+      id,
+    ) as SystemStructureEntityAssociation["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "system_structure_entity_associations",
+      "system_id",
+      id,
+    ) as SystemStructureEntityAssociation["systemId"],
+    sourceEntityId: guardedStr(
+      row["source_entity_id"],
+      "system_structure_entity_associations",
+      "source_entity_id",
+      id,
+    ) as SystemStructureEntityAssociation["sourceEntityId"],
+    targetEntityId: guardedStr(
+      row["target_entity_id"],
+      "system_structure_entity_associations",
+      "target_entity_id",
+      id,
+    ) as SystemStructureEntityAssociation["targetEntityId"],
+    createdAt: guardedToMs(
+      row["created_at"],
+      "system_structure_entity_associations",
+      "created_at",
+      id,
+    ),
   };
 }
 
-export function rowToRelationshipRow(row: Record<string, unknown>): RelationshipLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    sourceMemberId: strOrNull(row["source_member_id"]),
-    targetMemberId: strOrNull(row["target_member_id"]),
-    type: str(row["type"]),
-    label: strOrNull(row["label"]),
+export function rowToRelationship(
+  row: Record<string, unknown>,
+): Relationship | ArchivedRelationship {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const createdAt = guardedToMs(row["created_at"], "relationships", "created_at", id);
+  const base: Relationship = {
+    id: guardedStr(row["id"], "relationships", "id", id) as Relationship["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "relationships",
+      "system_id",
+      id,
+    ) as Relationship["systemId"],
+    sourceMemberId: strOrNull(
+      row["source_member_id"],
+      "relationships",
+      "source_member_id",
+      id,
+    ) as Relationship["sourceMemberId"],
+    targetMemberId: strOrNull(
+      row["target_member_id"],
+      "relationships",
+      "target_member_id",
+      id,
+    ) as Relationship["targetMemberId"],
+    type: guardedStr(row["type"], "relationships", "type", id) as Relationship["type"],
+    label: strOrNull(row["label"], "relationships", "label", id),
     bidirectional: intToBool(row["bidirectional"]),
-    createdAt: toMs(row["created_at"]),
-    archived: intToBool(row["archived"]),
+    createdAt,
+    archived: false,
   };
+  return archived ? wrapArchived(base, createdAt) : base;
 }
 
-export function rowToCustomFrontRow(row: Record<string, unknown>): CustomFrontLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    description: strOrNull(row["description"]),
-    color: strOrNull(row["color"]),
-    emoji: strOrNull(row["emoji"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToCustomFront(row: Record<string, unknown>): CustomFront | ArchivedCustomFront {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "custom_fronts", "updated_at", id);
+  const base: CustomFront = {
+    id: guardedStr(row["id"], "custom_fronts", "id", id) as CustomFront["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "custom_fronts",
+      "system_id",
+      id,
+    ) as CustomFront["systemId"],
+    name: guardedStr(row["name"], "custom_fronts", "name", id),
+    description: strOrNull(row["description"], "custom_fronts", "description", id),
+    color: strOrNull(row["color"], "custom_fronts", "color", id) as CustomFront["color"],
+    emoji: strOrNull(row["emoji"], "custom_fronts", "emoji", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "custom_fronts", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFieldDefinitionRow(row: Record<string, unknown>): FieldDefinitionLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    description: strOrNull(row["description"]),
-    fieldType: str(row["field_type"]),
-    options: parseStringArrayOrNull(row["options"]),
+export function rowToFieldDefinition(
+  row: Record<string, unknown>,
+): FieldDefinition | ArchivedFieldDefinition {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "field_definitions", "updated_at", id);
+  const base: FieldDefinition = {
+    id: guardedStr(row["id"], "field_definitions", "id", id) as FieldDefinition["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "field_definitions",
+      "system_id",
+      id,
+    ) as FieldDefinition["systemId"],
+    name: guardedStr(row["name"], "field_definitions", "name", id),
+    description: strOrNull(row["description"], "field_definitions", "description", id),
+    fieldType: guardedStr(
+      row["field_type"],
+      "field_definitions",
+      "field_type",
+      id,
+    ) as FieldDefinition["fieldType"],
+    options: parseStringArrayOrNull(row["options"], "field_definitions", "options", id),
     required: intToBool(row["required"]),
-    sortOrder: num(row["sort_order"]),
-    scopes: parseStringArray(row["scopes"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    sortOrder: guardedNum(row["sort_order"], "field_definitions", "sort_order", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "field_definitions", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFieldValueRow(row: Record<string, unknown>): FieldValueLocalRow {
+export function rowToFieldValue(row: Record<string, unknown>): FieldValue {
+  const id = rid(row);
   return {
-    id: str(row["id"]),
-    fieldDefinitionId: str(row["field_definition_id"]),
-    memberId: strOrNull(row["member_id"]),
-    structureEntityId: strOrNull(row["structure_entity_id"]),
-    groupId: strOrNull(row["group_id"]),
-    value: parseJson(row["value"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    id: guardedStr(row["id"], "field_values", "id", id) as FieldValue["id"],
+    fieldDefinitionId: guardedStr(
+      row["field_definition_id"],
+      "field_values",
+      "field_definition_id",
+      id,
+    ) as FieldValue["fieldDefinitionId"],
+    memberId: strOrNull(
+      row["member_id"],
+      "field_values",
+      "member_id",
+      id,
+    ) as FieldValue["memberId"],
+    structureEntityId: strOrNull(
+      row["structure_entity_id"],
+      "field_values",
+      "structure_entity_id",
+      id,
+    ) as FieldValue["structureEntityId"],
+    groupId: strOrNull(row["group_id"], "field_values", "group_id", id) as FieldValue["groupId"],
+    value: parseJsonSafe(row["value"], "field_values", "value", id) as FieldValue["value"],
+    createdAt: guardedToMs(row["created_at"], "field_values", "created_at", id),
+    updatedAt: guardedToMs(row["updated_at"], "field_values", "updated_at", id),
+    version: 0,
   };
 }
 
-export function rowToInnerWorldEntityRow(row: Record<string, unknown>): InnerWorldEntityLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    entityType: str(row["entity_type"]),
-    positionX: num(row["position_x"]),
-    positionY: num(row["position_y"]),
-    visual: parseJsonRequired(row["visual"]),
-    regionId: strOrNull(row["region_id"]),
-    linkedMemberId: strOrNull(row["linked_member_id"]),
-    linkedStructureEntityId: strOrNull(row["linked_structure_entity_id"]),
-    name: strOrNull(row["name"]),
-    description: strOrNull(row["description"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToInnerWorldEntity(
+  row: Record<string, unknown>,
+): InnerWorldEntity | ArchivedInnerWorldEntity {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "innerworld_entities", "updated_at", id);
+  const entityType = guardedStr(
+    row["entity_type"],
+    "innerworld_entities",
+    "entity_type",
+    id,
+  ) as InnerWorldEntity["entityType"];
+  const baseCommon = {
+    id: guardedStr(row["id"], "innerworld_entities", "id", id) as InnerWorldEntity["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "innerworld_entities",
+      "system_id",
+      id,
+    ) as InnerWorldEntity["systemId"],
+    positionX: guardedNum(row["position_x"], "innerworld_entities", "position_x", id),
+    positionY: guardedNum(row["position_y"], "innerworld_entities", "position_y", id),
+    visual: parseJsonRequired(
+      row["visual"],
+      "innerworld_entities",
+      "visual",
+      id,
+    ) as InnerWorldEntity["visual"],
+    regionId: strOrNull(
+      row["region_id"],
+      "innerworld_entities",
+      "region_id",
+      id,
+    ) as InnerWorldEntity["regionId"],
+    archived: false as const,
+    createdAt: guardedToMs(row["created_at"], "innerworld_entities", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+
+  let base: InnerWorldEntity;
+  if (entityType === "member") {
+    base = {
+      ...baseCommon,
+      entityType: "member",
+      linkedMemberId: guardedStr(
+        row["linked_member_id"],
+        "innerworld_entities",
+        "linked_member_id",
+        id,
+      ) as InnerWorldEntity["id"],
+    };
+  } else if (entityType === "landmark") {
+    base = {
+      ...baseCommon,
+      entityType: "landmark",
+      name: strOrNull(row["name"], "innerworld_entities", "name", id) ?? "",
+      description: strOrNull(row["description"], "innerworld_entities", "description", id),
+    };
+  } else {
+    base = {
+      ...baseCommon,
+      entityType: "structure-entity",
+      linkedStructureEntityId: guardedStr(
+        row["linked_structure_entity_id"],
+        "innerworld_entities",
+        "linked_structure_entity_id",
+        id,
+      ) as InnerWorldEntity["id"],
+    };
+  }
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToInnerWorldRegionRow(row: Record<string, unknown>): InnerWorldRegionLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    description: strOrNull(row["description"]),
-    parentRegionId: strOrNull(row["parent_region_id"]),
-    visual: parseJsonRequired(row["visual"]),
-    boundaryData: parseJsonRequired(row["boundary_data"]),
-    accessType: str(row["access_type"]),
-    gatekeeperMemberIds: parseStringArray(row["gatekeeper_member_ids"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToInnerWorldRegion(
+  row: Record<string, unknown>,
+): InnerWorldRegion | ArchivedInnerWorldRegion {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "innerworld_regions", "updated_at", id);
+  const base: InnerWorldRegion = {
+    id: guardedStr(row["id"], "innerworld_regions", "id", id) as InnerWorldRegion["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "innerworld_regions",
+      "system_id",
+      id,
+    ) as InnerWorldRegion["systemId"],
+    name: guardedStr(row["name"], "innerworld_regions", "name", id),
+    description: strOrNull(row["description"], "innerworld_regions", "description", id),
+    parentRegionId: strOrNull(
+      row["parent_region_id"],
+      "innerworld_regions",
+      "parent_region_id",
+      id,
+    ) as InnerWorldRegion["parentRegionId"],
+    visual: parseJsonRequired(
+      row["visual"],
+      "innerworld_regions",
+      "visual",
+      id,
+    ) as InnerWorldRegion["visual"],
+    boundaryData: parseJsonRequired(
+      row["boundary_data"],
+      "innerworld_regions",
+      "boundary_data",
+      id,
+    ) as InnerWorldRegion["boundaryData"],
+    accessType: guardedStr(
+      row["access_type"],
+      "innerworld_regions",
+      "access_type",
+      id,
+    ) as InnerWorldRegion["accessType"],
+    gatekeeperMemberIds: parseStringArray(
+      row["gatekeeper_member_ids"],
+      "innerworld_regions",
+      "gatekeeper_member_ids",
+      id,
+    ) as InnerWorldRegion["gatekeeperMemberIds"],
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "innerworld_regions", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToTimerRow(row: Record<string, unknown>): TimerLocalRow {
+export function rowToTimer(row: Record<string, unknown>): TimerConfig | ArchivedTimerConfig {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "timer_configs", "updated_at", id);
   const wakingHoursOnly =
     row["waking_hours_only"] === null || row["waking_hours_only"] === undefined
       ? null
       : intToBool(row["waking_hours_only"]);
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    intervalMinutes: numOrNull(row["interval_minutes"]),
+  const base: TimerConfig = {
+    id: guardedStr(row["id"], "timer_configs", "id", id) as TimerConfig["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "timer_configs",
+      "system_id",
+      id,
+    ) as TimerConfig["systemId"],
+    intervalMinutes: numOrNull(row["interval_minutes"], "timer_configs", "interval_minutes", id),
     wakingHoursOnly,
-    wakingStart: strOrNull(row["waking_start"]),
-    wakingEnd: strOrNull(row["waking_end"]),
-    promptText: str(row["prompt_text"]),
+    wakingStart: strOrNull(row["waking_start"], "timer_configs", "waking_start", id),
+    wakingEnd: strOrNull(row["waking_end"], "timer_configs", "waking_end", id),
+    promptText: guardedStr(row["prompt_text"], "timer_configs", "prompt_text", id),
     enabled: intToBool(row["enabled"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "timer_configs", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToLifecycleEventRow(row: Record<string, unknown>): LifecycleEventLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    eventType: str(row["event_type"]),
-    occurredAt: toMs(row["occurred_at"]),
-    recordedAt: toMs(row["recorded_at"]),
-    notes: strOrNull(row["notes"]),
-    payload: parseJsonRequired(row["payload"]),
-    archived: intToBool(row["archived"]),
+export function rowToLifecycleEvent(row: Record<string, unknown>): LifecycleEvent {
+  const id = rid(row);
+  const eventType = guardedStr(
+    row["event_type"],
+    "lifecycle_events",
+    "event_type",
+    id,
+  ) as LifecycleEvent["eventType"];
+  const payload = parseJsonRequired(row["payload"], "lifecycle_events", "payload", id) as Record<
+    string,
+    unknown
+  >;
+  const base = {
+    id: guardedStr(row["id"], "lifecycle_events", "id", id) as LifecycleEvent["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "lifecycle_events",
+      "system_id",
+      id,
+    ) as LifecycleEvent["systemId"],
+    occurredAt: guardedToMs(row["occurred_at"], "lifecycle_events", "occurred_at", id),
+    recordedAt: guardedToMs(row["recorded_at"], "lifecycle_events", "recorded_at", id),
+    notes: strOrNull(row["notes"], "lifecycle_events", "notes", id),
   };
+  // Spread the typed base + eventType discriminant + payload fields.
+  // The result satisfies every LifecycleEvent variant by construction;
+  // a single (non-unknown) cast is required because TS cannot verify the
+  // discriminated union match statically across a generic payload spread.
+  const assembled: typeof base & { eventType: typeof eventType } & Record<string, unknown> = {
+    ...base,
+    eventType,
+    ...payload,
+  };
+  return assembled as LifecycleEvent;
 }
 
 // ── fronting document ────────────────────────────────────────────────────────
 
-export function rowToFrontingSessionRow(row: Record<string, unknown>): FrontingSessionLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    memberId: str(row["member_id"]),
-    startTime: toMs(row["start_time"]),
-    endTime: toMsOrNull(row["end_time"]),
-    comment: strOrNull(row["comment"]),
-    customFrontId: strOrNull(row["custom_front_id"]),
-    structureEntityId: strOrNull(row["structure_entity_id"]),
-    positionality: strOrNull(row["positionality"]),
-    outtrigger: strOrNull(row["outtrigger"]),
-    outtriggerSentiment: strOrNull(row["outtrigger_sentiment"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToFrontingSession(
+  row: Record<string, unknown>,
+): FrontingSession | ArchivedFrontingSession {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "fronting_sessions", "updated_at", id);
+  const endTime = toMsOrNull(row["end_time"], "fronting_sessions", "end_time", id);
+  const baseCommon = {
+    id: guardedStr(row["id"], "fronting_sessions", "id", id) as FrontingSession["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "fronting_sessions",
+      "system_id",
+      id,
+    ) as FrontingSession["systemId"],
+    memberId: strOrNull(
+      row["member_id"],
+      "fronting_sessions",
+      "member_id",
+      id,
+    ) as FrontingSession["memberId"],
+    startTime: guardedToMs(row["start_time"], "fronting_sessions", "start_time", id),
+    comment: strOrNull(row["comment"], "fronting_sessions", "comment", id),
+    customFrontId: strOrNull(
+      row["custom_front_id"],
+      "fronting_sessions",
+      "custom_front_id",
+      id,
+    ) as FrontingSession["customFrontId"],
+    structureEntityId: strOrNull(
+      row["structure_entity_id"],
+      "fronting_sessions",
+      "structure_entity_id",
+      id,
+    ) as FrontingSession["structureEntityId"],
+    positionality: strOrNull(row["positionality"], "fronting_sessions", "positionality", id),
+    outtrigger: strOrNull(row["outtrigger"], "fronting_sessions", "outtrigger", id),
+    outtriggerSentiment: strOrNull(
+      row["outtrigger_sentiment"],
+      "fronting_sessions",
+      "outtrigger_sentiment",
+      id,
+    ) as FrontingSession["outtriggerSentiment"],
+    archived: false as const,
+    createdAt: guardedToMs(row["created_at"], "fronting_sessions", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  const base: FrontingSession =
+    endTime === null ? { ...baseCommon, endTime: null } : { ...baseCommon, endTime };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFrontingCommentRow(row: Record<string, unknown>): FrontingCommentLocalRow {
-  return {
-    id: str(row["id"]),
-    frontingSessionId: str(row["fronting_session_id"]),
-    systemId: str(row["system_id"]),
-    memberId: strOrNull(row["member_id"]),
-    customFrontId: strOrNull(row["custom_front_id"]),
-    structureEntityId: strOrNull(row["structure_entity_id"]),
-    content: str(row["content"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToFrontingComment(
+  row: Record<string, unknown>,
+): FrontingComment | ArchivedFrontingComment {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "fronting_comments", "updated_at", id);
+  const base: FrontingComment = {
+    id: guardedStr(row["id"], "fronting_comments", "id", id) as FrontingComment["id"],
+    frontingSessionId: guardedStr(
+      row["fronting_session_id"],
+      "fronting_comments",
+      "fronting_session_id",
+      id,
+    ) as FrontingComment["frontingSessionId"],
+    systemId: guardedStr(
+      row["system_id"],
+      "fronting_comments",
+      "system_id",
+      id,
+    ) as FrontingComment["systemId"],
+    memberId: strOrNull(
+      row["member_id"],
+      "fronting_comments",
+      "member_id",
+      id,
+    ) as FrontingComment["memberId"],
+    customFrontId: strOrNull(
+      row["custom_front_id"],
+      "fronting_comments",
+      "custom_front_id",
+      id,
+    ) as FrontingComment["customFrontId"],
+    structureEntityId: strOrNull(
+      row["structure_entity_id"],
+      "fronting_comments",
+      "structure_entity_id",
+      id,
+    ) as FrontingComment["structureEntityId"],
+    content: guardedStr(row["content"], "fronting_comments", "content", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "fronting_comments", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToCheckInRecordRow(row: Record<string, unknown>): CheckInRecordLocalRow {
-  return {
-    id: str(row["id"]),
-    timerConfigId: str(row["timer_config_id"]),
-    systemId: str(row["system_id"]),
-    scheduledAt: toMs(row["scheduled_at"]),
-    respondedByMemberId: strOrNull(row["responded_by_member_id"]),
-    respondedAt: toMsOrNull(row["responded_at"]),
+export function rowToCheckInRecord(
+  row: Record<string, unknown>,
+): CheckInRecord | ArchivedCheckInRecord {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const archivedAt = toMsOrNull(row["archived_at"], "check_in_records", "archived_at", id);
+  const base: CheckInRecord = {
+    id: guardedStr(row["id"], "check_in_records", "id", id) as CheckInRecord["id"],
+    timerConfigId: guardedStr(
+      row["timer_config_id"],
+      "check_in_records",
+      "timer_config_id",
+      id,
+    ) as CheckInRecord["timerConfigId"],
+    systemId: guardedStr(
+      row["system_id"],
+      "check_in_records",
+      "system_id",
+      id,
+    ) as CheckInRecord["systemId"],
+    scheduledAt: guardedToMs(row["scheduled_at"], "check_in_records", "scheduled_at", id),
+    respondedByMemberId: strOrNull(
+      row["responded_by_member_id"],
+      "check_in_records",
+      "responded_by_member_id",
+      id,
+    ) as CheckInRecord["respondedByMemberId"],
+    respondedAt: toMsOrNull(row["responded_at"], "check_in_records", "responded_at", id),
     dismissed: intToBool(row["dismissed"]),
-    archived: intToBool(row["archived"]),
-    archivedAt: null,
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    archived: false,
+    archivedAt,
   };
+  if (archived) {
+    const updatedAt = guardedToMs(row["updated_at"], "check_in_records", "updated_at", id);
+    return wrapArchived(base, archivedAt ?? updatedAt);
+  }
+  return base;
 }
 
-export function rowToFrontingReportRow(row: Record<string, unknown>): FrontingReportLocalRow {
+export function rowToFrontingReport(row: Record<string, unknown>): FrontingReportRaw {
+  // FrontingReport is stored encrypted in SQLite; the row holds the wire shape
+  // (encryptedData blob) rather than the decrypted domain fields.
+  const id = rid(row);
   return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    encryptedData: str(row["encrypted_data"]),
-    format: str(row["format"]),
-    generatedAt: toMs(row["generated_at"]),
+    id: guardedStr(row["id"], "fronting_reports", "id", id) as FrontingReportRaw["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "fronting_reports",
+      "system_id",
+      id,
+    ) as FrontingReportRaw["systemId"],
+    encryptedData: guardedStr(row["encrypted_data"], "fronting_reports", "encrypted_data", id),
+    format: guardedStr(
+      row["format"],
+      "fronting_reports",
+      "format",
+      id,
+    ) as FrontingReportRaw["format"],
+    generatedAt: guardedToMs(row["generated_at"], "fronting_reports", "generated_at", id),
+    version: 0,
+    archived: false,
+    archivedAt: null,
   };
 }
 
 // ── chat document ────────────────────────────────────────────────────────────
 
-export function rowToChannelRow(row: Record<string, unknown>): ChannelLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    type: str(row["type"]),
-    parentId: strOrNull(row["parent_id"]),
-    sortOrder: num(row["sort_order"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToChannel(row: Record<string, unknown>): Channel | ArchivedChannel {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "channels", "updated_at", id);
+  const base: Channel = {
+    id: guardedStr(row["id"], "channels", "id", id) as Channel["id"],
+    systemId: guardedStr(row["system_id"], "channels", "system_id", id) as Channel["systemId"],
+    name: guardedStr(row["name"], "channels", "name", id),
+    type: guardedStr(row["type"], "channels", "type", id) as Channel["type"],
+    parentId: strOrNull(row["parent_id"], "channels", "parent_id", id) as Channel["parentId"],
+    sortOrder: guardedNum(row["sort_order"], "channels", "sort_order", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "channels", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToMessageRow(row: Record<string, unknown>): MessageLocalRow {
-  return {
-    id: str(row["id"]),
-    channelId: str(row["channel_id"]),
-    systemId: str(row["system_id"]),
-    senderId: str(row["sender_id"]),
-    content: str(row["content"]),
-    attachments: parseStringArray(row["attachments"]),
-    mentions: parseStringArray(row["mentions"]),
-    replyToId: strOrNull(row["reply_to_id"]),
-    timestamp: toMs(row["timestamp"]),
-    editOf: strOrNull(row["edit_of"]),
-    archived: intToBool(row["archived"]),
+export function rowToMessage(row: Record<string, unknown>): ChatMessage | ArchivedChatMessage {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  // Mobile SQLite stores edited_at (timestamp), not edit_of (reference)
+  const updatedAt =
+    toMsOrNull(row["updated_at"], "messages", "updated_at", id) ??
+    guardedToMs(row["created_at"], "messages", "created_at", id);
+  const base: ChatMessage = {
+    id: guardedStr(row["id"], "messages", "id", id) as ChatMessage["id"],
+    channelId: guardedStr(
+      row["channel_id"],
+      "messages",
+      "channel_id",
+      id,
+    ) as ChatMessage["channelId"],
+    systemId: guardedStr(row["system_id"], "messages", "system_id", id) as ChatMessage["systemId"],
+    senderId: guardedStr(row["sender_id"], "messages", "sender_id", id) as ChatMessage["senderId"],
+    content: guardedStr(row["content"], "messages", "content", id),
+    attachments: parseStringArray(
+      row["attachments"],
+      "messages",
+      "attachments",
+      id,
+    ) as ChatMessage["attachments"],
+    mentions: parseStringArray(
+      row["mentions"],
+      "messages",
+      "mentions",
+      id,
+    ) as ChatMessage["mentions"],
+    replyToId: strOrNull(
+      row["reply_to_id"],
+      "messages",
+      "reply_to_id",
+      id,
+    ) as ChatMessage["replyToId"],
+    timestamp: guardedToMs(row["timestamp"], "messages", "timestamp", id),
+    editedAt: toMsOrNull(row["edited_at"], "messages", "edited_at", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "messages", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToBoardMessageRow(row: Record<string, unknown>): BoardMessageLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    senderId: str(row["sender_id"]),
-    content: str(row["content"]),
+export function rowToBoardMessage(
+  row: Record<string, unknown>,
+): BoardMessage | ArchivedBoardMessage {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "board_messages", "updated_at", id);
+  const base: BoardMessage = {
+    id: guardedStr(row["id"], "board_messages", "id", id) as BoardMessage["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "board_messages",
+      "system_id",
+      id,
+    ) as BoardMessage["systemId"],
+    senderId: guardedStr(
+      row["sender_id"],
+      "board_messages",
+      "sender_id",
+      id,
+    ) as BoardMessage["senderId"],
+    content: guardedStr(row["content"], "board_messages", "content", id),
     pinned: intToBool(row["pinned"]),
-    sortOrder: num(row["sort_order"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    sortOrder: guardedNum(row["sort_order"], "board_messages", "sort_order", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "board_messages", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToPollRow(row: Record<string, unknown>): PollLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    createdByMemberId: strOrNull(row["created_by_member_id"]),
-    title: str(row["title"]),
-    description: strOrNull(row["description"]),
-    kind: str(row["kind"]),
-    status: str(row["status"]),
-    closedAt: toMsOrNull(row["closed_at"]),
-    endsAt: toMsOrNull(row["ends_at"]),
+export function rowToPoll(row: Record<string, unknown>): Poll | ArchivedPoll {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "polls", "updated_at", id);
+  const base: Poll = {
+    id: guardedStr(row["id"], "polls", "id", id) as Poll["id"],
+    systemId: guardedStr(row["system_id"], "polls", "system_id", id) as Poll["systemId"],
+    createdByMemberId: guardedStr(
+      row["created_by_member_id"],
+      "polls",
+      "created_by_member_id",
+      id,
+    ) as Poll["createdByMemberId"],
+    title: guardedStr(row["title"], "polls", "title", id),
+    description: strOrNull(row["description"], "polls", "description", id),
+    kind: guardedStr(row["kind"], "polls", "kind", id) as Poll["kind"],
+    options: [] as Poll["options"],
+    status: guardedStr(row["status"], "polls", "status", id) as Poll["status"],
+    closedAt: toMsOrNull(row["closed_at"], "polls", "closed_at", id),
+    endsAt: toMsOrNull(row["ends_at"], "polls", "ends_at", id),
     allowMultipleVotes: intToBool(row["allow_multiple_votes"]),
-    maxVotesPerMember: num(row["max_votes_per_member"]),
+    maxVotesPerMember: guardedNum(row["max_votes_per_member"], "polls", "max_votes_per_member", id),
     allowAbstain: intToBool(row["allow_abstain"]),
     allowVeto: intToBool(row["allow_veto"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "polls", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToAcknowledgementRow(row: Record<string, unknown>): AcknowledgementLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    createdByMemberId: strOrNull(row["created_by_member_id"]),
-    targetMemberId: str(row["target_member_id"]),
-    message: str(row["message"]),
+export function rowToAcknowledgement(
+  row: Record<string, unknown>,
+): AcknowledgementRequest | ArchivedAcknowledgementRequest {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "acknowledgements", "updated_at", id);
+  const base: AcknowledgementRequest = {
+    id: guardedStr(row["id"], "acknowledgements", "id", id) as AcknowledgementRequest["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "acknowledgements",
+      "system_id",
+      id,
+    ) as AcknowledgementRequest["systemId"],
+    createdByMemberId: guardedStr(
+      row["created_by_member_id"],
+      "acknowledgements",
+      "created_by_member_id",
+      id,
+    ) as AcknowledgementRequest["createdByMemberId"],
+    targetMemberId: guardedStr(
+      row["target_member_id"],
+      "acknowledgements",
+      "target_member_id",
+      id,
+    ) as AcknowledgementRequest["targetMemberId"],
+    message: guardedStr(row["message"], "acknowledgements", "message", id),
     confirmed: intToBool(row["confirmed"]),
-    confirmedAt: toMsOrNull(row["confirmed_at"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+    confirmedAt: toMsOrNull(row["confirmed_at"], "acknowledgements", "confirmed_at", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "acknowledgements", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
 // ── journal document ─────────────────────────────────────────────────────────
 
-export function rowToJournalEntryRow(row: Record<string, unknown>): JournalEntryLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    author: strOrNull(row["author"]),
-    frontingSessionId: strOrNull(row["fronting_session_id"]),
-    title: str(row["title"]),
-    blocks: parseJsonRequired(row["blocks"]),
-    tags: parseStringArray(row["tags"]),
-    linkedEntities: parseJsonRequired(row["linked_entities"]),
-    frontingSnapshots: parseJson(row["fronting_snapshots"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToJournalEntry(
+  row: Record<string, unknown>,
+): JournalEntry | ArchivedJournalEntry {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "journal_entries", "updated_at", id);
+  // Mobile SQLite stores `author` as a plain member-ID string; reconstruct EntityReference.
+  const authorRaw = strOrNull(row["author"], "journal_entries", "author", id);
+  const author: EntityReference<"member" | "structure-entity"> | null =
+    authorRaw !== null ? { entityType: "member", entityId: authorRaw } : null;
+  const base: JournalEntry = {
+    id: guardedStr(row["id"], "journal_entries", "id", id) as JournalEntry["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "journal_entries",
+      "system_id",
+      id,
+    ) as JournalEntry["systemId"],
+    author,
+    frontingSessionId: strOrNull(
+      row["fronting_session_id"],
+      "journal_entries",
+      "fronting_session_id",
+      id,
+    ) as JournalEntry["frontingSessionId"],
+    title: guardedStr(row["title"], "journal_entries", "title", id),
+    blocks: parseJsonRequired(
+      row["blocks"],
+      "journal_entries",
+      "blocks",
+      id,
+    ) as JournalEntry["blocks"],
+    tags: parseStringArray(row["tags"], "journal_entries", "tags", id),
+    linkedEntities: parseJsonRequired(
+      row["linked_entities"],
+      "journal_entries",
+      "linked_entities",
+      id,
+    ) as JournalEntry["linkedEntities"],
+    frontingSnapshots: parseJsonSafe(
+      row["fronting_snapshots"],
+      "journal_entries",
+      "fronting_snapshots",
+      id,
+    ) as JournalEntry["frontingSnapshots"],
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "journal_entries", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToWikiPageRow(row: Record<string, unknown>): WikiPageLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    title: str(row["title"]),
-    slug: str(row["slug"]),
-    blocks: parseJsonRequired(row["blocks"]),
-    linkedFromPages: parseStringArray(row["linked_from_pages"]),
-    tags: parseStringArray(row["tags"]),
-    linkedEntities: parseJsonRequired(row["linked_entities"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToWikiPage(row: Record<string, unknown>): WikiPage | ArchivedWikiPage {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "wiki_pages", "updated_at", id);
+  const base: WikiPage = {
+    id: guardedStr(row["id"], "wiki_pages", "id", id) as WikiPage["id"],
+    systemId: guardedStr(row["system_id"], "wiki_pages", "system_id", id) as WikiPage["systemId"],
+    title: guardedStr(row["title"], "wiki_pages", "title", id),
+    slug: guardedStr(row["slug"], "wiki_pages", "slug", id),
+    blocks: parseJsonRequired(row["blocks"], "wiki_pages", "blocks", id) as WikiPage["blocks"],
+    linkedFromPages: parseStringArray(
+      row["linked_from_pages"],
+      "wiki_pages",
+      "linked_from_pages",
+      id,
+    ) as WikiPage["linkedFromPages"],
+    tags: parseStringArray(row["tags"], "wiki_pages", "tags", id),
+    linkedEntities: parseJsonRequired(
+      row["linked_entities"],
+      "wiki_pages",
+      "linked_entities",
+      id,
+    ) as WikiPage["linkedEntities"],
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "wiki_pages", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToNoteRow(row: Record<string, unknown>): NoteLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    authorEntityType: strOrNull(row["author_entity_type"]),
-    authorEntityId: strOrNull(row["author_entity_id"]),
-    title: str(row["title"]),
-    content: str(row["content"]),
-    backgroundColor: strOrNull(row["background_color"]),
-    archived: intToBool(row["archived"]),
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
+export function rowToNote(row: Record<string, unknown>): Note | ArchivedNote {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "notes", "updated_at", id);
+  const authorEntityType = strOrNull(
+    row["author_entity_type"],
+    "notes",
+    "author_entity_type",
+    id,
+  ) as NoteAuthorEntityType | null;
+  const authorEntityId = strOrNull(row["author_entity_id"], "notes", "author_entity_id", id);
+  const author: EntityReference<NoteAuthorEntityType> | null =
+    authorEntityType !== null && authorEntityId !== null
+      ? { entityType: authorEntityType, entityId: authorEntityId }
+      : null;
+  const base: Note = {
+    id: guardedStr(row["id"], "notes", "id", id) as Note["id"],
+    systemId: guardedStr(row["system_id"], "notes", "system_id", id) as Note["systemId"],
+    author,
+    title: guardedStr(row["title"], "notes", "title", id),
+    content: guardedStr(row["content"], "notes", "content", id),
+    backgroundColor: strOrNull(
+      row["background_color"],
+      "notes",
+      "background_color",
+      id,
+    ) as Note["backgroundColor"],
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "notes", "created_at", id),
+    updatedAt,
+    version: 0,
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
 // ── privacy-config document ──────────────────────────────────────────────────
 
-export function rowToPrivacyBucketRow(row: Record<string, unknown>): PrivacyBucketLocalRow {
-  return {
-    id: str(row["id"]),
-    systemId: str(row["system_id"]),
-    name: str(row["name"]),
-    description: strOrNull(row["description"]),
-    archived: intToBool(row["archived"]),
-    archivedAt: null,
+export function rowToPrivacyBucket(
+  row: Record<string, unknown>,
+): PrivacyBucket | ArchivedPrivacyBucket {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "privacy_buckets", "updated_at", id);
+  const base: PrivacyBucket = {
+    id: guardedStr(row["id"], "privacy_buckets", "id", id) as PrivacyBucket["id"],
+    systemId: guardedStr(
+      row["system_id"],
+      "privacy_buckets",
+      "system_id",
+      id,
+    ) as PrivacyBucket["systemId"],
+    name: guardedStr(row["name"], "privacy_buckets", "name", id),
+    description: strOrNull(row["description"], "privacy_buckets", "description", id),
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "privacy_buckets", "created_at", id),
+    updatedAt,
     version: 0,
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFriendConnectionRow(row: Record<string, unknown>): FriendConnectionLocalRow {
-  return {
-    id: str(row["id"]),
-    accountId: str(row["account_id"]),
-    friendAccountId: str(row["friend_account_id"]),
-    status: str(row["status"]),
-    assignedBuckets: parseStringArray(row["assigned_buckets"]),
-    visibility: parseJsonRequired(row["visibility"]),
-    archived: intToBool(row["archived"]),
-    archivedAt: null,
+export function rowToFriendConnection(
+  row: Record<string, unknown>,
+): FriendConnection | ArchivedFriendConnection {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const updatedAt = guardedToMs(row["updated_at"], "friend_connections", "updated_at", id);
+  const base: FriendConnection = {
+    id: guardedStr(row["id"], "friend_connections", "id", id) as FriendConnection["id"],
+    accountId: guardedStr(
+      row["account_id"],
+      "friend_connections",
+      "account_id",
+      id,
+    ) as FriendConnection["accountId"],
+    friendAccountId: guardedStr(
+      row["friend_account_id"],
+      "friend_connections",
+      "friend_account_id",
+      id,
+    ) as FriendConnection["friendAccountId"],
+    status: guardedStr(
+      row["status"],
+      "friend_connections",
+      "status",
+      id,
+    ) as FriendConnection["status"],
+    assignedBucketIds: parseStringArray(
+      row["assigned_buckets"],
+      "friend_connections",
+      "assigned_buckets",
+      id,
+    ) as FriendConnection["assignedBucketIds"],
+    visibility: parseJsonRequired(
+      row["visibility"],
+      "friend_connections",
+      "visibility",
+      id,
+    ) as FriendVisibilitySettings,
+    archived: false,
+    createdAt: guardedToMs(row["created_at"], "friend_connections", "created_at", id),
+    updatedAt,
     version: 0,
-    createdAt: toMs(row["created_at"]),
-    updatedAt: toMs(row["updated_at"]),
   };
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
 
-export function rowToFriendCodeRow(row: Record<string, unknown>): FriendCodeLocalRow {
-  return {
-    id: str(row["id"]),
-    accountId: str(row["account_id"]),
-    code: str(row["code"]),
-    createdAt: toMs(row["created_at"]),
-    expiresAt: toMsOrNull(row["expires_at"]),
-    archived: intToBool(row["archived"]),
-    archivedAt: null,
+export function rowToFriendCode(row: Record<string, unknown>): FriendCode | ArchivedFriendCode {
+  const id = rid(row);
+  const archived = intToBool(row["archived"]);
+  const createdAt = guardedToMs(row["created_at"], "friend_codes", "created_at", id);
+  const base: FriendCode = {
+    id: guardedStr(row["id"], "friend_codes", "id", id) as FriendCode["id"],
+    accountId: guardedStr(
+      row["account_id"],
+      "friend_codes",
+      "account_id",
+      id,
+    ) as FriendCode["accountId"],
+    code: guardedStr(row["code"], "friend_codes", "code", id),
+    createdAt,
+    expiresAt: toMsOrNull(row["expires_at"], "friend_codes", "expires_at", id),
+    archived: false,
   };
+  return archived ? wrapArchived(base, createdAt) : base;
 }

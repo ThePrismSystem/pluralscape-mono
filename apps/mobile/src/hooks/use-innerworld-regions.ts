@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToInnerWorldRegionRow } from "../data/row-transforms.js";
+import { rowToInnerWorldRegion } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { InnerWorldRegionLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   InnerWorldRegionDecrypted,
@@ -42,9 +41,7 @@ interface InnerWorldRegionListOpts extends SystemIdOverride {
 export function useInnerWorldRegion(
   regionId: InnerWorldRegionId,
   opts?: SystemIdOverride,
-): DataQuery<
-  InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted> | InnerWorldRegionLocalRow
-> {
+): DataQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -65,7 +62,7 @@ export function useInnerWorldRegion(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM innerworld_regions WHERE id = ?", [regionId]);
       if (!row) throw new Error("InnerWorldRegion not found");
-      return rowToInnerWorldRegionRow(row);
+      return rowToInnerWorldRegion(row);
     },
     enabled: source === "local",
   });
@@ -83,9 +80,7 @@ export function useInnerWorldRegion(
 
 export function useInnerWorldRegionsList(
   opts?: InnerWorldRegionListOpts,
-): DataListQuery<
-  InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted> | InnerWorldRegionLocalRow
-> {
+): DataListQuery<InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -112,7 +107,7 @@ export function useInnerWorldRegionsList(
       const sql = includeArchived
         ? "SELECT * FROM innerworld_regions WHERE system_id = ?"
         : "SELECT * FROM innerworld_regions WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldRegionRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldRegion);
     },
     enabled: source === "local",
   });

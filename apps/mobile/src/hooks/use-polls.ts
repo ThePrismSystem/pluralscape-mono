@@ -3,7 +3,7 @@ import { decryptPoll, decryptPollPage, decryptPollVote } from "@pluralscape/data
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToPollRow } from "../data/row-transforms.js";
+import { rowToPoll } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -18,7 +18,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { PollLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   PollDecrypted,
@@ -58,7 +57,7 @@ interface PollVoteListOpts extends SystemIdOverride {
 export function usePoll(
   pollId: PollId,
   opts?: SystemIdOverride,
-): DataQuery<PollDecrypted | Archived<PollDecrypted> | PollLocalRow> {
+): DataQuery<PollDecrypted | Archived<PollDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -79,7 +78,7 @@ export function usePoll(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM own_polls WHERE id = ?", [pollId]);
       if (!row) throw new Error("Poll not found");
-      return rowToPollRow(row);
+      return rowToPoll(row);
     },
     enabled: source === "local",
   });
@@ -97,7 +96,7 @@ export function usePoll(
 
 export function usePollsList(
   opts?: PollListOpts,
-): DataListQuery<PollDecrypted | Archived<PollDecrypted> | PollLocalRow> {
+): DataListQuery<PollDecrypted | Archived<PollDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -124,7 +123,7 @@ export function usePollsList(
       const sql = includeArchived
         ? "SELECT * FROM own_polls WHERE system_id = ?"
         : "SELECT * FROM own_polls WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToPollRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToPoll);
     },
     enabled: source === "local",
   });

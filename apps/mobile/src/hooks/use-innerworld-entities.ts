@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToInnerWorldEntityRow } from "../data/row-transforms.js";
+import { rowToInnerWorldEntity } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { InnerWorldEntityLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   InnerWorldEntityDecrypted,
@@ -43,9 +42,7 @@ interface InnerWorldEntityListOpts extends SystemIdOverride {
 export function useInnerWorldEntity(
   entityId: InnerWorldEntityId,
   opts?: SystemIdOverride,
-): DataQuery<
-  InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted> | InnerWorldEntityLocalRow
-> {
+): DataQuery<InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -66,7 +63,7 @@ export function useInnerWorldEntity(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM innerworld_entities WHERE id = ?", [entityId]);
       if (!row) throw new Error("InnerWorldEntity not found");
-      return rowToInnerWorldEntityRow(row);
+      return rowToInnerWorldEntity(row);
     },
     enabled: source === "local",
   });
@@ -84,9 +81,7 @@ export function useInnerWorldEntity(
 
 export function useInnerWorldEntitiesList(
   opts?: InnerWorldEntityListOpts,
-): DataListQuery<
-  InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted> | InnerWorldEntityLocalRow
-> {
+): DataListQuery<InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -121,12 +116,12 @@ export function useInnerWorldEntitiesList(
         const sql = includeArchived
           ? "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ?"
           : "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? AND archived = 0";
-        return localDb.queryAll(sql, [systemId, regionId]).map(rowToInnerWorldEntityRow);
+        return localDb.queryAll(sql, [systemId, regionId]).map(rowToInnerWorldEntity);
       }
       const sql = includeArchived
         ? "SELECT * FROM innerworld_entities WHERE system_id = ?"
         : "SELECT * FROM innerworld_entities WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldEntityRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToInnerWorldEntity);
     },
     enabled: source === "local",
   });

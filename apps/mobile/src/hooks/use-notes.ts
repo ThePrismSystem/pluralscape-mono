@@ -3,7 +3,7 @@ import { decryptNote, decryptNotePage } from "@pluralscape/data/transforms/note"
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToNoteRow } from "../data/row-transforms.js";
+import { rowToNote } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -16,7 +16,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { NoteLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   NoteDecrypted,
@@ -42,7 +41,7 @@ interface NoteListOpts extends SystemIdOverride {
 export function useNote(
   noteId: NoteId,
   opts?: SystemIdOverride,
-): DataQuery<NoteDecrypted | Archived<NoteDecrypted> | NoteLocalRow> {
+): DataQuery<NoteDecrypted | Archived<NoteDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -63,7 +62,7 @@ export function useNote(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM own_notes WHERE id = ?", [noteId]);
       if (!row) throw new Error("Note not found");
-      return rowToNoteRow(row);
+      return rowToNote(row);
     },
     enabled: source === "local",
   });
@@ -81,7 +80,7 @@ export function useNote(
 
 export function useNotesList(
   opts?: NoteListOpts,
-): DataListQuery<NoteDecrypted | Archived<NoteDecrypted> | NoteLocalRow> {
+): DataListQuery<NoteDecrypted | Archived<NoteDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -116,7 +115,7 @@ export function useNotesList(
       const sql = includeArchived
         ? "SELECT * FROM own_notes WHERE system_id = ?"
         : "SELECT * FROM own_notes WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToNoteRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToNote);
     },
     enabled: source === "local",
   });

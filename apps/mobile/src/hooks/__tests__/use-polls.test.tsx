@@ -570,7 +570,7 @@ function createMockLocalDb(rows: Record<string, unknown>[]) {
 const LOCAL_POLL_ROW: Record<string, unknown> = {
   id: "poll-local-1",
   system_id: TEST_SYSTEM_ID,
-  created_by_member_id: null,
+  created_by_member_id: "m-1",
   title: "Favorite color?",
   description: null,
   kind: "single-choice",

@@ -3,7 +3,7 @@ import { decryptCustomFront } from "@pluralscape/data/transforms/custom-front";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToCustomFrontRow } from "../data/row-transforms.js";
+import { rowToCustomFront } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -16,7 +16,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { CustomFrontLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   CustomFrontPage as CustomFrontRawPage,
@@ -37,7 +36,7 @@ interface CustomFrontListOpts extends SystemIdOverride {
 export function useCustomFront(
   customFrontId: CustomFrontId,
   opts?: SystemIdOverride,
-): DataQuery<CustomFront | Archived<CustomFront> | CustomFrontLocalRow> {
+): DataQuery<CustomFront | Archived<CustomFront>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -58,7 +57,7 @@ export function useCustomFront(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM custom_fronts WHERE id = ?", [customFrontId]);
       if (!row) throw new Error("Custom front not found");
-      return rowToCustomFrontRow(row);
+      return rowToCustomFront(row);
     },
     enabled: source === "local",
   });
@@ -76,7 +75,7 @@ export function useCustomFront(
 
 export function useCustomFrontsList(
   opts?: CustomFrontListOpts,
-): DataListQuery<CustomFront | Archived<CustomFront> | CustomFrontLocalRow> {
+): DataListQuery<CustomFront | Archived<CustomFront>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -104,7 +103,7 @@ export function useCustomFrontsList(
       if (localDb === null) throw new Error("localDb is null");
       return localDb
         .queryAll("SELECT * FROM custom_fronts WHERE system_id = ? AND archived = 0", [systemId])
-        .map(rowToCustomFrontRow);
+        .map(rowToCustomFront);
     },
     enabled: source === "local",
   });

@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToFrontingSessionRow, type FrontingSessionLocalRow } from "../data/row-transforms.js";
+import { rowToFrontingSession } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -55,7 +55,7 @@ interface FrontingSessionListOpts extends SystemIdOverride {
 export function useFrontingSession(
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
-): DataQuery<FrontingSession | Archived<FrontingSession> | FrontingSessionLocalRow> {
+): DataQuery<FrontingSession | Archived<FrontingSession>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -76,7 +76,7 @@ export function useFrontingSession(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM fronting_sessions WHERE id = ?", [sessionId]);
       if (!row) throw new Error("Fronting session not found");
-      return rowToFrontingSessionRow(row);
+      return rowToFrontingSession(row);
     },
     enabled: source === "local",
   });
@@ -94,7 +94,7 @@ export function useFrontingSession(
 
 export function useFrontingSessionsList(
   opts?: FrontingSessionListOpts,
-): DataListQuery<FrontingSession | Archived<FrontingSession> | FrontingSessionLocalRow> {
+): DataListQuery<FrontingSession | Archived<FrontingSession>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -131,7 +131,7 @@ export function useFrontingSessionsList(
       } else if (!includeArchived) {
         sql += " AND archived = 0";
       }
-      return localDb.queryAll(sql, [systemId]).map(rowToFrontingSessionRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToFrontingSession);
     },
     enabled: source === "local",
   });

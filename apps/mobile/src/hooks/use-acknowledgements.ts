@@ -6,7 +6,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToAcknowledgementRow } from "../data/row-transforms.js";
+import { rowToAcknowledgement } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -19,7 +19,6 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { AcknowledgementLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   AcknowledgementDecrypted,
@@ -43,9 +42,7 @@ interface AcknowledgementListOpts extends SystemIdOverride {
 export function useAcknowledgement(
   ackId: AcknowledgementId,
   opts?: SystemIdOverride,
-): DataQuery<
-  AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> | AcknowledgementLocalRow
-> {
+): DataQuery<AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -66,7 +63,7 @@ export function useAcknowledgement(
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM own_acknowledgements WHERE id = ?", [ackId]);
       if (!row) throw new Error("Acknowledgement not found");
-      return rowToAcknowledgementRow(row);
+      return rowToAcknowledgement(row);
     },
     enabled: source === "local",
   });
@@ -84,9 +81,7 @@ export function useAcknowledgement(
 
 export function useAcknowledgementsList(
   opts?: AcknowledgementListOpts,
-): DataListQuery<
-  AcknowledgementDecrypted | Archived<AcknowledgementDecrypted> | AcknowledgementLocalRow
-> {
+): DataListQuery<AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -119,7 +114,7 @@ export function useAcknowledgementsList(
       const sql = includeArchived
         ? "SELECT * FROM own_acknowledgements WHERE system_id = ?"
         : "SELECT * FROM own_acknowledgements WHERE system_id = ? AND archived = 0";
-      return localDb.queryAll(sql, [systemId]).map(rowToAcknowledgementRow);
+      return localDb.queryAll(sql, [systemId]).map(rowToAcknowledgement);
     },
     enabled: source === "local",
   });

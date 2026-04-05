@@ -337,7 +337,7 @@ const LOCAL_MEMBER_ROW: Record<string, unknown> = {
   description: "From SQLite",
   avatar_source: null,
   colors: "[]",
-  saturation_level: "highly-elaborated",
+  saturation_level: '{"kind":"known","level":"highly-elaborated"}',
   tags: "[]",
   suppress_friend_front_notification: 0,
   board_message_notification_on_front: 1,

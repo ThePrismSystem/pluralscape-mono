@@ -365,8 +365,10 @@ const LOCAL_MESSAGE_ROW: Record<string, unknown> = {
   mentions: "[]",
   reply_to_id: null,
   timestamp: 1_700_000_000_000,
-  edit_of: null,
+  edited_at: null,
   archived: 0,
+  created_at: 1_700_000_000_000,
+  updated_at: 1_700_000_000_000,
 };
 
 describe("useMessage (local source)", () => {

@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { useQuery } from "@tanstack/react-query";
 
-import { rowToStructureEntityMemberLinkRow } from "../data/row-transforms.js";
+import { rowToStructureEntityMemberLink } from "../data/row-transforms.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
@@ -12,8 +12,8 @@ import {
 } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { StructureEntityMemberLinkLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { SystemStructureEntityMemberLink } from "@pluralscape/types";
 
 type MemberLinkPage = RouterOutput["structure"]["memberLink"]["list"];
 type MemberLinkItem = MemberLinkPage["data"][number];
@@ -24,7 +24,7 @@ interface StructureMemberLinkListOpts extends SystemIdOverride {
 
 export function useStructureMemberLinksList(
   opts?: StructureMemberLinkListOpts,
-): DataListQuery<MemberLinkItem | StructureEntityMemberLinkLocalRow> {
+): DataListQuery<SystemStructureEntityMemberLink | MemberLinkItem> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const activeSystemId = useActiveSystemId();
@@ -39,7 +39,7 @@ export function useStructureMemberLinksList(
           "SELECT * FROM structure_entity_member_links WHERE system_id = ? AND archived = 0",
           [systemId],
         )
-        .map(rowToStructureEntityMemberLinkRow);
+        .map(rowToStructureEntityMemberLink);
     },
     enabled: source === "local",
   });

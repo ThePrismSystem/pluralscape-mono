@@ -6,14 +6,13 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { rowToSystemSettingsRow } from "../data/row-transforms.js";
+import { rowToSystemSettings } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import { type DataQuery, type TRPCMutation } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type { SystemSettingsLocalRow } from "../data/row-transforms.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   DecryptedNomenclature,
@@ -22,7 +21,7 @@ import type {
 } from "@pluralscape/data/transforms/system-settings";
 import type { NomenclatureSettings, SystemSettings } from "@pluralscape/types";
 
-export function useSystemSettings(): DataQuery<SystemSettings | SystemSettingsLocalRow> {
+export function useSystemSettings(): DataQuery<SystemSettings> {
   const source = useQuerySource();
   const localDb = useLocalDb();
   const systemId = useActiveSystemId();
@@ -42,7 +41,7 @@ export function useSystemSettings(): DataQuery<SystemSettings | SystemSettingsLo
       if (localDb === null) throw new Error("localDb is null");
       const row = localDb.queryOne("SELECT * FROM system_settings WHERE system_id = ?", [systemId]);
       if (!row) throw new Error("System settings not found");
-      return rowToSystemSettingsRow(row);
+      return rowToSystemSettings(row);
     },
     enabled: source === "local",
   });

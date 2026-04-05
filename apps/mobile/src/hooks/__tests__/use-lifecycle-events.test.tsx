@@ -396,7 +396,6 @@ describe("useLifecycleEvent (local source)", () => {
       id: "evt-local-1",
       eventType: "discovery",
       notes: "Some notes",
-      archived: false,
     });
   });
 
