@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-05T05:51:18Z
-updated_at: 2026-04-05T10:21:53Z
+updated_at: 2026-04-05T16:04:15Z
 parent: ps-vegi
 ---
 
@@ -25,3 +25,7 @@ sqlite-backed platform, bootstraps sync when the SSE connection reports "connect
 and tears down all resources on auth transitions or unmount. Errors are emitted
 through the event bus rather than console. The context now exposes `progress: null`
 for future extension.
+
+## Summary of Changes
+
+Wired all four sync engine adapters in SyncProvider: SqliteStorageAdapter, DocumentKeyResolver with BucketKeyCache, WsNetworkAdapter via WsManager, and ReplicationProfile (owner-full for native SQLite, owner-lite for web). Added bootstrap flow with progress tracking, cleanup on auth transitions, getAdapter() on WsManager, getWsUrl() config helper, and BootstrapGate component that gates app render during initial sync.
