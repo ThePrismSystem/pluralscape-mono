@@ -147,6 +147,24 @@ interface DomainMutationConfig<TData, TVars> {
 }
 
 // ---------------------------------------------------------------------------
+// Remote-only query config types
+// ---------------------------------------------------------------------------
+
+interface RemoteOnlyQueryConfig<TResult> {
+  readonly systemIdOverride?: SystemIdOverride;
+  /**
+   * Consumer-provided hook call. The factory resolves systemId and passes it
+   * to the consumer's tRPC hook.
+   */
+  readonly useRemote: (args: { systemId: SystemId; enabled: boolean }) => DataQuery<TResult>;
+}
+
+interface RemoteOnlyListConfig<TResult> {
+  readonly systemIdOverride?: SystemIdOverride;
+  readonly useRemote: (args: { systemId: SystemId; enabled: boolean }) => DataListQuery<TResult>;
+}
+
+// ---------------------------------------------------------------------------
 // Internal helper — not exported
 // ---------------------------------------------------------------------------
 
@@ -333,4 +351,40 @@ export function useDomainMutation<TData, TVars>(
       config.onInvalidate(utils, systemId, data, vars);
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// useRemoteOnlyQuery — single-entity remote-only get
+// ---------------------------------------------------------------------------
+
+/**
+ * Factory for single-entity queries that are always remote (no local SQLite).
+ * Resolves systemId from context or override, delegates to consumer tRPC hook.
+ * The tRPC hook manages its own React Query cache key from procedure path + input.
+ */
+export function useRemoteOnlyQuery<TResult>(
+  config: RemoteOnlyQueryConfig<TResult>,
+): DataQuery<TResult> {
+  const activeSystemId = useActiveSystemId();
+  const systemId = config.systemIdOverride?.systemId ?? activeSystemId;
+
+  return config.useRemote({ systemId, enabled: true });
+}
+
+// ---------------------------------------------------------------------------
+// useRemoteOnlyList — paginated remote-only list
+// ---------------------------------------------------------------------------
+
+/**
+ * Factory for paginated list queries that are always remote (no local SQLite).
+ * Resolves systemId from context or override, delegates to consumer tRPC hook.
+ * The tRPC hook manages its own React Query cache key from procedure path + input.
+ */
+export function useRemoteOnlyList<TResult>(
+  config: RemoteOnlyListConfig<TResult>,
+): DataListQuery<TResult> {
+  const activeSystemId = useActiveSystemId();
+  const systemId = config.systemIdOverride?.systemId ?? activeSystemId;
+
+  return config.useRemote({ systemId, enabled: true });
 }
