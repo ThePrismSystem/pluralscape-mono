@@ -139,8 +139,8 @@ describe("ConnectionManager", () => {
     }
     expect(manager.getSnapshot()).toBe("reconnecting");
 
-    // Advance past backoff delay to trigger reconnect (baseBackoffMs * 2^retryCount = 1000 * 2^1)
-    vi.advanceTimersByTime(2_000);
+    // Advance past max possible jittered backoff (baseBackoffMs * 2^retryCount * JITTER_MAX = 1000 * 2^1 * 1.25)
+    vi.advanceTimersByTime(3_000);
     expect(manager.getSnapshot()).toBe("connected");
 
     vi.useRealTimers();
@@ -170,7 +170,7 @@ describe("ConnectionManager", () => {
       return Promise.resolve();
     });
 
-    vi.advanceTimersByTime(2_000); // baseBackoffMs * 2^retryCount = 1000 * 2^1
+    vi.advanceTimersByTime(3_000); // past max possible jittered backoff (1000 * 2^1 * 1.25)
     expect(manager.getSnapshot()).toBe("connected");
 
     vi.useRealTimers();
@@ -258,8 +258,8 @@ describe("ConnectionManager", () => {
     }
     expect(manager.getLastError()).toBe(sseError);
 
-    // Reconnect succeeds after backoff
-    vi.advanceTimersByTime(2_000);
+    // Reconnect succeeds after backoff (past max possible jittered backoff: 1000 * 2^1 * 1.25)
+    vi.advanceTimersByTime(3_000);
     expect(manager.getSnapshot()).toBe("connected");
     expect(manager.getLastError()).toBeNull();
 
