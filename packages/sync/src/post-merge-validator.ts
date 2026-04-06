@@ -807,7 +807,7 @@ export function runAllValidations(
       correctionEnvelopes.push(tombstoneResult.envelope);
     }
     notifications.push(...tombstoneResult.notifications);
-  } catch (error) {
+  } catch (error: unknown) {
     errors.push({ validator: "enforceTombstones", error });
     onError?.("Tombstone enforcement failed", error);
   }
@@ -829,7 +829,7 @@ export function runAllValidations(
           summary: `Cycle broken: nulled parent of ${cycleBreak.entityId} (was ${cycleBreak.formerParentId})`,
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "detectHierarchyCycles", error });
       onError?.("Cycle detection failed", error);
     }
@@ -850,7 +850,7 @@ export function runAllValidations(
           summary: `Sort order normalized: ${patch.entityId} → ${String(patch.newSortOrder)}`,
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "normalizeSortOrder", error });
       onError?.("Sort order normalization failed", error);
     }
@@ -864,7 +864,7 @@ export function runAllValidations(
         correctionEnvelopes.push(timerResult.envelope);
       }
       notifications.push(...timerResult.notifications);
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "normalizeTimerConfig", error });
       onError?.("Timer config normalization failed", error);
     }
@@ -878,7 +878,7 @@ export function runAllValidations(
         correctionEnvelopes.push(webhookResult.envelope);
       }
       notifications.push(...webhookResult.notifications);
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "normalizeWebhookConfigs", error });
       onError?.("Webhook config validation failed", error);
     }
@@ -901,7 +901,7 @@ export function runAllValidations(
           summary: `Normalized ${String(checkInNormalizations)} check-in record(s)`,
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "normalizeCheckInRecord", error });
       onError?.("Check-in normalization failed", error);
     }
@@ -918,7 +918,7 @@ export function runAllValidations(
         correctionEnvelopes.push(frontingResult.envelope);
       }
       notifications.push(...frontingResult.notifications);
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "normalizeFrontingSessions", error });
       onError?.("Fronting session normalization failed", error);
     }
@@ -927,7 +927,7 @@ export function runAllValidations(
       const commentResult = normalizeFrontingCommentAuthors(session);
       frontingCommentAuthorIssues = commentResult.notifications.length;
       notifications.push(...commentResult.notifications);
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "normalizeFrontingCommentAuthors", error });
       onError?.("Fronting comment author validation failed", error);
     }
@@ -950,7 +950,7 @@ export function runAllValidations(
           summary: `Normalized ${String(friendConnectionNormalizations)} friend connection(s)`,
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       errors.push({ validator: "normalizeFriendConnection", error });
       onError?.("Friend connection normalization failed", error);
     }

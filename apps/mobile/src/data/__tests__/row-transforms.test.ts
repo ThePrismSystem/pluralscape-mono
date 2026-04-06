@@ -106,11 +106,12 @@ describe("parseJsonSafe", () => {
   it("includes table/field context in error", () => {
     try {
       parseJsonSafe("{broken", "members", "tags", "mem-1");
-    } catch (e) {
-      const rte = e as InstanceType<typeof RowTransformError>;
-      expect(rte.table).toBe("members");
-      expect(rte.field).toBe("tags");
-      expect(rte.rowId).toBe("mem-1");
+    } catch (e: unknown) {
+      expect(e).toBeInstanceOf(RowTransformError);
+      if (!(e instanceof RowTransformError)) throw e;
+      expect(e.table).toBe("members");
+      expect(e.field).toBe("tags");
+      expect(e.rowId).toBe("mem-1");
     }
   });
 
@@ -118,9 +119,11 @@ describe("parseJsonSafe", () => {
     const longJson = "{" + "x".repeat(200);
     try {
       parseJsonSafe(longJson, "t", "f");
-    } catch (e) {
-      expect((e as Error).message).toContain("…");
-      expect((e as Error).message.length).toBeLessThan(200);
+    } catch (e: unknown) {
+      expect(e).toBeInstanceOf(Error);
+      if (!(e instanceof Error)) throw e;
+      expect(e.message).toContain("…");
+      expect(e.message.length).toBeLessThan(200);
     }
   });
 });

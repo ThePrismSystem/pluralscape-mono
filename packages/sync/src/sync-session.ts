@@ -74,7 +74,7 @@ export class EncryptedSyncSession<T> {
         this.doc = newDoc;
         this.lastSyncedSeq_ = maxSeq;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.doc = savedDoc;
       this.lastSyncedSeq_ = savedSeq;
       throw error;

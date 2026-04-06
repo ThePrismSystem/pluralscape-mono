@@ -195,7 +195,7 @@ export function useBlobUpload(): BlobUploadState {
           setResult(confirmed);
           setStatus("success");
           void utils.blob.list.invalidate({ systemId });
-        } catch (err) {
+        } catch (err: unknown) {
           if (gen === genRef.current) {
             setError(err instanceof Error ? err : new Error(String(err)));
             setStatus("error");

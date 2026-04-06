@@ -17,7 +17,7 @@ export async function mapConcurrent<T, R>(
       try {
         const value = await fn(item);
         results[i] = { status: "fulfilled", value };
-      } catch (reason) {
+      } catch (reason: unknown) {
         results[i] = { status: "rejected", reason };
       }
     }

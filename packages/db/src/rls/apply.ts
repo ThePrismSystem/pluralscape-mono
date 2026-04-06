@@ -36,7 +36,7 @@ export async function applyAllRls(executor: RlsExecutor): Promise<void> {
       }
     }
     await executor.execute("COMMIT");
-  } catch (error) {
+  } catch (error: unknown) {
     await executor.execute("ROLLBACK");
     throw error;
   }

@@ -42,8 +42,10 @@ describe("sync typed errors", () => {
     it("can be caught by name", () => {
       try {
         throw new SyncProtocolError("INTERNAL_ERROR", "test");
-      } catch (err) {
-        expect((err as Error).name).toBe("SyncProtocolError");
+      } catch (err: unknown) {
+        expect(err).toBeInstanceOf(SyncProtocolError);
+        if (!(err instanceof SyncProtocolError)) throw err;
+        expect(err.name).toBe("SyncProtocolError");
       }
     });
   });

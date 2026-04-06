@@ -144,7 +144,7 @@ async function replayEntry(
       await config.offlineQueueAdapter.markSynced(entry.id, sequenced.seq);
 
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
       // Non-retriable errors (4xx except 408/429) fail immediately
       if (!isRetriableError(error)) {
         config.onError(
