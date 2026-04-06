@@ -361,3 +361,44 @@ describe("useDomainMutation", () => {
     expect(vars).toEqual({});
   });
 });
+
+// ── Table name validation ─────────────────────────────────────────────
+describe("table name validation", () => {
+  it("rejects table names with SQL injection characters", () => {
+    function useBadTable() {
+      return useOfflineFirstQuery<RawEntity, RawEntity>({
+        queryKey: ["bad"],
+        table: '"; DROP TABLE users --',
+        entityId: "x",
+        rowTransform: (row) => ({ name: String(row["name"]) }),
+        useRemote: ({ systemId, enabled }) =>
+          trpc.member.get.useQuery(
+            { systemId, memberId: "x" as never },
+            { enabled },
+          ) as DataQuery<RawEntity>,
+      });
+    }
+
+    expect(() => renderHookWithProviders(() => useBadTable())).toThrow("Invalid table name");
+  });
+
+  it("accepts valid table names with underscores", () => {
+    fixtures.set("member.get", { name: "OK" });
+
+    expect(() =>
+      renderHookWithProviders(() =>
+        useOfflineFirstQuery<RawEntity, RawEntity>({
+          queryKey: ["good"],
+          table: "valid_table_name",
+          entityId: "x",
+          rowTransform: (row) => ({ name: String(row["name"]) }),
+          useRemote: ({ systemId, enabled }) =>
+            trpc.member.get.useQuery(
+              { systemId, memberId: "x" as never },
+              { enabled },
+            ) as DataQuery<RawEntity>,
+        }),
+      ),
+    ).not.toThrow();
+  });
+});

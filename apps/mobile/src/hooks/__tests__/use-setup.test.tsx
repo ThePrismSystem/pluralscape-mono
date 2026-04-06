@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderHookWithProviders, TEST_SYSTEM_ID } from "./helpers/render-hook-with-providers.js";
 
+import type { SystemId } from "@pluralscape/types";
+
 // ── Fixture registry (accessible from vi.mock via hoisting) ──────────
 const { fixtures } = vi.hoisted(() => {
   const store = new Map<string, unknown>();
@@ -149,5 +151,15 @@ describe("useSetupComplete", () => {
         systemId: TEST_SYSTEM_ID,
       });
     });
+  });
+});
+
+describe("useSetupStatus (disabled)", () => {
+  it("does not fetch when systemId is empty", () => {
+    fixtures.set("setup.getStatus", { isComplete: false });
+    const { result } = renderHookWithProviders(() => useSetupStatus("" as SystemId));
+
+    expect(result.current.fetchStatus).toBe("idle");
+    expect(result.current.data).toBeUndefined();
   });
 });
