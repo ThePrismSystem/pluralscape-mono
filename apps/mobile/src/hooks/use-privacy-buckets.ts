@@ -118,3 +118,16 @@ export function useRestorePrivacyBucket(): TRPCMutation<
     },
   });
 }
+
+export function useDeletePrivacyBucket(): TRPCMutation<
+  RouterOutput["bucket"]["delete"],
+  RouterInput["bucket"]["delete"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.delete.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.get.invalidate({ systemId, bucketId: variables.bucketId });
+      void utils.bucket.list.invalidate({ systemId });
+    },
+  });
+}

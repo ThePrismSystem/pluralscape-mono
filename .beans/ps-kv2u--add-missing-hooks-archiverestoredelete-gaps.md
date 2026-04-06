@@ -1,11 +1,11 @@
 ---
 # ps-kv2u
 title: "Add missing hooks: archive/restore/delete gaps"
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-04-06T00:52:38Z
-updated_at: 2026-04-06T00:52:38Z
+updated_at: 2026-04-06T05:26:31Z
 parent: ps-y621
 ---
 

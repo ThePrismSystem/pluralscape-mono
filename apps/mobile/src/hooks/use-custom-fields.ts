@@ -107,6 +107,38 @@ export function useUpdateField(): TRPCMutation<
   });
 }
 
+export function useArchiveFieldDefinition(): TRPCMutation<
+  RouterOutput["field"]["definition"]["archive"],
+  RouterInput["field"]["definition"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.field.definition.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.field.definition.get.invalidate({
+        systemId,
+        fieldDefinitionId: variables.fieldDefinitionId,
+      });
+      void utils.field.definition.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreFieldDefinition(): TRPCMutation<
+  RouterOutput["field"]["definition"]["restore"],
+  RouterInput["field"]["definition"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.field.definition.restore.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.field.definition.get.invalidate({
+        systemId,
+        fieldDefinitionId: variables.fieldDefinitionId,
+      });
+      void utils.field.definition.list.invalidate({ systemId });
+    },
+  });
+}
+
 export function useDeleteField(): TRPCMutation<
   RouterOutput["field"]["definition"]["delete"],
   RouterInput["field"]["definition"]["delete"]

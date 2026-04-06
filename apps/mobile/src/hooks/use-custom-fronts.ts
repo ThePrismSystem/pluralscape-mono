@@ -96,6 +96,32 @@ export function useUpdateCustomFront(): TRPCMutation<
   });
 }
 
+export function useArchiveCustomFront(): TRPCMutation<
+  RouterOutput["customFront"]["archive"],
+  RouterInput["customFront"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.customFront.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.customFront.get.invalidate({ systemId, customFrontId: variables.customFrontId });
+      void utils.customFront.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreCustomFront(): TRPCMutation<
+  RouterOutput["customFront"]["restore"],
+  RouterInput["customFront"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.customFront.restore.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.customFront.get.invalidate({ systemId, customFrontId: variables.customFrontId });
+      void utils.customFront.list.invalidate({ systemId });
+    },
+  });
+}
+
 export function useDeleteCustomFront(): TRPCMutation<
   RouterOutput["customFront"]["delete"],
   RouterInput["customFront"]["delete"]

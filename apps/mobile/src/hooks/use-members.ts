@@ -120,6 +120,19 @@ export function useRestoreMember(): TRPCMutation<
   });
 }
 
+export function useDeleteMember(): TRPCMutation<
+  RouterOutput["member"]["delete"],
+  RouterInput["member"]["delete"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.member.delete.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.member.get.invalidate({ systemId, memberId: variables.memberId });
+      void utils.member.list.invalidate({ systemId });
+    },
+  });
+}
+
 export function useDuplicateMember(): TRPCMutation<
   RouterOutput["member"]["duplicate"],
   RouterInput["member"]["duplicate"]

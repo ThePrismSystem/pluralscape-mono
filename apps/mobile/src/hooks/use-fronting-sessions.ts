@@ -185,6 +185,45 @@ export function useUpdateSession(): TRPCMutation<
   });
 }
 
+export function useArchiveFrontingSession(): TRPCMutation<
+  RouterOutput["frontingSession"]["archive"],
+  RouterInput["frontingSession"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingSession.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
+      void utils.frontingSession.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreFrontingSession(): TRPCMutation<
+  RouterOutput["frontingSession"]["restore"],
+  RouterInput["frontingSession"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingSession.restore.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
+      void utils.frontingSession.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useDeleteFrontingSession(): TRPCMutation<
+  RouterOutput["frontingSession"]["delete"],
+  RouterInput["frontingSession"]["delete"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingSession.delete.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
+      void utils.frontingSession.list.invalidate({ systemId });
+    },
+  });
+}
+
 export function useActiveFronters(): TRPCQuery<ActiveFrontersResult> {
   const systemId = useActiveSystemId();
   const masterKey = useMasterKey();
