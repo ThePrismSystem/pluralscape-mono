@@ -1,3 +1,4 @@
+import { getSodium } from "@pluralscape/crypto";
 import { createAppQueryClient } from "@pluralscape/data";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
@@ -162,7 +163,11 @@ export default function RootLayout(): React.JSX.Element {
   queryClientRef.current ??= createAppQueryClient();
 
   const authMachineRef = useRef<AuthStateMachine | null>(null);
-  authMachineRef.current ??= new AuthStateMachine();
+  authMachineRef.current ??= new AuthStateMachine({
+    onKeyDiscard: (key) => {
+      getSodium().memzero(key);
+    },
+  });
 
   const connectionConfig = useMemo(
     () => ({
