@@ -106,6 +106,7 @@ describe("parseJsonSafe", () => {
   it("includes table/field context in error", () => {
     try {
       parseJsonSafe("{broken", "members", "tags", "mem-1");
+      expect.fail("Expected to throw");
     } catch (e: unknown) {
       expect(e).toBeInstanceOf(RowTransformError);
       if (!(e instanceof RowTransformError)) throw e;
@@ -119,6 +120,7 @@ describe("parseJsonSafe", () => {
     const longJson = "{" + "x".repeat(200);
     try {
       parseJsonSafe(longJson, "t", "f");
+      expect.fail("Expected to throw");
     } catch (e: unknown) {
       expect(e).toBeInstanceOf(Error);
       if (!(e instanceof Error)) throw e;
