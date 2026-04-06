@@ -57,6 +57,9 @@ vi.mock("@pluralscape/db/pg", () => ({
     channelId: "channel_id",
     archived: "archived",
   },
+  systems: {
+    id: "id",
+  },
 }));
 
 vi.mock("@pluralscape/types", async (importOriginal) => {
