@@ -8,7 +8,10 @@ import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 type AccountInfo = RouterOutput["account"]["get"];
 
 export function useAccount(): TRPCQuery<AccountInfo> {
-  return trpc.account.get.useQuery();
+  return trpc.account.get.useQuery(undefined, {
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
 }
 
 export function useChangeEmail(): TRPCMutation<

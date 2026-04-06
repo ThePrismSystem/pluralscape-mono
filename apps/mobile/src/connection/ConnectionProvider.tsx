@@ -24,15 +24,16 @@ export function ConnectionProvider({
   readonly children: ReactNode;
 }): React.JSX.Element {
   const auth = useAuth();
+  const authState = auth.snapshot.state;
+  const credentials = auth.snapshot.state === "unlocked" ? auth.snapshot.credentials : null;
 
   useEffect(() => {
-    if (auth.snapshot.state === "unlocked") {
-      const { sessionToken, systemId } = auth.snapshot.credentials;
-      manager.connect(sessionToken, systemId);
+    if (credentials) {
+      manager.connect(credentials.sessionToken, credentials.systemId);
     } else {
       manager.disconnect();
     }
-  }, [manager, auth.snapshot]);
+  }, [manager, authState, credentials]);
 
   const subscribe = useMemo(
     () => (listener: (state: ConnectionState) => void) => manager.subscribe(listener),
