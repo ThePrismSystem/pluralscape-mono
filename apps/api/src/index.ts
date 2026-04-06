@@ -169,6 +169,14 @@ async function start(): Promise<void> {
     initEmailAdapter(ResendEmailAdapter.create({ apiKey, fromAddress: env.EMAIL_FROM }));
     logger.info("Email adapter initialized", { provider: "resend" });
   } else if (emailProvider === "smtp") {
+    // Refuse to start with plaintext SMTP in production
+    if (env.NODE_ENV === "production" && !env.SMTP_SECURE) {
+      throw new Error(
+        "SMTP_SECURE must be enabled (SMTP_SECURE=1) when using SMTP in production. " +
+          "Refusing to start with plaintext email transport.",
+      );
+    }
+
     const { SmtpEmailAdapter } = await import("@pluralscape/email/smtp");
     const host = env.SMTP_HOST;
     const port = env.SMTP_PORT;
