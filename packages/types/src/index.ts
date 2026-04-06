@@ -31,6 +31,7 @@ export type {
   TimerId,
   JournalEntryId,
   WikiPageId,
+  InnerWorldCanvasId,
   InnerWorldEntityId,
   InnerWorldRegionId,
   AuditLogEntryId,

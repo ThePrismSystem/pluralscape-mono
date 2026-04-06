@@ -316,6 +316,18 @@ export const ENTITY_TABLE_REGISTRY: Record<SyncedEntityType, EntityTableDef> = {
     hotPath: false,
   },
 
+  "innerworld-canvas": {
+    tableName: "innerworld_canvas",
+    columns: [
+      systemId,
+      { name: "encrypted_data", sqlType: "BLOB", notNull: true },
+      createdAt,
+      updatedAt,
+    ],
+    ftsColumns: [],
+    hotPath: false,
+  },
+
   timer: {
     tableName: "timers",
     columns: [
