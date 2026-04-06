@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
 
+## Milestone 8: App Foundation & Data Layer
+
+### Added
+
+- App shell and navigation — Expo Router layout with `(auth)` and `(app)/(tabs)` route groups, tab bar, stack navigators, deep link configuration, auth-gated routing
+- Provider tree — layered initialization: PlatformProvider, I18nProvider, QueryClientProvider, TRPCProvider, RestClientProvider, AuthProvider, SystemProvider, CryptoProvider, BucketKeyProvider, DataLayerProvider, ConnectionProvider, SyncProvider
+- Auth flow — state machine (unauthenticated/unlocked/locked), TokenStore with platform-aware secure storage, SessionRefreshService with memoized token fetching, BiometricKeyStore
+- Local data layer — SQLite local database with WAL mode, materializer DDL, FriendIndexer, QueryInvalidator bridging sync events to React Query invalidation, full-text search (FTS5) indexes for system and friend data
+- Connection management — ConnectionManager with state machine (disconnected/connecting/connected/backoff/reconnecting), SSE client for real-time notifications, exponential backoff with configurable delays
+- Hook factory pattern — `useOfflineFirstQuery`, `useOfflineFirstInfiniteQuery`, `useDomainMutation` factories with dual-observer architecture (local SQLite + remote tRPC), automatic source branching based on connection state
+- Data package (`packages/data`) — framework-agnostic client data layer: REST query factory, CRDT sync bridge, per-entity row transforms and crypto transforms across all domains
+- Identity data hooks — members, groups/folders, custom fields, custom fronts, system settings, member duplication, archival
+- Fronting data hooks — fronting sessions (with co-fronting), analytics queries, timers, check-in records, fronting comments
+- Communication data hooks — chat channels/messages, board messages, private notes, polls with voting, acknowledgements with mandatory confirmation
+- Social data hooks — privacy buckets, friend network, device tokens, notification configs, external dashboard, friend search with ETag caching
+- Structure and journaling data hooks — inner world (regions, entities, canvas), journal entries/snapshots, structure entities/links/types
+- Utility data hooks — audit log, media upload/download, lifecycle events, API keys, search, account management (deletion, PIN, security)
+- Web platform adapter — platform detection (native vs web), storage drivers (ExpoSqlite for mobile, OPFS SQLite for modern web, IndexedDB fallback), crypto adapters (React Native libsodium vs WASM)
+- PluralKit import — client-side JSON parsing of PluralKit export format
+- i18n integration — locale detection, RTL layout support, nomenclature wiring via i18n provider
+- CRDT sync coverage — all entity types mapped to sync document strategies with materializer registration
+- Mobile developer guide — architecture, hook patterns, platform abstraction, and contributor walkthrough
+- Architecture overview — system topology, package dependencies, data flow, encryption boundaries, security model
+
+### Fixed
+
+- M8 audit remediation (P1 + P2) — hook factory improvements, security fixes (plaintext zeroing on key discard, crypto key handling, error message sanitization), observer overhead documentation, missing hooks for edge-case entities, ConnectionProvider snapshot identity stability, row transform null handling
+
 ## Milestone 7: Data Portability
 
 ### Added

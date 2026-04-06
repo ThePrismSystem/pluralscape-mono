@@ -104,6 +104,28 @@ jobs:
           path: coverage/
           retention-days: 14
 
+      - name: Extract coverage data
+        if: github.ref == 'refs/heads/main'
+        id: coverage-data
+        run: |
+          PCT=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          echo "pct=$PCT" >> "$GITHUB_OUTPUT"
+          echo "message=${PCT}%" >> "$GITHUB_OUTPUT"
+
+      - name: Update coverage badge
+        if: github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483 # v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: b29472c169f6d431acf2b24a60a33225
+          filename: coverage.json
+          label: coverage
+          message: ${{ steps.coverage-data.outputs.message }}
+          valColorRange: ${{ steps.coverage-data.outputs.pct }}
+          minColorRange: 50
+          maxColorRange: 85
+          invertColorRange: false
+
   migrations:
     name: Migration Freshness
     needs: [lint, typecheck]
@@ -226,10 +248,31 @@ jobs:
       - name: Run E2E tests
         env:
           E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
-        run: pnpm test:e2e
+        run: pnpm test:e2e | tee e2e-output.txt
 
       - name: Run slow E2E tests
         env:
           E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
           E2E_WORKERS: "1"
-        run: pnpm test:e2e:slow
+        run: pnpm test:e2e:slow | tee e2e-slow-output.txt
+
+      - name: Extract E2E test count
+        if: github.ref == 'refs/heads/main'
+        id: e2e-data
+        run: |
+          E2E_COUNT=$(grep -oP '\d+(?= passed)' e2e-output.txt | tail -1)
+          SLOW_COUNT=$(grep -oP '\d+(?= passed)' e2e-slow-output.txt | tail -1)
+          TOTAL=$(( ${E2E_COUNT:-0} + ${SLOW_COUNT:-0} ))
+          echo "count=$TOTAL" >> "$GITHUB_OUTPUT"
+          echo "message=${TOTAL} passed" >> "$GITHUB_OUTPUT"
+
+      - name: Update E2E tests badge
+        if: github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483 # v1.7.0
+        with:
+          auth: ${{ secrets.GIST_TOKEN }}
+          gistID: b29472c169f6d431acf2b24a60a33225
+          filename: e2e-tests.json
+          label: E2E tests
+          message: ${{ steps.e2e-data.outputs.message }}
+          color: brightgreen

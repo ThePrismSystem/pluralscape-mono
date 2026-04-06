@@ -4,15 +4,23 @@
 
 <p align="center">A community-driven, open-source plurality management platform.</p>
 
+<p align="center">
+  <a href="https://github.com/ThePrismSystem/pluralscape-mono/actions/workflows/ci.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ThePrismSystem/b29472c169f6d431acf2b24a60a33225/raw/coverage.json" alt="Coverage"></a>
+  <a href="https://github.com/ThePrismSystem/pluralscape-mono/actions/workflows/ci.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ThePrismSystem/b29472c169f6d431acf2b24a60a33225/raw/e2e-tests.json" alt="E2E Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License"></a>
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun" alt="Bun">
+</p>
+
 Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity tracking, fronting logs, internal communication, and privacy-controlled external sharing across web, iOS, and Android.
 
 ## Status
 
-**Active development — Milestones 0-7 complete, Milestone 8 (App Foundation & Data Layer) next.**
+**Active development — Milestones 0-8 complete, Milestone 9 (UI/UX Design) next.**
 
-Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), 3 (Sync and Real-Time), 4 (Fronting Engine), 5 (Communication), 6 (Privacy and Social), and 7 (Data Portability) are complete. The full REST API is documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)) covering 304 operations across 31 route domains. The internal tRPC layer provides end-to-end type-safe access to the same service layer for the Expo mobile client (see [tRPC guide](docs/trpc-guide.md) and [ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
+Milestones 0-7 built the full backend: data layer, API, sync, fronting, communication, privacy, and data portability. The REST API covers 304 operations across 31 route domains ([OpenAPI spec](docs/openapi/openapi.yaml)), with a type-safe tRPC layer mirroring the full surface for the Expo mobile client ([ADR 032](docs/adr/032-trpc-parity-enforcement.md)).
 
-Milestone 7 delivered: email notifications (Resend + SMTP adapters with security notification templates), server-side encrypted email storage (ADR 029), webhook enhancements (secret rotation, test/ping endpoint, payload encryption), webhook event dispatch for identity and friend events, API feature completeness (closing audit gaps across account management, friends, API keys, system operations, structure entities, communication, and infrastructure), tRPC parity (35 routers mirroring every REST endpoint with CI-enforced consistency), API consumer guide, multiple audit rounds, and comprehensive E2E test expansion. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
+Milestone 8 delivered the complete client foundation: Expo app shell with auth-gated routing, a 14-provider initialization tree (platform detection, auth state machine, encryption, sync), offline-first local data layer (SQLite + FTS5 search), 50+ domain data hooks via factory pattern (`useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery`), web platform adapter (OPFS/IndexedDB), CRDT sync coverage for all entity types, and PluralKit import. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, the [architecture overview](docs/architecture.md) for system design, and the [mobile developer guide](docs/guides/mobile-developer-guide.md) for client internals.
 
 ## Test Suite
 
@@ -26,16 +34,7 @@ pnpm test:coverage     # Tests with coverage report
 pnpm test:e2e          # E2E tests (Playwright)
 ```
 
-### Current Coverage
-
-| Metric     | Coverage |
-| ---------- | -------- |
-| Statements | 95.54%   |
-| Branches   | 87.37%   |
-| Functions  | 96.22%   |
-| Lines      | 96.06%   |
-
-E2E suite: 314 tests across 69 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
+E2E suite covers auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 
@@ -56,6 +55,7 @@ apps/
 packages/
   types/           Shared domain types, Zod validators, branded IDs, API constants
   crypto/          E2E encryption — libsodium (WASM + React Native adapters)
+  data/            Client data layer — query factories, CRDT bridge, row/crypto transforms
   db/              Drizzle ORM schemas — PostgreSQL + SQLite dual-dialect
   sync/            CRDT sync protocol — Automerge
   api-client/      tRPC + TanStack Query client bindings
@@ -79,7 +79,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (33 accepted)
+  adr/             Architecture Decision Records (32 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -99,7 +99,7 @@ docs/
 | Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md) |
 | Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)    |
 
-All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [33 ADRs](docs/adr/).
+All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [32 ADRs](docs/adr/).
 
 ## Key Libraries
 
@@ -198,7 +198,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 33 accepted ADRs cover the full stack from licensing through email provider selection. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 32 accepted ADRs cover the full stack from licensing through email provider selection. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 
