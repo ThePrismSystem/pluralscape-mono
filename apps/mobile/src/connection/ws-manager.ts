@@ -168,6 +168,8 @@ export function createWsManager(config: WsManagerConfig): WsManager {
         adapter = null;
       }
 
+      lastToken = null;
+      lastSystemId = null;
       setStatus("disconnected");
     },
 
