@@ -1,6 +1,6 @@
 ---
 # ps-pg06
-title: 'Fix CI: add json-summary reporter and bump dynamic-badges to v1.8.0'
+title: "Fix CI: add json-summary reporter and bump dynamic-badges to v1.8.0"
 status: completed
 type: bug
 priority: normal
