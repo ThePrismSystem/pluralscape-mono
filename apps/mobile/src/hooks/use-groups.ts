@@ -176,3 +176,29 @@ export function useReorderGroups(): TRPCMutation<
     },
   });
 }
+
+export function useMoveGroup(): TRPCMutation<
+  RouterOutput["group"]["move"],
+  RouterInput["group"]["move"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.group.move.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.group.get.invalidate({ systemId, groupId: variables.groupId });
+      void utils.group.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useCopyGroup(): TRPCMutation<
+  RouterOutput["group"]["copy"],
+  RouterInput["group"]["copy"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.group.copy.useMutation(mutOpts),
+    onInvalidate: (utils, systemId) => {
+      void utils.group.list.invalidate({ systemId });
+      void utils.member.list.invalidate({ systemId });
+    },
+  });
+}
