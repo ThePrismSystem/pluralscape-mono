@@ -134,7 +134,7 @@ function parseEnvelope(
     );
   }
 
-  const keyBytes = plaintext.subarray(offset);
+  const keyBytes = plaintext.slice(offset);
   assertAeadKey(keyBytes);
   return keyBytes;
 }
