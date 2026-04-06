@@ -1,10 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import {
-  useOfflineFirstQuery,
-  useOfflineFirstInfiniteQuery,
-  useDomainMutation,
-} from "./factories.js";
+import { useRemoteOnlyQuery, useRemoteOnlyList, useDomainMutation } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
   type DataListQuery,
@@ -45,18 +41,6 @@ interface WebhookDeliveryListOpts extends SystemIdOverride {
 }
 
 // ---------------------------------------------------------------------------
-// Row transforms — remote-only stubs
-// ---------------------------------------------------------------------------
-
-function rowToWebhookConfigNever(): never {
-  throw new Error("rowToWebhookConfig: webhook configs are remote-only");
-}
-
-function rowToWebhookDeliveryNever(): never {
-  throw new Error("rowToWebhookDelivery: webhook deliveries are remote-only");
-}
-
-// ---------------------------------------------------------------------------
 // Webhook config queries
 // ---------------------------------------------------------------------------
 
@@ -64,11 +48,7 @@ export function useWebhookConfig(
   webhookId: WebhookId,
   opts?: SystemIdOverride,
 ): DataQuery<WebhookConfigGetResult> {
-  return useOfflineFirstQuery<WebhookConfigGetResult, WebhookConfigGetResult>({
-    queryKey: ["webhook-configs", webhookId],
-    table: "webhook_configs",
-    entityId: webhookId,
-    rowTransform: rowToWebhookConfigNever,
+  return useRemoteOnlyQuery<WebhookConfigGetResult>({
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled }) =>
       trpc.webhookConfig.get.useQuery(
@@ -81,11 +61,7 @@ export function useWebhookConfig(
 export function useWebhookConfigsList(
   opts?: WebhookConfigListOpts,
 ): DataListQuery<WebhookConfigListItem> {
-  return useOfflineFirstInfiniteQuery<WebhookConfigListItem, WebhookConfigListItem>({
-    queryKey: ["webhook-configs", "list", opts?.systemId, opts?.includeArchived ?? false],
-    table: "webhook_configs",
-    rowTransform: rowToWebhookConfigNever,
-    includeArchived: opts?.includeArchived,
+  return useRemoteOnlyList<WebhookConfigListItem>({
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled }) =>
       trpc.webhookConfig.list.useInfiniteQuery(
@@ -186,12 +162,10 @@ export function useTestWebhook(): TRPCMutation<
   RouterOutput["webhookConfig"]["test"],
   RouterInput["webhookConfig"]["test"]
 > {
-  return useDomainMutation({
-    useMutation: (mutOpts) => trpc.webhookConfig.test.useMutation(mutOpts),
-    onInvalidate: () => {
-      // Test delivery is fire-and-forget — no cache invalidation needed
-    },
-  });
+  return trpc.webhookConfig.test.useMutation() as TRPCMutation<
+    RouterOutput["webhookConfig"]["test"],
+    RouterInput["webhookConfig"]["test"]
+  >;
 }
 
 // ---------------------------------------------------------------------------
@@ -202,11 +176,7 @@ export function useWebhookDelivery(
   deliveryId: WebhookDeliveryId,
   opts?: SystemIdOverride,
 ): DataQuery<WebhookDeliveryGetResult> {
-  return useOfflineFirstQuery<WebhookDeliveryGetResult, WebhookDeliveryGetResult>({
-    queryKey: ["webhook-deliveries", deliveryId],
-    table: "webhook_deliveries",
-    entityId: deliveryId,
-    rowTransform: rowToWebhookDeliveryNever,
+  return useRemoteOnlyQuery<WebhookDeliveryGetResult>({
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled }) =>
       trpc.webhookDelivery.get.useQuery(
@@ -219,17 +189,7 @@ export function useWebhookDelivery(
 export function useWebhookDeliveriesList(
   opts?: WebhookDeliveryListOpts,
 ): DataListQuery<WebhookDeliveryListItem> {
-  return useOfflineFirstInfiniteQuery<WebhookDeliveryListItem, WebhookDeliveryListItem>({
-    queryKey: [
-      "webhook-deliveries",
-      "list",
-      opts?.systemId,
-      opts?.webhookId,
-      opts?.status,
-      opts?.eventType,
-    ],
-    table: "webhook_deliveries",
-    rowTransform: rowToWebhookDeliveryNever,
+  return useRemoteOnlyList<WebhookDeliveryListItem>({
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled }) =>
       trpc.webhookDelivery.list.useInfiniteQuery(
