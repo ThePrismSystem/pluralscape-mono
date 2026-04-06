@@ -64,7 +64,9 @@ export function TRPCProvider({
 
     return trpc.createClient({
       links: [
-        loggerLink({ enabled: () => __DEV__ }),
+        loggerLink({
+          enabled: (opts) => __DEV__ && opts.direction === "down" && "error" in opts.result,
+        }),
         splitLink({
           condition: (op) => op.type === "subscription",
           true: httpSubscriptionLink({
