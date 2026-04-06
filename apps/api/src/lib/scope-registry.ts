@@ -44,7 +44,8 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["DELETE /systems/:systemId/members/:memberId/photos/:photoId", "delete:members"],
   ["POST /systems/:systemId/members/:memberId/photos/:photoId/archive", "write:members"],
   ["POST /systems/:systemId/members/:memberId/photos/:photoId/restore", "write:members"],
-  ["POST /systems/:systemId/members/:memberId/photos/reorder", "write:members"],
+  ["PUT /systems/:systemId/members/:memberId/photos/reorder", "write:members"],
+  ["GET /systems/:systemId/members/:memberId/memberships", "read:members"],
 
   // Groups
   ["GET /systems/:systemId/groups", "read:groups"],
@@ -80,7 +81,7 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["POST /systems/:systemId/fronting-sessions/:sessionId/archive", "write:fronting"],
   ["POST /systems/:systemId/fronting-sessions/:sessionId/restore", "write:fronting"],
   ["POST /systems/:systemId/fronting-sessions/:sessionId/end", "write:fronting"],
-  ["GET /systems/:systemId/fronting-sessions/active", "read:fronting"],
+  ["GET /systems/:systemId/fronting/active", "read:fronting"],
 
   // Fronting Comments
   ["GET /systems/:systemId/fronting-sessions/:sessionId/comments", "read:fronting"],
@@ -127,15 +128,18 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["POST /systems/:systemId/buckets/:bucketId/archive", "write:buckets"],
   ["POST /systems/:systemId/buckets/:bucketId/restore", "write:buckets"],
   ["GET /systems/:systemId/buckets/:bucketId/friends", "read:buckets"],
-  ["POST /systems/:systemId/buckets/:bucketId/friends/:friendId", "write:buckets"],
-  ["DELETE /systems/:systemId/buckets/:bucketId/friends/:friendId", "delete:buckets"],
+  ["POST /systems/:systemId/buckets/:bucketId/friends", "write:buckets"],
+  ["DELETE /systems/:systemId/buckets/:bucketId/friends/:connectionId", "delete:buckets"],
   ["GET /systems/:systemId/buckets/:bucketId/tags", "read:buckets"],
   ["POST /systems/:systemId/buckets/:bucketId/tags", "write:buckets"],
-  ["DELETE /systems/:systemId/buckets/:bucketId/tags/:tagId", "delete:buckets"],
+  ["DELETE /systems/:systemId/buckets/:bucketId/tags/:entityType/:entityId", "delete:buckets"],
   ["GET /systems/:systemId/buckets/:bucketId/export", "read:buckets"],
-  ["GET /systems/:systemId/buckets/:bucketId/export/page", "read:buckets"],
+  ["GET /systems/:systemId/buckets/:bucketId/export/manifest", "read:buckets"],
   ["POST /systems/:systemId/buckets/:bucketId/rotations", "write:buckets"],
-  ["GET /systems/:systemId/buckets/:bucketId/rotations/progress", "read:buckets"],
+  ["GET /systems/:systemId/buckets/:bucketId/rotations/:rotationId", "read:buckets"],
+  ["POST /systems/:systemId/buckets/:bucketId/rotations/:rotationId/claim", "write:buckets"],
+  ["POST /systems/:systemId/buckets/:bucketId/rotations/:rotationId/complete", "write:buckets"],
+  ["POST /systems/:systemId/buckets/:bucketId/rotations/:rotationId/retry", "write:buckets"],
 
   // Channels
   ["GET /systems/:systemId/channels", "read:channels"],
@@ -187,6 +191,9 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["POST /systems/:systemId/polls/:pollId/close", "write:polls"],
   ["GET /systems/:systemId/polls/:pollId/results", "read:polls"],
   ["GET /systems/:systemId/polls/:pollId/votes", "read:polls"],
+  ["POST /systems/:systemId/polls/:pollId/votes", "write:polls"],
+  ["PUT /systems/:systemId/polls/:pollId/votes/:voteId", "write:polls"],
+  ["DELETE /systems/:systemId/polls/:pollId/votes/:voteId", "delete:polls"],
 
   // Relationships
   ["GET /systems/:systemId/relationships", "read:relationships"],
@@ -240,7 +247,6 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["GET /systems/:systemId/check-in-records", "read:check-ins"],
   ["POST /systems/:systemId/check-in-records", "write:check-ins"],
   ["GET /systems/:systemId/check-in-records/:recordId", "read:check-ins"],
-  ["PUT /systems/:systemId/check-in-records/:recordId", "write:check-ins"],
   ["DELETE /systems/:systemId/check-in-records/:recordId", "delete:check-ins"],
   ["POST /systems/:systemId/check-in-records/:recordId/archive", "write:check-ins"],
   ["POST /systems/:systemId/check-in-records/:recordId/restore", "write:check-ins"],
@@ -276,7 +282,6 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["GET /systems/:systemId/acknowledgements", "read:acknowledgements"],
   ["POST /systems/:systemId/acknowledgements", "write:acknowledgements"],
   ["GET /systems/:systemId/acknowledgements/:acknowledgementId", "read:acknowledgements"],
-  ["PUT /systems/:systemId/acknowledgements/:acknowledgementId", "write:acknowledgements"],
   ["DELETE /systems/:systemId/acknowledgements/:acknowledgementId", "delete:acknowledgements"],
   ["POST /systems/:systemId/acknowledgements/:acknowledgementId/archive", "write:acknowledgements"],
   ["POST /systems/:systemId/acknowledgements/:acknowledgementId/restore", "write:acknowledgements"],
@@ -285,12 +290,12 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   // API Keys
   ["GET /systems/:systemId/api-keys", "full"],
   ["POST /systems/:systemId/api-keys", "full"],
-  ["GET /systems/:systemId/api-keys/:keyId", "full"],
-  ["DELETE /systems/:systemId/api-keys/:keyId", "full"],
+  ["GET /systems/:systemId/api-keys/:apiKeyId", "full"],
+  ["POST /systems/:systemId/api-keys/:apiKeyId/revoke", "full"],
 
   // Settings
   ["GET /systems/:systemId/settings", "read:system"],
-  ["PATCH /systems/:systemId/settings", "write:system"],
+  ["PUT /systems/:systemId/settings", "write:system"],
   ["POST /systems/:systemId/settings/pin", "write:system"],
   ["DELETE /systems/:systemId/settings/pin", "write:system"],
   ["POST /systems/:systemId/settings/pin/verify", "read:system"],
@@ -331,20 +336,20 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["GET /systems/:systemId/structure/entities/:entityId/hierarchy", "read:structure"],
 
   // Structure Links
-  ["GET /systems/:systemId/structure/links", "read:structure"],
-  ["POST /systems/:systemId/structure/links", "write:structure"],
-  ["PUT /systems/:systemId/structure/links/:linkId", "write:structure"],
-  ["DELETE /systems/:systemId/structure/links/:linkId", "delete:structure"],
+  ["GET /systems/:systemId/structure/entity-links", "read:structure"],
+  ["POST /systems/:systemId/structure/entity-links", "write:structure"],
+  ["PUT /systems/:systemId/structure/entity-links/:linkId", "write:structure"],
+  ["DELETE /systems/:systemId/structure/entity-links/:linkId", "delete:structure"],
 
   // Structure Member Links
-  ["GET /systems/:systemId/structure/member-links", "read:structure"],
-  ["POST /systems/:systemId/structure/member-links", "write:structure"],
-  ["DELETE /systems/:systemId/structure/member-links/:linkId", "delete:structure"],
+  ["GET /systems/:systemId/structure/entity-member-links", "read:structure"],
+  ["POST /systems/:systemId/structure/entity-member-links", "write:structure"],
+  ["DELETE /systems/:systemId/structure/entity-member-links/:linkId", "delete:structure"],
 
   // Structure Associations
-  ["GET /systems/:systemId/structure/associations", "read:structure"],
-  ["POST /systems/:systemId/structure/associations", "write:structure"],
-  ["DELETE /systems/:systemId/structure/associations/:associationId", "delete:structure"],
+  ["GET /systems/:systemId/structure/entity-associations", "read:structure"],
+  ["POST /systems/:systemId/structure/entity-associations", "write:structure"],
+  ["DELETE /systems/:systemId/structure/entity-associations/:associationId", "delete:structure"],
 
   // Device Tokens
   ["GET /systems/:systemId/device-tokens", "read:notifications"],
@@ -355,8 +360,7 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
 
   // Notification Configs
   ["GET /systems/:systemId/notification-configs", "read:notifications"],
-  ["GET /systems/:systemId/notification-configs/:configId", "read:notifications"],
-  ["PATCH /systems/:systemId/notification-configs/:configId", "write:notifications"],
+  ["PATCH /systems/:systemId/notification-configs/:eventType", "write:notifications"],
 
   // Notification Stream
   ["GET /notifications/stream", "read:notifications"],

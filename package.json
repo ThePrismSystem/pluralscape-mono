@@ -27,6 +27,7 @@
     "openapi:check": "redocly bundle docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml -o docs/openapi.yaml && tsx scripts/reconcile-openapi.ts",
     "commitlint": "commitlint --from=origin/main --to=HEAD",
     "knip": "knip --exclude exports --exclude types",
+    "scope:check": "tsx scripts/check-scope-coverage.ts",
     "trpc:parity": "pnpm --filter @pluralscape/api trpc:parity",
     "prepare": "husky"
   },

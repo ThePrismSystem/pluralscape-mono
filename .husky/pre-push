@@ -3,6 +3,7 @@ set -e
 pnpm typecheck
 pnpm lint
 pnpm test:unit
+pnpm scope:check
 
 # Migration freshness check (same as CI)
 echo "Checking migration freshness..."
