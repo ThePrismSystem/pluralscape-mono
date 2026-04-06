@@ -7,6 +7,7 @@ import {
   useOfflineFirstQuery,
   useOfflineFirstInfiniteQuery,
   useDomainMutation,
+  useRemoteOnlyQuery,
 } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
@@ -201,6 +202,32 @@ export function useUpdateFriendVisibility(): TRPCMutation<
     onInvalidate: (utils, _systemId, _data, variables) => {
       void utils.friend.get.invalidate({ connectionId: variables.connectionId });
       void utils.friend.list.invalidate();
+    },
+  });
+}
+
+export function useFriendNotificationPrefs(
+  connectionId: FriendConnectionId,
+  opts?: { enabled?: boolean },
+): DataQuery<RouterOutput["friend"]["getNotifications"]> {
+  return useRemoteOnlyQuery<RouterOutput["friend"]["getNotifications"]>({
+    useRemote: ({ enabled }) =>
+      trpc.friend.getNotifications.useQuery(
+        { connectionId },
+        { enabled: enabled && (opts?.enabled ?? true) },
+      ) as DataQuery<RouterOutput["friend"]["getNotifications"]>,
+  });
+}
+
+export function useUpdateFriendNotificationPrefs(): TRPCMutation<
+  RouterOutput["friend"]["updateNotifications"],
+  RouterInput["friend"]["updateNotifications"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.friend.updateNotifications.useMutation(mutOpts),
+    onInvalidate: (utils, _systemId, _data, variables) => {
+      void utils.friend.getNotifications.invalidate({ connectionId: variables.connectionId });
+      void utils.friend.get.invalidate({ connectionId: variables.connectionId });
     },
   });
 }
