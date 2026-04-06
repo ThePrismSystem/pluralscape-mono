@@ -6,6 +6,7 @@ import {
   useOfflineFirstQuery,
   useOfflineFirstInfiniteQuery,
   useDomainMutation,
+  useRemoteOnlyQuery,
 } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
@@ -129,5 +130,189 @@ export function useDeletePrivacyBucket(): TRPCMutation<
       void utils.bucket.get.invalidate({ systemId, bucketId: variables.bucketId });
       void utils.bucket.list.invalidate({ systemId });
     },
+  });
+}
+
+// ── Content tagging ──────────────────────────────────────────────────────────
+
+export function useTagBucketContent(): TRPCMutation<
+  RouterOutput["bucket"]["tagContent"],
+  RouterInput["bucket"]["tagContent"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.tagContent.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.listTags.invalidate({ systemId, bucketId: variables.bucketId });
+      void utils.bucket.get.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+export function useUntagBucketContent(): TRPCMutation<
+  RouterOutput["bucket"]["untagContent"],
+  RouterInput["bucket"]["untagContent"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.untagContent.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.listTags.invalidate({ systemId, bucketId: variables.bucketId });
+      void utils.bucket.get.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+export function useListBucketTags(
+  bucketId: BucketId,
+  opts?: SystemIdOverride,
+): DataQuery<RouterOutput["bucket"]["listTags"]> {
+  return useRemoteOnlyQuery({
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled }) =>
+      trpc.bucket.listTags.useQuery({ systemId, bucketId }, { enabled }) as DataQuery<
+        RouterOutput["bucket"]["listTags"]
+      >,
+  });
+}
+
+// ── Key rotation ─────────────────────────────────────────────────────────────
+
+export function useInitiateBucketRotation(): TRPCMutation<
+  RouterOutput["bucket"]["initiateRotation"],
+  RouterInput["bucket"]["initiateRotation"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.initiateRotation.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.get.invalidate({ systemId, bucketId: variables.bucketId });
+      void utils.bucket.rotationProgress.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+export function useBucketRotationProgress(
+  bucketId: BucketId,
+  rotationId: string,
+  opts?: SystemIdOverride,
+): DataQuery<RouterOutput["bucket"]["rotationProgress"]> {
+  return useRemoteOnlyQuery({
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled }) =>
+      trpc.bucket.rotationProgress.useQuery(
+        { systemId, bucketId, rotationId },
+        { enabled },
+      ) as DataQuery<RouterOutput["bucket"]["rotationProgress"]>,
+  });
+}
+
+export function useClaimRotationChunk(): TRPCMutation<
+  RouterOutput["bucket"]["claimRotationChunk"],
+  RouterInput["bucket"]["claimRotationChunk"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.claimRotationChunk.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.rotationProgress.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+export function useCompleteRotationChunk(): TRPCMutation<
+  RouterOutput["bucket"]["completeRotationChunk"],
+  RouterInput["bucket"]["completeRotationChunk"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.completeRotationChunk.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.rotationProgress.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+export function useRetryBucketRotation(): TRPCMutation<
+  RouterOutput["bucket"]["retryRotation"],
+  RouterInput["bucket"]["retryRotation"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.retryRotation.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.rotationProgress.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+
+export function useBucketExportManifest(
+  bucketId: BucketId,
+  opts?: SystemIdOverride,
+): DataQuery<RouterOutput["bucket"]["exportManifest"]> {
+  return useRemoteOnlyQuery({
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled }) =>
+      trpc.bucket.exportManifest.useQuery({ systemId, bucketId }, { enabled }) as DataQuery<
+        RouterOutput["bucket"]["exportManifest"]
+      >,
+  });
+}
+
+export function useBucketExportPage(
+  bucketId: BucketId,
+  pageParams: Omit<RouterInput["bucket"]["exportPage"], "systemId" | "bucketId">,
+  opts?: SystemIdOverride,
+): DataQuery<RouterOutput["bucket"]["exportPage"]> {
+  return useRemoteOnlyQuery({
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled }) =>
+      trpc.bucket.exportPage.useQuery(
+        { systemId, bucketId, ...pageParams },
+        { enabled },
+      ) as DataQuery<RouterOutput["bucket"]["exportPage"]>,
+  });
+}
+
+// ── Friend assignment ────────────────────────────────────────────────────────
+
+export function useAssignBucketFriend(): TRPCMutation<
+  RouterOutput["bucket"]["assignFriend"],
+  RouterInput["bucket"]["assignFriend"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.assignFriend.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.listFriendAssignments.invalidate({
+        systemId,
+        bucketId: variables.bucketId,
+      });
+      void utils.bucket.get.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+export function useUnassignBucketFriend(): TRPCMutation<
+  RouterOutput["bucket"]["unassignFriend"],
+  RouterInput["bucket"]["unassignFriend"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.bucket.unassignFriend.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.bucket.listFriendAssignments.invalidate({
+        systemId,
+        bucketId: variables.bucketId,
+      });
+      void utils.bucket.get.invalidate({ systemId, bucketId: variables.bucketId });
+    },
+  });
+}
+
+export function useListBucketFriendAssignments(
+  bucketId: BucketId,
+  opts?: SystemIdOverride,
+): DataQuery<RouterOutput["bucket"]["listFriendAssignments"]> {
+  return useRemoteOnlyQuery({
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled }) =>
+      trpc.bucket.listFriendAssignments.useQuery({ systemId, bucketId }, { enabled }) as DataQuery<
+        RouterOutput["bucket"]["listFriendAssignments"]
+      >,
   });
 }
