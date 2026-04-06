@@ -39,3 +39,24 @@ export type ScopeTier = "read" | "write" | "delete";
  * Aggregates (read-all, write-all, delete-all) are grant-side only.
  */
 export type RequiredScope = `${ScopeTier}:${ScopeDomain}` | "read:audit-log" | "full";
+
+/** All valid API key scope values, derived from SCOPE_DOMAINS. */
+export const ALL_API_KEY_SCOPES = [
+  ...SCOPE_DOMAINS.flatMap((domain) => [
+    `read:${domain}` as const,
+    `write:${domain}` as const,
+    `delete:${domain}` as const,
+  ]),
+  "read:audit-log",
+  "read-all",
+  "write-all",
+  "delete-all",
+  "full",
+] as const satisfies readonly (
+  | `${ScopeTier}:${ScopeDomain}`
+  | "read:audit-log"
+  | "read-all"
+  | "write-all"
+  | "delete-all"
+  | "full"
+)[];

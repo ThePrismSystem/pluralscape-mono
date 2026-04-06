@@ -390,7 +390,7 @@ export type {
 
 // ── Scope domains ────────────────────────────────────────────
 export type { ScopeDomain, ScopeTier, RequiredScope } from "./scope-domains.js";
-export { SCOPE_DOMAINS } from "./scope-domains.js";
+export { SCOPE_DOMAINS, ALL_API_KEY_SCOPES } from "./scope-domains.js";
 
 // ── API keys ──────────────────────────────────────────────────
 export type {
