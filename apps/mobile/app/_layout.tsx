@@ -165,7 +165,11 @@ export default function RootLayout(): React.JSX.Element {
   const authMachineRef = useRef<AuthStateMachine | null>(null);
   authMachineRef.current ??= new AuthStateMachine({
     onKeyDiscard: (key) => {
-      getSodium().memzero(key);
+      try {
+        getSodium().memzero(key);
+      } catch (err) {
+        globalThis.console.error("Failed to zero master key:", err);
+      }
     },
   });
 

@@ -4,6 +4,7 @@ import { useDomainMutation } from "./factories.js";
 import { type DataQuery, type TRPCMutation } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
+import type { SystemId } from "@pluralscape/types";
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -15,7 +16,7 @@ type SetupStatusResult = RouterOutput["systemSettings"]["setup"]["getStatus"];
 // Setup status query — plain tRPC, no offline-first factory needed
 // ---------------------------------------------------------------------------
 
-export function useSetupStatus(systemId: string): DataQuery<SetupStatusResult> {
+export function useSetupStatus(systemId: SystemId): DataQuery<SetupStatusResult> {
   return trpc.systemSettings.setup.getStatus.useQuery(
     { systemId },
     { enabled: !!systemId },
