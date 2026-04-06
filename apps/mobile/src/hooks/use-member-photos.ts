@@ -1,10 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import {
-  useOfflineFirstQuery,
-  useOfflineFirstInfiniteQuery,
-  useDomainMutation,
-} from "./factories.js";
+import { useRemoteOnlyQuery, useRemoteOnlyList, useDomainMutation } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
   type DataListQuery,
@@ -33,14 +29,6 @@ interface MemberPhotoListOpts extends SystemIdOverride {
 }
 
 // ---------------------------------------------------------------------------
-// Row transforms — remote-only stubs (no local transform file exists)
-// ---------------------------------------------------------------------------
-
-function rowToMemberPhotoNever(): never {
-  throw new Error("rowToMemberPhoto: member photos are remote-only");
-}
-
-// ---------------------------------------------------------------------------
 // Member photo queries
 // ---------------------------------------------------------------------------
 
@@ -48,11 +36,7 @@ export function useMemberPhoto(
   photoId: MemberPhotoId,
   opts: MemberPhotoGetOpts,
 ): DataQuery<MemberPhotoGetResult> {
-  return useOfflineFirstQuery<MemberPhotoGetResult, MemberPhotoGetResult>({
-    queryKey: ["member-photos", opts.memberId, photoId],
-    table: "member_photos",
-    entityId: photoId,
-    rowTransform: rowToMemberPhotoNever,
+  return useRemoteOnlyQuery<MemberPhotoGetResult>({
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled }) =>
       trpc.memberPhoto.get.useQuery(
@@ -63,10 +47,7 @@ export function useMemberPhoto(
 }
 
 export function useMemberPhotosList(opts: MemberPhotoListOpts): DataListQuery<MemberPhotoListItem> {
-  return useOfflineFirstInfiniteQuery<MemberPhotoListItem, MemberPhotoListItem>({
-    queryKey: ["member-photos", "list", opts.memberId, opts.systemId],
-    table: "member_photos",
-    rowTransform: rowToMemberPhotoNever,
+  return useRemoteOnlyList<MemberPhotoListItem>({
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled }) =>
       trpc.memberPhoto.list.useInfiniteQuery(

@@ -1,10 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import {
-  useOfflineFirstQuery,
-  useOfflineFirstInfiniteQuery,
-  useDomainMutation,
-} from "./factories.js";
+import { useRemoteOnlyQuery, useDomainMutation } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
   type DataListQuery,
@@ -27,23 +23,11 @@ interface SystemListOpts {
 }
 
 // ---------------------------------------------------------------------------
-// Row transforms — remote-only stubs (no local transform file exists)
-// ---------------------------------------------------------------------------
-
-function rowToSystemNever(): never {
-  throw new Error("rowToSystem: system profiles are remote-only");
-}
-
-// ---------------------------------------------------------------------------
 // System queries
 // ---------------------------------------------------------------------------
 
 export function useSystem(opts?: SystemIdOverride): DataQuery<SystemGetResult> {
-  return useOfflineFirstQuery<SystemGetResult, SystemGetResult>({
-    queryKey: ["system"],
-    table: "systems",
-    entityId: "",
-    rowTransform: rowToSystemNever,
+  return useRemoteOnlyQuery<SystemGetResult>({
     systemIdOverride: opts,
     useRemote: ({ systemId, enabled }) =>
       trpc.system.get.useQuery({ systemId }, { enabled }) as DataQuery<SystemGetResult>,
@@ -53,23 +37,13 @@ export function useSystem(opts?: SystemIdOverride): DataQuery<SystemGetResult> {
 /**
  * Lists all systems for the authenticated account.
  * Uses `protectedProcedure` (account-scoped) — no systemId required.
+ * Plain tRPC hook, not a factory, because this is both account-scoped and remote-only.
  */
 export function useSystemsList(opts?: SystemListOpts): DataListQuery<SystemListItem> {
-  return useOfflineFirstInfiniteQuery<SystemListItem, SystemListItem>({
-    queryKey: ["systems", "list"],
-    table: "systems",
-    rowTransform: rowToSystemNever,
-    useRemote: ({ enabled }) =>
-      trpc.system.list.useInfiniteQuery(
-        {
-          limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
-        },
-        {
-          enabled,
-          getNextPageParam: (lastPage) => lastPage.nextCursor,
-        },
-      ) as DataListQuery<SystemListItem>,
-  });
+  return trpc.system.list.useInfiniteQuery(
+    { limit: opts?.limit ?? DEFAULT_LIST_LIMIT },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+  ) as DataListQuery<SystemListItem>;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,8 +102,8 @@ export function useDuplicateSystem(): TRPCMutation<
 
 /**
  * Purge is destructive — deletes the entire system and all associated data.
- * Uses a manual mutation pattern with broad cache invalidation instead of
- * the factory, because every domain cache must be cleared after purge.
+ * Uses direct tRPC (not useDomainMutation) because purge requires broad cache
+ * invalidation of all domain caches, not scoped invalidation.
  */
 export function usePurgeSystem(): TRPCMutation<
   RouterOutput["system"]["purge"],
