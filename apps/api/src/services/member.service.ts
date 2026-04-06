@@ -330,6 +330,22 @@ export async function duplicateMember(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Enforce per-system member quota
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existingCount] = await tx
+      .select({ count: count() })
+      .from(members)
+      .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
+
+    if ((existingCount?.count ?? 0) >= MAX_MEMBERS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_MEMBERS_PER_SYSTEM)} members per system`,
+      );
+    }
+
     // Verify source member inside transaction to prevent TOCTOU
     const [source] = await tx
       .select()
@@ -535,6 +551,20 @@ export async function restoreMember(
 
     if (!existing) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
+
+    // Enforce per-system member quota on restore
+    const [activeCount] = await tx
+      .select({ count: count() })
+      .from(members)
+      .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
+
+    if ((activeCount?.count ?? 0) >= MAX_MEMBERS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_MEMBERS_PER_SYSTEM)} members per system`,
+      );
     }
 
     const timestamp = now();

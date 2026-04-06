@@ -1,5 +1,5 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
-import { memberPhotos } from "@pluralscape/db/pg";
+import { memberPhotos, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, max, or } from "drizzle-orm";
@@ -132,6 +132,9 @@ export async function createMemberPhoto(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Lock system row to serialize concurrent quota checks
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
     // Check quota inside transaction to prevent TOCTOU races
     const [countResult] = await tx
       .select({ count: count() })
@@ -477,6 +480,40 @@ export async function restoreMemberPhoto(
 
     if (!existing) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Photo not found");
+    }
+
+    // Enforce per-member photo quota on restore
+    const [memberCount] = await tx
+      .select({ count: count() })
+      .from(memberPhotos)
+      .where(
+        and(
+          eq(memberPhotos.memberId, memberId),
+          eq(memberPhotos.systemId, systemId),
+          eq(memberPhotos.archived, false),
+        ),
+      );
+
+    if ((memberCount?.count ?? 0) >= MAX_PHOTOS_PER_MEMBER) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_PHOTOS_PER_MEMBER)} photos per member`,
+      );
+    }
+
+    // Enforce system-wide photo quota on restore
+    const [systemCount] = await tx
+      .select({ count: count() })
+      .from(memberPhotos)
+      .where(and(eq(memberPhotos.systemId, systemId), eq(memberPhotos.archived, false)));
+
+    if ((systemCount?.count ?? 0) >= MAX_PHOTOS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_PHOTOS_PER_SYSTEM)} photos per system`,
+      );
     }
 
     const timestamp = now();

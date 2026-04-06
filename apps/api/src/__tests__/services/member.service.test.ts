@@ -412,6 +412,8 @@ describe("duplicateMember", () => {
     chain.returning.mockResolvedValueOnce([newRow]);
     // Photos select in tx: tx.select().from(memberPhotos).where() — terminal (no .limit())
     chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([]) // quota count → resolves to empty (under quota)
       .mockReturnValueOnce(chain) // source member → chains to .limit()
       .mockResolvedValueOnce([
         {
@@ -448,6 +450,8 @@ describe("duplicateMember", () => {
     chain.returning.mockResolvedValueOnce([newRow]);
     // Field values select in tx: tx.select().from(fieldValues).where() — terminal
     chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([]) // quota count → resolves to empty (under quota)
       .mockReturnValueOnce(chain) // source member → chains to .limit()
       .mockResolvedValueOnce([
         {
@@ -484,6 +488,8 @@ describe("duplicateMember", () => {
     chain.returning.mockResolvedValueOnce([newRow]);
     // Group memberships select in tx: tx.select().from(groupMemberships).where() — terminal
     chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([]) // quota count → resolves to empty (under quota)
       .mockReturnValueOnce(chain) // source member → chains to .limit()
       .mockResolvedValueOnce([
         {

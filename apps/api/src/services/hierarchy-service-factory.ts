@@ -406,6 +406,22 @@ export function createHierarchyService<
         );
       }
 
+      // Enforce per-system quota on restore if configured
+      if (cfg.maxPerSystem !== undefined) {
+        const [activeCount] = await tx
+          .select({ count: count() })
+          .from(table)
+          .where(and(eq(columns.systemId, systemId), eq(columns.archived, false)));
+
+        if ((activeCount?.count ?? 0) >= cfg.maxPerSystem) {
+          throw new ApiHttpError(
+            HTTP_TOO_MANY_REQUESTS,
+            "QUOTA_EXCEEDED",
+            `Maximum of ${String(cfg.maxPerSystem)} ${entityName.toLowerCase()}s per system`,
+          );
+        }
+      }
+
       // If parent is archived, promote to root
       let newParentId = typeof existing.parentId === "string" ? existing.parentId : null;
       if (newParentId !== null) {
