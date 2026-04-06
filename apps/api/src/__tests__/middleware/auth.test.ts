@@ -7,11 +7,13 @@ import { requestIdMiddleware } from "../../middleware/request-id.js";
 
 import type { AuthContext, AuthEnv } from "../../lib/auth-context.js";
 import type { ValidateSessionResult } from "../../lib/session-auth.js";
+import type { ValidateApiKeyResult } from "../../services/api-key.service.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
 const mockValidateSession = vi.fn<() => Promise<ValidateSessionResult>>();
+const mockValidateApiKey = vi.fn<() => Promise<ValidateApiKeyResult | null>>();
 const mockGetDb = vi.fn();
 const mockDbUpdate = vi.fn().mockReturnValue({
   set: vi.fn().mockReturnValue({
@@ -41,12 +43,17 @@ vi.mock("../../lib/session-auth.js", () => ({
   validateSession: (): Promise<ValidateSessionResult> => mockValidateSession(),
 }));
 
+vi.mock("../../services/api-key.service.js", () => ({
+  validateApiKey: (): Promise<ValidateApiKeyResult | null> => mockValidateApiKey(),
+}));
+
 vi.mock("../../lib/db.js", () => ({
   getDb: (): unknown => mockGetDb(),
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({
   sessions: { id: "sessions.id" },
+  apiKeys: { id: "apiKeys.id" },
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -78,6 +85,9 @@ function createApp(): Hono<AuthEnv> {
 
 /** A valid 64-char lowercase hex token for tests. */
 const VALID_TOKEN = "a0".repeat(32);
+
+/** A valid API key token: ps_ prefix + 64 lowercase hex chars. */
+const VALID_API_KEY_TOKEN = `ps_${"b1".repeat(32)}`;
 
 interface MockSessionData {
   id: string;
@@ -120,12 +130,26 @@ function makeValidResult(
   };
 }
 
+function makeValidApiKeyResult(
+  overrides: Partial<ValidateApiKeyResult> = {},
+): ValidateApiKeyResult {
+  return {
+    accountId: "acct_apikey" as ValidateApiKeyResult["accountId"],
+    systemId: "sys_apikey" as ValidateApiKeyResult["systemId"],
+    scopes: ["read:members", "read:fronting"],
+    auditLogIpTracking: false,
+    keyId: "ak_00000000-0000-0000-0000-000000000001" as ValidateApiKeyResult["keyId"],
+    ...overrides,
+  };
+}
+
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe("authMiddleware", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockValidateSession.mockReset();
+    mockValidateApiKey.mockReset();
     mockGetDb.mockReset();
     mockNow.mockReset();
     mockDbUpdate.mockClear();
@@ -356,5 +380,163 @@ describe("authMiddleware", () => {
 
     expect(res.status).toBe(200);
     expect(mockValidateSession).toHaveBeenCalled();
+  });
+
+  // ── API key authentication ──────────────────────────────────────────
+
+  describe("API key authentication", () => {
+    it("returns 200 with apiKeyScopes in auth context for valid API key", async () => {
+      const apiKeyResult = makeValidApiKeyResult();
+      const mockDb = { update: mockDbUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      mockValidateApiKey.mockResolvedValue(apiKeyResult);
+      mockNow.mockReturnValue(2_000_000);
+
+      const app = createApp();
+      const res = await app.request("/protected", {
+        headers: { Authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { auth: AuthContext };
+      expect(body.auth).toEqual(
+        expect.objectContaining({
+          accountId: "acct_apikey",
+          systemId: "sys_apikey",
+          accountType: "system",
+          apiKeyScopes: ["read:members", "read:fronting"],
+        }),
+      );
+    });
+
+    it("returns 401 for revoked API key", async () => {
+      const mockDb = { update: mockDbUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      mockValidateApiKey.mockResolvedValue(null);
+
+      const app = createApp();
+      const res = await app.request("/protected", {
+        headers: { Authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      });
+
+      expect(res.status).toBe(401);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("UNAUTHENTICATED");
+      expect(body.error.message).toBe("Invalid or revoked API key");
+    });
+
+    it("returns 401 for expired API key", async () => {
+      const mockDb = { update: mockDbUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      // validateApiKey returns null for expired keys
+      mockValidateApiKey.mockResolvedValue(null);
+
+      const app = createApp();
+      const res = await app.request("/protected", {
+        headers: { Authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      });
+
+      expect(res.status).toBe(401);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("UNAUTHENTICATED");
+      expect(body.error.message).toBe("Invalid or revoked API key");
+    });
+
+    it("returns 401 for invalid API key (bad hash)", async () => {
+      const mockDb = { update: mockDbUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      // validateApiKey returns null when no matching hash found
+      mockValidateApiKey.mockResolvedValue(null);
+
+      const invalidApiKey = `ps_${"ff".repeat(32)}`;
+      const app = createApp();
+      const res = await app.request("/protected", {
+        headers: { Authorization: `Bearer ${invalidApiKey}` },
+      });
+
+      expect(res.status).toBe(401);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("UNAUTHENTICATED");
+      expect(body.error.message).toBe("Invalid or revoked API key");
+    });
+
+    it("ownedSystemIds contains only the key's systemId", async () => {
+      const apiKeyResult = makeValidApiKeyResult({
+        systemId: "sys_only" as ValidateApiKeyResult["systemId"],
+      });
+      const mockDb = { update: mockDbUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      mockValidateApiKey.mockResolvedValue(apiKeyResult);
+      mockNow.mockReturnValue(2_000_000);
+
+      const app = createApp();
+      const res = await app.request("/protected", {
+        headers: { Authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      });
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { auth: Record<string, unknown> };
+      // Sets are serialized as empty objects in JSON; verify systemId matches
+      expect(body.auth.systemId).toBe("sys_only");
+      expect(body.auth.accountType).toBe("system");
+    });
+
+    it("fires lastUsedAt update for valid API key", async () => {
+      const apiKeyResult = makeValidApiKeyResult();
+      const mockDb = { update: mockDbUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      mockValidateApiKey.mockResolvedValue(apiKeyResult);
+      mockNow.mockReturnValue(3_000_000);
+
+      const app = createApp();
+      const res = await app.request("/protected", {
+        headers: { Authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      });
+
+      expect(res.status).toBe(200);
+      expect(mockDbUpdate).toHaveBeenCalled();
+    });
+
+    it("does not crash when lastUsedAt update fails for API key", async () => {
+      const apiKeyResult = makeValidApiKeyResult();
+      const failingUpdate = vi.fn().mockReturnValue({
+        set: vi.fn().mockReturnValue({
+          where: vi.fn().mockRejectedValue(new Error("DB write error")),
+        }),
+      });
+      const mockDb = { update: failingUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      mockValidateApiKey.mockResolvedValue(apiKeyResult);
+      mockNow.mockReturnValue(3_000_000);
+
+      const app = createApp();
+      const res = await app.request("/protected", {
+        headers: { Authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      });
+
+      expect(res.status).toBe(200);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(mockLogError).toHaveBeenCalledWith(
+        "Failed to update API key lastUsedAt",
+        expect.objectContaining({ err: expect.any(Error) }),
+      );
+    });
+
+    it("does not call validateSession for API key tokens", async () => {
+      const apiKeyResult = makeValidApiKeyResult();
+      const mockDb = { update: mockDbUpdate };
+      mockGetDb.mockResolvedValue(mockDb);
+      mockValidateApiKey.mockResolvedValue(apiKeyResult);
+      mockNow.mockReturnValue(2_000_000);
+
+      const app = createApp();
+      await app.request("/protected", {
+        headers: { Authorization: `Bearer ${VALID_API_KEY_TOKEN}` },
+      });
+
+      expect(mockValidateSession).not.toHaveBeenCalled();
+    });
   });
 });

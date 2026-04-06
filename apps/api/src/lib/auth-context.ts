@@ -1,5 +1,5 @@
 import type { AppLogger } from "./logger.js";
-import type { AccountId, AccountType, SessionId, SystemId } from "@pluralscape/types";
+import type { AccountId, AccountType, ApiKeyScope, SessionId, SystemId } from "@pluralscape/types";
 
 /** Authenticated request context attached to Hono context by auth middleware. */
 export interface AuthContext {
@@ -12,6 +12,8 @@ export interface AuthContext {
   readonly ownedSystemIds: ReadonlySet<SystemId>;
   /** When true, IP address and user-agent are persisted in audit log entries (ADR 028). */
   readonly auditLogIpTracking: boolean;
+  /** Present when authenticated via API key. Contains the scopes granted to the key. */
+  readonly apiKeyScopes?: readonly ApiKeyScope[];
 }
 
 /** Hono environment type augmentation for authenticated routes. */
