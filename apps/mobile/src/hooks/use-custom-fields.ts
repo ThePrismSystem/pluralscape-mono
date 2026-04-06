@@ -10,6 +10,7 @@ import {
   useOfflineFirstQuery,
   useOfflineFirstInfiniteQuery,
   useDomainMutation,
+  useRemoteOnlyQuery,
 } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
@@ -191,5 +192,59 @@ export function useUpdateMemberFieldValues(): TRPCMutation<
     onInvalidate: (utils, systemId, _data, variables) => {
       void utils.field.value.list.invalidate({ systemId, owner: variables.owner });
     },
+  });
+}
+
+export function useSetFieldBucketVisibility(): TRPCMutation<
+  RouterOutput["field"]["bucketVisibility"]["set"],
+  RouterInput["field"]["bucketVisibility"]["set"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.field.bucketVisibility.set.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.field.bucketVisibility.list.invalidate({
+        systemId,
+        fieldDefinitionId: variables.fieldDefinitionId,
+      });
+      void utils.field.definition.get.invalidate({
+        systemId,
+        fieldDefinitionId: variables.fieldDefinitionId,
+      });
+      void utils.bucket.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRemoveFieldBucketVisibility(): TRPCMutation<
+  RouterOutput["field"]["bucketVisibility"]["remove"],
+  RouterInput["field"]["bucketVisibility"]["remove"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.field.bucketVisibility.remove.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.field.bucketVisibility.list.invalidate({
+        systemId,
+        fieldDefinitionId: variables.fieldDefinitionId,
+      });
+      void utils.field.definition.get.invalidate({
+        systemId,
+        fieldDefinitionId: variables.fieldDefinitionId,
+      });
+      void utils.bucket.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useListFieldBucketVisibility(
+  fieldDefinitionId: FieldDefinitionId,
+  opts?: SystemIdOverride,
+): DataQuery<RouterOutput["field"]["bucketVisibility"]["list"]> {
+  return useRemoteOnlyQuery({
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled }) =>
+      trpc.field.bucketVisibility.list.useQuery(
+        { systemId, fieldDefinitionId },
+        { enabled },
+      ) as DataQuery<RouterOutput["field"]["bucketVisibility"]["list"]>,
   });
 }
