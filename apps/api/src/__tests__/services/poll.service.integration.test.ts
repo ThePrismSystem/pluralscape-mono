@@ -449,14 +449,16 @@ describe("poll.service (PGlite integration)", () => {
       const created = await createPoll(asDb(db), systemId, makeCreateParams(), auth, noopAudit);
 
       // Insert a vote row directly
+      const voteNow = Date.now();
       await db.insert(pollVotes).values({
         id: genPollVoteId(),
         pollId: created.id,
         systemId,
         voter: { entityType: "member", entityId: "mem_test-voter" },
-        votedAt: Date.now(),
+        votedAt: voteNow,
         encryptedData: testBlob(),
-        createdAt: Date.now(),
+        createdAt: voteNow,
+        updatedAt: voteNow,
       });
 
       const err = await assertApiError(
