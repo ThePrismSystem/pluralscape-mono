@@ -33,7 +33,14 @@ vi.mock("../../../services/recovery-key.service.js", () => ({
 
 vi.mock("../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
+vi.mock("../../../lib/email-hash.js", () => ({
+  hashEmail: vi.fn().mockReturnValue("hashed-email"),
+}));
+
+vi.mock("../../../middleware/rate-limit.js", () => ({
+  ...mockRateLimitFactory(),
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
+}));
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -43,6 +50,7 @@ const {
   DecryptionFailedError,
   InvalidInputError,
 } = await import("../../../services/recovery-key.service.js");
+const { checkRateLimit } = await import("../../../middleware/rate-limit.js");
 const { passwordResetRoute } = await import("../../../routes/auth/password-reset.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -170,6 +178,18 @@ describe("POST /password-reset/recovery-key", () => {
     expect(res.status).toBe(401);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("returns 429 when per-account recovery rate limit is exceeded", async () => {
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({ allowed: false, retryAfterMs: 3_000 });
+
+    const app = createApp();
+    const res = await postJSON(app, VALID_BODY);
+
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("RATE_LIMITED");
+    expect(body.error.message).toBe("Too many recovery attempts for this account");
   });
 
   it("re-throws unexpected errors as 500", async () => {
