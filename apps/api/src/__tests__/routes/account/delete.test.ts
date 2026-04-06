@@ -5,6 +5,7 @@ import {
   mockAuditWriterFactory,
   mockDbFactory,
   mockRateLimitFactory,
+  mockScopeFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
@@ -21,6 +22,8 @@ vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
+
+vi.mock("../../../middleware/scope.js", () => mockScopeFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 

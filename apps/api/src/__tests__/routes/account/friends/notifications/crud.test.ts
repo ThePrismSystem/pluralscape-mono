@@ -5,6 +5,7 @@ import {
   mockAuditWriterFactory,
   mockDbFactory,
   mockRateLimitFactory,
+  mockScopeFactory,
 } from "../../../../helpers/common-route-mocks.js";
 import {
   MOCK_ACCOUNT_ONLY_AUTH,
@@ -46,6 +47,8 @@ vi.mock("../../../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
+
+vi.mock("../../../../../middleware/scope.js", () => mockScopeFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
