@@ -33,7 +33,9 @@ describe("createSecureHeaders", () => {
     expect(res.status).toBe(200);
     const csp = res.headers.get("Content-Security-Policy");
     expect(csp).toBeDefined();
-    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain("base-uri 'none'");
+    expect(csp).toContain("form-action 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
   });
 
