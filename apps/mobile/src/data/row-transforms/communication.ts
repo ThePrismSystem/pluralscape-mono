@@ -311,5 +311,5 @@ export function rowToNote(row: Record<string, unknown>): NoteDecrypted | Archive
     createdAt: guardedToMs(row["created_at"], "notes", "created_at", id),
     updatedAt,
   };
-  return archived ? { ...base, archived: true as const, archivedAt: updatedAt } : base;
+  return archived ? wrapArchived(base, updatedAt) : base;
 }
