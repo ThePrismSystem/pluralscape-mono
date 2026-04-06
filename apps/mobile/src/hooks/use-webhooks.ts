@@ -15,9 +15,6 @@ import {
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
-  ArchivedWebhookConfig,
-  WebhookConfig,
-  WebhookDelivery,
   WebhookDeliveryId,
   WebhookDeliveryStatus,
   WebhookEventType,
@@ -25,10 +22,13 @@ import type {
 } from "@pluralscape/types";
 
 // ---------------------------------------------------------------------------
-// Shared types
+// Shared types — use RouterOutput to match what the API actually returns
 // ---------------------------------------------------------------------------
 
-type WebhookConfigResult = WebhookConfig | ArchivedWebhookConfig;
+type WebhookConfigGetResult = RouterOutput["webhookConfig"]["get"];
+type WebhookConfigListItem = RouterOutput["webhookConfig"]["list"]["data"][number];
+type WebhookDeliveryGetResult = RouterOutput["webhookDelivery"]["get"];
+type WebhookDeliveryListItem = RouterOutput["webhookDelivery"]["list"]["data"][number];
 
 interface WebhookConfigListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -48,18 +48,10 @@ interface WebhookDeliveryListOpts extends SystemIdOverride {
 // Row transforms — remote-only stubs
 // ---------------------------------------------------------------------------
 
-/**
- * Webhook configs are partially materialized to local SQLite (the CRDT
- * materializer stores url, eventTypes, enabled, archived) but the
- * server-authoritative `secret` and `cryptoKeyId` fields are excluded
- * from the CRDT schema. Since the management UI needs the full config,
- * these hooks are remote-only and this transform is never called.
- */
 function rowToWebhookConfigNever(): never {
   throw new Error("rowToWebhookConfig: webhook configs are remote-only");
 }
 
-/** Webhook deliveries are not in the CRDT materializer — remote-only. */
 function rowToWebhookDeliveryNever(): never {
   throw new Error("rowToWebhookDelivery: webhook deliveries are remote-only");
 }
@@ -71,8 +63,8 @@ function rowToWebhookDeliveryNever(): never {
 export function useWebhookConfig(
   webhookId: WebhookId,
   opts?: SystemIdOverride,
-): DataQuery<WebhookConfigResult> {
-  return useOfflineFirstQuery<WebhookConfigResult, WebhookConfigResult>({
+): DataQuery<WebhookConfigGetResult> {
+  return useOfflineFirstQuery<WebhookConfigGetResult, WebhookConfigGetResult>({
     queryKey: ["webhook-configs", webhookId],
     table: "webhook_configs",
     entityId: webhookId,
@@ -82,14 +74,14 @@ export function useWebhookConfig(
       trpc.webhookConfig.get.useQuery(
         { systemId, webhookId },
         { enabled },
-      ) as DataQuery<WebhookConfigResult>,
+      ) as DataQuery<WebhookConfigGetResult>,
   });
 }
 
 export function useWebhookConfigsList(
   opts?: WebhookConfigListOpts,
-): DataListQuery<WebhookConfigResult> {
-  return useOfflineFirstInfiniteQuery<WebhookConfigResult, WebhookConfigResult>({
+): DataListQuery<WebhookConfigListItem> {
+  return useOfflineFirstInfiniteQuery<WebhookConfigListItem, WebhookConfigListItem>({
     queryKey: ["webhook-configs", "list", opts?.systemId, opts?.includeArchived ?? false],
     table: "webhook_configs",
     rowTransform: rowToWebhookConfigNever,
@@ -106,7 +98,7 @@ export function useWebhookConfigsList(
           enabled,
           getNextPageParam: (lastPage) => lastPage.nextCursor,
         },
-      ) as DataListQuery<WebhookConfigResult>,
+      ) as DataListQuery<WebhookConfigListItem>,
   });
 }
 
@@ -209,25 +201,25 @@ export function useTestWebhook(): TRPCMutation<
 export function useWebhookDelivery(
   deliveryId: WebhookDeliveryId,
   opts?: SystemIdOverride,
-): DataQuery<WebhookDelivery> {
-  return useOfflineFirstQuery<WebhookDelivery, WebhookDelivery>({
+): DataQuery<WebhookDeliveryGetResult> {
+  return useOfflineFirstQuery<WebhookDeliveryGetResult, WebhookDeliveryGetResult>({
     queryKey: ["webhook-deliveries", deliveryId],
     table: "webhook_deliveries",
     entityId: deliveryId,
     rowTransform: rowToWebhookDeliveryNever,
     systemIdOverride: opts,
-    useRemote: ({ systemId, enabled, select }) =>
+    useRemote: ({ systemId, enabled }) =>
       trpc.webhookDelivery.get.useQuery(
         { systemId, deliveryId },
-        { enabled, select },
-      ) as DataQuery<WebhookDelivery>,
+        { enabled },
+      ) as DataQuery<WebhookDeliveryGetResult>,
   });
 }
 
 export function useWebhookDeliveriesList(
   opts?: WebhookDeliveryListOpts,
-): DataListQuery<WebhookDelivery> {
-  return useOfflineFirstInfiniteQuery<WebhookDelivery, WebhookDelivery>({
+): DataListQuery<WebhookDeliveryListItem> {
+  return useOfflineFirstInfiniteQuery<WebhookDeliveryListItem, WebhookDeliveryListItem>({
     queryKey: [
       "webhook-deliveries",
       "list",
@@ -254,7 +246,7 @@ export function useWebhookDeliveriesList(
           enabled,
           getNextPageParam: (lastPage) => lastPage.nextCursor,
         },
-      ) as DataListQuery<WebhookDelivery>,
+      ) as DataListQuery<WebhookDeliveryListItem>,
   });
 }
 
