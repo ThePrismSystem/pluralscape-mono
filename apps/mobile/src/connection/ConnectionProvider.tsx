@@ -24,7 +24,6 @@ export function ConnectionProvider({
   readonly children: ReactNode;
 }): React.JSX.Element {
   const auth = useAuth();
-  const authState = auth.snapshot.state;
   const credentials = auth.snapshot.state === "unlocked" ? auth.snapshot.credentials : null;
 
   useEffect(() => {
@@ -33,7 +32,7 @@ export function ConnectionProvider({
     } else {
       manager.disconnect();
     }
-  }, [manager, authState, credentials]);
+  }, [manager, credentials]);
 
   const subscribe = useMemo(
     () => (listener: (state: ConnectionState) => void) => manager.subscribe(listener),
