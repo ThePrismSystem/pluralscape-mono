@@ -27,6 +27,7 @@ import {
   updateGroup,
 } from "../../services/group.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -48,6 +49,7 @@ const MemberIdSchema = z.object({
 export const groupRouter = router({
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(CreateGroupBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -66,6 +68,7 @@ export const groupRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:groups"))
     .input(GroupIdSchema)
     .query(async ({ ctx, input }) => {
       return getGroup(ctx.db, ctx.systemId, input.groupId, ctx.auth);
@@ -73,6 +76,7 @@ export const groupRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:groups"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -93,6 +97,7 @@ export const groupRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(GroupIdSchema.and(UpdateGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -108,6 +113,7 @@ export const groupRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:groups"))
     .input(GroupIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -117,6 +123,7 @@ export const groupRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(GroupIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -126,6 +133,7 @@ export const groupRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(GroupIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -134,6 +142,7 @@ export const groupRouter = router({
 
   move: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(GroupIdSchema.and(MoveGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -149,6 +158,7 @@ export const groupRouter = router({
 
   copy: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(GroupIdSchema.and(CopyGroupBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -165,12 +175,16 @@ export const groupRouter = router({
       );
     }),
 
-  getTree: systemProcedure.use(readHeavyLimiter).query(async ({ ctx }) => {
-    return getGroupTree(ctx.db, ctx.systemId, ctx.auth);
-  }),
+  getTree: systemProcedure
+    .use(readHeavyLimiter)
+    .use(requireScope("read:groups"))
+    .query(async ({ ctx }) => {
+      return getGroupTree(ctx.db, ctx.systemId, ctx.auth);
+    }),
 
   reorder: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(ReorderGroupsBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -180,6 +194,7 @@ export const groupRouter = router({
 
   addMember: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(GroupIdSchema.and(MemberIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -195,6 +210,7 @@ export const groupRouter = router({
 
   removeMember: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:groups"))
     .input(GroupIdSchema.and(MemberIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -204,6 +220,7 @@ export const groupRouter = router({
 
   listMembers: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:groups"))
     .input(
       GroupIdSchema.and(
         z.object({

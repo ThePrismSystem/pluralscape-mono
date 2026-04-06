@@ -42,6 +42,7 @@ import {
   retryRotation,
 } from "../../services/key-rotation.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -67,6 +68,7 @@ const RotationIdSchema = z.object({
 export const bucketRouter = router({
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(CreateBucketBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -81,6 +83,7 @@ export const bucketRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:buckets"))
     .input(BucketIdSchema)
     .query(async ({ ctx, input }) => {
       return getBucket(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
@@ -88,6 +91,7 @@ export const bucketRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:buckets"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -105,6 +109,7 @@ export const bucketRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(UpdateBucketBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -120,6 +125,7 @@ export const bucketRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -129,6 +135,7 @@ export const bucketRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -137,6 +144,7 @@ export const bucketRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:buckets"))
     .input(BucketIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -148,6 +156,7 @@ export const bucketRouter = router({
 
   assignFriend: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(ConnectionIdSchema).and(AssignBucketBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -167,6 +176,7 @@ export const bucketRouter = router({
 
   unassignFriend: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(ConnectionIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -182,6 +192,7 @@ export const bucketRouter = router({
 
   listFriendAssignments: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:buckets"))
     .input(BucketIdSchema)
     .query(async ({ ctx, input }) => {
       return listFriendBucketAssignments(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
@@ -191,6 +202,7 @@ export const bucketRouter = router({
 
   tagContent: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(TagContentBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -206,6 +218,7 @@ export const bucketRouter = router({
 
   untagContent: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(
       BucketIdSchema.and(
         z.object({
@@ -230,6 +243,7 @@ export const bucketRouter = router({
 
   listTags: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:buckets"))
     .input(
       BucketIdSchema.and(
         z.object({
@@ -249,6 +263,7 @@ export const bucketRouter = router({
 
   exportManifest: systemProcedure
     .use(readHeavyLimiter)
+    .use(requireScope("read:buckets"))
     .input(BucketIdSchema)
     .query(async ({ ctx, input }) => {
       return getBucketExportManifest(ctx.db, ctx.systemId, input.bucketId, ctx.auth);
@@ -256,6 +271,7 @@ export const bucketRouter = router({
 
   exportPage: systemProcedure
     .use(readHeavyLimiter)
+    .use(requireScope("read:buckets"))
     .input(
       BucketIdSchema.and(
         z.object({
@@ -281,6 +297,7 @@ export const bucketRouter = router({
 
   initiateRotation: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(InitiateRotationBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -289,6 +306,7 @@ export const bucketRouter = router({
 
   rotationProgress: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:buckets"))
     .input(BucketIdSchema.and(RotationIdSchema))
     .query(async ({ ctx, input }) => {
       return getRotationProgress(ctx.db, ctx.systemId, input.bucketId, input.rotationId, ctx.auth);
@@ -296,6 +314,7 @@ export const bucketRouter = router({
 
   claimRotationChunk: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(RotationIdSchema).and(ClaimChunkBodySchema))
     .mutation(async ({ ctx, input }) => {
       return claimRotationChunk(
@@ -310,6 +329,7 @@ export const bucketRouter = router({
 
   completeRotationChunk: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(RotationIdSchema).and(CompleteChunkBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -326,6 +346,7 @@ export const bucketRouter = router({
 
   retryRotation: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:buckets"))
     .input(BucketIdSchema.and(RotationIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

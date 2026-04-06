@@ -13,6 +13,7 @@ import {
   updateDeviceToken,
 } from "../../services/device-token.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -29,6 +30,7 @@ const TokenIdSchema = z.object({
 export const deviceTokenRouter = router({
   register: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:notifications"))
     .input(RegisterDeviceTokenBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -37,6 +39,7 @@ export const deviceTokenRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:notifications"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -52,6 +55,7 @@ export const deviceTokenRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:notifications"))
     .input(TokenIdSchema.and(UpdateDeviceTokenBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -60,6 +64,7 @@ export const deviceTokenRouter = router({
 
   revoke: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:notifications"))
     .input(TokenIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -69,6 +74,7 @@ export const deviceTokenRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:notifications"))
     .input(TokenIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

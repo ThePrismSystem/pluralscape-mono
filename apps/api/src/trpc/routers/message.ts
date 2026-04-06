@@ -18,6 +18,7 @@ import {
   updateMessage,
 } from "../../services/message.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -40,6 +41,7 @@ const MessageIdSchema = z.object({
 export const messageRouter = router({
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:messages"))
     .input(ChannelScopeSchema.and(CreateMessageBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -62,6 +64,7 @@ export const messageRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:messages"))
     .input(ChannelScopeSchema.and(MessageIdSchema))
     .query(async ({ ctx, input }) => {
       return getMessage(ctx.db, ctx.systemId, input.messageId, ctx.auth);
@@ -69,6 +72,7 @@ export const messageRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:messages"))
     .input(
       ChannelScopeSchema.and(
         z.object({
@@ -92,6 +96,7 @@ export const messageRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:messages"))
     .input(ChannelScopeSchema.and(MessageIdSchema).and(UpdateMessageBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -114,6 +119,7 @@ export const messageRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:messages"))
     .input(ChannelScopeSchema.and(MessageIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -129,6 +135,7 @@ export const messageRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:messages"))
     .input(ChannelScopeSchema.and(MessageIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -144,6 +151,7 @@ export const messageRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:messages"))
     .input(
       ChannelScopeSchema.and(MessageIdSchema).and(
         z.object({ timestamp: z.number().int().min(0).optional() }),
@@ -163,38 +171,37 @@ export const messageRouter = router({
       return { success: true as const };
     }),
 
-  onChange: systemProcedure.input(ChannelScopeSchema).subscription(async function* ({
-    ctx,
-    input,
-    signal,
-  }) {
-    const { channelId } = input;
-    const queue: MessageChangeEvent[] = [];
-    let resolve: (() => void) | null = null;
+  onChange: systemProcedure
+    .use(requireScope("read:messages"))
+    .input(ChannelScopeSchema)
+    .subscription(async function* ({ ctx, input, signal }) {
+      const { channelId } = input;
+      const queue: MessageChangeEvent[] = [];
+      let resolve: (() => void) | null = null;
 
-    const unsubscribe = await subscribeToEntityChanges(ctx.systemId, "message", (event) => {
-      const msgEvent = event as MessageChangeEvent;
-      if (msgEvent.channelId === channelId) {
-        queue.push(msgEvent);
-        resolve?.();
-      }
-    });
-
-    try {
-      while (!signal?.aborted) {
-        while (queue.length > 0) {
-          const event = queue.shift();
-          if (event) {
-            yield tracked(`${event.type}:${event.messageId}`, event);
-          }
+      const unsubscribe = await subscribeToEntityChanges(ctx.systemId, "message", (event) => {
+        const msgEvent = event as MessageChangeEvent;
+        if (msgEvent.channelId === channelId) {
+          queue.push(msgEvent);
+          resolve?.();
         }
-        await new Promise<void>((r) => {
-          resolve = r;
-        });
-        resolve = null;
+      });
+
+      try {
+        while (!signal?.aborted) {
+          while (queue.length > 0) {
+            const event = queue.shift();
+            if (event) {
+              yield tracked(`${event.type}:${event.messageId}`, event);
+            }
+          }
+          await new Promise<void>((r) => {
+            resolve = r;
+          });
+          resolve = null;
+        }
+      } finally {
+        await unsubscribe?.();
       }
-    } finally {
-      await unsubscribe?.();
-    }
-  }),
+    }),
 });

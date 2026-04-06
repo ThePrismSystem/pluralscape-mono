@@ -7,6 +7,7 @@ import {
   listWebhookDeliveries,
 } from "../../services/webhook-delivery.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -23,6 +24,7 @@ const DeliveryIdSchema = z.object({
 export const webhookDeliveryRouter = router({
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:webhooks"))
     .input(
       WebhookDeliveryQuerySchema.and(
         z.object({
@@ -45,6 +47,7 @@ export const webhookDeliveryRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:webhooks"))
     .input(DeliveryIdSchema)
     .query(async ({ ctx, input }) => {
       return getWebhookDelivery(ctx.db, ctx.systemId, input.deliveryId, ctx.auth);
@@ -52,6 +55,7 @@ export const webhookDeliveryRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:webhooks"))
     .input(DeliveryIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

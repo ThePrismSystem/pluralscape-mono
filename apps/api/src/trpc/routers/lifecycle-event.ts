@@ -15,6 +15,7 @@ import {
   updateLifecycleEvent,
 } from "../../services/lifecycle-event.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -31,6 +32,7 @@ const EventIdSchema = z.object({
 export const lifecycleEventRouter = router({
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:lifecycle-events"))
     .input(CreateLifecycleEventBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -39,6 +41,7 @@ export const lifecycleEventRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:lifecycle-events"))
     .input(EventIdSchema)
     .query(async ({ ctx, input }) => {
       return getLifecycleEvent(ctx.db, ctx.systemId, input.eventId, ctx.auth);
@@ -46,6 +49,7 @@ export const lifecycleEventRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:lifecycle-events"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -68,6 +72,7 @@ export const lifecycleEventRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:lifecycle-events"))
     .input(EventIdSchema.and(UpdateLifecycleEventBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -76,6 +81,7 @@ export const lifecycleEventRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:lifecycle-events"))
     .input(EventIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -85,6 +91,7 @@ export const lifecycleEventRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:lifecycle-events"))
     .input(EventIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -93,6 +100,7 @@ export const lifecycleEventRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:lifecycle-events"))
     .input(EventIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

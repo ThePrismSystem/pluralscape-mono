@@ -47,6 +47,7 @@ import {
   updateEntityType,
 } from "../../services/structure-entity-type.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -82,6 +83,7 @@ export const structureRouter = router({
   entityType: router({
     create: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(CreateStructureEntityTypeBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -90,6 +92,7 @@ export const structureRouter = router({
 
     get: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(EntityTypeIdSchema)
       .query(async ({ ctx, input }) => {
         return getEntityType(ctx.db, ctx.systemId, input.entityTypeId, ctx.auth);
@@ -97,6 +100,7 @@ export const structureRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -114,6 +118,7 @@ export const structureRouter = router({
 
     update: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(EntityTypeIdSchema.and(UpdateStructureEntityTypeBodySchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -133,6 +138,7 @@ export const structureRouter = router({
 
     archive: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(EntityTypeIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -142,6 +148,7 @@ export const structureRouter = router({
 
     restore: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(EntityTypeIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -150,6 +157,7 @@ export const structureRouter = router({
 
     delete: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("delete:structure"))
       .input(EntityTypeIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -163,6 +171,7 @@ export const structureRouter = router({
   entity: router({
     create: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(CreateStructureEntityBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -171,6 +180,7 @@ export const structureRouter = router({
 
     get: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(EntityIdSchema)
       .query(async ({ ctx, input }) => {
         return getStructureEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
@@ -178,6 +188,7 @@ export const structureRouter = router({
 
     getHierarchy: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(EntityIdSchema)
       .query(async ({ ctx, input }) => {
         return getEntityHierarchy(ctx.db, ctx.systemId, input.entityId, ctx.auth);
@@ -185,6 +196,7 @@ export const structureRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -204,6 +216,7 @@ export const structureRouter = router({
 
     update: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(EntityIdSchema.and(UpdateStructureEntityBodySchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -224,6 +237,7 @@ export const structureRouter = router({
 
     archive: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(EntityIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -233,6 +247,7 @@ export const structureRouter = router({
 
     restore: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(EntityIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -241,6 +256,7 @@ export const structureRouter = router({
 
     delete: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("delete:structure"))
       .input(EntityIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -254,6 +270,7 @@ export const structureRouter = router({
   link: router({
     create: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(CreateStructureEntityLinkBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -262,6 +279,7 @@ export const structureRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -277,6 +295,7 @@ export const structureRouter = router({
 
     update: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(LinkIdSchema.and(UpdateStructureEntityLinkBodySchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -292,6 +311,7 @@ export const structureRouter = router({
 
     delete: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("delete:structure"))
       .input(LinkIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -305,6 +325,7 @@ export const structureRouter = router({
   memberLink: router({
     create: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(CreateStructureEntityMemberLinkBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -313,6 +334,7 @@ export const structureRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -328,6 +350,7 @@ export const structureRouter = router({
 
     delete: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("delete:structure"))
       .input(MemberLinkIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -341,6 +364,7 @@ export const structureRouter = router({
   association: router({
     create: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("write:structure"))
       .input(CreateStructureEntityAssociationBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -349,6 +373,7 @@ export const structureRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
+      .use(requireScope("read:structure"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -364,6 +389,7 @@ export const structureRouter = router({
 
     delete: systemProcedure
       .use(writeLimiter)
+      .use(requireScope("delete:structure"))
       .input(AssociationIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);

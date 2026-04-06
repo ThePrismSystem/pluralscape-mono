@@ -8,6 +8,7 @@ import {
   listSnapshots,
 } from "../../services/snapshot.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -24,6 +25,7 @@ const SnapshotIdSchema = z.object({
 export const snapshotRouter = router({
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:system"))
     .input(CreateSnapshotBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -32,6 +34,7 @@ export const snapshotRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:system"))
     .input(SnapshotIdSchema)
     .query(async ({ ctx, input }) => {
       return getSnapshot(ctx.db, ctx.systemId, input.snapshotId, ctx.auth);
@@ -39,6 +42,7 @@ export const snapshotRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:system"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -51,6 +55,7 @@ export const snapshotRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:system"))
     .input(SnapshotIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

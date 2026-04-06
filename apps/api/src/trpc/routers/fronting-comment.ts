@@ -15,6 +15,7 @@ import {
   updateFrontingComment,
 } from "../../services/fronting-comment.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -35,6 +36,7 @@ const CommentIdSchema = z.object({
 export const frontingCommentRouter = router({
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(SessionIdSchema.and(CreateFrontingCommentBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -43,6 +45,7 @@ export const frontingCommentRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:fronting"))
     .input(SessionIdSchema.and(CommentIdSchema))
     .query(async ({ ctx, input }) => {
       return getFrontingComment(ctx.db, ctx.systemId, input.sessionId, input.commentId, ctx.auth);
@@ -50,6 +53,7 @@ export const frontingCommentRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:fronting"))
     .input(
       SessionIdSchema.and(
         z.object({
@@ -69,6 +73,7 @@ export const frontingCommentRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(SessionIdSchema.and(CommentIdSchema).and(UpdateFrontingCommentBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -85,6 +90,7 @@ export const frontingCommentRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(SessionIdSchema.and(CommentIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -101,6 +107,7 @@ export const frontingCommentRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(SessionIdSchema.and(CommentIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -116,6 +123,7 @@ export const frontingCommentRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:fronting"))
     .input(SessionIdSchema.and(CommentIdSchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

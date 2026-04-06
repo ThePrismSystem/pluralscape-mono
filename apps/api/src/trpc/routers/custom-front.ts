@@ -15,6 +15,7 @@ import {
   updateCustomFront,
 } from "../../services/custom-front.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -31,6 +32,7 @@ const CustomFrontIdSchema = z.object({
 export const customFrontRouter = router({
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(CreateCustomFrontBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -45,6 +47,7 @@ export const customFrontRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:fronting"))
     .input(CustomFrontIdSchema)
     .query(async ({ ctx, input }) => {
       return getCustomFront(ctx.db, ctx.systemId, input.customFrontId, ctx.auth);
@@ -52,6 +55,7 @@ export const customFrontRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:fronting"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -70,6 +74,7 @@ export const customFrontRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(CustomFrontIdSchema.and(UpdateCustomFrontBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -85,6 +90,7 @@ export const customFrontRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(CustomFrontIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -94,6 +100,7 @@ export const customFrontRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:fronting"))
     .input(CustomFrontIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -102,6 +109,7 @@ export const customFrontRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:fronting"))
     .input(CustomFrontIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

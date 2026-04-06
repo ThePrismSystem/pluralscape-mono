@@ -27,6 +27,7 @@ import {
   updatePoll,
 } from "../../services/poll.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
+import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -52,6 +53,7 @@ export const pollRouter = router({
 
   create: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:polls"))
     .input(CreatePollBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -66,6 +68,7 @@ export const pollRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:polls"))
     .input(PollIdSchema)
     .query(async ({ ctx, input }) => {
       return getPoll(ctx.db, ctx.systemId, input.pollId, ctx.auth);
@@ -73,6 +76,7 @@ export const pollRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:polls"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -92,6 +96,7 @@ export const pollRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:polls"))
     .input(PollIdSchema.and(UpdatePollBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -113,6 +118,7 @@ export const pollRouter = router({
 
   close: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:polls"))
     .input(PollIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -127,6 +133,7 @@ export const pollRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:polls"))
     .input(PollIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -141,6 +148,7 @@ export const pollRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:polls"))
     .input(PollIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -155,6 +163,7 @@ export const pollRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:polls"))
     .input(PollIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -171,6 +180,7 @@ export const pollRouter = router({
 
   castVote: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:polls"))
     .input(PollIdSchema.and(CastVoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -185,6 +195,7 @@ export const pollRouter = router({
 
   listVotes: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:polls"))
     .input(
       PollIdSchema.and(
         z.object({
@@ -204,6 +215,7 @@ export const pollRouter = router({
 
   updateVote: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("write:polls"))
     .input(VoteIdSchema.and(UpdatePollVoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -226,6 +238,7 @@ export const pollRouter = router({
 
   deleteVote: systemProcedure
     .use(writeLimiter)
+    .use(requireScope("delete:polls"))
     .input(VoteIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -240,12 +253,14 @@ export const pollRouter = router({
 
   results: systemProcedure
     .use(readLimiter)
+    .use(requireScope("read:polls"))
     .input(PollIdSchema)
     .query(async ({ ctx, input }) => {
       return getPollResults(ctx.db, ctx.systemId, input.pollId, ctx.auth);
     }),
 
   onChange: systemProcedure
+    .use(requireScope("read:polls"))
     .input(z.object({ pollId: brandedIdQueryParam("poll_").optional() }))
     .subscription(async function* ({ ctx, input, signal }) {
       const filterPollId = input.pollId;
