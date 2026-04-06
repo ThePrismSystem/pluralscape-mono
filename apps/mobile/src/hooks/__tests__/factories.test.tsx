@@ -66,8 +66,12 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
 
 // Must import AFTER vi.mock
 const { trpc } = await import("@pluralscape/api-client/trpc");
-const { useOfflineFirstQuery, useOfflineFirstInfiniteQuery, useDomainMutation } =
-  await import("../factories.js");
+const {
+  useOfflineFirstQuery,
+  useOfflineFirstInfiniteQuery,
+  useDomainMutation,
+  useRemoteOnlyQuery,
+} = await import("../factories.js");
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -479,6 +483,61 @@ describe("useDomainMutation", () => {
     // data and vars come from the mutation mock's mutationFn/mutateAsync call
     expect(data).toEqual({ id: "new-1" });
     expect(vars).toEqual({});
+  });
+});
+
+// ── useRemoteOnlyQuery ───────────────────────────────────────────────
+function useRemoteOnlyGet(id: string) {
+  return useRemoteOnlyQuery<RawEntity>({
+    useRemote: ({ systemId, enabled }) =>
+      trpc.member.get.useQuery(
+        { systemId, memberId: id as never },
+        { enabled },
+      ) as DataQuery<RawEntity>,
+  });
+}
+
+function useRemoteOnlyGetWithOverride(id: string, systemId: SystemId) {
+  return useRemoteOnlyQuery<RawEntity>({
+    systemIdOverride: { systemId },
+    useRemote: ({ systemId: resolvedId, enabled }) =>
+      trpc.member.get.useQuery(
+        { systemId: resolvedId, memberId: id as never },
+        { enabled },
+      ) as DataQuery<RawEntity>,
+  });
+}
+
+describe("useRemoteOnlyQuery", () => {
+  it("resolves systemId from context", async () => {
+    fixtures.set("member.get", { name: "Remote" });
+    const { result } = renderHookWithProviders(() => useRemoteOnlyGet("r-1"));
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.name).toBe("Remote");
+  });
+
+  it("respects systemIdOverride", async () => {
+    fixtures.set("member.get", { name: "Override" });
+    const overrideId = "sys-override" as SystemId;
+    const { result } = renderHookWithProviders(() =>
+      useRemoteOnlyGetWithOverride("r-2", overrideId),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.name).toBe("Override");
+  });
+
+  it("passes enabled: true to consumer hook", () => {
+    fixtures.set("member.get", { name: "Enabled" });
+    const { result } = renderHookWithProviders(() => useRemoteOnlyGet("r-3"));
+
+    // enabled: true means the query will fire, so fetchStatus should not be "idle"
+    expect(result.current.fetchStatus).not.toBe("idle");
   });
 });
 
