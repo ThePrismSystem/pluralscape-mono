@@ -13,6 +13,7 @@ import {
 } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
+import { requireSession } from "../../lib/auth-context.js";
 import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
@@ -60,6 +61,7 @@ deviceTransferRoute.use(
 // POST / — Initiate a device transfer
 deviceTransferRoute.post("/", async (c) => {
   const auth = c.get("auth");
+  const session = requireSession(auth);
   const db = await getDb();
   const body = await parseJsonBody(c);
   const audit = createAuditWriter(c, auth);
@@ -78,7 +80,7 @@ deviceTransferRoute.post("/", async (c) => {
     const result = await initiateTransfer(
       db,
       auth.accountId,
-      auth.sessionId,
+      session.sessionId,
       parseResult.data,
       audit,
     );
@@ -105,12 +107,13 @@ deviceTransferRoute.use(
 // POST /:id/approve — Approve a pending device transfer (source device only)
 deviceTransferRoute.post("/:id/approve", async (c) => {
   const auth = c.get("auth");
+  const session = requireSession(auth);
   const db = await getDb();
   const audit = createAuditWriter(c, auth);
   const transferId = c.req.param("id");
 
   try {
-    await approveTransfer(db, transferId, auth.accountId, auth.sessionId, audit);
+    await approveTransfer(db, transferId, auth.accountId, session.sessionId, audit);
     return c.body(null, HTTP_NO_CONTENT);
   } catch (error: unknown) {
     if (error instanceof TransferNotFoundError) {
@@ -137,6 +140,7 @@ deviceTransferRoute.use(
 // POST /:id/complete — Complete a device transfer
 deviceTransferRoute.post("/:id/complete", async (c) => {
   const auth = c.get("auth");
+  const session = requireSession(auth);
   const db = await getDb();
   const body = await parseJsonBody(c);
   const audit = createAuditWriter(c, auth);
@@ -157,7 +161,7 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
       db,
       transferId,
       auth.accountId,
-      auth.sessionId,
+      session.sessionId,
       parseResult.data.code,
       audit,
     );

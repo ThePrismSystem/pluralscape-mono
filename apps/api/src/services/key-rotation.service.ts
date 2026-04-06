@@ -297,7 +297,7 @@ export async function claimRotationChunk(
       .update(bucketRotationItems)
       .set({
         status: ROTATION_ITEM_STATUSES.claimed,
-        claimedBy: auth.sessionId,
+        claimedBy: auth.authMethod === "session" ? auth.sessionId : auth.keyId,
         claimedAt: timestamp,
       })
       .where(

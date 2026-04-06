@@ -6,6 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { requireSession } from "../lib/auth-context.js";
 import { toHex } from "../lib/hex.js";
 import { withTenantTransaction } from "../lib/rls-context.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -36,6 +37,7 @@ export async function enrollBiometric(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<{ id: BiometricTokenId }> {
+  const session = requireSession(auth);
   const parsed = BiometricEnrollBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid enroll payload");
@@ -73,7 +75,7 @@ export async function enrollBiometric(
 
     await tx.insert(biometricTokens).values({
       id,
-      sessionId: auth.sessionId,
+      sessionId: session.sessionId,
       tokenHash,
       createdAt: timestamp,
     });
@@ -97,6 +99,7 @@ export async function verifyBiometric(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<{ verified: true }> {
+  const session = requireSession(auth);
   const parsed = BiometricVerifyBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid verify payload");
@@ -119,7 +122,7 @@ export async function verifyBiometric(
       .set({ usedAt: now() })
       .where(
         and(
-          eq(biometricTokens.sessionId, auth.sessionId),
+          eq(biometricTokens.sessionId, session.sessionId),
           eq(biometricTokens.tokenHash, tokenHash),
           isNull(biometricTokens.usedAt),
         ),
