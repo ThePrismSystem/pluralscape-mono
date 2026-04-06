@@ -4,7 +4,7 @@
  * Centralizes default values so adding fields to AuthContext does not
  * require updating every test file individually.
  */
-import type { AuthContext } from "../../lib/auth-context.js";
+import type { SessionAuthContext } from "../../lib/auth-context.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 /** Default system ID used across service unit tests. */
@@ -18,15 +18,16 @@ interface TestAuthOverrides {
   readonly accountId?: string;
   readonly systemId?: string;
   readonly sessionId?: string;
-  readonly accountType?: AuthContext["accountType"];
+  readonly accountType?: SessionAuthContext["accountType"];
   readonly ownedSystemIds?: ReadonlySet<SystemId>;
   readonly auditLogIpTracking?: boolean;
 }
 
-/** Create a test AuthContext with sensible defaults. Override any field via the options. */
-export function makeTestAuth(overrides?: TestAuthOverrides): AuthContext {
+/** Create a test SessionAuthContext with sensible defaults. Override any field via the options. */
+export function makeTestAuth(overrides?: TestAuthOverrides): SessionAuthContext {
   const systemId = (overrides?.systemId ?? DEFAULT_SYSTEM_ID) as SystemId;
   return {
+    authMethod: "session" as const,
     accountId: (overrides?.accountId ?? "acct_test") as AccountId,
     systemId,
     sessionId: (overrides?.sessionId ?? "sess_test") as SessionId,
