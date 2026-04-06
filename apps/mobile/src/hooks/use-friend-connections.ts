@@ -231,3 +231,14 @@ export function useUpdateFriendNotificationPrefs(): TRPCMutation<
     },
   });
 }
+
+export function useListReceivedKeyGrants(opts?: {
+  enabled?: boolean;
+}): DataQuery<RouterOutput["friend"]["listReceivedKeyGrants"]> {
+  return useRemoteOnlyQuery<RouterOutput["friend"]["listReceivedKeyGrants"]>({
+    useRemote: ({ enabled }) =>
+      trpc.friend.listReceivedKeyGrants.useQuery(undefined, {
+        enabled: enabled && (opts?.enabled ?? true),
+      }) as DataQuery<RouterOutput["friend"]["listReceivedKeyGrants"]>,
+  });
+}
