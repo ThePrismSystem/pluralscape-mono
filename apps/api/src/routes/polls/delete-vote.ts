@@ -14,7 +14,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const deleteVoteRoute = new Hono<AuthEnv>();
 
 deleteVoteRoute.use("*", createCategoryRateLimiter("write"));
-deleteVoteRoute.use("*", requireScopeMiddleware("write:polls"));
+deleteVoteRoute.use("*", requireScopeMiddleware("delete:polls"));
 
 deleteVoteRoute.delete("/:pollId/votes/:voteId", async (c) => {
   const auth = c.get("auth");

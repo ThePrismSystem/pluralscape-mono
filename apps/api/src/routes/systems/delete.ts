@@ -14,7 +14,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const deleteRoute = new Hono<AuthEnv>();
 
 deleteRoute.use("*", createCategoryRateLimiter("write"));
-deleteRoute.use("*", requireScopeMiddleware("delete:system"));
+deleteRoute.use("*", requireScopeMiddleware("write:system"));
 
 deleteRoute.delete("/:id", async (c) => {
   const auth = c.get("auth");

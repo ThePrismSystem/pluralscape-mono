@@ -15,6 +15,7 @@ import {
   buildRESTInventory,
   discoverTRPCProcedures,
   extractTRPCRateLimits,
+  extractTRPCScopes,
   printResults,
   runParityChecks,
 } from "./trpc-parity-lib.js";
@@ -22,6 +23,7 @@ import {
 async function main(): Promise<void> {
   let trpcProcedures = await discoverTRPCProcedures();
   trpcProcedures = extractTRPCRateLimits(trpcProcedures);
+  trpcProcedures = extractTRPCScopes(trpcProcedures);
   const { routes: restRoutes, failures: discoveryFailures } = buildRESTInventory();
   const { failures, warnings, stats } = runParityChecks(restRoutes, trpcProcedures);
   const allFailures = [...discoveryFailures, ...failures];

@@ -84,7 +84,7 @@ export const systemSettingsRouter = router({
       }),
     verify: systemProcedure
       .use(authHeavyLimiter)
-      .use(requireScope("write:system"))
+      .use(requireScope("read:system"))
       .input(VerifyPinBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
