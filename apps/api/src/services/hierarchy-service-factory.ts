@@ -1,7 +1,8 @@
+import { systems } from "@pluralscape/db/pg";
 import { createId, now } from "@pluralscape/types";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity } from "../lib/entity-lifecycle.js";
@@ -81,6 +82,28 @@ export function createHierarchyService<
     const timestamp = now();
 
     return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+      // Enforce per-system quota if configured
+      if (cfg.maxPerSystem !== undefined) {
+        await tx
+          .select({ id: systems.id })
+          .from(systems)
+          .where(eq(systems.id, systemId))
+          .for("update");
+
+        const [existing] = await tx
+          .select({ count: count() })
+          .from(table)
+          .where(and(eq(columns.systemId, systemId), eq(columns.archived, false)));
+
+        if ((existing?.count ?? 0) >= cfg.maxPerSystem) {
+          throw new ApiHttpError(
+            HTTP_TOO_MANY_REQUESTS,
+            "QUOTA_EXCEEDED",
+            `Maximum of ${String(cfg.maxPerSystem)} ${entityName.toLowerCase()}s per system`,
+          );
+        }
+      }
+
       // Validate parent exists in same system if non-null
       const parsedRecord = parsed as Record<string, unknown>;
       const rawParentId = parentFieldName in parsedRecord ? parsedRecord[parentFieldName] : null;
