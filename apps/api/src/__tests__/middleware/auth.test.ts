@@ -5,7 +5,7 @@ import { authMiddleware } from "../../middleware/auth.js";
 import { errorHandler } from "../../middleware/error-handler.js";
 import { requestIdMiddleware } from "../../middleware/request-id.js";
 
-import type { AuthContext, AuthEnv } from "../../lib/auth-context.js";
+import type { AuthContext, AuthEnv, SessionAuthContext } from "../../lib/auth-context.js";
 import type { ValidateSessionResult } from "../../lib/session-auth.js";
 import type { ValidateApiKeyResult } from "../../services/api-key.service.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
@@ -102,7 +102,7 @@ interface MockSessionData {
 
 function makeValidResult(
   sessionOverrides: Partial<MockSessionData> = {},
-  authOverrides: Partial<AuthContext> = {},
+  authOverrides: Partial<SessionAuthContext> = {},
 ): ValidateSessionResult {
   const session: MockSessionData = {
     id: "sess_00000000-0000-0000-0000-000000000001",
@@ -118,9 +118,10 @@ function makeValidResult(
   return {
     ok: true,
     auth: {
+      authMethod: "session" as const,
       accountId: "acct_xyz" as AuthContext["accountId"],
       systemId: "sys_001" as AuthContext["systemId"],
-      sessionId: "sess_00000000-0000-0000-0000-000000000001" as AuthContext["sessionId"],
+      sessionId: "sess_00000000-0000-0000-0000-000000000001" as SessionAuthContext["sessionId"],
       accountType: "system",
       ownedSystemIds: new Set(["sys_001" as AuthContext["systemId"] & string]),
       auditLogIpTracking: false,
@@ -277,6 +278,7 @@ describe("authMiddleware", () => {
     const body = (await res.json()) as { auth: AuthContext };
     expect(body.auth).toEqual(
       expect.objectContaining({
+        authMethod: "session",
         accountId: "acct_xyz",
         systemId: "sys_001",
         sessionId: "sess_00000000-0000-0000-0000-000000000001",
@@ -401,12 +403,15 @@ describe("authMiddleware", () => {
       const body = (await res.json()) as { auth: AuthContext };
       expect(body.auth).toEqual(
         expect.objectContaining({
+          authMethod: "apiKey",
           accountId: "acct_apikey",
           systemId: "sys_apikey",
           accountType: "system",
           apiKeyScopes: ["read:members", "read:fronting"],
+          keyId: "ak_00000000-0000-0000-0000-000000000001",
         }),
       );
+      expect(body.auth).not.toHaveProperty("sessionId");
     });
 
     it("returns 401 for revoked API key", async () => {
