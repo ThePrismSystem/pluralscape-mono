@@ -18,6 +18,7 @@ vi.mock("../../lib/session-auth.js", () => ({
   validateSession: vi.fn().mockResolvedValue({
     ok: true,
     auth: {
+      authMethod: "session" as const,
       accountId: "acct_test" as AccountId,
       systemId: "sys_test" as SystemId,
       sessionId: "sess_test" as SessionId,
@@ -687,6 +688,7 @@ describe("message-router", () => {
       brokenManager.authenticate(
         "conn-broken",
         {
+          authMethod: "session" as const,
           accountId: "acct_test" as AccountId,
           systemId: "sys_test" as SystemId,
           sessionId: "sess_test" as SessionId,
@@ -708,6 +710,7 @@ describe("message-router", () => {
       brokenManager.authenticate(
         "conn-sub",
         {
+          authMethod: "session" as const,
           accountId: "acct_test" as AccountId,
           systemId: "sys_test" as SystemId,
           sessionId: "sess_test" as SessionId,
@@ -896,6 +899,7 @@ describe("message-router", () => {
       manager.authenticate(
         "conn-sub",
         {
+          authMethod: "session" as const,
           accountId: "acct_test" as AccountId,
           systemId: "sys_sub" as SystemId,
           sessionId: "sess_sub" as SessionId,
@@ -1099,6 +1103,7 @@ describe("message-router", () => {
       brokenManager.authenticate(
         "conn-broken-mfst",
         {
+          authMethod: "session" as const,
           accountId: "acct_test" as AccountId,
           systemId: "sys_test" as SystemId,
           sessionId: "sess_test" as SessionId,
@@ -1140,6 +1145,7 @@ describe("message-router", () => {
       brokenManager.authenticate(
         "conn-broken-sub",
         {
+          authMethod: "session" as const,
           accountId: "acct_test" as AccountId,
           systemId: "sys_test" as SystemId,
           sessionId: "sess_test" as SessionId,
@@ -1181,6 +1187,7 @@ describe("message-router", () => {
       brokenManager.authenticate(
         "conn-broken-snap",
         {
+          authMethod: "session" as const,
           accountId: "acct_test" as AccountId,
           systemId: "sys_test" as SystemId,
           sessionId: "sess_test" as SessionId,

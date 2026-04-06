@@ -67,11 +67,18 @@ export function mockDb(overrides?: Partial<MockChain>): {
     }
   }
 
-  // Wire up fluent chaining: each method returns the chain
+  // Wire up fluent chaining: each method returns the chain.
+  // `where` returns a thenable chain so `await tx.select().from().where()`
+  // resolves to an empty array (for quota count queries) while still supporting
+  // further chaining like `.for("update")` or `.limit(1)`.
+  const thenableChain = Object.assign(Object.create(chain), {
+    then: (resolve: (v: unknown[]) => void) => Promise.resolve([]).then(resolve),
+  });
+
   chain.select.mockReturnValue(chain);
   chain.from.mockReturnValue(chain);
   chain.leftJoin.mockReturnValue(chain);
-  chain.where.mockReturnValue(chain);
+  chain.where.mockReturnValue(thenableChain);
   chain.orderBy.mockReturnValue(chain);
   chain.limit.mockResolvedValue([]);
   chain.insert.mockReturnValue(chain);
@@ -80,7 +87,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
   chain.update.mockReturnValue(chain);
   chain.set.mockReturnValue(chain);
   chain.delete.mockReturnValue(chain);
-  chain.for.mockReturnValue(chain);
+  chain.for.mockReturnValue(thenableChain);
   chain.onConflictDoNothing.mockReturnValue(chain);
   chain.groupBy.mockResolvedValue([]);
   // execute is used by RLS context helpers (setTenantContext, setAccountId)

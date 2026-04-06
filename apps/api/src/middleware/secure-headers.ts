@@ -17,7 +17,9 @@ export function createSecureHeaders(): MiddlewareHandler {
 
   return honoSecureHeaders({
     contentSecurityPolicy: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'none'"],
       frameAncestors: ["'none'"],
     },
     xFrameOptions: "DENY",

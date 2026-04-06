@@ -312,7 +312,7 @@ describe("key-rotation.service (PGlite integration)", () => {
       expect(claim.rotationState).toBe(ROTATION_STATES.migrating);
       for (const item of claim.data) {
         expect(item.status).toBe(ROTATION_ITEM_STATUSES.claimed);
-        expect(item.claimedBy).toBe(auth.sessionId);
+        expect(item.claimedBy).toBe(auth.authMethod === "session" ? auth.sessionId : null);
       }
     });
 

@@ -397,6 +397,7 @@ export type {
   ApiKey,
   ApiKeyWithSecret,
 } from "./api-keys.js";
+export { API_KEY_TOKEN_PREFIX } from "./api-keys.js";
 
 // ── Jobs ──────────────────────────────────────────────────────
 export type {

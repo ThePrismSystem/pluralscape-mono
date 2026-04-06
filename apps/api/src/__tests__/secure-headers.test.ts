@@ -37,7 +37,7 @@ describe("secureHeaders middleware", () => {
     const app = createApp();
     const res = await app.request("/test");
     const csp = res.headers.get("content-security-policy");
-    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("default-src 'none'");
   });
 
   it("sets Content-Security-Policy with frame-ancestors none", async () => {

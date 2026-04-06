@@ -128,7 +128,7 @@ describe("POST /systems/:systemId/members/:memberId/photos", () => {
   it("returns 409 when quota exceeded", async () => {
     const { ApiHttpError } = await import("../../../../lib/api-error.js");
     vi.mocked(createMemberPhoto).mockRejectedValueOnce(
-      new ApiHttpError(409, "QUOTA_EXCEEDED", "Maximum of 50 photos per member"),
+      new ApiHttpError(409, "QUOTA_EXCEEDED", "Maximum of 5 photos per member"),
     );
 
     const app = createApp();

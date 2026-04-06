@@ -57,6 +57,9 @@ vi.mock("@pluralscape/db/pg", () => ({
     channelId: "channel_id",
     archived: "archived",
   },
+  systems: {
+    id: "id",
+  },
 }));
 
 vi.mock("@pluralscape/types", async (importOriginal) => {
@@ -224,6 +227,17 @@ describe("channel service", () => {
 
       await expect(createChannel(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
         expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+      );
+    });
+
+    it("throws QUOTA_EXCEEDED when channel count is at maximum", async () => {
+      const { db, chain } = mockDb();
+      chain.where
+        .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+        .mockResolvedValueOnce([{ count: 50 }]); // quota count -> at limit
+
+      await expect(createChannel(db, SYSTEM_ID, validPayload, AUTH, mockAudit)).rejects.toThrow(
+        expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }),
       );
     });
   });

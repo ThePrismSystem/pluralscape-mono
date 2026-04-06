@@ -78,6 +78,7 @@ export async function validateSession(
   return {
     ok: true,
     auth: {
+      authMethod: "session" as const,
       accountId,
       systemId: firstSystemId ?? null,
       sessionId: row.session.id as SessionId,

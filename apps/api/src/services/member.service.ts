@@ -11,6 +11,7 @@ import {
   polls,
   relationships,
   systemStructureEntityMemberLinks,
+  systems,
 } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
@@ -20,7 +21,12 @@ import {
 } from "@pluralscape/validation";
 import { and, count, eq, gt, inArray, or, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_CONFLICT,
+  HTTP_NOT_FOUND,
+  HTTP_TOO_MANY_REQUESTS,
+} from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
@@ -35,6 +41,9 @@ import {
 } from "../routes/members/members.constants.js";
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
+/** Maximum non-archived members per system. */
+const MAX_MEMBERS_PER_SYSTEM = 5_000;
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -106,6 +115,22 @@ export async function createMember(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Enforce per-system member quota
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existing] = await tx
+      .select({ count: count() })
+      .from(members)
+      .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
+
+    if ((existing?.count ?? 0) >= MAX_MEMBERS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_MEMBERS_PER_SYSTEM)} members per system`,
+      );
+    }
+
     const [row] = await tx
       .insert(members)
       .values({
@@ -305,6 +330,22 @@ export async function duplicateMember(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Enforce per-system member quota
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existingCount] = await tx
+      .select({ count: count() })
+      .from(members)
+      .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
+
+    if ((existingCount?.count ?? 0) >= MAX_MEMBERS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_MEMBERS_PER_SYSTEM)} members per system`,
+      );
+    }
+
     // Verify source member inside transaction to prevent TOCTOU
     const [source] = await tx
       .select()
@@ -510,6 +551,20 @@ export async function restoreMember(
 
     if (!existing) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
+
+    // Enforce per-system member quota on restore
+    const [activeCount] = await tx
+      .select({ count: count() })
+      .from(members)
+      .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
+
+    if ((activeCount?.count ?? 0) >= MAX_MEMBERS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_MEMBERS_PER_SYSTEM)} members per system`,
+      );
     }
 
     const timestamp = now();

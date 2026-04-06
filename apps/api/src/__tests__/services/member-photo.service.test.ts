@@ -90,7 +90,9 @@ describe("createMemberPhoto", () => {
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
     chain.where
       .mockReturnValueOnce(chain) // assertMemberActive → chains to .limit()
-      .mockResolvedValueOnce([{ count: 0 }]) // count query
+      .mockReturnValueOnce(chain) // FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([{ count: 0 }]) // per-member count query
+      .mockResolvedValueOnce([{ count: 0 }]) // system-wide count query
       .mockResolvedValueOnce([{ maxSort: null }]); // max sort query (first photo)
     chain.returning.mockResolvedValueOnce([makePhotoRow()]);
 
@@ -118,7 +120,9 @@ describe("createMemberPhoto", () => {
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
     chain.where
       .mockReturnValueOnce(chain) // assertMemberActive → chains to .limit()
-      .mockResolvedValueOnce([{ count: 0 }]); // count query
+      .mockReturnValueOnce(chain) // FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([{ count: 0 }]) // per-member count query
+      .mockResolvedValueOnce([{ count: 0 }]); // system-wide count query
     // No max sort query when sortOrder is explicit
     chain.returning.mockResolvedValueOnce([makePhotoRow({ sortOrder: 5 })]);
 
@@ -140,7 +144,8 @@ describe("createMemberPhoto", () => {
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
     chain.where
       .mockReturnValueOnce(chain) // assertMemberActive → chains to .limit()
-      .mockResolvedValueOnce([{ count: 50 }]); // count at quota
+      .mockReturnValueOnce(chain) // FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([{ count: 5 }]); // per-member count at quota
 
     await expect(
       createMemberPhoto(

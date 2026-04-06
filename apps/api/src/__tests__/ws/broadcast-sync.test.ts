@@ -20,6 +20,7 @@ interface MockPubSub {
 
 function mockAuth(accountId = "acct_test" as AccountId) {
   return {
+    authMethod: "session" as const,
     accountId,
     systemId: "sys_test" as SystemId,
     sessionId: "sess_test" as SessionId,

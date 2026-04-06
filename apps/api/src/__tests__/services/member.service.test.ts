@@ -156,6 +156,17 @@ describe("createMember", () => {
       createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
+
+  it("throws QUOTA_EXCEEDED when member count is at maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 5000 }]); // quota count -> at limit
+
+    await expect(
+      createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
+  });
 });
 
 describe("listMembers", () => {
@@ -412,6 +423,8 @@ describe("duplicateMember", () => {
     chain.returning.mockResolvedValueOnce([newRow]);
     // Photos select in tx: tx.select().from(memberPhotos).where() — terminal (no .limit())
     chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([]) // quota count → resolves to empty (under quota)
       .mockReturnValueOnce(chain) // source member → chains to .limit()
       .mockResolvedValueOnce([
         {
@@ -448,6 +461,8 @@ describe("duplicateMember", () => {
     chain.returning.mockResolvedValueOnce([newRow]);
     // Field values select in tx: tx.select().from(fieldValues).where() — terminal
     chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([]) // quota count → resolves to empty (under quota)
       .mockReturnValueOnce(chain) // source member → chains to .limit()
       .mockResolvedValueOnce([
         {
@@ -484,6 +499,8 @@ describe("duplicateMember", () => {
     chain.returning.mockResolvedValueOnce([newRow]);
     // Group memberships select in tx: tx.select().from(groupMemberships).where() — terminal
     chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock → chains to .for()
+      .mockResolvedValueOnce([]) // quota count → resolves to empty (under quota)
       .mockReturnValueOnce(chain) // source member → chains to .limit()
       .mockResolvedValueOnce([
         {

@@ -25,6 +25,7 @@ const BUCKET_B = "bkt_bbb" as BucketId;
 
 function makeAuth(accountId: AccountId = ACCOUNT_ID): AuthContext {
   return {
+    authMethod: "session" as const,
     accountId,
     systemId: null,
     sessionId: "sess_test" as SessionId,

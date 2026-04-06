@@ -22,6 +22,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
+import { requireSession } from "../../lib/auth-context.js";
 import {
   MAX_TRANSFER_CODE_ATTEMPTS,
   TRANSFER_INITIATION_LIMIT,
@@ -284,9 +285,10 @@ export const accountRouter = router({
     .use(initiateTransferLimiter)
     .input(initiateTransferInput)
     .mutation(async ({ ctx, input }) => {
+      const session = requireSession(ctx.auth);
       const audit = ctx.createAudit(ctx.auth);
       try {
-        return await initiateTransfer(ctx.db, ctx.auth.accountId, ctx.auth.sessionId, input, audit);
+        return await initiateTransfer(ctx.db, ctx.auth.accountId, session.sessionId, input, audit);
       } catch (err) {
         if (err instanceof TransferValidationError) {
           throw new TRPCError({ code: "BAD_REQUEST", message: err.message, cause: err });
@@ -304,13 +306,14 @@ export const accountRouter = router({
     .use(approveTransferLimiter)
     .input(z.object({ transferId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
+      const session = requireSession(ctx.auth);
       const audit = ctx.createAudit(ctx.auth);
       try {
         await approveTransfer(
           ctx.db,
           input.transferId,
           ctx.auth.accountId,
-          ctx.auth.sessionId,
+          session.sessionId,
           audit,
         );
         return { success: true as const };
@@ -334,13 +337,14 @@ export const accountRouter = router({
     .use(completeTransferLimiter)
     .input(completeTransferInput)
     .mutation(async ({ ctx, input }) => {
+      const session = requireSession(ctx.auth);
       const audit = ctx.createAudit(ctx.auth);
       try {
         return await completeTransfer(
           ctx.db,
           input.transferId,
           ctx.auth.accountId,
-          ctx.auth.sessionId,
+          session.sessionId,
           input.code,
           audit,
         );

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "./helpers/mock-db.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AuthContext } from "../lib/auth-context.js";
+import type { AuthContext, SessionAuthContext } from "../lib/auth-context.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ───────────────────────────────────────────────────────────
@@ -35,8 +35,9 @@ const { purgeSystem } = await import("../services/system-purge.service.js");
 const SYSTEM_ID = "sys_00000000-0000-0000-0000-000000000001" as SystemId;
 const ACCOUNT_ID = "acc_00000000-0000-0000-0000-000000000001" as AccountId;
 
-function stubAuth(overrides?: Partial<AuthContext>): AuthContext {
+function stubAuth(overrides?: Partial<SessionAuthContext>): AuthContext {
   return {
+    authMethod: "session" as const,
     accountId: ACCOUNT_ID,
     systemId: SYSTEM_ID,
     sessionId: "ses_00000000-0000-0000-0000-000000000001" as SessionId,
@@ -44,7 +45,7 @@ function stubAuth(overrides?: Partial<AuthContext>): AuthContext {
     ownedSystemIds: new Set([SYSTEM_ID]),
     auditLogIpTracking: false,
     ...overrides,
-  };
+  } satisfies SessionAuthContext;
 }
 
 function stubAudit(): AuditWriter {

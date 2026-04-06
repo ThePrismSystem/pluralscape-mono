@@ -12,6 +12,7 @@ import { initEmailAdapter } from "./lib/email.js";
 import { logger } from "./lib/logger.js";
 import { setNotificationPubSub } from "./lib/notification-pubsub.js";
 import { sanitizeS3Error } from "./lib/s3-log-sanitizer.js";
+import { assertSmtpSecure } from "./lib/smtp-tls-guard.js";
 import { initStorageAdapter } from "./lib/storage.js";
 import { accessLogMiddleware } from "./middleware/access-log.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
@@ -169,6 +170,8 @@ async function start(): Promise<void> {
     initEmailAdapter(ResendEmailAdapter.create({ apiKey, fromAddress: env.EMAIL_FROM }));
     logger.info("Email adapter initialized", { provider: "resend" });
   } else if (emailProvider === "smtp") {
+    assertSmtpSecure(emailProvider, env.SMTP_SECURE, env.NODE_ENV);
+
     const { SmtpEmailAdapter } = await import("@pluralscape/email/smtp");
     const host = env.SMTP_HOST;
     const port = env.SMTP_PORT;

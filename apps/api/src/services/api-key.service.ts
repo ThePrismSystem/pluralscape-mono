@@ -1,7 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { apiKeys } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import { accounts, apiKeys } from "@pluralscape/db/pg";
+import {
+  API_KEY_TOKEN_PREFIX,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import { CreateApiKeyBodySchema } from "@pluralscape/validation";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 
@@ -17,6 +24,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
+  AccountId,
   ApiKeyId,
   ApiKeyScope,
   PaginatedResult,
@@ -98,7 +106,8 @@ function toApiKeyResult(row: {
 
 /** Generate a cryptographically random API key token and its SHA-256 hash. */
 function generateTokenPair(): { token: string; tokenHash: string } {
-  const token = randomBytes(API_KEY_TOKEN_BYTES).toString("hex");
+  const raw = randomBytes(API_KEY_TOKEN_BYTES).toString("hex");
+  const token = `${API_KEY_TOKEN_PREFIX}${raw}`;
   const tokenHash = createHash("sha256").update(token).digest("hex");
   return { token, tokenHash };
 }
@@ -269,4 +278,54 @@ export async function revokeApiKey(
       systemId,
     });
   });
+}
+
+// ── VALIDATE ──────────────────────────────────────────────────────────
+
+/** Result of API key validation — returned to auth middleware. */
+export interface ValidateApiKeyResult {
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly scopes: readonly ApiKeyScope[];
+  readonly auditLogIpTracking: boolean;
+  readonly keyId: ApiKeyId;
+}
+
+/**
+ * Validate an API key token and return the associated account and system.
+ * Returns null if the key is invalid, revoked, or expired.
+ */
+export async function validateApiKey(
+  db: PostgresJsDatabase,
+  token: string,
+): Promise<ValidateApiKeyResult | null> {
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const currentTime = now();
+
+  const [row] = await db
+    .select({
+      id: apiKeys.id,
+      accountId: apiKeys.accountId,
+      systemId: apiKeys.systemId,
+      scopes: apiKeys.scopes,
+      revokedAt: apiKeys.revokedAt,
+      expiresAt: apiKeys.expiresAt,
+      auditLogIpTracking: accounts.auditLogIpTracking,
+    })
+    .from(apiKeys)
+    .innerJoin(accounts, eq(accounts.id, apiKeys.accountId))
+    .where(eq(apiKeys.tokenHash, tokenHash))
+    .limit(1);
+
+  if (!row) return null;
+  if (row.revokedAt !== null) return null;
+  if (row.expiresAt !== null && currentTime > row.expiresAt) return null;
+
+  return {
+    accountId: row.accountId as AccountId,
+    systemId: row.systemId as SystemId,
+    scopes: row.scopes,
+    auditLogIpTracking: row.auditLogIpTracking,
+    keyId: row.id as ApiKeyId,
+  };
 }

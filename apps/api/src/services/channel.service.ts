@@ -1,9 +1,9 @@
-import { channels, messages } from "@pluralscape/db/pg";
+import { channels, messages, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateChannelBodySchema, UpdateChannelBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
@@ -19,6 +19,9 @@ import {
 } from "../service.constants.js";
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
+/** Maximum non-archived channels per system (includes categories). */
+const MAX_CHANNELS_PER_SYSTEM = 50;
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -106,6 +109,22 @@ export async function createChannel(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Enforce per-system channel quota
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existing] = await tx
+      .select({ count: count() })
+      .from(channels)
+      .where(and(eq(channels.systemId, systemId), eq(channels.archived, false)));
+
+    if ((existing?.count ?? 0) >= MAX_CHANNELS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_CHANNELS_PER_SYSTEM)} channels per system`,
+      );
+    }
+
     // If parentId provided, validate it exists, belongs to system, and is a category
     if (parsed.parentId) {
       const [parent] = await tx

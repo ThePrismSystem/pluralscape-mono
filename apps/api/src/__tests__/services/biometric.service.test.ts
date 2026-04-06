@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
-import type { AuthContext } from "../../lib/auth-context.js";
-import type { BiometricTokenId } from "@pluralscape/types";
+import type { AuthContext, SessionAuthContext } from "../../lib/auth-context.js";
+import type { BiometricTokenId, SessionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -53,16 +53,17 @@ const { enrollBiometric, verifyBiometric } = await import("../../services/biomet
 
 // ── Fixtures ─────────────────────────────────────────────────────
 
-function createAuth(overrides?: Partial<AuthContext>): AuthContext {
+function createAuth(overrides?: Partial<SessionAuthContext>): AuthContext {
   return {
+    authMethod: "session" as const,
     accountId: "acct_abc" as AuthContext["accountId"],
     systemId: "sys_xyz" as AuthContext["systemId"],
-    sessionId: "sess_001" as AuthContext["sessionId"],
+    sessionId: "sess_001" as SessionId,
     accountType: "system",
     ownedSystemIds: new Set(["sys_xyz" as AuthContext["systemId"] & string]),
     auditLogIpTracking: false,
     ...overrides,
-  };
+  } satisfies SessionAuthContext;
 }
 
 const VALID_ENROLL_BODY = { token: "my-biometric-token" };

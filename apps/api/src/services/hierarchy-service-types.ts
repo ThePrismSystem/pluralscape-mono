@@ -60,6 +60,8 @@ export interface HierarchyServiceConfig<
   readonly idPrefix: string;
   /** Human-readable entity name for error messages. */
   readonly entityName: string;
+  /** Maximum non-archived entities per system. When set, create() enforces this quota. */
+  readonly maxPerSystem?: number;
   /** The camelCase field name for the parent ID in parsed bodies and insert values (e.g. "parentGroupId"). */
   readonly parentFieldName: string;
   /** Maps a raw DB row to the domain result type. */

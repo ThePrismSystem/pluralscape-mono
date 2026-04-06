@@ -40,6 +40,7 @@ vi.mock("../../../middleware/auth.js", () => ({
       () =>
         async (c: { set: (key: string, value: unknown) => void }, next: () => Promise<void>) => {
           c.set("auth", {
+            authMethod: "session",
             accountId: "acct_test",
             sessionId: MOCK_CURRENT_SESSION_ID,
             systemId: null,

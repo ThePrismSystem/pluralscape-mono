@@ -16,6 +16,9 @@ export const MAX_RATE_LIMIT_ENTRIES = 10_000;
 /** Regex pattern for valid hex-encoded session tokens (32 bytes = 64 lowercase hex chars). */
 export const SESSION_TOKEN_PATTERN = /^[0-9a-f]{64}$/;
 
+/** Regex pattern for API key tokens: "ps_" prefix + 64 lowercase hex chars. */
+export const API_KEY_TOKEN_PATTERN = /^ps_[0-9a-f]{64}$/;
+
 // ── Body limit ──────────────────────────────────────────────────────
 
 /** Maximum request body size in bytes (256 KiB). */

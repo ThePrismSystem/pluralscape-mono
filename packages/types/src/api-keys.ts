@@ -5,6 +5,9 @@ import type { AuditMetadata } from "./utility.js";
 /** A branded API key token — prevents accidental logging. */
 export type ApiKeyToken = Brand<string, "ApiKeyToken">;
 
+/** Prefix for API key tokens to distinguish them from session tokens. */
+export const API_KEY_TOKEN_PREFIX = "ps_";
+
 /** Scopes an API key can be granted. */
 export type ApiKeyScope =
   | "read:members"

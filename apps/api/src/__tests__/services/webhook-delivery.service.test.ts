@@ -57,6 +57,7 @@ const {
 
 function makeAuth(accountId: string, systemId: string) {
   return {
+    authMethod: "session" as const,
     accountId: accountId as AccountId,
     systemId: systemId as SystemId,
     sessionId: "sess_test" as SessionId,

@@ -2,6 +2,7 @@ import { brandedIdQueryParam } from "@pluralscape/validation";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
 
+import { requireSession } from "../../lib/auth-context.js";
 import { logger } from "../../lib/logger.js";
 import {
   LoginThrottledError,
@@ -139,8 +140,9 @@ export const authRouter = router({
 
   /** Logout the current session. Requires authentication. */
   logout: protectedProcedure.use(authLightLimiter).mutation(async ({ ctx }) => {
+    const session = requireSession(ctx.auth);
     const audit = ctx.createAudit(ctx.auth);
-    await logoutCurrentSession(ctx.db, ctx.auth.sessionId, ctx.auth.accountId, audit);
+    await logoutCurrentSession(ctx.db, session.sessionId, ctx.auth.accountId, audit);
     return { success: true as const };
   }),
 
@@ -166,7 +168,8 @@ export const authRouter = router({
       .use(authLightLimiter)
       .input(z.object({ sessionId: brandedIdQueryParam("sess_") }))
       .mutation(async ({ input, ctx }) => {
-        if (input.sessionId === ctx.auth.sessionId) {
+        const session = requireSession(ctx.auth);
+        if (input.sessionId === session.sessionId) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "Use logout to revoke the current session",
@@ -183,8 +186,9 @@ export const authRouter = router({
         return { revoked: true as const };
       }),
     revokeAll: protectedProcedure.use(authLightLimiter).mutation(async ({ ctx }) => {
+      const session = requireSession(ctx.auth);
       const audit = ctx.createAudit(ctx.auth);
-      const count = await revokeAllSessions(ctx.db, ctx.auth.accountId, ctx.auth.sessionId, audit);
+      const count = await revokeAllSessions(ctx.db, ctx.auth.accountId, session.sessionId, audit);
       return { revokedCount: count };
     }),
   }),

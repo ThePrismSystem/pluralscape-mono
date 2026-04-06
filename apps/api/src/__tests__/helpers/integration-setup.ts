@@ -59,6 +59,7 @@ export function testEncryptedDataBase64(): string {
 /** Build a minimal AuthContext for integration tests. */
 export function makeAuth(accountId: AccountId, systemId: SystemId): AuthContext {
   return {
+    authMethod: "session" as const,
     accountId,
     systemId,
     sessionId: `sess_${crypto.randomUUID()}` as SessionId,

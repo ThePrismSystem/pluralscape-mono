@@ -22,6 +22,7 @@ function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi
 function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
   const systemId = crypto.randomUUID() as SystemId;
   return {
+    authMethod: "session" as const,
     accountId,
     systemId,
     sessionId: crypto.randomUUID() as SessionId,

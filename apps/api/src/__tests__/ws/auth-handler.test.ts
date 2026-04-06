@@ -46,6 +46,7 @@ type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
 function validAuth(): AuthContextWithSystem {
   const systemId = crypto.randomUUID() as SystemId;
   return {
+    authMethod: "session" as const,
     accountId: crypto.randomUUID() as AccountId,
     systemId,
     sessionId: crypto.randomUUID() as SessionId,

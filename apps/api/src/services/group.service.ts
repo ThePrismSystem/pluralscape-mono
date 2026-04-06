@@ -69,6 +69,9 @@ function toGroupResult(row: {
   };
 }
 
+/** Maximum non-archived groups per system. */
+const MAX_GROUPS_PER_SYSTEM = 200;
+
 // ── Shared hierarchy service ────────────────────────────────────────
 
 const groupHierarchy = createHierarchyService<
@@ -101,6 +104,7 @@ const groupHierarchy = createHierarchyService<
   },
   idPrefix: ID_PREFIXES.group,
   entityName: "Group",
+  maxPerSystem: MAX_GROUPS_PER_SYSTEM,
   parentFieldName: "parentGroupId",
   toResult: toGroupResult,
   createSchema: CreateGroupBodySchema,

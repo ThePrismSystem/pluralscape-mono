@@ -31,7 +31,7 @@ describe("middleware composition", () => {
     const res = await testApp.request("/health");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(res.headers.get("x-frame-options")).toBe("DENY");
-    expect(res.headers.get("content-security-policy")).toContain("default-src 'self'");
+    expect(res.headers.get("content-security-policy")).toContain("default-src 'none'");
   });
 
   it("sets X-Request-Id header on all responses", async () => {
