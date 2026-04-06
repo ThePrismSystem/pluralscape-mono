@@ -223,6 +223,7 @@ Per-bucket symmetric keys are derived client-side. The server never holds T1 key
 | Encryption boundary | T1/T2/T3 classification; fail-closed on unmapped data         | [adr/018-encryption-at-rest-boundary.md](adr/018-encryption-at-rest-boundary.md) |
 | RLS denormalization | system_id/account_id columns on every table for RLS           | [adr/020-rls-denormalization.md](adr/020-rls-denormalization.md)                 |
 | Email encryption    | Server-side AES-256-GCM; BLAKE2b hash for lookup              | [adr/029-server-side-encrypted-email.md](adr/029-server-side-encrypted-email.md) |
+| Web storage backend | OPFS+wa-sqlite preferred, IndexedDB fallback; auto-detected   | [adr/031-web-storage-backend.md](adr/031-web-storage-backend.md)                 |
 | tRPC parity         | `pnpm trpc:parity` enforces REST+tRPC coverage on every PR    | [adr/032-trpc-parity-enforcement.md](adr/032-trpc-parity-enforcement.md)         |
 
 ---
