@@ -1,11 +1,11 @@
 ---
 # ps-62kh
 title: "Clean dead code: session-refresh, biometric-key-store, friend-indexer, i18n exports"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-06T00:53:47Z
-updated_at: 2026-04-06T00:53:47Z
+updated_at: 2026-04-06T09:45:50Z
 parent: ps-y621
 ---
 
@@ -20,3 +20,7 @@ Currently dead/unused exports:
 Note: some may be pre-wired infrastructure for M9. Verify before removing.
 
 Audit ref: Pass 6 MEDIUM
+
+## Summary of Changes
+
+Item 5 (E2E fixture duplicate constants) not fixed — api-e2e doesn't depend on api-client, not worth adding dependency for 2 constants. Items 1-4 kept as M9 scaffolding per user decision.

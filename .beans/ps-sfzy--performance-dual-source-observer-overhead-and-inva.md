@@ -1,11 +1,11 @@
 ---
 # ps-sfzy
 title: "Performance: dual-source observer overhead and invalidation breadth"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-06T00:53:46Z
-updated_at: 2026-04-06T00:53:46Z
+updated_at: 2026-04-06T09:45:50Z
 parent: ps-y621
 ---
 
@@ -20,3 +20,7 @@ Architectural notes for future optimization (not blocking):
 4. use-friend-export.ts etagRef is per-component-instance, lost on unmount.
 
 Audit ref: Pass 3 MEDIUM + LOW
+
+## Summary of Changes
+
+Added architecture notes block in hooks/factories.ts documenting: dual observer overhead, invalidation breadth, key rotation callback cost, and etagRef per-instance lifecycle.

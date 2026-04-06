@@ -1,11 +1,11 @@
 ---
 # ps-t1fv
 title: Document poll-option CRDT/PG asymmetry
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-06T00:53:47Z
-updated_at: 2026-04-06T00:53:47Z
+updated_at: 2026-04-06T09:45:50Z
 parent: ps-y621
 ---
 
@@ -14,3 +14,7 @@ poll-option has a CRDT strategy and local SQLite entity but no corresponding PG 
 Fix: add architecture comment in crdt-strategies.ts and/or a note in the relevant ADR.
 
 Audit ref: Pass 8 MEDIUM
+
+## Summary of Changes
+
+Added architecture comment on poll-option entry in crdt-strategies.ts explaining no PG table exists — options stored in parent poll's encryptedData blob.

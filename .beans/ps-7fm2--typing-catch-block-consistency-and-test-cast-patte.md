@@ -1,11 +1,11 @@
 ---
 # ps-7fm2
 title: "Typing: catch block consistency and test cast patterns"
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-04-06T00:53:47Z
-updated_at: 2026-04-06T00:53:47Z
+updated_at: 2026-04-06T09:45:50Z
 parent: ps-y621
 ---
 
@@ -23,3 +23,10 @@ Minor typing improvements:
 4. packages/types/src/jobs.ts:63-68 — 9 job payload entries use Record<string, unknown> as placeholder. Narrow as handlers are built.
 
 Audit ref: Pass 4 MEDIUM + LOW
+
+## Summary of Changes
+
+1. Added : unknown annotation to 34 catch blocks across crypto, db, sync, and mobile packages.
+2. Replaced as Error/as RowTransformError casts with instanceof narrowing in 3 test files.
+3. sync-engine.ts generic cast left as-is — JSDoc already documents the assertion.
+4. jobs.ts placeholder payloads deferred until handlers are built.
