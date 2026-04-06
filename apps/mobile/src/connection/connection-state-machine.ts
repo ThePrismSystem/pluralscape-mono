@@ -44,14 +44,13 @@ export class ConnectionStateMachine {
   }
 
   /**
-   * Returns the current exponential backoff delay in milliseconds,
-   * capped at maxBackoffMs.
+   * Returns the current exponential backoff delay in milliseconds
+   * with ±25% jitter, hard-capped at maxBackoffMs.
    */
   getBackoffMs(): number {
     const delay = this.config.baseBackoffMs * Math.pow(BACKOFF_MULTIPLIER, this.retryCount);
-    const capped = Math.min(delay, this.config.maxBackoffMs);
     const jitter = JITTER_MIN + Math.random() * (JITTER_MAX - JITTER_MIN);
-    return Math.round(capped * jitter);
+    return Math.round(Math.min(delay * jitter, this.config.maxBackoffMs));
   }
 
   dispatch(event: ConnectionEvent): void {

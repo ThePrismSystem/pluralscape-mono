@@ -101,25 +101,19 @@ describe("ConnectionStateMachine", () => {
 
   it("caps backoff at maxBackoffMs", () => {
     const machine = new ConnectionStateMachine({
-      baseUrl: "https://example.com",
-      baseBackoffMs: 1_000,
+      baseUrl: "http://test",
       maxBackoffMs: 5_000,
     });
     machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
-    // Trigger multiple failures
     for (let i = 0; i < 10; i++) {
-      if (machine.getSnapshot() === "connecting" || machine.getSnapshot() === "reconnecting") {
-        machine.dispatch({ type: "CONNECTION_LOST" });
-      }
-      if (machine.getSnapshot() === "backoff") {
+      machine.dispatch({ type: "CONNECTION_LOST" });
+      if (i < 9) {
         machine.dispatch({ type: "BACKOFF_COMPLETE" });
-      }
-      if (machine.getSnapshot() === "reconnecting") {
         machine.dispatch({ type: "RETRY" });
       }
     }
-    // cap is 5000, jitter can add up to 25% → max possible is Math.round(5000 * 1.25)
-    expect(machine.getBackoffMs()).toBeLessThanOrEqual(Math.round(5_000 * 1.25));
+    // maxBackoffMs is now a true ceiling — jitter cannot exceed it
+    expect(machine.getBackoffMs()).toBeLessThanOrEqual(5_000);
   });
 
   it("resets retry count on successful connection", () => {
@@ -224,9 +218,9 @@ describe("ConnectionStateMachine.getBackoffMs jitter", () => {
       machine.dispatch({ type: "BACKOFF_COMPLETE" });
       machine.dispatch({ type: "RETRY" });
     }
-    const maxWithJitter = Math.round(30_000 * JITTER_MAX);
+    // Default maxBackoffMs is 30_000 — jitter applied before cap, so cap is true ceiling
     for (let i = 0; i < SAMPLE_COUNT; i++) {
-      expect(machine.getBackoffMs()).toBeLessThanOrEqual(maxWithJitter);
+      expect(machine.getBackoffMs()).toBeLessThanOrEqual(30_000);
     }
   });
 
