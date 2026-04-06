@@ -1,13 +1,33 @@
 import type { AuthContext } from "./auth-context.js";
-import type { ApiKeyScope, RequiredScope } from "@pluralscape/types";
+import type { ApiKeyScope, RequiredScope, ScopeTier } from "@pluralscape/types";
+
+/** Numeric tier levels — higher number = more privilege. */
+const TIER_LEVEL: Record<ScopeTier, number> = { read: 0, write: 1, delete: 2 };
+
+const SCOPE_TIERS: readonly ScopeTier[] = ["read", "write", "delete"];
+
+/** Aggregate scope names indexed by tier. */
+const AGGREGATE_SCOPES: Record<ScopeTier, ApiKeyScope> = {
+  read: "read-all",
+  write: "write-all",
+  delete: "delete-all",
+};
+
+function isScopeTier(value: string): value is ScopeTier {
+  return value === "read" || value === "write" || value === "delete";
+}
 
 /**
  * Split a per-entity scope like "read:members" into its tier and domain.
- * Only called for per-entity scopes — aggregates and "full" are handled before this.
+ * Only called for per-entity scopes — "full" is handled before this.
  */
-function splitScope(scope: string): readonly [tier: string, domain: string] {
+function splitScope(scope: RequiredScope): readonly [tier: ScopeTier, domain: string] {
   const colonIdx = scope.indexOf(":");
-  return [scope.slice(0, colonIdx), scope.slice(colonIdx + 1)] as const;
+  const tier = scope.slice(0, colonIdx);
+  if (!isScopeTier(tier)) {
+    throw new Error(`Invalid scope tier in "${scope}"`);
+  }
+  return [tier, scope.slice(colonIdx + 1)] as const;
 }
 
 /**
@@ -24,31 +44,27 @@ export function hasScope(auth: AuthContext, required: RequiredScope): boolean {
   if (scopes.includes("full")) return true;
   if (required === "full") return false;
 
-  const [tier, domain] = splitScope(required);
+  const [requiredTier, domain] = splitScope(required);
+  const requiredLevel = TIER_LEVEL[requiredTier];
 
-  // Check aggregate scopes with hierarchy: delete-all > write-all > read-all.
-  if (tier === "read") {
-    if (
+  // audit-log is a read-only domain outside SCOPE_DOMAINS — no write/delete variants exist.
+  if (domain === "audit-log") {
+    if (requiredTier !== "read") return false;
+    return (
+      scopes.includes("read:audit-log" as ApiKeyScope) ||
       scopes.includes("read-all") ||
       scopes.includes("write-all") ||
       scopes.includes("delete-all")
-    )
-      return true;
-  } else if (tier === "write") {
-    if (scopes.includes("write-all") || scopes.includes("delete-all")) return true;
-  } else if (tier === "delete") {
-    if (scopes.includes("delete-all")) return true;
+    );
   }
 
-  // Check per-entity hierarchy: delete:X > write:X > read:X.
-  const readScope = `read:${domain}` as ApiKeyScope;
-  const writeScope = `write:${domain}` as ApiKeyScope;
-  const deleteScope = `delete:${domain}` as ApiKeyScope;
+  // Check aggregate and per-entity scopes: any tier at or above the required level grants access.
+  for (const tier of SCOPE_TIERS) {
+    if (TIER_LEVEL[tier] >= requiredLevel) {
+      if (scopes.includes(AGGREGATE_SCOPES[tier])) return true;
+      if (scopes.includes(`${tier}:${domain}` as ApiKeyScope)) return true;
+    }
+  }
 
-  if (tier === "read")
-    return (
-      scopes.includes(readScope) || scopes.includes(writeScope) || scopes.includes(deleteScope)
-    );
-  if (tier === "write") return scopes.includes(writeScope) || scopes.includes(deleteScope);
-  return scopes.includes(deleteScope);
+  return false;
 }

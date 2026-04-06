@@ -213,4 +213,27 @@ describe("hasScope", () => {
       expect(hasScope(auth, "delete:groups")).toBe(false); // only write:groups
     });
   });
+
+  describe("audit-log domain (read-only)", () => {
+    it("read:audit-log grants read:audit-log", () => {
+      expect(hasScope(apiKeyAuth(["read:audit-log"]), "read:audit-log")).toBe(true);
+    });
+
+    it("read-all grants read:audit-log", () => {
+      expect(hasScope(apiKeyAuth(["read-all"]), "read:audit-log")).toBe(true);
+    });
+
+    it("write-all grants read:audit-log (write implies read)", () => {
+      expect(hasScope(apiKeyAuth(["write-all"]), "read:audit-log")).toBe(true);
+    });
+
+    it("delete-all grants read:audit-log (delete implies read)", () => {
+      expect(hasScope(apiKeyAuth(["delete-all"]), "read:audit-log")).toBe(true);
+    });
+
+    it("unrelated scopes do not grant read:audit-log", () => {
+      expect(hasScope(apiKeyAuth(["read:members"]), "read:audit-log")).toBe(false);
+      expect(hasScope(apiKeyAuth(["write:system"]), "read:audit-log")).toBe(false);
+    });
+  });
 });
