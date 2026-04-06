@@ -20,6 +20,9 @@ import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { SystemId } from "@pluralscape/types";
 import type { InfiniteData, UseQueryResult } from "@tanstack/react-query";
 
+/** Allowlist pattern for SQLite table names — lowercase letters and underscores only. */
+const VALID_TABLE_NAME = /^[a-z_]+$/;
+
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
@@ -111,6 +114,8 @@ interface OfflineFirstInfiniteQueryConfigBase<TRaw, TDecrypted> {
   /** Override the default list SQL. Receives systemId for the WHERE clause. */
   readonly localQueryFn?: (localDb: LocalDatabase, systemId: SystemId) => readonly TDecrypted[];
   readonly systemIdOverride?: SystemIdOverride;
+  /** Whether to auto-append resolved systemId to queryKey. Defaults to true. Set false for account-scoped queries. */
+  readonly injectSystemId?: boolean;
   readonly useRemote: (args: UseRemoteListArgs<TRaw, TDecrypted>) => DataListQuery<TDecrypted>;
 }
 
@@ -169,16 +174,16 @@ function useOfflineFirstSetup(override?: SystemIdOverride): OfflineFirstSetup {
  * a runtime guard that throws if masterKey is unexpectedly null.
  */
 function useEncryptedSelect<TRaw, TDecrypted>(
-  decrypt: (raw: TRaw, masterKey: KdfMasterKey) => TDecrypted,
+  decrypt: ((raw: TRaw, masterKey: KdfMasterKey) => TDecrypted) | undefined,
   masterKey: KdfMasterKey | null,
 ): (raw: TRaw) => TDecrypted {
   return useCallback(
     (raw: TRaw): TDecrypted => {
+      if (decrypt === undefined) throw new Error("decrypt called on plaintext entity");
       const key = masterKey;
       if (key === null) throw new Error("masterKey is null");
       return decrypt(raw, key);
     },
-    // decrypt is a stable module-level function imported by the consumer
     [masterKey, decrypt],
   );
 }
@@ -187,11 +192,12 @@ function useEncryptedSelect<TRaw, TDecrypted>(
  * Builds a memoized select callback for page-level list decryption.
  */
 function useEncryptedListSelect<TRaw, TDecrypted>(
-  decrypt: (raw: TRaw, masterKey: KdfMasterKey) => TDecrypted,
+  decrypt: ((raw: TRaw, masterKey: KdfMasterKey) => TDecrypted) | undefined,
   masterKey: KdfMasterKey | null,
 ): (data: InfiniteData<RawPage<TRaw>>) => InfiniteData<DecPage<TDecrypted>> {
   return useCallback(
     (data: InfiniteData<RawPage<TRaw>>): InfiniteData<DecPage<TDecrypted>> => {
+      if (decrypt === undefined) throw new Error("decrypt called on plaintext entity");
       const key = masterKey;
       if (key === null) throw new Error("masterKey is null");
       return {
@@ -220,21 +226,16 @@ function useEncryptedListSelect<TRaw, TDecrypted>(
 export function useOfflineFirstQuery<TRaw, TDecrypted>(
   config: OfflineFirstQueryConfig<TRaw, TDecrypted>,
 ): DataQuery<TDecrypted> {
+  if (!VALID_TABLE_NAME.test(config.table)) {
+    throw new Error(`Invalid table name: ${config.table}`);
+  }
+
   const { source, localDb, systemId, masterKey } = useOfflineFirstSetup(config.systemIdOverride);
 
   const encrypted = config.decrypt !== undefined;
 
-  // Only created when decrypt is provided; identity-returns otherwise.
-  // Hooks must be called unconditionally, so we always call this — but
-  // only pass the result to useRemote when encrypted.
-  // Fallback is never invoked — useEncryptedSelect must always be called
-  // (rules of hooks), but select is only passed to useRemote when encrypted.
-  const noopDecrypt = useCallback(() => undefined as never, []) as (
-    raw: TRaw,
-    mk: KdfMasterKey,
-  ) => TDecrypted;
-
-  const encryptedSelect = useEncryptedSelect(config.decrypt ?? noopDecrypt, masterKey);
+  // Always called (rules of hooks) — result only used when encrypted.
+  const encryptedSelect = useEncryptedSelect(config.decrypt, masterKey);
 
   const localQuery = useQuery({
     queryKey: config.queryKey,
@@ -271,20 +272,22 @@ export function useOfflineFirstQuery<TRaw, TDecrypted>(
 export function useOfflineFirstInfiniteQuery<TRaw, TDecrypted>(
   config: OfflineFirstInfiniteQueryConfig<TRaw, TDecrypted>,
 ): DataListQuery<TDecrypted> {
+  if (!VALID_TABLE_NAME.test(config.table)) {
+    throw new Error(`Invalid table name: ${config.table}`);
+  }
+
   const { source, localDb, systemId, masterKey } = useOfflineFirstSetup(config.systemIdOverride);
 
   const encrypted = config.decrypt !== undefined;
   const includeArchived = config.includeArchived ?? false;
+  const shouldInjectSystemId = config.injectSystemId !== false;
+  const scopedQueryKey = shouldInjectSystemId ? [...config.queryKey, systemId] : config.queryKey;
 
-  const noopListDecrypt = useCallback(() => undefined as never, []) as (
-    raw: TRaw,
-    mk: KdfMasterKey,
-  ) => TDecrypted;
-
-  const encryptedListSelect = useEncryptedListSelect(config.decrypt ?? noopListDecrypt, masterKey);
+  // Always called (rules of hooks) — result only used when encrypted.
+  const encryptedListSelect = useEncryptedListSelect(config.decrypt, masterKey);
 
   const localQuery = useQuery({
-    queryKey: config.queryKey,
+    queryKey: scopedQueryKey,
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
       if (config.localQueryFn) return config.localQueryFn(localDb, systemId);
@@ -315,6 +318,9 @@ export function useOfflineFirstInfiniteQuery<TRaw, TDecrypted>(
  * Factory for domain mutations that follow the standard pattern:
  * resolve systemId, grab tRPC utils, call the consumer-provided mutation
  * hook, and fire cache invalidation on success.
+ *
+ * For scoped cache invalidation only. Use direct tRPC for broad invalidation
+ * (e.g., system purge that clears all domain caches).
  */
 export function useDomainMutation<TData, TVars>(
   config: DomainMutationConfig<TData, TVars>,
