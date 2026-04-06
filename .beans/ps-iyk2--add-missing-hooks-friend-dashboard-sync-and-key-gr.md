@@ -1,11 +1,11 @@
 ---
 # ps-iyk2
 title: "Add missing hooks: friend dashboard sync and key grants"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T00:52:38Z
-updated_at: 2026-04-06T00:52:38Z
+updated_at: 2026-04-06T05:35:40Z
 parent: ps-y621
 ---
 
@@ -15,3 +15,5 @@ Missing hooks:
 - friend.listReceivedKeyGrants
 
 Audit ref: Pass 1 LOW
+
+## Summary of Changes\n\nAdded friend dashboard sync and received key grants hooks.

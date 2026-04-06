@@ -1,11 +1,11 @@
 ---
 # ps-s1in
 title: Add LIMIT to local SQLite list queries
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-04-06T00:52:54Z
-updated_at: 2026-04-06T00:52:54Z
+updated_at: 2026-04-06T05:22:37Z
 parent: ps-y621
 ---
 
@@ -16,3 +16,5 @@ Affected hooks: use-members, use-fronting-sessions, use-messages, use-notes, use
 Fix: add LIMIT + offset to local queries or implement virtual scrolling.
 
 Audit ref: Pass 3 HIGH
+
+## Summary of Changes\n\nAdded LIMIT 20 to default local SQLite list queries in useOfflineFirstInfiniteQuery factory.
