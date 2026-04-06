@@ -960,6 +960,38 @@ describe("rowToFieldValue", () => {
     expect(result.createdAt).toBe(1_700_000_000_000);
     expect(result.version).toBe(0);
   });
+
+  it("throws RowTransformError when value JSON has no fieldType", () => {
+    const row: Record<string, unknown> = {
+      id: "fv-corrupt",
+      field_definition_id: "fd-1",
+      member_id: null,
+      structure_entity_id: null,
+      group_id: null,
+      value: JSON.stringify({ value: "orphaned" }),
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+    };
+    expect(() => rowToFieldValue(row, "sys-1" as import("@pluralscape/types").SystemId)).toThrow(
+      RowTransformError,
+    );
+  });
+
+  it("throws RowTransformError when value column is null", () => {
+    const row: Record<string, unknown> = {
+      id: "fv-null",
+      field_definition_id: "fd-1",
+      member_id: null,
+      structure_entity_id: null,
+      group_id: null,
+      value: null,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+    };
+    expect(() => rowToFieldValue(row, "sys-1" as import("@pluralscape/types").SystemId)).toThrow(
+      RowTransformError,
+    );
+  });
 });
 
 // ── innerworld-entity (system-core, boolean archived) ────────────────────────

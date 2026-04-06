@@ -6,6 +6,7 @@ import {
   parseJsonSafe,
   parseStringArrayOrNull,
   rid,
+  RowTransformError,
   strOrNull,
   wrapArchived,
 } from "./primitives.js";
@@ -86,7 +87,20 @@ export function rowToFieldValue(
   systemId: SystemId,
 ): FieldValueDecrypted {
   const id = rid(row);
-  const valueUnion = parseJsonSafe(row["value"], "field_values", "value", id) as FieldValueUnion;
+  const valueRaw = parseJsonSafe(row["value"], "field_values", "value", id);
+  if (
+    valueRaw === null ||
+    typeof valueRaw !== "object" ||
+    typeof (valueRaw as Record<string, unknown>)["fieldType"] !== "string"
+  ) {
+    throw new RowTransformError(
+      "field_values",
+      "value",
+      id,
+      "invalid FieldValueUnion: missing or non-string fieldType",
+    );
+  }
+  const valueUnion = valueRaw as FieldValueUnion;
   return {
     id: guardedStr(row["id"], "field_values", "id", id) as FieldValueDecrypted["id"],
     fieldDefinitionId: guardedStr(
