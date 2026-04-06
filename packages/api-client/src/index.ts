@@ -3,7 +3,7 @@ import createClient from "openapi-fetch";
 import type { paths } from "./generated/api-types.js";
 
 export type { paths } from "./generated/api-types.js";
-export type { FetchOptions, MaybeOptionalInit } from "openapi-fetch";
+export type { MaybeOptionalInit } from "openapi-fetch";
 
 export interface ApiClientConfig {
   readonly baseUrl: string;

@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptAcknowledgement } from "@pluralscape/data/transforms/acknowledgement";
 
-import { rowToAcknowledgement } from "../data/row-transforms.js";
+import { rowToAcknowledgement } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

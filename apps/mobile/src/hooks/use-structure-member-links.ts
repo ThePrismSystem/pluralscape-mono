@@ -1,6 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import { rowToStructureEntityMemberLink } from "../data/row-transforms.js";
+import { rowToStructureEntityMemberLink } from "../data/row-transforms/index.js";
 
 import { useOfflineFirstInfiniteQuery, useDomainMutation } from "./factories.js";
 import {
@@ -28,10 +28,10 @@ export function useStructureMemberLinksList(
     table: "structure_entity_member_links",
     rowTransform: rowToStructureEntityMemberLink,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId) =>
+    localQueryFn: (localDb, systemId, pagination) =>
       localDb
         .queryAll(
-          "SELECT * FROM structure_entity_member_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC",
+          `SELECT * FROM structure_entity_member_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`,
           [systemId],
         )
         .map(rowToStructureEntityMemberLink),

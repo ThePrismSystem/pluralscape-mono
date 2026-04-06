@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptInnerWorldEntity } from "@pluralscape/data/transforms/innerworld-entity";
 
-import { rowToInnerWorldEntity } from "../data/row-transforms.js";
+import { rowToInnerWorldEntity } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -38,7 +38,7 @@ export function useInnerWorldEntity(
     InnerWorldEntityRaw,
     InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
   >({
-    queryKey: ["innerworld-entities", entityId],
+    queryKey: ["innerworld_entities", entityId],
     table: "innerworld_entities",
     entityId,
     rowTransform: rowToInnerWorldEntity,
@@ -60,7 +60,7 @@ export function useInnerWorldEntitiesList(
     InnerWorldEntityRaw,
     InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
   >({
-    queryKey: ["innerworld-entities", "list", opts?.includeArchived ?? false, regionId],
+    queryKey: ["innerworld_entities", "list", opts?.includeArchived ?? false, regionId],
     table: "innerworld_entities",
     rowTransform: rowToInnerWorldEntity,
     decrypt: decryptInnerWorldEntity,
@@ -69,11 +69,10 @@ export function useInnerWorldEntitiesList(
     // Optional regionId filter requires a custom local query
     localQueryFn:
       regionId !== null
-        ? (localDb, systemId) => {
+        ? (localDb, systemId, pagination) => {
             const includeArchived = opts?.includeArchived ?? false;
-            const sql = includeArchived
-              ? "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? ORDER BY created_at DESC"
-              : "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? AND archived = 0 ORDER BY created_at DESC";
+            const archived = includeArchived ? "" : " AND archived = 0";
+            const sql = `SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
             return localDb.queryAll(sql, [systemId, regionId]).map(rowToInnerWorldEntity);
           }
         : undefined,

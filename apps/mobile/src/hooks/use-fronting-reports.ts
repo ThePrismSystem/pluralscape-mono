@@ -84,6 +84,32 @@ export function useGenerateReport(): TRPCMutation<
   });
 }
 
+export function useArchiveFrontingReport(): TRPCMutation<
+  RouterOutput["frontingReport"]["archive"],
+  RouterInput["frontingReport"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingReport.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingReport.get.invalidate({ systemId, reportId: variables.reportId });
+      void utils.frontingReport.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreFrontingReport(): TRPCMutation<
+  RouterOutput["frontingReport"]["restore"],
+  RouterInput["frontingReport"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingReport.restore.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingReport.get.invalidate({ systemId, reportId: variables.reportId });
+      void utils.frontingReport.list.invalidate({ systemId });
+    },
+  });
+}
+
 export function useDeleteReport(): TRPCMutation<
   RouterOutput["frontingReport"]["delete"],
   RouterInput["frontingReport"]["delete"]

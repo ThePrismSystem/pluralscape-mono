@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptCustomFront } from "@pluralscape/data/transforms/custom-front";
 
-import { rowToCustomFront } from "../data/row-transforms.js";
+import { rowToCustomFront } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -89,6 +89,32 @@ export function useUpdateCustomFront(): TRPCMutation<
 > {
   return useDomainMutation({
     useMutation: (mutOpts) => trpc.customFront.update.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.customFront.get.invalidate({ systemId, customFrontId: variables.customFrontId });
+      void utils.customFront.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useArchiveCustomFront(): TRPCMutation<
+  RouterOutput["customFront"]["archive"],
+  RouterInput["customFront"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.customFront.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.customFront.get.invalidate({ systemId, customFrontId: variables.customFrontId });
+      void utils.customFront.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreCustomFront(): TRPCMutation<
+  RouterOutput["customFront"]["restore"],
+  RouterInput["customFront"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.customFront.restore.useMutation(mutOpts),
     onInvalidate: (utils, systemId, _data, variables) => {
       void utils.customFront.get.invalidate({ systemId, customFrontId: variables.customFrontId });
       void utils.customFront.list.invalidate({ systemId });

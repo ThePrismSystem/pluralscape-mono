@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptNote } from "@pluralscape/data/transforms/note";
 
-import { rowToNote } from "../data/row-transforms.js";
+import { rowToNote } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -69,11 +69,10 @@ export function useNotesList(
     systemIdOverride: opts,
     // Custom local query: note filters (authorEntityType, authorEntityId, systemWide)
     // are server-side only; local fallback returns all notes for the system
-    localQueryFn: (localDb, systemId) => {
+    localQueryFn: (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
-      const sql = includeArchived
-        ? "SELECT * FROM own_notes WHERE system_id = ? ORDER BY created_at DESC"
-        : "SELECT * FROM own_notes WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+      const archived = includeArchived ? "" : " AND archived = 0";
+      const sql = `SELECT * FROM own_notes WHERE system_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, [systemId]).map(rowToNote);
     },
     useRemote: ({ systemId, enabled, select }) =>

@@ -2,7 +2,7 @@ import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingSession } from "@pluralscape/data/transforms/fronting-session";
 import { useCallback } from "react";
 
-import { rowToFrontingSession } from "../data/row-transforms.js";
+import { rowToFrontingSession } from "../data/row-transforms/index.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
@@ -85,7 +85,7 @@ export function useFrontingSessionsList(
     decrypt: decryptFrontingSession,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb: LocalDatabase, systemId: SystemId) => {
+    localQueryFn: (localDb: LocalDatabase, systemId: SystemId, pagination) => {
       const activeOnly = opts?.activeOnly ?? false;
       const includeArchived = opts?.includeArchived ?? false;
       let sql = "SELECT * FROM fronting_sessions WHERE system_id = ?";
@@ -94,7 +94,7 @@ export function useFrontingSessionsList(
       } else if (!includeArchived) {
         sql += " AND archived = 0";
       }
-      sql += " ORDER BY created_at DESC";
+      sql += ` ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, [systemId]).map(rowToFrontingSession);
     },
     useRemote: ({ systemId, enabled, select }) =>
@@ -178,6 +178,45 @@ export function useUpdateSession(): TRPCMutation<
 > {
   return useDomainMutation({
     useMutation: (mutOpts) => trpc.frontingSession.update.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
+      void utils.frontingSession.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useArchiveFrontingSession(): TRPCMutation<
+  RouterOutput["frontingSession"]["archive"],
+  RouterInput["frontingSession"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingSession.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
+      void utils.frontingSession.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreFrontingSession(): TRPCMutation<
+  RouterOutput["frontingSession"]["restore"],
+  RouterInput["frontingSession"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingSession.restore.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
+      void utils.frontingSession.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useDeleteFrontingSession(): TRPCMutation<
+  RouterOutput["frontingSession"]["delete"],
+  RouterInput["frontingSession"]["delete"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingSession.delete.useMutation(mutOpts),
     onInvalidate: (utils, systemId, _data, variables) => {
       void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
       void utils.frontingSession.list.invalidate({ systemId });

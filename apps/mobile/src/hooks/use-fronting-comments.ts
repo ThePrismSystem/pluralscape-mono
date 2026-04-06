@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingComment } from "@pluralscape/data/transforms/fronting-comment";
 
-import { rowToFrontingComment } from "../data/row-transforms.js";
+import { rowToFrontingComment } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -67,11 +67,10 @@ export function useFrontingCommentsList(
     decrypt: decryptFrontingComment,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb) => {
+    localQueryFn: (localDb, _systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
-      const sql = includeArchived
-        ? "SELECT * FROM fronting_comments WHERE fronting_session_id = ? ORDER BY created_at DESC"
-        : "SELECT * FROM fronting_comments WHERE fronting_session_id = ? AND archived = 0 ORDER BY created_at DESC";
+      const archived = includeArchived ? "" : " AND archived = 0";
+      const sql = `SELECT * FROM fronting_comments WHERE fronting_session_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, [sessionId]).map(rowToFrontingComment);
     },
     useRemote: ({ systemId, enabled, select }) =>

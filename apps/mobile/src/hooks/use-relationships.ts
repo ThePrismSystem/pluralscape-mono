@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptRelationship } from "@pluralscape/data/transforms/relationship";
 
-import { rowToRelationship } from "../data/row-transforms.js";
+import { rowToRelationship } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -65,9 +65,8 @@ export function useRelationshipsList(
     decrypt: decryptRelationship,
     systemIdOverride: opts,
     // Custom local SQL: filter by source OR target member, plus optional type
-    localQueryFn: (localDb, systemId) => {
-      let sql =
-        "SELECT * FROM relationships WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC";
+    localQueryFn: (localDb, systemId, pagination) => {
+      let sql = "SELECT * FROM relationships WHERE system_id = ? AND archived = 0";
       const params: unknown[] = [systemId];
       if (opts?.memberId !== undefined) {
         sql += " AND (source_member_id = ? OR target_member_id = ?)";
@@ -77,6 +76,7 @@ export function useRelationshipsList(
         sql += " AND type = ?";
         params.push(opts.type);
       }
+      sql += ` ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, params).map(rowToRelationship);
     },
     useRemote: ({ systemId, enabled, select }) =>

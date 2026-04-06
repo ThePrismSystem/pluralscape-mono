@@ -11,6 +11,7 @@ type CapturedInput = Record<string, unknown>;
 let lastGetInput: CapturedInput = {};
 let lastListOpts: CapturedOpts = {};
 let lastDownloadInput: CapturedInput = {};
+let lastDownloadOpts: CapturedOpts = {};
 
 const mockUtils = {
   blob: {
@@ -38,8 +39,9 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
           },
         },
         getDownloadUrl: {
-          useQuery: (input: CapturedInput) => {
+          useQuery: (input: CapturedInput, opts: CapturedOpts = {}) => {
             lastDownloadInput = input;
+            lastDownloadOpts = opts;
             return { data: undefined, isLoading: true };
           },
         },
@@ -79,6 +81,7 @@ beforeEach(() => {
   lastGetInput = {};
   lastListOpts = {};
   lastDownloadInput = {};
+  lastDownloadOpts = {};
   vi.clearAllMocks();
 });
 
@@ -107,6 +110,12 @@ describe("useBlobDownloadUrl", () => {
     renderHookWithProviders(() => useBlobDownloadUrl("blob_dl" as BlobId));
     expect(lastDownloadInput["blobId"]).toBe("blob_dl");
     expect(lastDownloadInput["systemId"]).toBe(TEST_SYSTEM_ID);
+  });
+
+  it("sets staleTime and gcTime to prevent serving expired presigned URLs", () => {
+    renderHookWithProviders(() => useBlobDownloadUrl("blob_dl" as BlobId));
+    expect(lastDownloadOpts["staleTime"]).toBe(300_000);
+    expect(lastDownloadOpts["gcTime"]).toBe(300_000);
   });
 });
 

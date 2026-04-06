@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptMember } from "@pluralscape/data/transforms/member";
 
-import { rowToMember } from "../data/row-transforms.js";
+import { rowToMember } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -113,6 +113,19 @@ export function useRestoreMember(): TRPCMutation<
 > {
   return useDomainMutation({
     useMutation: (mutOpts) => trpc.member.restore.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.member.get.invalidate({ systemId, memberId: variables.memberId });
+      void utils.member.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useDeleteMember(): TRPCMutation<
+  RouterOutput["member"]["delete"],
+  RouterInput["member"]["delete"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.member.delete.useMutation(mutOpts),
     onInvalidate: (utils, systemId, _data, variables) => {
       void utils.member.get.invalidate({ systemId, memberId: variables.memberId });
       void utils.member.list.invalidate({ systemId });

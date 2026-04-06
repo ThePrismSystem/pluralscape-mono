@@ -4,7 +4,10 @@ import { useCallback } from "react";
 
 import { useBucketKeys } from "../providers/bucket-key-provider.js";
 
-import type { TRPCQuery } from "./types.js";
+import { useRemoteOnlyQuery } from "./factories.js";
+
+import type { DataQuery, TRPCQuery } from "./types.js";
+import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { DecryptedFriendDashboard } from "@pluralscape/data/transforms/friend-dashboard";
 import type { FriendConnectionId } from "@pluralscape/types";
 
@@ -38,4 +41,15 @@ export function useFriendDashboard(
       select,
     },
   );
+}
+
+export function useFriendDashboardSync(
+  connectionId: FriendConnectionId,
+): DataQuery<RouterOutput["friend"]["getDashboardSync"]> {
+  return useRemoteOnlyQuery<RouterOutput["friend"]["getDashboardSync"]>({
+    useRemote: ({ enabled }) =>
+      trpc.friend.getDashboardSync.useQuery({ connectionId }, { enabled }) as DataQuery<
+        RouterOutput["friend"]["getDashboardSync"]
+      >,
+  });
 }

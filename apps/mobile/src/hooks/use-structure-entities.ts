@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptStructureEntity } from "@pluralscape/data/transforms/structure-entity";
 
-import { rowToStructureEntity } from "../data/row-transforms.js";
+import { rowToStructureEntity } from "../data/row-transforms/index.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
@@ -80,16 +80,16 @@ export function useStructureEntitiesList(
     decrypt: decryptStructureEntity,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId) => {
+    localQueryFn: (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
-      let sql = includeArchived
-        ? "SELECT * FROM structure_entities WHERE system_id = ? ORDER BY sort_order ASC"
-        : "SELECT * FROM structure_entities WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC";
+      const archived = includeArchived ? "" : " AND archived = 0";
+      let sql = `SELECT * FROM structure_entities WHERE system_id = ?${archived}`;
       const params: unknown[] = [systemId];
       if (opts?.entityTypeId !== undefined) {
         sql += " AND entity_type_id = ?";
         params.push(opts.entityTypeId);
       }
+      sql += ` ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, params).map(rowToStructureEntity);
     },
     useRemote: ({ systemId, enabled, select }) =>

@@ -1,12 +1,13 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
 import { useAuth } from "../auth/index.js";
-import { rowToFriendConnection } from "../data/row-transforms.js";
+import { rowToFriendConnection } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
   useOfflineFirstInfiniteQuery,
   useDomainMutation,
+  useRemoteOnlyQuery,
 } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
@@ -79,7 +80,7 @@ export function useFriendConnectionsList(
     rowTransform: rowToFriendConnection,
     injectSystemId: false,
     includeArchived: opts?.includeArchived,
-    localQueryFn: (localDb) => {
+    localQueryFn: (localDb, _systemId, pagination) => {
       if (accountId === null) throw new Error("accountId is null");
       const includeArchived = opts?.includeArchived ?? false;
       const status = opts?.status;
@@ -94,7 +95,7 @@ export function useFriendConnectionsList(
       if (!includeArchived) {
         sql += " AND archived = 0";
       }
-      sql += " ORDER BY created_at DESC";
+      sql += ` ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
 
       return localDb.queryAll(sql, params).map(rowToFriendConnection);
     },
@@ -202,5 +203,42 @@ export function useUpdateFriendVisibility(): TRPCMutation<
       void utils.friend.get.invalidate({ connectionId: variables.connectionId });
       void utils.friend.list.invalidate();
     },
+  });
+}
+
+export function useFriendNotificationPrefs(
+  connectionId: FriendConnectionId,
+  opts?: { enabled?: boolean },
+): DataQuery<RouterOutput["friend"]["getNotifications"]> {
+  return useRemoteOnlyQuery<RouterOutput["friend"]["getNotifications"]>({
+    useRemote: ({ enabled }) =>
+      trpc.friend.getNotifications.useQuery(
+        { connectionId },
+        { enabled: enabled && (opts?.enabled ?? true) },
+      ) as DataQuery<RouterOutput["friend"]["getNotifications"]>,
+  });
+}
+
+export function useUpdateFriendNotificationPrefs(): TRPCMutation<
+  RouterOutput["friend"]["updateNotifications"],
+  RouterInput["friend"]["updateNotifications"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.friend.updateNotifications.useMutation(mutOpts),
+    onInvalidate: (utils, _systemId, _data, variables) => {
+      void utils.friend.getNotifications.invalidate({ connectionId: variables.connectionId });
+      void utils.friend.get.invalidate({ connectionId: variables.connectionId });
+    },
+  });
+}
+
+export function useListReceivedKeyGrants(opts?: {
+  enabled?: boolean;
+}): DataQuery<RouterOutput["friend"]["listReceivedKeyGrants"]> {
+  return useRemoteOnlyQuery<RouterOutput["friend"]["listReceivedKeyGrants"]>({
+    useRemote: ({ enabled }) =>
+      trpc.friend.listReceivedKeyGrants.useQuery(undefined, {
+        enabled: enabled && (opts?.enabled ?? true),
+      }) as DataQuery<RouterOutput["friend"]["listReceivedKeyGrants"]>,
   });
 }

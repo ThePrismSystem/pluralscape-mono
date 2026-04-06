@@ -1,6 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import { rowToStructureEntityAssociation } from "../data/row-transforms.js";
+import { rowToStructureEntityAssociation } from "../data/row-transforms/index.js";
 
 import { useOfflineFirstInfiniteQuery, useDomainMutation } from "./factories.js";
 import {
@@ -28,10 +28,10 @@ export function useStructureAssociationsList(
     table: "structure_entity_associations",
     rowTransform: rowToStructureEntityAssociation,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId) =>
+    localQueryFn: (localDb, systemId, pagination) =>
       localDb
         .queryAll(
-          "SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC",
+          `SELECT * FROM structure_entity_associations WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`,
           [systemId],
         )
         .map(rowToStructureEntityAssociation),

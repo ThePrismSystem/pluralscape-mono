@@ -48,6 +48,9 @@ export function useBlobsList(opts?: BlobListOpts): TRPCInfiniteQuery<BlobPage> {
   );
 }
 
+/** Presigned URL TTL is server-controlled; keep cache short to avoid serving expired URLs. */
+const BLOB_URL_GC_TIME_MS = 5 * 60 * 1_000;
+
 export function useBlobDownloadUrl(
   blobId: BlobId,
   opts?: SystemIdOverride,
@@ -55,7 +58,10 @@ export function useBlobDownloadUrl(
   const activeSystemId = useActiveSystemId();
   const systemId = opts?.systemId ?? activeSystemId;
 
-  return trpc.blob.getDownloadUrl.useQuery({ systemId, blobId });
+  return trpc.blob.getDownloadUrl.useQuery(
+    { systemId, blobId },
+    { staleTime: BLOB_URL_GC_TIME_MS, gcTime: BLOB_URL_GC_TIME_MS },
+  );
 }
 
 export function useDeleteBlob(): TRPCMutation<

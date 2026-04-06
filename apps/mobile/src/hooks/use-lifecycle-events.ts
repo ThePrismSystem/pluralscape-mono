@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptLifecycleEvent } from "@pluralscape/data/transforms/lifecycle-event";
 
-import { rowToLifecycleEvent } from "../data/row-transforms.js";
+import { rowToLifecycleEvent } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -35,7 +35,7 @@ export function useLifecycleEvent(
   opts?: SystemIdOverride,
 ): DataQuery<LifecycleEventWithArchive> {
   return useOfflineFirstQuery<LifecycleEventRaw, LifecycleEventWithArchive>({
-    queryKey: ["lifecycle-events", eventId],
+    queryKey: ["lifecycle_events", eventId],
     table: "lifecycle_events",
     entityId: eventId,
     rowTransform: rowToLifecycleEvent,
@@ -53,18 +53,17 @@ export function useLifecycleEventsList(
   opts?: LifecycleEventListOpts,
 ): DataListQuery<LifecycleEventWithArchive> {
   return useOfflineFirstInfiniteQuery<LifecycleEventRaw, LifecycleEventWithArchive>({
-    queryKey: ["lifecycle-events", "list", opts?.includeArchived ?? false],
+    queryKey: ["lifecycle_events", "list", opts?.includeArchived ?? false],
     table: "lifecycle_events",
     rowTransform: rowToLifecycleEvent,
     decrypt: decryptLifecycleEvent,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
     // Custom orderBy: lifecycle events sort by occurred_at, not created_at
-    localQueryFn: (localDb, systemId) => {
+    localQueryFn: (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
-      const sql = includeArchived
-        ? "SELECT * FROM lifecycle_events WHERE system_id = ? ORDER BY occurred_at DESC"
-        : "SELECT * FROM lifecycle_events WHERE system_id = ? AND archived = 0 ORDER BY occurred_at DESC";
+      const archived = includeArchived ? "" : " AND archived = 0";
+      const sql = `SELECT * FROM lifecycle_events WHERE system_id = ?${archived} ORDER BY occurred_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, [systemId]).map(rowToLifecycleEvent);
     },
     useRemote: ({ systemId, enabled, select }) =>

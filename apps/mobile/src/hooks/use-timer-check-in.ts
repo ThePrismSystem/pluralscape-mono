@@ -2,7 +2,7 @@ import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptTimerConfig } from "@pluralscape/data/transforms/timer-check-in";
 import { useQuery } from "@tanstack/react-query";
 
-import { rowToCheckInRecord, rowToTimer } from "../data/row-transforms.js";
+import { rowToCheckInRecord, rowToTimer } from "../data/row-transforms/index.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
@@ -107,6 +107,32 @@ export function useUpdateTimer(): TRPCMutation<
 > {
   return useDomainMutation({
     useMutation: (mutOpts) => trpc.timerConfig.update.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.timerConfig.get.invalidate({ systemId, timerId: variables.timerId });
+      void utils.timerConfig.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useArchiveTimer(): TRPCMutation<
+  RouterOutput["timerConfig"]["archive"],
+  RouterInput["timerConfig"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.timerConfig.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.timerConfig.get.invalidate({ systemId, timerId: variables.timerId });
+      void utils.timerConfig.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreTimer(): TRPCMutation<
+  RouterOutput["timerConfig"]["restore"],
+  RouterInput["timerConfig"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.timerConfig.restore.useMutation(mutOpts),
     onInvalidate: (utils, systemId, _data, variables) => {
       void utils.timerConfig.get.invalidate({ systemId, timerId: variables.timerId });
       void utils.timerConfig.list.invalidate({ systemId });
@@ -225,6 +251,32 @@ export function useMarkCheckInDismissed(): TRPCMutation<
 > {
   return useDomainMutation({
     useMutation: (mutOpts) => trpc.checkInRecord.dismiss.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.checkInRecord.get.invalidate({ systemId, recordId: variables.recordId });
+      void utils.checkInRecord.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useArchiveCheckIn(): TRPCMutation<
+  RouterOutput["checkInRecord"]["archive"],
+  RouterInput["checkInRecord"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.checkInRecord.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.checkInRecord.get.invalidate({ systemId, recordId: variables.recordId });
+      void utils.checkInRecord.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreCheckIn(): TRPCMutation<
+  RouterOutput["checkInRecord"]["restore"],
+  RouterInput["checkInRecord"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.checkInRecord.restore.useMutation(mutOpts),
     onInvalidate: (utils, systemId, _data, variables) => {
       void utils.checkInRecord.get.invalidate({ systemId, recordId: variables.recordId });
       void utils.checkInRecord.list.invalidate({ systemId });

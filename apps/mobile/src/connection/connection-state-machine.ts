@@ -8,6 +8,8 @@ import type {
 } from "./connection-types.js";
 
 const BACKOFF_MULTIPLIER = 2;
+const JITTER_MIN = 0.75;
+const JITTER_MAX = 1.25;
 
 /**
  * Pure, framework-agnostic connection state machine.
@@ -42,12 +44,13 @@ export class ConnectionStateMachine {
   }
 
   /**
-   * Returns the current exponential backoff delay in milliseconds,
-   * capped at maxBackoffMs.
+   * Returns the current exponential backoff delay in milliseconds
+   * with ±25% jitter, hard-capped at maxBackoffMs.
    */
   getBackoffMs(): number {
     const delay = this.config.baseBackoffMs * Math.pow(BACKOFF_MULTIPLIER, this.retryCount);
-    return Math.min(delay, this.config.maxBackoffMs);
+    const jitter = JITTER_MIN + Math.random() * (JITTER_MAX - JITTER_MIN);
+    return Math.round(Math.min(delay * jitter, this.config.maxBackoffMs));
   }
 
   dispatch(event: ConnectionEvent): void {

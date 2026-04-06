@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptGroup } from "@pluralscape/data/transforms/group";
 
-import { rowToGroup } from "../data/row-transforms.js";
+import { rowToGroup } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
@@ -94,6 +94,32 @@ export function useUpdateGroup(): TRPCMutation<
   });
 }
 
+export function useArchiveGroup(): TRPCMutation<
+  RouterOutput["group"]["archive"],
+  RouterInput["group"]["archive"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.group.archive.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.group.get.invalidate({ systemId, groupId: variables.groupId });
+      void utils.group.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useRestoreGroup(): TRPCMutation<
+  RouterOutput["group"]["restore"],
+  RouterInput["group"]["restore"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.group.restore.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.group.get.invalidate({ systemId, groupId: variables.groupId });
+      void utils.group.list.invalidate({ systemId });
+    },
+  });
+}
+
 export function useDeleteGroup(): TRPCMutation<
   RouterOutput["group"]["delete"],
   RouterInput["group"]["delete"]
@@ -147,6 +173,32 @@ export function useReorderGroups(): TRPCMutation<
     useMutation: (mutOpts) => trpc.group.reorder.useMutation(mutOpts),
     onInvalidate: (utils, systemId) => {
       void utils.group.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useMoveGroup(): TRPCMutation<
+  RouterOutput["group"]["move"],
+  RouterInput["group"]["move"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.group.move.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
+      void utils.group.get.invalidate({ systemId, groupId: variables.groupId });
+      void utils.group.list.invalidate({ systemId });
+    },
+  });
+}
+
+export function useCopyGroup(): TRPCMutation<
+  RouterOutput["group"]["copy"],
+  RouterInput["group"]["copy"]
+> {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.group.copy.useMutation(mutOpts),
+    onInvalidate: (utils, systemId) => {
+      void utils.group.list.invalidate({ systemId });
+      void utils.member.list.invalidate({ systemId });
     },
   });
 }
