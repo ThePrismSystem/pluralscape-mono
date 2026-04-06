@@ -114,7 +114,7 @@ jobs:
 
       - name: Update coverage badge
         if: github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483 # v1.7.0
+        uses: schneegans/dynamic-badges-action@0e50b8bad39e7e1afd3e4e9c2b7dd145fad07501 # v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: b29472c169f6d431acf2b24a60a33225
@@ -268,7 +268,7 @@ jobs:
 
       - name: Update E2E tests badge
         if: github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@e9a478b16159b4d31420099ba146cdc50f134483 # v1.7.0
+        uses: schneegans/dynamic-badges-action@0e50b8bad39e7e1afd3e4e9c2b7dd145fad07501 # v1.8.0
         with:
           auth: ${{ secrets.GIST_TOKEN }}
           gistID: b29472c169f6d431acf2b24a60a33225
