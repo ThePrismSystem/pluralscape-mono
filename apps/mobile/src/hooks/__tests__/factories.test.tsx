@@ -124,7 +124,10 @@ function usePlaintextGet(id: string) {
   });
 }
 
-function useLocalGet(id: string, localQueryFn?: (db: LocalDatabase) => DecEntity) {
+function useLocalGet(
+  id: string,
+  localQueryFn?: (db: LocalDatabase, systemId: SystemId) => DecEntity,
+) {
   return useOfflineFirstQuery<RawEntity, DecEntity>({
     queryKey: ["test-local", id],
     table: "test_entities",
@@ -264,7 +267,7 @@ describe("useOfflineFirstQuery (local source)", () => {
     const customFn = vi.fn().mockReturnValue({ decryptedName: "custom-result" });
 
     const { result } = renderHookWithProviders(
-      () => useLocalGet("loc-2", customFn as (db: LocalDatabase) => DecEntity),
+      () => useLocalGet("loc-2", customFn as (db: LocalDatabase, systemId: SystemId) => DecEntity),
       { querySource: "local", localDb },
     );
 
@@ -272,7 +275,7 @@ describe("useOfflineFirstQuery (local source)", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(customFn).toHaveBeenCalledWith(localDb);
+    expect(customFn).toHaveBeenCalledWith(localDb, TEST_SYSTEM_ID);
     expect(localDb.queryOne).not.toHaveBeenCalled();
     expect(result.current.data?.decryptedName).toBe("custom-result");
   });

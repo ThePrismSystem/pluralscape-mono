@@ -65,7 +65,7 @@ interface OfflineFirstQueryConfigBase<TRaw, TDecrypted> {
   /** Transforms a raw SQLite row into the local domain type. */
   readonly rowTransform: (row: Record<string, unknown>) => TDecrypted;
   /** Override the default `SELECT * FROM <table> WHERE id = ?` query. */
-  readonly localQueryFn?: (localDb: LocalDatabase) => TDecrypted;
+  readonly localQueryFn?: (localDb: LocalDatabase, systemId: SystemId) => TDecrypted;
   readonly systemIdOverride?: SystemIdOverride;
   /**
    * Consumer-provided hook call. The factory cannot call tRPC hooks directly
@@ -240,7 +240,7 @@ export function useOfflineFirstQuery<TRaw, TDecrypted>(
     queryKey: config.queryKey,
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
-      if (config.localQueryFn) return config.localQueryFn(localDb);
+      if (config.localQueryFn) return config.localQueryFn(localDb, systemId);
       const row = localDb.queryOne(`SELECT * FROM ${config.table} WHERE id = ?`, [config.entityId]);
       if (!row) throw new Error(`${config.table} entity not found`);
       return config.rowTransform(row);
