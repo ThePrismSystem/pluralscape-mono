@@ -76,7 +76,9 @@ export function BucketKeyProvider({
           continue;
         }
         // Unexpected error — log for diagnostics but don't crash the provider
-        globalThis.console.warn(`BucketKeyProvider: failed to decrypt grant ${grant.id}:`, err);
+        globalThis.console.warn(
+          `BucketKeyProvider: failed to decrypt grant ${grant.id}: ${err instanceof Error ? err.message : "unknown error"}`,
+        );
       }
     }
 
