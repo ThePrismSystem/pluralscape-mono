@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
+import { DEFAULT_LIST_LIMIT } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
 import type {
@@ -309,9 +310,8 @@ export function useOfflineFirstInfiniteQuery<TRaw, TDecrypted>(
     queryFn: () => {
       if (localDb === null) throw new Error("localDb is null");
       if (config.localQueryFn) return config.localQueryFn(localDb, systemId);
-      const sql = includeArchived
-        ? `SELECT * FROM ${config.table} WHERE system_id = ? ORDER BY created_at DESC`
-        : `SELECT * FROM ${config.table} WHERE system_id = ? AND archived = 0 ORDER BY created_at DESC`;
+      const archived = includeArchived ? "" : " AND archived = 0";
+      const sql = `SELECT * FROM ${config.table} WHERE system_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(DEFAULT_LIST_LIMIT)}`;
       return localDb.queryAll(sql, [systemId]).map(config.rowTransform);
     },
     enabled: source === "local" && localDb !== null,

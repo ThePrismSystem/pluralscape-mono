@@ -304,6 +304,43 @@ describe("useOfflineFirstInfiniteQuery (encrypted)", () => {
   });
 });
 
+// ── useOfflineFirstInfiniteQuery — local source ─────────────────────
+describe("useOfflineFirstInfiniteQuery (local source)", () => {
+  it("default SQL includes LIMIT 20", async () => {
+    const localDb = createMockLocalDb([{ id: "l-1", name: "Local" }]);
+    const { result } = renderHookWithProviders(() => usePlaintextList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("LIMIT 20"),
+      expect.any(Array),
+    );
+  });
+
+  it("default SQL excludes archived rows when includeArchived is false", async () => {
+    const localDb = createMockLocalDb([]);
+    const { result } = renderHookWithProviders(() => usePlaintextList(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(localDb.queryAll).toHaveBeenCalledWith(
+      expect.stringContaining("AND archived = 0"),
+      expect.any(Array),
+    );
+  });
+});
+
 // ── useOfflineFirstInfiniteQuery — plaintext mode ───────────────────
 describe("useOfflineFirstInfiniteQuery (plaintext)", () => {
   it("returns paginated data without decryption", async () => {
