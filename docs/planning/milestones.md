@@ -266,42 +266,8 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - Custom lifecycle event types — [future feature doc](../future-features/012-custom-lifecycle-events.md)
 - Cosmetic monetization — [future feature doc](../future-features/002-monetization-cosmetics.md)
 
-## Architecture Decision Records
+## Architecture and Decision Records
 
-30 accepted ADRs cover the full stack:
+For system topology, package dependencies, data flow, encryption boundaries, and the development sequence rationale, see the [Architecture Overview](../architecture.md).
 
-- [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
-- [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
-- [ADR 009: Blob/Media Storage](../adr/009-blob-media-storage.md) — S3-compatible encrypted media, MinIO for self-hosted, local filesystem fallback
-- [ADR 010: Background Job Architecture](../adr/010-background-jobs.md) — BullMQ (Valkey) for hosted, SQLite-backed fallback for self-hosted
-- [ADR 011: Key Lifecycle and Recovery](../adr/011-key-recovery.md) — recovery key, multi-device transfer, password reset semantics
-- [ADR 012: Self-Hosted Deployment Tiers](../adr/012-self-hosted-tiers.md) — minimal (single binary) vs full (Docker Compose), capability matrix
-- [ADR 013: API Authentication with E2E Encryption](../adr/013-api-auth-encryption.md) — hybrid metadata + crypto key model, scoped access, key creation UX
-- [ADR 014: Lazy Key Rotation](../adr/014-lazy-key-rotation.md) — per-bucket lazy rotation with server-side ledger
-- [ADR 015: Push Token Plaintext](../adr/015-push-token-plaintext.md) — push tokens stored in plaintext (server-side only, not user content)
-- [ADR 016: Messages Partitioning](../adr/016-messages-partitioning.md) — hash-based partitioning for the messages table
-- [ADR 017: Audit Log Partitioning](../adr/017-audit-log-partitioning.md) — time-based partitioning with automated retention
-- [ADR 018: Encryption-at-Rest Boundary](../adr/018-encryption-at-rest-boundary.md) — DB-layer encryption boundary for tier-2/tier-3 data
-- [ADR 019: Fronting Sessions Partitioning](../adr/019-fronting-sessions-partitioning.md) — time-based partitioning for active fronting session performance
-- [ADR 020: RLS Denormalization](../adr/020-rls-denormalization.md) — cached system_id/account_id on all tables for RLS policy efficiency
-- [ADR 021: Non-System Account Model](../adr/021-non-system-accounts.md) — viewer accounts, account-level friend connections
-- [ADR 022: System Structure Snapshots](../adr/022-system-snapshots.md) — point-in-time structure captures, manual and scheduled triggers
-- [ADR 023: Zod-Type Alignment](../adr/023-zod-type-alignment.md) — strategy for keeping Zod validation schemas synchronized with TypeScript types
-- [ADR 024: Device Transfer Code Entropy](../adr/024-device-transfer-code-entropy.md) — entropy trade-off for user-typed device transfer codes
-- [ADR 025: Webhook Secret Storage](../adr/025-webhook-secret-storage.md) — T3 plaintext storage for webhook signing secrets
-- [ADR 026: Lifecycle Event Type-Specific Validation](../adr/026-lifecycle-event-type-validation.md) — type-discriminated validation for lifecycle event subtypes
-- [ADR 027: Webhook Secret Rotation](../adr/027-webhook-secret-rotation.md) — procedure for rotating webhook HMAC signing secrets
-- [ADR 028: Opt-in IP Audit Logging](../adr/028-opt-in-ip-audit-logging.md) — IP address and user-agent audit logging is opt-in per account (default off)
-- [ADR 029: Server-Side Encrypted Email](../adr/029-server-side-encrypted-email.md) — AES-256-GCM encryption for server-held email addresses (BLAKE2b hash preserved for lookup)
-- [ADR 030: Email Provider Selection](../adr/030-email-provider-selection.md) — Resend for hosted, Nodemailer/SMTP for self-hosted, stub for dev
-
-## Development Sequence Rationale
-
-1. **Types, DB, Crypto, Sync Design** (M1): Everything depends on the domain model. Encryption tiers affect how data is stored. The sync protocol must be co-designed with the DB schema — retrofitting CRDT sync onto an existing schema guarantees rework.
-2. **API Core** (M2): CRUD operations are the foundation for everything above. Auth gates all other endpoints. Recovery key generation happens at registration.
-3. **Sync and Real-Time** (M3): With sync protocol designed in M1, implementation happens early so every subsequent feature is built on top of the sync layer rather than retrofitted. Multi-device key recovery also lives here.
-4. **Fronting, Communication, Privacy** (M4-M6): Ordered by complexity and dependency. Fronting is the most-used feature. Communication builds on member identity. Privacy governs visibility of everything and integrates the three-tier encryption model.
-5. **Data Portability** (M7): Email notifications, webhook enhancements, and public API audit — infrastructure that supports external integration. Import/export and bridge features moved to M8 since they require the client app.
-6. **Client App** (M8): UI consumes the API. Building it after the API is stable prevents constant frontend rework. Includes import/export, PluralKit bridge, and API key management since these are client-side features. In practice, M8 epics will be developed in parallel with M2-M7 (each API feature gets its corresponding UI). Targets web, iOS, and Android via Expo.
-7. **Self-Hosted** (M9): Two-tier model — minimal single binary for personal use, full Docker Compose for feature parity. Depends on the SQLite adapter and full feature set being stable.
-8. **Polish** (M10): Final hardening pass before public launch.
+32 accepted ADRs are documented in [`docs/adr/`](../adr/).
