@@ -7,7 +7,6 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { endFrontingSession } from "../../services/fronting-session.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -15,7 +14,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const endRoute = new Hono<AuthEnv>();
 
 endRoute.use("*", createCategoryRateLimiter("write"));
-endRoute.use("*", requireScopeMiddleware("write:fronting"));
 
 endRoute.post("/:sessionId/end", async (c) => {
   const body = await parseJsonBody(c);

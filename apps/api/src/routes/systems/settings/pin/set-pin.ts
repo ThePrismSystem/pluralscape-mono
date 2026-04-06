@@ -7,7 +7,6 @@ import { getDb } from "../../../../lib/db.js";
 import { requireIdParam } from "../../../../lib/id-param.js";
 import { parseJsonBody } from "../../../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../../../middleware/scope.js";
 import { setPin } from "../../../../services/pin.service.js";
 
 import type { AuthEnv } from "../../../../lib/auth-context.js";
@@ -15,7 +14,6 @@ import type { AuthEnv } from "../../../../lib/auth-context.js";
 export const setPinRoute = new Hono<AuthEnv>();
 
 setPinRoute.use("*", createCategoryRateLimiter("authHeavy"));
-setPinRoute.use("*", requireScopeMiddleware("write:system"));
 
 setPinRoute.post("/", async (c) => {
   const body = await parseJsonBody(c);

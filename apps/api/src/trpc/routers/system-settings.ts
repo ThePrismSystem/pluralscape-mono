@@ -22,7 +22,6 @@ import {
 } from "../../services/setup.service.js";
 import { getSystemSettings, updateSystemSettings } from "../../services/system-settings.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -32,15 +31,11 @@ const authHeavyLimiter = createTRPCCategoryRateLimiter("authHeavy");
 
 export const systemSettingsRouter = router({
   settings: router({
-    get: systemProcedure
-      .use(readLimiter)
-      .use(requireScope("read:system"))
-      .query(async ({ ctx }) => {
-        return getSystemSettings(ctx.db, ctx.systemId, ctx.auth);
-      }),
+    get: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
+      return getSystemSettings(ctx.db, ctx.systemId, ctx.auth);
+    }),
     update: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:system"))
       .input(UpdateSystemSettingsBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -48,15 +43,11 @@ export const systemSettingsRouter = router({
       }),
   }),
   nomenclature: router({
-    get: systemProcedure
-      .use(readLimiter)
-      .use(requireScope("read:system"))
-      .query(async ({ ctx }) => {
-        return getNomenclatureSettings(ctx.db, ctx.systemId, ctx.auth);
-      }),
+    get: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
+      return getNomenclatureSettings(ctx.db, ctx.systemId, ctx.auth);
+    }),
     update: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:system"))
       .input(UpdateNomenclatureBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -66,7 +57,6 @@ export const systemSettingsRouter = router({
   pin: router({
     set: systemProcedure
       .use(authHeavyLimiter)
-      .use(requireScope("write:system"))
       .input(SetPinBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -75,7 +65,6 @@ export const systemSettingsRouter = router({
       }),
     remove: systemProcedure
       .use(authHeavyLimiter)
-      .use(requireScope("write:system"))
       .input(RemovePinBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -84,7 +73,6 @@ export const systemSettingsRouter = router({
       }),
     verify: systemProcedure
       .use(authHeavyLimiter)
-      .use(requireScope("read:system"))
       .input(VerifyPinBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -92,15 +80,11 @@ export const systemSettingsRouter = router({
       }),
   }),
   setup: router({
-    getStatus: systemProcedure
-      .use(readLimiter)
-      .use(requireScope("read:system"))
-      .query(async ({ ctx }) => {
-        return getSetupStatus(ctx.db, ctx.systemId, ctx.auth);
-      }),
+    getStatus: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
+      return getSetupStatus(ctx.db, ctx.systemId, ctx.auth);
+    }),
     nomenclatureStep: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:system"))
       .input(SetupNomenclatureStepBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -108,7 +92,6 @@ export const systemSettingsRouter = router({
       }),
     profileStep: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:system"))
       .input(SetupProfileStepBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -116,7 +99,6 @@ export const systemSettingsRouter = router({
       }),
     complete: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:system"))
       .input(SetupCompleteBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);

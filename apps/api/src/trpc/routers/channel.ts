@@ -15,7 +15,6 @@ import {
   updateChannel,
 } from "../../services/channel.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -32,7 +31,6 @@ const ChannelIdSchema = z.object({
 export const channelRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:channels"))
     .input(CreateChannelBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -41,7 +39,6 @@ export const channelRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:channels"))
     .input(ChannelIdSchema)
     .query(async ({ ctx, input }) => {
       return getChannel(ctx.db, ctx.systemId, input.channelId, ctx.auth);
@@ -49,7 +46,6 @@ export const channelRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:channels"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -67,7 +63,6 @@ export const channelRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:channels"))
     .input(ChannelIdSchema.and(UpdateChannelBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -83,7 +78,6 @@ export const channelRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:channels"))
     .input(ChannelIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -93,7 +87,6 @@ export const channelRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:channels"))
     .input(ChannelIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -102,7 +95,6 @@ export const channelRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:channels"))
     .input(ChannelIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

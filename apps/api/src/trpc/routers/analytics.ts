@@ -8,7 +8,6 @@ import {
   computeFrontingBreakdown,
 } from "../../services/analytics.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -102,7 +101,6 @@ function toDateRangeFilter(input: z.infer<typeof AnalyticsInputSchema>): DateRan
 export const analyticsRouter = router({
   fronting: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:reports"))
     .input(AnalyticsInputSchema)
     .query(async ({ ctx, input }) => {
       const dateRange = toDateRangeFilter(input);
@@ -111,7 +109,6 @@ export const analyticsRouter = router({
 
   coFronting: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:reports"))
     .input(AnalyticsInputSchema)
     .query(async ({ ctx, input }) => {
       const dateRange = toDateRangeFilter(input);

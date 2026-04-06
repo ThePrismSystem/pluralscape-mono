@@ -6,7 +6,6 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { archiveNote } from "../../services/note.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,7 +13,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const archiveRoute = new Hono<AuthEnv>();
 
 archiveRoute.use("*", createCategoryRateLimiter("write"));
-archiveRoute.use("*", requireScopeMiddleware("write:notes"));
 
 archiveRoute.post("/:noteId/archive", async (c) => {
   const auth = c.get("auth");

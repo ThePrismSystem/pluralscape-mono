@@ -16,7 +16,6 @@ import {
 } from "../../services/system.service.js";
 import { protectedProcedure } from "../middlewares/auth.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -32,12 +31,9 @@ export const systemRouter = router({
     return createSystem(ctx.db, ctx.auth, audit);
   }),
 
-  get: systemProcedure
-    .use(readLimiter)
-    .use(requireScope("read:system"))
-    .query(async ({ ctx }) => {
-      return getSystemProfile(ctx.db, ctx.systemId, ctx.auth);
-    }),
+  get: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
+    return getSystemProfile(ctx.db, ctx.systemId, ctx.auth);
+  }),
 
   list: protectedProcedure
     .use(readLimiter)
@@ -53,7 +49,6 @@ export const systemRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:system"))
     .input(UpdateSystemBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -66,18 +61,14 @@ export const systemRouter = router({
       );
     }),
 
-  archive: systemProcedure
-    .use(writeLimiter)
-    .use(requireScope("write:system"))
-    .mutation(async ({ ctx }) => {
-      const audit = ctx.createAudit(ctx.auth);
-      await archiveSystem(ctx.db, ctx.systemId, ctx.auth, audit);
-      return { success: true as const };
-    }),
+  archive: systemProcedure.use(writeLimiter).mutation(async ({ ctx }) => {
+    const audit = ctx.createAudit(ctx.auth);
+    await archiveSystem(ctx.db, ctx.systemId, ctx.auth, audit);
+    return { success: true as const };
+  }),
 
   duplicate: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:system"))
     .input(DuplicateSystemBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -86,7 +77,6 @@ export const systemRouter = router({
 
   purge: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:system"))
     .input(PurgeSystemBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

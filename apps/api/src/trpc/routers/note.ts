@@ -16,7 +16,6 @@ import {
   updateNote,
 } from "../../services/note.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -36,7 +35,6 @@ const NoteIdSchema = z.object({
 export const noteRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:notes"))
     .input(CreateNoteBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -45,7 +43,6 @@ export const noteRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:notes"))
     .input(NoteIdSchema)
     .query(async ({ ctx, input }) => {
       return getNote(ctx.db, ctx.systemId, input.noteId, ctx.auth);
@@ -53,7 +50,6 @@ export const noteRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:notes"))
     .input(
       z
         .object({
@@ -86,7 +82,6 @@ export const noteRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:notes"))
     .input(NoteIdSchema.and(UpdateNoteBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -102,7 +97,6 @@ export const noteRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:notes"))
     .input(NoteIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -112,7 +106,6 @@ export const noteRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:notes"))
     .input(NoteIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -121,7 +114,6 @@ export const noteRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:notes"))
     .input(NoteIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

@@ -7,7 +7,6 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../../middleware/scope.js";
 import { setupNomenclatureStep } from "../../../services/setup.service.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
@@ -15,7 +14,6 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 export const nomenclatureStepRoute = new Hono<AuthEnv>();
 
 nomenclatureStepRoute.use("*", createCategoryRateLimiter("write"));
-nomenclatureStepRoute.use("*", requireScopeMiddleware("write:system"));
 
 nomenclatureStepRoute.post("/", async (c) => {
   const body = await parseJsonBody(c);

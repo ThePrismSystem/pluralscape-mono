@@ -18,7 +18,6 @@ import {
   updateWebhookConfig,
 } from "../../services/webhook-config.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -35,7 +34,6 @@ const WebhookIdSchema = z.object({
 export const webhookConfigRouter = router({
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:webhooks"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -53,7 +51,6 @@ export const webhookConfigRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:webhooks"))
     .input(WebhookIdSchema)
     .query(async ({ ctx, input }) => {
       return getWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth);
@@ -61,7 +58,6 @@ export const webhookConfigRouter = router({
 
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:webhooks"))
     .input(CreateWebhookConfigBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -70,7 +66,6 @@ export const webhookConfigRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:webhooks"))
     .input(WebhookIdSchema.and(UpdateWebhookConfigBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -80,7 +75,6 @@ export const webhookConfigRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:webhooks"))
     .input(WebhookIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -90,7 +84,6 @@ export const webhookConfigRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:webhooks"))
     .input(WebhookIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -100,7 +93,6 @@ export const webhookConfigRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:webhooks"))
     .input(WebhookIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -109,7 +101,6 @@ export const webhookConfigRouter = router({
 
   rotateSecret: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:webhooks"))
     .input(WebhookIdSchema.and(RotateWebhookSecretBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -119,7 +110,6 @@ export const webhookConfigRouter = router({
 
   test: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:webhooks"))
     .input(WebhookIdSchema)
     .mutation(async ({ ctx, input }) => {
       return testWebhookConfig(ctx.db, ctx.systemId, input.webhookId, ctx.auth);

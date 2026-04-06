@@ -8,7 +8,6 @@ import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../../middleware/scope.js";
 import { addMember } from "../../../services/group-membership.service.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
@@ -16,7 +15,6 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 export const addRoute = new Hono<AuthEnv>();
 
 addRoute.use("*", createCategoryRateLimiter("write"));
-addRoute.use("*", requireScopeMiddleware("write:groups"));
 
 addRoute.post("/", async (c) => {
   const body = await parseJsonBody(c);

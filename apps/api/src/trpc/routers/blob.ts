@@ -15,7 +15,6 @@ import {
   listBlobs,
 } from "../../services/blob.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -33,7 +32,6 @@ const BlobIdSchema = z.object({
 export const blobRouter = router({
   createUploadUrl: systemProcedure
     .use(blobUploadLimiter)
-    .use(requireScope("write:blobs"))
     .input(CreateUploadUrlBodySchema)
     .mutation(async ({ ctx, input }) => {
       const storageAdapter = getStorageAdapter();
@@ -52,7 +50,6 @@ export const blobRouter = router({
 
   confirmUpload: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:blobs"))
     .input(BlobIdSchema.and(ConfirmUploadBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -61,7 +58,6 @@ export const blobRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:blobs"))
     .input(BlobIdSchema)
     .query(async ({ ctx, input }) => {
       return getBlob(ctx.db, ctx.systemId, input.blobId, ctx.auth);
@@ -69,7 +65,6 @@ export const blobRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:blobs"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -87,7 +82,6 @@ export const blobRouter = router({
 
   getDownloadUrl: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:blobs"))
     .input(BlobIdSchema)
     .query(async ({ ctx, input }) => {
       const storageAdapter = getStorageAdapter();
@@ -96,7 +90,6 @@ export const blobRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:blobs"))
     .input(BlobIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

@@ -16,7 +16,6 @@ import {
   restoreCheckInRecord,
 } from "../../services/check-in-record.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -33,7 +32,6 @@ const RecordIdSchema = z.object({
 export const checkInRecordRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:check-ins"))
     .input(CreateCheckInRecordBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -42,7 +40,6 @@ export const checkInRecordRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:check-ins"))
     .input(RecordIdSchema)
     .query(async ({ ctx, input }) => {
       return getCheckInRecord(ctx.db, ctx.systemId, input.recordId, ctx.auth);
@@ -50,7 +47,6 @@ export const checkInRecordRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:check-ins"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -72,7 +68,6 @@ export const checkInRecordRouter = router({
 
   respond: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:check-ins"))
     .input(RecordIdSchema.and(RespondCheckInRecordBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -81,7 +76,6 @@ export const checkInRecordRouter = router({
 
   dismiss: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:check-ins"))
     .input(RecordIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -90,7 +84,6 @@ export const checkInRecordRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:check-ins"))
     .input(RecordIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -100,7 +93,6 @@ export const checkInRecordRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:check-ins"))
     .input(RecordIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -109,7 +101,6 @@ export const checkInRecordRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:check-ins"))
     .input(RecordIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

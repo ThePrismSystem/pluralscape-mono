@@ -5,7 +5,6 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { fromCompositeCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../../middleware/scope.js";
 import {
   DEFAULT_PHOTO_LIMIT,
   listMemberPhotos,
@@ -17,7 +16,6 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 export const listRoute = new Hono<AuthEnv>();
 
 listRoute.use("*", createCategoryRateLimiter("readDefault"));
-listRoute.use("*", requireScopeMiddleware("read:members"));
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

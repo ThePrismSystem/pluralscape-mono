@@ -8,7 +8,6 @@ import {
   revokeApiKey,
 } from "../../services/api-key.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -25,7 +24,6 @@ const ApiKeyIdSchema = z.object({
 export const apiKeyRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("full"))
     .input(CreateApiKeyBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -34,7 +32,6 @@ export const apiKeyRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("full"))
     .input(ApiKeyIdSchema)
     .query(async ({ ctx, input }) => {
       return getApiKey(ctx.db, ctx.systemId, input.apiKeyId, ctx.auth);
@@ -42,7 +39,6 @@ export const apiKeyRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("full"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -60,7 +56,6 @@ export const apiKeyRouter = router({
 
   revoke: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("full"))
     .input(ApiKeyIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

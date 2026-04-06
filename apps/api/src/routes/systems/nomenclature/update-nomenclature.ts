@@ -7,7 +7,6 @@ import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../../middleware/scope.js";
 import { updateNomenclatureSettings } from "../../../services/nomenclature.service.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
@@ -15,7 +14,6 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 export const updateNomenclatureRoute = new Hono<AuthEnv>();
 
 updateNomenclatureRoute.use("*", createCategoryRateLimiter("write"));
-updateNomenclatureRoute.use("*", requireScopeMiddleware("write:system"));
 
 updateNomenclatureRoute.put("/", async (c) => {
   const body = await parseJsonBody(c);

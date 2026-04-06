@@ -26,7 +26,6 @@ import {
   setFieldValueForOwner,
 } from "../../services/field-value.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -67,7 +66,6 @@ export const fieldRouter = router({
   definition: router({
     create: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:fields"))
       .input(CreateFieldDefinitionBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -76,7 +74,6 @@ export const fieldRouter = router({
 
     get: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:fields"))
       .input(FieldDefinitionIdSchema)
       .query(async ({ ctx, input }) => {
         return getFieldDefinition(ctx.db, ctx.systemId, input.fieldDefinitionId, ctx.auth);
@@ -84,7 +81,6 @@ export const fieldRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:fields"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -102,7 +98,6 @@ export const fieldRouter = router({
 
     update: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:fields"))
       .input(FieldDefinitionIdSchema.and(UpdateFieldDefinitionBodySchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -118,7 +113,6 @@ export const fieldRouter = router({
 
     archive: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:fields"))
       .input(FieldDefinitionIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -134,7 +128,6 @@ export const fieldRouter = router({
 
     restore: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:fields"))
       .input(FieldDefinitionIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -149,7 +142,6 @@ export const fieldRouter = router({
 
     delete: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("delete:fields"))
       .input(FieldDefinitionIdSchema.and(z.object({ force: z.boolean().default(false) })))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -170,7 +162,6 @@ export const fieldRouter = router({
   value: router({
     set: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:fields"))
       .input(
         FieldDefinitionIdSchema.and(z.object({ owner: FieldOwnerSchema })).and(
           SetFieldValueBodySchema,
@@ -191,7 +182,6 @@ export const fieldRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:fields"))
       .input(z.object({ owner: FieldOwnerSchema }))
       .query(async ({ ctx, input }) => {
         return listFieldValuesForOwner(
@@ -204,7 +194,6 @@ export const fieldRouter = router({
 
     remove: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("delete:fields"))
       .input(FieldDefinitionIdSchema.and(z.object({ owner: FieldOwnerSchema })))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -225,7 +214,6 @@ export const fieldRouter = router({
   bucketVisibility: router({
     set: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:fields"))
       .input(FieldDefinitionIdSchema.and(BucketIdSchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -241,7 +229,6 @@ export const fieldRouter = router({
 
     remove: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("delete:fields"))
       .input(FieldDefinitionIdSchema.and(BucketIdSchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -258,7 +245,6 @@ export const fieldRouter = router({
 
     list: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:fields"))
       .input(
         FieldDefinitionIdSchema.and(
           z.object({ limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional() }),

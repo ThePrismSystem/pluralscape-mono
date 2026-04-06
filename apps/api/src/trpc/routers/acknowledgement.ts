@@ -17,7 +17,6 @@ import {
   restoreAcknowledgement,
 } from "../../services/acknowledgement.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -36,7 +35,6 @@ const AckIdSchema = z.object({
 export const acknowledgementRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:acknowledgements"))
     .input(CreateAcknowledgementBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -51,7 +49,6 @@ export const acknowledgementRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:acknowledgements"))
     .input(AckIdSchema)
     .query(async ({ ctx, input }) => {
       return getAcknowledgement(ctx.db, ctx.systemId, input.ackId, ctx.auth);
@@ -59,7 +56,6 @@ export const acknowledgementRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:acknowledgements"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -79,7 +75,6 @@ export const acknowledgementRouter = router({
 
   confirm: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:acknowledgements"))
     .input(AckIdSchema.and(ConfirmAcknowledgementBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -101,7 +96,6 @@ export const acknowledgementRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:acknowledgements"))
     .input(AckIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -116,7 +110,6 @@ export const acknowledgementRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:acknowledgements"))
     .input(AckIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -137,7 +130,6 @@ export const acknowledgementRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:acknowledgements"))
     .input(AckIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -150,36 +142,30 @@ export const acknowledgementRouter = router({
       return { success: true as const };
     }),
 
-  onChange: systemProcedure
-    .use(requireScope("read:acknowledgements"))
-    .subscription(async function* ({ ctx, signal }) {
-      const queue: AcknowledgementChangeEvent[] = [];
-      let resolve: (() => void) | null = null;
+  onChange: systemProcedure.subscription(async function* ({ ctx, signal }) {
+    const queue: AcknowledgementChangeEvent[] = [];
+    let resolve: (() => void) | null = null;
 
-      const unsubscribe = await subscribeToEntityChanges(
-        ctx.systemId,
-        "acknowledgement",
-        (event) => {
-          queue.push(event as AcknowledgementChangeEvent);
-          resolve?.();
-        },
-      );
+    const unsubscribe = await subscribeToEntityChanges(ctx.systemId, "acknowledgement", (event) => {
+      queue.push(event as AcknowledgementChangeEvent);
+      resolve?.();
+    });
 
-      try {
-        while (!signal?.aborted) {
-          while (queue.length > 0) {
-            const event = queue.shift();
-            if (event) {
-              yield tracked(`${event.type}:${event.ackId}`, event);
-            }
+    try {
+      while (!signal?.aborted) {
+        while (queue.length > 0) {
+          const event = queue.shift();
+          if (event) {
+            yield tracked(`${event.type}:${event.ackId}`, event);
           }
-          await new Promise<void>((r) => {
-            resolve = r;
-          });
-          resolve = null;
         }
-      } finally {
-        await unsubscribe?.();
+        await new Promise<void>((r) => {
+          resolve = r;
+        });
+        resolve = null;
       }
-    }),
+    } finally {
+      await unsubscribe?.();
+    }
+  }),
 });

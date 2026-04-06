@@ -5,7 +5,6 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { getAcknowledgement } from "../../services/acknowledgement.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -13,7 +12,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const getRoute = new Hono<AuthEnv>();
 
 getRoute.use("*", createCategoryRateLimiter("readDefault"));
-getRoute.use("*", requireScopeMiddleware("read:acknowledgements"));
 
 getRoute.get("/:acknowledgementId", async (c) => {
   const auth = c.get("auth");

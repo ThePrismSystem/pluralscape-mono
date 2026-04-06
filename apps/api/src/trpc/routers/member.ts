@@ -18,7 +18,6 @@ import {
   updateMember,
 } from "../../services/member.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -35,7 +34,6 @@ const MemberIdSchema = z.object({
 export const memberRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(CreateMemberBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -51,7 +49,6 @@ export const memberRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:members"))
     .input(MemberIdSchema)
     .query(async ({ ctx, input }) => {
       return getMember(ctx.db, ctx.systemId, input.memberId, ctx.auth);
@@ -59,7 +56,6 @@ export const memberRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:members"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -79,7 +75,6 @@ export const memberRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberIdSchema.and(UpdateMemberBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -95,7 +90,6 @@ export const memberRouter = router({
 
   duplicate: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberIdSchema.and(DuplicateMemberBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -116,7 +110,6 @@ export const memberRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -126,7 +119,6 @@ export const memberRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -135,7 +127,6 @@ export const memberRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:members"))
     .input(MemberIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -145,7 +136,6 @@ export const memberRouter = router({
 
   listMemberships: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:members"))
     .input(MemberIdSchema)
     .query(async ({ ctx, input }) => {
       return listAllMemberMemberships(ctx.db, ctx.systemId, input.memberId, ctx.auth);

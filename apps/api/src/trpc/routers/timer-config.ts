@@ -15,7 +15,6 @@ import {
   updateTimerConfig,
 } from "../../services/timer-config.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -32,7 +31,6 @@ const TimerIdSchema = z.object({
 export const timerConfigRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:timers"))
     .input(CreateTimerConfigBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -41,7 +39,6 @@ export const timerConfigRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:timers"))
     .input(TimerIdSchema)
     .query(async ({ ctx, input }) => {
       return getTimerConfig(ctx.db, ctx.systemId, input.timerId, ctx.auth);
@@ -49,7 +46,6 @@ export const timerConfigRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:timers"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -67,7 +63,6 @@ export const timerConfigRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:timers"))
     .input(TimerIdSchema.and(UpdateTimerConfigBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -76,7 +71,6 @@ export const timerConfigRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:timers"))
     .input(TimerIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -86,7 +80,6 @@ export const timerConfigRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:timers"))
     .input(TimerIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -95,7 +88,6 @@ export const timerConfigRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:timers"))
     .input(TimerIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

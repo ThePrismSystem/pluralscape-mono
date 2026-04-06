@@ -7,7 +7,6 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { respondCheckInRecord } from "../../services/check-in-record.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -15,7 +14,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const respondRoute = new Hono<AuthEnv>();
 
 respondRoute.use("*", createCategoryRateLimiter("write"));
-respondRoute.use("*", requireScopeMiddleware("write:check-ins"));
 
 respondRoute.post("/:recordId/respond", async (c) => {
   const auth = c.get("auth");

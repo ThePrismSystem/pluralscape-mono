@@ -22,7 +22,7 @@ import {
 } from "../../lib/sse.constants.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
+import { scopeGateMiddleware } from "../../middleware/scope-gate.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 import type { SSEStreamingApi } from "hono/streaming";
@@ -31,7 +31,7 @@ export const notificationsRoutes = new Hono<AuthEnv>();
 
 notificationsRoutes.use("*", createCategoryRateLimiter("sseStream"));
 notificationsRoutes.use("*", authMiddleware());
-notificationsRoutes.use("*", requireScopeMiddleware("read:notifications"));
+notificationsRoutes.use("*", scopeGateMiddleware());
 
 /** Per-account SSE state: shared buffer, set of connected streams, Valkey handler. */
 interface AccountSseState {

@@ -6,7 +6,6 @@ import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { restoreWebhookConfig } from "../../services/webhook-config.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,7 +13,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const restoreRoute = new Hono<AuthEnv>();
 
 restoreRoute.use("*", createCategoryRateLimiter("write"));
-restoreRoute.use("*", requireScopeMiddleware("write:webhooks"));
 
 restoreRoute.post("/:webhookId/restore", async (c) => {
   const auth = c.get("auth");

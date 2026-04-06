@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { authMiddleware } from "../../middleware/auth.js";
+import { scopeGateMiddleware } from "../../middleware/scope-gate.js";
 import { acknowledgementRoutes } from "../acknowledgements/index.js";
 import { analyticsRoutes } from "../analytics/index.js";
 import { apiKeyRoutes } from "../api-keys/index.js";
@@ -46,6 +47,7 @@ export const systemRoutes = new Hono<AuthEnv>();
 
 // All system routes require authentication
 systemRoutes.use("*", authMiddleware());
+systemRoutes.use("*", scopeGateMiddleware());
 
 // listRoute before getRoute so GET / is not captured by /:id
 systemRoutes.route("/", listRoute);

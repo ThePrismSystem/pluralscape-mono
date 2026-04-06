@@ -5,7 +5,6 @@ import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { envelope } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../../middleware/scope.js";
 import { listFieldBucketVisibility } from "../../../services/field-bucket-visibility.service.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
@@ -13,7 +12,6 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 export const listVisibilityRoute = new Hono<AuthEnv>();
 
 listVisibilityRoute.use("*", createCategoryRateLimiter("readDefault"));
-listVisibilityRoute.use("*", requireScopeMiddleware("read:fields"));
 
 listVisibilityRoute.get("/", async (c) => {
   const auth = c.get("auth");

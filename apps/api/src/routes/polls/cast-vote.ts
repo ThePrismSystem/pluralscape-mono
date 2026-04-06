@@ -9,7 +9,6 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { castVote } from "../../services/poll-vote.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -17,7 +16,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const castVoteRoute = new Hono<AuthEnv>();
 
 castVoteRoute.use("*", createCategoryRateLimiter("write"));
-castVoteRoute.use("*", requireScopeMiddleware("write:polls"));
 castVoteRoute.use("*", createIdempotencyMiddleware());
 
 castVoteRoute.post("/:pollId/votes", async (c) => {

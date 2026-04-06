@@ -7,7 +7,6 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { listMembers } from "../../services/member.service.js";
 
 import { DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT } from "./members.constants.js";
@@ -29,7 +28,6 @@ const MEMBER_FIELDS = [
 export const listRoute = new Hono<AuthEnv>();
 
 listRoute.use("*", createCategoryRateLimiter("readDefault"));
-listRoute.use("*", requireScopeMiddleware("read:members"));
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

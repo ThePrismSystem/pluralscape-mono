@@ -15,7 +15,6 @@ import {
   updateFrontingReport,
 } from "../../services/fronting-report.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -32,7 +31,6 @@ const ReportIdSchema = z.object({
 export const frontingReportRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:reports"))
     .input(CreateFrontingReportBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -41,7 +39,6 @@ export const frontingReportRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:reports"))
     .input(ReportIdSchema)
     .query(async ({ ctx, input }) => {
       return getFrontingReport(ctx.db, ctx.systemId, input.reportId, ctx.auth);
@@ -49,7 +46,6 @@ export const frontingReportRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:reports"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -65,7 +61,6 @@ export const frontingReportRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:reports"))
     .input(ReportIdSchema.and(UpdateFrontingReportBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -74,7 +69,6 @@ export const frontingReportRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:reports"))
     .input(ReportIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -84,7 +78,6 @@ export const frontingReportRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:reports"))
     .input(ReportIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -93,7 +86,6 @@ export const frontingReportRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:reports"))
     .input(ReportIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

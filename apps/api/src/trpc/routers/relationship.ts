@@ -16,7 +16,6 @@ import {
   updateRelationship,
 } from "../../services/relationship.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -33,7 +32,6 @@ const RelationshipIdSchema = z.object({
 export const relationshipRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:relationships"))
     .input(CreateRelationshipBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -42,7 +40,6 @@ export const relationshipRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:relationships"))
     .input(RelationshipIdSchema)
     .query(async ({ ctx, input }) => {
       return getRelationship(ctx.db, ctx.systemId, input.relationshipId, ctx.auth);
@@ -50,7 +47,6 @@ export const relationshipRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:relationships"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -73,7 +69,6 @@ export const relationshipRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:relationships"))
     .input(RelationshipIdSchema.and(UpdateRelationshipBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -82,7 +77,6 @@ export const relationshipRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:relationships"))
     .input(RelationshipIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -92,7 +86,6 @@ export const relationshipRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:relationships"))
     .input(RelationshipIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -101,7 +94,6 @@ export const relationshipRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:relationships"))
     .input(RelationshipIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

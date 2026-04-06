@@ -6,7 +6,6 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { deletePollVote } from "../../services/poll-vote.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,7 +13,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const deleteVoteRoute = new Hono<AuthEnv>();
 
 deleteVoteRoute.use("*", createCategoryRateLimiter("write"));
-deleteVoteRoute.use("*", requireScopeMiddleware("delete:polls"));
 
 deleteVoteRoute.delete("/:pollId/votes/:voteId", async (c) => {
   const auth = c.get("auth");

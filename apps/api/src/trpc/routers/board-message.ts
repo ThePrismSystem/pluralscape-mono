@@ -21,7 +21,6 @@ import {
   updateBoardMessage,
 } from "../../services/board-message.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -40,7 +39,6 @@ const BoardMessageIdSchema = z.object({
 export const boardMessageRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:messages"))
     .input(CreateBoardMessageBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -55,7 +53,6 @@ export const boardMessageRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:messages"))
     .input(BoardMessageIdSchema)
     .query(async ({ ctx, input }) => {
       return getBoardMessage(ctx.db, ctx.systemId, input.boardMessageId, ctx.auth);
@@ -63,7 +60,6 @@ export const boardMessageRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:messages"))
     .input(
       z.object({
         cursor: z.string().nullish(),
@@ -81,7 +77,6 @@ export const boardMessageRouter = router({
 
   update: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:messages"))
     .input(BoardMessageIdSchema.and(UpdateBoardMessageBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -103,7 +98,6 @@ export const boardMessageRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:messages"))
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -118,7 +112,6 @@ export const boardMessageRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:messages"))
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -139,7 +132,6 @@ export const boardMessageRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:messages"))
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -154,7 +146,6 @@ export const boardMessageRouter = router({
 
   reorder: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:messages"))
     .input(ReorderBoardMessagesBodySchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -168,7 +159,6 @@ export const boardMessageRouter = router({
 
   pin: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:messages"))
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -189,7 +179,6 @@ export const boardMessageRouter = router({
 
   unpin: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:messages"))
     .input(BoardMessageIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -208,10 +197,7 @@ export const boardMessageRouter = router({
       return result;
     }),
 
-  onChange: systemProcedure.use(requireScope("read:messages")).subscription(async function* ({
-    ctx,
-    signal,
-  }) {
+  onChange: systemProcedure.subscription(async function* ({ ctx, signal }) {
     const queue: BoardMessageChangeEvent[] = [];
     let resolve: (() => void) | null = null;
 

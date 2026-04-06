@@ -16,7 +16,6 @@ import {
   restoreMemberPhoto,
 } from "../../services/member-photo.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -39,7 +38,6 @@ const MemberPhotoIdSchema = MemberIdSchema.and(PhotoIdSchema);
 export const memberPhotoRouter = router({
   create: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberIdSchema.and(CreateMemberPhotoBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -55,7 +53,6 @@ export const memberPhotoRouter = router({
 
   get: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:members"))
     .input(MemberPhotoIdSchema)
     .query(async ({ ctx, input }) => {
       return getMemberPhoto(ctx.db, ctx.systemId, input.memberId, input.photoId, ctx.auth);
@@ -63,7 +60,6 @@ export const memberPhotoRouter = router({
 
   list: systemProcedure
     .use(readLimiter)
-    .use(requireScope("read:members"))
     .input(
       MemberIdSchema.and(
         z.object({
@@ -82,7 +78,6 @@ export const memberPhotoRouter = router({
 
   archive: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberPhotoIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -99,7 +94,6 @@ export const memberPhotoRouter = router({
 
   restore: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberPhotoIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -115,7 +109,6 @@ export const memberPhotoRouter = router({
 
   delete: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("delete:members"))
     .input(MemberPhotoIdSchema)
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);
@@ -125,7 +118,6 @@ export const memberPhotoRouter = router({
 
   reorder: systemProcedure
     .use(writeLimiter)
-    .use(requireScope("write:members"))
     .input(MemberIdSchema.and(ReorderPhotosBodySchema))
     .mutation(async ({ ctx, input }) => {
       const audit = ctx.createAudit(ctx.auth);

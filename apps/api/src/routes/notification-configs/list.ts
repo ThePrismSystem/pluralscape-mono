@@ -5,7 +5,6 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { listNotificationConfigs } from "../../services/notification-config.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -13,7 +12,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const listRoute = new Hono<AuthEnv>();
 
 listRoute.use("*", createCategoryRateLimiter("readDefault"));
-listRoute.use("*", requireScopeMiddleware("read:notifications"));
 
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");

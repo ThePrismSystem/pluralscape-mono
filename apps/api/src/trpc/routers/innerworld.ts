@@ -28,7 +28,6 @@ import {
   updateRegion,
 } from "../../services/innerworld-region.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
-import { requireScope } from "../middlewares/scope.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
@@ -50,7 +49,6 @@ export const innerworldRouter = router({
   entity: router({
     create: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(CreateEntityBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -58,14 +56,12 @@ export const innerworldRouter = router({
       }),
     get: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:innerworld"))
       .input(EntityIdSchema)
       .query(async ({ ctx, input }) => {
         return getEntity(ctx.db, ctx.systemId, input.entityId, ctx.auth);
       }),
     list: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:innerworld"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -84,7 +80,6 @@ export const innerworldRouter = router({
       }),
     update: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(EntityIdSchema.and(UpdateEntityBodySchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -99,7 +94,6 @@ export const innerworldRouter = router({
       }),
     archive: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(EntityIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -108,7 +102,6 @@ export const innerworldRouter = router({
       }),
     restore: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(EntityIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -116,7 +109,6 @@ export const innerworldRouter = router({
       }),
     delete: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("delete:innerworld"))
       .input(EntityIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -128,7 +120,6 @@ export const innerworldRouter = router({
   region: router({
     create: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(CreateRegionBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -136,14 +127,12 @@ export const innerworldRouter = router({
       }),
     get: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:innerworld"))
       .input(RegionIdSchema)
       .query(async ({ ctx, input }) => {
         return getRegion(ctx.db, ctx.systemId, input.regionId, ctx.auth);
       }),
     list: systemProcedure
       .use(readLimiter)
-      .use(requireScope("read:innerworld"))
       .input(
         z.object({
           cursor: z.string().nullish(),
@@ -160,7 +149,6 @@ export const innerworldRouter = router({
       }),
     update: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(RegionIdSchema.and(UpdateRegionBodySchema))
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -175,7 +163,6 @@ export const innerworldRouter = router({
       }),
     archive: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(RegionIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -184,7 +171,6 @@ export const innerworldRouter = router({
       }),
     restore: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(RegionIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -192,7 +178,6 @@ export const innerworldRouter = router({
       }),
     delete: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("delete:innerworld"))
       .input(RegionIdSchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);
@@ -202,15 +187,11 @@ export const innerworldRouter = router({
   }),
 
   canvas: router({
-    get: systemProcedure
-      .use(readLimiter)
-      .use(requireScope("read:innerworld"))
-      .query(async ({ ctx }) => {
-        return getCanvas(ctx.db, ctx.systemId, ctx.auth);
-      }),
+    get: systemProcedure.use(readLimiter).query(async ({ ctx }) => {
+      return getCanvas(ctx.db, ctx.systemId, ctx.auth);
+    }),
     upsert: systemProcedure
       .use(writeLimiter)
-      .use(requireScope("write:innerworld"))
       .input(UpdateCanvasBodySchema)
       .mutation(async ({ ctx, input }) => {
         const audit = ctx.createAudit(ctx.auth);

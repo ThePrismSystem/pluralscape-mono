@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 
 import { ApiHttpError } from "../lib/api-error.js";
 
+import { scopeGateMiddleware } from "./middlewares/scope-gate.js";
 import { middleware, publicProcedure } from "./trpc.js";
 
 /** Maps HTTP status codes to tRPC error codes. */
@@ -61,4 +62,4 @@ const errorMapper = middleware(async ({ next }) => {
  * Base procedure with error mapping applied.
  * All other procedures (protectedProcedure, systemProcedure) extend from this.
  */
-export const errorMapProcedure = publicProcedure.use(errorMapper);
+export const errorMapProcedure = publicProcedure.use(errorMapper).use(scopeGateMiddleware);

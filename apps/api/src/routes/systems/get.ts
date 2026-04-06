@@ -5,7 +5,6 @@ import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { getSystemProfile } from "../../services/system.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -13,7 +12,6 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const getRoute = new Hono<AuthEnv>();
 
 getRoute.use("*", createCategoryRateLimiter("readDefault"));
-getRoute.use("*", requireScopeMiddleware("read:system"));
 getRoute.get("/:id", async (c) => {
   const auth = c.get("auth");
   const systemId = parseIdParam(c.req.param("id"), ID_PREFIXES.system);
