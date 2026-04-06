@@ -20,7 +20,6 @@ import type { SqliteDriver } from "@pluralscape/sync/adapters";
 import type { SystemId } from "@pluralscape/types";
 import type { ReactNode } from "react";
 
-export type { SyncContextValue, SyncProgress } from "./sync-context.js";
 export { SyncCtx, useSync } from "./sync-context.js";
 
 /** Maximum number of bootstrap attempts before falling back to remote. */

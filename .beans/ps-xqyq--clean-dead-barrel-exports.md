@@ -1,11 +1,11 @@
 ---
 # ps-xqyq
 title: Clean dead barrel exports
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T00:52:54Z
-updated_at: 2026-04-06T00:52:54Z
+updated_at: 2026-04-06T04:51:28Z
 parent: ps-y621
 ---
 
