@@ -46,6 +46,7 @@ describe("friend-code.service (PGlite integration)", () => {
 
   function makeAccountAuth(accountId: AccountId, systemId: SystemId): AuthContext {
     return {
+      authMethod: "session" as const,
       accountId,
       systemId,
       sessionId: `sess_${crypto.randomUUID()}` as never,

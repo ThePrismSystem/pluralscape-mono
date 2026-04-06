@@ -104,6 +104,7 @@ const STUB_ENCRYPTED_DATA = "enc_stub";
 
 function makeAuth(): AuthContext {
   return {
+    authMethod: "session" as const,
     accountId: ACCOUNT_ID,
     systemId: null,
     sessionId: "sess_test" as SessionId,

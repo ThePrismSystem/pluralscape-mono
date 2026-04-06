@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, SystemId } from "@pluralscape/types";
+import type { AuthContext, SessionAuthContext } from "../../lib/auth-context.js";
+import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Context } from "hono";
 
@@ -55,16 +55,17 @@ function mockParams(callIndex: number): Record<string, unknown> {
   return writeAuditLogSpy.mock.calls[callIndex]?.[1] as Record<string, unknown>;
 }
 
-function createAuth(overrides?: Partial<AuthContext>): AuthContext {
+function createAuth(overrides?: Partial<SessionAuthContext>): AuthContext {
   return {
+    authMethod: "session" as const,
     accountId: "acc_test-account" as AuthContext["accountId"],
     systemId: "sys_test-system" as AuthContext["systemId"],
-    sessionId: "ses_test-session" as AuthContext["sessionId"],
+    sessionId: "ses_test-session" as SessionId,
     accountType: "system" as AuthContext["accountType"],
     ownedSystemIds: new Set(["sys_test-system" as AuthContext["systemId"] & string]),
     auditLogIpTracking: false,
     ...overrides,
-  };
+  } satisfies SessionAuthContext;
 }
 
 describe("createAuditWriter", () => {

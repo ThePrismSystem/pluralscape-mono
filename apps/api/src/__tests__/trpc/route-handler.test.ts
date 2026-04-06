@@ -41,6 +41,7 @@ const { validateSession } = await import("../../lib/session-auth.js");
 const { trpcRoute } = await import("../../routes/trpc.js");
 
 const MOCK_AUTH: AuthContext = {
+  authMethod: "session" as const,
   accountId: "acct_550e8400-e29b-41d4-a716-446655440000" as AccountId,
   systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId,
   sessionId: "sess_550e8400-e29b-41d4-a716-446655440000" as SessionId,

@@ -46,6 +46,7 @@ describe("idempotency middleware", () => {
     app.use("*", requestIdMiddleware());
     app.use("*", (c, next) => {
       c.set("auth", {
+        authMethod: "session" as const,
         accountId: "acct-1" as never,
         systemId: null,
         sessionId: "sess-1" as never,
@@ -117,6 +118,7 @@ describe("idempotency middleware", () => {
     errApp.use("*", requestIdMiddleware());
     errApp.use("*", (c, next) => {
       c.set("auth", {
+        authMethod: "session" as const,
         accountId: "acct-1" as never,
         systemId: null,
         sessionId: "sess-1" as never,
@@ -246,6 +248,7 @@ describe("idempotency middleware", () => {
     app.use("*", requestIdMiddleware());
     app.use("*", (c, next) => {
       c.set("auth", {
+        authMethod: "session" as const,
         accountId: "acct-auth-test" as never,
         systemId: null,
         sessionId: "sess-auth" as never,
