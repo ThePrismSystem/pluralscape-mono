@@ -35,7 +35,7 @@ passwordResetRoute.post("/recovery-key", async (c) => {
       ? (body as { email: unknown }).email
       : undefined;
   if (typeof email !== "string") {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_INPUT", "Email is required");
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Email is required");
   }
 
   // Per-account rate limiting on recovery attempts (keyed by email hash)
