@@ -1,16 +1,17 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingReport } from "@pluralscape/data/transforms/fronting-report";
-import { useCallback } from "react";
-
-import { useMasterKey } from "../providers/crypto-provider.js";
-import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {
+  useOfflineFirstQuery,
+  useOfflineFirstInfiniteQuery,
+  useDomainMutation,
+} from "./factories.js";
+import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
@@ -19,8 +20,6 @@ import type {
   FrontingReportRaw,
 } from "@pluralscape/data/transforms/fronting-report";
 import type { FrontingReport, FrontingReportId } from "@pluralscape/types";
-import type { InfiniteData } from "@tanstack/react-query";
-type ReportPage = { readonly data: FrontingReport[]; readonly nextCursor: string | null };
 
 interface FrontingReportListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -29,72 +28,57 @@ interface FrontingReportListOpts extends SystemIdOverride {
 export function useFrontingReport(
   reportId: FrontingReportId,
   opts?: SystemIdOverride,
-): TRPCQuery<FrontingReport> {
-  const activeSystemId = useActiveSystemId();
-  const systemId = opts?.systemId ?? activeSystemId;
-  const masterKey = useMasterKey();
-
-  const selectFrontingReport = useCallback(
-    (raw: FrontingReportRaw): FrontingReport => {
-      if (masterKey === null) throw new Error("masterKey is null");
-      return decryptFrontingReport(raw, masterKey);
+): DataQuery<FrontingReport> {
+  return useOfflineFirstQuery<FrontingReportRaw, FrontingReport>({
+    queryKey: ["fronting_reports", reportId],
+    table: "fronting_reports",
+    entityId: reportId,
+    rowTransform: () => {
+      throw new Error("fronting_reports are remote-only");
     },
-    [masterKey],
-  );
-
-  return trpc.frontingReport.get.useQuery(
-    { systemId, reportId },
-    {
-      enabled: masterKey !== null,
-      select: selectFrontingReport,
-    },
-  );
+    decrypt: decryptFrontingReport,
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled, select }) =>
+      trpc.frontingReport.get.useQuery(
+        { systemId, reportId },
+        { enabled, select },
+      ) as DataQuery<FrontingReport>,
+  });
 }
 
 export function useFrontingReportsList(
   opts?: FrontingReportListOpts,
-): TRPCInfiniteQuery<ReportPage> {
-  const activeSystemId = useActiveSystemId();
-  const systemId = opts?.systemId ?? activeSystemId;
-  const masterKey = useMasterKey();
-
-  const selectFrontingReportsList = useCallback(
-    (data: InfiniteData<FrontingReportPage>): InfiniteData<ReportPage> => {
-      if (masterKey === null) throw new Error("masterKey is null");
-      const key = masterKey;
-      return {
-        ...data,
-        pages: data.pages.map((page) => ({
-          data: page.data.map((item) => decryptFrontingReport(item, key)),
-          nextCursor: page.nextCursor,
-        })),
-      };
+): DataListQuery<FrontingReport> {
+  return useOfflineFirstInfiniteQuery<FrontingReportRaw, FrontingReport>({
+    queryKey: ["fronting_reports", "list", opts?.systemId],
+    table: "fronting_reports",
+    rowTransform: () => {
+      throw new Error("fronting_reports are remote-only");
     },
-    [masterKey],
-  );
-
-  return trpc.frontingReport.list.useInfiniteQuery(
-    {
-      systemId,
-      limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
-    },
-    {
-      enabled: masterKey !== null,
-      getNextPageParam: (lastPage: FrontingReportPage) => lastPage.nextCursor,
-      select: selectFrontingReportsList,
-    },
-  );
+    decrypt: decryptFrontingReport,
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled, select }) =>
+      trpc.frontingReport.list.useInfiniteQuery(
+        {
+          systemId,
+          limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
+        },
+        {
+          enabled,
+          getNextPageParam: (lastPage: FrontingReportPage) => lastPage.nextCursor,
+          select,
+        },
+      ) as DataListQuery<FrontingReport>,
+  });
 }
 
 export function useGenerateReport(): TRPCMutation<
   RouterOutput["frontingReport"]["create"],
   RouterInput["frontingReport"]["create"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.frontingReport.create.useMutation({
-    onSuccess: () => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingReport.create.useMutation(mutOpts),
+    onInvalidate: (utils, systemId) => {
       void utils.frontingReport.list.invalidate({ systemId });
     },
   });
@@ -104,11 +88,9 @@ export function useDeleteReport(): TRPCMutation<
   RouterOutput["frontingReport"]["delete"],
   RouterInput["frontingReport"]["delete"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.frontingReport.delete.useMutation({
-    onSuccess: (_data, variables) => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingReport.delete.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
       void utils.frontingReport.get.invalidate({ systemId, reportId: variables.reportId });
       void utils.frontingReport.list.invalidate({ systemId });
     },

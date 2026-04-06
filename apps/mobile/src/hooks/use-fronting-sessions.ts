@@ -1,15 +1,16 @@
 import { trpc } from "@pluralscape/api-client/trpc";
-import {
-  decryptFrontingSession,
-  decryptFrontingSessionPage,
-} from "@pluralscape/data/transforms/fronting-session";
-import { useQuery } from "@tanstack/react-query";
+import { decryptFrontingSession } from "@pluralscape/data/transforms/fronting-session";
 import { useCallback } from "react";
 
 import { rowToFrontingSession } from "../data/row-transforms.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
+import {
+  useOfflineFirstQuery,
+  useOfflineFirstInfiniteQuery,
+  useDomainMutation,
+} from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
   type DataListQuery,
@@ -19,15 +20,15 @@ import {
   type TRPCMutation,
   type TRPCQuery,
 } from "./types.js";
-import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
+import type { LocalDatabase } from "../data/local-database.js";
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type {
   FrontingSessionPage as FrontingSessionRawPage,
   FrontingSessionRaw,
 } from "@pluralscape/data/transforms/fronting-session";
-import type { Archived, FrontingSession, FrontingSessionId } from "@pluralscape/types";
-import type { InfiniteData, UseMutationResult } from "@tanstack/react-query";
+import type { Archived, FrontingSession, FrontingSessionId, SystemId } from "@pluralscape/types";
+import type { UseMutationResult } from "@tanstack/react-query";
 import type { TRPCHookResult } from "@trpc/react-query/shared";
 
 type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
@@ -36,10 +37,6 @@ type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
 // Remains as RouterOutput because getActive returns a composite shape
 // (sessions + isCofronting + entityMemberMap) with no transform-level wire type.
 type RawGetActive = RouterOutput["frontingSession"]["getActive"];
-type SessionPage = {
-  readonly data: (FrontingSession | Archived<FrontingSession>)[];
-  readonly nextCursor: string | null;
-};
 type ActiveFrontersResult = {
   readonly sessions: (FrontingSession | Archived<FrontingSession>)[];
   readonly isCofronting: boolean;
@@ -56,73 +53,40 @@ export function useFrontingSession(
   sessionId: FrontingSessionId,
   opts?: SystemIdOverride,
 ): DataQuery<FrontingSession | Archived<FrontingSession>> {
-  const source = useQuerySource();
-  const localDb = useLocalDb();
-  const activeSystemId = useActiveSystemId();
-  const systemId = opts?.systemId ?? activeSystemId;
-  const masterKey = useMasterKey();
-
-  const selectFrontingSession = useCallback(
-    (raw: FrontingSessionRaw): FrontingSession | Archived<FrontingSession> => {
-      if (masterKey === null) throw new Error("masterKey is null");
-      return decryptFrontingSession(raw, masterKey);
-    },
-    [masterKey],
-  );
-
-  const localQuery = useQuery({
+  return useOfflineFirstQuery<FrontingSessionRaw, FrontingSession | Archived<FrontingSession>>({
     queryKey: ["fronting_sessions", sessionId],
-    queryFn: () => {
-      if (localDb === null) throw new Error("localDb is null");
-      const row = localDb.queryOne("SELECT * FROM fronting_sessions WHERE id = ?", [sessionId]);
-      if (!row) throw new Error("Fronting session not found");
-      return rowToFrontingSession(row);
-    },
-    enabled: source === "local" && localDb !== null,
+    table: "fronting_sessions",
+    entityId: sessionId,
+    rowTransform: rowToFrontingSession,
+    decrypt: decryptFrontingSession,
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled, select }) =>
+      trpc.frontingSession.get.useQuery({ systemId, sessionId }, { enabled, select }) as DataQuery<
+        FrontingSession | Archived<FrontingSession>
+      >,
   });
-
-  const remoteQuery = trpc.frontingSession.get.useQuery(
-    { systemId, sessionId },
-    {
-      enabled: source === "remote" && masterKey !== null,
-      select: selectFrontingSession,
-    },
-  );
-
-  return source === "local" ? localQuery : remoteQuery;
 }
 
 export function useFrontingSessionsList(
   opts?: FrontingSessionListOpts,
 ): DataListQuery<FrontingSession | Archived<FrontingSession>> {
-  const source = useQuerySource();
-  const localDb = useLocalDb();
-  const activeSystemId = useActiveSystemId();
-  const systemId = opts?.systemId ?? activeSystemId;
-  const masterKey = useMasterKey();
-
-  const selectFrontingSessionsList = useCallback(
-    (data: InfiniteData<FrontingSessionRawPage>): InfiniteData<SessionPage> => {
-      if (masterKey === null) throw new Error("masterKey is null");
-      const key = masterKey;
-      return {
-        ...data,
-        pages: data.pages.map((page) => decryptFrontingSessionPage(page, key)),
-      };
-    },
-    [masterKey],
-  );
-
-  const localQuery = useQuery({
+  return useOfflineFirstInfiniteQuery<
+    FrontingSessionRaw,
+    FrontingSession | Archived<FrontingSession>
+  >({
     queryKey: [
       "fronting_sessions",
       "list",
-      systemId,
+      opts?.systemId,
       opts?.activeOnly ?? false,
       opts?.includeArchived ?? false,
     ],
-    queryFn: () => {
-      if (localDb === null) throw new Error("localDb is null");
+    table: "fronting_sessions",
+    rowTransform: rowToFrontingSession,
+    decrypt: decryptFrontingSession,
+    includeArchived: opts?.includeArchived,
+    systemIdOverride: opts,
+    localQueryFn: (localDb: LocalDatabase, systemId: SystemId) => {
       const activeOnly = opts?.activeOnly ?? false;
       const includeArchived = opts?.includeArchived ?? false;
       let sql = "SELECT * FROM fronting_sessions WHERE system_id = ?";
@@ -134,26 +98,26 @@ export function useFrontingSessionsList(
       sql += " ORDER BY created_at DESC";
       return localDb.queryAll(sql, [systemId]).map(rowToFrontingSession);
     },
-    enabled: source === "local" && localDb !== null,
+    useRemote: ({ systemId, enabled, select }) =>
+      trpc.frontingSession.list.useInfiniteQuery(
+        {
+          systemId,
+          limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
+          activeOnly: opts?.activeOnly ?? false,
+          includeArchived: opts?.includeArchived ?? false,
+        },
+        {
+          enabled,
+          getNextPageParam: (lastPage: FrontingSessionRawPage) => lastPage.nextCursor,
+          select,
+        },
+      ) as DataListQuery<FrontingSession | Archived<FrontingSession>>,
   });
-
-  const remoteQuery = trpc.frontingSession.list.useInfiniteQuery(
-    {
-      systemId,
-      limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
-      activeOnly: opts?.activeOnly ?? false,
-      includeArchived: opts?.includeArchived ?? false,
-    },
-    {
-      enabled: source === "remote" && masterKey !== null,
-      getNextPageParam: (lastPage: FrontingSessionRawPage) => lastPage.nextCursor,
-      select: selectFrontingSessionsList,
-    },
-  );
-
-  return source === "local" ? localQuery : remoteQuery;
 }
 
+// Kept as manual tRPC mutation — onMutate cancels in-flight queries and
+// onSettled (not onSuccess) fires invalidation on both success and error,
+// which does not map to the useDomainMutation factory's onSuccess-only pattern.
 export function useStartSession(): TRPCMutation<
   RouterOutput["frontingSession"]["create"],
   RouterInput["frontingSession"]["create"]
@@ -174,6 +138,8 @@ export function useStartSession(): TRPCMutation<
 
 type EndSessionContext = { readonly previousSession: FrontingSessionRaw | undefined };
 
+// Kept as manual tRPC mutation — optimistic update with onMutate/onError/onSettled
+// rollback does not fit the useDomainMutation factory pattern.
 export function useEndSession(): TRPCMutationCtx<
   RouterOutput["frontingSession"]["end"],
   RouterInput["frontingSession"]["end"],
@@ -211,11 +177,9 @@ export function useUpdateSession(): TRPCMutation<
   RouterOutput["frontingSession"]["update"],
   RouterInput["frontingSession"]["update"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.frontingSession.update.useMutation({
-    onSuccess: (_data, variables) => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.frontingSession.update.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
       void utils.frontingSession.get.invalidate({ systemId, sessionId: variables.sessionId });
       void utils.frontingSession.list.invalidate({ systemId });
     },
