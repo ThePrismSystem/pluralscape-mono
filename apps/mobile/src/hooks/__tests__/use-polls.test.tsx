@@ -644,8 +644,9 @@ describe("usePollsList (local source)", () => {
     );
 
     const data = result.current.data;
-    expect(Array.isArray(data)).toBe(true);
-    const items = Array.isArray(data) ? data : [];
+    const pages = data && "pages" in data ? data.pages : [];
+    expect(pages).toHaveLength(1);
+    const items = pages[0] && "data" in pages[0] ? pages[0].data : [];
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({ title: "Favorite color?" });
     expect(items[1]).toMatchObject({ title: "Favorite food?" });
@@ -663,6 +664,9 @@ describe("usePollsList (local source)", () => {
       expect(result.current.data).toBeDefined();
     });
 
-    expect(result.current.data).toHaveLength(1);
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
+    const items = pages[0] && "data" in pages[0] ? pages[0].data : [];
+    expect(items).toHaveLength(1);
   });
 });
