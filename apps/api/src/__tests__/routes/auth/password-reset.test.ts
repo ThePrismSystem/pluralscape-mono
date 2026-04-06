@@ -192,6 +192,15 @@ describe("POST /password-reset/recovery-key", () => {
     expect(body.error.message).toBe("Too many recovery attempts for this account");
   });
 
+  it("returns 400 when email is missing from recovery request", async () => {
+    const app = createApp();
+    const res = await postJSON(app, { recoveryKey: "a".repeat(52) });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("INVALID_INPUT");
+  });
+
   it("re-throws unexpected errors as 500", async () => {
     vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValueOnce(new Error("DB timeout"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);
