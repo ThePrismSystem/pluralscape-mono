@@ -15,6 +15,33 @@ import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { SystemId } from "@pluralscape/types";
 import type { InfiniteData } from "@tanstack/react-query";
 
+// ---------------------------------------------------------------------------
+// Architecture notes — dual-source hook pattern
+// ---------------------------------------------------------------------------
+//
+// Performance characteristics of the useOfflineFirstQuery / useOfflineFirstInfiniteQuery
+// factories (acceptable trade-offs, documented for future optimizers):
+//
+// 1. DUAL OBSERVERS: Each hook registers two query observers (local + remote),
+//    one always disabled. Inherent to the offline-first branching pattern.
+//    Could be reduced to a single useQuery with a dynamic queryFn, but the
+//    current approach is simpler and the overhead is negligible for <100 hooks.
+//
+// 2. INVALIDATION BREADTH: query-invalidator.ts invalidates by [tableName]
+//    prefix on materialized:document events, marking ALL queries for that table
+//    stale. Acceptable for local SQLite reads (cheap) but could cascade in
+//    high-frequency sync scenarios. Entity-level events use [tableName, entityId]
+//    for narrower invalidation.
+//
+// 3. KEY ROTATION: masterKey change recreates all select callbacks
+//    simultaneously (they capture masterKey in closure). One-time cost per
+//    rotation, not a hot-path concern.
+//
+// 4. ETAG REFS: use-friend-export.ts etagRef is per-component-instance
+//    (useRef), lost on unmount. Two components calling the same export hook
+//    maintain independent ETags and issue independent conditional requests.
+// ---------------------------------------------------------------------------
+
 /** Allowlist pattern for SQLite table names — lowercase letters and underscores only. */
 const VALID_TABLE_NAME = /^[a-z_]+$/;
 

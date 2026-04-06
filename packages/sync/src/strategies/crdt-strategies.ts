@@ -262,6 +262,12 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "polls",
     mutationSemantics: "LWW per field — title, description, status, closedAt, archived",
   },
+  /**
+   * poll-option has a CRDT strategy and local SQLite entity but NO corresponding
+   * PG table. Options are stored inside the parent poll's encryptedData blob on
+   * the server (E2E encrypted). Locally they exist as separate LWW-map entities
+   * within the "chat" document so the CRDT layer can merge option edits.
+   */
   "poll-option": {
     storageType: "lww-map",
     document: "chat",
