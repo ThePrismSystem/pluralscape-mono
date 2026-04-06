@@ -250,7 +250,7 @@ describe("BucketKeyProvider", () => {
     });
 
     expect(result.current?.size).toBe(0);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("kg_err"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("kg_err"), expect.any(Error));
     warnSpy.mockRestore();
   });
 
@@ -277,7 +277,7 @@ describe("BucketKeyProvider", () => {
     });
 
     expect(result.current?.size).toBe(0);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("kg_badkey"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("kg_badkey"), expect.any(Error));
     warnSpy.mockRestore();
   });
 
