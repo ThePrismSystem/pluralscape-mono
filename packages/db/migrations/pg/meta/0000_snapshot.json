@@ -1,5 +1,5 @@
 {
-  "id": "a96536db-432c-48a8-b39e-28b80fe64427",
+  "id": "031bafb8-6704-4841-aaa9-ddc7c448d36f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -6613,6 +6613,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
         "archived": {
           "name": "archived",
           "type": "boolean",
@@ -6673,6 +6680,10 @@
         "notification_configs_archived_consistency_check": {
           "name": "notification_configs_archived_consistency_check",
           "value": "(\"notification_configs\".\"archived\" = true) = (\"notification_configs\".\"archived_at\" IS NOT NULL)"
+        },
+        "notification_configs_version_check": {
+          "name": "notification_configs_version_check",
+          "value": "\"notification_configs\".\"version\" >= 1"
         }
       },
       "isRLSEnabled": false
@@ -6852,6 +6863,19 @@
           "primaryKey": false,
           "notNull": true
         },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
         "archived": {
           "name": "archived",
           "type": "boolean",
@@ -6977,6 +7001,10 @@
         "poll_votes_archived_consistency_check": {
           "name": "poll_votes_archived_consistency_check",
           "value": "(\"poll_votes\".\"archived\" = true) = (\"poll_votes\".\"archived_at\" IS NOT NULL)"
+        },
+        "poll_votes_version_check": {
+          "name": "poll_votes_version_check",
+          "value": "\"poll_votes\".\"version\" >= 1"
         }
       },
       "isRLSEnabled": false

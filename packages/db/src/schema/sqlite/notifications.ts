@@ -15,6 +15,8 @@ import {
   archivable,
   archivableConsistencyCheckFor,
   timestamps,
+  versioned,
+  versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
@@ -66,6 +68,7 @@ export const notificationConfigs = sqliteTable(
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     pushEnabled: integer("push_enabled", { mode: "boolean" }).notNull().default(true),
     ...timestamps(),
+    ...versioned(),
     ...archivable(),
   },
   (t) => [
@@ -77,6 +80,7 @@ export const notificationConfigs = sqliteTable(
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
     ),
     archivableConsistencyCheckFor("notification_configs", t.archived, t.archivedAt),
+    versionCheckFor("notification_configs", t.version),
   ],
 );
 

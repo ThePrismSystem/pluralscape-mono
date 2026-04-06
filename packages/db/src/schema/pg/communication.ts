@@ -204,7 +204,8 @@ export const pollVotes = pgTable(
     isVeto: boolean("is_veto").notNull().default(false),
     votedAt: pgTimestamp("voted_at").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
-    createdAt: pgTimestamp("created_at").notNull(),
+    ...timestamps(),
+    ...versioned(),
     ...archivable(),
   },
   (t) => [
@@ -218,6 +219,7 @@ export const pollVotes = pgTable(
     }).onDelete("restrict"),
     check("poll_votes_voter_not_null", sql`${t.voter} IS NOT NULL`),
     archivableConsistencyCheckFor("poll_votes", t.archived, t.archivedAt),
+    versionCheckFor("poll_votes", t.version),
   ],
 );
 

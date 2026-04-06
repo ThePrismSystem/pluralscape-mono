@@ -655,10 +655,12 @@ CREATE TABLE "notification_configs" (
 	"push_enabled" boolean DEFAULT true NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
 	CONSTRAINT "notification_configs_event_type_check" CHECK ("notification_configs"."event_type" IS NULL OR "notification_configs"."event_type" IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')),
-	CONSTRAINT "notification_configs_archived_consistency_check" CHECK (("notification_configs"."archived" = true) = ("notification_configs"."archived_at" IS NOT NULL))
+	CONSTRAINT "notification_configs_archived_consistency_check" CHECK (("notification_configs"."archived" = true) = ("notification_configs"."archived_at" IS NOT NULL)),
+	CONSTRAINT "notification_configs_version_check" CHECK ("notification_configs"."version" >= 1)
 );
 --> statement-breakpoint
 CREATE TABLE "pk_bridge_configs" (
@@ -687,10 +689,13 @@ CREATE TABLE "poll_votes" (
 	"voted_at" timestamptz NOT NULL,
 	"encrypted_data" "bytea" NOT NULL,
 	"created_at" timestamptz NOT NULL,
+	"updated_at" timestamptz NOT NULL,
+	"version" integer DEFAULT 1 NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
 	CONSTRAINT "poll_votes_voter_not_null" CHECK ("poll_votes"."voter" IS NOT NULL),
-	CONSTRAINT "poll_votes_archived_consistency_check" CHECK (("poll_votes"."archived" = true) = ("poll_votes"."archived_at" IS NOT NULL))
+	CONSTRAINT "poll_votes_archived_consistency_check" CHECK (("poll_votes"."archived" = true) = ("poll_votes"."archived_at" IS NOT NULL)),
+	CONSTRAINT "poll_votes_version_check" CHECK ("poll_votes"."version" >= 1)
 );
 --> statement-breakpoint
 CREATE TABLE "polls" (

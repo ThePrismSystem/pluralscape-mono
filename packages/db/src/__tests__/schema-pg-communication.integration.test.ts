@@ -1109,6 +1109,7 @@ describe("PG communication schema", () => {
         votedAt: now,
         encryptedData: data,
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
@@ -1125,8 +1126,8 @@ describe("PG communication schema", () => {
 
       await expect(
         client.query(
-          `INSERT INTO poll_votes (id, poll_id, system_id, voter, encrypted_data, voted_at, created_at)
-           VALUES ($1, $2, $3, '{"entityType":"member","entityId":"m-1"}'::jsonb, NULL, $4, $5)`,
+          `INSERT INTO poll_votes (id, poll_id, system_id, voter, encrypted_data, voted_at, created_at, updated_at)
+           VALUES ($1, $2, $3, '{"entityType":"member","entityId":"m-1"}'::jsonb, NULL, $4, $5, $5)`,
           [crypto.randomUUID(), pollId, systemId, now, now],
         ),
       ).rejects.toThrow();
@@ -1147,6 +1148,7 @@ describe("PG communication schema", () => {
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       await expect(db.delete(polls).where(eq(polls.id, pollId))).rejects.toThrow();
@@ -1167,6 +1169,7 @@ describe("PG communication schema", () => {
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       await db.delete(systems).where(eq(systems.id, systemId));
@@ -1192,6 +1195,7 @@ describe("PG communication schema", () => {
         votedAt,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
@@ -1216,6 +1220,7 @@ describe("PG communication schema", () => {
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
@@ -1238,6 +1243,7 @@ describe("PG communication schema", () => {
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
@@ -1262,6 +1268,7 @@ describe("PG communication schema", () => {
         archivedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
@@ -1284,6 +1291,7 @@ describe("PG communication schema", () => {
         votedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
+        updatedAt: now,
       });
 
       const archiveTime = Date.now();
