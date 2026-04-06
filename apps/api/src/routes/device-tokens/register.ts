@@ -11,6 +11,7 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { registerDeviceToken } from "../../services/device-token.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -18,6 +19,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const registerRoute = new Hono<AuthEnv>();
 
 registerRoute.use("*", createCategoryRateLimiter("write"));
+registerRoute.use("*", requireScopeMiddleware("write:notifications"));
 registerRoute.use("*", createIdempotencyMiddleware());
 
 registerRoute.post("/", async (c) => {

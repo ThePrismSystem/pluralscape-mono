@@ -8,6 +8,7 @@ import { checkConditionalRequest } from "../../lib/etag.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import {
   getBucketExportManifest,
   getBucketExportPage,
@@ -21,6 +22,7 @@ export const exportRoutes = new Hono<AuthEnv>();
 // Uses readHeavy to match the tRPC bucket.exportManifest/exportPage rate limit.
 exportRoutes.use("/manifest", createCategoryRateLimiter("readHeavy"));
 exportRoutes.use("/", createCategoryRateLimiter("readHeavy"));
+exportRoutes.use("*", requireScopeMiddleware("read:buckets"));
 
 // ── Manifest ───────────────────────────────────────────────────────
 

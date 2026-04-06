@@ -7,6 +7,7 @@ import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { confirmAcknowledgement } from "../../services/acknowledgement.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,6 +15,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const confirmRoute = new Hono<AuthEnv>();
 
 confirmRoute.use("*", createCategoryRateLimiter("write"));
+confirmRoute.use("*", requireScopeMiddleware("write:acknowledgements"));
 
 confirmRoute.post("/:acknowledgementId/confirm", async (c) => {
   const auth = c.get("auth");

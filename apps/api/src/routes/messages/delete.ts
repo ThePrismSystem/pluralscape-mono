@@ -7,6 +7,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { deleteMessage } from "../../services/message.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,6 +15,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const deleteRoute = new Hono<AuthEnv>();
 
 deleteRoute.use("*", createCategoryRateLimiter("write"));
+deleteRoute.use("*", requireScopeMiddleware("delete:messages"));
 
 deleteRoute.delete("/:messageId", async (c) => {
   const auth = c.get("auth");

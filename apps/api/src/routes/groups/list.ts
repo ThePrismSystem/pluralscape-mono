@@ -8,6 +8,7 @@ import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { parseQuery } from "../../lib/query-parse.js";
 import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { listGroups } from "../../services/group.service.js";
 
@@ -30,6 +31,7 @@ const GROUP_FIELDS = [
 export const listRoute = new Hono<AuthEnv>();
 
 listRoute.use("*", createCategoryRateLimiter("readDefault"));
+listRoute.use("*", requireScopeMiddleware("read:groups"));
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

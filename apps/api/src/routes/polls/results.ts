@@ -5,6 +5,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { getPollResults } from "../../services/poll-vote.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -12,6 +13,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const resultsRoute = new Hono<AuthEnv>();
 
 resultsRoute.use("*", createCategoryRateLimiter("readDefault"));
+resultsRoute.use("*", requireScopeMiddleware("read:polls"));
 
 resultsRoute.get("/:pollId/results", async (c) => {
   const auth = c.get("auth");

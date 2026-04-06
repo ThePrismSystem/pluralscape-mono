@@ -11,6 +11,7 @@ import { requireIdParam, requireParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { updateNotificationConfig } from "../../services/notification-config.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -19,6 +20,7 @@ import type { NotificationEventType } from "@pluralscape/types";
 export const updateRoute = new Hono<AuthEnv>();
 
 updateRoute.use("*", createCategoryRateLimiter("write"));
+updateRoute.use("*", requireScopeMiddleware("write:notifications"));
 
 updateRoute.patch("/:eventType", async (c) => {
   const auth = c.get("auth");

@@ -5,6 +5,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { getActiveFronting } from "../../services/fronting-session.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -12,6 +13,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const activeRoute = new Hono<AuthEnv>();
 
 activeRoute.use("*", createCategoryRateLimiter("readDefault"));
+activeRoute.use("*", requireScopeMiddleware("read:fronting"));
 
 activeRoute.get("/", async (c) => {
   const auth = c.get("auth");

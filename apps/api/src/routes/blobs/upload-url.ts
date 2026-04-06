@@ -10,6 +10,7 @@ import { envelope } from "../../lib/response.js";
 import { getQuotaService, getStorageAdapter } from "../../lib/storage.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { createUploadUrl } from "../../services/blob.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -17,6 +18,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const uploadUrlRoute = new Hono<AuthEnv>();
 
 uploadUrlRoute.use("*", createCategoryRateLimiter("blobUpload"));
+uploadUrlRoute.use("*", requireScopeMiddleware("write:blobs"));
 uploadUrlRoute.use("*", createIdempotencyMiddleware());
 
 uploadUrlRoute.post("/upload-url", async (c) => {

@@ -8,6 +8,7 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import {
   deleteFieldValueForOwner,
   listFieldValuesForOwner,
@@ -71,6 +72,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
   // ── SET (POST /:fieldDefId) ─────────────────────────────────────
   const setRoute = new Hono<AuthEnv>();
   setRoute.use("*", createCategoryRateLimiter("write"));
+  setRoute.use("*", requireScopeMiddleware("write:fields"));
   setRoute.post("/:fieldDefId", async (c) => {
     const body = await parseJsonBody(c);
     const auth = c.get("auth");
@@ -87,6 +89,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
   // ── LIST (GET /) ────────────────────────────────────────────────
   const listRoute = new Hono<AuthEnv>();
   listRoute.use("*", createCategoryRateLimiter("readDefault"));
+  listRoute.use("*", requireScopeMiddleware("read:fields"));
   listRoute.get("/", async (c) => {
     const auth = c.get("auth");
     const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
@@ -100,6 +103,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
   // ── UPDATE (PUT /:fieldDefId) ───────────────────────────────────
   const updateRoute = new Hono<AuthEnv>();
   updateRoute.use("*", createCategoryRateLimiter("write"));
+  updateRoute.use("*", requireScopeMiddleware("write:fields"));
   updateRoute.put("/:fieldDefId", async (c) => {
     const body = await parseJsonBody(c);
     const auth = c.get("auth");
@@ -124,6 +128,7 @@ export function createFieldValueRoutes(config: FieldValueRouteConfig): FieldValu
   // ── DELETE (DELETE /:fieldDefId) ────────────────────────────────
   const deleteRoute = new Hono<AuthEnv>();
   deleteRoute.use("*", createCategoryRateLimiter("write"));
+  deleteRoute.use("*", requireScopeMiddleware("delete:fields"));
   deleteRoute.delete("/:fieldDefId", async (c) => {
     const auth = c.get("auth");
     const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

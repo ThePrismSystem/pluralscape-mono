@@ -5,6 +5,7 @@ import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   listCheckInRecords,
@@ -16,6 +17,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const listRoute = new Hono<AuthEnv>();
 
 listRoute.use("*", createCategoryRateLimiter("readDefault"));
+listRoute.use("*", requireScopeMiddleware("read:check-ins"));
 
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");

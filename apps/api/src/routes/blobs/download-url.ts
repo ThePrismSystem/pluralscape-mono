@@ -6,6 +6,7 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { envelope } from "../../lib/response.js";
 import { getStorageAdapter } from "../../lib/storage.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { getDownloadUrl } from "../../services/blob.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -13,6 +14,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const downloadUrlRoute = new Hono<AuthEnv>();
 
 downloadUrlRoute.use("*", createCategoryRateLimiter("readDefault"));
+downloadUrlRoute.use("*", requireScopeMiddleware("read:blobs"));
 downloadUrlRoute.get("/:blobId/download-url", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

@@ -10,6 +10,7 @@ import { getQueue } from "../../lib/queue.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { createFrontingSession } from "../../services/fronting-session.service.js";
 import { dispatchSwitchAlertForSession } from "../../services/switch-alert-dispatcher.js";
 
@@ -18,6 +19,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const createRoute = new Hono<AuthEnv>();
 
 createRoute.use("*", createCategoryRateLimiter("write"));
+createRoute.use("*", requireScopeMiddleware("write:fronting"));
 createRoute.use("*", createIdempotencyMiddleware());
 
 createRoute.post("/", async (c) => {

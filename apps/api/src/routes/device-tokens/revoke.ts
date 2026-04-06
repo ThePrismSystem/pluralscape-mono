@@ -6,6 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { revokeDeviceToken } from "../../services/device-token.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -13,6 +14,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const revokeRoute = new Hono<AuthEnv>();
 
 revokeRoute.use("*", createCategoryRateLimiter("write"));
+revokeRoute.use("*", requireScopeMiddleware("write:notifications"));
 
 revokeRoute.post("/:tokenId/revoke", async (c) => {
   const auth = c.get("auth");

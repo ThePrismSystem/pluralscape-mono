@@ -7,6 +7,7 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { updatePollVote } from "../../services/poll-vote.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,6 +15,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const updateVoteRoute = new Hono<AuthEnv>();
 
 updateVoteRoute.use("*", createCategoryRateLimiter("write"));
+updateVoteRoute.use("*", requireScopeMiddleware("write:polls"));
 
 updateVoteRoute.put("/:pollId/votes/:voteId", async (c) => {
   const body = await parseJsonBody(c);

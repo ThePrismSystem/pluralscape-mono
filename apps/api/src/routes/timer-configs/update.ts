@@ -7,6 +7,7 @@ import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { updateTimerConfig } from "../../services/timer-config.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,6 +15,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const updateRoute = new Hono<AuthEnv>();
 
 updateRoute.use("*", createCategoryRateLimiter("write"));
+updateRoute.use("*", requireScopeMiddleware("write:timers"));
 
 updateRoute.put("/:timerId", async (c) => {
   const body = await parseJsonBody(c);

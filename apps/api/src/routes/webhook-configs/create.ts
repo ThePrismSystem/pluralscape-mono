@@ -9,6 +9,7 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { envelope } from "../../lib/response.js";
 import { createIdempotencyMiddleware } from "../../middleware/idempotency.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { requireScopeMiddleware } from "../../middleware/scope.js";
 import { createWebhookConfig } from "../../services/webhook-config.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -16,6 +17,7 @@ import type { AuthEnv } from "../../lib/auth-context.js";
 export const createRoute = new Hono<AuthEnv>();
 
 createRoute.use("*", createCategoryRateLimiter("write"));
+createRoute.use("*", requireScopeMiddleware("write:webhooks"));
 createRoute.use("*", createIdempotencyMiddleware());
 
 createRoute.post("/", async (c) => {
