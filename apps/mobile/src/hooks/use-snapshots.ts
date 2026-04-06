@@ -1,16 +1,17 @@
 import { trpc } from "@pluralscape/api-client/trpc";
-import { decryptSnapshot, decryptSnapshotPage } from "@pluralscape/data/transforms/snapshot";
-import { useCallback } from "react";
-
-import { useMasterKey } from "../providers/crypto-provider.js";
-import { useActiveSystemId } from "../providers/system-provider.js";
+import { decryptSnapshot } from "@pluralscape/data/transforms/snapshot";
 
 import {
+  useOfflineFirstQuery,
+  useOfflineFirstInfiniteQuery,
+  useDomainMutation,
+} from "./factories.js";
+import {
   DEFAULT_LIST_LIMIT,
+  type DataListQuery,
+  type DataQuery,
   type SystemIdOverride,
-  type TRPCInfiniteQuery,
   type TRPCMutation,
-  type TRPCQuery,
 } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
@@ -20,12 +21,6 @@ import type {
   SnapshotRaw,
 } from "@pluralscape/data/transforms/snapshot";
 import type { SystemSnapshotId } from "@pluralscape/types";
-import type { InfiniteData } from "@tanstack/react-query";
-
-type SnapshotPage = {
-  readonly data: SnapshotDecrypted[];
-  readonly nextCursor: string | null;
-};
 
 interface SnapshotListOpts extends SystemIdOverride {
   readonly limit?: number;
@@ -34,67 +29,57 @@ interface SnapshotListOpts extends SystemIdOverride {
 export function useSnapshot(
   snapshotId: SystemSnapshotId,
   opts?: SystemIdOverride,
-): TRPCQuery<SnapshotDecrypted> {
-  const activeSystemId = useActiveSystemId();
-  const systemId = opts?.systemId ?? activeSystemId;
-  const masterKey = useMasterKey();
-
-  const selectSnapshot = useCallback(
-    (raw: SnapshotRaw): SnapshotDecrypted => {
-      if (masterKey === null) throw new Error("masterKey is null");
-      return decryptSnapshot(raw, masterKey);
+): DataQuery<SnapshotDecrypted> {
+  return useOfflineFirstQuery<SnapshotRaw, SnapshotDecrypted>({
+    queryKey: ["snapshots", snapshotId],
+    table: "snapshots",
+    entityId: snapshotId,
+    // Snapshots are remote-only; local path never executes
+    rowTransform: () => {
+      throw new Error("snapshots are remote-only");
     },
-    [masterKey],
-  );
-
-  return trpc.snapshot.get.useQuery(
-    { systemId, snapshotId },
-    {
-      enabled: masterKey !== null,
-      select: selectSnapshot,
-    },
-  );
+    decrypt: decryptSnapshot,
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled, select }) =>
+      trpc.snapshot.get.useQuery(
+        { systemId, snapshotId },
+        { enabled, select },
+      ) as DataQuery<SnapshotDecrypted>,
+  });
 }
 
-export function useSnapshotsList(opts?: SnapshotListOpts): TRPCInfiniteQuery<SnapshotPage> {
-  const activeSystemId = useActiveSystemId();
-  const systemId = opts?.systemId ?? activeSystemId;
-  const masterKey = useMasterKey();
-
-  const selectPage = useCallback(
-    (data: InfiniteData<SnapshotRawPage>): InfiniteData<SnapshotPage> => {
-      if (masterKey === null) throw new Error("masterKey is null");
-      const key = masterKey;
-      return {
-        ...data,
-        pages: data.pages.map((page) => decryptSnapshotPage(page, key)),
-      };
+export function useSnapshotsList(opts?: SnapshotListOpts): DataListQuery<SnapshotDecrypted> {
+  return useOfflineFirstInfiniteQuery<SnapshotRaw, SnapshotDecrypted>({
+    queryKey: ["snapshots", "list", opts?.systemId],
+    table: "snapshots",
+    // Snapshots are remote-only; local path never executes
+    rowTransform: () => {
+      throw new Error("snapshots are remote-only");
     },
-    [masterKey],
-  );
-
-  return trpc.snapshot.list.useInfiniteQuery(
-    {
-      systemId,
-      limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
-    },
-    {
-      enabled: masterKey !== null,
-      getNextPageParam: (lastPage: SnapshotRawPage) => lastPage.nextCursor,
-      select: selectPage,
-    },
-  );
+    decrypt: decryptSnapshot,
+    systemIdOverride: opts,
+    useRemote: ({ systemId, enabled, select }) =>
+      trpc.snapshot.list.useInfiniteQuery(
+        {
+          systemId,
+          limit: opts?.limit ?? DEFAULT_LIST_LIMIT,
+        },
+        {
+          enabled,
+          getNextPageParam: (lastPage: SnapshotRawPage) => lastPage.nextCursor,
+          select,
+        },
+      ) as DataListQuery<SnapshotDecrypted>,
+  });
 }
 
 export function useCreateSnapshot(): TRPCMutation<
   RouterOutput["snapshot"]["create"],
   RouterInput["snapshot"]["create"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.snapshot.create.useMutation({
-    onSuccess: () => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.snapshot.create.useMutation(mutOpts),
+    onInvalidate: (utils, systemId) => {
       void utils.snapshot.list.invalidate({ systemId });
     },
   });
@@ -104,11 +89,9 @@ export function useDeleteSnapshot(): TRPCMutation<
   RouterOutput["snapshot"]["delete"],
   RouterInput["snapshot"]["delete"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.snapshot.delete.useMutation({
-    onSuccess: (_data, variables) => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.snapshot.delete.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
       void utils.snapshot.get.invalidate({ systemId, snapshotId: variables.snapshotId });
       void utils.snapshot.list.invalidate({ systemId });
     },
