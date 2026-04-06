@@ -1,9 +1,9 @@
-import { customFronts, frontingSessions } from "@pluralscape/db/pg";
+import { customFronts, frontingSessions, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND, HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
@@ -19,6 +19,9 @@ import {
 } from "../service.constants.js";
 
 import { dispatchWebhookEvent } from "./webhook-dispatcher.js";
+
+/** Maximum non-archived custom fronts per system. */
+const MAX_CUSTOM_FRONTS_PER_SYSTEM = 200;
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -89,6 +92,22 @@ export async function createCustomFront(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // Enforce per-system custom front quota
+    await tx.select({ id: systems.id }).from(systems).where(eq(systems.id, systemId)).for("update");
+
+    const [existing] = await tx
+      .select({ count: count() })
+      .from(customFronts)
+      .where(and(eq(customFronts.systemId, systemId), eq(customFronts.archived, false)));
+
+    if ((existing?.count ?? 0) >= MAX_CUSTOM_FRONTS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_TOO_MANY_REQUESTS,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_CUSTOM_FRONTS_PER_SYSTEM)} custom fronts per system`,
+      );
+    }
+
     const [row] = await tx
       .insert(customFronts)
       .values({
