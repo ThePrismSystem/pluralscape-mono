@@ -4,6 +4,14 @@
 
 <p align="center">A community-driven, open-source plurality management platform.</p>
 
+<p align="center">
+  <a href="https://github.com/ThePrismSystem/pluralscape-mono/actions/workflows/ci.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ThePrismSystem/b29472c169f6d431acf2b24a60a33225/raw/coverage.json" alt="Coverage"></a>
+  <a href="https://github.com/ThePrismSystem/pluralscape-mono/actions/workflows/ci.yml"><img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/ThePrismSystem/b29472c169f6d431acf2b24a60a33225/raw/e2e-tests.json" alt="E2E Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License"></a>
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/runtime-Bun-f9f1e1?logo=bun" alt="Bun">
+</p>
+
 Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity tracking, fronting logs, internal communication, and privacy-controlled external sharing across web, iOS, and Android.
 
 ## Status
@@ -26,16 +34,7 @@ pnpm test:coverage     # Tests with coverage report
 pnpm test:e2e          # E2E tests (Playwright)
 ```
 
-### Current Coverage
-
-| Metric     | Coverage |
-| ---------- | -------- |
-| Statements | 93.08%   |
-| Branches   | 86.30%   |
-| Functions  | 91.84%   |
-| Lines      | 93.58%   |
-
-E2E suite: 461 tests across 73 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
+E2E suite covers auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 
