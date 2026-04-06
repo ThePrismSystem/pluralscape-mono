@@ -33,7 +33,6 @@ import type {
   TimerId,
 } from "@pluralscape/types";
 
-
 interface TimerConfigListOpts extends SystemIdOverride {
   readonly limit?: number;
   readonly includeArchived?: boolean;

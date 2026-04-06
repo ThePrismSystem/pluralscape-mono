@@ -11,7 +11,6 @@ import {
   type TRPCQuery,
 } from "./types.js";
 
-
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { ApiKeyId } from "@pluralscape/types";
 
