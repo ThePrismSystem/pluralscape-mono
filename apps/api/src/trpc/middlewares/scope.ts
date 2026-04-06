@@ -17,7 +17,13 @@ export function requireScope(
   scope: RequiredScope,
 ): TRPCMiddlewareBuilder<TRPCContext, object, object, unknown> {
   return middleware(async ({ ctx, next }) => {
-    if (!ctx.auth || !hasScope(ctx.auth, scope)) {
+    if (!ctx.auth) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Authentication required",
+      });
+    }
+    if (!hasScope(ctx.auth, scope)) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: `Insufficient scope: requires ${scope}`,
