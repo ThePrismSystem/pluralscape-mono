@@ -12,7 +12,7 @@ import { validateApiKey } from "../services/api-key.service.js";
 import { API_KEY_TOKEN_PATTERN, SESSION_TOKEN_PATTERN } from "./middleware.constants.js";
 
 import type { AuthEnv } from "../lib/auth-context.js";
-import type { SessionId, SystemId } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 import type { MiddlewareHandler } from "hono";
 
 /**
@@ -51,7 +51,6 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
         .update(apiKeys)
         .set({ lastUsedAt: currentTime })
         .where(eq(apiKeys.id, result.keyId))
-        .then(() => {})
         .catch((err: unknown) => {
           log.error(
             "Failed to update API key lastUsedAt",
@@ -60,12 +59,13 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
         });
 
       c.set("auth", {
+        authMethod: "apiKey" as const,
         accountId: result.accountId,
         systemId: result.systemId,
-        sessionId: result.keyId as string as SessionId,
         accountType: "system" as const,
         ownedSystemIds: new Set<SystemId>([result.systemId]),
         auditLogIpTracking: result.auditLogIpTracking,
+        keyId: result.keyId,
         apiKeyScopes: result.scopes,
       });
 
@@ -93,7 +93,6 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
         .update(sessions)
         .set({ lastActive: currentTime })
         .where(eq(sessions.id, result.session.id))
-        .then(() => {})
         .catch((err: unknown) => {
           log.error(
             "Failed to update session lastActive",
