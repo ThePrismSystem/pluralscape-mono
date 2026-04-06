@@ -38,7 +38,7 @@ export function useInnerWorldEntity(
     InnerWorldEntityRaw,
     InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
   >({
-    queryKey: ["innerworld-entities", entityId],
+    queryKey: ["innerworld_entities", entityId],
     table: "innerworld_entities",
     entityId,
     rowTransform: rowToInnerWorldEntity,
@@ -60,7 +60,7 @@ export function useInnerWorldEntitiesList(
     InnerWorldEntityRaw,
     InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
   >({
-    queryKey: ["innerworld-entities", "list", opts?.includeArchived ?? false, regionId],
+    queryKey: ["innerworld_entities", "list", opts?.includeArchived ?? false, regionId],
     table: "innerworld_entities",
     rowTransform: rowToInnerWorldEntity,
     decrypt: decryptInnerWorldEntity,

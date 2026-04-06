@@ -33,7 +33,7 @@ export function useBoardMessage(
   opts?: SystemIdOverride,
 ): DataQuery<BoardMessage | Archived<BoardMessage>> {
   return useOfflineFirstQuery<BoardMessageRaw, BoardMessage | Archived<BoardMessage>>({
-    queryKey: ["boardMessages", boardMessageId],
+    queryKey: ["board_messages", boardMessageId],
     table: "own_board_messages",
     entityId: boardMessageId,
     rowTransform: rowToBoardMessage,
@@ -51,7 +51,7 @@ export function useBoardMessagesList(
   opts?: BoardMessageListOpts,
 ): DataListQuery<BoardMessage | Archived<BoardMessage>> {
   return useOfflineFirstInfiniteQuery<BoardMessageRaw, BoardMessage | Archived<BoardMessage>>({
-    queryKey: ["boardMessages", "list", opts?.includeArchived ?? false],
+    queryKey: ["board_messages", "list", opts?.includeArchived ?? false],
     table: "own_board_messages",
     rowTransform: rowToBoardMessage,
     decrypt: decryptBoardMessage,

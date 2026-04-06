@@ -35,7 +35,7 @@ export function useLifecycleEvent(
   opts?: SystemIdOverride,
 ): DataQuery<LifecycleEventWithArchive> {
   return useOfflineFirstQuery<LifecycleEventRaw, LifecycleEventWithArchive>({
-    queryKey: ["lifecycle-events", eventId],
+    queryKey: ["lifecycle_events", eventId],
     table: "lifecycle_events",
     entityId: eventId,
     rowTransform: rowToLifecycleEvent,
@@ -53,7 +53,7 @@ export function useLifecycleEventsList(
   opts?: LifecycleEventListOpts,
 ): DataListQuery<LifecycleEventWithArchive> {
   return useOfflineFirstInfiniteQuery<LifecycleEventRaw, LifecycleEventWithArchive>({
-    queryKey: ["lifecycle-events", "list", opts?.includeArchived ?? false],
+    queryKey: ["lifecycle_events", "list", opts?.includeArchived ?? false],
     table: "lifecycle_events",
     rowTransform: rowToLifecycleEvent,
     decrypt: decryptLifecycleEvent,

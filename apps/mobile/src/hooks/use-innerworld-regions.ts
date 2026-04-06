@@ -37,7 +37,7 @@ export function useInnerWorldRegion(
     InnerWorldRegionRaw,
     InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>
   >({
-    queryKey: ["innerworld-regions", regionId],
+    queryKey: ["innerworld_regions", regionId],
     table: "innerworld_regions",
     entityId: regionId,
     rowTransform: rowToInnerWorldRegion,
@@ -57,7 +57,7 @@ export function useInnerWorldRegionsList(
     InnerWorldRegionRaw,
     InnerWorldRegionDecrypted | Archived<InnerWorldRegionDecrypted>
   >({
-    queryKey: ["innerworld-regions", "list", opts?.includeArchived ?? false],
+    queryKey: ["innerworld_regions", "list", opts?.includeArchived ?? false],
     table: "innerworld_regions",
     rowTransform: rowToInnerWorldRegion,
     decrypt: decryptInnerWorldRegion,

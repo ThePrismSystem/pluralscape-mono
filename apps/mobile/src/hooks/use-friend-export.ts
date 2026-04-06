@@ -34,7 +34,7 @@ export function useFriendExportManifest(
   const etagRef = useRef<string | null>(null);
 
   return useQuery({
-    queryKey: ["friend-export-manifest", connectionId] as const,
+    queryKey: ["friend_export_manifest", connectionId] as const,
     queryFn: async (): Promise<ManifestData | undefined> => {
       const { data, response } = await client.GET(
         "/account/friends/{connectionId}/export/manifest",
@@ -90,7 +90,7 @@ export function useFriendExportPage(
   const limit = opts?.limit;
 
   return useQuery({
-    queryKey: ["friend-export-page", connectionId, entityType, cursor, limit] as const,
+    queryKey: ["friend_export_page", connectionId, entityType, cursor, limit] as const,
     queryFn: async (): Promise<ExportPageData | undefined> => {
       const { data, response } = await client.GET("/account/friends/{connectionId}/export", {
         params: {

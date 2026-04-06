@@ -1,11 +1,11 @@
 ---
 # ps-wxn7
 title: Normalize query key naming convention
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T00:52:54Z
-updated_at: 2026-04-06T00:52:54Z
+updated_at: 2026-04-06T05:11:47Z
 parent: ps-y621
 ---
 
