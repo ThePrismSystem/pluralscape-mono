@@ -115,6 +115,12 @@ switch (status) {
 - **Exhaustive pattern matching** — all `switch` statements on union types must handle every case (use `as never` default)
 - **No magic numbers/strings** — extract to `*.constants.ts` files. Each package/domain has its own (e.g., `crypto.constants.ts`, `middleware.constants.ts`). The ESLint config disables `no-magic-numbers` for this glob. Every constant needs a JSDoc comment and should use numeric underscores for readability (`86_400` not `86400`). When adding a constant, extend the nearest existing `*.constants.ts`; only create a new file when entering a new domain.
 
+### Mobile Development
+
+All interactive UI elements must have accessibility props (`accessibilityLabel`, `accessibilityRole`) with minimum 44x44pt touch targets.
+
+For hook conventions, offline-first patterns, the provider tree architecture, platform abstraction, and a walkthrough of adding new features end-to-end, see the [Mobile Developer Guide](docs/guides/mobile-developer-guide.md).
+
 ### Adding API Endpoints
 
 Every new API feature requires both a REST route and a tRPC procedure. The CI check (`pnpm trpc:parity`) enforces this.
