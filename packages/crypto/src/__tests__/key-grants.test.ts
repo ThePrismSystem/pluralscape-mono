@@ -242,6 +242,39 @@ describe("createKeyGrant", () => {
       }),
     ).toThrow(InvalidInputError);
   });
+
+  it("decrypted key is independent of internal plaintext buffer", () => {
+    const sender = makeBoxKeypair();
+    const recipient = makeBoxKeypair();
+    const bucketKey = generateBucketKey();
+    const bucketId = makeBucketId();
+
+    const blob = createKeyGrant({
+      bucketKey,
+      bucketId,
+      keyVersion: 1,
+      recipientPublicKey: recipient.publicKey,
+      senderSecretKey: sender.secretKey,
+    });
+
+    const recovered = decryptKeyGrant({
+      encryptedBucketKey: blob.encryptedBucketKey,
+      bucketId,
+      keyVersion: 1,
+      senderPublicKey: sender.publicKey,
+      recipientSecretKey: recipient.secretKey,
+    });
+
+    // Save a copy of the recovered key before comparing
+    const recoveredCopy = new Uint8Array(recovered);
+    // The key should match the original
+    expect(recovered).toEqual(bucketKey);
+    // Verify the key's underlying buffer is NOT shared with any larger buffer
+    // (slice creates an independent copy; subarray would share the buffer)
+    expect(recovered.buffer.byteLength).toBe(recovered.byteLength);
+    // Double-check the copy still matches
+    expect(recoveredCopy).toEqual(bucketKey);
+  });
 });
 
 // ── Phase 2: Validation + safety ────────────────────────────────────

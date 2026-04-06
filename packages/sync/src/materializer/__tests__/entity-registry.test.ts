@@ -94,6 +94,13 @@ describe("ENTITY_TABLE_REGISTRY", () => {
     expect(ENTITY_TABLE_REGISTRY["friend-connection"].hotPath).toBe(false);
   });
 
+  it("fronting_sessions.member_id is nullable (custom fronts have no member)", () => {
+    const def = ENTITY_TABLE_REGISTRY["fronting-session"];
+    const memberIdCol = def.columns.find((c) => c.name === "member_id");
+    expect(memberIdCol).toBeDefined();
+    expect(memberIdCol?.notNull).toBeFalsy();
+  });
+
   it("id column is a primary key TEXT column", () => {
     for (const [entityType, def] of Object.entries(ENTITY_TABLE_REGISTRY)) {
       const idCol = def.columns.find((c) => c.name === "id");
