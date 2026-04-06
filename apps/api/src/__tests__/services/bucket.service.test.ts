@@ -249,7 +249,7 @@ describe("bucket service", () => {
     });
 
     it("throws QUOTA_EXCEEDED when at max buckets", async () => {
-      thenableQueue.push([], [{ count: 100 }]);
+      thenableQueue.push([], [{ count: 50 }]);
 
       await expect(
         createBucket({} as never, SYSTEM_ID, validPayload, AUTH, mockAudit),

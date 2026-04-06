@@ -28,7 +28,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const MAX_PHOTOS_PER_MEMBER = 50;
+const MAX_PHOTOS_PER_MEMBER = 5;
+
+/** Maximum non-archived photos across all members in a system. */
+const MAX_PHOTOS_PER_SYSTEM = 500;
 const MAX_ENCRYPTED_PHOTO_DATA_BYTES = 131_072;
 
 /** Default page size for photo list. */
@@ -146,6 +149,20 @@ export async function createMemberPhoto(
         HTTP_CONFLICT,
         "QUOTA_EXCEEDED",
         `Maximum of ${String(MAX_PHOTOS_PER_MEMBER)} photos per member`,
+      );
+    }
+
+    // System-wide photo quota
+    const [systemCount] = await tx
+      .select({ count: count() })
+      .from(memberPhotos)
+      .where(and(eq(memberPhotos.systemId, systemId), eq(memberPhotos.archived, false)));
+
+    if ((systemCount?.count ?? 0) >= MAX_PHOTOS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_PHOTOS_PER_SYSTEM)} photos per system`,
       );
     }
 
