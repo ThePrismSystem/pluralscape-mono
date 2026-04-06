@@ -156,6 +156,17 @@ describe("createMember", () => {
       createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
+
+  it("throws QUOTA_EXCEEDED when member count is at maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 5000 }]); // quota count -> at limit
+
+    await expect(
+      createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
+  });
 });
 
 describe("listMembers", () => {

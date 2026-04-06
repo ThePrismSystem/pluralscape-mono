@@ -185,6 +185,23 @@ describe("createGroup", () => {
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
+
+  it("throws QUOTA_EXCEEDED when group count is at maximum", async () => {
+    const { db, chain } = mockDb();
+    chain.where
+      .mockReturnValueOnce(chain) // quota FOR UPDATE lock -> chains to .for()
+      .mockResolvedValueOnce([{ count: 200 }]); // quota count -> at limit
+
+    await expect(
+      createGroup(
+        db,
+        SYSTEM_ID,
+        { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 429, code: "QUOTA_EXCEEDED" }));
+  });
 });
 
 describe("listGroups", () => {
