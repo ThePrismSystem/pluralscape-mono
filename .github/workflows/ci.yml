@@ -124,7 +124,6 @@ jobs:
           valColorRange: ${{ steps.coverage-data.outputs.pct }}
           minColorRange: 50
           maxColorRange: 85
-          invertColorRange: false
 
   migrations:
     name: Migration Freshness
