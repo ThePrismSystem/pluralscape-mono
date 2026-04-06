@@ -112,9 +112,9 @@ describe("useBlobDownloadUrl", () => {
     expect(lastDownloadInput["systemId"]).toBe(TEST_SYSTEM_ID);
   });
 
-  it("sets staleTime: 0 and gcTime: 300_000 to prevent serving expired presigned URLs", () => {
+  it("sets staleTime and gcTime to prevent serving expired presigned URLs", () => {
     renderHookWithProviders(() => useBlobDownloadUrl("blob_dl" as BlobId));
-    expect(lastDownloadOpts["staleTime"]).toBe(0);
+    expect(lastDownloadOpts["staleTime"]).toBe(300_000);
     expect(lastDownloadOpts["gcTime"]).toBe(300_000);
   });
 });

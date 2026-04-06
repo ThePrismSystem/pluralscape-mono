@@ -60,7 +60,7 @@ export function useBlobDownloadUrl(
 
   return trpc.blob.getDownloadUrl.useQuery(
     { systemId, blobId },
-    { staleTime: 0, gcTime: BLOB_URL_GC_TIME_MS },
+    { staleTime: BLOB_URL_GC_TIME_MS, gcTime: BLOB_URL_GC_TIME_MS },
   );
 }
 
