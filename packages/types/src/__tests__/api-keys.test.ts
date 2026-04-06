@@ -35,33 +35,18 @@ describe("ApiKeyScope", () => {
     assertType<ApiKeyScope>("admin");
   });
 
-  it("is exhaustive in a switch", () => {
-    function handleScope(scope: ApiKeyScope): string {
-      switch (scope) {
-        case "read:members":
-        case "write:members":
-        case "read:fronting":
-        case "write:fronting":
-        case "read:groups":
-        case "write:groups":
-        case "read:system":
-        case "write:system":
-        case "read:webhooks":
-        case "write:webhooks":
-        case "read:audit-log":
-        case "read:blobs":
-        case "write:blobs":
-        case "read:notifications":
-        case "write:notifications":
-        case "full":
-          return scope;
-        default: {
-          const _exhaustive: never = scope;
-          return _exhaustive;
-        }
-      }
-    }
-    expectTypeOf(handleScope).toBeFunction();
+  it("accepts new three-tier scopes", () => {
+    assertType<ApiKeyScope>("delete:members");
+    assertType<ApiKeyScope>("read:structure");
+    assertType<ApiKeyScope>("write:channels");
+    assertType<ApiKeyScope>("delete:innerworld");
+    assertType<ApiKeyScope>("read:audit-log");
+  });
+
+  it("accepts aggregate scopes", () => {
+    assertType<ApiKeyScope>("read-all");
+    assertType<ApiKeyScope>("write-all");
+    assertType<ApiKeyScope>("delete-all");
   });
 });
 

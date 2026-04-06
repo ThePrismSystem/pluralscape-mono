@@ -388,6 +388,10 @@ export type {
   SystemOverviewReport,
 } from "./import-export.js";
 
+// ── Scope domains ────────────────────────────────────────────
+export type { ScopeDomain, ScopeTier, RequiredScope } from "./scope-domains.js";
+export { SCOPE_DOMAINS } from "./scope-domains.js";
+
 // ── API keys ──────────────────────────────────────────────────
 export type {
   ApiKeyToken,
