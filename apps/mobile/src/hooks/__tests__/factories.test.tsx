@@ -103,10 +103,10 @@ function useEncryptedGet(id: string) {
     rowTransform: (row) => ({ decryptedName: String(row["name"]) }),
     decrypt: (raw) => ({ decryptedName: `decrypted:${raw.name}` }),
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.get.useQuery(
-        { systemId, memberId: id as never },
-        { enabled, select },
-      ) as DataQuery<DecEntity>,
+      trpc.member.get.useQuery({ systemId, memberId: id as never }, { enabled, select } as Record<
+        string,
+        unknown
+      >) as DataQuery<DecEntity>,
   });
 }
 
@@ -117,10 +117,10 @@ function usePlaintextGet(id: string) {
     entityId: id,
     rowTransform: (row) => ({ name: String(row["name"]) }),
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.get.useQuery(
-        { systemId, memberId: id as never },
-        { enabled, select },
-      ) as DataQuery<RawEntity>,
+      trpc.member.get.useQuery({ systemId, memberId: id as never }, { enabled, select } as Record<
+        string,
+        unknown
+      >) as DataQuery<RawEntity>,
   });
 }
 
@@ -136,10 +136,10 @@ function useLocalGet(
     decrypt: (raw) => ({ decryptedName: `decrypted:${raw.name}` }),
     localQueryFn,
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.get.useQuery(
-        { systemId, memberId: id as never },
-        { enabled, select },
-      ) as DataQuery<DecEntity>,
+      trpc.member.get.useQuery({ systemId, memberId: id as never }, { enabled, select } as Record<
+        string,
+        unknown
+      >) as DataQuery<DecEntity>,
   });
 }
 
@@ -150,14 +150,11 @@ function useEncryptedList() {
     rowTransform: (row) => ({ decryptedName: String(row["name"]) }),
     decrypt: (raw) => ({ decryptedName: `decrypted:${raw.name}` }),
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.list.useInfiniteQuery(
-        { systemId, limit: 20 },
-        {
-          enabled,
-          select,
-          getNextPageParam: (lp: { nextCursor: string | null }) => lp.nextCursor,
-        },
-      ) as DataListQuery<DecEntity>,
+      trpc.member.list.useInfiniteQuery({ systemId, limit: 20 }, {
+        enabled,
+        select,
+        getNextPageParam: (lp: { nextCursor: string | null }) => lp.nextCursor,
+      } as never) as DataListQuery<DecEntity>,
   });
 }
 
@@ -167,14 +164,11 @@ function usePlaintextList() {
     table: "test_entities",
     rowTransform: (row) => ({ name: String(row["name"]) }),
     useRemote: ({ systemId, enabled, select }) =>
-      trpc.member.list.useInfiniteQuery(
-        { systemId, limit: 20 },
-        {
-          enabled,
-          select,
-          getNextPageParam: (lp: { nextCursor: string | null }) => lp.nextCursor,
-        },
-      ) as DataListQuery<RawEntity>,
+      trpc.member.list.useInfiniteQuery({ systemId, limit: 20 }, {
+        enabled,
+        select,
+        getNextPageParam: (lp: { nextCursor: string | null }) => lp.nextCursor,
+      } as never) as DataListQuery<RawEntity>,
   });
 }
 

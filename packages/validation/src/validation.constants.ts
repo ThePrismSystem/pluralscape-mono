@@ -109,6 +109,8 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "poll.deleted",
   "poll-vote.cast",
   "poll-vote.vetoed",
+  "poll-vote.updated",
+  "poll-vote.archived",
   "acknowledgement.created",
   "acknowledgement.confirmed",
   "acknowledgement.archived",

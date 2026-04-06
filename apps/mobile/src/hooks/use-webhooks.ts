@@ -28,11 +28,6 @@ import type {
 // Shared types
 // ---------------------------------------------------------------------------
 
-type WebhookConfigPage = {
-  readonly data: WebhookConfigResult[];
-  readonly nextCursor: string | null;
-};
-type WebhookDeliveryPage = { readonly data: WebhookDelivery[]; readonly nextCursor: string | null };
 type WebhookConfigResult = WebhookConfig | ArchivedWebhookConfig;
 
 interface WebhookConfigListOpts extends SystemIdOverride {
@@ -83,10 +78,10 @@ export function useWebhookConfig(
     entityId: webhookId,
     rowTransform: rowToWebhookConfigNever,
     systemIdOverride: opts,
-    useRemote: ({ systemId, enabled, select }) =>
+    useRemote: ({ systemId, enabled }) =>
       trpc.webhookConfig.get.useQuery(
         { systemId, webhookId },
-        { enabled, select },
+        { enabled },
       ) as DataQuery<WebhookConfigResult>,
   });
 }
@@ -100,7 +95,7 @@ export function useWebhookConfigsList(
     rowTransform: rowToWebhookConfigNever,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    useRemote: ({ systemId, enabled, select }) =>
+    useRemote: ({ systemId, enabled }) =>
       trpc.webhookConfig.list.useInfiniteQuery(
         {
           systemId,
@@ -109,8 +104,7 @@ export function useWebhookConfigsList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: WebhookConfigPage) => lastPage.nextCursor,
-          select,
+          getNextPageParam: (lastPage) => lastPage.nextCursor,
         },
       ) as DataListQuery<WebhookConfigResult>,
   });
@@ -245,7 +239,7 @@ export function useWebhookDeliveriesList(
     table: "webhook_deliveries",
     rowTransform: rowToWebhookDeliveryNever,
     systemIdOverride: opts,
-    useRemote: ({ systemId, enabled, select }) =>
+    useRemote: ({ systemId, enabled }) =>
       trpc.webhookDelivery.list.useInfiniteQuery(
         {
           systemId,
@@ -258,8 +252,7 @@ export function useWebhookDeliveriesList(
         },
         {
           enabled,
-          getNextPageParam: (lastPage: WebhookDeliveryPage) => lastPage.nextCursor,
-          select,
+          getNextPageParam: (lastPage) => lastPage.nextCursor,
         },
       ) as DataListQuery<WebhookDelivery>,
   });
