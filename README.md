@@ -35,7 +35,7 @@ pnpm test:e2e          # E2E tests (Playwright)
 | Functions  | 91.84%   |
 | Lines      | 93.58%   |
 
-E2E suite: 315 tests across 73 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
+E2E suite: 461 tests across 73 spec files covering auth, CRUD, fronting, sync, webhooks, timers, real-time notifications, chat, boards, notes, polls, acknowledgements, privacy buckets, friends, dashboards, notifications, report export, blobs, custom fields, relationships, innerworld, API keys, check-in records, lifecycle events, notification configs, and tRPC smoke tests. Run `pnpm test:coverage` for up-to-date numbers.
 
 ## Values
 
