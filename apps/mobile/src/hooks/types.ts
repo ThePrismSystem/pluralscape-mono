@@ -24,16 +24,16 @@ export type TRPCMutation<TData, TVars> = TRPCHookResult &
 export type DataQuery<T> = UseQueryResult<T, Error | TRPCError>;
 
 /**
- * List query that returns a flat array from local SQLite
- * or paginated infinite data from remote tRPC.
+ * List query that returns paginated infinite data from either
+ * local SQLite or remote tRPC. Legacy flat-array arm retained
+ * for manual hooks that haven't migrated to useInfiniteQuery.
  */
 export type DataListQuery<TItem> =
   | UseQueryResult<readonly TItem[], Error | TRPCError>
-  | (TRPCHookResult &
-      UseInfiniteQueryResult<
-        InfiniteData<{ readonly data: TItem[]; readonly nextCursor: string | null }>,
-        TRPCError
-      >);
+  | UseInfiniteQueryResult<
+      InfiniteData<{ readonly data: readonly TItem[]; readonly nextCursor: string | null }>,
+      Error | TRPCError
+    >;
 
 export interface SystemIdOverride {
   readonly systemId?: SystemId;

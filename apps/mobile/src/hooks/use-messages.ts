@@ -75,11 +75,10 @@ export function useMessagesList(
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
     // Custom local query: scoped by channel_id, ordered by timestamp DESC
-    localQueryFn: (localDb, systemId) => {
+    localQueryFn: (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
-      const sql = includeArchived
-        ? "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? ORDER BY timestamp DESC"
-        : "SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ? AND archived = 0 ORDER BY timestamp DESC";
+      const archived = includeArchived ? "" : " AND archived = 0";
+      const sql = `SELECT * FROM own_messages WHERE system_id = ? AND channel_id = ?${archived} ORDER BY timestamp DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, [systemId, channelId]).map(rowToMessage);
     },
     useRemote: ({ systemId, enabled, select }) =>

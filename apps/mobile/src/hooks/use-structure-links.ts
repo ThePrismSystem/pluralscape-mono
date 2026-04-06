@@ -28,10 +28,10 @@ export function useStructureLinksList(
     table: "structure_entity_links",
     rowTransform: rowToStructureEntityLink,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId) =>
+    localQueryFn: (localDb, systemId, pagination) =>
       localDb
         .queryAll(
-          "SELECT * FROM structure_entity_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC",
+          `SELECT * FROM structure_entity_links WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`,
           [systemId],
         )
         .map(rowToStructureEntityLink),

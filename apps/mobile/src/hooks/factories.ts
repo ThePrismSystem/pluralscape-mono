@@ -1,5 +1,5 @@
 import { trpc } from "@pluralscape/api-client/trpc";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { useMasterKey } from "../providers/crypto-provider.js";
@@ -8,18 +8,12 @@ import { useActiveSystemId } from "../providers/system-provider.js";
 import { DEFAULT_LIST_LIMIT } from "./types.js";
 import { useLocalDb, useQuerySource } from "./use-query-source.js";
 
-import type {
-  DataListQuery,
-  DataQuery,
-  SystemIdOverride,
-  TRPCError,
-  TRPCMutation,
-} from "./types.js";
+import type { DataListQuery, DataQuery, SystemIdOverride, TRPCMutation } from "./types.js";
 import type { QuerySource } from "./use-query-source.js";
 import type { LocalDatabase } from "../data/local-database.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { SystemId } from "@pluralscape/types";
-import type { InfiniteData, UseQueryResult } from "@tanstack/react-query";
+import type { InfiniteData } from "@tanstack/react-query";
 
 /** Allowlist pattern for SQLite table names — lowercase letters and underscores only. */
 const VALID_TABLE_NAME = /^[a-z_]+$/;
@@ -112,8 +106,12 @@ interface OfflineFirstInfiniteQueryConfigBase<TRaw, TDecrypted> {
   /** Transforms a raw SQLite row into the local domain type. */
   readonly rowTransform: (row: Record<string, unknown>) => TDecrypted;
   readonly includeArchived?: boolean;
-  /** Override the default list SQL. Receives systemId for the WHERE clause. */
-  readonly localQueryFn?: (localDb: LocalDatabase, systemId: SystemId) => readonly TDecrypted[];
+  /** Override the default list SQL. Must apply LIMIT/OFFSET from pagination. */
+  readonly localQueryFn?: (
+    localDb: LocalDatabase,
+    systemId: SystemId,
+    pagination: { readonly offset: number; readonly limit: number },
+  ) => readonly TDecrypted[];
   readonly systemIdOverride?: SystemIdOverride;
   /** Whether to auto-append resolved systemId to queryKey. Defaults to true. Set false for account-scoped queries. */
   readonly injectSystemId?: boolean;
@@ -305,15 +303,28 @@ export function useOfflineFirstInfiniteQuery<TRaw, TDecrypted>(
   // Always called (rules of hooks) — result only used when encrypted.
   const encryptedListSelect = useEncryptedListSelect(config.decrypt, masterKey);
 
-  const localQuery = useQuery({
+  const localQuery = useInfiniteQuery({
     queryKey: scopedQueryKey,
-    queryFn: () => {
+    queryFn: ({ pageParam }) => {
       if (localDb === null) throw new Error("localDb is null");
-      if (config.localQueryFn) return config.localQueryFn(localDb, systemId);
-      const archived = includeArchived ? "" : " AND archived = 0";
-      const sql = `SELECT * FROM ${config.table} WHERE system_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(DEFAULT_LIST_LIMIT)}`;
-      return localDb.queryAll(sql, [systemId]).map(config.rowTransform);
+      const offset = pageParam;
+      const limit = DEFAULT_LIST_LIMIT;
+      let rows: readonly TDecrypted[];
+      if (config.localQueryFn) {
+        rows = config.localQueryFn(localDb, systemId, { offset, limit });
+      } else {
+        const archived = includeArchived ? "" : " AND archived = 0";
+        const sql = `SELECT * FROM ${config.table} WHERE system_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(limit)} OFFSET ${String(offset)}`;
+        rows = localDb.queryAll(sql, [systemId]).map(config.rowTransform);
+      }
+      return {
+        data: rows,
+        nextCursor: rows.length === limit ? String(offset + limit) : null,
+      };
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: { nextCursor: string | null }) =>
+      lastPage.nextCursor !== null ? Number(lastPage.nextCursor) : undefined,
     enabled: source === "local" && localDb !== null,
   });
 
@@ -323,9 +334,7 @@ export function useOfflineFirstInfiniteQuery<TRaw, TDecrypted>(
     select: encrypted ? encryptedListSelect : undefined,
   });
 
-  return source === "local"
-    ? (localQuery as UseQueryResult<readonly TDecrypted[], Error | TRPCError>)
-    : remoteQuery;
+  return source === "local" ? localQuery : remoteQuery;
 }
 
 // ---------------------------------------------------------------------------

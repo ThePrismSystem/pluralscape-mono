@@ -64,11 +64,10 @@ export function useStructureEntityTypesList(
     decrypt: decryptStructureEntityType,
     includeArchived: opts?.includeArchived,
     systemIdOverride: opts,
-    localQueryFn: (localDb, systemId) => {
+    localQueryFn: (localDb, systemId, pagination) => {
       const includeArchived = opts?.includeArchived ?? false;
-      const sql = includeArchived
-        ? "SELECT * FROM structure_entity_types WHERE system_id = ? ORDER BY sort_order ASC"
-        : "SELECT * FROM structure_entity_types WHERE system_id = ? AND archived = 0 ORDER BY sort_order ASC";
+      const archived = includeArchived ? "" : " AND archived = 0";
+      const sql = `SELECT * FROM structure_entity_types WHERE system_id = ?${archived} ORDER BY sort_order ASC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
       return localDb.queryAll(sql, [systemId]).map(rowToStructureEntityType);
     },
     useRemote: ({ systemId, enabled, select }) =>

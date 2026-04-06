@@ -69,11 +69,10 @@ export function useInnerWorldEntitiesList(
     // Optional regionId filter requires a custom local query
     localQueryFn:
       regionId !== null
-        ? (localDb, systemId) => {
+        ? (localDb, systemId, pagination) => {
             const includeArchived = opts?.includeArchived ?? false;
-            const sql = includeArchived
-              ? "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? ORDER BY created_at DESC"
-              : "SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ? AND archived = 0 ORDER BY created_at DESC";
+            const archived = includeArchived ? "" : " AND archived = 0";
+            const sql = `SELECT * FROM innerworld_entities WHERE system_id = ? AND region_id = ?${archived} ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
             return localDb.queryAll(sql, [systemId, regionId]).map(rowToInnerWorldEntity);
           }
         : undefined,

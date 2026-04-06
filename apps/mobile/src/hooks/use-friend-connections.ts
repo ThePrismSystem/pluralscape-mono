@@ -80,7 +80,7 @@ export function useFriendConnectionsList(
     rowTransform: rowToFriendConnection,
     injectSystemId: false,
     includeArchived: opts?.includeArchived,
-    localQueryFn: (localDb) => {
+    localQueryFn: (localDb, _systemId, pagination) => {
       if (accountId === null) throw new Error("accountId is null");
       const includeArchived = opts?.includeArchived ?? false;
       const status = opts?.status;
@@ -95,7 +95,7 @@ export function useFriendConnectionsList(
       if (!includeArchived) {
         sql += " AND archived = 0";
       }
-      sql += " ORDER BY created_at DESC";
+      sql += ` ORDER BY created_at DESC LIMIT ${String(pagination.limit)} OFFSET ${String(pagination.offset)}`;
 
       return localDb.queryAll(sql, params).map(rowToFriendConnection);
     },
