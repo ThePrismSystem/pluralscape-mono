@@ -816,10 +816,13 @@ export const SQLITE_DDL = {
       voted_at INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       FOREIGN KEY (poll_id, system_id) REFERENCES polls(id, system_id) ON DELETE CASCADE,
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
+      CHECK ((archived = true) = (archived_at IS NOT NULL)),
+      CHECK (version >= 1)
     )
   `,
   pollVotesIndexes: `
@@ -1027,10 +1030,12 @@ export const SQLITE_DDL = {
       push_enabled INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       CHECK (event_type IS NULL OR event_type IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
+      CHECK ((archived = true) = (archived_at IS NOT NULL)),
+      CHECK (version >= 1)
     )
   `,
   notificationConfigsIndexes: `

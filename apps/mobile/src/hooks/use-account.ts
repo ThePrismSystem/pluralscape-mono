@@ -7,8 +7,13 @@ import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
 
 type AccountInfo = RouterOutput["account"]["get"];
 
+/** 5 minutes — account data changes infrequently. */
+const ACCOUNT_STALE_TIME_MS = 5 * 60_000;
+
 export function useAccount(): TRPCQuery<AccountInfo> {
-  return trpc.account.get.useQuery();
+  return trpc.account.get.useQuery(undefined, {
+    staleTime: ACCOUNT_STALE_TIME_MS,
+  });
 }
 
 export function useChangeEmail(): TRPCMutation<

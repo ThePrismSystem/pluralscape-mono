@@ -15,6 +15,8 @@ export type TRPCInfiniteQuery<T> = TRPCHookResult &
   UseInfiniteQueryResult<InfiniteData<T>, TRPCError>;
 export type TRPCMutation<TData, TVars> = TRPCHookResult &
   UseMutationResult<TData, TRPCError, TVars>;
+export type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
+  UseMutationResult<TData, TRPCError, TVars, TCtx>;
 
 /**
  * Query result for hooks that read from either local SQLite or remote tRPC.

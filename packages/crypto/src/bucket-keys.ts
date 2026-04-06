@@ -110,7 +110,11 @@ export function rotateBucketKey(oldKey: AeadKey, currentVersion: number): Rotate
   const newVersion = validateKeyVersion(currentVersion + 1);
   const reEncrypt = (payload: EncryptedPayload): EncryptedPayload => {
     const plaintext = decrypt(payload, oldKey);
-    return encrypt(plaintext, newKey);
+    try {
+      return encrypt(plaintext, newKey);
+    } finally {
+      plaintext.fill(0);
+    }
   };
   return { newKey, newVersion, reEncrypt };
 }

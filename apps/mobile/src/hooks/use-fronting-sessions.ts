@@ -16,8 +16,8 @@ import {
   type DataListQuery,
   type DataQuery,
   type SystemIdOverride,
-  type TRPCError,
   type TRPCMutation,
+  type TRPCMutationCtx,
   type TRPCQuery,
 } from "./types.js";
 
@@ -28,11 +28,6 @@ import type {
   FrontingSessionRaw,
 } from "@pluralscape/data/transforms/fronting-session";
 import type { Archived, FrontingSession, FrontingSessionId, SystemId } from "@pluralscape/types";
-import type { UseMutationResult } from "@tanstack/react-query";
-import type { TRPCHookResult } from "@trpc/react-query/shared";
-
-type TRPCMutationCtx<TData, TVars, TCtx> = TRPCHookResult &
-  UseMutationResult<TData, TRPCError, TVars, TCtx>;
 
 // Remains as RouterOutput because getActive returns a composite shape
 // (sessions + isCofronting + entityMemberMap) with no transform-level wire type.

@@ -121,7 +121,7 @@ export async function pgDetachOldPartitions<
         );
         await db.execute(sql`DROP TABLE ${sql.raw(`"${partition_name}"`)}`);
         detachedCount++;
-      } catch (err) {
+      } catch (err: unknown) {
         errors.push({ partitionName: partition_name, error: extractErrorMessage(err) });
       }
     }

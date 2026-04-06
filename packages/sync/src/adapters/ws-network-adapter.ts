@@ -214,7 +214,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         for (const cb of callbacks) {
           try {
             cb(msg.changes);
-          } catch (err) {
+          } catch (err: unknown) {
             this.logger?.warn("Subscriber callback error", { error: String(err) });
           }
         }

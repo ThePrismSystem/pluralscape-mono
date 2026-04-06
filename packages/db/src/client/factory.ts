@@ -85,7 +85,7 @@ export async function createDatabase(config: DatabaseConfig): Promise<DatabaseCl
         }
         client.pragma("journal_mode = WAL");
         client.pragma("foreign_keys = ON");
-      } catch (err) {
+      } catch (err: unknown) {
         client.close();
         throw err;
       }

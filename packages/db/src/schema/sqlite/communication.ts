@@ -198,7 +198,8 @@ export const pollVotes = sqliteTable(
     isVeto: integer("is_veto", { mode: "boolean" }).notNull().default(false),
     votedAt: sqliteTimestamp("voted_at").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
-    createdAt: sqliteTimestamp("created_at").notNull(),
+    ...timestamps(),
+    ...versioned(),
     ...archivable(),
   },
   (t) => [
@@ -211,6 +212,7 @@ export const pollVotes = sqliteTable(
     }).onDelete("restrict"),
     check("poll_votes_voter_not_null", sql`${t.voter} IS NOT NULL`),
     archivableConsistencyCheckFor("poll_votes", t.archived, t.archivedAt),
+    versionCheckFor("poll_votes", t.version),
   ],
 );
 

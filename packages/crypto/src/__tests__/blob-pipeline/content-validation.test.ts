@@ -147,11 +147,11 @@ describe("validateBlobContentType", () => {
     try {
       validateBlobContentType("text/html", "avatar");
       expect.fail("Should have thrown");
-    } catch (err) {
+    } catch (err: unknown) {
       expect(err).toBeInstanceOf(ContentTypeNotAllowedError);
-      const cte = err as ContentTypeNotAllowedError;
-      expect(cte.mimeType).toBe("text/html");
-      expect(cte.purpose).toBe("avatar");
+      if (!(err instanceof ContentTypeNotAllowedError)) throw err;
+      expect(err.mimeType).toBe("text/html");
+      expect(err.purpose).toBe("avatar");
     }
   });
 });

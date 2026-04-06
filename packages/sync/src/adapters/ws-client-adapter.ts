@@ -236,7 +236,7 @@ export function createWsClientAdapter(config: WsClientAdapterConfig): WsClientAd
 
       try {
         sendRaw(fullMessage);
-      } catch (err) {
+      } catch (err: unknown) {
         clearTimeout(timer);
         pending.delete(correlationId);
         reject(err instanceof Error ? err : new Error(String(err)));

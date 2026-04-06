@@ -112,7 +112,7 @@ export async function createOpfsSqliteDriver(): Promise<SqliteDriver & { flush()
         const result = fn();
         trackExec("COMMIT");
         return result;
-      } catch (err) {
+      } catch (err: unknown) {
         trackExec("ROLLBACK");
         throw err;
       }

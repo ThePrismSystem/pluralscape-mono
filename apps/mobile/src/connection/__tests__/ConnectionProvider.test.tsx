@@ -1,3 +1,5 @@
+// @vitest-environment happy-dom
+import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -5,8 +7,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ConnectionManager } from "../connection-manager.js";
 import { ConnectionProvider, useConnection } from "../ConnectionProvider.js";
 
+import type { AuthCredentials, AuthSession } from "../../auth/auth-types.js";
 import type { AuthContextValue } from "../../auth/AuthProvider.js";
-import type { SystemId } from "@pluralscape/types";
+import type { AccountId, SystemId } from "@pluralscape/types";
 
 vi.mock("@microsoft/fetch-event-source", () => ({
   fetchEventSource: vi.fn(),
@@ -113,5 +116,66 @@ describe("ConnectionProvider", () => {
     manager.connect("tok", "sys_1" as SystemId);
     expect(spy).toHaveBeenCalledWith("tok", "sys_1");
     expect(manager.getSnapshot()).toBe("connecting");
+  });
+
+  it("does not reconnect when auth snapshot identity changes but credentials are unchanged", () => {
+    const manager = makeManager();
+    const connectSpy = vi.spyOn(manager, "connect");
+    const disconnectSpy = vi.spyOn(manager, "disconnect");
+
+    const credentials: AuthCredentials = {
+      sessionToken: "tok_1",
+      accountId: "acc_1" as AccountId,
+      systemId: "sys_1" as SystemId,
+      salt: new Uint8Array(16) as AuthCredentials["salt"],
+    };
+
+    const session: AuthSession = {
+      credentials,
+      masterKey: new Uint8Array(32) as AuthSession["masterKey"],
+      identityKeys: {
+        sign: {
+          publicKey: new Uint8Array(32),
+          secretKey: new Uint8Array(64),
+        } as AuthSession["identityKeys"]["sign"],
+        box: {
+          publicKey: new Uint8Array(32),
+          secretKey: new Uint8Array(32),
+        } as AuthSession["identityKeys"]["box"],
+      },
+    };
+
+    mockAuthValue = {
+      snapshot: { state: "unlocked" as const, session, credentials },
+      login: vi.fn(),
+      logout: vi.fn(),
+      lock: vi.fn(),
+      unlock: vi.fn(),
+    };
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <ConnectionProvider manager={manager}>{children}</ConnectionProvider>
+    );
+
+    const { rerender } = renderHook(() => useConnection(), { wrapper });
+
+    expect(connectSpy).toHaveBeenCalledTimes(1);
+    expect(connectSpy).toHaveBeenCalledWith("tok_1", "sys_1");
+
+    // New snapshot object identity, same credentials reference
+    mockAuthValue = {
+      snapshot: { state: "unlocked" as const, session, credentials },
+      login: vi.fn(),
+      logout: vi.fn(),
+      lock: vi.fn(),
+      unlock: vi.fn(),
+    };
+
+    act(() => {
+      rerender();
+    });
+
+    expect(connectSpy).toHaveBeenCalledTimes(1);
+    expect(disconnectSpy).not.toHaveBeenCalled();
   });
 });

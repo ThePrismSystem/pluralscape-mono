@@ -12,7 +12,13 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
-import { archivable, archivableConsistencyCheckFor, timestamps } from "../../helpers/audit.pg.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
@@ -68,6 +74,7 @@ export const notificationConfigs = pgTable(
     enabled: boolean("enabled").notNull().default(true),
     pushEnabled: boolean("push_enabled").notNull().default(true),
     ...timestamps(),
+    ...versioned(),
     ...archivable(),
   },
   (t) => [
@@ -79,6 +86,7 @@ export const notificationConfigs = pgTable(
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
     ),
     archivableConsistencyCheckFor("notification_configs", t.archived, t.archivedAt),
+    versionCheckFor("notification_configs", t.version),
   ],
 );
 

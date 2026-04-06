@@ -193,7 +193,7 @@ export class SyncEngine {
           null,
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.handleError("Offline queue replay failed", error);
     }
   }
@@ -298,7 +298,7 @@ export class SyncEngine {
     for (const sub of this.subscriptions) {
       try {
         sub.unsubscribe();
-      } catch (error) {
+      } catch (error: unknown) {
         this.handleError("Failed to unsubscribe during dispose", error);
       }
     }
@@ -314,7 +314,7 @@ export class SyncEngine {
             this.handleError("Failed to close network adapter during dispose", error);
           });
         }
-      } catch (error) {
+      } catch (error: unknown) {
         this.handleError("Failed to close network adapter during dispose", error);
       }
     }
@@ -326,7 +326,7 @@ export class SyncEngine {
             this.handleError("Failed to close storage adapter during dispose", error);
           });
         }
-      } catch (error) {
+      } catch (error: unknown) {
         this.handleError("Failed to close storage adapter during dispose", error);
       }
     }
@@ -556,7 +556,7 @@ export class SyncEngine {
           batch.documentId,
           batch.notifications,
         );
-      } catch (error) {
+      } catch (error: unknown) {
         this.handleError("Failed to persist conflict records", error);
         this.failedConflictPersistence.push(batch);
       }

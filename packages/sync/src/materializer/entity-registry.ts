@@ -445,7 +445,7 @@ export const ENTITY_TABLE_REGISTRY: Record<SyncedEntityType, EntityTableDef> = {
     columns: [
       id,
       systemId,
-      { name: "member_id", sqlType: "TEXT", notNull: true },
+      { name: "member_id", sqlType: "TEXT", notNull: false },
       { name: "start_time", sqlType: "INTEGER", notNull: true },
       { name: "end_time", sqlType: "INTEGER" },
       { name: "comment", sqlType: "TEXT" },

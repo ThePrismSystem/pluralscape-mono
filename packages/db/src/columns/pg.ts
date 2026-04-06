@@ -46,7 +46,7 @@ export function jsonFromDriver(val: unknown): unknown {
   }
   try {
     return JSON.parse(val) as unknown;
-  } catch (error) {
+  } catch (error: unknown) {
     const preview =
       val.length > JSON_PREVIEW_LENGTH ? `${val.slice(0, JSON_PREVIEW_LENGTH)}…` : val;
     throw new Error(`Failed to parse JSON from database: "${preview}"`, { cause: error });

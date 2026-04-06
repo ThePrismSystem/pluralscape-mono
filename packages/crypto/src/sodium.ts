@@ -40,7 +40,7 @@ export async function initSodium(): Promise<void> {
       // TS loses narrowing of module-level vars across await in closures,
       // but adapter is guaranteed non-null after the above block
       await adapter.init();
-    } catch (error) {
+    } catch (error: unknown) {
       throw new CryptoNotReadyError(
         "Failed to initialize sodium adapter. If running in React Native, " +
           "call configureSodium(new ReactNativeSodiumAdapter()) before initSodium().",

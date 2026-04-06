@@ -180,7 +180,7 @@ export abstract class BaseSodiumAdapter implements SodiumAdapter {
         nonce,
         key,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       throw new DecryptionFailedError(undefined, { cause: error });
     }
   }
@@ -230,7 +230,7 @@ export abstract class BaseSodiumAdapter implements SodiumAdapter {
     const sodium = this.lib();
     try {
       return sodium.crypto_box_open_easy(ciphertext, nonce, senderPublicKey, recipientSecretKey);
-    } catch (error) {
+    } catch (error: unknown) {
       throw new DecryptionFailedError(undefined, { cause: error });
     }
   }

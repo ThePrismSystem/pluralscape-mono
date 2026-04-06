@@ -150,6 +150,31 @@ describe("rotateBucketKey", () => {
     ).toThrow();
   });
 
+  it("zeros intermediate plaintext after re-encryption", () => {
+    const { reEncrypt } = rotateBucketKey(oldKey, 1);
+    const plaintext = new TextEncoder().encode("sensitive data");
+    const original = encrypt(plaintext, oldKey);
+    const fillSpy = vi.spyOn(Uint8Array.prototype, "fill");
+    reEncrypt(original);
+    expect(fillSpy).toHaveBeenCalledWith(0);
+    fillSpy.mockRestore();
+  });
+
+  it("zeros intermediate plaintext even when encrypt throws", () => {
+    const { reEncrypt } = rotateBucketKey(oldKey, 1);
+    const plaintext = new TextEncoder().encode("sensitive data");
+    const original = encrypt(plaintext, oldKey);
+    const fillSpy = vi.spyOn(Uint8Array.prototype, "fill");
+    const sodium = getSodium();
+    const aeadEncryptSpy = vi.spyOn(sodium, "aeadEncrypt").mockImplementation(() => {
+      throw new Error("encrypt failed");
+    });
+    expect(() => reEncrypt(original)).toThrow("encrypt failed");
+    expect(fillSpy).toHaveBeenCalledWith(0);
+    fillSpy.mockRestore();
+    aeadEncryptSpy.mockRestore();
+  });
+
   it("negative currentVersion throws InvalidInputError", () => {
     expect(() => rotateBucketKey(oldKey, -1)).toThrow(InvalidInputError);
   });

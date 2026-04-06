@@ -174,6 +174,7 @@ export async function castVote(
         votedAt: timestamp,
         encryptedData: blob,
         createdAt: timestamp,
+        updatedAt: timestamp,
       })
       .returning();
 
