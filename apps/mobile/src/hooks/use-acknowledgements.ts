@@ -58,13 +58,7 @@ export function useAcknowledgementsList(
     AcknowledgementRaw,
     AcknowledgementDecrypted | Archived<AcknowledgementDecrypted>
   >({
-    queryKey: [
-      "acknowledgements",
-      "list",
-      opts?.systemId,
-      opts?.includeArchived ?? false,
-      opts?.confirmed,
-    ],
+    queryKey: ["acknowledgements", "list", opts?.includeArchived ?? false, opts?.confirmed],
     table: "own_acknowledgements",
     rowTransform: rowToAcknowledgement,
     decrypt: decryptAcknowledgement,

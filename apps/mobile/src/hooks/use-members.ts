@@ -46,7 +46,7 @@ export function useMember(
 
 export function useMembersList(opts?: MemberListOpts): DataListQuery<Member | Archived<Member>> {
   return useOfflineFirstInfiniteQuery<MemberRaw, Member | Archived<Member>>({
-    queryKey: ["members", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["members", "list", opts?.includeArchived ?? false],
     table: "members",
     rowTransform: rowToMember,
     decrypt: decryptMember,

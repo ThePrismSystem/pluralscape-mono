@@ -59,7 +59,7 @@ export function useRelationshipsList(
     RelationshipRaw,
     RelationshipDecrypted | Archived<RelationshipDecrypted>
   >({
-    queryKey: ["relationships", "list", opts?.systemId, opts?.memberId, opts?.type],
+    queryKey: ["relationships", "list", opts?.memberId, opts?.type],
     table: "relationships",
     rowTransform: rowToRelationship,
     decrypt: decryptRelationship,

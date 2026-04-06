@@ -57,7 +57,6 @@ export function useNotesList(
     queryKey: [
       "notes",
       "list",
-      opts?.systemId,
       opts?.includeArchived ?? false,
       opts?.authorEntityType,
       opts?.authorEntityId,

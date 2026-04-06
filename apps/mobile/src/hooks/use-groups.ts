@@ -47,7 +47,7 @@ export function useGroup(groupId: GroupId, opts?: SystemIdOverride): DataQuery<G
 
 export function useGroupsList(opts?: GroupListOpts): DataListQuery<GroupDecrypted> {
   return useOfflineFirstInfiniteQuery<GroupRaw, GroupDecrypted>({
-    queryKey: ["groups", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["groups", "list", opts?.includeArchived ?? false],
     table: "groups",
     rowTransform: rowToGroup,
     decrypt: decryptGroup,

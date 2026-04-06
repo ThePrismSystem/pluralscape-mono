@@ -53,7 +53,7 @@ export function useLifecycleEventsList(
   opts?: LifecycleEventListOpts,
 ): DataListQuery<LifecycleEventWithArchive> {
   return useOfflineFirstInfiniteQuery<LifecycleEventRaw, LifecycleEventWithArchive>({
-    queryKey: ["lifecycle-events", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["lifecycle-events", "list", opts?.includeArchived ?? false],
     table: "lifecycle_events",
     rowTransform: rowToLifecycleEvent,
     decrypt: decryptLifecycleEvent,

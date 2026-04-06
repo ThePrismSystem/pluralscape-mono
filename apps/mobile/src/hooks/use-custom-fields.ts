@@ -57,7 +57,7 @@ export function useFieldDefinitionsList(
   opts?: FieldDefinitionListOpts,
 ): DataListQuery<FieldDefinitionDecrypted> {
   return useOfflineFirstInfiniteQuery<FieldDefinitionRaw, FieldDefinitionDecrypted>({
-    queryKey: ["field_definitions", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["field_definitions", "list", opts?.includeArchived ?? false],
     table: "field_definitions",
     rowTransform: rowToFieldDefinition,
     decrypt: decryptFieldDefinition,

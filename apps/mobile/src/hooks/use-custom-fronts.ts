@@ -50,7 +50,7 @@ export function useCustomFrontsList(
   opts?: CustomFrontListOpts,
 ): DataListQuery<CustomFront | Archived<CustomFront>> {
   return useOfflineFirstInfiniteQuery<CustomFrontRaw, CustomFront | Archived<CustomFront>>({
-    queryKey: ["custom_fronts", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["custom_fronts", "list", opts?.includeArchived ?? false],
     table: "custom_fronts",
     rowTransform: rowToCustomFront,
     decrypt: decryptCustomFront,

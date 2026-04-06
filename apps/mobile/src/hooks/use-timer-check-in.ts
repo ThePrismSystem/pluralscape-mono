@@ -67,7 +67,7 @@ export function useTimerConfigsList(
   opts?: TimerConfigListOpts,
 ): DataListQuery<TimerConfig | Archived<TimerConfig>> {
   return useOfflineFirstInfiniteQuery<TimerConfigRaw, TimerConfig | Archived<TimerConfig>>({
-    queryKey: ["timer_configs", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["timer_configs", "list", opts?.includeArchived ?? false],
     table: "timer_configs",
     rowTransform: rowToTimer,
     decrypt: decryptTimerConfig,

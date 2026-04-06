@@ -24,7 +24,7 @@ export function useStructureAssociationsList(
   opts?: StructureAssociationListOpts,
 ): DataListQuery<SystemStructureEntityAssociation> {
   return useOfflineFirstInfiniteQuery<AssociationRaw, SystemStructureEntityAssociation>({
-    queryKey: ["structure_entity_associations", "list", opts?.systemId],
+    queryKey: ["structure_entity_associations", "list"],
     table: "structure_entity_associations",
     rowTransform: rowToStructureEntityAssociation,
     systemIdOverride: opts,

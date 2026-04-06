@@ -77,7 +77,6 @@ export function useFrontingSessionsList(
     queryKey: [
       "fronting_sessions",
       "list",
-      opts?.systemId,
       opts?.activeOnly ?? false,
       opts?.includeArchived ?? false,
     ],

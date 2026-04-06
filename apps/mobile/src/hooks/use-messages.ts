@@ -68,7 +68,7 @@ export function useMessagesList(
   opts?: MessageListOpts,
 ): DataListQuery<ChatMessage | ArchivedChatMessage> {
   return useOfflineFirstInfiniteQuery<MessageRaw, ChatMessage | ArchivedChatMessage>({
-    queryKey: ["messages", "list", opts?.systemId, channelId, opts?.includeArchived ?? false],
+    queryKey: ["messages", "list", channelId, opts?.includeArchived ?? false],
     table: "own_messages",
     rowTransform: rowToMessage,
     decrypt: decryptMessage,

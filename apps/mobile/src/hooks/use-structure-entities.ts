@@ -74,13 +74,7 @@ export function useStructureEntitiesList(
     StructureEntityRaw,
     StructureEntityDecrypted | Archived<StructureEntityDecrypted>
   >({
-    queryKey: [
-      "structure_entities",
-      "list",
-      opts?.systemId,
-      opts?.includeArchived ?? false,
-      opts?.entityTypeId,
-    ],
+    queryKey: ["structure_entities", "list", opts?.includeArchived ?? false, opts?.entityTypeId],
     table: "structure_entities",
     rowTransform: rowToStructureEntity,
     decrypt: decryptStructureEntity,

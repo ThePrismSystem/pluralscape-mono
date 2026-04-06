@@ -50,7 +50,7 @@ export function useChannelsList(
   opts?: ChannelListOpts,
 ): DataListQuery<Channel | Archived<Channel>> {
   return useOfflineFirstInfiniteQuery<ChannelRaw, Channel | Archived<Channel>>({
-    queryKey: ["channels", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["channels", "list", opts?.includeArchived ?? false],
     table: "own_channels",
     rowTransform: rowToChannel,
     decrypt: decryptChannel,

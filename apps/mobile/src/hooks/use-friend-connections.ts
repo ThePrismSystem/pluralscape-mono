@@ -77,6 +77,7 @@ export function useFriendConnectionsList(
     ],
     table: "friend_connections",
     rowTransform: rowToFriendConnection,
+    injectSystemId: false,
     includeArchived: opts?.includeArchived,
     localQueryFn: (localDb) => {
       if (accountId === null) throw new Error("accountId is null");

@@ -50,7 +50,7 @@ export function useSnapshot(
 
 export function useSnapshotsList(opts?: SnapshotListOpts): DataListQuery<SnapshotDecrypted> {
   return useOfflineFirstInfiniteQuery<SnapshotRaw, SnapshotDecrypted>({
-    queryKey: ["snapshots", "list", opts?.systemId],
+    queryKey: ["snapshots", "list"],
     table: "snapshots",
     // Snapshots are remote-only; local path never executes
     rowTransform: () => {

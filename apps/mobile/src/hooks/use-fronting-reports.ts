@@ -50,7 +50,7 @@ export function useFrontingReportsList(
   opts?: FrontingReportListOpts,
 ): DataListQuery<FrontingReport> {
   return useOfflineFirstInfiniteQuery<FrontingReportRaw, FrontingReport>({
-    queryKey: ["fronting_reports", "list", opts?.systemId],
+    queryKey: ["fronting_reports", "list"],
     table: "fronting_reports",
     rowTransform: () => {
       throw new Error("fronting_reports are remote-only");

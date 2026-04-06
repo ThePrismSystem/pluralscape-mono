@@ -22,6 +22,7 @@ export function useFriendCodesList(
     queryKey: ["friend_codes", "list"],
     table: "friend_codes",
     rowTransform: rowToFriendCode,
+    injectSystemId: false,
     useRemote: ({ enabled, select }) =>
       trpc.friendCode.list.useInfiniteQuery(
         {

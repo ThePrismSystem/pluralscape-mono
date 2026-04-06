@@ -74,7 +74,7 @@ export function usePollsList(
   opts?: PollListOpts,
 ): DataListQuery<PollDecrypted | Archived<PollDecrypted>> {
   return useOfflineFirstInfiniteQuery<PollRaw, PollDecrypted | Archived<PollDecrypted>>({
-    queryKey: ["polls", "list", opts?.systemId, opts?.includeArchived ?? false, opts?.status],
+    queryKey: ["polls", "list", opts?.includeArchived ?? false, opts?.status],
     table: "own_polls",
     rowTransform: rowToPoll,
     decrypt: decryptPoll,

@@ -51,7 +51,7 @@ export function useBoardMessagesList(
   opts?: BoardMessageListOpts,
 ): DataListQuery<BoardMessage | Archived<BoardMessage>> {
   return useOfflineFirstInfiniteQuery<BoardMessageRaw, BoardMessage | Archived<BoardMessage>>({
-    queryKey: ["boardMessages", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["boardMessages", "list", opts?.includeArchived ?? false],
     table: "own_board_messages",
     rowTransform: rowToBoardMessage,
     decrypt: decryptBoardMessage,

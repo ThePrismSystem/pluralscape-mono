@@ -58,7 +58,7 @@ export function useStructureEntityTypesList(
     StructureEntityTypeRaw,
     StructureEntityTypeDecrypted | Archived<StructureEntityTypeDecrypted>
   >({
-    queryKey: ["structure_entity_types", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["structure_entity_types", "list", opts?.includeArchived ?? false],
     table: "structure_entity_types",
     rowTransform: rowToStructureEntityType,
     decrypt: decryptStructureEntityType,

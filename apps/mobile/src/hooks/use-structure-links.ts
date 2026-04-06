@@ -24,7 +24,7 @@ export function useStructureLinksList(
   opts?: StructureLinkListOpts,
 ): DataListQuery<SystemStructureEntityLink> {
   return useOfflineFirstInfiniteQuery<LinkRaw, SystemStructureEntityLink>({
-    queryKey: ["structure_entity_links", "list", opts?.systemId],
+    queryKey: ["structure_entity_links", "list"],
     table: "structure_entity_links",
     rowTransform: rowToStructureEntityLink,
     systemIdOverride: opts,

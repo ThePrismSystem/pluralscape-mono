@@ -47,7 +47,7 @@ export function usePrivacyBucketsList(
   opts?: BucketListOpts,
 ): DataListQuery<PrivacyBucket | ArchivedPrivacyBucket> {
   return useOfflineFirstInfiniteQuery<BucketRaw, PrivacyBucket | ArchivedPrivacyBucket>({
-    queryKey: ["buckets", "list", opts?.systemId, opts?.includeArchived ?? false],
+    queryKey: ["buckets", "list", opts?.includeArchived ?? false],
     table: "buckets",
     rowTransform: rowToPrivacyBucket,
     includeArchived: opts?.includeArchived,

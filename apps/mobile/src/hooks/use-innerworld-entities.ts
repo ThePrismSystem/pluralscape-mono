@@ -60,13 +60,7 @@ export function useInnerWorldEntitiesList(
     InnerWorldEntityRaw,
     InnerWorldEntityDecrypted | Archived<InnerWorldEntityDecrypted>
   >({
-    queryKey: [
-      "innerworld-entities",
-      "list",
-      opts?.systemId,
-      opts?.includeArchived ?? false,
-      regionId,
-    ],
+    queryKey: ["innerworld-entities", "list", opts?.includeArchived ?? false, regionId],
     table: "innerworld_entities",
     rowTransform: rowToInnerWorldEntity,
     decrypt: decryptInnerWorldEntity,
