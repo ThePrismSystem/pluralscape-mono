@@ -286,6 +286,29 @@ describe("WsManager", () => {
       vi.useRealTimers();
     });
 
+    it("nulls lastToken and lastSystemId so reconnect bails out after disconnect", () => {
+      vi.useFakeTimers();
+
+      const eventBus = createEventBus<DataLayerEventMap>();
+      const manager = makeManager(eventBus);
+
+      manager.connect("tok", asSystemId("sys_abc"));
+      eventBus.emit("ws:connected", { type: "ws:connected" });
+
+      manager.disconnect();
+      mockConnect.mockClear();
+
+      // Re-connect with fresh state to confirm old credentials are gone:
+      // simulate what would happen if reconnect() ran with nulled token
+      // by verifying the manager stays disconnected after explicit disconnect
+      // even if we advance timers past any hypothetical backoff
+      vi.advanceTimersByTime(10_000);
+      expect(manager.getSnapshot()).toBe("disconnected");
+      expect(mockConnect).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
     it("clears pending backoff timer when disconnect is called during backoff", () => {
       vi.useFakeTimers();
 

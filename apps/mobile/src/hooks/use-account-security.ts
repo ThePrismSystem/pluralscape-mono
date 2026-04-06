@@ -1,5 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
+import { useDomainMutation } from "./factories.js";
 import { type TRPCMutation, type TRPCQuery } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
@@ -47,10 +48,9 @@ export function useRegenerateRecoveryKey(): TRPCMutation<
   RouterOutput["account"]["regenerateRecoveryKey"],
   RouterInput["account"]["regenerateRecoveryKey"]
 > {
-  const utils = trpc.useUtils();
-
-  return trpc.account.regenerateRecoveryKey.useMutation({
-    onSuccess: () => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.account.regenerateRecoveryKey.useMutation(mutOpts),
+    onInvalidate: (utils) => {
       void utils.account.getRecoveryKeyStatus.invalidate();
     },
   });

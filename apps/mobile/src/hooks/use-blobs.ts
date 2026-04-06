@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { useActiveSystemId } from "../providers/system-provider.js";
 
+import { useDomainMutation } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
   type SystemIdOverride,
@@ -61,11 +62,9 @@ export function useDeleteBlob(): TRPCMutation<
   RouterOutput["blob"]["delete"],
   RouterInput["blob"]["delete"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.blob.delete.useMutation({
-    onSuccess: (_data, variables) => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.blob.delete.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
       void utils.blob.get.invalidate({ systemId, blobId: variables.blobId });
       void utils.blob.list.invalidate({ systemId });
     },

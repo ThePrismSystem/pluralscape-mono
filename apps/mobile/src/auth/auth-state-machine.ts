@@ -7,6 +7,10 @@ import type {
 } from "./auth-types.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 
+export interface AuthStateMachineConfig {
+  readonly onKeyDiscard?: (key: KdfMasterKey) => void;
+}
+
 type InternalState =
   | { readonly kind: "unauthenticated" }
   | { readonly kind: "locked"; readonly credentials: AuthCredentials }
@@ -52,6 +56,11 @@ export class AuthStateMachine {
   private internal: InternalState = { kind: "unauthenticated" };
   private cachedSnapshot: AuthStateSnapshot = buildSnapshot(this.internal);
   private readonly listeners = new Set<AuthListener>();
+  private readonly onKeyDiscard?: (key: KdfMasterKey) => void;
+
+  constructor(config?: AuthStateMachineConfig) {
+    this.onKeyDiscard = config?.onKeyDiscard;
+  }
 
   getSnapshot(): AuthStateSnapshot {
     return this.cachedSnapshot;
@@ -81,6 +90,7 @@ export class AuthStateMachine {
 
       case "LOCK":
         if (prev.kind === "unlocked") {
+          this.onKeyDiscard?.(prev.masterKey);
           this.internal = { kind: "locked", credentials: prev.credentials };
         }
         break;
@@ -97,6 +107,9 @@ export class AuthStateMachine {
         break;
 
       case "LOGOUT":
+        if (prev.kind === "unlocked") {
+          this.onKeyDiscard?.(prev.masterKey);
+        }
         this.internal = { kind: "unauthenticated" };
         break;
 

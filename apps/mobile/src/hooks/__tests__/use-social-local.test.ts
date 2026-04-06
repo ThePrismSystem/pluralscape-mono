@@ -17,6 +17,10 @@ vi.mock("../../providers/system-provider.js", () => ({
   useActiveSystemId: vi.fn().mockReturnValue("sys-1"),
 }));
 
+vi.mock("../../providers/crypto-provider.js", () => ({
+  useMasterKey: vi.fn().mockReturnValue(null),
+}));
+
 vi.mock("../../auth/index.js", () => ({
   useAuth: vi.fn().mockReturnValue({
     snapshot: {

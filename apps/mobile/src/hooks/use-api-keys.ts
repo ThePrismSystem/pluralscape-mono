@@ -2,6 +2,7 @@ import { trpc } from "@pluralscape/api-client/trpc";
 
 import { useActiveSystemId } from "../providers/system-provider.js";
 
+import { useDomainMutation } from "./factories.js";
 import {
   DEFAULT_LIST_LIMIT,
   type SystemIdOverride,
@@ -48,11 +49,9 @@ export function useCreateApiKey(): TRPCMutation<
   RouterOutput["apiKey"]["create"],
   RouterInput["apiKey"]["create"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.apiKey.create.useMutation({
-    onSuccess: () => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.apiKey.create.useMutation(mutOpts),
+    onInvalidate: (utils, systemId) => {
       void utils.apiKey.list.invalidate({ systemId });
     },
   });
@@ -62,11 +61,9 @@ export function useRevokeApiKey(): TRPCMutation<
   RouterOutput["apiKey"]["revoke"],
   RouterInput["apiKey"]["revoke"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.apiKey.revoke.useMutation({
-    onSuccess: (_data, variables) => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.apiKey.revoke.useMutation(mutOpts),
+    onInvalidate: (utils, systemId, _data, variables) => {
       void utils.apiKey.get.invalidate({ systemId, apiKeyId: variables.apiKeyId });
       void utils.apiKey.list.invalidate({ systemId });
     },

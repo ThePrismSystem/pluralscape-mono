@@ -171,7 +171,8 @@ describe("useFrontingReportsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data = result.current.data;
+    const pages = data && "pages" in data ? data.pages : [];
     expect(pages).toHaveLength(1);
     expect(pages[0]?.data).toHaveLength(2);
     expect(pages[0]?.data[0]?.id).toBe("fr-1");

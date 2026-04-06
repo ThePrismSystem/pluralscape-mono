@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
+import { useDomainMutation } from "./factories.js";
 import { type SystemIdOverride, type TRPCMutation, type TRPCQuery } from "./types.js";
 
 import type { RouterInput, RouterOutput } from "@pluralscape/api-client/trpc";
@@ -36,11 +37,9 @@ export function useUpsertCanvas(): TRPCMutation<
   RouterOutput["innerworld"]["canvas"]["upsert"],
   RouterInput["innerworld"]["canvas"]["upsert"]
 > {
-  const systemId = useActiveSystemId();
-  const utils = trpc.useUtils();
-
-  return trpc.innerworld.canvas.upsert.useMutation({
-    onSuccess: () => {
+  return useDomainMutation({
+    useMutation: (mutOpts) => trpc.innerworld.canvas.upsert.useMutation(mutOpts),
+    onInvalidate: (utils, systemId) => {
       void utils.innerworld.canvas.get.invalidate({ systemId });
     },
   });

@@ -244,4 +244,89 @@ describe("AuthStateMachine", () => {
     const after = machine.getSnapshot();
     expect(after).not.toBe(before);
   });
+
+  describe("onKeyDiscard", () => {
+    it("calls onKeyDiscard with masterKey on LOCK from unlocked", () => {
+      const onKeyDiscard = vi.fn();
+      const machine = new AuthStateMachine({ onKeyDiscard });
+      machine.dispatch({
+        type: "LOGIN",
+        credentials: fakeCredentials,
+        masterKey: fakeMasterKey,
+        identityKeys: fakeIdentityKeys,
+      });
+
+      machine.dispatch({ type: "LOCK" });
+      expect(onKeyDiscard).toHaveBeenCalledOnce();
+      expect(onKeyDiscard).toHaveBeenCalledWith(fakeMasterKey);
+    });
+
+    it("calls onKeyDiscard with masterKey on LOGOUT from unlocked", () => {
+      const onKeyDiscard = vi.fn();
+      const machine = new AuthStateMachine({ onKeyDiscard });
+      machine.dispatch({
+        type: "LOGIN",
+        credentials: fakeCredentials,
+        masterKey: fakeMasterKey,
+        identityKeys: fakeIdentityKeys,
+      });
+
+      machine.dispatch({ type: "LOGOUT" });
+      expect(onKeyDiscard).toHaveBeenCalledOnce();
+      expect(onKeyDiscard).toHaveBeenCalledWith(fakeMasterKey);
+    });
+
+    it("does NOT call onKeyDiscard on LOGOUT from locked state", () => {
+      const onKeyDiscard = vi.fn();
+      const machine = new AuthStateMachine({ onKeyDiscard });
+      machine.dispatch({
+        type: "LOGIN",
+        credentials: fakeCredentials,
+        masterKey: fakeMasterKey,
+        identityKeys: fakeIdentityKeys,
+      });
+      machine.dispatch({ type: "LOCK" });
+      onKeyDiscard.mockClear();
+
+      machine.dispatch({ type: "LOGOUT" });
+      expect(onKeyDiscard).not.toHaveBeenCalled();
+    });
+
+    it("works without callback (backwards compatible)", () => {
+      const machine = new AuthStateMachine();
+      machine.dispatch({
+        type: "LOGIN",
+        credentials: fakeCredentials,
+        masterKey: fakeMasterKey,
+        identityKeys: fakeIdentityKeys,
+      });
+
+      expect(() => {
+        machine.dispatch({ type: "LOCK" });
+      }).not.toThrow();
+      expect(machine.getSnapshot().state).toBe("locked");
+    });
+
+    it("remains in unlocked state if onKeyDiscard throws (guard in _layout.tsx is critical)", () => {
+      const onKeyDiscard = vi.fn().mockImplementation(() => {
+        throw new Error("sodium not ready");
+      });
+      const machine = new AuthStateMachine({ onKeyDiscard });
+      machine.dispatch({
+        type: "LOGIN",
+        credentials: fakeCredentials,
+        masterKey: fakeMasterKey,
+        identityKeys: fakeIdentityKeys,
+      });
+
+      expect(() => {
+        machine.dispatch({ type: "LOCK" });
+      }).toThrow("sodium not ready");
+
+      // State machine did NOT transition — masterKey still referenced
+      const snapshot = machine.getSnapshot();
+      expect(snapshot.state).toBe("unlocked");
+      expect(snapshot.session?.masterKey).toBe(fakeMasterKey);
+    });
+  });
 });

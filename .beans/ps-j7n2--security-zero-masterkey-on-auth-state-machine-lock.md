@@ -1,11 +1,11 @@
 ---
 # ps-j7n2
 title: "Security: zero masterKey on auth state machine LOCK/LOGOUT"
-status: todo
+status: completed
 type: bug
 priority: critical
 created_at: 2026-04-06T00:52:27Z
-updated_at: 2026-04-06T00:52:27Z
+updated_at: 2026-04-06T02:44:11Z
 parent: ps-y621
 ---
 
@@ -15,3 +15,5 @@ Fix: accept a memzero callback in the state machine and zero the masterKey on LO
 
 File: apps/mobile/src/auth/auth-state-machine.ts:83-84
 Audit ref: Pass 2 HIGH
+
+## Summary of Changes\n\nAdded onKeyDiscard callback to AuthStateMachine, wired to sodium.memzero in \_layout.tsx.

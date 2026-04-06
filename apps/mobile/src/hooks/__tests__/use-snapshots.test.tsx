@@ -174,7 +174,8 @@ describe("useSnapshotsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data1 = result.current.data;
+    const pages = data1 && "pages" in data1 ? data1.pages : [];
     const [firstPage] = pages;
     expect(pages).toHaveLength(1);
     expect(firstPage?.data).toHaveLength(2);
@@ -207,7 +208,8 @@ describe("useSnapshotsList", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const pages = result.current.data?.pages ?? [];
+    const data2 = result.current.data;
+    const pages = data2 && "pages" in data2 ? data2.pages : [];
     const [firstPage] = pages;
     expect(firstPage?.data).toHaveLength(0);
   });

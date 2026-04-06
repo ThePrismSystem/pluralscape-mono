@@ -151,6 +151,12 @@ export const ENTITY_CRDT_STRATEGIES = {
     mutationSemantics:
       "LWW per field — name, description, parentRegionId, visual, boundaryData, accessType, gatekeeperMemberIds, archived",
   },
+  "innerworld-canvas": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "innerWorldCanvases",
+    mutationSemantics: "LWW per field — viewport, zoom, pan, settings, archived",
+  },
   timer: {
     storageType: "lww-map",
     document: "system-core",

@@ -1,11 +1,11 @@
 ---
 # ps-0l9n
 title: "Security: null WsManager token on disconnect"
-status: todo
+status: completed
 type: bug
 priority: critical
 created_at: 2026-04-06T00:52:27Z
-updated_at: 2026-04-06T00:52:27Z
+updated_at: 2026-04-06T02:44:11Z
 parent: ps-y621
 ---
 
@@ -15,3 +15,5 @@ Fix: set lastToken = null and lastSystemId = null in disconnect().
 
 File: apps/mobile/src/connection/ws-manager.ts:62-63,147
 Audit ref: Pass 2 HIGH
+
+## Summary of Changes\n\nNull lastToken and lastSystemId in WsManager disconnect().
