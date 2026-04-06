@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptNote } from "@pluralscape/data/transforms/note";
 
-import { rowToNote } from "../data/row-transforms.js";
+import { rowToNote } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

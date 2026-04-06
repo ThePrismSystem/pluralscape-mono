@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptRelationship } from "@pluralscape/data/transforms/relationship";
 
-import { rowToRelationship } from "../data/row-transforms.js";
+import { rowToRelationship } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

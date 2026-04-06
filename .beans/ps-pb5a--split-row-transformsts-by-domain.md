@@ -1,11 +1,11 @@
 ---
 # ps-pb5a
 title: Split row-transforms.ts by domain
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T00:52:54Z
-updated_at: 2026-04-06T00:52:54Z
+updated_at: 2026-04-06T05:05:56Z
 parent: ps-y621
 ---
 

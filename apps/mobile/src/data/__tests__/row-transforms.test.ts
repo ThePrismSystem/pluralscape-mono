@@ -35,7 +35,7 @@ import {
   rowToSystemSettings,
   rowToTimer,
   rowToWikiPage,
-} from "../row-transforms.js";
+} from "../row-transforms/index.js";
 
 // ── Guarded primitive helpers ─────────────────────────────────────────────────
 

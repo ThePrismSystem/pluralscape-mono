@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptGroup } from "@pluralscape/data/transforms/group";
 
-import { rowToGroup } from "../data/row-transforms.js";
+import { rowToGroup } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

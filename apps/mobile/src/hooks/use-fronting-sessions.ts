@@ -2,7 +2,7 @@ import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingSession } from "@pluralscape/data/transforms/fronting-session";
 import { useCallback } from "react";
 
-import { rowToFrontingSession } from "../data/row-transforms.js";
+import { rowToFrontingSession } from "../data/row-transforms/index.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 

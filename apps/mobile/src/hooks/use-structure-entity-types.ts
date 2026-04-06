@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptStructureEntityType } from "@pluralscape/data/transforms/structure-entity-type";
 
-import { rowToStructureEntityType } from "../data/row-transforms.js";
+import { rowToStructureEntityType } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

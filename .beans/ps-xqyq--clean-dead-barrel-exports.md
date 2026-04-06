@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T00:52:54Z
-updated_at: 2026-04-06T04:51:28Z
+updated_at: 2026-04-06T04:55:15Z
 parent: ps-y621
 ---
 
@@ -19,3 +19,5 @@ parent: ps-y621
 - packages/data/src/index.ts: paths re-export
 
 Audit ref: Pass 6 CRITICAL + HIGH + LOW
+
+## Summary of Changes\n\nRemoved 17 dead barrel re-exports from connection, auth, platform, sync, api-client, and data barrels.

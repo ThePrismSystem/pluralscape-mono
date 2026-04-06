@@ -2,7 +2,7 @@ import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptTimerConfig } from "@pluralscape/data/transforms/timer-check-in";
 import { useQuery } from "@tanstack/react-query";
 
-import { rowToCheckInRecord, rowToTimer } from "../data/row-transforms.js";
+import { rowToCheckInRecord, rowToTimer } from "../data/row-transforms/index.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {

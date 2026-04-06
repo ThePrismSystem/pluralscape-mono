@@ -1,6 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import { rowToStructureEntityAssociation } from "../data/row-transforms.js";
+import { rowToStructureEntityAssociation } from "../data/row-transforms/index.js";
 
 import { useOfflineFirstInfiniteQuery, useDomainMutation } from "./factories.js";
 import {

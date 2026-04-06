@@ -4,7 +4,7 @@ import {
   decryptFieldValueList,
 } from "@pluralscape/data/transforms/custom-field";
 
-import { rowToFieldDefinition, rowToFieldValue } from "../data/row-transforms.js";
+import { rowToFieldDefinition, rowToFieldValue } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

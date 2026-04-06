@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptBoardMessage } from "@pluralscape/data/transforms/board-message";
 
-import { rowToBoardMessage } from "../data/row-transforms.js";
+import { rowToBoardMessage } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

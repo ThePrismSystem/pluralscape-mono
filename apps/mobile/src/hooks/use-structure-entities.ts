@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptStructureEntity } from "@pluralscape/data/transforms/structure-entity";
 
-import { rowToStructureEntity } from "../data/row-transforms.js";
+import { rowToStructureEntity } from "../data/row-transforms/index.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 
 import {

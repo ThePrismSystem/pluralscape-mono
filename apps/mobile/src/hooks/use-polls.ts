@@ -2,7 +2,7 @@ import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptPoll, decryptPollVote } from "@pluralscape/data/transforms/poll";
 import { useCallback } from "react";
 
-import { rowToPoll } from "../data/row-transforms.js";
+import { rowToPoll } from "../data/row-transforms/index.js";
 import { useMasterKey } from "../providers/crypto-provider.js";
 import { useActiveSystemId } from "../providers/system-provider.js";
 

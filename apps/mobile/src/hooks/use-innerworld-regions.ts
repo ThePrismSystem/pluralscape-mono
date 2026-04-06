@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptInnerWorldRegion } from "@pluralscape/data/transforms/innerworld-region";
 
-import { rowToInnerWorldRegion } from "../data/row-transforms.js";
+import { rowToInnerWorldRegion } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

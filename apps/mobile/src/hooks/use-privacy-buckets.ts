@@ -1,6 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import { rowToPrivacyBucket } from "../data/row-transforms.js";
+import { rowToPrivacyBucket } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

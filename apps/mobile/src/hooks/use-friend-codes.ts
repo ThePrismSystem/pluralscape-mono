@@ -1,6 +1,6 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
-import { rowToFriendCode } from "../data/row-transforms.js";
+import { rowToFriendCode } from "../data/row-transforms/index.js";
 
 import { useOfflineFirstInfiniteQuery, useDomainMutation } from "./factories.js";
 import { DEFAULT_LIST_LIMIT, type DataListQuery, type TRPCMutation } from "./types.js";

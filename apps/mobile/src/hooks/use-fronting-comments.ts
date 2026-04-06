@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptFrontingComment } from "@pluralscape/data/transforms/fronting-comment";
 
-import { rowToFrontingComment } from "../data/row-transforms.js";
+import { rowToFrontingComment } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

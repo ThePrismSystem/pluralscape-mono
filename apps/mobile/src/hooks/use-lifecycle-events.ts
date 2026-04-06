@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptLifecycleEvent } from "@pluralscape/data/transforms/lifecycle-event";
 
-import { rowToLifecycleEvent } from "../data/row-transforms.js";
+import { rowToLifecycleEvent } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

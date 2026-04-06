@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 import { decryptInnerWorldEntity } from "@pluralscape/data/transforms/innerworld-entity";
 
-import { rowToInnerWorldEntity } from "../data/row-transforms.js";
+import { rowToInnerWorldEntity } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,

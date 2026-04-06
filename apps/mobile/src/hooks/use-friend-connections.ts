@@ -1,7 +1,7 @@
 import { trpc } from "@pluralscape/api-client/trpc";
 
 import { useAuth } from "../auth/index.js";
-import { rowToFriendConnection } from "../data/row-transforms.js";
+import { rowToFriendConnection } from "../data/row-transforms/index.js";
 
 import {
   useOfflineFirstQuery,
