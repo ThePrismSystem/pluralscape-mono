@@ -137,22 +137,26 @@ Epics:
 - ~~tRPC parity enforcement~~ [COMPLETED] — CI script verifying 1:1 REST ↔ tRPC coverage across routes, input validation, and rate limiting; parity audit and remediation of missing procedures (delete, auth, input validation gaps)
 - ~~API documentation~~ [COMPLETED] — API consumer guide (authentication, encryption lifecycle, REST conventions, tRPC setup, sync protocol, error handling), tRPC consumer guide for mobile developers, OpenAPI expanded to 304 operations across 31 route domains
 
-## Milestone 8: App Foundation & Data Layer
+## Milestone 8: App Foundation & Data Layer [COMPLETED]
 
 Goal: App skeleton, navigation infrastructure, provider tree, and the complete data interaction layer — every React Query hook, auth flow, encryption pipeline, sync client, and offline queue needed to power the client app.
 
 Epics:
 
-- App shell & navigation
-- Provider tree & auth flow
-- Sync & offline client
-- Identity data hooks
-- Fronting data hooks
-- Communication data hooks
-- Social data hooks
-- Structure & journaling data hooks
-- Utility data hooks
-- Web platform data adapter
+- ~~App shell & navigation~~ [COMPLETED] — Expo Router layout with `(auth)` and `(app)/(tabs)` route groups, tab bar, stack navigators, deep link config, auth-gated routing
+- ~~Provider tree & auth flow~~ [COMPLETED] — layered provider initialization (Platform, I18n, QueryClient, tRPC, REST, Auth, System, Crypto, BucketKey, DataLayer, Connection, Sync), auth state machine (unauthenticated/unlocked/locked), TokenStore with platform-aware secure storage, SessionRefreshService, BiometricKeyStore
+- ~~Data package~~ [COMPLETED] — `@pluralscape/data` framework-agnostic client data layer: REST query factory, CRDT sync bridge, per-entity row transforms and crypto transforms across all domains
+- ~~Sync & offline client~~ [COMPLETED] — CRDT sync engine integration, WebSocket client, SSE notification client, offline queue with replay, connection state machine with exponential backoff
+- ~~Local data layer & search~~ [COMPLETED] — SQLite local database (WAL mode), materializer DDL, FriendIndexer, QueryInvalidator bridging sync events to React Query, FTS5 full-text search for system and friend data
+- ~~Identity data hooks~~ [COMPLETED] — members, groups/folders, custom fields, custom fronts, system settings with `useOfflineFirstQuery`/`useOfflineFirstInfiniteQuery` factory pattern
+- ~~Fronting data hooks~~ [COMPLETED] — fronting sessions (co-fronting as parallel timelines), analytics, timers, check-ins, comments
+- ~~Communication data hooks~~ [COMPLETED] — channels/messages, board messages, notes, polls with voting, acknowledgements with mandatory confirmation
+- ~~Social data hooks~~ [COMPLETED] — privacy buckets, friend network, device tokens, notification configs, dashboard, friend search with ETag caching, BucketKeyProvider
+- ~~Structure & journaling data hooks~~ [COMPLETED] — inner world (regions, entities, canvas), journal entries/snapshots, structure entities/links/types
+- ~~Utility data hooks~~ [COMPLETED] — audit log, media upload/download, lifecycle events, API keys, search, account management
+- ~~Web platform data adapter~~ [COMPLETED] — platform detection (native vs web), ExpoSqlite (mobile), OPFS SQLite (modern web), IndexedDB (fallback), crypto adapters (React Native vs WASM)
+- ~~CRDT sync entity coverage~~ [COMPLETED] — all document types mapped to sync strategies with materializer registration tests
+- ~~M8 audit remediation~~ [COMPLETED] — P1 + P2 remediation across hook factories, security (plaintext zeroing, error sanitization), missing hooks, observer overhead documentation, bug fixes
 
 ## Milestone 9: UI/UX Design
 
