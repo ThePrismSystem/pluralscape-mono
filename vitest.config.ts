@@ -192,7 +192,7 @@ export default defineConfig({
         // mobile: config depends on expo-constants — mocked in tests but not coverable
         "apps/mobile/src/config.ts",
       ],
-      reporter: ["text", "lcov", "html"],
+      reporter: ["text", "json-summary", "lcov", "html"],
       reportsDirectory: "./coverage",
       // packages/db has only integration tests currently; unit coverage
       // will be enforced when db schema code (db-2je4) is added
