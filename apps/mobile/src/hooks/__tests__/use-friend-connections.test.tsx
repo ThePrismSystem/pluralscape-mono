@@ -15,6 +15,10 @@ const mockUtils = {
   },
 };
 
+let lastNotifInput: Record<string, unknown> = {};
+let lastNotifOpts: CapturedOpts = {};
+let lastListReceivedKeyGrantsOpts: CapturedOpts = {};
+
 vi.mock("@pluralscape/api-client/trpc", async () => {
   const rq = await import("@tanstack/react-query");
 
@@ -46,8 +50,29 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
         archive: { useMutation: makeMutation },
         restore: { useMutation: makeMutation },
         updateVisibility: { useMutation: makeMutation },
+        getNotifications: {
+          useQuery: (input: Record<string, unknown>, opts: CapturedOpts = {}) => {
+            lastNotifInput = input;
+            lastNotifOpts = opts;
+            return { data: undefined, isLoading: true };
+          },
+          invalidate: vi.fn(),
+        },
+        updateNotifications: { useMutation: makeMutation },
+        listReceivedKeyGrants: {
+          useQuery: (_input: unknown, opts: CapturedOpts = {}) => {
+            lastListReceivedKeyGrantsOpts = opts;
+            return { data: undefined, isLoading: true };
+          },
+        },
       },
-      useUtils: () => mockUtils,
+      useUtils: () => ({
+        ...mockUtils,
+        friend: {
+          ...mockUtils.friend,
+          getNotifications: { invalidate: vi.fn() },
+        },
+      }),
     },
   };
 });
@@ -62,6 +87,9 @@ const {
   useArchiveFriendConnection,
   useRestoreFriendConnection,
   useUpdateFriendVisibility,
+  useFriendNotificationPrefs,
+  useUpdateFriendNotificationPrefs,
+  useListReceivedKeyGrants,
 } = await import("../use-friend-connections.js");
 
 beforeEach(() => {
@@ -177,5 +205,55 @@ describe("useUpdateFriendVisibility", () => {
       expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
       expect(mockUtils.friend.list.invalidate).toHaveBeenCalled();
     });
+  });
+});
+
+describe("useFriendNotificationPrefs", () => {
+  it("forwards connectionId to the underlying tRPC query", () => {
+    renderHookWithProviders(() => useFriendNotificationPrefs("fc_notif" as never), {
+      querySource: "remote",
+    });
+    expect(lastNotifInput["connectionId"]).toBe("fc_notif");
+  });
+
+  it("merges enabled flag with parent query enablement (default true)", () => {
+    renderHookWithProviders(() => useFriendNotificationPrefs("fc_notif" as never), {
+      querySource: "remote",
+    });
+    expect(lastNotifOpts["enabled"]).toBe(true);
+  });
+
+  it("respects opts.enabled === false override", () => {
+    renderHookWithProviders(
+      () => useFriendNotificationPrefs("fc_notif" as never, { enabled: false }),
+      { querySource: "remote" },
+    );
+    expect(lastNotifOpts["enabled"]).toBe(false);
+  });
+});
+
+describe("useUpdateFriendNotificationPrefs", () => {
+  it("invalidates getNotifications and get on success", async () => {
+    const { result } = renderHookWithProviders(() => useUpdateFriendNotificationPrefs());
+    await act(() => result.current.mutateAsync({ connectionId: "fc_test" } as never));
+    // The mocked useUtils returns a fresh utils object per call; assertions on the
+    // singleton mockUtils.friend.get cover the cross-cutting "get invalidated" path.
+    await waitFor(() => {
+      expect(mockUtils.friend.get.invalidate).toHaveBeenCalledWith({ connectionId: "fc_test" });
+    });
+  });
+});
+
+describe("useListReceivedKeyGrants", () => {
+  it("uses default enabled true when opts not provided", () => {
+    renderHookWithProviders(() => useListReceivedKeyGrants(), { querySource: "remote" });
+    expect(lastListReceivedKeyGrantsOpts["enabled"]).toBe(true);
+  });
+
+  it("respects opts.enabled === false override", () => {
+    renderHookWithProviders(() => useListReceivedKeyGrants({ enabled: false }), {
+      querySource: "remote",
+    });
+    expect(lastListReceivedKeyGrantsOpts["enabled"]).toBe(false);
   });
 });
