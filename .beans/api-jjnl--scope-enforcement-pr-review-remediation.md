@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-04-06T21:03:11Z
-updated_at: 2026-04-06T21:43:23Z
+updated_at: 2026-04-07T01:01:58Z
 ---
 
 Fix critical/important issues and implement suggestions from PR review of scope enforcement
@@ -28,3 +28,15 @@ Fix critical/important issues and implement suggestions from PR review of scope 
 - Split UNAUTHORIZED (missing auth) from FORBIDDEN (insufficient scope) in tRPC middleware
 - Added 6 Hono middleware unit tests, 6 tRPC middleware unit tests, 8 integration tests
 - Extracted `findNearestMiddleware` generic function in parity script (-40 lines)
+
+## Round 2 Remediation (PR review fixes)
+
+- Fixed 3 REST/tRPC scope tier mismatches (delete:X → write:X for relationship modifications)
+- Removed GET/POST /systems from REST registry (session-only, matches tRPC exclusions)
+- Removed dead scope parity parsing from trpc-parity-lib.ts (151 lines of unused regex logic)
+- Removed dead mockScopeFactory and vi.mock scope lines from 152 test files
+- Tightened splitScope return type to [ScopeTier, ScopeDomain | "audit-log"], removed as ApiKeyScope casts
+- Removed unused "friends" scope domain from SCOPE_DOMAINS
+- Added duplicate-key detection in buildRegistry()
+- Added aggregate scope tests for tRPC scope gate
+- Added security invariant comment on tRPC !ctx.auth bypass
