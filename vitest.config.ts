@@ -191,8 +191,6 @@ export default defineConfig({
         // mobile: type-only files
         "apps/mobile/src/auth/auth-types.ts",
         "apps/mobile/src/platform/types.ts",
-        // mobile: config depends on expo-constants — mocked in tests but not coverable
-        "apps/mobile/src/config.ts",
       ],
       reporter: ["text", "json-summary", "lcov", "html"],
       reportsDirectory: "./coverage",
