@@ -110,7 +110,7 @@ describe("enum arrays", () => {
   });
 
   it("API_KEY_SCOPES matches ApiKeyScope union", () => {
-    expect(API_KEY_SCOPES).toHaveLength(71);
+    expect(API_KEY_SCOPES).toHaveLength(68);
     expect(API_KEY_SCOPES).toContain("read:members");
     expect(API_KEY_SCOPES).toContain("write:members");
     expect(API_KEY_SCOPES).toContain("delete:members");
@@ -305,7 +305,7 @@ describe("enum arrays", () => {
     expect(SYNC_DOC_TYPES).toHaveLength(7);
     expect(SYNC_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
-    expect(API_KEY_SCOPES).toHaveLength(71);
+    expect(API_KEY_SCOPES).toHaveLength(68);
     expect(AUDIT_EVENT_TYPES).toHaveLength(214);
     expect(CHANNEL_TYPES).toHaveLength(2);
     expect(POLL_STATUSES).toHaveLength(2);

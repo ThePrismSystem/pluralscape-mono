@@ -24,7 +24,6 @@ export const SCOPE_DOMAINS = [
   "lifecycle-events",
   "timers",
   "buckets",
-  "friends",
 ] as const;
 
 /** A scope domain — the entity group a scope applies to. */
