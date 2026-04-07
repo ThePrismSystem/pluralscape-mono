@@ -276,5 +276,39 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
       );
       expect(Number(sessionsAfter.rows[0]?.count)).toBe(1);
     });
+
+    it("throws DecryptionFailedError when recovery key is wrong (leaves crypto vars undefined in finally)", async () => {
+      const { email } = await registerTestAccount();
+      const newPassword = `NewP@ss!${crypto.randomUUID()}`;
+      // Use a syntactically valid but wrong recovery key — decryption will fail
+      const wrongRecoveryKey = "AAAA-BBBB-CCCC-DDDD-EEEE-FFFF-GGGG-HHHH-IIII-JJJJ-KKKK-LLLL-MMMM";
+
+      await expect(
+        resetPasswordWithRecoveryKey(
+          asDb(db),
+          { email, recoveryKey: wrongRecoveryKey, newPassword },
+          "web",
+          noopAudit,
+          mockLogger,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("creates a new session with mobile platform timeouts", async () => {
+      const { email, recoveryKey } = await registerTestAccount();
+      const newPassword = `NewP@ss!${crypto.randomUUID()}`;
+
+      const result = await resetPasswordWithRecoveryKey(
+        asDb(db),
+        { email, recoveryKey, newPassword },
+        "mobile",
+        noopAudit,
+        mockLogger,
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.sessionToken).toBeTruthy();
+      expect(result?.accountId).toMatch(/^acct_/);
+    });
   });
 });
