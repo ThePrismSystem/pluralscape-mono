@@ -348,6 +348,103 @@ describe("encryptFieldValueInput", () => {
   });
 });
 
+// ── Validation branches for encrypted blob assertions ─────────────────
+
+describe("assertFieldDefinitionEncryptedFields branches (via decryptFieldDefinition)", () => {
+  it("throws when decrypted blob is null", () => {
+    const raw = { ...BASE_DEFINITION_RESULT, encryptedData: makeBase64Blob(null, masterKey) };
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(/not an object/i);
+  });
+
+  it("throws when decrypted blob is a primitive (string)", () => {
+    const raw = {
+      ...BASE_DEFINITION_RESULT,
+      encryptedData: makeBase64Blob("just a string", masterKey),
+    };
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(/not an object/i);
+  });
+
+  it("throws when name is not a string", () => {
+    const raw = {
+      ...BASE_DEFINITION_RESULT,
+      encryptedData: makeBase64Blob({ name: 42, description: null, options: null }, masterKey),
+    };
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(
+      /missing required string field: name/,
+    );
+  });
+
+  it("throws when description is neither null nor a string", () => {
+    const raw = {
+      ...BASE_DEFINITION_RESULT,
+      encryptedData: makeBase64Blob({ name: "X", description: 5, options: null }, masterKey),
+    };
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(
+      /description must be string or null/,
+    );
+  });
+
+  it("throws when options is not an array", () => {
+    const raw = {
+      ...BASE_DEFINITION_RESULT,
+      encryptedData: makeBase64Blob(
+        { name: "X", description: null, options: "not-an-array" },
+        masterKey,
+      ),
+    };
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(
+      /options must be string\[\] or null/,
+    );
+  });
+
+  it("throws when one of the options is not a string", () => {
+    const raw = {
+      ...BASE_DEFINITION_RESULT,
+      encryptedData: makeBase64Blob(
+        { name: "X", description: null, options: ["valid", 42] },
+        masterKey,
+      ),
+    };
+    expect(() => decryptFieldDefinition(raw, masterKey)).toThrow(/each option must be a string/);
+  });
+});
+
+describe("assertFieldValueUnion branches (via decryptFieldValue)", () => {
+  it("throws when decrypted blob is null", () => {
+    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(null, masterKey) };
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/not an object/i);
+  });
+
+  it("throws when decrypted blob is a primitive", () => {
+    const raw = { ...BASE_VALUE_RESULT, encryptedData: makeBase64Blob(123, masterKey) };
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/not an object/i);
+  });
+
+  it("throws when fieldType is not a string", () => {
+    const raw = {
+      ...BASE_VALUE_RESULT,
+      encryptedData: makeBase64Blob({ fieldType: 42, value: "x" }, masterKey),
+    };
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/invalid fieldType/);
+  });
+
+  it("throws when fieldType is a string but not in the allowed set", () => {
+    const raw = {
+      ...BASE_VALUE_RESULT,
+      encryptedData: makeBase64Blob({ fieldType: "bogus", value: "x" }, masterKey),
+    };
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/invalid fieldType: bogus/);
+  });
+
+  it("throws when value field is missing entirely", () => {
+    const raw = {
+      ...BASE_VALUE_RESULT,
+      encryptedData: makeBase64Blob({ fieldType: "text" }, masterKey),
+    };
+    expect(() => decryptFieldValue(raw, masterKey)).toThrow(/missing required field: value/);
+  });
+});
+
 // ── FieldValueDecrypted type guard ────────────────────────────────────
 
 describe("FieldValueDecrypted shape", () => {
