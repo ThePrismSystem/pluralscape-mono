@@ -1270,3 +1270,511 @@ describe("row transform error handling", () => {
     });
   });
 });
+
+// ── communication.ts functions not previously covered ───────────────────────
+
+describe("rowToChannel", () => {
+  function baseChannelRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "chan-1",
+      system_id: "sys-1",
+      name: "general",
+      type: "text",
+      parent_id: null,
+      sort_order: 0,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("maps a non-archived channel row", () => {
+    const result = rowToChannel(baseChannelRow());
+    expect(result.id).toBe("chan-1");
+    expect(result.systemId).toBe("sys-1");
+    expect(result.name).toBe("general");
+    expect(result.type).toBe("text");
+    expect(result.parentId).toBeNull();
+    expect(result.sortOrder).toBe(0);
+    expect(result.archived).toBe(false);
+    expect(result.version).toBe(0);
+  });
+
+  it("returns archived channel when archived = 1", () => {
+    const result = rowToChannel(baseChannelRow({ archived: 1, updated_at: 1_700_000_999_000 }));
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_999_000);
+    }
+  });
+
+  it("populates parentId when present", () => {
+    const result = rowToChannel(baseChannelRow({ parent_id: "chan-parent" }));
+    expect(result.parentId).toBe("chan-parent");
+  });
+});
+
+describe("rowToMessage edge branches", () => {
+  it("falls back to created_at when updated_at is missing", () => {
+    const row: Record<string, unknown> = {
+      id: "msg-fallback",
+      channel_id: "chan-1",
+      system_id: "sys-1",
+      sender_id: "mem-1",
+      content: "Hi",
+      attachments: "[]",
+      mentions: "[]",
+      reply_to_id: null,
+      timestamp: 1_700_000_000_000,
+      edited_at: null,
+      archived: 0,
+      created_at: 1_700_000_111_000,
+      updated_at: null,
+    };
+    const result = rowToMessage(row);
+    expect(result.updatedAt).toBe(1_700_000_111_000);
+  });
+
+  it("returns archived message when archived = 1", () => {
+    const row: Record<string, unknown> = {
+      id: "msg-arch",
+      channel_id: "chan-1",
+      system_id: "sys-1",
+      sender_id: "mem-1",
+      content: "old",
+      attachments: "[]",
+      mentions: "[]",
+      reply_to_id: null,
+      timestamp: 1_700_000_000_000,
+      edited_at: 1_700_000_000_500,
+      archived: 1,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_222_000,
+    };
+    const result = rowToMessage(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_222_000);
+    }
+  });
+
+  it("populates replyToId when present", () => {
+    const row: Record<string, unknown> = {
+      id: "msg-reply",
+      channel_id: "chan-1",
+      system_id: "sys-1",
+      sender_id: "mem-1",
+      content: "Yes",
+      attachments: "[]",
+      mentions: "[]",
+      reply_to_id: "msg-original",
+      timestamp: 1_700_000_000_000,
+      edited_at: null,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+    };
+    const result = rowToMessage(row);
+    expect(result.replyToId).toBe("msg-original");
+  });
+});
+
+describe("rowToBoardMessage", () => {
+  function baseBoardRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "bm-1",
+      system_id: "sys-1",
+      sender_id: "mem-1",
+      content: "Welcome",
+      pinned: 0,
+      sort_order: 0,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("maps a non-archived board message row", () => {
+    const result = rowToBoardMessage(baseBoardRow());
+    expect(result.id).toBe("bm-1");
+    expect(result.systemId).toBe("sys-1");
+    expect(result.senderId).toBe("mem-1");
+    expect(result.content).toBe("Welcome");
+    expect(result.pinned).toBe(false);
+    expect(result.sortOrder).toBe(0);
+    expect(result.archived).toBe(false);
+  });
+
+  it("returns archived board message when archived = 1", () => {
+    const result = rowToBoardMessage(
+      baseBoardRow({ archived: 1, updated_at: 1_700_000_555_000, pinned: 1 }),
+    );
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_555_000);
+      expect(result.pinned).toBe(true);
+    }
+  });
+});
+
+describe("rowToPoll", () => {
+  function basePollRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "poll-1",
+      system_id: "sys-1",
+      created_by_member_id: "mem-1",
+      title: "What's for dinner?",
+      description: "Help us decide",
+      kind: "single",
+      status: "open",
+      closed_at: null,
+      ends_at: null,
+      allow_multiple_votes: 0,
+      max_votes_per_member: 1,
+      allow_abstain: 0,
+      allow_veto: 0,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("maps a non-archived poll row", () => {
+    const result = rowToPoll(basePollRow());
+    expect(result.id).toBe("poll-1");
+    expect(result.title).toBe("What's for dinner?");
+    expect(result.description).toBe("Help us decide");
+    expect(result.kind).toBe("single");
+    expect(result.status).toBe("open");
+    expect(result.closedAt).toBeNull();
+    expect(result.endsAt).toBeNull();
+    expect(result.allowMultipleVotes).toBe(false);
+    expect(result.maxVotesPerMember).toBe(1);
+    expect(result.allowAbstain).toBe(false);
+    expect(result.allowVeto).toBe(false);
+    expect(result.archived).toBe(false);
+  });
+
+  it("supports nullable description and bool flags = 1", () => {
+    const result = rowToPoll(
+      basePollRow({
+        description: null,
+        allow_multiple_votes: 1,
+        allow_abstain: 1,
+        allow_veto: 1,
+      }),
+    );
+    expect(result.description).toBeNull();
+    expect(result.allowMultipleVotes).toBe(true);
+    expect(result.allowAbstain).toBe(true);
+    expect(result.allowVeto).toBe(true);
+  });
+
+  it("returns archived poll when archived = 1", () => {
+    const result = rowToPoll(
+      basePollRow({ archived: 1, updated_at: 1_700_000_777_000, status: "closed" }),
+    );
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_777_000);
+    }
+  });
+
+  it("preserves closedAt and endsAt timestamps", () => {
+    const result = rowToPoll(
+      basePollRow({
+        closed_at: 1_700_000_001_000,
+        ends_at: 1_700_000_002_000,
+      }),
+    );
+    expect(result.closedAt).toBe(1_700_000_001_000);
+    expect(result.endsAt).toBe(1_700_000_002_000);
+  });
+});
+
+describe("rowToAcknowledgement", () => {
+  function baseAckRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "ack-1",
+      system_id: "sys-1",
+      created_by_member_id: "mem-1",
+      target_member_id: "mem-2",
+      message: "Please acknowledge",
+      confirmed: 0,
+      confirmed_at: null,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("maps a non-archived unconfirmed acknowledgement row", () => {
+    const result = rowToAcknowledgement(baseAckRow());
+    expect(result.id).toBe("ack-1");
+    expect(result.createdByMemberId).toBe("mem-1");
+    expect(result.targetMemberId).toBe("mem-2");
+    expect(result.confirmed).toBe(false);
+    expect(result.confirmedAt).toBeNull();
+    expect(result.archived).toBe(false);
+  });
+
+  it("captures confirmedAt when confirmed = 1", () => {
+    const result = rowToAcknowledgement(
+      baseAckRow({ confirmed: 1, confirmed_at: 1_700_000_001_000 }),
+    );
+    expect(result.confirmed).toBe(true);
+    expect(result.confirmedAt).toBe(1_700_000_001_000);
+  });
+
+  it("returns archived acknowledgement when archived = 1", () => {
+    const result = rowToAcknowledgement(baseAckRow({ archived: 1, updated_at: 1_700_000_888_000 }));
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_888_000);
+    }
+  });
+});
+
+describe("rowToWikiPage", () => {
+  function baseWikiRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "wiki-1",
+      system_id: "sys-1",
+      title: "Welcome",
+      slug: "welcome",
+      blocks: '[{"type":"paragraph","text":"Hi"}]',
+      linked_from_pages: '["wiki-2"]',
+      tags: '["intro"]',
+      linked_entities: "[]",
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("maps a non-archived wiki page row", () => {
+    const result = rowToWikiPage(baseWikiRow());
+    expect(result.id).toBe("wiki-1");
+    expect(result.title).toBe("Welcome");
+    expect(result.slug).toBe("welcome");
+    expect(result.blocks).toEqual([{ type: "paragraph", text: "Hi" }]);
+    expect(result.linkedFromPages).toEqual(["wiki-2"]);
+    expect(result.tags).toEqual(["intro"]);
+    expect(result.linkedEntities).toEqual([]);
+    expect(result.archived).toBe(false);
+  });
+
+  it("returns archived wiki page when archived = 1", () => {
+    const result = rowToWikiPage(baseWikiRow({ archived: 1, updated_at: 1_700_000_333_000 }));
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_333_000);
+    }
+  });
+});
+
+describe("rowToNote", () => {
+  function baseNoteRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "note-1",
+      system_id: "sys-1",
+      author_entity_type: "member",
+      author_entity_id: "mem-1",
+      title: "My Note",
+      content: "Some content",
+      background_color: null,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("maps a non-archived note row", () => {
+    const result = rowToNote(baseNoteRow());
+    expect(result.id).toBe("note-1");
+    expect(result.systemId).toBe("sys-1");
+    expect(result.authorEntityType).toBe("member");
+    expect(result.authorEntityId).toBe("mem-1");
+    expect(result.title).toBe("My Note");
+    expect(result.content).toBe("Some content");
+    expect(result.backgroundColor).toBeNull();
+    expect(result.archived).toBe(false);
+  });
+
+  it("returns archived note when archived = 1", () => {
+    const result = rowToNote(baseNoteRow({ archived: 1, updated_at: 1_700_000_444_000 }));
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_444_000);
+    }
+  });
+
+  it("supports null author fields", () => {
+    const result = rowToNote(baseNoteRow({ author_entity_type: null, author_entity_id: null }));
+    expect(result.authorEntityType).toBeNull();
+    expect(result.authorEntityId).toBeNull();
+  });
+
+  it("populates backgroundColor when provided", () => {
+    const result = rowToNote(baseNoteRow({ background_color: "yellow" }));
+    expect(result.backgroundColor).toBe("yellow");
+  });
+});
+
+describe("rowToInnerWorldEntity entity-type branches", () => {
+  function baseEntityRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: "iwe-x",
+      system_id: "sys-1",
+      entity_type: "member",
+      position_x: 0,
+      position_y: 0,
+      visual:
+        '{"color":null,"icon":null,"size":null,"opacity":null,"imageSource":null,"externalUrl":null}',
+      region_id: null,
+      linked_member_id: "mem-1",
+      linked_structure_entity_id: null,
+      name: null,
+      description: null,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("maps a landmark entity with name and description", () => {
+    const row = baseEntityRow({
+      entity_type: "landmark",
+      linked_member_id: null,
+      name: "Old Oak",
+      description: "Ancient tree at the center",
+    });
+    const result = rowToInnerWorldEntity(row);
+    expect(result.entityType).toBe("landmark");
+    if (result.entityType === "landmark") {
+      expect(result.name).toBe("Old Oak");
+      expect(result.description).toBe("Ancient tree at the center");
+    }
+  });
+
+  it("falls back to empty name when landmark name is null", () => {
+    const row = baseEntityRow({
+      entity_type: "landmark",
+      linked_member_id: null,
+      name: null,
+    });
+    const result = rowToInnerWorldEntity(row);
+    expect(result.entityType).toBe("landmark");
+    if (result.entityType === "landmark") {
+      expect(result.name).toBe("");
+    }
+  });
+
+  it("returns archived landmark when archived = 1", () => {
+    const row = baseEntityRow({
+      entity_type: "landmark",
+      linked_member_id: null,
+      name: "Old Oak",
+      archived: 1,
+      updated_at: 1_700_000_999_000,
+    });
+    const result = rowToInnerWorldEntity(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_999_000);
+    }
+  });
+
+  it("maps a structure-entity link", () => {
+    const row = baseEntityRow({
+      entity_type: "structure-entity",
+      linked_member_id: null,
+      linked_structure_entity_id: "se-42",
+    });
+    const result = rowToInnerWorldEntity(row);
+    expect(result.entityType).toBe("structure-entity");
+    if (result.entityType === "structure-entity") {
+      expect(result.linkedStructureEntityId).toBe("se-42");
+    }
+  });
+
+  it("returns archived structure-entity when archived = 1", () => {
+    const row = baseEntityRow({
+      entity_type: "structure-entity",
+      linked_member_id: null,
+      linked_structure_entity_id: "se-42",
+      archived: 1,
+      updated_at: 1_700_000_777_000,
+    });
+    const result = rowToInnerWorldEntity(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_777_000);
+    }
+  });
+
+  it("returns archived member entity when archived = 1", () => {
+    const row = baseEntityRow({ archived: 1, updated_at: 1_700_000_555_000 });
+    const result = rowToInnerWorldEntity(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_555_000);
+    }
+  });
+});
+
+describe("rowToInnerWorldRegion archived branch", () => {
+  it("returns archived region when archived = 1", () => {
+    const row: Record<string, unknown> = {
+      id: "iwr-arch",
+      system_id: "sys-1",
+      name: "Old Forest",
+      description: null,
+      parent_region_id: null,
+      visual:
+        '{"color":null,"icon":null,"size":null,"opacity":null,"imageSource":null,"externalUrl":null}',
+      boundary_data: "[]",
+      access_type: "open",
+      gatekeeper_member_ids: "[]",
+      archived: 1,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_111_000,
+    };
+    const result = rowToInnerWorldRegion(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_111_000);
+    }
+  });
+});
+
+describe("rowToJournalEntry edge branches", () => {
+  it("returns archived journal entry when archived = 1", () => {
+    const row: Record<string, unknown> = {
+      id: "je-arch",
+      system_id: "sys-1",
+      author: "mem-1",
+      fronting_session_id: "fs-1",
+      title: "Archived entry",
+      blocks: "[]",
+      tags: "[]",
+      linked_entities: "[]",
+      fronting_snapshots: '[{"memberId":"mem-1"}]',
+      archived: 1,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_666_000,
+    };
+    const result = rowToJournalEntry(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_666_000);
+    }
+  });
+});
