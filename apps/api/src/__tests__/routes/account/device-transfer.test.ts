@@ -39,7 +39,6 @@ vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const {

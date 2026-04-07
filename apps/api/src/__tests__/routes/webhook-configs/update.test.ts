@@ -20,7 +20,6 @@ vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { updateWebhookConfig } = await import("../../../services/webhook-config.service.js");

@@ -26,7 +26,6 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
-
 // Also mock services used by other account routes to prevent import errors
 vi.mock("../../../services/account.service.js", () => ({
   getAccountInfo: vi.fn(),

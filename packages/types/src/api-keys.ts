@@ -1,4 +1,5 @@
 import type { ApiKeyId, Brand, BucketId, SystemId } from "./ids.js";
+import type { ScopeDomain, ScopeTier } from "./scope-domains.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -10,21 +11,11 @@ export const API_KEY_TOKEN_PREFIX = "ps_";
 
 /** Scopes an API key can be granted. */
 export type ApiKeyScope =
-  | "read:members"
-  | "write:members"
-  | "read:fronting"
-  | "write:fronting"
-  | "read:groups"
-  | "write:groups"
-  | "read:system"
-  | "write:system"
-  | "read:webhooks"
-  | "write:webhooks"
+  | `${ScopeTier}:${ScopeDomain}`
   | "read:audit-log"
-  | "read:blobs"
-  | "write:blobs"
-  | "read:notifications"
-  | "write:notifications"
+  | "read-all"
+  | "write-all"
+  | "delete-all"
   | "full";
 
 /** A metadata-only API key (no crypto key material). */

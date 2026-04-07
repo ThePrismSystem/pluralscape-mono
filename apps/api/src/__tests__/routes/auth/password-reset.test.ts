@@ -41,7 +41,6 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   ...mockRateLimitFactory(),
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const {

@@ -23,7 +23,6 @@ vi.mock("../../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { updateRegion } = await import("../../../../services/innerworld-region.service.js");

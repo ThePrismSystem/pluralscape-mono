@@ -35,7 +35,6 @@ vi.mock("../../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { updateFriendVisibility } =

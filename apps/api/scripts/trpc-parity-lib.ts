@@ -432,34 +432,33 @@ export function walkRouteTree(
 }
 
 /**
- * Find the rate limit category that applies to a route at the given position.
+ * Generic middleware value resolver for a route at the given position.
  *
  * Strategy:
  * 1. Find which Hono variable the route handler belongs to.
  * 2. Extract the path from the route handler (e.g. "/manifest").
- * 3. Look for rate limiters on the same Hono variable:
- *    a. Path-specific .use("/path", limiter) that matches the route path.
- *    b. Wildcard .use("*", limiter) on the same variable.
- *    c. Inline middleware on the route handler itself.
- * 4. Fall back to the file-level (first) rate limiter.
+ * 3. Look for middleware on the same Hono variable:
+ *    a. Inline middleware on the route handler itself.
+ *    b. Path-specific .use("/path", middleware) that matches the route path.
+ *    c. Wildcard .use("*", middleware) on the same variable.
+ *    d. Any middleware on the same Hono variable.
+ * 4. Fall back to the file-level (first) middleware value.
  */
-function findNearestCategory(
+function findNearestMiddleware(
   routeIndex: number,
-  positions: Array<{ index: number; category: string }>,
+  positions: Array<{ index: number; value: string }>,
   fallback: string | null,
   source: string,
+  inlinePattern: RegExp,
+  useCallPattern: (routeVar: string) => RegExp,
 ): string | null {
   if (positions.length === 0) return fallback;
-  if (positions.length === 1) return positions[0]?.category ?? fallback;
+  if (positions.length === 1) return positions[0]?.value ?? fallback;
 
-  // Find which Hono variable this route belongs to
-  // routeIndex points to the "." before the method name, so beforeRoute
-  // ends with the variable name (e.g. "recoveryKeyRoutes")
   const beforeRoute = source.slice(0, routeIndex);
   const routeVarMatch = /(\w+)\s*$/.exec(beforeRoute);
   const routeVar = routeVarMatch?.[1];
 
-  // Extract the route path from the handler (e.g. .get("/manifest", ...))
   const routeHandlerSnippet = source.slice(routeIndex, routeIndex + 200);
   const routePathMatch = /^\.\s*(?:get|post|put|delete|patch)\(\s*["'](\/[^"']*?)["']/.exec(
     routeHandlerSnippet,
@@ -467,55 +466,69 @@ function findNearestCategory(
   const routePath = routePathMatch?.[1] ?? "/";
 
   if (!routeVar) {
-    // Can't determine variable — use the closest rate limiter before this route
     let nearest: string | null = fallback;
     for (const pos of positions) {
-      if (pos.index < routeIndex) nearest = pos.category;
+      if (pos.index < routeIndex) nearest = pos.value;
     }
     return nearest;
   }
 
   // Check for inline middleware on the route handler itself
-  // e.g. .post("/regenerate", createCategoryRateLimiter("authHeavy"), ...)
-  // Only match within the same statement (stop at `async` or semicolons) to
-  // avoid bleeding into subsequent Hono variable declarations.
   const inlineSnippet = source.slice(routeIndex, routeIndex + 500);
-  const inlineLimiterMatch =
-    /^\.(?:get|post|put|delete|patch)\([^;]*?createCategoryRateLimiter\(\s*["']([^"']+)["']/.exec(
-      inlineSnippet,
-    );
-  if (inlineLimiterMatch?.[1]) return inlineLimiterMatch[1];
+  const inlineMatch = inlinePattern.exec(inlineSnippet);
+  if (inlineMatch?.[1]) return inlineMatch[1];
 
-  // Look for path-specific .use() calls on the same variable that match the route path
-  const usePattern = new RegExp(
-    `${routeVar}\\.use\\(\\s*["']([^"']+)["']\\s*,\\s*createCategoryRateLimiter\\(\\s*["']([^"']+)["']`,
-    "g",
-  );
+  // Look for path-specific .use() calls on the same variable
+  const usePattern = useCallPattern(routeVar);
   let bestMatch: string | null = null;
   for (const useMatch of execAllMatches(usePattern, source)) {
     const usePath = useMatch[1];
-    const useCategory = useMatch[2];
-    if (usePath === undefined || useCategory === undefined) continue;
+    const useValue = useMatch[2];
+    if (usePath === undefined || useValue === undefined) continue;
 
     if (usePath === routePath) {
-      return useCategory; // Exact path match
+      return useValue;
     }
     if (usePath === "*") {
-      bestMatch = useCategory; // Wildcard match (lower priority)
+      bestMatch = useValue;
     }
   }
 
   if (bestMatch) return bestMatch;
 
-  // Fall back: find rate limiters on the same Hono variable (any path)
+  // Fall back: find middleware on the same Hono variable
   for (const pos of positions) {
     const context = source.slice(Math.max(0, pos.index - 200), pos.index);
     if (context.includes(routeVar)) {
-      return pos.category;
+      return pos.value;
     }
   }
 
   return fallback;
+}
+
+/** Inline regex for createCategoryRateLimiter on a route handler. */
+const INLINE_RATE_LIMIT_PATTERN =
+  /^\.(?:get|post|put|delete|patch)\([^;]*?createCategoryRateLimiter\(\s*["']([^"']+)["']/;
+
+function findNearestCategory(
+  routeIndex: number,
+  positions: Array<{ index: number; category: string }>,
+  fallback: string | null,
+  source: string,
+): string | null {
+  return findNearestMiddleware(
+    routeIndex,
+    positions.map((p) => ({ index: p.index, value: p.category })),
+    fallback,
+    source,
+    INLINE_RATE_LIMIT_PATTERN,
+    (routeVar) =>
+      new RegExp(
+        `${routeVar}\\.use\\(\\s*["']([^"']+)["']\\s*,\\s*createCategoryRateLimiter\\(\\s*["']([^"']+)["']`,
+        "g",
+      ),
+  );
 }
 
 /**
@@ -1090,7 +1103,7 @@ export function runParityChecks(
       }
     }
 
-    // Check 5: Idempotency
+    // Check 4: Idempotency
     if (rest.hasIdempotency) {
       idempotencyChecked++;
       // tRPC doesn't have idempotency middleware yet — just report it

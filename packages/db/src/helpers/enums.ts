@@ -5,11 +5,11 @@
  */
 
 import {
+  ALL_API_KEY_SCOPES,
   BUCKET_CONTENT_ENTITY_TYPES,
   type AccountPurgeStatus,
   type AccountType,
   type ApiKey,
-  type ApiKeyScope,
   type AuditEventType,
   type AuthKeyType,
   type BlobPurpose,
@@ -130,24 +130,7 @@ export const API_KEY_KEY_TYPES = [
   "metadata",
   "crypto",
 ] as const satisfies readonly ApiKey["keyType"][];
-export const API_KEY_SCOPES = [
-  "read:members",
-  "write:members",
-  "read:fronting",
-  "write:fronting",
-  "read:groups",
-  "write:groups",
-  "read:system",
-  "write:system",
-  "read:webhooks",
-  "write:webhooks",
-  "read:audit-log",
-  "read:blobs",
-  "write:blobs",
-  "read:notifications",
-  "write:notifications",
-  "full",
-] as const satisfies readonly ApiKeyScope[];
+export { ALL_API_KEY_SCOPES as API_KEY_SCOPES };
 export const AUDIT_EVENT_TYPES = [
   "auth.register",
   "auth.login",

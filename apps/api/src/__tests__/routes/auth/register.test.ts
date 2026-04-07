@@ -27,7 +27,6 @@ vi.mock("../../../services/auth.service.js", () => ({
 vi.mock("../../../lib/db.js", () => mockDbFactory());
 
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");

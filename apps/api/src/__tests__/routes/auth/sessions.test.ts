@@ -52,7 +52,6 @@ vi.mock("../../../middleware/auth.js", () => ({
         },
     ),
 }));
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");

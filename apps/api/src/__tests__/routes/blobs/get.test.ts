@@ -33,7 +33,6 @@ vi.mock("../../../lib/storage.js", () => ({
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { getBlob } = await import("../../../services/blob.service.js");

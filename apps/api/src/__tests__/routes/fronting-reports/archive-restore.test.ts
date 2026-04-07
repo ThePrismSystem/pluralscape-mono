@@ -19,7 +19,6 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
 const { archiveFrontingReport, restoreFrontingReport } =
   await import("../../../services/fronting-report.service.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
