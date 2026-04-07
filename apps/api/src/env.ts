@@ -49,6 +49,13 @@ export const env = createEnv({
       .refine((v) => !isProduction || v !== undefined, {
         message: "WEBHOOK_PAYLOAD_ENCRYPTION_KEY is required in production",
       }),
+    API_KEY_HMAC_KEY: z
+      .string()
+      .regex(/^[0-9a-fA-F]{64}$/)
+      .optional()
+      .refine((v) => !isProduction || v !== undefined, {
+        message: "API_KEY_HMAC_KEY is required in production",
+      }),
     BLOB_STORAGE_S3_BUCKET: z.string().optional(),
     BLOB_STORAGE_S3_REGION: z.string().default("us-east-1"),
     BLOB_STORAGE_S3_ENDPOINT: z

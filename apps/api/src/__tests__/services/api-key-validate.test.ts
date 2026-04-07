@@ -156,7 +156,7 @@ describe("validateApiKey", () => {
     expect(result?.auditLogIpTracking).toBe(true);
   });
 
-  it("hashes token with SHA-256 for lookup", async () => {
+  it("hashes token with HMAC-SHA256 for lookup", async () => {
     mockChain.limit.mockResolvedValueOnce([makeValidRow()]);
 
     await validateApiKey(mockChain as never, TOKEN);

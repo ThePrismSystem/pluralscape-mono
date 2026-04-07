@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 import { accounts, apiKeys } from "@pluralscape/db/pg";
 import {
@@ -12,6 +12,7 @@ import {
 import { CreateApiKeyBodySchema } from "@pluralscape/validation";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 
+import { env } from "../env.js";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
@@ -37,6 +38,21 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Number of random bytes for API key token generation (32 bytes = 256-bit). */
 const API_KEY_TOKEN_BYTES = 32;
+
+/** Hex length of HMAC key (32 bytes = 64 hex characters). */
+const HMAC_KEY_HEX_LENGTH = 64;
+
+/**
+ * Deterministic fallback HMAC key for dev/test when API_KEY_HMAC_KEY is unset.
+ * In production, API_KEY_HMAC_KEY is required by env validation.
+ */
+const DEV_HMAC_KEY = "0".repeat(HMAC_KEY_HEX_LENGTH);
+
+/** HMAC-SHA256 hash of an API key token for storage and lookup. */
+function hashApiKeyToken(token: string): string {
+  const key = env.API_KEY_HMAC_KEY ?? DEV_HMAC_KEY;
+  return createHmac("sha256", key).update(token).digest("hex");
+}
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -104,11 +120,11 @@ function toApiKeyResult(row: {
   };
 }
 
-/** Generate a cryptographically random API key token and its SHA-256 hash. */
+/** Generate a cryptographically random API key token and its HMAC-SHA256 hash. */
 function generateTokenPair(): { token: string; tokenHash: string } {
   const raw = randomBytes(API_KEY_TOKEN_BYTES).toString("hex");
   const token = `${API_KEY_TOKEN_PREFIX}${raw}`;
-  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const tokenHash = hashApiKeyToken(token);
   return { token, tokenHash };
 }
 
@@ -299,7 +315,7 @@ export async function validateApiKey(
   db: PostgresJsDatabase,
   token: string,
 ): Promise<ValidateApiKeyResult | null> {
-  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const tokenHash = hashApiKeyToken(token);
   const currentTime = now();
 
   const [row] = await db
