@@ -113,4 +113,16 @@ describe("scopeGateMiddleware (tRPC)", () => {
     const result = await caller.member.get();
     expect(result).toEqual({ ok: true });
   });
+
+  it("passes through for API key with aggregate scope (read-all)", async () => {
+    const caller = createTestCaller(apiKeyAuth(["read-all"]));
+    const result = await caller.member.get();
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("passes through for API key with higher aggregate scope (write-all for read)", async () => {
+    const caller = createTestCaller(apiKeyAuth(["write-all"]));
+    const result = await caller.member.get();
+    expect(result).toEqual({ ok: true });
+  });
 });
