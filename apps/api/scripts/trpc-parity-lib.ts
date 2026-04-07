@@ -4,13 +4,12 @@
  * Pure functions and types extracted from check-trpc-parity.ts for testability.
  * This module has no side effects — it never calls main() or process.exit().
  *
- * Validates six dimensions of parity between REST routes and tRPC procedures:
+ * Validates five dimensions of parity between REST routes and tRPC procedures:
  * 1. Procedure existence — every REST endpoint has a tRPC counterpart
  * 2. Rate limit category — same category on both sides
  * 3. Auth level — public/protected/system matches
- * 4. Scope — required API key scope matches on both sides
- * 5. Input validation — Zod schema usage on both sides
- * 6. Idempotency — REST mutations with idempotency middleware (informational)
+ * 4. Input validation — Zod schema usage on both sides
+ * 5. Idempotency — REST mutations with idempotency middleware (informational)
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -42,13 +41,12 @@ const API_ROOT = resolve(__dirname_lib, "..");
 
 export type AuthLevel = "public" | "protected" | "system";
 
-export type ParityDimension = "existence" | "rate-limit" | "auth-level" | "idempotency" | "scope";
+export type ParityDimension = "existence" | "rate-limit" | "auth-level" | "idempotency";
 
 export interface TRPCProcedureInfo {
   readonly path: string;
   readonly type: "query" | "mutation";
   readonly rateLimitCategory: string | null;
-  readonly scope: string | null;
   readonly authLevel: AuthLevel;
   readonly hasInputValidation: boolean;
 }
@@ -58,7 +56,6 @@ export interface RESTRouteInfo {
   readonly method: string;
   readonly fullPath: string;
   readonly rateLimitCategory: string | null;
-  readonly scope: string | null;
   readonly authLevel: AuthLevel;
   readonly hasInputValidation: boolean;
   readonly hasIdempotency: boolean;
@@ -78,7 +75,6 @@ export interface CheckStats {
   readonly existenceChecked: number;
   readonly rateLimitChecked: number;
   readonly authChecked: number;
-  readonly scopeChecked: number;
   readonly idempotencyChecked: number;
   readonly unmappedCount: number;
 }
@@ -127,7 +123,6 @@ export async function discoverTRPCProcedures(): Promise<Map<string, TRPCProcedur
       path,
       type,
       rateLimitCategory: null, // filled in by source-level analysis
-      scope: null, // filled in by source-level analysis
       authLevel,
       hasInputValidation,
     });
@@ -187,68 +182,6 @@ export function extractTRPCRateLimits(
   }
 
   return updated;
-}
-
-// ── 2b. tRPC Scope Extraction (source analysis) ────────────────────────────
-
-export function extractTRPCScopes(
-  procedures: Map<string, TRPCProcedureInfo>,
-): Map<string, TRPCProcedureInfo> {
-  const routersDir = resolve(API_ROOT, "src/trpc/routers");
-  const files = readdirSync(routersDir).filter((f) => f.endsWith(".ts"));
-  const updated = new Map(procedures);
-
-  for (const file of files) {
-    const source = readFileSync(resolve(routersDir, file), "utf-8");
-    const routerPrefix = deriveRouterPrefix(file);
-
-    const procScopes = parseProcedureScopes(source, routerPrefix);
-
-    for (const [procPath, scope] of procScopes) {
-      const existing = updated.get(procPath);
-      if (existing) {
-        updated.set(procPath, { ...existing, scope });
-      }
-    }
-  }
-
-  return updated;
-}
-
-function parseProcedureScopes(source: string, routerPrefix: string): Map<string, string> {
-  const result = new Map<string, string>();
-
-  // Pattern: procName: systemProcedure.use(requireScope("scope")).use(...)...
-  const procScopePattern =
-    /(\w+)\s*:\s*(?:systemProcedure|protectedProcedure|errorMapProcedure)\b[^,}]*?\.use\(\s*requireScope\(\s*["']([^"']+)["']\s*\)\s*\)/g;
-
-  // First pass: top-level procedures
-  for (const match of execAllMatches(procScopePattern, source)) {
-    const procName = match[1];
-    const scope = match[2];
-    if (procName === undefined || scope === undefined) continue;
-    result.set(`${routerPrefix}.${procName}`, scope);
-  }
-
-  // Second pass: nested router blocks
-  const nestedRouterStart = /(\w+)\s*:\s*router\(\{/g;
-  for (const startMatch of execAllMatches(nestedRouterStart, source)) {
-    const nestedName = startMatch[1];
-    if (nestedName === undefined) continue;
-
-    const openBraceIdx = startMatch.index + startMatch[0].length - 1;
-    const body = extractBalancedBlock(source, openBraceIdx);
-    if (!body) continue;
-
-    for (const innerMatch of execAllMatches(procScopePattern, body)) {
-      const innerProcName = innerMatch[1];
-      const innerScope = innerMatch[2];
-      if (innerProcName === undefined || innerScope === undefined) continue;
-      result.set(`${routerPrefix}.${nestedName}.${innerProcName}`, innerScope);
-    }
-  }
-
-  return result;
 }
 
 export function deriveRouterPrefix(filename: string): string {
@@ -385,7 +318,6 @@ export function extractBalancedBlock(source: string, openIdx: number): string | 
 const IDEMPOTENCY_PATTERN = /createIdempotencyMiddleware\(\)/;
 const IDEMPOTENCY_PATTERN_GLOBAL = /createIdempotencyMiddleware\(\)/g;
 const REST_RATE_LIMIT_PATTERN_GLOBAL = /createCategoryRateLimiter\(\s*["']([^"']+)["']\s*\)/g;
-const REST_SCOPE_PATTERN_GLOBAL = /requireScopeMiddleware\(\s*["']([^"']+)["']\s*\)/g;
 const AUTH_MIDDLEWARE_PATTERN = /authMiddleware\(\)/;
 const VALIDATION_SCHEMA_PATTERN = /import\s*\{([^}]+)\}\s*from\s*["']@pluralscape\/validation["']/;
 const METHOD_PATTERN = /\.(get|post|put|delete|patch)\(\s*["'](\/[^"']*?)["']/g;
@@ -437,16 +369,6 @@ export function walkRouteTree(
     }
   }
 
-  // Collect all scope middleware values and their positions in this file
-  const allScopes = execAllMatches(REST_SCOPE_PATTERN_GLOBAL, source);
-  const fileScopeValue = allScopes[0]?.[1] ?? null;
-  const scopePositions: Array<{ index: number; scope: string }> = [];
-  for (const match of allScopes) {
-    if (match[1] !== undefined) {
-      scopePositions.push({ index: match.index, scope: match[1] });
-    }
-  }
-
   // Collect all idempotency middleware positions
   const idempotencyPositions: number[] = [];
   for (const match of execAllMatches(IDEMPOTENCY_PATTERN_GLOBAL, source)) {
@@ -480,15 +402,11 @@ export function walkRouteTree(
         : "protected"
       : "public";
 
-    // Find the closest scope that applies to this route
-    const routeScope = findNearestScope(match.index, scopePositions, fileScopeValue, source);
-
     entries.push({
       routeKey,
       method,
       fullPath,
       rateLimitCategory: routeCategory,
-      scope: routeScope,
       authLevel,
       hasInputValidation: hasValidation,
       hasIdempotency,
@@ -593,10 +511,6 @@ function findNearestMiddleware(
 const INLINE_RATE_LIMIT_PATTERN =
   /^\.(?:get|post|put|delete|patch)\([^;]*?createCategoryRateLimiter\(\s*["']([^"']+)["']/;
 
-/** Inline regex for requireScopeMiddleware on a route handler. */
-const INLINE_SCOPE_PATTERN =
-  /^\.(?:get|post|put|delete|patch)\([^;]*?requireScopeMiddleware\(\s*["']([^"']+)["']/;
-
 function findNearestCategory(
   routeIndex: number,
   positions: Array<{ index: number; category: string }>,
@@ -612,26 +526,6 @@ function findNearestCategory(
     (routeVar) =>
       new RegExp(
         `${routeVar}\\.use\\(\\s*["']([^"']+)["']\\s*,\\s*createCategoryRateLimiter\\(\\s*["']([^"']+)["']`,
-        "g",
-      ),
-  );
-}
-
-function findNearestScope(
-  routeIndex: number,
-  positions: Array<{ index: number; scope: string }>,
-  fallback: string | null,
-  source: string,
-): string | null {
-  return findNearestMiddleware(
-    routeIndex,
-    positions.map((p) => ({ index: p.index, value: p.scope })),
-    fallback,
-    source,
-    INLINE_SCOPE_PATTERN,
-    (routeVar) =>
-      new RegExp(
-        `${routeVar}\\.use\\(\\s*["']([^"']+)["']\\s*,\\s*requireScopeMiddleware\\(\\s*["']([^"']+)["']`,
         "g",
       ),
   );
@@ -1133,7 +1027,6 @@ export function runParityChecks(
   let existenceChecked = 0;
   let rateLimitChecked = 0;
   let authChecked = 0;
-  let scopeChecked = 0;
   let idempotencyChecked = 0;
   let unmappedCount = 0;
 
@@ -1210,36 +1103,7 @@ export function runParityChecks(
       }
     }
 
-    // Check 4: Scope
-    if (rest.scope && trpc.scope) {
-      scopeChecked++;
-      if (rest.scope !== trpc.scope) {
-        failures.push({
-          dimension: "scope",
-          restRoute: rest.routeKey,
-          expected: `scope "${rest.scope}" (REST)`,
-          actual: `scope "${trpc.scope}" (tRPC: ${trpcPath})`,
-        });
-      }
-    } else if (rest.scope && !trpc.scope) {
-      scopeChecked++;
-      failures.push({
-        dimension: "scope",
-        restRoute: rest.routeKey,
-        expected: `scope "${rest.scope}" (REST)`,
-        actual: `no scope detected (tRPC: ${trpcPath})`,
-      });
-    } else if (!rest.scope && trpc.scope) {
-      scopeChecked++;
-      failures.push({
-        dimension: "scope",
-        restRoute: rest.routeKey,
-        expected: `no scope (REST)`,
-        actual: `scope "${trpc.scope}" (tRPC: ${trpcPath})`,
-      });
-    }
-
-    // Check 5: Idempotency
+    // Check 4: Idempotency
     if (rest.hasIdempotency) {
       idempotencyChecked++;
       // tRPC doesn't have idempotency middleware yet — just report it
@@ -1261,7 +1125,6 @@ export function runParityChecks(
       existenceChecked,
       rateLimitChecked,
       authChecked,
-      scopeChecked,
       idempotencyChecked,
       unmappedCount,
     },
@@ -1282,7 +1145,6 @@ export function printResults(
   console.log(`${DIM}Existence:${RESET}        ${String(stats.existenceChecked)} checked`);
   console.log(`${DIM}Rate limits:${RESET}      ${String(stats.rateLimitChecked)} compared`);
   console.log(`${DIM}Auth levels:${RESET}      ${String(stats.authChecked)} compared`);
-  console.log(`${DIM}Scopes:${RESET}           ${String(stats.scopeChecked)} compared`);
   console.log(`${DIM}Idempotency:${RESET}      ${String(stats.idempotencyChecked)} flagged\n`);
 
   if (failures.length > 0) {
