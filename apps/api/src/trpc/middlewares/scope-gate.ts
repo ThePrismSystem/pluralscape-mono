@@ -14,6 +14,9 @@ import { middleware } from "../trpc.js";
  *   - Entry missing: rejects with FORBIDDEN (fail-closed).
  */
 export const scopeGateMiddleware = middleware(async ({ ctx, path, next }) => {
+  // Public procedures have no auth context — scope enforcement doesn't apply.
+  // Security invariant: every scoped procedure must have auth middleware applied
+  // before this middleware (via protectedProcedure or systemProcedure base).
   if (!ctx.auth) return next();
   if (ctx.auth.authMethod === "session") return next();
 
