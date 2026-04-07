@@ -157,10 +157,21 @@ export default defineConfig({
         "packages/types/src/search.ts",
         "packages/types/src/snapshot.ts",
         "packages/types/src/webhooks.ts",
+        "packages/types/src/friend-dashboard.ts",
+        "packages/types/src/subscription-events.ts",
         "packages/crypto/src/types.ts",
         "packages/crypto/src/adapter/interface.ts",
         "packages/crypto/src/lifecycle-types.ts",
+        "packages/crypto/src/key-storage.ts",
+        "packages/crypto/src/blob-pipeline/blob-encryption-metadata.ts",
         "packages/db/src/client/types.ts",
+        "packages/db/src/helpers/types.ts",
+        "packages/db/src/views/types.ts",
+        "packages/i18n/src/types.ts",
+        // Auto-generated openapi types
+        "packages/api-client/src/generated/api-types.ts",
+        // sync: event-map is interface-only
+        "packages/sync/src/event-bus/event-map.ts",
         // Drizzle schema files are declarative — callbacks only run during migration generation
         "packages/db/src/schema/**/*.ts",
         // DB query helpers are tested via integration tests, not unit tests
@@ -198,6 +209,10 @@ export default defineConfig({
         // mobile: type-only files
         "apps/mobile/src/auth/auth-types.ts",
         "apps/mobile/src/platform/types.ts",
+        // api: middleware store interfaces and service type definitions
+        "apps/api/src/middleware/idempotency-store.ts",
+        "apps/api/src/middleware/rate-limit-store.ts",
+        "apps/api/src/services/hierarchy-service-types.ts",
       ],
       reporter: ["text", "json-summary", "lcov", "html"],
       reportsDirectory: "./coverage",
