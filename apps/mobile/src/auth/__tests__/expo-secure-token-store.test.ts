@@ -1,51 +1,71 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-// Backing store shared between mock and test — cleared in beforeEach
-const backingStore = new Map<string, string>();
+import * as secureStore from "../../__tests__/expo-secure-store-mock";
+import { createExpoSecureTokenStore } from "../expo-secure-token-store";
 
-vi.mock("expo-secure-store", () => ({
-  getItemAsync: vi.fn((key: string) => Promise.resolve(backingStore.get(key) ?? null)),
-  setItemAsync: vi.fn((key: string, value: string) => {
-    backingStore.set(key, value);
-    return Promise.resolve();
-  }),
-  deleteItemAsync: vi.fn((key: string) => {
-    backingStore.delete(key);
-    return Promise.resolve();
-  }),
-}));
-
-// Import AFTER mock setup
-import { createExpoSecureTokenStore } from "../expo-secure-token-store.js";
-
-beforeEach(() => {
-  backingStore.clear();
-  vi.clearAllMocks();
+afterEach(() => {
+  secureStore.__reset();
 });
 
-describe("createExpoSecureTokenStore", () => {
-  it("getToken returns null when no token is stored", async () => {
-    const store = createExpoSecureTokenStore();
-    expect(await store.getToken()).toBeNull();
+describe("expo-secure-token-store", () => {
+  describe("getToken", () => {
+    it("returns null when no token has been stored", async () => {
+      const store = createExpoSecureTokenStore();
+      const result = await store.getToken();
+      expect(result).toBeNull();
+    });
+
+    it("returns the stored token value", async () => {
+      const store = createExpoSecureTokenStore();
+      await store.setToken("test-token-abc123");
+      const result = await store.getToken();
+      expect(result).toBe("test-token-abc123");
+    });
+
+    it("propagates errors thrown by getItemAsync", async () => {
+      const store = createExpoSecureTokenStore();
+      const err = new Error("keychain unavailable");
+      secureStore.__throwOnNext("getItemAsync", err);
+      await expect(store.getToken()).rejects.toThrow("keychain unavailable");
+    });
   });
 
-  it("setToken stores and getToken retrieves the token", async () => {
-    const store = createExpoSecureTokenStore();
-    await store.setToken("my-session-token");
-    expect(await store.getToken()).toBe("my-session-token");
+  describe("setToken", () => {
+    it("stores the token so subsequent getToken returns it", async () => {
+      const store = createExpoSecureTokenStore();
+      await store.setToken("stored-value-xyz");
+      expect(secureStore.__snapshot()).toMatchObject({
+        pluralscape_session_token: "stored-value-xyz",
+      });
+    });
+
+    it("propagates errors thrown by setItemAsync", async () => {
+      const store = createExpoSecureTokenStore();
+      const err = new Error("write failed");
+      secureStore.__throwOnNext("setItemAsync", err);
+      await expect(store.setToken("some-token")).rejects.toThrow("write failed");
+    });
   });
 
-  it("clearToken removes the stored token", async () => {
-    const store = createExpoSecureTokenStore();
-    await store.setToken("my-session-token");
-    await store.clearToken();
-    expect(await store.getToken()).toBeNull();
-  });
+  describe("clearToken", () => {
+    it("removes the stored token", async () => {
+      const store = createExpoSecureTokenStore();
+      await store.setToken("token-to-clear");
+      await store.clearToken();
+      const result = await store.getToken();
+      expect(result).toBeNull();
+    });
 
-  it("setToken overwrites a previously stored token", async () => {
-    const store = createExpoSecureTokenStore();
-    await store.setToken("first");
-    await store.setToken("second");
-    expect(await store.getToken()).toBe("second");
+    it("succeeds when no token exists", async () => {
+      const store = createExpoSecureTokenStore();
+      await expect(store.clearToken()).resolves.toBeUndefined();
+    });
+
+    it("propagates errors thrown by deleteItemAsync", async () => {
+      const store = createExpoSecureTokenStore();
+      const err = new Error("delete failed");
+      secureStore.__throwOnNext("deleteItemAsync", err);
+      await expect(store.clearToken()).rejects.toThrow("delete failed");
+    });
   });
 });

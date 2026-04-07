@@ -192,7 +192,6 @@ export default defineConfig({
         "apps/mobile/src/auth/auth-types.ts",
         "apps/mobile/src/platform/types.ts",
         // mobile: Expo-native drivers — require native modules, produce 0% in Node/vitest
-        "apps/mobile/src/auth/expo-secure-token-store.ts",
         "apps/mobile/src/platform/drivers/expo-sqlite-driver.ts",
         // mobile: config depends on expo-constants — mocked in tests but not coverable
         "apps/mobile/src/config.ts",
