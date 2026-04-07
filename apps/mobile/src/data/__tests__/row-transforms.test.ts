@@ -795,8 +795,8 @@ describe("rowToStructureEntityType", () => {
 // ── timer (system-core, multiple booleans) ────────────────────────────────────
 
 describe("rowToTimer", () => {
-  it("maps timer row with waking_hours_only and enabled booleans", () => {
-    const row: Record<string, unknown> = {
+  function baseTimerRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
       id: "tmr-1",
       system_id: "sys-1",
       interval_minutes: 60,
@@ -808,10 +808,12 @@ describe("rowToTimer", () => {
       archived: 0,
       created_at: 1_700_000_000_000,
       updated_at: 1_700_000_000_000,
+      ...overrides,
     };
+  }
 
-    const result = rowToTimer(row);
-
+  it("maps timer row with waking_hours_only and enabled booleans", () => {
+    const result = rowToTimer(baseTimerRow());
     expect(result.id).toBe("tmr-1");
     expect(result.intervalMinutes).toBe(60);
     expect(result.wakingHoursOnly).toBe(true);
@@ -821,6 +823,26 @@ describe("rowToTimer", () => {
     expect(result.enabled).toBe(true);
     expect(result.archived).toBe(false);
     expect(result.version).toBe(0);
+  });
+
+  it("returns null wakingHoursOnly when source field is null", () => {
+    const result = rowToTimer(baseTimerRow({ waking_hours_only: null }));
+    expect(result.wakingHoursOnly).toBeNull();
+  });
+
+  it("returns null wakingHoursOnly when source field is undefined", () => {
+    const row = baseTimerRow();
+    delete row["waking_hours_only"];
+    const result = rowToTimer(row);
+    expect(result.wakingHoursOnly).toBeNull();
+  });
+
+  it("returns archived timer when archived = 1", () => {
+    const result = rowToTimer(baseTimerRow({ archived: 1, updated_at: 1_700_000_555_000 }));
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_555_000);
+    }
   });
 });
 
@@ -846,14 +868,33 @@ describe("rowToLifecycleEvent", () => {
     expect(result.occurredAt).toBe(1_700_000_000_000);
     expect(result.recordedAt).toBe(1_700_000_001_000);
     expect(result.notes).toBe("Found a new member");
+    expect(result.archived).toBe(false);
+  });
+
+  it("returns archived lifecycle event when archived = 1", () => {
+    const row: Record<string, unknown> = {
+      id: "le-arch",
+      system_id: "sys-1",
+      event_type: "milestone",
+      occurred_at: 1_700_000_000_000,
+      recorded_at: 1_700_000_888_000,
+      notes: null,
+      payload: "{}",
+      archived: 1,
+    };
+    const result = rowToLifecycleEvent(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_888_000);
+    }
   });
 });
 
 // ── check-in-record (fronting document, dismissed + archived booleans) ────────
 
 describe("rowToCheckInRecord", () => {
-  it("maps check-in record row", () => {
-    const row: Record<string, unknown> = {
+  function baseCheckInRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
       id: "cir-1",
       timer_config_id: "tmr-1",
       system_id: "sys-1",
@@ -865,10 +906,12 @@ describe("rowToCheckInRecord", () => {
       archived_at: null,
       created_at: 1_700_000_000_000,
       updated_at: 1_700_000_001_000,
+      ...overrides,
     };
+  }
 
-    const result = rowToCheckInRecord(row);
-
+  it("maps check-in record row", () => {
+    const result = rowToCheckInRecord(baseCheckInRow());
     expect(result.id).toBe("cir-1");
     expect(result.timerConfigId).toBe("tmr-1");
     expect(result.systemId).toBe("sys-1");
@@ -878,6 +921,38 @@ describe("rowToCheckInRecord", () => {
     expect(result.dismissed).toBe(false);
     expect(result.archived).toBe(false);
     expect(result.archivedAt).toBeNull();
+  });
+
+  it("returns archived check-in with archivedAt from archived_at column", () => {
+    const result = rowToCheckInRecord(
+      baseCheckInRow({ archived: 1, archived_at: 1_700_000_999_000 }),
+    );
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_999_000);
+    }
+  });
+
+  it("falls back to updated_at when archived = 1 but archived_at is null", () => {
+    const result = rowToCheckInRecord(
+      baseCheckInRow({
+        archived: 1,
+        archived_at: null,
+        updated_at: 1_700_000_222_000,
+      }),
+    );
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_222_000);
+    }
+  });
+
+  it("supports null respondedByMemberId and respondedAt (unanswered)", () => {
+    const result = rowToCheckInRecord(
+      baseCheckInRow({ responded_by_member_id: null, responded_at: null }),
+    );
+    expect(result.respondedByMemberId).toBeNull();
+    expect(result.respondedAt).toBeNull();
   });
 });
 
