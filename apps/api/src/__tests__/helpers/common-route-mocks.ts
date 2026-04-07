@@ -14,19 +14,6 @@ export function mockDbFactory(): { getDb: ReturnType<typeof vi.fn> } {
   return { getDb: vi.fn().mockResolvedValue({}) };
 }
 
-/** Factory for vi.mock("…/scope.js") — passes through to next(). */
-export function mockScopeFactory(): {
-  requireScopeMiddleware: ReturnType<typeof vi.fn>;
-} {
-  return {
-    requireScopeMiddleware: vi
-      .fn()
-      .mockImplementation(() => async (_c: Context, next: () => Promise<void>) => {
-        await next();
-      }),
-  };
-}
-
 /** Factory for vi.mock("…/rate-limit.js") — passes through to next(). */
 export function mockRateLimitFactory(): {
   createCategoryRateLimiter: ReturnType<typeof vi.fn>;

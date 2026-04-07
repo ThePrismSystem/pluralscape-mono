@@ -5,7 +5,6 @@ import {
   mockAuditWriterFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockScopeFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
@@ -42,9 +41,6 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   ...mockRateLimitFactory(),
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
-
-vi.mock("../../../middleware/scope.js", () => mockScopeFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const {

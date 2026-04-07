@@ -6,7 +6,6 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockScopeFactory,
   mockSystemOwnershipFactory,
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
@@ -35,9 +34,6 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../lib/system-ownership.js", () => mockSystemOwnershipFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
-vi.mock("../../../middleware/scope.js", () => mockScopeFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { listMembers } = await import("../../../services/member.service.js");

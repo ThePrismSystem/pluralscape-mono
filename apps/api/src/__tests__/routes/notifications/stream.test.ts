@@ -1,11 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SSE_MAX_CONNECTIONS_PER_ACCOUNT } from "../../../lib/sse.constants.js";
-import {
-  mockAuthFactory,
-  mockRateLimitFactory,
-  mockScopeFactory,
-} from "../../helpers/common-route-mocks.js";
+import { mockAuthFactory, mockRateLimitFactory } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, MOCK_AUTH } from "../../helpers/route-test-setup.js";
 
 // ── Pub/Sub mock with channel handler capture ───────────────────
@@ -33,8 +29,6 @@ let mockPubSub: ReturnType<typeof createMockPubSub> | undefined;
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
-vi.mock("../../../middleware/scope.js", () => mockScopeFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../lib/notification-pubsub.js", () => ({
   getNotificationPubSub: vi.fn(() => mockPubSub),

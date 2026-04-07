@@ -5,7 +5,6 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockScopeFactory,
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
@@ -33,9 +32,6 @@ vi.mock("../../../lib/storage.js", () => ({
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
-vi.mock("../../../middleware/scope.js", () => mockScopeFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createUploadUrl } = await import("../../../services/blob.service.js");

@@ -6,7 +6,6 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockScopeFactory,
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
@@ -26,9 +25,6 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
-vi.mock("../../../middleware/scope.js", () => mockScopeFactory());
-
 const { listGroups } = await import("../../../services/group.service.js");
 const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");

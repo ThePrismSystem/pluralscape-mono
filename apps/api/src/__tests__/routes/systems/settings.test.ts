@@ -6,7 +6,6 @@ import {
   mockAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockScopeFactory,
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
@@ -34,9 +33,6 @@ vi.mock("../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
-
-vi.mock("../../../middleware/scope.js", () => mockScopeFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { getSystemSettings, updateSystemSettings } =

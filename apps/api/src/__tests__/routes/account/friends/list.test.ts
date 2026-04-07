@@ -4,7 +4,6 @@ import {
   mockAccountOnlyAuthFactory,
   mockDbFactory,
   mockRateLimitFactory,
-  mockScopeFactory,
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_ACCOUNT_ONLY_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
@@ -27,9 +26,6 @@ vi.mock("../../../../lib/db.js", () => mockDbFactory());
 vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
-
-vi.mock("../../../../middleware/scope.js", () => mockScopeFactory());
-
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { listFriendConnections } = await import("../../../../services/friend-connection.service.js");
