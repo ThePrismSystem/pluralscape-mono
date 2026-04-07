@@ -85,6 +85,14 @@ export default defineConfig({
             // in a Node/vitest environment. Redirect to a minimal stub so tests
             // that transitively import react-native (e.g. via expo-constants) work.
             "react-native": path.resolve("apps/mobile/src/__tests__/react-native-mock.ts"),
+            // Expo native modules — redirect to in-memory mocks so wrapper logic
+            // (key namespacing, error wrapping, init guards, fallbacks) is testable
+            // without spinning up a real device or simulator.
+            "expo-secure-store": path.resolve(
+              "apps/mobile/src/__tests__/expo-secure-store-mock.ts",
+            ),
+            "expo-sqlite": path.resolve("apps/mobile/src/__tests__/expo-sqlite-mock.ts"),
+            "expo-constants": path.resolve("apps/mobile/src/__tests__/expo-constants-mock.ts"),
           },
         },
         test: {
