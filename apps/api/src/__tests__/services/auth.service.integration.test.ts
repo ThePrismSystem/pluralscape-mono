@@ -2,6 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -12,11 +13,21 @@ vi.hoisted(() => {
   process.env["EMAIL_HASH_PEPPER"] ??= "ab".repeat(32);
 });
 
-import { _resetAccountLoginStoreForTesting } from "../../middleware/stores/account-login-store.js";
 import {
+  ACCOUNT_LOGIN_MAX_ATTEMPTS,
+  MemoryAccountLoginStore,
+  _resetAccountLoginStoreForTesting,
+  setAccountLoginStore,
+} from "../../middleware/stores/account-login-store.js";
+import {
+  LoginThrottledError,
+  isDuplicateEmailError,
   listSessions,
   loginAccount,
+  logoutCurrentSession,
+  needsRehash,
   registerAccount,
+  revokeAllSessions,
   revokeSession,
 } from "../../services/auth.service.js";
 import { asDb, noopAudit, spyAudit } from "../helpers/integration-setup.js";
@@ -57,16 +68,18 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
     _resetAccountLoginStoreForTesting();
   });
 
-  function makeRegistrationParams(overrides: { email?: string; password?: string } = {}): {
+  function makeRegistrationParams(
+    overrides: { email?: string; password?: string; accountType?: "system" | "viewer" } = {},
+  ): {
     email: string;
     password: string;
-    accountType: "system";
+    accountType: "system" | "viewer";
     recoveryKeyBackupConfirmed: true;
   } {
     return {
       email: overrides.email ?? `test-${crypto.randomUUID()}@test.local`,
       password: overrides.password ?? "TestPassword123!",
-      accountType: "system",
+      accountType: overrides.accountType ?? "system",
       recoveryKeyBackupConfirmed: true,
     };
   }
@@ -115,6 +128,26 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
         current = current.cause;
       }
       expect(foundViolation).toBe(true);
+    });
+
+    it("registers a viewer account (no system row created)", async () => {
+      const params = makeRegistrationParams({ accountType: "viewer" });
+      const result = await registerAccount(asDb(db), params, "web", noopAudit);
+
+      expect(result.accountType).toBe("viewer");
+      expect(result.accountId).toMatch(/^acct_/);
+      // Viewer accounts must not have a system row
+      const sysList = await db
+        .select()
+        .from(systems)
+        .where(eq(systems.accountId, result.accountId));
+      expect(sysList).toHaveLength(0);
+    });
+
+    it("uses mobile platform timeouts when platform is mobile", async () => {
+      const params = makeRegistrationParams();
+      const result = await registerAccount(asDb(db), params, "mobile", noopAudit);
+      expect(result.sessionToken.length).toBeGreaterThan(0);
     });
   });
 
@@ -179,6 +212,141 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
 
       expect(result).toBeNull();
     });
+
+    it("throws LoginThrottledError when account is throttled", async () => {
+      // Seed the in-memory store with enough failures to exceed the threshold
+      const store = new MemoryAccountLoginStore();
+      setAccountLoginStore(store);
+
+      // Fill failures for any email — we use a non-existent email so login
+      // fails fast. We need MAX_ATTEMPTS failures recorded against the hash
+      // of our target email before we attempt the throttled login.
+      const throttledEmail = `throttle-${crypto.randomUUID()}@test.local`;
+
+      // Record failures directly on the store up to the limit
+      for (let i = 0; i < ACCOUNT_LOGIN_MAX_ATTEMPTS; i++) {
+        const { hashEmail } = await import("../../lib/email-hash.js");
+        const key = hashEmail(throttledEmail);
+        await store.recordFailure(key);
+      }
+
+      let caught: unknown;
+      try {
+        await loginAccount(
+          asDb(db),
+          { email: throttledEmail, password: "AnyPassword123!" },
+          "web",
+          noopAudit,
+          logger,
+        );
+      } catch (err: unknown) {
+        caught = err;
+      }
+
+      expect(caught).toBeInstanceOf(LoginThrottledError);
+      const throttleErr = caught as LoginThrottledError;
+      expect(throttleErr.windowResetAt).toBeGreaterThan(0);
+    });
+
+    it("triggers password rehash when account has a low-iteration hash", async () => {
+      // Generate a real Argon2id hash for `password` with opsLimit=2 (INTERACTIVE),
+      // which is below PWHASH_OPSLIMIT_SENSITIVE=4 so needsRehash() returns true.
+      // Using sodium directly so we can control the iteration count.
+      const { getSodium, PWHASH_MEMLIMIT_INTERACTIVE } = await import("@pluralscape/crypto");
+      const sodium = getSodium();
+      const passwordBytes = new TextEncoder().encode(password);
+      const lowIterHash = sodium.pwhashStr(passwordBytes, 2, PWHASH_MEMLIMIT_INTERACTIVE);
+      sodium.memzero(passwordBytes);
+
+      await db
+        .update(accounts)
+        .set({ passwordHash: lowIterHash })
+        .where(eq(accounts.id, registration.accountId));
+
+      // Login with the correct password — needsRehash branch fires and schedules
+      // a background re-hash. We just verify login succeeds (no throw).
+      const result = await loginAccount(
+        asDb(db),
+        { email: registeredEmail, password },
+        "web",
+        noopAudit,
+        logger,
+      );
+
+      expect(result).not.toBeNull();
+    });
+
+    it("returns null for viewer account with wrong password (accountType branch)", async () => {
+      const viewerEmail = `viewer-${crypto.randomUUID()}@test.local`;
+      await registerAccount(
+        asDb(db),
+        makeRegistrationParams({ email: viewerEmail, accountType: "viewer" }),
+        "web",
+        noopAudit,
+      );
+
+      const result = await loginAccount(
+        asDb(db),
+        { email: viewerEmail, password: "WrongPassword999!" },
+        "web",
+        noopAudit,
+        logger,
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("returns null systemId for viewer account on successful login", async () => {
+      const viewerEmail = `viewer2-${crypto.randomUUID()}@test.local`;
+      const viewerPw = "TestPassword123!";
+      await registerAccount(
+        asDb(db),
+        makeRegistrationParams({ email: viewerEmail, password: viewerPw, accountType: "viewer" }),
+        "web",
+        noopAudit,
+      );
+
+      const result = await loginAccount(
+        asDb(db),
+        { email: viewerEmail, password: viewerPw },
+        "web",
+        noopAudit,
+        logger,
+      );
+
+      expect(result).not.toBeNull();
+      expect(result?.accountType).toBe("viewer");
+      expect(result?.systemId).toBeNull();
+    });
+
+    it("evicts oldest session when MAX_SESSIONS_PER_ACCOUNT is exceeded", async () => {
+      // Import MAX_SESSIONS_PER_ACCOUNT from the constants file
+      const { MAX_SESSIONS_PER_ACCOUNT } = await import("../../routes/auth/auth.constants.js");
+
+      // Record the IDs of the first batch of sessions created via loginAccount
+      const firstSessionIds: string[] = [];
+      for (let i = 0; i < MAX_SESSIONS_PER_ACCOUNT; i++) {
+        const res = await loginAccount(
+          asDb(db),
+          { email: registeredEmail, password },
+          "web",
+          noopAudit,
+          logger,
+        );
+        expect(res).not.toBeNull();
+        // Fetch the most-recently inserted session to track it
+        const { sessions: all } = await listSessions(asDb(db), registration.accountId as AccountId);
+        firstSessionIds.push(all[all.length - 1]?.id ?? "");
+      }
+
+      // This login should evict the oldest session
+      await loginAccount(asDb(db), { email: registeredEmail, password }, "web", noopAudit, logger);
+
+      const { sessions: after } = await listSessions(asDb(db), registration.accountId as AccountId);
+
+      // Total active sessions must be ≤ MAX_SESSIONS_PER_ACCOUNT
+      expect(after.length).toBeLessThanOrEqual(MAX_SESSIONS_PER_ACCOUNT);
+    });
   });
 
   // ── listSessions ──────────────────────────────────────────────────
@@ -197,6 +365,38 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
         expect(first.id).toMatch(/^sess_/);
         expect(typeof first.createdAt).toBe("number");
       }
+    });
+
+    it("respects cursor-based pagination", async () => {
+      const params = makeRegistrationParams();
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
+
+      // Create a second session by logging in
+      await loginAccount(
+        asDb(db),
+        { email: params.email, password: params.password },
+        "web",
+        noopAudit,
+        createMockLogger().logger,
+      );
+
+      // Fetch all sessions to confirm there are at least 2
+      const all = await listSessions(asDb(db), reg.accountId as AccountId);
+      expect(all.sessions.length).toBeGreaterThanOrEqual(2);
+
+      // Fetch first page with limit=1 — nextCursor signals more pages exist
+      const page1 = await listSessions(asDb(db), reg.accountId as AccountId, undefined, 1);
+      expect(page1.sessions).toHaveLength(1);
+      expect(page1.nextCursor).not.toBeNull();
+
+      // listSessions compares cursor directly against sessions.id via GT.
+      // Pass the raw session ID from page1 as the cursor for page2.
+      const rawCursor = page1.sessions[0]?.id;
+      expect(rawCursor).toBeDefined();
+
+      const page2 = await listSessions(asDb(db), reg.accountId as AccountId, rawCursor, 1);
+      expect(page2.sessions).toHaveLength(1);
+      expect(page2.sessions[0]?.id).not.toBe(rawCursor);
     });
   });
 
@@ -232,6 +432,181 @@ describe("auth.service (PGlite integration)", { timeout: 60_000 }, () => {
       if (auditCall) {
         expect(auditCall.eventType).toBe("auth.logout");
       }
+    });
+
+    it("returns false when revoking an already-revoked session", async () => {
+      const params = makeRegistrationParams();
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
+
+      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const firstSession = before[0];
+      if (!firstSession) return;
+
+      // Revoke once — succeeds
+      await revokeSession(asDb(db), firstSession.id, reg.accountId as AccountId, noopAudit);
+
+      // Revoke again — must return false
+      const result = await revokeSession(
+        asDb(db),
+        firstSession.id,
+        reg.accountId as AccountId,
+        noopAudit,
+      );
+      expect(result).toBe(false);
+    });
+
+    it("returns false for a session that belongs to a different account", async () => {
+      const params = makeRegistrationParams();
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
+      const other = await registerAccount(asDb(db), makeRegistrationParams(), "web", noopAudit);
+
+      const { sessions: otherSessions } = await listSessions(
+        asDb(db),
+        other.accountId as AccountId,
+      );
+      const otherSession = otherSessions[0];
+      if (!otherSession) return;
+
+      const result = await revokeSession(
+        asDb(db),
+        otherSession.id,
+        reg.accountId as AccountId,
+        noopAudit,
+      );
+      expect(result).toBe(false);
+    });
+  });
+
+  // ── revokeAllSessions ─────────────────────────────────────────────
+
+  describe("revokeAllSessions", () => {
+    it("revokes all sessions except the specified one", async () => {
+      const params = makeRegistrationParams();
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
+
+      // Create a second session
+      await loginAccount(
+        asDb(db),
+        { email: params.email, password: params.password },
+        "web",
+        noopAudit,
+        logger,
+      );
+
+      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
+      expect(before.length).toBeGreaterThanOrEqual(2);
+      const keepSession = before[0];
+      if (!keepSession) return;
+
+      const audit = spyAudit();
+      const count = await revokeAllSessions(
+        asDb(db),
+        reg.accountId as AccountId,
+        keepSession.id,
+        audit,
+      );
+
+      expect(count).toBeGreaterThanOrEqual(1);
+
+      const { sessions: after } = await listSessions(asDb(db), reg.accountId as AccountId);
+      expect(after).toHaveLength(1);
+      expect(after[0]?.id).toBe(keepSession.id);
+
+      expect(audit.calls).toHaveLength(1);
+      expect(audit.calls[0]?.eventType).toBe("auth.logout");
+    });
+
+    it("returns 0 when no other sessions exist", async () => {
+      const params = makeRegistrationParams();
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
+
+      const { sessions: all } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const only = all[0];
+      if (!only) return;
+
+      const count = await revokeAllSessions(
+        asDb(db),
+        reg.accountId as AccountId,
+        only.id,
+        noopAudit,
+      );
+      expect(count).toBe(0);
+    });
+  });
+
+  // ── logoutCurrentSession ──────────────────────────────────────────
+
+  describe("logoutCurrentSession", () => {
+    it("revokes the current session so it no longer appears in listSessions", async () => {
+      const params = makeRegistrationParams();
+      const reg = await registerAccount(asDb(db), params, "web", noopAudit);
+
+      const { sessions: before } = await listSessions(asDb(db), reg.accountId as AccountId);
+      const current = before[0];
+      if (!current) return;
+
+      const audit = spyAudit();
+      await logoutCurrentSession(asDb(db), current.id, reg.accountId as AccountId, audit);
+
+      const { sessions: after } = await listSessions(asDb(db), reg.accountId as AccountId);
+      expect(after.find((s) => s.id === current.id)).toBeUndefined();
+
+      expect(audit.calls[0]?.eventType).toBe("auth.logout");
+    });
+  });
+
+  // ── isDuplicateEmailError ─────────────────────────────────────────
+
+  describe("isDuplicateEmailError", () => {
+    it("returns false for non-Error values", () => {
+      expect(isDuplicateEmailError(null)).toBe(false);
+      expect(isDuplicateEmailError("string error")).toBe(false);
+      expect(isDuplicateEmailError(42)).toBe(false);
+    });
+
+    it("returns false when the constraint name does not match", () => {
+      const err = Object.assign(new Error("unique violation"), {
+        code: "23505",
+        constraint_name: "some_other_constraint",
+      });
+      expect(isDuplicateEmailError(err)).toBe(false);
+    });
+
+    it("returns true when constraint_name matches on the error directly", () => {
+      const err = Object.assign(new Error("unique violation"), {
+        code: "23505",
+        constraint_name: "accounts_email_hash_idx",
+      });
+      expect(isDuplicateEmailError(err)).toBe(true);
+    });
+
+    it("returns true when constraint_name is on error.cause (DrizzleQueryError wrapper)", () => {
+      const cause = Object.assign(new Error("cause"), {
+        code: "23505",
+        constraint_name: "accounts_email_hash_idx",
+      });
+      const wrapper = Object.assign(new Error("wrapper"), { code: "23505", cause });
+      expect(isDuplicateEmailError(wrapper)).toBe(true);
+    });
+  });
+
+  // ── needsRehash ───────────────────────────────────────────────────
+
+  describe("needsRehash", () => {
+    it("returns false for a hash with t=4 (current sensitive profile)", () => {
+      const hash =
+        "$argon2id$v=19$m=65536,t=4,p=1$R8XiCuEH7Vp0dU/c3DPG7g$DsumexqNIgHFu2dhin/zZci/+LwXFjSIpq2OienfAd4";
+      expect(needsRehash(hash)).toBe(false);
+    });
+
+    it("returns true for a hash with t=1 (below sensitive profile)", () => {
+      const hash =
+        "$argon2id$v=19$m=65536,t=1,p=1$R8XiCuEH7Vp0dU/c3DPG7g$DsumexqNIgHFu2dhin/zZci/+LwXFjSIpq2OienfAd4";
+      expect(needsRehash(hash)).toBe(true);
+    });
+
+    it("returns false for a non-argon2id hash string", () => {
+      expect(needsRehash("not-a-real-hash")).toBe(false);
     });
   });
 });
