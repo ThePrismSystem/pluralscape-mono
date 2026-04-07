@@ -19,8 +19,6 @@ export interface ScopeRegistry {
 
 const REST_ENTRIES: readonly [string, RequiredScope][] = [
   // Systems
-  ["GET /systems", "read:system"],
-  ["POST /systems", "write:system"],
   ["GET /systems/:systemId", "read:system"],
   ["PUT /systems/:systemId", "write:system"],
   ["DELETE /systems/:systemId", "delete:system"],

@@ -37,8 +37,14 @@ const authenticatedRoutes = allRoutes.filter(
   (e) => e.hasAuth && e.fullPath.startsWith("/v1/systems"),
 );
 
+// Session-only routes that intentionally have no scope registry entry.
+// API keys are per-system, so creating/listing systems is session-only.
+const EXCLUDED_REST_ROUTES = new Set(["GET /systems", "POST /systems"]);
+
 // Strip /v1 prefix; registry keys have no prefix
-const routeKeys = authenticatedRoutes.map((e) => `${e.method} ${e.fullPath.replace(/^\/v1/, "")}`);
+const routeKeys = authenticatedRoutes
+  .map((e) => `${e.method} ${e.fullPath.replace(/^\/v1/, "")}`)
+  .filter((key) => !EXCLUDED_REST_ROUTES.has(key));
 
 // Add the notification stream route manually — it's authenticated but not
 // reachable via buildInventory due to barrel re-exports in its mount chain.
