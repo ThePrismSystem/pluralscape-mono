@@ -232,6 +232,45 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+// ── Local DB row factory ─────────────────────────────────────────────
+function makeSystemSettingsRow(): Record<string, unknown> {
+  return {
+    id: SETTINGS_ID,
+    system_id: TEST_SYSTEM_ID,
+    theme: "dark",
+    font_scale: 1.0,
+    locale: null,
+    default_bucket_id: null,
+    app_lock:
+      '{"pinEnabled":false,"biometricEnabled":false,"lockTimeout":5,"backgroundGraceSeconds":30}',
+    notifications:
+      '{"pushEnabled":true,"emailEnabled":false,"switchReminders":false,"checkInReminders":false}',
+    sync_preferences: '{"syncEnabled":true,"syncOnCellular":false}',
+    privacy_defaults: '{"defaultBucketForNewContent":null,"friendRequestPolicy":"open"}',
+    littles_safe_mode:
+      '{"enabled":false,"allowedContentIds":[],"simplifiedUIFlags":{"largeButtons":false,"iconDriven":false,"noDeletion":false,"noSettings":false,"noAnalytics":false}}',
+    nomenclature:
+      '{"collective":"System","individual":"Member","fronting":"Fronting","switching":"Switch","co-presence":"Co-fronting","internal-space":"Headspace","primary-fronter":"Host","structure":"System Structure","dormancy":"Dormancy","body":"Body","amnesia":"Amnesia","saturation":"Saturation"}',
+    saturation_levels_enabled: 1,
+    auto_capture_fronting_on_journal: 0,
+    snapshot_schedule: '"disabled"',
+    onboarding_complete: 0,
+    created_at: NOW,
+    updated_at: NOW,
+  };
+}
+
+function createMockLocalDb(row: Record<string, unknown> | null) {
+  return {
+    initialize: vi.fn(),
+    queryAll: vi.fn().mockReturnValue(row ? [row] : []),
+    queryOne: vi.fn().mockReturnValue(row),
+    execute: vi.fn(),
+    transaction: vi.fn(),
+    close: vi.fn(),
+  };
+}
+
 // ── Query tests ─────────────────────────────────────────────────────
 describe("useSystemSettings", () => {
   it("returns decrypted system settings data", async () => {
@@ -267,6 +306,38 @@ describe("useSystemSettings", () => {
     rerender();
     expect(result.current.data).toBe(ref1);
   });
+
+  it("returns local row data when source is local", async () => {
+    const localDb = createMockLocalDb(makeSystemSettingsRow());
+    const { result } = renderHookWithProviders(() => useSystemSettings(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.theme).toBe("dark");
+    expect(result.current.data?.id).toBe(SETTINGS_ID);
+    expect(localDb.queryOne).toHaveBeenCalledWith(
+      expect.stringContaining("system_settings"),
+      expect.arrayContaining([TEST_SYSTEM_ID]),
+    );
+  });
+
+  it("enters error state when local row is not found", async () => {
+    const localDb = createMockLocalDb(null);
+    const { result } = renderHookWithProviders(() => useSystemSettings(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect((result.current.error as Error).message).toMatch(/System settings not found/);
+  });
 });
 
 describe("useNomenclature", () => {
@@ -300,6 +371,99 @@ describe("useNomenclature", () => {
     const ref1 = result.current.data;
     rerender();
     expect(result.current.data).toBe(ref1);
+  });
+
+  it("returns parsed nomenclature from local row (nomenclature as JSON string)", async () => {
+    const nomRow = {
+      nomenclature: JSON.stringify({
+        collective: "Collective",
+        individual: "Part",
+        fronting: "Fronting",
+        switching: "Switch",
+        "co-presence": "Co-fronting",
+        "internal-space": "Headspace",
+        "primary-fronter": "Host",
+        structure: "Structure",
+        dormancy: "Dormancy",
+        body: "Body",
+        amnesia: "Amnesia",
+        saturation: "Saturation",
+      }),
+    };
+    const localDb = {
+      initialize: vi.fn(),
+      queryAll: vi.fn(),
+      queryOne: vi.fn().mockReturnValue(nomRow),
+      execute: vi.fn(),
+      transaction: vi.fn(),
+      close: vi.fn(),
+    };
+    const { result } = renderHookWithProviders(() => useNomenclature(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toMatchObject({ collective: "Collective", individual: "Part" });
+  });
+
+  it("returns nomenclature from local row (nomenclature as object)", async () => {
+    const nomObj = {
+      collective: "System",
+      individual: "Member",
+      fronting: "Fronting",
+      switching: "Switch",
+      "co-presence": "Co-fronting",
+      "internal-space": "Headspace",
+      "primary-fronter": "Host",
+      structure: "Structure",
+      dormancy: "Dormancy",
+      body: "Body",
+      amnesia: "Amnesia",
+      saturation: "Saturation",
+    };
+    const nomRow = { nomenclature: nomObj };
+    const localDb = {
+      initialize: vi.fn(),
+      queryAll: vi.fn(),
+      queryOne: vi.fn().mockReturnValue(nomRow),
+      execute: vi.fn(),
+      transaction: vi.fn(),
+      close: vi.fn(),
+    };
+    const { result } = renderHookWithProviders(() => useNomenclature(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data).toMatchObject({ collective: "System", individual: "Member" });
+  });
+
+  it("enters error state when local nomenclature row is not found", async () => {
+    const localDb = {
+      initialize: vi.fn(),
+      queryAll: vi.fn(),
+      queryOne: vi.fn().mockReturnValue(null),
+      execute: vi.fn(),
+      transaction: vi.fn(),
+      close: vi.fn(),
+    };
+    const { result } = renderHookWithProviders(() => useNomenclature(), {
+      querySource: "local",
+      localDb,
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect((result.current.error as Error).message).toMatch(/System settings not found/);
   });
 });
 
