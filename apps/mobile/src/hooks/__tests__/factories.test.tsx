@@ -561,6 +561,24 @@ describe("table name validation", () => {
     expect(() => renderHookWithProviders(() => useBadTable())).toThrow("Invalid table name");
   });
 
+  it("rejects invalid table names in useOfflineFirstInfiniteQuery", () => {
+    function useBadInfiniteTable() {
+      return useOfflineFirstInfiniteQuery<RawEntity, RawEntity>({
+        queryKey: ["bad-infinite"],
+        table: "'; DROP--",
+        rowTransform: (row) => ({ name: String(row["name"]) }),
+        useRemote: ({ enabled }) =>
+          trpc.member.list.useInfiniteQuery(
+            { systemId: "sys-test" as never },
+            { enabled, getNextPageParam: () => null },
+          ) as never,
+      });
+    }
+    expect(() => renderHookWithProviders(() => useBadInfiniteTable())).toThrow(
+      "Invalid table name",
+    );
+  });
+
   it("accepts valid table names with underscores", () => {
     fixtures.set("member.get", { name: "OK" });
 
