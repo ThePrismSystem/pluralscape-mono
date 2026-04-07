@@ -17,7 +17,11 @@
    - [8.3 Privacy Buckets](#83-privacy-buckets)
    - [8.4 Friend Network](#84-friend-network)
    - [8.5 Push Notifications](#85-push-notifications)
-9. [Self-Hosted Considerations](#9-self-hosted-considerations)
+9. [API Keys](#9-api-keys)
+   - [9.1 Key Types](#91-key-types)
+   - [9.2 Scopes](#92-scopes)
+   - [9.3 Lifecycle](#93-lifecycle)
+10. [Self-Hosted Considerations](#10-self-hosted-considerations)
 
 ---
 
@@ -1292,7 +1296,62 @@ Each config has `enabled` (master toggle) and `pushEnabled` (push-specific toggl
 
 ---
 
-## 9. Self-Hosted Considerations
+## 9. API Keys
+
+API keys provide programmatic access to system-scoped endpoints without requiring a session. Keys are prefixed with `ps_` and authenticated via the `Authorization` header:
+
+```
+Authorization: Bearer ps_<token>
+```
+
+### 9.1 Key Types
+
+| Type       | Purpose                                             | Key Material                        |
+| ---------- | --------------------------------------------------- | ----------------------------------- |
+| `metadata` | Read/write operations that don't require encryption | None                                |
+| `crypto`   | Operations involving E2E encrypted data             | Public key + encrypted key material |
+
+### 9.2 Scopes
+
+Each API key is granted a set of scopes that control which endpoints it can access. Scopes follow a three-tier hierarchy:
+
+- **read** -- list and get operations
+- **write** -- create, update, archive, restore (implies read)
+- **delete** -- permanent deletion and purge (implies write and read)
+
+Scopes are organized by domain (e.g., `read:members`, `write:fronting`, `delete:groups`). Aggregate scopes (`read-all`, `write-all`, `delete-all`) grant access across all domains. The `full` scope grants unrestricted access including API key management.
+
+For the complete scope reference, domain list, and hierarchy resolution rules, see [API Key Scopes Reference](api-key-scopes.md).
+
+### 9.3 Lifecycle
+
+API key scopes are immutable after creation. To change scopes, revoke the existing key and create a new one.
+
+```
+POST   /v1/systems/:systemId/api-keys                    Create key (returns token once)
+GET    /v1/systems/:systemId/api-keys                     List keys (paginated)
+GET    /v1/systems/:systemId/api-keys/:apiKeyId           Get key details
+POST   /v1/systems/:systemId/api-keys/:apiKeyId/revoke    Revoke key
+```
+
+**Create request body:**
+
+```json
+{
+  "keyType": "metadata",
+  "scopes": ["read:members", "write:fronting"],
+  "encryptedData": "<base64-encoded encrypted blob>",
+  "expiresAt": 1735689600000
+}
+```
+
+The `token` field is only returned in the create response -- store it securely. It cannot be retrieved again.
+
+**Scope enforcement:** every endpoint checks the requesting key's scopes. If the key lacks the required scope, the server returns `403` with error code `SCOPE_INSUFFICIENT`. API key management endpoints require the `full` scope to prevent privilege escalation.
+
+---
+
+## 10. Self-Hosted Considerations
 
 Pluralscape supports self-hosted deployments. The API uses an adapter pattern for external services, so the client should not need to change behavior based on the hosting environment -- but there are subtle differences to be aware of.
 
