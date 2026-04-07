@@ -9,18 +9,39 @@ import { ALL_API_KEY_SCOPES } from "@pluralscape/types";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createApiKey, getApiKey, listApiKeys } from "../../services/api-key.service.js";
+import {
+  createApiKey,
+  getApiKey,
+  listApiKeys,
+  revokeApiKey,
+  validateApiKey,
+} from "../../services/api-key.service.js";
 import {
   asDb,
+  assertApiError,
   makeAuth,
   noopAudit,
+  spyAudit,
   testEncryptedDataBase64,
 } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, ApiKeyScope, SystemId } from "@pluralscape/types";
+import type { AccountId, ApiKeyId, ApiKeyScope, SystemId } from "@pluralscape/types";
 
-function makeCreateParams(scopes: readonly ApiKeyScope[], overrides: Record<string, unknown> = {}) {
+/** Shape of the params accepted by createApiKey (matches CreateApiKeyBodySchema input). */
+interface CreateApiKeyTestParams {
+  keyType: "metadata" | "crypto";
+  scopes: ApiKeyScope[];
+  encryptedData: string;
+  encryptedKeyMaterial?: string;
+  expiresAt?: number;
+  scopedBucketIds?: string[];
+}
+
+function makeCreateParams(
+  scopes: readonly ApiKeyScope[],
+  overrides: Partial<CreateApiKeyTestParams> = {},
+) {
   return {
     keyType: "metadata" as const,
     scopes: [...scopes],
@@ -29,7 +50,7 @@ function makeCreateParams(scopes: readonly ApiKeyScope[], overrides: Record<stri
   };
 }
 
-describe("api-key.service scope validation (PGlite integration)", () => {
+describe("api-key.service (PGlite integration)", () => {
   let client: PGlite;
   let db: ReturnType<typeof drizzle<typeof schema>>;
   let accountId: AccountId;
@@ -132,10 +153,10 @@ describe("api-key.service scope validation (PGlite integration)", () => {
     expect(result.scopes).toEqual(["full"]);
   });
 
-  // ── All 71 scopes at once ─────────────────────────────────────
+  // ── All scopes at once ──────────────────────────────────────────
 
-  it("creates key with all 71 scopes", async () => {
-    const allScopes = [...ALL_API_KEY_SCOPES] as ApiKeyScope[];
+  it("creates key with all 68 scopes", async () => {
+    const allScopes = [...ALL_API_KEY_SCOPES];
     const result = await createApiKey(
       asDb(db),
       systemId,
@@ -198,9 +219,183 @@ describe("api-key.service scope validation (PGlite integration)", () => {
   });
 
   it("rejects missing scopes field", async () => {
-    const params = { keyType: "metadata", encryptedData: testEncryptedDataBase64() };
+    const params = {
+      keyType: "metadata" as const,
+      encryptedData: testEncryptedDataBase64(),
+    };
     await expect(createApiKey(asDb(db), systemId, params, auth, noopAudit)).rejects.toThrow(
       "Invalid payload",
     );
+  });
+
+  // ── Key type validation (crypto) ──────────────────────────────
+
+  it("creates crypto key with encryptedKeyMaterial", async () => {
+    const keyMaterial = Buffer.from("test-key-material").toString("base64");
+    const result = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["read:members"], {
+        keyType: "crypto",
+        encryptedKeyMaterial: keyMaterial,
+      }),
+      auth,
+      noopAudit,
+    );
+    expect(result.keyType).toBe("crypto");
+    expect(result.scopes).toEqual(["read:members"]);
+  });
+
+  it("rejects crypto key without encryptedKeyMaterial", async () => {
+    await expect(
+      createApiKey(
+        asDb(db),
+        systemId,
+        makeCreateParams(["read:members"], { keyType: "crypto" }),
+        auth,
+        noopAudit,
+      ),
+    ).rejects.toThrow("Invalid payload");
+  });
+
+  it("rejects metadata key with encryptedKeyMaterial", async () => {
+    const keyMaterial = Buffer.from("test-key-material").toString("base64");
+    await expect(
+      createApiKey(
+        asDb(db),
+        systemId,
+        makeCreateParams(["read:members"], { encryptedKeyMaterial: keyMaterial }),
+        auth,
+        noopAudit,
+      ),
+    ).rejects.toThrow("Invalid payload");
+  });
+
+  // ── Revocation ────────────────────────────────────────────────
+
+  it("revokes a key and writes audit event", async () => {
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["read:members"]),
+      auth,
+      noopAudit,
+    );
+    const audit = spyAudit();
+    await revokeApiKey(asDb(db), systemId, created.id, auth, audit);
+
+    expect(audit.calls).toHaveLength(1);
+    expect(audit.calls[0]?.eventType).toBe("api-key.revoked");
+
+    const fetched = await getApiKey(asDb(db), systemId, created.id, auth);
+    expect(fetched.revokedAt).not.toBeNull();
+  });
+
+  it("revoke is idempotent for already-revoked key", async () => {
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["read:members"]),
+      auth,
+      noopAudit,
+    );
+    await revokeApiKey(asDb(db), systemId, created.id, auth, noopAudit);
+
+    const audit = spyAudit();
+    await revokeApiKey(asDb(db), systemId, created.id, auth, audit);
+    // No audit event written for idempotent revoke
+    expect(audit.calls).toHaveLength(0);
+  });
+
+  it("revoke throws NOT_FOUND for non-existent key", async () => {
+    const fakeId = "ak_00000000-0000-0000-0000-000000000000" as ApiKeyId;
+    await assertApiError(
+      revokeApiKey(asDb(db), systemId, fakeId, auth, noopAudit),
+      "NOT_FOUND",
+      404,
+    );
+  });
+
+  it("revoked keys are excluded from list by default", async () => {
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["delete:timers"]),
+      auth,
+      noopAudit,
+    );
+    await revokeApiKey(asDb(db), systemId, created.id, auth, noopAudit);
+
+    const listed = await listApiKeys(asDb(db), systemId, auth);
+    expect(listed.data.find((k) => k.id === created.id)).toBeUndefined();
+  });
+
+  it("revoked keys are included in list with includeRevoked", async () => {
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["delete:polls"]),
+      auth,
+      noopAudit,
+    );
+    await revokeApiKey(asDb(db), systemId, created.id, auth, noopAudit);
+
+    const listed = await listApiKeys(asDb(db), systemId, auth, { includeRevoked: true });
+    const match = listed.data.find((k) => k.id === created.id);
+    expect(match).toBeDefined();
+    expect(match?.revokedAt).not.toBeNull();
+  });
+
+  // ── Token validation ──────────────────────────────────────────
+
+  it("validates a valid token and returns correct data", async () => {
+    const scopes: ApiKeyScope[] = ["read:members", "write:fronting"];
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(scopes),
+      auth,
+      noopAudit,
+    );
+
+    const result = await validateApiKey(asDb(db), created.token);
+    expect(result).not.toBeNull();
+    if (result === null) return; // narrowing for lint
+    expect(result.accountId).toBe(accountId);
+    expect(result.systemId).toBe(systemId);
+    expect(result.scopes).toEqual(scopes);
+    expect(result.keyId).toBe(created.id);
+  });
+
+  it("returns null for a revoked token", async () => {
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["read:groups"]),
+      auth,
+      noopAudit,
+    );
+    await revokeApiKey(asDb(db), systemId, created.id, auth, noopAudit);
+
+    const result = await validateApiKey(asDb(db), created.token);
+    expect(result).toBeNull();
+  });
+
+  it("returns null for a non-existent token", async () => {
+    const result = await validateApiKey(asDb(db), "ps_nonexistent_token");
+    expect(result).toBeNull();
+  });
+
+  it("returns null for an expired token", async () => {
+    const created = await createApiKey(
+      asDb(db),
+      systemId,
+      makeCreateParams(["read:notes"], { expiresAt: 1 }),
+      auth,
+      noopAudit,
+    );
+
+    const result = await validateApiKey(asDb(db), created.token);
+    expect(result).toBeNull();
   });
 });

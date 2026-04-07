@@ -14,7 +14,7 @@ Ensure the mobile app's data layer hooks for API key management (create, update,
 
 ## Summary of Changes
 
-Audited the mobile hook type chain for expanded API key scopes (71 values). Findings:
+Audited the mobile hook type chain for expanded API key scopes (68 values). Findings:
 
 - `RouterInput["apiKey"]["create"]` correctly infers `scopes: ApiKeyScope[]` from `CreateApiKeyBodySchema`, which uses `z.enum(ALL_API_KEY_SCOPES)`
 - `RouterOutput["apiKey"]["get"]` and list items include `scopes: readonly ApiKeyScope[]`

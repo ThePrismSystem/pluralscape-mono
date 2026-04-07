@@ -72,10 +72,10 @@ When an endpoint requires a scope, the server checks in this order:
 
 ## Scope Count
 
-- 22 domains x 3 tiers = 66 per-entity scopes
+- 21 domains x 3 tiers = 63 per-entity scopes
 - 1 special scope: `read:audit-log`
 - 4 aggregate scopes: `read-all`, `write-all`, `delete-all`, `full`
-- **Total: 71 scopes**
+- **Total: 68 scopes**
 
 ## Common Scope Combinations
 
