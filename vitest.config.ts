@@ -174,8 +174,6 @@ export default defineConfig({
 
         // storage: interface-only files (no executable code)
         "packages/storage/src/interface.ts",
-        // sync: Bun-only adapters — produce 0% coverage in Node-based vitest
-        "packages/sync/src/adapters/sqlite-driver.ts",
         // sync: CRDT schema interfaces and adapter interfaces (no executable code)
         "packages/sync/src/schemas.ts",
         "packages/sync/src/schemas/**/*.ts",
