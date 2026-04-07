@@ -3,7 +3,6 @@ import { SCOPE_DOMAINS } from "@pluralscape/types";
 import type { AuthContext } from "./auth-context.js";
 import type { ApiKeyScope, RequiredScope, ScopeDomain, ScopeTier } from "@pluralscape/types";
 
-
 /** Numeric tier levels — higher number = more privilege. */
 const TIER_LEVEL: Record<ScopeTier, number> = { read: 0, write: 1, delete: 2 };
 
