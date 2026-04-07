@@ -234,4 +234,56 @@ describe("ConnectionStateMachine.getBackoffMs jitter", () => {
       expect(delay).toBeLessThanOrEqual(Math.round(2_000 * JITTER_MAX));
     }
   });
+
+  describe("no-op transitions", () => {
+    it("BACKOFF_COMPLETE is a no-op when not in backoff state", () => {
+      const machine = makeMachine();
+      machine.dispatch({ type: "BACKOFF_COMPLETE" });
+      expect(machine.getSnapshot()).toBe("disconnected");
+    });
+
+    it("RETRY is a no-op when not in reconnecting state", () => {
+      const machine = makeMachine();
+      machine.dispatch({ type: "RETRY" });
+      expect(machine.getSnapshot()).toBe("disconnected");
+    });
+
+    it("CONNECTED is a no-op when in disconnected state", () => {
+      const machine = makeMachine();
+      machine.dispatch({ type: "CONNECTED" });
+      expect(machine.getSnapshot()).toBe("disconnected");
+    });
+
+    it("CONNECTION_LOST is a no-op when already disconnected", () => {
+      const machine = makeMachine();
+      machine.dispatch({ type: "CONNECTION_LOST" });
+      expect(machine.getSnapshot()).toBe("disconnected");
+    });
+  });
+
+  describe("custom config", () => {
+    it("uses provided baseBackoffMs and maxBackoffMs", () => {
+      const machine = new ConnectionStateMachine({
+        baseUrl: "http://test",
+        baseBackoffMs: 500,
+        maxBackoffMs: 5_000,
+      });
+      // retryCount = 0 → delay ~= 500 * jitter, capped at 5_000
+      const delay = machine.getBackoffMs();
+      expect(delay).toBeGreaterThanOrEqual(Math.round(500 * 0.75));
+      expect(delay).toBeLessThanOrEqual(5_000);
+    });
+  });
+
+  describe("CONNECTED from reconnecting", () => {
+    it("transitions reconnecting → connected", () => {
+      const machine = makeMachine();
+      machine.dispatch({ type: "CONNECT", token: "tok", systemId: "sys" as SystemId });
+      machine.dispatch({ type: "CONNECTED" });
+      machine.dispatch({ type: "CONNECTION_LOST" }); // → reconnecting
+      expect(machine.getSnapshot()).toBe("reconnecting");
+      machine.dispatch({ type: "CONNECTED" });
+      expect(machine.getSnapshot()).toBe("connected");
+    });
+  });
 });
