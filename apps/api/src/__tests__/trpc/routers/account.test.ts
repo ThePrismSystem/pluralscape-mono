@@ -18,6 +18,15 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+vi.mock("../../../trpc/middlewares/rate-limit.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../trpc/middlewares/rate-limit.js")>();
+  const { middleware: mw } = await import("../../../trpc/trpc.js");
+  return {
+    ...actual,
+    createTRPCRateLimiter: vi.fn().mockImplementation(() => mw(({ next }) => next())),
+  };
+});
+
 vi.mock("../../../services/account.service.js", () => ({
   getAccountInfo: vi.fn(),
   changeEmail: vi.fn(),
@@ -45,6 +54,22 @@ vi.mock("../../../services/audit-log-query.service.js", () => ({
   queryAuditLog: vi.fn(),
 }));
 
+vi.mock("../../../services/account-deletion.service.js", () => ({
+  deleteAccount: vi.fn(),
+}));
+
+vi.mock("../../../services/device-transfer.service.js", () => ({
+  initiateTransfer: vi.fn(),
+  approveTransfer: vi.fn(),
+  completeTransfer: vi.fn(),
+  TransferValidationError: class TransferValidationError extends Error {},
+  TransferNotFoundError: class TransferNotFoundError extends Error {},
+  TransferCodeError: class TransferCodeError extends Error {},
+  TransferExpiredError: class TransferExpiredError extends Error {},
+  KeyDerivationUnavailableError: class KeyDerivationUnavailableError extends Error {},
+  TransferSessionMismatchError: class TransferSessionMismatchError extends Error {},
+}));
+
 const { getAccountInfo, changeEmail, changePassword, updateAccountSettings } =
   await import("../../../services/account.service.js");
 const { setAccountPin, removeAccountPin, verifyAccountPin } =
@@ -53,6 +78,17 @@ const { enrollBiometric, verifyBiometric } = await import("../../../services/bio
 const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup } =
   await import("../../../services/recovery-key.service.js");
 const { queryAuditLog } = await import("../../../services/audit-log-query.service.js");
+const {
+  initiateTransfer,
+  approveTransfer,
+  completeTransfer,
+  TransferValidationError,
+  TransferNotFoundError,
+  TransferCodeError,
+  TransferExpiredError,
+  KeyDerivationUnavailableError,
+  TransferSessionMismatchError,
+} = await import("../../../services/device-transfer.service.js");
 
 const { accountRouter } = await import("../../../trpc/routers/account.js");
 
@@ -472,5 +508,189 @@ describe("account router", () => {
         caller.account.changeEmail({ email: "new@example.com", currentPassword: "OldPassword1!" }),
       "authHeavy",
     );
+  });
+
+  // ── deleteAccount ─────────────────────────────────────────────────
+
+  describe("account.deleteAccount", () => {
+    const input = { password: "MyPassword1!", confirmed: true as const };
+
+    it("calls deleteAccount service and returns success", async () => {
+      const { deleteAccount: deleteAccountSvc } =
+        await import("../../../services/account-deletion.service.js");
+      vi.mocked(deleteAccountSvc).mockResolvedValue(undefined);
+      const caller = createCaller();
+      const result = await caller.account.deleteAccount(input);
+      expect(result).toEqual({ success: true });
+    });
+
+    it("throws UNAUTHORIZED for unauthenticated callers", async () => {
+      const caller = createCaller(null);
+      await expect(caller.account.deleteAccount(input)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+  });
+
+  // ── initiateDeviceTransfer ────────────────────────────────────────
+
+  describe("account.initiateDeviceTransfer", () => {
+    // 32 hex chars (PWHASH_SALT_BYTES=16 * HEX_CHARS_PER_BYTE=2)
+    const VALID_CODE_SALT = "a".repeat(32);
+    // 80 hex chars ((AEAD_NONCE_BYTES=24 + AEAD_TAG_BYTES=16) * 2)
+    const VALID_ENC_KEY = "b".repeat(80);
+
+    const validInput = {
+      codeSaltHex: VALID_CODE_SALT,
+      encryptedKeyMaterialHex: VALID_ENC_KEY,
+    };
+
+    const mockTransferResult = {
+      transferId: "xfer_001",
+      expiresAt: 1_700_003_600_000 as import("@pluralscape/types").UnixMillis,
+    };
+
+    it("returns transfer result on success", async () => {
+      vi.mocked(initiateTransfer).mockResolvedValue(mockTransferResult);
+      const caller = createCaller();
+      const result = await caller.account.initiateDeviceTransfer(validInput);
+      expect(result).toEqual(mockTransferResult);
+    });
+
+    it("maps TransferValidationError to BAD_REQUEST", async () => {
+      vi.mocked(initiateTransfer).mockRejectedValue(new TransferValidationError("bad"));
+      const caller = createCaller();
+      await expect(caller.account.initiateDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
+    });
+
+    it("surfaces unknown errors as INTERNAL_SERVER_ERROR", async () => {
+      vi.mocked(initiateTransfer).mockRejectedValue(new Error("unexpected"));
+      const caller = createCaller();
+      await expect(caller.account.initiateDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }),
+      );
+    });
+
+    it("throws UNAUTHORIZED for unauthenticated callers", async () => {
+      const caller = createCaller(null);
+      await expect(caller.account.initiateDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+  });
+
+  // ── approveDeviceTransfer ─────────────────────────────────────────
+
+  describe("account.approveDeviceTransfer", () => {
+    const validInput = { transferId: "xfer_001" };
+
+    it("returns success on approval", async () => {
+      vi.mocked(approveTransfer).mockResolvedValue(undefined);
+      const caller = createCaller();
+      const result = await caller.account.approveDeviceTransfer(validInput);
+      expect(result).toEqual({ success: true });
+    });
+
+    it("maps TransferNotFoundError to NOT_FOUND", async () => {
+      vi.mocked(approveTransfer).mockRejectedValue(new TransferNotFoundError("not found"));
+      const caller = createCaller();
+      await expect(caller.account.approveDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "NOT_FOUND" }),
+      );
+    });
+
+    it("maps TransferSessionMismatchError to FORBIDDEN", async () => {
+      vi.mocked(approveTransfer).mockRejectedValue(new TransferSessionMismatchError("forbidden"));
+      const caller = createCaller();
+      await expect(caller.account.approveDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "FORBIDDEN" }),
+      );
+    });
+
+    it("surfaces unknown errors as INTERNAL_SERVER_ERROR", async () => {
+      vi.mocked(approveTransfer).mockRejectedValue(new Error("unexpected"));
+      const caller = createCaller();
+      await expect(caller.account.approveDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }),
+      );
+    });
+
+    it("throws UNAUTHORIZED for unauthenticated callers", async () => {
+      const caller = createCaller(null);
+      await expect(caller.account.approveDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+  });
+
+  // ── completeDeviceTransfer ────────────────────────────────────────
+
+  describe("account.completeDeviceTransfer", () => {
+    const validInput = { transferId: "xfer_001", code: "1234567890" };
+    const mockCompleteResult = { encryptedKeyMaterialHex: "deadbeef".repeat(10) };
+
+    it("returns complete result on success", async () => {
+      vi.mocked(completeTransfer).mockResolvedValue(mockCompleteResult);
+      const caller = createCaller();
+      const result = await caller.account.completeDeviceTransfer(validInput);
+      expect(result).toEqual(mockCompleteResult);
+    });
+
+    it("maps TransferNotFoundError to NOT_FOUND", async () => {
+      vi.mocked(completeTransfer).mockRejectedValue(new TransferNotFoundError("not found"));
+      const caller = createCaller();
+      await expect(caller.account.completeDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "NOT_FOUND" }),
+      );
+    });
+
+    it("maps TransferCodeError to UNAUTHORIZED", async () => {
+      vi.mocked(completeTransfer).mockRejectedValue(new TransferCodeError("bad code"));
+      const caller = createCaller();
+      await expect(caller.account.completeDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+
+    it("maps TransferExpiredError to UNAUTHORIZED", async () => {
+      vi.mocked(completeTransfer).mockRejectedValue(new TransferExpiredError("expired"));
+      const caller = createCaller();
+      await expect(caller.account.completeDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+
+    it("maps TransferValidationError to BAD_REQUEST", async () => {
+      vi.mocked(completeTransfer).mockRejectedValue(new TransferValidationError("invalid"));
+      const caller = createCaller();
+      await expect(caller.account.completeDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "BAD_REQUEST" }),
+      );
+    });
+
+    it("maps KeyDerivationUnavailableError to SERVICE_UNAVAILABLE", async () => {
+      vi.mocked(completeTransfer).mockRejectedValue(new KeyDerivationUnavailableError("kdf down"));
+      const caller = createCaller();
+      await expect(caller.account.completeDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "SERVICE_UNAVAILABLE" }),
+      );
+    });
+
+    it("surfaces unknown errors as INTERNAL_SERVER_ERROR", async () => {
+      vi.mocked(completeTransfer).mockRejectedValue(new Error("unexpected"));
+      const caller = createCaller();
+      await expect(caller.account.completeDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }),
+      );
+    });
+
+    it("throws UNAUTHORIZED for unauthenticated callers", async () => {
+      const caller = createCaller(null);
+      await expect(caller.account.completeDeviceTransfer(validInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
   });
 });
