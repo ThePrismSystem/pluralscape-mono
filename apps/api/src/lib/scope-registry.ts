@@ -709,11 +709,17 @@ const TRPC_ENTRIES: readonly [string, RequiredScope][] = [
 function buildRegistry(): ScopeRegistry {
   const rest = new Map<string, ScopeEntry>();
   for (const [key, scope] of REST_ENTRIES) {
+    if (rest.has(key)) {
+      throw new Error(`Duplicate REST scope registry key: "${key}"`);
+    }
     rest.set(key, { scope });
   }
 
   const trpc = new Map<string, ScopeEntry>();
   for (const [key, scope] of TRPC_ENTRIES) {
+    if (trpc.has(key)) {
+      throw new Error(`Duplicate tRPC scope registry key: "${key}"`);
+    }
     trpc.set(key, { scope });
   }
 
