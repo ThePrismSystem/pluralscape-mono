@@ -31,6 +31,9 @@ import {
   rowToPrivacyBucket,
   rowToRelationship,
   rowToStructureEntity,
+  rowToStructureEntityAssociation,
+  rowToStructureEntityLink,
+  rowToStructureEntityMemberLink,
   rowToStructureEntityType,
   rowToSystemSettings,
   rowToTimer,
@@ -1624,6 +1627,151 @@ describe("rowToNote", () => {
   it("populates backgroundColor when provided", () => {
     const result = rowToNote(baseNoteRow({ background_color: "yellow" }));
     expect(result.backgroundColor).toBe("yellow");
+  });
+});
+
+describe("rowToStructureEntity edge branches", () => {
+  function baseStructureEntityRow(
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    return {
+      id: "se-arch",
+      system_id: "sys-1",
+      entity_type_id: "set-1",
+      name: "Lattice",
+      description: "Inner network",
+      color: "#7777ff",
+      image_source: null,
+      emoji: "🔮",
+      sort_order: 2.0,
+      archived: 0,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_000_000,
+      ...overrides,
+    };
+  }
+
+  it("returns archived structure entity when archived = 1", () => {
+    const result = rowToStructureEntity(
+      baseStructureEntityRow({ archived: 1, updated_at: 1_700_000_222_000 }),
+    );
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_222_000);
+    }
+  });
+
+  it("populates description, color, and emoji when present", () => {
+    const result = rowToStructureEntity(baseStructureEntityRow());
+    expect(result.description).toBe("Inner network");
+    expect(result.color).toBe("#7777ff");
+    expect(result.emoji).toBe("🔮");
+  });
+});
+
+describe("rowToStructureEntityType edge branches", () => {
+  it("returns archived structure entity type when archived = 1", () => {
+    const row: Record<string, unknown> = {
+      id: "set-arch",
+      system_id: "sys-1",
+      name: "Old Type",
+      description: null,
+      color: null,
+      image_source: null,
+      emoji: null,
+      sort_order: 1.0,
+      archived: 1,
+      created_at: 1_700_000_000_000,
+      updated_at: 1_700_000_333_000,
+    };
+    const result = rowToStructureEntityType(row);
+    expect(result.archived).toBe(true);
+    if (result.archived) {
+      expect(result.archivedAt).toBe(1_700_000_333_000);
+    }
+  });
+});
+
+describe("rowToStructureEntityLink", () => {
+  it("maps a structure entity link row", () => {
+    const row: Record<string, unknown> = {
+      id: "sel-1",
+      system_id: "sys-1",
+      entity_id: "se-1",
+      parent_entity_id: "se-parent",
+      sort_order: 0,
+      created_at: 1_700_000_000_000,
+    };
+    const result = rowToStructureEntityLink(row);
+    expect(result.id).toBe("sel-1");
+    expect(result.systemId).toBe("sys-1");
+    expect(result.entityId).toBe("se-1");
+    expect(result.parentEntityId).toBe("se-parent");
+    expect(result.sortOrder).toBe(0);
+    expect(result.createdAt).toBe(1_700_000_000_000);
+  });
+
+  it("supports null parentEntityId", () => {
+    const row: Record<string, unknown> = {
+      id: "sel-2",
+      system_id: "sys-1",
+      entity_id: "se-1",
+      parent_entity_id: null,
+      sort_order: 1,
+      created_at: 1_700_000_000_000,
+    };
+    const result = rowToStructureEntityLink(row);
+    expect(result.parentEntityId).toBeNull();
+  });
+});
+
+describe("rowToStructureEntityMemberLink", () => {
+  it("maps a structure entity member link row", () => {
+    const row: Record<string, unknown> = {
+      id: "seml-1",
+      system_id: "sys-1",
+      member_id: "mem-1",
+      parent_entity_id: "se-1",
+      sort_order: 0,
+      created_at: 1_700_000_000_000,
+    };
+    const result = rowToStructureEntityMemberLink(row);
+    expect(result.id).toBe("seml-1");
+    expect(result.systemId).toBe("sys-1");
+    expect(result.memberId).toBe("mem-1");
+    expect(result.parentEntityId).toBe("se-1");
+    expect(result.sortOrder).toBe(0);
+  });
+
+  it("supports null parentEntityId", () => {
+    const row: Record<string, unknown> = {
+      id: "seml-2",
+      system_id: "sys-1",
+      member_id: "mem-1",
+      parent_entity_id: null,
+      sort_order: 0,
+      created_at: 1_700_000_000_000,
+    };
+    const result = rowToStructureEntityMemberLink(row);
+    expect(result.parentEntityId).toBeNull();
+  });
+});
+
+describe("rowToStructureEntityAssociation", () => {
+  it("maps a structure entity association row", () => {
+    const row: Record<string, unknown> = {
+      id: "sea-1",
+      system_id: "sys-1",
+      source_entity_id: "se-1",
+      target_entity_id: "se-2",
+      created_at: 1_700_000_000_000,
+    };
+    const result = rowToStructureEntityAssociation(row);
+    expect(result.id).toBe("sea-1");
+    expect(result.systemId).toBe("sys-1");
+    expect(result.sourceEntityId).toBe("se-1");
+    expect(result.targetEntityId).toBe("se-2");
+    expect(result.createdAt).toBe(1_700_000_000_000);
   });
 });
 
