@@ -25,6 +25,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint --max-warnings 0 .",
     "lint:fix": "eslint --fix --max-warnings 0 .",
-    "build-fixtures": "tsx scripts/build-fixtures.ts"
+    "build-fixtures": "tsx scripts/build-fixtures.ts",
+    "smoke-test": "tsx scripts/manual-import.ts"
   }
 }
