@@ -5,6 +5,14 @@ import type {
   ImportEntityType,
 } from "@pluralscape/types";
 
+/**
+ * Checkpoint state is keyed by `ImportEntityType` (values like `"member"`),
+ * not `SpCollectionName` (values like `"members"`). Callers walking
+ * `DEPENDENCY_ORDER` (which is keyed by `SpCollectionName`) must translate
+ * via `collectionToEntityType()` from `entity-type-map.ts` before invoking
+ * these helpers.
+ */
+
 /** Schema version emitted by `emptyCheckpointState`. Bumped when the shape changes. */
 const CHECKPOINT_SCHEMA_VERSION = 1;
 
@@ -25,6 +33,20 @@ export interface AdvanceDelta {
   readonly total: number;
 }
 
+/**
+ * Build a fresh `ImportCheckpointState` for a new import job.
+ *
+ * `firstEntityType` must be an `ImportEntityType`, not an `SpCollectionName`.
+ * When deriving it from `DEPENDENCY_ORDER` (keyed by collection name), translate
+ * first:
+ *
+ * @example
+ *   emptyCheckpointState({
+ *     firstEntityType: collectionToEntityType(DEPENDENCY_ORDER[0]),
+ *     selectedCategories,
+ *     avatarMode,
+ *   });
+ */
 export function emptyCheckpointState(opts: {
   firstEntityType: ImportEntityType;
   selectedCategories: Record<string, boolean>;
