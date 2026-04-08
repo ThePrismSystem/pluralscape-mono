@@ -29,7 +29,12 @@ export interface MappedJournalParagraphBlock {
 
 export interface MappedJournalEntry {
   readonly title: string;
-  readonly authorMemberId: string;
+  /**
+   * Mirrors Pluralscape `JournalEntry.author`'s `EntityReference` shape,
+   * narrowed to the `"member"` variant. SP has no structure-entity
+   * equivalent, so the discriminant is always `"member"`.
+   */
+  readonly author: { readonly entityType: "member"; readonly entityId: string };
   readonly blocks: readonly MappedJournalParagraphBlock[];
   readonly createdAt: number;
 }
@@ -62,7 +67,7 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
   };
   const payload: MappedJournalEntry = {
     title: sp.title,
-    authorMemberId: resolved,
+    author: { entityType: "member", entityId: resolved },
     blocks: [block],
     createdAt: sp.date,
   };

@@ -20,7 +20,7 @@ describe("mapJournalEntry", () => {
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.title).toBe("Morning thoughts");
-      expect(result.payload.authorMemberId).toBe("ps_m1");
+      expect(result.payload.author).toEqual({ entityType: "member", entityId: "ps_m1" });
       expect(result.payload.createdAt).toBe(1_700_000_000_000);
       expect(result.payload.blocks).toHaveLength(1);
       expect(result.payload.blocks[0]).toEqual({
