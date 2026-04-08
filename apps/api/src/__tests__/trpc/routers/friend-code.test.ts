@@ -80,6 +80,8 @@ describe("friendCode router", () => {
       const result = await caller.friendCode.list({});
 
       expect(vi.mocked(listFriendCodes)).toHaveBeenCalledOnce();
+      expect(vi.mocked(listFriendCodes).mock.calls[0]?.[1]).toBe(MOCK_AUTH.accountId);
+      expect(vi.mocked(listFriendCodes).mock.calls[0]?.[2]).toBe(MOCK_AUTH);
       expect(result).toEqual(mockResult);
     });
 
