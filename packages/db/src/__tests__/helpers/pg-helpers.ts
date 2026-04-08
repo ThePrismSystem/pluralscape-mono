@@ -38,7 +38,12 @@ import {
 } from "../../schema/pg/custom-fields.js";
 import { customFronts, frontingComments, frontingSessions } from "../../schema/pg/fronting.js";
 import { groupMemberships, groups } from "../../schema/pg/groups.js";
-import { accountPurgeRequests, exportRequests, importJobs } from "../../schema/pg/import-export.js";
+import {
+  accountPurgeRequests,
+  exportRequests,
+  importEntityRefs,
+  importJobs,
+} from "../../schema/pg/import-export.js";
 import {
   innerworldCanvas,
   innerworldEntities,
@@ -265,6 +270,8 @@ export const PG_DDL = {
   // --- Import/Export ---
   importJobs: pgTableToCreateDDL(importJobs),
   importJobsIndexes: indexDDL(importJobs),
+  importEntityRefs: pgTableToCreateDDL(importEntityRefs),
+  importEntityRefsIndexes: indexDDL(importEntityRefs),
   exportRequests: pgTableToCreateDDL(exportRequests),
   exportRequestsIndexes: indexDDL(exportRequests),
   accountPurgeRequests: pgTableToCreateDDL(accountPurgeRequests),
@@ -689,6 +696,8 @@ export async function createPgImportExportTables(client: PGlite): Promise<void> 
   await pgExec(client, PG_DDL.blobMetadataIndexes);
   await pgExec(client, PG_DDL.importJobs);
   await pgExec(client, PG_DDL.importJobsIndexes);
+  await pgExec(client, PG_DDL.importEntityRefs);
+  await pgExec(client, PG_DDL.importEntityRefsIndexes);
   await pgExec(client, PG_DDL.exportRequests);
   await pgExec(client, PG_DDL.exportRequestsIndexes);
   await pgExec(client, PG_DDL.accountPurgeRequests);
@@ -871,6 +880,8 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   // Import/Export
   await pgExec(client, PG_DDL.importJobs);
   await pgExec(client, PG_DDL.importJobsIndexes);
+  await pgExec(client, PG_DDL.importEntityRefs);
+  await pgExec(client, PG_DDL.importEntityRefsIndexes);
   await pgExec(client, PG_DDL.exportRequests);
   await pgExec(client, PG_DDL.exportRequestsIndexes);
   await pgExec(client, PG_DDL.accountPurgeRequests);

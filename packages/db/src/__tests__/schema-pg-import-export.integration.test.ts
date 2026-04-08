@@ -4,7 +4,12 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
-import { accountPurgeRequests, exportRequests, importJobs } from "../schema/pg/import-export.js";
+import {
+  accountPurgeRequests,
+  exportRequests,
+  importEntityRefs,
+  importJobs,
+} from "../schema/pg/import-export.js";
 import { systems } from "../schema/pg/systems.js";
 
 import {
@@ -13,9 +18,17 @@ import {
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
 
+import type { ImportCheckpointState } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, importJobs, exportRequests, accountPurgeRequests };
+const schema = {
+  accounts,
+  systems,
+  importJobs,
+  importEntityRefs,
+  exportRequests,
+  accountPurgeRequests,
+};
 
 describe("PG import-export schema", () => {
   let client: PGlite;
@@ -754,6 +767,173 @@ describe("PG import-export schema", () => {
           requestedAt: now,
         }),
       ).rejects.toThrow();
+    });
+  });
+
+  describe("import_jobs.checkpoint_state", () => {
+    it("persists a full ImportCheckpointState as JSONB", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      const state: ImportCheckpointState = {
+        schemaVersion: 1,
+        checkpoint: {
+          completedCollections: ["member"],
+          currentCollection: "fronting-session",
+          currentCollectionLastSourceId: "507f1f77bcf86cd799439011",
+        },
+        options: {
+          selectedCategories: { identity: true, fronting: true },
+          avatarMode: "api",
+        },
+        totals: {
+          perCollection: {
+            member: { total: 20, imported: 20, updated: 0, skipped: 0, failed: 0 },
+          },
+        },
+      };
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "simply-plural",
+        status: "importing",
+        progressPercent: 25,
+        checkpointState: state,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.checkpointState).toEqual(state);
+    });
+
+    it("allows null checkpoint_state for jobs that have not started", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "simply-plural",
+        status: "pending",
+        progressPercent: 0,
+        checkpointState: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.checkpointState).toBeNull();
+    });
+  });
+
+  describe("import_entity_refs", () => {
+    afterEach(async () => {
+      await db.delete(importEntityRefs);
+    });
+
+    it("inserts and retrieves a ref", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importEntityRefs).values({
+        id,
+        accountId,
+        systemId,
+        source: "simply-plural",
+        sourceEntityType: "member",
+        sourceEntityId: "507f1f77bcf86cd799439011",
+        pluralscapeEntityId: "mem_test_target_01",
+        importedAt: now,
+      });
+
+      const rows = await db.select().from(importEntityRefs).where(eq(importEntityRefs.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.sourceEntityId).toBe("507f1f77bcf86cd799439011");
+      expect(rows[0]?.pluralscapeEntityId).toBe("mem_test_target_01");
+      expect(rows[0]?.source).toBe("simply-plural");
+    });
+
+    it("enforces unique (account, system, source, type, sourceId)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await db.insert(importEntityRefs).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        source: "simply-plural",
+        sourceEntityType: "member",
+        sourceEntityId: "deadbeefdeadbeefdeadbeef",
+        pluralscapeEntityId: "mem_target_a",
+        importedAt: now,
+      });
+
+      await expect(
+        db.insert(importEntityRefs).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          source: "simply-plural",
+          sourceEntityType: "member",
+          sourceEntityId: "deadbeefdeadbeefdeadbeef",
+          pluralscapeEntityId: "mem_target_b",
+          importedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects invalid source_entity_type via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      await expect(
+        db.insert(importEntityRefs).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          source: "simply-plural",
+          sourceEntityType: "not-a-real-type" as never,
+          sourceEntityId: "x",
+          pluralscapeEntityId: "y",
+          importedAt: Date.now(),
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("cascades on account deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      await db.insert(importEntityRefs).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        source: "simply-plural",
+        sourceEntityType: "member",
+        sourceEntityId: "abc-cascade",
+        pluralscapeEntityId: "mem_cascade_target",
+        importedAt: Date.now(),
+      });
+
+      await db.delete(accounts).where(eq(accounts.id, accountId));
+
+      const remaining = await db
+        .select()
+        .from(importEntityRefs)
+        .where(eq(importEntityRefs.accountId, accountId));
+      expect(remaining).toHaveLength(0);
     });
   });
 });

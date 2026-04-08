@@ -200,6 +200,7 @@ export const RLS_TABLE_POLICIES = {
 
   // Import/Export
   import_jobs: "dual",
+  import_entity_refs: "dual",
   export_requests: "dual",
   account_purge_requests: "account",
 

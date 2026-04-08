@@ -373,6 +373,12 @@ ALTER TABLE import_jobs FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS import_jobs_tenant_isolation ON import_jobs;
 CREATE POLICY import_jobs_tenant_isolation ON import_jobs USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
+-- import_entity_refs
+ALTER TABLE import_entity_refs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE import_entity_refs FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS import_entity_refs_tenant_isolation ON import_entity_refs;
+CREATE POLICY import_entity_refs_tenant_isolation ON import_entity_refs USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar AND system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+
 -- export_requests
 ALTER TABLE export_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE export_requests FORCE ROW LEVEL SECURITY;
