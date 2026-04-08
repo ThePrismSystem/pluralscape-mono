@@ -205,3 +205,37 @@ describe("runImport — fatal error", () => {
     expect(result.finalState.checkpoint.currentCollectionLastSourceId).toBe("b_ok");
   });
 });
+
+describe("runImport — non-fatal mapper failure", () => {
+  it("records the failure and continues iterating", async () => {
+    const data: FakeSourceData = {
+      members: [
+        { _id: "m_ok", name: "Aria" },
+        // missing required `name` → validation failure → non-fatal
+        { _id: "m_bad" },
+        { _id: "m_ok2", name: "Brook" },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m_ok", "m_ok2"]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(false);
+    expect(result.errors[0]?.entityType).toBe("member");
+    expect(result.errors[0]?.entityId).toBe("m_bad");
+    expect(result.finalState.totals.perCollection.member?.imported).toBe(2);
+    expect(result.finalState.totals.perCollection.member?.failed).toBe(1);
+  });
+});
