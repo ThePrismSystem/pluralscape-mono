@@ -13,6 +13,7 @@ const PACKAGES = [
   "validation",
   "rotation-worker",
   "email",
+  "import-sp",
 ];
 
 function projectConfig(name: string, root: string) {
