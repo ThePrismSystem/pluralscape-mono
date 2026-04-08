@@ -19,7 +19,7 @@
  * results via the persister boundary.
  */
 export { DEPENDENCY_ORDER } from "./engine/dependency-order.js";
-export { classifyError, isFatalError } from "./engine/engine-errors.js";
+export { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine/engine-errors.js";
 export { collectionToEntityType, entityTypeToCollection } from "./engine/entity-type-map.js";
 export { runImport } from "./engine/import-engine.js";
 export type { ImportRunOutcome, ImportRunResult, RunImportArgs } from "./engine/import-engine.js";

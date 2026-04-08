@@ -284,6 +284,57 @@ describe("runImport — resume", () => {
   });
 });
 
+describe("runImport — resume cutoff missing from source", () => {
+  it("aborts when the checkpointed lastSourceId is no longer yielded", async () => {
+    const data: FakeSourceData = {
+      members: [
+        { _id: "m_1", name: "Aria" },
+        { _id: "m_2", name: "Brook" },
+        { _id: "m_3", name: "Cass" },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const initial = emptyCheckpointState({
+      firstEntityType: "member",
+      selectedCategories: ALL_CATEGORIES_ON,
+      avatarMode: "skip",
+    });
+    const resumeState: ImportCheckpointState = {
+      ...initial,
+      checkpoint: {
+        ...initial.checkpoint,
+        currentCollection: "member",
+        currentCollectionLastSourceId: "nonexistent_id",
+      },
+    };
+    const result = await runImport({
+      source,
+      persister,
+      initialCheckpoint: resumeState,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("aborted");
+    // No member should have been persisted — every doc was gated behind the
+    // (never-reached) resume cutoff.
+    expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(0);
+    // Exactly one error: the resume-cutoff-not-found sentinel.
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(true);
+    expect(result.errors[0]?.recoverable).toBe(true);
+    expect(result.errors[0]?.message).toContain("resume cutoff not found in members");
+    expect(result.errors[0]?.message).toContain("nonexistent_id");
+    // Checkpoint must remain unchanged so the operator can retry.
+    expect(result.finalState.checkpoint.currentCollection).toBe("member");
+    expect(result.finalState.checkpoint.currentCollectionLastSourceId).toBe("nonexistent_id");
+    expect(result.finalState.checkpoint.completedCollections).not.toContain("member");
+  });
+});
+
 describe("runImport — legacy bucket synthesis", () => {
   it("synthesizes Public/Trusted/Private when privacyBuckets is absent", async () => {
     const data: FakeSourceData = {

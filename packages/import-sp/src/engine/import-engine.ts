@@ -40,7 +40,7 @@ import {
   type AdvanceDelta,
 } from "./checkpoint.js";
 import { DEPENDENCY_ORDER } from "./dependency-order.js";
-import { classifyError, isFatalError } from "./engine-errors.js";
+import { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine-errors.js";
 import { collectionToEntityType, entityTypeToCollection } from "./entity-type-map.js";
 import { MAPPER_DISPATCH } from "./mapper-dispatch.js";
 
@@ -310,6 +310,26 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       const error = classifyError(thrown, { entityType, entityId: null });
       errors.push(error);
       await persister.recordError(error);
+      return {
+        finalState: state,
+        warnings: ctx.warnings,
+        errors,
+        outcome: "aborted",
+      };
+    }
+
+    // Resume cutoff sanity check: if we were resuming mid-collection and
+    // never saw the checkpointed `lastSourceId` during iteration, the source
+    // likely dropped that document between runs. Aborting (rather than
+    // silently skipping the rest of the collection) forces the operator to
+    // restart the import deliberately.
+    if (resumeCutoffSourceId !== null && !pastResumeCutoff) {
+      const cutoffError = classifyError(
+        new ResumeCutoffNotFoundError(collection, resumeCutoffSourceId),
+        { entityType, entityId: resumeCutoffSourceId },
+      );
+      errors.push(cutoffError);
+      await persister.recordError(cutoffError);
       return {
         finalState: state,
         warnings: ctx.warnings,

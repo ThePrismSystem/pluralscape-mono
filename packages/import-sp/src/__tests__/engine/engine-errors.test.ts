@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyError, isFatalError } from "../../engine/engine-errors.js";
+import {
+  classifyError,
+  isFatalError,
+  ResumeCutoffNotFoundError,
+} from "../../engine/engine-errors.js";
 import { ApiSourceTokenRejectedError, ApiSourceTransientError } from "../../sources/api-source.js";
 
 describe("classifyError", () => {
@@ -32,6 +36,17 @@ describe("classifyError", () => {
     expect(error.recoverable).toBe(false);
     expect(error.entityType).toBe("member");
     expect(error.entityId).toBe("src_1");
+  });
+
+  it("classifies ResumeCutoffNotFoundError as fatal + recoverable with cutoff id", () => {
+    const thrown = new ResumeCutoffNotFoundError("members", "m_missing");
+    const error = classifyError(thrown, { entityType: "member", entityId: "m_missing" });
+    expect(error.fatal).toBe(true);
+    expect(error.recoverable).toBe(true);
+    expect(error.entityType).toBe("unknown");
+    expect(error.entityId).toBe("m_missing");
+    expect(error.message).toContain("resume cutoff not found in members");
+    expect(error.message).toContain("m_missing");
   });
 
   it("classifies a SyntaxError (JSON parse) as fatal + non-recoverable", () => {

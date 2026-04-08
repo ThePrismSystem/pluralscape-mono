@@ -1,10 +1,31 @@
 import { ApiSourceTokenRejectedError, ApiSourceTransientError } from "../sources/api-source.js";
 
+import type { SpCollectionName } from "../sources/sp-collections.js";
 import type { ImportEntityType, ImportError } from "@pluralscape/types";
 
 export interface ClassifyContext {
   readonly entityType: ImportEntityType;
   readonly entityId: string | null;
+}
+
+/**
+ * Thrown when the engine resumes mid-collection with a checkpointed
+ * `currentCollectionLastSourceId` that the source no longer yields — e.g.
+ * the document was deleted between runs. Classified as fatal + recoverable:
+ * the user needs to restart the import from scratch (or from an earlier
+ * checkpoint) rather than silently skipping the rest of the collection.
+ */
+export class ResumeCutoffNotFoundError extends Error {
+  public readonly collection: SpCollectionName;
+  public readonly cutoffId: string;
+  public constructor(collection: SpCollectionName, cutoffId: string) {
+    super(
+      `resume cutoff not found in ${collection} — source may have been modified since last run (looking for ${cutoffId})`,
+    );
+    this.name = "ResumeCutoffNotFoundError";
+    this.collection = collection;
+    this.cutoffId = cutoffId;
+  }
 }
 
 /**
@@ -38,6 +59,15 @@ export function classifyError(thrown: unknown, ctx: ClassifyContext): ImportErro
     return {
       entityType: "unknown",
       entityId: null,
+      message: thrown.message,
+      fatal: true,
+      recoverable: true,
+    };
+  }
+  if (thrown instanceof ResumeCutoffNotFoundError) {
+    return {
+      entityType: "unknown",
+      entityId: thrown.cutoffId,
       message: thrown.message,
       fatal: true,
       recoverable: true,
