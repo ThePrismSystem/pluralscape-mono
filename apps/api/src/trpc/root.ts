@@ -17,6 +17,7 @@ import { frontingCommentRouter } from "./routers/fronting-comment.js";
 import { frontingReportRouter } from "./routers/fronting-report.js";
 import { frontingSessionRouter } from "./routers/fronting-session.js";
 import { groupRouter } from "./routers/group.js";
+import { importEntityRefRouter } from "./routers/import-entity-ref.js";
 import { importJobRouter } from "./routers/import-job.js";
 import { innerworldRouter } from "./routers/innerworld.js";
 import { lifecycleEventRouter } from "./routers/lifecycle-event.js";
@@ -63,6 +64,7 @@ export const appRouter = router({
   frontingReport: frontingReportRouter,
   frontingSession: frontingSessionRouter,
   group: groupRouter,
+  importEntityRef: importEntityRefRouter,
   importJob: importJobRouter,
   innerworld: innerworldRouter,
   lifecycleEvent: lifecycleEventRouter,
