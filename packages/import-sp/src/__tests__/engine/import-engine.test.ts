@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
+import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
 import type { Persister, PersistableEntity } from "../../persistence/persister.types.js";
@@ -139,5 +140,68 @@ describe("runImport — happy path", () => {
     expect(collectionToEntityType("members")).toBe("member");
     expect(collectionToEntityType("privacyBuckets")).toBe("privacy-bucket");
     expect(collectionToEntityType("frontHistory")).toBe("fronting-session");
+  });
+});
+
+describe("runImport — fatal error", () => {
+  it("aborts when source iteration throws ApiSourceTokenRejectedError", async () => {
+    const tokenError = new ApiSourceTokenRejectedError();
+    const source = {
+      mode: "fake" as const,
+      iterate(): AsyncGenerator<never> {
+        async function* gen(): AsyncGenerator<never> {
+          await Promise.resolve();
+          throw tokenError;
+        }
+        return gen();
+      },
+      close(): Promise<void> {
+        return Promise.resolve();
+      },
+    };
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("aborted");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(true);
+    expect(result.errors[0]?.recoverable).toBe(true);
+    expect(persister.errors).toHaveLength(1);
+    expect(result.finalState.checkpoint.completedCollections).toEqual([]);
+  });
+
+  it("aborts when persister.upsertEntity throws a fatal error", async () => {
+    const data: FakeSourceData = {
+      privacyBuckets: [
+        { _id: "b_ok", name: "Public" },
+        { _id: "b_fail", name: "Private" },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister({
+      throwOn: { b_fail: new ApiSourceTokenRejectedError() },
+    });
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("aborted");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(true);
+    expect(persister.upserted.map((e) => e.sourceEntityId)).toEqual(["b_ok"]);
+    expect(result.finalState.checkpoint.currentCollection).toBe("privacy-bucket");
+    expect(result.finalState.checkpoint.currentCollectionLastSourceId).toBe("b_ok");
   });
 });
