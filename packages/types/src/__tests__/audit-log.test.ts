@@ -249,6 +249,8 @@ describe("AuditEventType", () => {
         case "friend-notification-preference.updated":
         case "api-key.created":
         case "api-key.revoked":
+        case "import-job.created":
+        case "import-job.updated":
           return type;
         default: {
           const _exhaustive: never = type;
