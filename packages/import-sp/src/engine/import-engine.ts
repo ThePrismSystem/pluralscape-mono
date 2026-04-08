@@ -1,0 +1,373 @@
+/**
+ * Import engine orchestrator.
+ *
+ * Walks `DEPENDENCY_ORDER`, dispatches each document through the
+ * `MAPPER_DISPATCH` table, persists `mapped` results via the injected
+ * `Persister`, records non-fatal failures, and aborts on fatal transport or
+ * parse errors with a recoverable checkpoint preserved.
+ *
+ * Public surface:
+ *  - {@link runImport} — the orchestrator entry point.
+ *  - {@link RunImportArgs}, {@link ImportRunResult} — argument and result
+ *    shapes the API service uses to bridge the engine to `import_jobs`.
+ *
+ * Design notes:
+ *  - The engine never imports the API client. It calls the injected
+ *    `Persister` and `onProgress` callbacks instead.
+ *  - The engine calls `synthesizeLegacyBuckets` itself when the source has no
+ *    `privacyBuckets` collection so member mappers can resolve their synthetic
+ *    bucket source IDs (`synthetic:public` etc.).
+ *  - Checkpoint state is keyed by `ImportEntityType`, not `SpCollectionName`.
+ *    The engine translates via {@link collectionToEntityType} when calling
+ *    checkpoint helpers and via {@link entityTypeToCollection} when resuming.
+ *  - Errors thrown inside the iteration loop are classified by
+ *    {@link classifyError}: fatal errors abort the run; non-fatal errors are
+ *    recorded against the failing document and iteration continues.
+ */
+import { CHECKPOINT_CHUNK_SIZE } from "../import-sp.constants.js";
+import { synthesizeLegacyBuckets, type MappedBucket } from "../mappers/bucket.mapper.js";
+import {
+  createMappingContext,
+  type MappingContext,
+  type MappingWarning,
+} from "../mappers/context.js";
+
+import {
+  advanceWithinCollection,
+  completeCollection,
+  emptyCheckpointState,
+  resumeStartCollection,
+  type AdvanceDelta,
+} from "./checkpoint.js";
+import { DEPENDENCY_ORDER } from "./dependency-order.js";
+import { classifyError, isFatalError } from "./engine-errors.js";
+import { collectionToEntityType, entityTypeToCollection } from "./entity-type-map.js";
+import { MAPPER_DISPATCH } from "./mapper-dispatch.js";
+
+import type { Persister } from "../persistence/persister.types.js";
+import type { ImportSource } from "../sources/source.types.js";
+import type { SpCollectionName } from "../sources/sp-collections.js";
+import type { ImportAvatarMode, ImportCheckpointState, ImportError } from "@pluralscape/types";
+
+/** Numeric delta describing one mapped+persisted document. */
+const ONE_IMPORTED: AdvanceDelta = {
+  imported: 1,
+  updated: 0,
+  skipped: 0,
+  failed: 0,
+  total: 1,
+};
+
+/** Numeric delta describing one document the persister recognised as updated. */
+const ONE_UPDATED: AdvanceDelta = {
+  imported: 0,
+  updated: 1,
+  skipped: 0,
+  failed: 0,
+  total: 1,
+};
+
+/** Numeric delta describing one document the persister recognised as a skip. */
+const ONE_PERSISTER_SKIPPED: AdvanceDelta = {
+  imported: 0,
+  updated: 0,
+  skipped: 1,
+  failed: 0,
+  total: 1,
+};
+
+/** Numeric delta describing one document the mapper voluntarily skipped. */
+const ONE_MAPPER_SKIPPED: AdvanceDelta = {
+  imported: 0,
+  updated: 0,
+  skipped: 1,
+  failed: 0,
+  total: 1,
+};
+
+/** Numeric delta describing one document that failed at the mapper layer. */
+const ONE_FAILED: AdvanceDelta = {
+  imported: 0,
+  updated: 0,
+  skipped: 0,
+  failed: 1,
+  total: 1,
+};
+
+export interface RunImportArgs {
+  readonly source: ImportSource;
+  readonly persister: Persister;
+  readonly initialCheckpoint?: ImportCheckpointState;
+  readonly options: {
+    readonly selectedCategories: Record<string, boolean>;
+    readonly avatarMode: ImportAvatarMode;
+  };
+  readonly onProgress: (state: ImportCheckpointState) => Promise<void>;
+}
+
+export type ImportRunOutcome = "completed" | "aborted";
+
+export interface ImportRunResult {
+  readonly finalState: ImportCheckpointState;
+  readonly warnings: readonly MappingWarning[];
+  readonly errors: readonly ImportError[];
+  readonly outcome: ImportRunOutcome;
+}
+
+/**
+ * Find the index in `DEPENDENCY_ORDER` of the collection corresponding to a
+ * resumed entity type. Resumes are stored as `ImportEntityType`; we walk back
+ * to the collection name to know where in the iteration order to start.
+ */
+function indexOfResumeCollection(state: ImportCheckpointState): number {
+  const entityType = resumeStartCollection(state);
+  // `entityTypeToCollection` throws when the entity type has no SP collection;
+  // a freshly-built checkpoint always points at a valid SP collection so this
+  // is safe in practice. Tests around malformed checkpoints would surface here.
+  const collection = entityTypeToCollection(entityType);
+  return DEPENDENCY_ORDER.indexOf(collection);
+}
+
+/**
+ * Synthesize the three legacy privacy buckets, persist them, and register
+ * each in the translation table so member mappers can resolve their
+ * `synthetic:*` references. Called only when the source has no
+ * `privacyBuckets` collection.
+ */
+async function persistSynthesizedBuckets(
+  persister: Persister,
+  ctx: MappingContext,
+  errors: ImportError[],
+): Promise<{ persisted: number; aborted: boolean; lastSourceId: string | null }> {
+  const synthesized = synthesizeLegacyBuckets({ existingBucketNames: [] });
+  let persisted = 0;
+  let lastSourceId: string | null = null;
+  for (const bucket of synthesized) {
+    const payload: MappedBucket = {
+      name: bucket.name,
+      description: bucket.description,
+      color: null,
+      icon: null,
+    };
+    try {
+      const result = await persister.upsertEntity({
+        entityType: "privacy-bucket",
+        sourceEntityId: bucket.syntheticSourceId,
+        source: "simply-plural",
+        payload,
+      });
+      ctx.register("privacy-bucket", bucket.syntheticSourceId, result.pluralscapeEntityId);
+      persisted += 1;
+      lastSourceId = bucket.syntheticSourceId;
+    } catch (thrown) {
+      const error = classifyError(thrown, {
+        entityType: "privacy-bucket",
+        entityId: bucket.syntheticSourceId,
+      });
+      errors.push(error);
+      await persister.recordError(error);
+      if (isFatalError(error)) {
+        return { persisted, aborted: true, lastSourceId };
+      }
+    }
+  }
+  return { persisted, aborted: false, lastSourceId };
+}
+
+export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
+  const { source, persister, options, onProgress } = args;
+  const ctx = createMappingContext({ sourceMode: source.mode });
+  const errors: ImportError[] = [];
+
+  let state: ImportCheckpointState =
+    args.initialCheckpoint ??
+    emptyCheckpointState({
+      firstEntityType: collectionToEntityType(DEPENDENCY_ORDER[0] ?? "users"),
+      selectedCategories: options.selectedCategories,
+      avatarMode: options.avatarMode,
+    });
+
+  const startIndex = indexOfResumeCollection(state);
+  const safeStartIndex = startIndex < 0 ? 0 : startIndex;
+
+  // Track how many documents the privacyBuckets collection emitted during its
+  // own pass so the members pass knows whether to synthesize legacy buckets.
+  // When resuming past members, assume legacy synthesis (if any) already ran.
+  let privacyBucketsSeen = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
+  // When resuming into members directly we cannot know whether the previous
+  // run already synthesized the legacy buckets. The persister's idempotency
+  // guarantees re-synthesis is safe, so we conservatively re-run.
+
+  for (
+    let collectionIndex = safeStartIndex;
+    collectionIndex < DEPENDENCY_ORDER.length;
+    collectionIndex += 1
+  ) {
+    const collection: SpCollectionName | undefined = DEPENDENCY_ORDER[collectionIndex];
+    if (collection === undefined) continue;
+    const entityType = collectionToEntityType(collection);
+
+    if (options.selectedCategories[collection] === false) {
+      // User opted out: advance the checkpoint past this collection without
+      // touching the source.
+      const nextCollection = DEPENDENCY_ORDER[collectionIndex + 1];
+      const nextEntityType = nextCollection ? collectionToEntityType(nextCollection) : entityType;
+      state = completeCollection(state, { nextEntityType });
+      await persister.flush();
+      await onProgress(state);
+      continue;
+    }
+
+    // Legacy bucket synthesis: when we enter members and the privacyBuckets
+    // pass produced zero documents, synthesize the three legacy buckets so
+    // members can resolve their `synthetic:*` references.
+    if (collection === "members" && privacyBucketsSeen === 0) {
+      const synth = await persistSynthesizedBuckets(persister, ctx, errors);
+      if (synth.aborted) {
+        return {
+          finalState: state,
+          warnings: ctx.warnings,
+          errors,
+          outcome: "aborted",
+        };
+      }
+      // Mark as handled so a downstream resume doesn't re-trigger.
+      privacyBucketsSeen = synth.persisted;
+    }
+
+    let docsSinceCheckpoint = 0;
+    let collectionAborted = false;
+    // Capture the resume cutoff at collection entry. After we persist the
+    // first doc of this collection, the live `state` will record its source
+    // ID as the new `lastSourceId`, so `shouldSkipBefore(state, ...)` would
+    // start over-skipping. We only honour the cutoff against the original
+    // checkpoint (`resumeCutoffSourceId`) and stop honouring it once we walk
+    // past the resumed source ID. This correctly handles sources whose IDs
+    // are not lexicographically sortable: we walk the (stable) iteration
+    // order and skip every doc up to and including the cutoff.
+    const resumeCutoffSourceId =
+      state.checkpoint.currentCollection === entityType
+        ? state.checkpoint.currentCollectionLastSourceId
+        : null;
+    let pastResumeCutoff = resumeCutoffSourceId === null;
+
+    try {
+      for await (const doc of source.iterate(collection)) {
+        if (collection === "privacyBuckets") privacyBucketsSeen += 1;
+        if (!pastResumeCutoff) {
+          if (doc.sourceId === resumeCutoffSourceId) {
+            pastResumeCutoff = true;
+          }
+          continue;
+        }
+
+        const entry = MAPPER_DISPATCH[collection];
+        const result = entry.map(doc.document, ctx);
+
+        if (result.status === "skipped") {
+          state = advanceWithinCollection(state, {
+            entityType,
+            lastSourceId: doc.sourceId,
+            delta: ONE_MAPPER_SKIPPED,
+          });
+        } else if (result.status === "failed") {
+          const error: ImportError = {
+            entityType,
+            entityId: doc.sourceId,
+            message: result.message,
+            fatal: false,
+            recoverable: false,
+          };
+          errors.push(error);
+          await persister.recordError(error);
+          state = advanceWithinCollection(state, {
+            entityType,
+            lastSourceId: doc.sourceId,
+            delta: ONE_FAILED,
+          });
+        } else {
+          // status === "mapped"
+          try {
+            const upsert = await persister.upsertEntity({
+              entityType,
+              sourceEntityId: doc.sourceId,
+              source: "simply-plural",
+              payload: result.payload,
+            });
+            ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
+            const delta =
+              upsert.action === "created"
+                ? ONE_IMPORTED
+                : upsert.action === "updated"
+                  ? ONE_UPDATED
+                  : ONE_PERSISTER_SKIPPED;
+            state = advanceWithinCollection(state, {
+              entityType,
+              lastSourceId: doc.sourceId,
+              delta,
+            });
+          } catch (thrown) {
+            const error = classifyError(thrown, { entityType, entityId: doc.sourceId });
+            errors.push(error);
+            await persister.recordError(error);
+            if (isFatalError(error)) {
+              collectionAborted = true;
+              break;
+            }
+            // Non-fatal persister failure: record and continue with this doc
+            // marked as failed in the checkpoint.
+            state = advanceWithinCollection(state, {
+              entityType,
+              lastSourceId: doc.sourceId,
+              delta: ONE_FAILED,
+            });
+          }
+        }
+
+        docsSinceCheckpoint += 1;
+        if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
+          await persister.flush();
+          await onProgress(state);
+          docsSinceCheckpoint = 0;
+        }
+      }
+    } catch (thrown) {
+      // Source iteration itself threw — classify and treat as fatal.
+      const error = classifyError(thrown, { entityType, entityId: null });
+      errors.push(error);
+      await persister.recordError(error);
+      return {
+        finalState: state,
+        warnings: ctx.warnings,
+        errors,
+        outcome: "aborted",
+      };
+    }
+
+    if (collectionAborted) {
+      return {
+        finalState: state,
+        warnings: ctx.warnings,
+        errors,
+        outcome: "aborted",
+      };
+    }
+
+    // Collection finished cleanly — advance state and flush+report.
+    const nextCollection = DEPENDENCY_ORDER[collectionIndex + 1];
+    const nextEntityType = nextCollection ? collectionToEntityType(nextCollection) : entityType;
+    state = completeCollection(state, { nextEntityType });
+    await persister.flush();
+    await onProgress(state);
+  }
+
+  return {
+    finalState: state,
+    warnings: ctx.warnings,
+    errors,
+    outcome: "completed",
+  };
+}
+
+// Re-export the entity type map helpers for callers that compose this engine.
+export { collectionToEntityType, entityTypeToCollection };
