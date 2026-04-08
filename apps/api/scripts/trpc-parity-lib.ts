@@ -951,6 +951,16 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   "GET /v1/systems/:systemId/snapshots/:snapshotId": "snapshot.get",
   "DELETE /v1/systems/:systemId/snapshots/:snapshotId": "snapshot.delete",
 
+  // Import jobs
+  "POST /v1/systems/:systemId/import-jobs": "importJob.create",
+  "GET /v1/systems/:systemId/import-jobs": "importJob.list",
+  "GET /v1/systems/:systemId/import-jobs/:importJobId": "importJob.get",
+  "PATCH /v1/systems/:systemId/import-jobs/:importJobId": "importJob.update",
+
+  // Import entity refs
+  "GET /v1/systems/:systemId/import-entity-refs": "importEntityRef.list",
+  "GET /v1/systems/:systemId/import-entity-refs/lookup": "importEntityRef.lookup",
+
   // Structure - entity types
   "POST /v1/systems/:systemId/structure/entity-types": "structure.entityType.create",
   "GET /v1/systems/:systemId/structure/entity-types": "structure.entityType.list",
