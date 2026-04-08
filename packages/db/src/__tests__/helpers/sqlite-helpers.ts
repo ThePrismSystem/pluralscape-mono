@@ -1239,6 +1239,7 @@ export const SQLITE_DDL = {
       warning_count INTEGER NOT NULL DEFAULT 0,
       chunks_total INTEGER,
       chunks_completed INTEGER NOT NULL DEFAULT 0 CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total),
+      checkpoint_state TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       completed_at INTEGER,
@@ -1248,6 +1249,24 @@ export const SQLITE_DDL = {
   importJobsIndexes: `
     CREATE INDEX import_jobs_account_id_status_idx ON import_jobs (account_id, status);
     CREATE INDEX import_jobs_system_id_idx ON import_jobs (system_id)
+  `,
+  importEntityRefs: `
+    CREATE TABLE import_entity_refs (
+      id TEXT PRIMARY KEY,
+      import_job_id TEXT NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      source TEXT NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
+      entity_type TEXT NOT NULL CHECK (entity_type IN ('member', 'custom-front', 'group', 'channel', 'message', 'board-message', 'poll', 'note', 'journal-entry', 'fronting-session', 'field-definition', 'field-value', 'bucket')),
+      source_ref_id TEXT NOT NULL,
+      target_entity_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE (import_job_id, entity_type, source_ref_id)
+    )
+  `,
+  importEntityRefsIndexes: `
+    CREATE INDEX import_entity_refs_system_entity_source_idx ON import_entity_refs (system_id, entity_type, source_ref_id);
+    CREATE INDEX import_entity_refs_job_idx ON import_entity_refs (import_job_id)
   `,
   exportRequests: `
     CREATE TABLE export_requests (
@@ -1795,6 +1814,8 @@ export function createSqliteImportExportTables(client: InstanceType<typeof Datab
   client.exec(SQLITE_DDL.blobMetadataIndexes);
   client.exec(SQLITE_DDL.importJobs);
   client.exec(SQLITE_DDL.importJobsIndexes);
+  client.exec(SQLITE_DDL.importEntityRefs);
+  client.exec(SQLITE_DDL.importEntityRefsIndexes);
   client.exec(SQLITE_DDL.exportRequests);
   client.exec(SQLITE_DDL.exportRequestsIndexes);
   client.exec(SQLITE_DDL.accountPurgeRequests);
