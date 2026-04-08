@@ -148,7 +148,7 @@ export interface SPPollOption {
 export interface SPPollVote {
   readonly id: string;
   readonly comment?: string | null;
-  /** Either an SP user identifier or "veto" for veto votes. */
+  /** The option ID this vote is for, or "veto" for veto votes. Voter identity is in `id`. */
   readonly vote: string;
 }
 
