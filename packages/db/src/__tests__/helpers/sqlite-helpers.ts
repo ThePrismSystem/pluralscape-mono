@@ -1253,20 +1253,19 @@ export const SQLITE_DDL = {
   importEntityRefs: `
     CREATE TABLE import_entity_refs (
       id TEXT PRIMARY KEY,
-      import_job_id TEXT NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       source TEXT NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
-      entity_type TEXT NOT NULL CHECK (entity_type IN ('member', 'custom-front', 'group', 'channel', 'message', 'board-message', 'poll', 'note', 'journal-entry', 'fronting-session', 'field-definition', 'field-value', 'bucket')),
-      source_ref_id TEXT NOT NULL,
-      target_entity_id TEXT NOT NULL,
-      created_at INTEGER NOT NULL,
-      UNIQUE (import_job_id, entity_type, source_ref_id)
+      source_entity_type TEXT NOT NULL CHECK (source_entity_type IN ('member', 'group', 'fronting-session', 'switch', 'custom-field', 'note', 'chat-message', 'board-message', 'poll', 'timer', 'privacy-bucket', 'friend', 'unknown')),
+      source_entity_id TEXT NOT NULL,
+      pluralscape_entity_id TEXT NOT NULL,
+      imported_at INTEGER NOT NULL
     )
   `,
   importEntityRefsIndexes: `
-    CREATE INDEX import_entity_refs_system_entity_source_idx ON import_entity_refs (system_id, entity_type, source_ref_id);
-    CREATE INDEX import_entity_refs_job_idx ON import_entity_refs (import_job_id)
+    CREATE UNIQUE INDEX import_entity_refs_source_unique_idx ON import_entity_refs (account_id, system_id, source, source_entity_type, source_entity_id);
+    CREATE INDEX import_entity_refs_pluralscape_entity_id_idx ON import_entity_refs (pluralscape_entity_id);
+    CREATE INDEX import_entity_refs_account_system_idx ON import_entity_refs (account_id, system_id)
   `,
   exportRequests: `
     CREATE TABLE export_requests (

@@ -46,9 +46,9 @@ describe("ImportEntityRefQuerySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects sourceEntityId exceeding 256 characters", () => {
+  it("rejects sourceEntityId exceeding 128 characters", () => {
     const result = ImportEntityRefQuerySchema.safeParse({
-      sourceEntityId: "a".repeat(257),
+      sourceEntityId: "a".repeat(129),
     });
     expect(result.success).toBe(false);
   });

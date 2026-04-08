@@ -19,10 +19,10 @@ const IMPORT_ENTITY_TYPE_VALUES = [
 ] as const;
 
 /**
- * Maximum length of a source-side identifier stored in `import_entity_refs.source_ref_id`.
- * Matches the PG varchar(256) constraint defined in the schema.
+ * Maximum length of a source-side identifier stored in `import_entity_refs.source_entity_id`.
+ * Matches the PG varchar(128) constraint defined in the schema.
  */
-const MAX_SOURCE_ENTITY_ID_LENGTH = 256;
+const MAX_SOURCE_ENTITY_ID_LENGTH = 128;
 
 export const ImportEntityRefQuerySchema = z
   .object({
