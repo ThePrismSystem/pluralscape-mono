@@ -2,7 +2,8 @@
   "extends": "@pluralscape/tsconfig/base.json",
   "compilerOptions": {
     "rootDir": "../..",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["node"]
   },
   "include": ["src", "../../types"]
 }
