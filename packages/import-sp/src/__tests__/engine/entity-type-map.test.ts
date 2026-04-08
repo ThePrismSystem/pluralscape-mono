@@ -28,4 +28,8 @@ describe("entity-type-map", () => {
     expect(entityTypeToCollection("member")).toBe("members");
     expect(entityTypeToCollection("custom-front")).toBe("frontStatuses");
   });
+  it("resolves friend → friends as the canonical collection (not pendingFriendRequests)", () => {
+    expect(entityTypeToCollection("friend")).toBe("friends");
+    expect(collectionToEntityType("pendingFriendRequests")).toBe("friend");
+  });
 });

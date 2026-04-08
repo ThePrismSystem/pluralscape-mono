@@ -7,9 +7,10 @@ import type { ImportEntityType } from "@pluralscape/types";
  * Static map from each SP collection to the Pluralscape `ImportEntityType`
  * the engine records on `import_entity_refs.source_entity_type`.
  *
- * Note that two SP collections (`friends`, `pendingFriendRequests`) both
- * map to `friend`. The inverse map below resolves the latter to the former
- * deterministically.
+ * The `friends` and `pendingFriendRequests` collections both map forward to
+ * `"friend"`. The inverse map resolves `"friend" → "friends"` as the canonical
+ * collection (pending requests are a subset of friends), enforced via
+ * `CANONICAL_OVERRIDES` after the default iteration.
  */
 const TO_ENTITY_TYPE: Readonly<Record<SpCollectionName, ImportEntityType>> = {
   users: "system-profile",
@@ -31,6 +32,15 @@ const TO_ENTITY_TYPE: Readonly<Record<SpCollectionName, ImportEntityType>> = {
   pendingFriendRequests: "friend",
 };
 
+/**
+ * Explicit canonical inverse mappings for `ImportEntityType` values that have
+ * multiple source collections. Applied after `buildInverse` so the chosen
+ * collection wins regardless of declaration order in `SP_COLLECTION_NAMES`.
+ */
+const CANONICAL_OVERRIDES: readonly (readonly [ImportEntityType, SpCollectionName])[] = [
+  ["friend", "friends"],
+];
+
 const TO_COLLECTION: Partial<Record<ImportEntityType, SpCollectionName>> =
   buildInverse(TO_ENTITY_TYPE);
 
@@ -40,6 +50,9 @@ function buildInverse(
   const result: Partial<Record<ImportEntityType, SpCollectionName>> = {};
   for (const collection of SP_COLLECTION_NAMES) {
     const entityType = forward[collection];
+    result[entityType] = collection;
+  }
+  for (const [entityType, collection] of CANONICAL_OVERRIDES) {
     result[entityType] = collection;
   }
   return result;
