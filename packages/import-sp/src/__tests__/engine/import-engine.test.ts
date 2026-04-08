@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
 import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
 import type { Persister, PersistableEntity } from "../../persistence/persister.types.js";
-import type { ImportError } from "@pluralscape/types";
+import type { ImportCheckpointState, ImportError } from "@pluralscape/types";
 
 interface RecordingPersister extends Persister {
   readonly upserted: readonly PersistableEntity[];
@@ -237,5 +238,47 @@ describe("runImport — non-fatal mapper failure", () => {
     expect(result.errors[0]?.entityId).toBe("m_bad");
     expect(result.finalState.totals.perCollection.member?.imported).toBe(2);
     expect(result.finalState.totals.perCollection.member?.failed).toBe(1);
+  });
+});
+
+describe("runImport — resume", () => {
+  it("skips already-processed docs when resuming mid-collection", async () => {
+    const data: FakeSourceData = {
+      members: [
+        { _id: "m_1", name: "Aria" },
+        { _id: "m_2", name: "Brook" },
+        { _id: "m_3", name: "Cass" },
+        { _id: "m_4", name: "Dane" },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const initial = emptyCheckpointState({
+      firstEntityType: "member",
+      selectedCategories: ALL_CATEGORIES_ON,
+      avatarMode: "skip",
+    });
+    const resumeState: ImportCheckpointState = {
+      ...initial,
+      checkpoint: {
+        ...initial.checkpoint,
+        currentCollection: "member",
+        currentCollectionLastSourceId: "m_2",
+      },
+    };
+    const result = await runImport({
+      source,
+      persister,
+      initialCheckpoint: resumeState,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m_3", "m_4"]);
   });
 });
