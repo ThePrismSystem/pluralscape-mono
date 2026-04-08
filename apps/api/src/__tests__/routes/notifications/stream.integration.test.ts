@@ -210,7 +210,7 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
 
     const { controller: c1, responsePromise: p1 } = openSse();
     await p1;
-    await new Promise<void>((r) => setTimeout(r, 50));
+    await waitFor(() => warnMock.mock.calls.length > 0);
     const callsBefore = warnMock.mock.calls.length;
 
     // Second connection — noPubSubWarningLogged is already true, no new warn
@@ -323,7 +323,7 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     drainReader(reader, received);
 
     handler(JSON.stringify({ data: { value: 42 } }));
-    await new Promise<void>((r) => setTimeout(r, 150));
+    await waitFor(() => received.length > 0);
 
     expect(received.join("")).toContain("event: notification");
 
@@ -347,7 +347,7 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
 
     // No `data` field — data should be JSON.stringify(parsed) i.e. the whole object
     handler(JSON.stringify({ event: "test-event" }));
-    await new Promise<void>((r) => setTimeout(r, 150));
+    await waitFor(() => received.length > 0);
 
     const combined = received.join("");
     expect(combined).toContain("event: test-event");
@@ -390,7 +390,7 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     drainReader(c2Reader, c2Chunks);
 
     // Allow time for heartbeat + replayed events to arrive
-    await new Promise<void>((r) => setTimeout(r, 500));
+    await waitFor(() => c2Chunks.join("").includes("event: ev2"));
 
     const c2Text = c2Chunks.join("");
     expect(c2Text).toContain("event: ev2");
