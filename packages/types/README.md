@@ -57,7 +57,7 @@ See [ADR-006](../../docs/adr/006-encryption.md) for the encryption boundary rati
 | `analytics.ts`         | `FrontingAnalytics`, `CoFrontingAnalytics`, `ChartData`, `DateRangeFilter`, `DateRangePreset`                                              |
 | `innerworld.ts`        | `InnerWorldCanvas`, `InnerWorldEntity`, `InnerWorldRegion`                                                                                 |
 | `sync.ts`              | `SyncDocument`, `SyncState`, `SyncIndicator`, `SyncDocumentType`                                                                           |
-| `import-export.ts`     | `ImportJob`, `ExportRequest`, `SPImport*`, `PKImport*`, `AccountPurgeRequest`                                                              |
+| `import-export.ts`     | `ImportJob`, `ImportEntityRef`, `ImportCheckpointState`, `ExportRequest`, `PKImport*`, `AccountPurgeRequest`                               |
 | `pk-bridge.ts`         | `PKBridgeConfig`, `PKEntityMapping`, `PKSyncState`, `PKSyncError`                                                                          |
 | `webhooks.ts`          | `WebhookConfig`, `WebhookDelivery`, `WebhookEventPayloadMap`                                                                               |
 | `notifications.ts`     | `DeviceToken`, `NotificationConfig`, `FriendNotificationPreference`                                                                        |
