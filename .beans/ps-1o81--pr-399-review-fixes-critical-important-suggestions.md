@@ -1,11 +1,11 @@
 ---
 # ps-1o81
 title: "PR #399 review fixes (critical + important + suggestions)"
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-04-08T00:37:43Z
-updated_at: 2026-04-08T02:35:45Z
+updated_at: 2026-04-08T04:24:11Z
 ---
 
 Execute the implementation plan at docs/superpowers/plans/2026-04-07-pr-399-review-fixes.md to address all findings from the multi-agent review of PR #399.
@@ -24,7 +24,7 @@ Execute the implementation plan at docs/superpowers/plans/2026-04-07-pr-399-revi
 - [~] Task 6: Table-drive row-transforms tests (SCRAPPED — see ps-\*--row-transforms-refactor bean)
 - [x] Task 7: Migrate stream test fixed sleeps to waitFor
 - [x] Task 8: Create follow-up beans (PGlite audit + expo-sqlite smoke test)
-- [x] Task 9: Final /verify and push (push pending user approval)
+- [x] Task 9: Final /verify, push, and merge
 
 ## Spec
 
