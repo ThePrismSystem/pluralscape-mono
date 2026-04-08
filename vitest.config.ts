@@ -219,10 +219,10 @@ export default defineConfig({
       // packages/db has only integration tests currently; unit coverage
       // will be enforced when db schema code (db-2je4) is added
       thresholds: {
-        lines: 85,
-        functions: 85,
-        branches: 85,
-        statements: 85,
+        lines: 89,
+        functions: 89,
+        branches: 89,
+        statements: 89,
       },
     },
   },

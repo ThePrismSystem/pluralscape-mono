@@ -24,7 +24,7 @@ Milestone 8 delivered the complete client foundation: Expo app shell with auth-g
 
 ## Test Suite
 
-Unit and integration tests run via Vitest; E2E tests via Playwright (`apps/api-e2e`). Coverage is enforced in CI at 85% minimum (lines, functions, branches, statements).
+Unit and integration tests run via Vitest; E2E tests via Playwright (`apps/api-e2e`). Coverage is enforced in CI at 89% minimum (lines, functions, branches, statements).
 
 ```bash
 pnpm test              # Run all tests
