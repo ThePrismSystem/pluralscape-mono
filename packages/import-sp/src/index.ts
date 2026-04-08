@@ -1,7 +1,9 @@
 /**
  * @pluralscape/import-sp — Simply Plural import engine.
- *
- * Public exports are added incrementally as components land. See README.md
- * and the design spec at docs/planning/2026-04-08-simply-plural-import.md.
  */
-export {} from "./import-sp.constants.js";
+export type { AvatarFetcher, AvatarFetchResult } from "./persistence/avatar-fetcher.types.js";
+export type {
+  PersistableEntity,
+  Persister,
+  PersisterUpsertResult,
+} from "./persistence/persister.types.js";
