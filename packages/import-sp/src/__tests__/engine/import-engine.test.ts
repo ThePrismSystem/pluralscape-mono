@@ -179,6 +179,39 @@ describe("runImport — fatal error", () => {
     expect(result.finalState.checkpoint.completedCollections).toEqual([]);
   });
 
+  it("marks generic iterator throws as fatal even when classifier would say non-fatal", async () => {
+    // A plain `Error` thrown from the iterator: `classifyError` would
+    // normally treat this as non-fatal (per-document failure), but the
+    // engine must override that because iteration cannot continue.
+    const source = {
+      mode: "fake" as const,
+      iterate(): AsyncGenerator<never> {
+        async function* gen(): AsyncGenerator<never> {
+          await Promise.resolve();
+          throw new Error("generic boom");
+        }
+        return gen();
+      },
+      close(): Promise<void> {
+        return Promise.resolve();
+      },
+    };
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("aborted");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(true);
+    expect(result.errors[0]?.message).toBe("generic boom");
+  });
+
   it("aborts when persister.upsertEntity throws a fatal error", async () => {
     const data: FakeSourceData = {
       privacyBuckets: [

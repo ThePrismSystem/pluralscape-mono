@@ -306,8 +306,13 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
         }
       }
     } catch (thrown) {
-      // Source iteration itself threw — classify and treat as fatal.
-      const error = classifyError(thrown, { entityType, entityId: null });
+      // Source iteration itself threw — this is always fatal regardless of
+      // the underlying error type. Generic `Error` instances would otherwise
+      // be classified as non-fatal by `classifyError`, but there is no way
+      // to continue iterating a source whose generator has thrown, so we
+      // override `fatal` to make the abort explicit in recorded errors.
+      const classified = classifyError(thrown, { entityType, entityId: null });
+      const error: ImportError = { ...classified, fatal: true };
       errors.push(error);
       await persister.recordError(error);
       return {
