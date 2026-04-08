@@ -53,7 +53,12 @@ export { systemSettings } from "./system-settings.js";
 export { systems } from "./systems.js";
 export { checkInRecords, timerConfigs } from "./timers.js";
 export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
-export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
+export {
+  importJobs,
+  importEntityRefs,
+  exportRequests,
+  accountPurgeRequests,
+} from "./import-export.js";
 export { syncDocuments, syncChanges, syncSnapshots, syncConflicts } from "./sync.js";
 export { bucketKeyRotations, bucketRotationItems } from "./key-rotation.js";
 export { systemSnapshots } from "./snapshots.js";
@@ -225,6 +230,8 @@ export type {
 export type {
   ImportJobRow,
   NewImportJob,
+  ImportEntityRefRow,
+  NewImportEntityRef,
   ExportRequestRow,
   NewExportRequest,
   AccountPurgeRequestRow,

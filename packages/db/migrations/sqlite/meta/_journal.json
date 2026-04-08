@@ -15,6 +15,13 @@
       "when": 1775470133010,
       "tag": "0001_strange_gladiator",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1775654784563,
+      "tag": "0002_curly_stellaris",
+      "breakpoints": true
     }
   ]
 }
