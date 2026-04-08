@@ -50,4 +50,18 @@ describe("classifyError", () => {
     });
     expect(isFatalError(error)).toBe(true);
   });
+
+  it("classifies non-Error thrown values (string, number) as non-fatal with stringified message", () => {
+    const result1 = classifyError("plain string", { entityType: "member", entityId: "src_1" });
+    expect(result1.message).toBe("plain string");
+    expect(result1.fatal).toBe(false);
+    expect(result1.entityType).toBe("member");
+    expect(result1.entityId).toBe("src_1");
+
+    const result2 = classifyError(42, { entityType: "member", entityId: "src_2" });
+    expect(result2.message).toBe("42");
+    expect(result2.fatal).toBe(false);
+    expect(result2.entityType).toBe("member");
+    expect(result2.entityId).toBe("src_2");
+  });
 });
