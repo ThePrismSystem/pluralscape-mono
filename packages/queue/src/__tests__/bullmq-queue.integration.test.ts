@@ -31,6 +31,10 @@ process.on("unhandledRejection", ioredisRejectionHandler);
 
 const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
+// Valkey port resolution must mirror valkey-container.ts: CI sets TEST_VALKEY_PORT=6379,
+// local dev defaults to 10944. Hardcoding either value breaks the other environment.
+const VALKEY_TEST_PORT = Number(process.env["TEST_VALKEY_PORT"]) || 10_944;
+
 // Resolve Valkey availability before any tests run
 const ctx: ValkeyTestContext = await ensureValkey();
 const redis: IORedis | null = ctx.redis;
@@ -182,14 +186,14 @@ async function waitFor(
 
 describe.skipIf(!ctx.available)("createValkeyConnection", () => {
   it("creates a working connection with all optional fields omitted", async () => {
-    const conn = createValkeyConnection({ host: "localhost", port: 10_944 });
+    const conn = createValkeyConnection({ host: "localhost", port: VALKEY_TEST_PORT });
     const pong = await conn.ping();
     expect(pong).toBe("PONG");
     await conn.quit();
   });
 
   it("creates a connection with optional db field set", async () => {
-    const conn = createValkeyConnection({ host: "localhost", port: 10_944, db: 0 });
+    const conn = createValkeyConnection({ host: "localhost", port: VALKEY_TEST_PORT, db: 0 });
     const pong = await conn.ping();
     expect(pong).toBe("PONG");
     await conn.quit();
@@ -201,7 +205,7 @@ describe.skipIf(!ctx.available)("createValkeyConnection", () => {
     // the returned object is an IORedis instance.
     const conn = createValkeyConnection({
       host: "localhost",
-      port: 10_944,
+      port: VALKEY_TEST_PORT,
       password: undefined,
     });
     const pong = await conn.ping();
@@ -212,7 +216,7 @@ describe.skipIf(!ctx.available)("createValkeyConnection", () => {
   it("passes tls:true so the tls option is set (covers tls branch in createValkeyConnection)", () => {
     // We do not actually connect (TLS would fail against a plain Valkey),
     // just verify the options are applied.
-    const conn = createValkeyConnection({ host: "localhost", port: 10_944, tls: true });
+    const conn = createValkeyConnection({ host: "localhost", port: VALKEY_TEST_PORT, tls: true });
     // ioredis exposes the resolved options on the instance
     const opts = conn.options;
     expect(opts.tls).toBeDefined();
@@ -688,7 +692,7 @@ describe.skipIf(!ctx.available)("BullMQJobWorker — branch coverage", () => {
 
   it("worker starts with db option set in connection", async () => {
     if (redis === null) throw new Error("Valkey not available");
-    const connWithDb = createValkeyConnection({ host: "localhost", port: 10_944, db: 0 });
+    const connWithDb = createValkeyConnection({ host: "localhost", port: VALKEY_TEST_PORT, db: 0 });
     const q2 = new BullMQJobQueue(nextQueueName(), connWithDb, { logger: mockLogger });
     activeQueues.push(q2);
     const worker = new BullMQJobWorker(q2.name, connWithDb, q2, {
