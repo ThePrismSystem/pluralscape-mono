@@ -161,13 +161,18 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
   const startIndex = indexOfResumeCollection(state);
   const safeStartIndex = startIndex < 0 ? 0 : startIndex;
 
-  // Track how many documents the privacyBuckets collection emitted during its
-  // own pass so the members pass knows whether to synthesize legacy buckets.
+  // Track how many privacyBuckets documents were successfully mapped and
+  // registered during the privacyBuckets pass. Used at member-collection entry
+  // to decide whether to synthesize the three legacy buckets. Counting only
+  // mapped (not yielded) docs avoids the bug where every bucket fails Zod
+  // validation yet the count stays > 0, silently leaving members with
+  // unresolved synthetic bucket references.
+  //
   // When resuming past members, assume legacy synthesis (if any) already ran.
-  let privacyBucketsSeen = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
   // When resuming into members directly we cannot know whether the previous
   // run already synthesized the legacy buckets. The persister's idempotency
   // guarantees re-synthesis is safe, so we conservatively re-run.
+  let privacyBucketsMapped = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
 
   for (
     let collectionIndex = safeStartIndex;
@@ -190,9 +195,9 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     }
 
     // Legacy bucket synthesis: when we enter members and the privacyBuckets
-    // pass produced zero documents, synthesize the three legacy buckets so
-    // members can resolve their `synthetic:*` references.
-    if (collection === "members" && privacyBucketsSeen === 0) {
+    // pass produced zero successfully-mapped documents, synthesize the three
+    // legacy buckets so members can resolve their `synthetic:*` references.
+    if (collection === "members" && privacyBucketsMapped === 0) {
       const synth = await persistSynthesizedBuckets(persister, ctx, errors);
       if (synth.aborted) {
         return {
@@ -203,7 +208,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
         };
       }
       // Mark as handled so a downstream resume doesn't re-trigger.
-      privacyBucketsSeen = synth.persisted;
+      privacyBucketsMapped = synth.persisted;
     }
 
     let docsSinceCheckpoint = 0;
@@ -222,7 +227,6 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
 
     try {
       for await (const doc of source.iterate(collection)) {
-        if (collection === "privacyBuckets") privacyBucketsSeen += 1;
         if (!pastResumeCutoff) {
           if (doc.sourceId === resumeCutoffSourceId) {
             pastResumeCutoff = true;
@@ -264,6 +268,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
               payload: result.payload,
             });
             ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
+            if (collection === "privacyBuckets") privacyBucketsMapped += 1;
             const upsertDelta =
               upsert.action === "created"
                 ? delta("imported")

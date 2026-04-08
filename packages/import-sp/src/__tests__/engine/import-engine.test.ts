@@ -314,6 +314,45 @@ describe("runImport — legacy bucket synthesis", () => {
     expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(2);
   });
 
+  it("synthesizes legacy buckets when all privacyBuckets fail validation", async () => {
+    // Two bucket docs that both fail Zod validation (missing required `name`).
+    // The engine should treat the mapped-bucket count as zero and synthesize
+    // the three legacy buckets so members can still resolve their
+    // `synthetic:*` references.
+    const data: FakeSourceData = {
+      privacyBuckets: [{ _id: "b_bad1" }, { _id: "b_bad2" }],
+      members: [{ _id: "m_a", name: "Aria", private: true }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const bucketUpserts = persister.upserted.filter((e) => e.entityType === "privacy-bucket");
+    expect(bucketUpserts.map((e) => e.sourceEntityId).sort()).toEqual([
+      "synthetic:private",
+      "synthetic:public",
+      "synthetic:trusted",
+    ]);
+    // Two validation failures, one per bad bucket doc.
+    const bucketErrors = result.errors.filter((e) => e.entityType === "privacy-bucket");
+    expect(bucketErrors).toHaveLength(2);
+    expect(bucketErrors.map((e) => e.entityId).sort()).toEqual(["b_bad1", "b_bad2"]);
+    for (const error of bucketErrors) {
+      expect(error.fatal).toBe(false);
+      expect(error.message).toContain("validation");
+    }
+    // The member was persisted (resolved against the synthetic private bucket).
+    expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(1);
+  });
+
   it("does not synthesize legacy buckets when privacyBuckets has data", async () => {
     const data: FakeSourceData = {
       privacyBuckets: [{ _id: "b_pub", name: "Public" }],
