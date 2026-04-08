@@ -23,6 +23,7 @@ import {
   type ExportRequestStatus,
   type FieldDefinitionScopeType,
   type FriendConnectionStatus,
+  type ImportEntityType,
   type ImportJobStatus,
   type ImportSource,
   type JobStatus,
@@ -464,6 +465,21 @@ export const IMPORT_JOB_STATUSES = [
   "completed",
   "failed",
 ] as const satisfies readonly ImportJobStatus[];
+export const IMPORT_ENTITY_TYPES = [
+  "member",
+  "group",
+  "fronting-session",
+  "switch",
+  "custom-field",
+  "note",
+  "chat-message",
+  "board-message",
+  "poll",
+  "timer",
+  "privacy-bucket",
+  "friend",
+  "unknown",
+] as const satisfies readonly ImportEntityType[];
 export const EXPORT_FORMATS = ["json", "csv"] as const satisfies readonly ExportFormat[];
 export const EXPORT_REQUEST_STATUSES = [
   "pending",

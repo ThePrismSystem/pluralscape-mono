@@ -21,6 +21,7 @@ import {
   EXPORT_REQUEST_STATUSES,
   FRIEND_CONNECTION_STATUSES,
   FRONTING_REPORT_FORMATS,
+  IMPORT_ENTITY_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
   JOB_STATUSES,
@@ -43,6 +44,7 @@ import {
   WEBHOOK_EVENT_TYPES,
 } from "../helpers/enums.js";
 
+import type { ImportEntityType } from "@pluralscape/types";
 import type { AnyColumn } from "drizzle-orm";
 
 describe("enumCheck", () => {
@@ -370,5 +372,26 @@ describe("parseSearchableEntityType", () => {
 
   it("throws for unknown string", () => {
     expect(() => parseSearchableEntityType("nonexistent")).toThrow("Unknown SearchableEntityType");
+  });
+});
+
+describe("IMPORT_ENTITY_TYPES", () => {
+  it("includes every ImportEntityType variant", () => {
+    const expected: readonly ImportEntityType[] = [
+      "member",
+      "group",
+      "fronting-session",
+      "switch",
+      "custom-field",
+      "note",
+      "chat-message",
+      "board-message",
+      "poll",
+      "timer",
+      "privacy-bucket",
+      "friend",
+      "unknown",
+    ];
+    expect([...IMPORT_ENTITY_TYPES].sort()).toEqual([...expected].sort());
   });
 });
