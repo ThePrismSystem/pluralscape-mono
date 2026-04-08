@@ -215,6 +215,17 @@ export interface ImportError {
   readonly entityId: string | null;
   readonly message: string;
   readonly fatal: boolean;
+  /**
+   * For fatal errors, whether resumption is possible from the last checkpoint.
+   * Non-fatal errors should set this to false.
+   *
+   * true examples: SP token rejected (401), network unreachable after retries,
+   * rate-limit exhaustion. User can retry from the last checkpoint.
+   *
+   * false examples: JSON parse error, persister write failure, disk full.
+   * User must restart from scratch or fix an out-of-band issue.
+   */
+  readonly recoverable: boolean;
 }
 
 /** An import job. */
