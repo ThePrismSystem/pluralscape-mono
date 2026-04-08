@@ -282,3 +282,56 @@ describe("runImport — resume", () => {
     ).toEqual(["m_3", "m_4"]);
   });
 });
+
+describe("runImport — legacy bucket synthesis", () => {
+  it("synthesizes Public/Trusted/Private when privacyBuckets is absent", async () => {
+    const data: FakeSourceData = {
+      members: [
+        { _id: "m_a", name: "Aria", private: true },
+        { _id: "m_b", name: "Brook", preventTrusted: true },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const bucketUpserts = persister.upserted.filter((e) => e.entityType === "privacy-bucket");
+    expect(bucketUpserts).toHaveLength(3);
+    expect(bucketUpserts.map((e) => e.sourceEntityId).sort()).toEqual([
+      "synthetic:private",
+      "synthetic:public",
+      "synthetic:trusted",
+    ]);
+    expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(2);
+  });
+
+  it("does not synthesize legacy buckets when privacyBuckets has data", async () => {
+    const data: FakeSourceData = {
+      privacyBuckets: [{ _id: "b_pub", name: "Public" }],
+      members: [{ _id: "m_a", name: "Aria", buckets: ["b_pub"] }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const bucketUpserts = persister.upserted.filter((e) => e.entityType === "privacy-bucket");
+    expect(bucketUpserts).toHaveLength(1);
+    expect(bucketUpserts[0]?.sourceEntityId).toBe("b_pub");
+  });
+});
