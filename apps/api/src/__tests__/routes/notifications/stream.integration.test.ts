@@ -188,6 +188,8 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
   // ── finally block: cleanup on client abort ───────────────────────────────
 
   it("removes stream from state when client aborts (finally block runs)", async () => {
+    mockPubSub = createMockPubSub();
+    const pubsub = mockPubSub;
     const { controller, responsePromise } = openSse();
     const res = await responsePromise;
     if (!res.body) throw new Error("expected response body");
@@ -195,10 +197,11 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     await readNextEvent(reader);
     await closeSse(controller, reader);
 
-    // If the finally block didn't run, the internal promise would never resolve
-    // and vitest would time out. Passing confirms the cleanup path ran.
-    await new Promise<void>((resolve) => setTimeout(resolve, 150));
-    expect(true).toBe(true);
+    // After the sole stream disconnects, the finally block must remove it from
+    // sseState and call pubsub.unsubscribe once. If the finally block never ran,
+    // unsubscribe would never be invoked and waitFor would time out.
+    await waitFor(() => (pubsub.unsubscribe as ReturnType<typeof vi.fn>).mock.calls.length > 0);
+    expect(pubsub.unsubscribe).toHaveBeenCalledOnce();
   });
 
   it("only logs the no-pubsub warning once across multiple connections", async () => {
@@ -226,6 +229,8 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
   // ── cleanup: two streams, one aborts first (size remains > 0) ────────────
 
   it("keeps sseState when a second stream is still connected after first aborts", async () => {
+    mockPubSub = createMockPubSub();
+    const pubsub = mockPubSub;
     const { controller: c1, responsePromise: p1 } = openSse();
     const { controller: c2, responsePromise: p2 } = openSse();
 
@@ -241,13 +246,17 @@ describe("GET /notifications/stream (integration — real HTTP server)", () => {
     await readNextEvent(reader1);
     await readNextEvent(reader2);
 
-    // Abort only the first — state.streams.size goes 2 → 1, NOT 0
+    // Abort only the first — state.streams.size goes 2 → 1, NOT 0. The pubsub
+    // subscription is shared across both streams, so unsubscribe must NOT have
+    // been called yet.
     await closeSse(c1, reader1);
     await new Promise<void>((r) => setTimeout(r, 100));
+    expect(pubsub.unsubscribe).not.toHaveBeenCalled();
 
+    // Now abort the second. With streams.size → 0, unsubscribe is invoked once.
     await closeSse(c2, reader2);
-    await new Promise<void>((r) => setTimeout(r, 100));
-    expect(true).toBe(true);
+    await waitFor(() => (pubsub.unsubscribe as ReturnType<typeof vi.fn>).mock.calls.length > 0);
+    expect(pubsub.unsubscribe).toHaveBeenCalledOnce();
   });
 
   // ── pubsub unsubscribe on last stream close ───────────────────────────────
