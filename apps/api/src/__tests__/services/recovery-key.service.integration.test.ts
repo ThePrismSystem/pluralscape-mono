@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { initSodium } from "@pluralscape/crypto";
+import { DecryptionFailedError, initSodium } from "@pluralscape/crypto";
 import * as schema from "@pluralscape/db/pg";
 import { createPgAuthTables, PG_DDL, pgExec } from "@pluralscape/db/test-helpers/pg-helpers";
 import { drizzle } from "drizzle-orm/pglite";
@@ -291,7 +291,7 @@ describe("recovery-key.service (PGlite integration)", { timeout: 60_000 }, () =>
           noopAudit,
           mockLogger,
         ),
-      ).rejects.toThrow();
+      ).rejects.toThrow(DecryptionFailedError);
     });
 
     it("creates a new session with mobile platform timeouts", async () => {
