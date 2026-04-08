@@ -37,11 +37,19 @@ export interface MappingContext {
   register(entityType: ImportEntityType, sourceId: string, pluralscapeId: string): void;
   registerMany(entityType: ImportEntityType, entries: readonly IdTranslationEntry[]): void;
   addWarning(warning: MappingWarning): void;
+  /**
+   * Append a warning to the buffer at most once per `kind`. Subsequent calls
+   * with the same `kind` are no-ops. Use this for "field dropped" warnings
+   * where one notice per import run is enough — `addWarning` is for
+   * per-occurrence anomalies that should be surfaced individually.
+   */
+  addWarningOnce(kind: string, warning: MappingWarning): void;
 }
 
 export function createMappingContext(opts: { sourceMode: SourceMode }): MappingContext {
   const tables = new Map<ImportEntityType, Map<string, string>>();
   const warnings: MappingWarning[] = [];
+  const seenWarningKinds = new Set<string>();
 
   function tableFor(entityType: ImportEntityType): Map<string, string> {
     let table = tables.get(entityType);
@@ -71,6 +79,12 @@ export function createMappingContext(opts: { sourceMode: SourceMode }): MappingC
     },
     addWarning(warning) {
       if (warnings.length >= MAX_WARNING_BUFFER_SIZE) return;
+      warnings.push(warning);
+    },
+    addWarningOnce(kind, warning) {
+      if (seenWarningKinds.has(kind)) return;
+      if (warnings.length >= MAX_WARNING_BUFFER_SIZE) return;
+      seenWarningKinds.add(kind);
       warnings.push(warning);
     },
   };

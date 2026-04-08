@@ -6,7 +6,9 @@
  * messages have no Pluralscape equivalent).
  *
  * `readBy` tracks which SP system members have seen a post; Pluralscape
- * has no equivalent construct yet, so the field is dropped with a warning.
+ * has no equivalent construct yet, so the field is dropped with a single
+ * import-wide warning (the same notice would otherwise repeat for every
+ * board message in noisy SP exports).
  */
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
@@ -30,7 +32,7 @@ export function mapBoardMessage(
   }
 
   if (sp.readBy !== undefined) {
-    ctx.addWarning({
+    ctx.addWarningOnce("board-message.readBy-dropped", {
       entityType: "board-message",
       entityId: sp._id,
       message: "SP `readBy` dropped (no Pluralscape equivalent)",

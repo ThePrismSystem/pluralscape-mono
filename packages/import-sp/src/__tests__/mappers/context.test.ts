@@ -50,4 +50,36 @@ describe("MappingContext", () => {
     }
     expect(ctx.warnings.length).toBeLessThanOrEqual(WARNING_CAP);
   });
+
+  it("addWarningOnce records only the first warning for a given kind", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.addWarningOnce("dropped-x", {
+      entityType: "member",
+      entityId: "a",
+      message: "x dropped",
+    });
+    ctx.addWarningOnce("dropped-x", {
+      entityType: "member",
+      entityId: "b",
+      message: "x dropped",
+    });
+    expect(ctx.warnings).toHaveLength(1);
+    expect(ctx.warnings[0]?.entityId).toBe("a");
+  });
+
+  it("addWarningOnce treats different kinds independently", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.addWarningOnce("dropped-x", { entityType: "member", entityId: "a", message: "x" });
+    ctx.addWarningOnce("dropped-y", { entityType: "member", entityId: "b", message: "y" });
+    expect(ctx.warnings).toHaveLength(2);
+  });
+
+  it("addWarningOnce and addWarning coexist independently", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.addWarningOnce("kind", { entityType: "member", entityId: "a", message: "once" });
+    ctx.addWarning({ entityType: "member", entityId: "b", message: "per-occurrence" });
+    ctx.addWarning({ entityType: "member", entityId: "c", message: "per-occurrence" });
+    ctx.addWarningOnce("kind", { entityType: "member", entityId: "d", message: "once" });
+    expect(ctx.warnings).toHaveLength(3);
+  });
 });

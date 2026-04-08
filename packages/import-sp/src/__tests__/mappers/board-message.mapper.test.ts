@@ -79,6 +79,31 @@ describe("mapBoardMessage", () => {
     expect(ctx.warnings[0]?.message).toContain("readBy");
   });
 
+  it("emits the readBy-dropped warning at most once per import", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("member", "src_m1", "ps_m1");
+    const first: SPBoardMessage = {
+      _id: "bm6",
+      title: "x",
+      message: "y",
+      writer: "src_m1",
+      writtenAt: 0,
+      readBy: ["src_a"],
+    };
+    const second: SPBoardMessage = {
+      _id: "bm7",
+      title: "x2",
+      message: "y2",
+      writer: "src_m1",
+      writtenAt: 1,
+      readBy: ["src_b", "src_c"],
+    };
+    mapBoardMessage(first, ctx);
+    mapBoardMessage(second, ctx);
+    expect(ctx.warnings).toHaveLength(1);
+    expect(ctx.warnings[0]?.message).toContain("readBy");
+  });
+
   it("does not warn when readBy is absent", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
