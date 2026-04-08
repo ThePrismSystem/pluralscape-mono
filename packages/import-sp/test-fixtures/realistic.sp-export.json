@@ -1,0 +1,735 @@
+{
+  "users": [
+    {
+      "_id": "u_00000001",
+      "username": "Test System",
+      "color": "#ffaa00"
+    }
+  ],
+  "private": [
+    {
+      "_id": "p_00000001",
+      "locale": "en",
+      "frontNotifs": true
+    }
+  ],
+  "privacyBuckets": [
+    {
+      "_id": "bk_00000001",
+      "name": "Public"
+    },
+    {
+      "_id": "bk_00000002",
+      "name": "Trusted"
+    },
+    {
+      "_id": "bk_00000003",
+      "name": "Private"
+    }
+  ],
+  "customFields": [
+    {
+      "_id": "cf_00000001",
+      "name": "Favorite Color",
+      "type": "text",
+      "order": 0
+    },
+    {
+      "_id": "cf_00000002",
+      "name": "Age",
+      "type": "number",
+      "order": 1
+    }
+  ],
+  "frontStatuses": [
+    {
+      "_id": "fs_00000001",
+      "name": "Tired"
+    },
+    {
+      "_id": "fs_00000002",
+      "name": "Dissociated"
+    }
+  ],
+  "members": [
+    {
+      "_id": "m_00000001",
+      "name": "Member 1",
+      "pronouns": "they/them",
+      "color": "#000000",
+      "info": {
+        "cf_00000001": "value-1"
+      },
+      "buckets": ["bk_00000001"]
+    },
+    {
+      "_id": "m_00000002",
+      "name": "Member 2",
+      "pronouns": "she/her",
+      "color": "#0186a0",
+      "info": {
+        "cf_00000001": "value-2"
+      },
+      "buckets": ["bk_00000002"]
+    },
+    {
+      "_id": "m_00000003",
+      "name": "Member 3",
+      "pronouns": "she/her",
+      "color": "#030d40",
+      "info": {
+        "cf_00000001": "value-3"
+      },
+      "buckets": ["bk_00000003"]
+    },
+    {
+      "_id": "m_00000004",
+      "name": "Member 4",
+      "pronouns": "they/them",
+      "color": "#0493e0",
+      "info": {
+        "cf_00000001": "value-4"
+      },
+      "buckets": ["bk_00000001"]
+    },
+    {
+      "_id": "m_00000005",
+      "name": "Member 5",
+      "pronouns": "she/her",
+      "color": "#061a80",
+      "info": {
+        "cf_00000001": "value-5"
+      },
+      "buckets": ["bk_00000002"]
+    },
+    {
+      "_id": "m_00000006",
+      "name": "Member 6",
+      "pronouns": "she/her",
+      "color": "#07a120",
+      "info": {
+        "cf_00000001": "value-6"
+      },
+      "buckets": ["bk_00000003"]
+    },
+    {
+      "_id": "m_00000007",
+      "name": "Member 7",
+      "pronouns": "they/them",
+      "color": "#0927c0",
+      "info": {
+        "cf_00000001": "value-7"
+      },
+      "buckets": ["bk_00000001"]
+    },
+    {
+      "_id": "m_00000008",
+      "name": "Member 8",
+      "pronouns": "she/her",
+      "color": "#0aae60",
+      "info": {
+        "cf_00000001": "value-8"
+      },
+      "buckets": ["bk_00000002"]
+    },
+    {
+      "_id": "m_00000009",
+      "name": "Member 9",
+      "pronouns": "she/her",
+      "color": "#0c3500",
+      "info": {
+        "cf_00000001": "value-9"
+      },
+      "buckets": ["bk_00000003"]
+    },
+    {
+      "_id": "m_00000010",
+      "name": "Member 10",
+      "pronouns": "they/them",
+      "color": "#0dbba0",
+      "info": {
+        "cf_00000001": "value-10"
+      },
+      "buckets": ["bk_00000001"]
+    },
+    {
+      "_id": "m_00000011",
+      "name": "Member 11",
+      "pronouns": "she/her",
+      "color": "#0f4240",
+      "info": {
+        "cf_00000001": "value-11"
+      },
+      "buckets": ["bk_00000002"]
+    },
+    {
+      "_id": "m_00000012",
+      "name": "Member 12",
+      "pronouns": "she/her",
+      "color": "#10c8e0",
+      "info": {
+        "cf_00000001": "value-12"
+      },
+      "buckets": ["bk_00000003"]
+    },
+    {
+      "_id": "m_00000013",
+      "name": "Member 13",
+      "pronouns": "they/them",
+      "color": "#124f80",
+      "info": {
+        "cf_00000001": "value-13"
+      },
+      "buckets": ["bk_00000001"]
+    },
+    {
+      "_id": "m_00000014",
+      "name": "Member 14",
+      "pronouns": "she/her",
+      "color": "#13d620",
+      "info": {
+        "cf_00000001": "value-14"
+      },
+      "buckets": ["bk_00000002"]
+    },
+    {
+      "_id": "m_00000015",
+      "name": "Member 15",
+      "pronouns": "she/her",
+      "color": "#155cc0",
+      "info": {
+        "cf_00000001": "value-15"
+      },
+      "buckets": ["bk_00000003"]
+    },
+    {
+      "_id": "m_00000016",
+      "name": "Member 16",
+      "pronouns": "they/them",
+      "color": "#16e360",
+      "info": {
+        "cf_00000001": "value-16"
+      },
+      "buckets": ["bk_00000001"]
+    },
+    {
+      "_id": "m_00000017",
+      "name": "Member 17",
+      "pronouns": "she/her",
+      "color": "#186a00",
+      "info": {
+        "cf_00000001": "value-17"
+      },
+      "buckets": ["bk_00000002"]
+    },
+    {
+      "_id": "m_00000018",
+      "name": "Member 18",
+      "pronouns": "she/her",
+      "color": "#19f0a0",
+      "info": {
+        "cf_00000001": "value-18"
+      },
+      "buckets": ["bk_00000003"]
+    },
+    {
+      "_id": "m_00000019",
+      "name": "Member 19",
+      "pronouns": "they/them",
+      "color": "#1b7740",
+      "info": {
+        "cf_00000001": "value-19"
+      },
+      "buckets": ["bk_00000001"]
+    },
+    {
+      "_id": "m_00000020",
+      "name": "Member 20",
+      "pronouns": "she/her",
+      "color": "#1cfde0",
+      "info": {
+        "cf_00000001": "value-20"
+      },
+      "buckets": ["bk_00000002"]
+    }
+  ],
+  "groups": [
+    {
+      "_id": "g_00000001",
+      "name": "Pod A",
+      "members": ["m_00000001", "m_00000002", "m_00000003", "m_00000004", "m_00000005"]
+    }
+  ],
+  "frontHistory": [
+    {
+      "_id": "fh_00000001",
+      "member": "m_00000001",
+      "custom": false,
+      "live": false,
+      "startTime": 1700000000000,
+      "endTime": 1700003600000
+    },
+    {
+      "_id": "fh_00000002",
+      "member": "m_00000002",
+      "custom": false,
+      "live": false,
+      "startTime": 1700086400000,
+      "endTime": 1700090000000
+    },
+    {
+      "_id": "fh_00000003",
+      "member": "m_00000003",
+      "custom": false,
+      "live": false,
+      "startTime": 1700172800000,
+      "endTime": 1700176400000
+    },
+    {
+      "_id": "fh_00000004",
+      "member": "m_00000004",
+      "custom": false,
+      "live": false,
+      "startTime": 1700259200000,
+      "endTime": 1700262800000
+    },
+    {
+      "_id": "fh_00000005",
+      "member": "m_00000005",
+      "custom": false,
+      "live": false,
+      "startTime": 1700345600000,
+      "endTime": 1700349200000
+    },
+    {
+      "_id": "fh_00000006",
+      "member": "m_00000006",
+      "custom": false,
+      "live": false,
+      "startTime": 1700432000000,
+      "endTime": 1700435600000
+    },
+    {
+      "_id": "fh_00000007",
+      "member": "m_00000007",
+      "custom": false,
+      "live": false,
+      "startTime": 1700518400000,
+      "endTime": 1700522000000
+    },
+    {
+      "_id": "fh_00000008",
+      "member": "m_00000008",
+      "custom": false,
+      "live": false,
+      "startTime": 1700604800000,
+      "endTime": 1700608400000
+    },
+    {
+      "_id": "fh_00000009",
+      "member": "m_00000009",
+      "custom": false,
+      "live": false,
+      "startTime": 1700691200000,
+      "endTime": 1700694800000
+    },
+    {
+      "_id": "fh_00000010",
+      "member": "m_00000010",
+      "custom": false,
+      "live": false,
+      "startTime": 1700777600000,
+      "endTime": 1700781200000
+    },
+    {
+      "_id": "fh_00000011",
+      "member": "m_00000011",
+      "custom": false,
+      "live": false,
+      "startTime": 1700864000000,
+      "endTime": 1700867600000
+    },
+    {
+      "_id": "fh_00000012",
+      "member": "m_00000012",
+      "custom": false,
+      "live": false,
+      "startTime": 1700950400000,
+      "endTime": 1700954000000
+    },
+    {
+      "_id": "fh_00000013",
+      "member": "m_00000013",
+      "custom": false,
+      "live": false,
+      "startTime": 1701036800000,
+      "endTime": 1701040400000
+    },
+    {
+      "_id": "fh_00000014",
+      "member": "m_00000014",
+      "custom": false,
+      "live": false,
+      "startTime": 1701123200000,
+      "endTime": 1701126800000
+    },
+    {
+      "_id": "fh_00000015",
+      "member": "m_00000015",
+      "custom": false,
+      "live": false,
+      "startTime": 1701209600000,
+      "endTime": 1701213200000
+    },
+    {
+      "_id": "fh_00000016",
+      "member": "m_00000016",
+      "custom": false,
+      "live": false,
+      "startTime": 1701296000000,
+      "endTime": 1701299600000
+    },
+    {
+      "_id": "fh_00000017",
+      "member": "m_00000017",
+      "custom": false,
+      "live": false,
+      "startTime": 1701382400000,
+      "endTime": 1701386000000
+    },
+    {
+      "_id": "fh_00000018",
+      "member": "m_00000018",
+      "custom": false,
+      "live": false,
+      "startTime": 1701468800000,
+      "endTime": 1701472400000
+    },
+    {
+      "_id": "fh_00000019",
+      "member": "m_00000019",
+      "custom": false,
+      "live": false,
+      "startTime": 1701555200000,
+      "endTime": 1701558800000
+    },
+    {
+      "_id": "fh_00000020",
+      "member": "m_00000020",
+      "custom": false,
+      "live": false,
+      "startTime": 1701641600000,
+      "endTime": 1701645200000
+    },
+    {
+      "_id": "fh_00000021",
+      "member": "m_00000001",
+      "custom": false,
+      "live": false,
+      "startTime": 1701728000000,
+      "endTime": 1701731600000
+    },
+    {
+      "_id": "fh_00000022",
+      "member": "m_00000002",
+      "custom": false,
+      "live": false,
+      "startTime": 1701814400000,
+      "endTime": 1701818000000
+    },
+    {
+      "_id": "fh_00000023",
+      "member": "m_00000003",
+      "custom": false,
+      "live": false,
+      "startTime": 1701900800000,
+      "endTime": 1701904400000
+    },
+    {
+      "_id": "fh_00000024",
+      "member": "m_00000004",
+      "custom": false,
+      "live": false,
+      "startTime": 1701987200000,
+      "endTime": 1701990800000
+    },
+    {
+      "_id": "fh_00000025",
+      "member": "m_00000005",
+      "custom": false,
+      "live": false,
+      "startTime": 1702073600000,
+      "endTime": 1702077200000
+    },
+    {
+      "_id": "fh_00000026",
+      "member": "m_00000006",
+      "custom": false,
+      "live": false,
+      "startTime": 1702160000000,
+      "endTime": 1702163600000
+    },
+    {
+      "_id": "fh_00000027",
+      "member": "m_00000007",
+      "custom": false,
+      "live": false,
+      "startTime": 1702246400000,
+      "endTime": 1702250000000
+    },
+    {
+      "_id": "fh_00000028",
+      "member": "m_00000008",
+      "custom": false,
+      "live": false,
+      "startTime": 1702332800000,
+      "endTime": 1702336400000
+    },
+    {
+      "_id": "fh_00000029",
+      "member": "m_00000009",
+      "custom": false,
+      "live": false,
+      "startTime": 1702419200000,
+      "endTime": 1702422800000
+    },
+    {
+      "_id": "fh_00000030",
+      "member": "m_00000010",
+      "custom": false,
+      "live": false,
+      "startTime": 1702505600000,
+      "endTime": 1702509200000
+    },
+    {
+      "_id": "fh_00000031",
+      "member": "m_00000011",
+      "custom": false,
+      "live": false,
+      "startTime": 1702592000000,
+      "endTime": 1702595600000
+    },
+    {
+      "_id": "fh_00000032",
+      "member": "m_00000012",
+      "custom": false,
+      "live": false,
+      "startTime": 1702678400000,
+      "endTime": 1702682000000
+    },
+    {
+      "_id": "fh_00000033",
+      "member": "m_00000013",
+      "custom": false,
+      "live": false,
+      "startTime": 1702764800000,
+      "endTime": 1702768400000
+    },
+    {
+      "_id": "fh_00000034",
+      "member": "m_00000014",
+      "custom": false,
+      "live": false,
+      "startTime": 1702851200000,
+      "endTime": 1702854800000
+    },
+    {
+      "_id": "fh_00000035",
+      "member": "m_00000015",
+      "custom": false,
+      "live": false,
+      "startTime": 1702937600000,
+      "endTime": 1702941200000
+    },
+    {
+      "_id": "fh_00000036",
+      "member": "m_00000016",
+      "custom": false,
+      "live": false,
+      "startTime": 1703024000000,
+      "endTime": 1703027600000
+    },
+    {
+      "_id": "fh_00000037",
+      "member": "m_00000017",
+      "custom": false,
+      "live": false,
+      "startTime": 1703110400000,
+      "endTime": 1703114000000
+    },
+    {
+      "_id": "fh_00000038",
+      "member": "m_00000018",
+      "custom": false,
+      "live": false,
+      "startTime": 1703196800000,
+      "endTime": 1703200400000
+    },
+    {
+      "_id": "fh_00000039",
+      "member": "m_00000019",
+      "custom": false,
+      "live": false,
+      "startTime": 1703283200000,
+      "endTime": 1703286800000
+    },
+    {
+      "_id": "fh_00000040",
+      "member": "m_00000020",
+      "custom": false,
+      "live": false,
+      "startTime": 1703369600000,
+      "endTime": 1703373200000
+    },
+    {
+      "_id": "fh_00000041",
+      "member": "m_00000001",
+      "custom": false,
+      "live": false,
+      "startTime": 1703456000000,
+      "endTime": 1703459600000
+    },
+    {
+      "_id": "fh_00000042",
+      "member": "m_00000002",
+      "custom": false,
+      "live": false,
+      "startTime": 1703542400000,
+      "endTime": 1703546000000
+    },
+    {
+      "_id": "fh_00000043",
+      "member": "m_00000003",
+      "custom": false,
+      "live": false,
+      "startTime": 1703628800000,
+      "endTime": 1703632400000
+    },
+    {
+      "_id": "fh_00000044",
+      "member": "m_00000004",
+      "custom": false,
+      "live": false,
+      "startTime": 1703715200000,
+      "endTime": 1703718800000
+    },
+    {
+      "_id": "fh_00000045",
+      "member": "m_00000005",
+      "custom": false,
+      "live": false,
+      "startTime": 1703801600000,
+      "endTime": 1703805200000
+    },
+    {
+      "_id": "fh_00000046",
+      "member": "m_00000006",
+      "custom": false,
+      "live": false,
+      "startTime": 1703888000000,
+      "endTime": 1703891600000
+    },
+    {
+      "_id": "fh_00000047",
+      "member": "m_00000007",
+      "custom": false,
+      "live": false,
+      "startTime": 1703974400000,
+      "endTime": 1703978000000
+    },
+    {
+      "_id": "fh_00000048",
+      "member": "m_00000008",
+      "custom": false,
+      "live": false,
+      "startTime": 1704060800000,
+      "endTime": 1704064400000
+    },
+    {
+      "_id": "fh_00000049",
+      "member": "m_00000009",
+      "custom": false,
+      "live": false,
+      "startTime": 1704147200000,
+      "endTime": 1704150800000
+    },
+    {
+      "_id": "fh_00000050",
+      "member": "m_00000010",
+      "custom": false,
+      "live": true,
+      "startTime": 1704233600000,
+      "endTime": null
+    }
+  ],
+  "comments": [
+    {
+      "_id": "cm_00000001",
+      "documentId": "fh_00000001",
+      "text": "first front",
+      "time": 1700000001000
+    }
+  ],
+  "notes": [
+    {
+      "_id": "nt_00000001",
+      "title": "First note",
+      "note": "hello",
+      "date": 1700000000000,
+      "member": "m_00000001"
+    }
+  ],
+  "polls": [
+    {
+      "_id": "pl_00000001",
+      "name": "Dinner",
+      "options": [
+        {
+          "id": "o1",
+          "name": "Pizza"
+        },
+        {
+          "id": "o2",
+          "name": "Sushi"
+        }
+      ]
+    }
+  ],
+  "channelCategories": [
+    {
+      "_id": "cc_00000001",
+      "name": "Day"
+    }
+  ],
+  "channels": [
+    {
+      "_id": "ch_00000001",
+      "name": "general",
+      "parentCategory": "cc_00000001"
+    }
+  ],
+  "chatMessages": [
+    {
+      "_id": "cmm_00000001",
+      "channel": "ch_00000001",
+      "writer": "m_00000001",
+      "message": "hi",
+      "writtenAt": 1700000002000
+    }
+  ],
+  "boardMessages": [
+    {
+      "_id": "bm_00000001",
+      "title": "Board",
+      "message": "post",
+      "writer": "m_00000001",
+      "writtenAt": 1700000003000
+    }
+  ],
+  "friends": [
+    {
+      "_id": "fr_00000001",
+      "frienduid": "remote_user_1"
+    }
+  ]
+}

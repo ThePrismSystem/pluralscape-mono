@@ -1,0 +1,24 @@
+{
+  "members": [
+    {
+      "_id": "m_00000001",
+      "name": "Valid Member"
+    },
+    {
+      "_id": "m_00000002"
+    },
+    {
+      "name": "missing id"
+    }
+  ],
+  "frontHistory": [
+    {
+      "_id": "fh_00000001",
+      "member": "nonexistent",
+      "custom": false,
+      "live": true,
+      "startTime": 1700000000000,
+      "endTime": null
+    }
+  ]
+}
