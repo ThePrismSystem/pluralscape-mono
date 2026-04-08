@@ -104,16 +104,25 @@ describe("ImportEntityType", () => {
       switch (type) {
         case "member":
         case "group":
+        case "custom-front":
         case "fronting-session":
+        case "fronting-comment":
         case "switch":
         case "custom-field":
+        case "field-definition":
+        case "field-value":
         case "note":
+        case "journal-entry":
         case "chat-message":
         case "board-message":
+        case "channel-category":
+        case "channel":
         case "poll":
         case "timer":
         case "privacy-bucket":
         case "friend":
+        case "system-profile":
+        case "system-settings":
         case "unknown":
           return type;
         default: {

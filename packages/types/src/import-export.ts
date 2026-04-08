@@ -82,16 +82,25 @@ export type ImportJobStatus = "pending" | "validating" | "importing" | "complete
 export type ImportEntityType =
   | "member"
   | "group"
+  | "custom-front"
   | "fronting-session"
+  | "fronting-comment"
   | "switch"
   | "custom-field"
+  | "field-definition"
+  | "field-value"
   | "note"
+  | "journal-entry"
   | "chat-message"
   | "board-message"
+  | "channel-category"
+  | "channel"
   | "poll"
   | "timer"
   | "privacy-bucket"
   | "friend"
+  | "system-profile"
+  | "system-settings"
   | "unknown";
 
 /**

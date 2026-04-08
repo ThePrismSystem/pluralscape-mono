@@ -455,13 +455,42 @@ export const BLOB_PURPOSES = [
   "export",
   "littles-safe-mode",
 ] as const satisfies readonly BlobPurpose[];
-export {
-  IMPORT_AVATAR_MODES,
-  IMPORT_COLLECTION_TYPES,
-  IMPORT_ENTITY_TYPES,
-  IMPORT_JOB_STATUSES,
-  IMPORT_SOURCES,
-} from "@pluralscape/types";
+export const IMPORT_SOURCES = [
+  "simply-plural",
+  "pluralkit",
+  "pluralscape",
+] as const satisfies readonly ImportSource[];
+export const IMPORT_JOB_STATUSES = [
+  "pending",
+  "validating",
+  "importing",
+  "completed",
+  "failed",
+] as const satisfies readonly ImportJobStatus[];
+export const IMPORT_ENTITY_TYPES = [
+  "member",
+  "group",
+  "custom-front",
+  "fronting-session",
+  "fronting-comment",
+  "switch",
+  "custom-field",
+  "field-definition",
+  "field-value",
+  "note",
+  "journal-entry",
+  "chat-message",
+  "board-message",
+  "channel-category",
+  "channel",
+  "poll",
+  "timer",
+  "privacy-bucket",
+  "friend",
+  "system-profile",
+  "system-settings",
+  "unknown",
+] as const satisfies readonly ImportEntityType[];
 export const EXPORT_FORMATS = ["json", "csv"] as const satisfies readonly ExportFormat[];
 export const EXPORT_REQUEST_STATUSES = [
   "pending",
