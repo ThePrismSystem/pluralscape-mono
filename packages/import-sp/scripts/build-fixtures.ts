@@ -154,6 +154,39 @@ function buildRealistic(): unknown {
   };
 }
 
+/**
+ * Legacy export: no `privacyBuckets` collection. Members encode privacy
+ * exclusively via the `private` / `preventTrusted` boolean pair, which
+ * forces the engine into the synthesized-bucket code path.
+ *
+ * Four members cover every branch in `deriveBucketSourceIds`:
+ *   1. `private: true`            → synthetic:private
+ *   2. `preventTrusted: true`     → synthetic:public
+ *   3. `private: false`           → synthetic:public + synthetic:trusted
+ *   4. (no privacy flags)         → synthetic:private (fail-closed default)
+ */
+function buildLegacyNoBuckets(): unknown {
+  return {
+    customFields: [{ _id: id("cf", 1), name: "Likes", type: "text", order: 0 }],
+    members: [
+      { _id: id("m", 1), name: "Private Member", private: true },
+      { _id: id("m", 2), name: "Prevented Member", preventTrusted: true },
+      { _id: id("m", 3), name: "Public Member", private: false },
+      { _id: id("m", 4), name: "Default Member" },
+    ],
+    frontHistory: [
+      {
+        _id: id("fh", 1),
+        member: id("m", 1),
+        custom: false,
+        live: true,
+        startTime: REALISTIC_BASE_TIME_MS,
+        endTime: null,
+      },
+    ],
+  };
+}
+
 function buildCorrupted(): unknown {
   return {
     members: [
@@ -181,4 +214,5 @@ function writeJson(name: string, data: unknown): void {
 
 writeJson("minimal.sp-export.json", buildMinimal());
 writeJson("realistic.sp-export.json", buildRealistic());
+writeJson("legacy-no-buckets.sp-export.json", buildLegacyNoBuckets());
 writeJson("corrupted.sp-export.json", buildCorrupted());
