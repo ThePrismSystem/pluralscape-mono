@@ -206,3 +206,4 @@ export {
   UpdateImportJobBodySchema,
   ImportJobQuerySchema,
 } from "./import-job.js";
+export { ImportEntityRefQuerySchema } from "./import-entity-ref.js";
