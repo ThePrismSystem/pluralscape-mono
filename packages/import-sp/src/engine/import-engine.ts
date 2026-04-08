@@ -49,50 +49,21 @@ import type { ImportSource } from "../sources/source.types.js";
 import type { SpCollectionName } from "../sources/sp-collections.js";
 import type { ImportAvatarMode, ImportCheckpointState, ImportError } from "@pluralscape/types";
 
-/** Numeric delta describing one mapped+persisted document. */
-const ONE_IMPORTED: AdvanceDelta = {
-  imported: 1,
-  updated: 0,
-  skipped: 0,
-  failed: 0,
-  total: 1,
-};
-
-/** Numeric delta describing one document the persister recognised as updated. */
-const ONE_UPDATED: AdvanceDelta = {
-  imported: 0,
-  updated: 1,
-  skipped: 0,
-  failed: 0,
-  total: 1,
-};
-
-/** Numeric delta describing one document the persister recognised as a skip. */
-const ONE_PERSISTER_SKIPPED: AdvanceDelta = {
-  imported: 0,
-  updated: 0,
-  skipped: 1,
-  failed: 0,
-  total: 1,
-};
-
-/** Numeric delta describing one document the mapper voluntarily skipped. */
-const ONE_MAPPER_SKIPPED: AdvanceDelta = {
-  imported: 0,
-  updated: 0,
-  skipped: 1,
-  failed: 0,
-  total: 1,
-};
-
-/** Numeric delta describing one document that failed at the mapper layer. */
-const ONE_FAILED: AdvanceDelta = {
-  imported: 0,
-  updated: 0,
-  skipped: 0,
-  failed: 1,
-  total: 1,
-};
+/**
+ * Build a single-document `AdvanceDelta` for one of the four terminal outcomes.
+ * Collapses the four previous ONE_* constants into one helper — the distinction
+ * between "mapper skipped" and "persister skipped" was never load-bearing at
+ * the call sites, so both just map to `delta("skipped")`.
+ */
+function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelta {
+  return {
+    imported: kind === "imported" ? 1 : 0,
+    updated: kind === "updated" ? 1 : 0,
+    skipped: kind === "skipped" ? 1 : 0,
+    failed: kind === "failed" ? 1 : 0,
+    total: 1,
+  };
+}
 
 export interface RunImportArgs {
   readonly source: ImportSource;
@@ -266,7 +237,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
           state = advanceWithinCollection(state, {
             entityType,
             lastSourceId: doc.sourceId,
-            delta: ONE_MAPPER_SKIPPED,
+            delta: delta("skipped"),
           });
         } else if (result.status === "failed") {
           const error: ImportError = {
@@ -281,7 +252,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
           state = advanceWithinCollection(state, {
             entityType,
             lastSourceId: doc.sourceId,
-            delta: ONE_FAILED,
+            delta: delta("failed"),
           });
         } else {
           // status === "mapped"
@@ -293,16 +264,16 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
               payload: result.payload,
             });
             ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
-            const delta =
+            const upsertDelta =
               upsert.action === "created"
-                ? ONE_IMPORTED
+                ? delta("imported")
                 : upsert.action === "updated"
-                  ? ONE_UPDATED
-                  : ONE_PERSISTER_SKIPPED;
+                  ? delta("updated")
+                  : delta("skipped");
             state = advanceWithinCollection(state, {
               entityType,
               lastSourceId: doc.sourceId,
-              delta,
+              delta: upsertDelta,
             });
           } catch (thrown) {
             const error = classifyError(thrown, { entityType, entityId: doc.sourceId });
@@ -317,7 +288,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
             state = advanceWithinCollection(state, {
               entityType,
               lastSourceId: doc.sourceId,
-              delta: ONE_FAILED,
+              delta: delta("failed"),
             });
           }
         }
