@@ -187,7 +187,7 @@ describe("Poll", () => {
   it("has correct field types", () => {
     expectTypeOf<Poll["id"]>().toEqualTypeOf<PollId>();
     expectTypeOf<Poll["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Poll["createdByMemberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<Poll["createdByMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<Poll["title"]>().toBeString();
     expectTypeOf<Poll["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Poll["kind"]>().toEqualTypeOf<"standard" | "custom">();

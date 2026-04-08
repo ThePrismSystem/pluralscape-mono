@@ -110,7 +110,8 @@ export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly Poll
 export interface Poll extends AuditMetadata {
   readonly id: PollId;
   readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId;
+  /** Member who created the poll. null when imported from a source system (e.g., Simply Plural) that has no per-poll creator concept. */
+  readonly createdByMemberId: MemberId | null;
   readonly title: string;
   readonly description: string | null;
   readonly kind: PollKind;
