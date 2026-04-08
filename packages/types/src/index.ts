@@ -352,19 +352,6 @@ export type {
 
 // ── Import/Export ────────────────────────────────────────────────
 export type {
-  SPImportMember,
-  SPImportGroup,
-  SPImportFrontingSession,
-  SPImportCustomField,
-  SPImportCustomFieldValue,
-  SPImportNote,
-  SPImportChatMessage,
-  SPImportBoardMessage,
-  SPImportPoll,
-  SPImportTimer,
-  SPImportPrivacyBucket,
-  SPImportFriend,
-  SPImportPayload,
   PKProxyTag,
   PKImportMember,
   PKImportGroup,
