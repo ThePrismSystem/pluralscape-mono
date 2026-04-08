@@ -8,6 +8,7 @@ import {
   ACCOUNT_PURGE_STATUSES,
   EXPORT_FORMATS,
   EXPORT_REQUEST_STATUSES,
+  IMPORT_ENTITY_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
 } from "../../helpers/enums.js";
@@ -20,6 +21,8 @@ import type {
   AccountPurgeStatus,
   ExportFormat,
   ExportRequestStatus,
+  ImportCheckpointState,
+  ImportEntityType,
   ImportJobStatus,
   ImportSource,
 } from "@pluralscape/types";
@@ -40,6 +43,8 @@ export const importJobs = sqliteTable(
     progressPercent: integer("progress_percent").notNull().default(0),
     /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
     errorLog: sqliteJson("error_log"),
+    /** Resumption state for interrupted imports. See ImportCheckpointState in @pluralscape/types. */
+    checkpointState: sqliteJson("checkpoint_state").$type<ImportCheckpointState>(),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
@@ -63,6 +68,44 @@ export const importJobs = sqliteTable(
     check(
       "import_jobs_error_log_length_check",
       sql`${t.errorLog} IS NULL OR json_array_length(${t.errorLog}) <= ${sql.raw(String(MAX_ERROR_LOG_ENTRIES))}`,
+    ),
+  ],
+);
+
+/**
+ * Source-entity to target-entity mapping recorded during an import.
+ * Mirrors the PG schema. T3 operational metadata.
+ */
+export const importEntityRefs = sqliteTable(
+  "import_entity_refs",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    systemId: text("system_id")
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    source: text("source").notNull().$type<ImportSource>(),
+    sourceEntityType: text("source_entity_type").notNull().$type<ImportEntityType>(),
+    sourceEntityId: text("source_entity_id").notNull(),
+    pluralscapeEntityId: text("pluralscape_entity_id").notNull(),
+    importedAt: sqliteTimestamp("imported_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("import_entity_refs_source_unique_idx").on(
+      t.accountId,
+      t.systemId,
+      t.source,
+      t.sourceEntityType,
+      t.sourceEntityId,
+    ),
+    index("import_entity_refs_pluralscape_entity_id_idx").on(t.pluralscapeEntityId),
+    index("import_entity_refs_account_system_idx").on(t.accountId, t.systemId),
+    check("import_entity_refs_source_check", enumCheck(t.source, IMPORT_SOURCES)),
+    check(
+      "import_entity_refs_source_entity_type_check",
+      enumCheck(t.sourceEntityType, IMPORT_ENTITY_TYPES),
     ),
   ],
 );
@@ -120,6 +163,8 @@ export const accountPurgeRequests = sqliteTable(
 
 export type ImportJobRow = InferSelectModel<typeof importJobs>;
 export type NewImportJob = InferInsertModel<typeof importJobs>;
+export type ImportEntityRefRow = InferSelectModel<typeof importEntityRefs>;
+export type NewImportEntityRef = InferInsertModel<typeof importEntityRefs>;
 export type ExportRequestRow = InferSelectModel<typeof exportRequests>;
 export type NewExportRequest = InferInsertModel<typeof exportRequests>;
 export type AccountPurgeRequestRow = InferSelectModel<typeof accountPurgeRequests>;
