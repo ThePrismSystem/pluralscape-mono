@@ -119,17 +119,6 @@ export function completeCollection(
   };
 }
 
-export function shouldSkipBefore(
-  state: ImportCheckpointState,
-  entityType: ImportEntityType,
-  sourceId: string,
-): boolean {
-  if (state.checkpoint.currentCollection !== entityType) return false;
-  const last = state.checkpoint.currentCollectionLastSourceId;
-  if (last === null) return false;
-  return sourceId <= last;
-}
-
 export function resumeStartCollection(state: ImportCheckpointState): ImportEntityType {
   return state.checkpoint.currentCollection;
 }

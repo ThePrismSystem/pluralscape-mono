@@ -237,14 +237,12 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
 
     let docsSinceCheckpoint = 0;
     let collectionAborted = false;
-    // Capture the resume cutoff at collection entry. After we persist the
-    // first doc of this collection, the live `state` will record its source
-    // ID as the new `lastSourceId`, so `shouldSkipBefore(state, ...)` would
-    // start over-skipping. We only honour the cutoff against the original
-    // checkpoint (`resumeCutoffSourceId`) and stop honouring it once we walk
-    // past the resumed source ID. This correctly handles sources whose IDs
-    // are not lexicographically sortable: we walk the (stable) iteration
-    // order and skip every doc up to and including the cutoff.
+    // Capture the resume cutoff at collection entry. We only honour the
+    // cutoff against the original checkpoint (`resumeCutoffSourceId`) and
+    // stop honouring it once we walk past the resumed source ID. This
+    // correctly handles sources whose IDs are not lexicographically
+    // sortable: we walk the (stable) iteration order and skip every doc up
+    // to and including the cutoff.
     const resumeCutoffSourceId =
       state.checkpoint.currentCollection === entityType
         ? state.checkpoint.currentCollectionLastSourceId

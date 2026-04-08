@@ -5,7 +5,6 @@ import {
   completeCollection,
   emptyCheckpointState,
   resumeStartCollection,
-  shouldSkipBefore,
 } from "../../engine/checkpoint.js";
 
 describe("checkpoint helpers", () => {
@@ -52,33 +51,6 @@ describe("checkpoint helpers", () => {
     expect(state.checkpoint.completedCollections).toContain("member");
     expect(state.checkpoint.currentCollection).toBe("group");
     expect(state.checkpoint.currentCollectionLastSourceId).toBeNull();
-  });
-
-  it("shouldSkipBefore returns true for source IDs ≤ lastSourceId", () => {
-    const state = advanceWithinCollection(
-      emptyCheckpointState({
-        firstEntityType: "member",
-        selectedCategories: {},
-        avatarMode: "api",
-      }),
-      {
-        entityType: "member",
-        lastSourceId: "src_5",
-        delta: { imported: 1, updated: 0, skipped: 0, failed: 0, total: 1 },
-      },
-    );
-    expect(shouldSkipBefore(state, "member", "src_3")).toBe(true);
-    expect(shouldSkipBefore(state, "member", "src_5")).toBe(true);
-    expect(shouldSkipBefore(state, "member", "src_6")).toBe(false);
-  });
-
-  it("shouldSkipBefore returns false for non-current collections", () => {
-    const state = emptyCheckpointState({
-      firstEntityType: "member",
-      selectedCategories: {},
-      avatarMode: "api",
-    });
-    expect(shouldSkipBefore(state, "group", "anything")).toBe(false);
   });
 
   it("resumeStartCollection returns the currentCollection from the state", () => {
