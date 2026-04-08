@@ -4,6 +4,7 @@ import type {
   BlobId,
   BucketId,
   ExportRequestId,
+  ImportEntityRefId,
   ImportJobId,
   MemberId,
   SystemId,
@@ -243,6 +244,54 @@ export interface ImportJob {
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
+}
+
+/** Schema version for `ImportCheckpointState`. Bumped when the shape changes. */
+export type ImportCheckpointSchemaVersion = 1;
+
+/** Avatar handling mode during an import. */
+export type ImportAvatarMode = "api" | "zip" | "skip";
+
+/** Per-collection running counts during an import. */
+export interface ImportCollectionTotals {
+  readonly total: number;
+  readonly imported: number;
+  readonly updated: number;
+  readonly skipped: number;
+  readonly failed: number;
+}
+
+/** Resumption state stored in `import_jobs.checkpoint_state`. */
+export interface ImportCheckpointState {
+  readonly schemaVersion: ImportCheckpointSchemaVersion;
+  readonly checkpoint: {
+    readonly completedCollections: readonly ImportEntityType[];
+    readonly currentCollection: ImportEntityType;
+    readonly currentCollectionLastSourceId: string | null;
+  };
+  readonly options: {
+    readonly selectedCategories: Record<string, boolean>;
+    readonly avatarMode: ImportAvatarMode;
+  };
+  readonly totals: {
+    readonly perCollection: Partial<Record<ImportEntityType, ImportCollectionTotals>>;
+  };
+}
+
+/** A source-entity to target-entity mapping recorded during an import.
+ * Enables idempotent re-imports and cross-device dedup. */
+export interface ImportEntityRef {
+  readonly id: ImportEntityRefId;
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly source: ImportSource;
+  readonly sourceEntityType: ImportEntityType;
+  /** Opaque identifier from the source system (e.g., Mongo ObjectId for SP). */
+  readonly sourceEntityId: string;
+  /** The Pluralscape entity ID this source ID maps to. Not type-scoped — the
+   * consumer must use `sourceEntityType` to cast to the correct branded ID. */
+  readonly pluralscapeEntityId: string;
+  readonly importedAt: UnixMillis;
 }
 
 // ── Export types ─────────────────────────────────────────────────────

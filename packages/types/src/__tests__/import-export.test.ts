@@ -4,6 +4,7 @@ import type {
   AccountId,
   AccountPurgeRequestId,
   BucketId,
+  ImportEntityRefId,
   ImportJobId,
   MemberId,
   SystemId,
@@ -15,6 +16,9 @@ import type {
   ExportFormat,
   ExportManifest,
   ExportSection,
+  ImportAvatarMode,
+  ImportCheckpointState,
+  ImportEntityRef,
   ImportEntityType,
   ImportError,
   ImportJob,
@@ -465,5 +469,52 @@ describe("SystemOverviewReport", () => {
     expectTypeOf<SystemOverviewReport["sizeBytes"]>().toEqualTypeOf<number>();
     expectTypeOf<SystemOverviewReport["downloadUrl"]>().toBeString();
     expectTypeOf<SystemOverviewReport["expiresAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+});
+
+describe("ImportCheckpointState", () => {
+  it("captures resumption state with schema version 1", () => {
+    const state: ImportCheckpointState = {
+      schemaVersion: 1,
+      checkpoint: {
+        completedCollections: ["member", "group"],
+        currentCollection: "fronting-session",
+        currentCollectionLastSourceId: "507f1f77bcf86cd799439011",
+      },
+      options: {
+        selectedCategories: {
+          identity: true,
+          fronting: true,
+          communication: false,
+        },
+        avatarMode: "api",
+      },
+      totals: {
+        perCollection: {
+          member: { total: 20, imported: 20, updated: 0, skipped: 0, failed: 0 },
+        },
+      },
+    };
+    expectTypeOf(state.schemaVersion).toEqualTypeOf<1>();
+    expectTypeOf(state.checkpoint.currentCollection).toEqualTypeOf<ImportEntityType>();
+    expectTypeOf(state.options.avatarMode).toEqualTypeOf<ImportAvatarMode>();
+  });
+});
+
+describe("ImportEntityRef", () => {
+  it("records the mapping from a source entity ID to a Pluralscape entity ID", () => {
+    const ref: ImportEntityRef = {
+      id: "ier_01HX000000000000000000000A" as ImportEntityRefId,
+      accountId: "acc_01HX000000000000000000000B" as AccountId,
+      systemId: "sys_01HX000000000000000000000C" as SystemId,
+      source: "simply-plural",
+      sourceEntityType: "member",
+      sourceEntityId: "507f1f77bcf86cd799439011",
+      pluralscapeEntityId: "mem_01HX000000000000000000000D",
+      importedAt: 1234567890 as UnixMillis,
+    };
+    expectTypeOf(ref.source).toEqualTypeOf<ImportSource>();
+    expectTypeOf(ref.sourceEntityType).toEqualTypeOf<ImportEntityType>();
+    expectTypeOf(ref.id).toEqualTypeOf<ImportEntityRefId>();
   });
 });
