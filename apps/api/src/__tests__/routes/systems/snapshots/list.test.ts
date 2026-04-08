@@ -48,6 +48,7 @@ const MOCK_LIST_RESULT = {
 
 // ── Tests ────────────────────────────────────────────────────────
 
+// No error-mapping cases — listSnapshots does not throw ApiHttpError.
 describe("GET /systems/:systemId/snapshots", () => {
   beforeEach(() => {
     vi.mocked(listSnapshots).mockReset();

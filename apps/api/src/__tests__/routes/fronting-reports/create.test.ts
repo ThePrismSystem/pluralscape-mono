@@ -55,6 +55,7 @@ const MOCK_RESULT = {
 
 // ── Tests ────────────────────────────────────────────────────────
 
+// No error-mapping cases — createFrontingReport does not throw ApiHttpError.
 describe("POST /systems/:systemId/fronting-reports", () => {
   beforeEach(() => {
     vi.mocked(createFrontingReport).mockReset();

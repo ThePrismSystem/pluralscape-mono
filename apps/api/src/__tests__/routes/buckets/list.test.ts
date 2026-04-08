@@ -56,6 +56,7 @@ const MOCK_LIST_RESULT = {
 
 // ── Tests ────────────────────────────────────────────────────────
 
+// No error-mapping cases — listBuckets does not throw ApiHttpError.
 describe("GET /systems/:systemId/buckets", () => {
   beforeEach(() => {
     vi.mocked(listBuckets).mockReset();

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiHttpError } from "../../../lib/api-error.js";
 import {
   mockAuthFactory,
   mockDbFactory,
@@ -87,4 +88,17 @@ describe("GET /systems/:systemId/buckets/:bucketId", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
+
+  it.each([[404, "NOT_FOUND", "Bucket not found"]] as const)(
+    "maps service ApiHttpError %i %s to HTTP response",
+    async (status, code, message) => {
+      vi.mocked(getBucket).mockRejectedValueOnce(new ApiHttpError(status, code, message));
+
+      const res = await createApp().request(GET_URL);
+
+      expect(res.status).toBe(status);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe(code);
+    },
+  );
 });

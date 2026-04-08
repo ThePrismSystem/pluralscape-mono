@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiHttpError } from "../../../lib/api-error.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -101,5 +102,18 @@ describe("POST /systems/:systemId/webhook-configs/:webhookId/restore", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it.each([
+    [409, "NOT_ARCHIVED", "Webhook config is not archived"],
+    [404, "NOT_FOUND", "Archived webhook config not found"],
+  ] as const)("maps service ApiHttpError %i %s to HTTP response", async (status, code, message) => {
+    vi.mocked(restoreWebhookConfig).mockRejectedValueOnce(new ApiHttpError(status, code, message));
+
+    const res = await createApp().request(RESTORE_URL, { method: "POST" });
+
+    expect(res.status).toBe(status);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe(code);
   });
 });

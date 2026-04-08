@@ -40,6 +40,7 @@ const BASE_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/tags`;
 
 // ── Tests ────────────────────────────────────────────────────────
 
+// No error-mapping cases — listTagsByBucket does not throw ApiHttpError.
 describe("GET /systems/:id/buckets/:bucketId/tags", () => {
   beforeEach(() => {
     vi.mocked(listTagsByBucket).mockReset();

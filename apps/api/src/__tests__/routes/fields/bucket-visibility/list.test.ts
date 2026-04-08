@@ -37,6 +37,7 @@ const BASE_URL = `/systems/${SYS_ID}/fields/${FIELD_ID}/bucket-visibility`;
 
 // ── Tests ────────────────────────────────────────────────────────
 
+// No error-mapping cases — listFieldBucketVisibility does not throw ApiHttpError.
 describe("GET /systems/:id/fields/:fieldDefinitionId/bucket-visibility", () => {
   beforeEach(() => {
     vi.mocked(listFieldBucketVisibility).mockReset();

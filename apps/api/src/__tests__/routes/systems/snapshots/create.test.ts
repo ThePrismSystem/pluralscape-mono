@@ -48,6 +48,7 @@ const MOCK_RESULT = {
 
 // ── Tests ────────────────────────────────────────────────────────
 
+// No error-mapping cases — createSnapshot does not throw ApiHttpError.
 describe("POST /systems/:systemId/snapshots", () => {
   beforeEach(() => {
     vi.mocked(createSnapshot).mockReset();

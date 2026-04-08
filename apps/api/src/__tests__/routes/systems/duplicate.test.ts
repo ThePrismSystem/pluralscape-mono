@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiHttpError } from "../../../lib/api-error.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -93,5 +94,18 @@ describe("POST /systems/:id/duplicate", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it.each([
+    [403, "FORBIDDEN", "Only system accounts can duplicate systems"],
+    [404, "NOT_FOUND", "Source system not found"],
+  ] as const)("maps service ApiHttpError %i %s to HTTP response", async (status, code, message) => {
+    vi.mocked(duplicateSystem).mockRejectedValueOnce(new ApiHttpError(status, code, message));
+
+    const res = await postJSON(createApp(), DUPLICATE_URL, VALID_BODY);
+
+    expect(res.status).toBe(status);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe(code);
   });
 });

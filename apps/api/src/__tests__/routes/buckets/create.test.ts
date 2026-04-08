@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiHttpError } from "../../../lib/api-error.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -101,4 +102,17 @@ describe("POST /systems/:systemId/buckets", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
+
+  it.each([[400, "QUOTA_EXCEEDED", "Maximum of 10 buckets per system"]] as const)(
+    "maps service ApiHttpError %i %s to HTTP response",
+    async (status, code, message) => {
+      vi.mocked(createBucket).mockRejectedValueOnce(new ApiHttpError(status, code, message));
+
+      const res = await postJSON(createApp(), CREATE_URL, VALID_BODY);
+
+      expect(res.status).toBe(status);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe(code);
+    },
+  );
 });

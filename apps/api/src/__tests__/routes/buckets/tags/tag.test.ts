@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiHttpError } from "../../../../lib/api-error.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -121,4 +122,17 @@ describe("POST /systems/:id/buckets/:bucketId/tags", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
+
+  it.each([[400, "VALIDATION_ERROR", "Invalid tag content payload"]] as const)(
+    "maps service ApiHttpError %i %s to HTTP response",
+    async (status, code, message) => {
+      vi.mocked(tagContent).mockRejectedValueOnce(new ApiHttpError(status, code, message));
+
+      const res = await postJSON(createApp(), BASE_URL, VALID_BODY);
+
+      expect(res.status).toBe(status);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe(code);
+    },
+  );
 });

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ApiHttpError } from "../../../../lib/api-error.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -106,4 +107,17 @@ describe("DELETE /systems/:id/buckets/:bucketId/tags/:entityType/:entityId", () 
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
+
+  it.each([[404, "NOT_FOUND", "Content tag not found"]] as const)(
+    "maps service ApiHttpError %i %s to HTTP response",
+    async (status, code, message) => {
+      vi.mocked(untagContent).mockRejectedValueOnce(new ApiHttpError(status, code, message));
+
+      const res = await createApp().request(BASE_URL, { method: "DELETE" });
+
+      expect(res.status).toBe(status);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe(code);
+    },
+  );
 });
