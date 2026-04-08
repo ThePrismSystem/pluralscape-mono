@@ -18,6 +18,11 @@ export interface ClassifyContext {
  *   (the user must restart the import or fix the source data).
  * - Anything else is treated as a per-document failure: non-fatal so the
  *   engine can record it and keep iterating.
+ *
+ * Fatal errors set `entityType: "unknown"` because the failure is transport-
+ * or parse-level, not document-level — there is no specific entity to
+ * attribute it to. Non-fatal errors carry `ctx.entityType`/`ctx.entityId` so
+ * the persister can record per-document failures.
  */
 export function classifyError(thrown: unknown, ctx: ClassifyContext): ImportError {
   if (thrown instanceof ApiSourceTokenRejectedError) {
