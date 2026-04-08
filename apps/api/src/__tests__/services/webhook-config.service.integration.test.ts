@@ -125,6 +125,34 @@ describe("webhook-config.service (PGlite integration)", () => {
       );
     });
 
+    it("wraps SSRF validation Error into VALIDATION_ERROR on create", async () => {
+      const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
+      vi.mocked(resolveAndValidateUrl)
+        .mockRejectedValueOnce(new Error("private range"))
+        .mockResolvedValue(["93.184.216.34"]);
+
+      await assertApiError(
+        createWebhookConfig(asDb(db), systemId, createParams(), auth, noopAudit),
+        "VALIDATION_ERROR",
+        400,
+        "private range",
+      );
+    });
+
+    it("wraps non-Error SSRF rejection into VALIDATION_ERROR on create", async () => {
+      const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
+      vi.mocked(resolveAndValidateUrl)
+        .mockRejectedValueOnce("string-rejection")
+        .mockResolvedValue(["93.184.216.34"]);
+
+      await assertApiError(
+        createWebhookConfig(asDb(db), systemId, createParams(), auth, noopAudit),
+        "VALIDATION_ERROR",
+        400,
+        "Webhook URL validation failed",
+      );
+    });
+
     it("rejects creation when at per-system quota limit", async () => {
       const QUOTA_LIMIT = 25;
       // Bulk-insert configs to fill the quota
@@ -555,6 +583,108 @@ describe("webhook-config.service (PGlite integration)", () => {
       expect(result.httpStatus).toBeNull();
       expect(result.error).toContain("SSRF validation failed");
       expect(result.error).toContain("private IP");
+    });
+
+    it("returns SSRF error with stringified message when non-Error is thrown", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+
+      const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
+      vi.mocked(resolveAndValidateUrl)
+        .mockRejectedValueOnce("not-an-error-object")
+        .mockResolvedValue(["93.184.216.34"]);
+
+      const result = await testWebhookConfig(asDb(db), systemId, created.id, auth);
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBeNull();
+      expect(result.error).toContain("SSRF validation failed");
+      expect(result.error).toContain("not-an-error-object");
+    });
+
+    it("returns SSRF error when resolved IPs array is empty", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+
+      const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
+      vi.mocked(resolveAndValidateUrl)
+        .mockResolvedValueOnce([])
+        .mockResolvedValue(["93.184.216.34"]);
+
+      const result = await testWebhookConfig(asDb(db), systemId, created.id, auth);
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBeNull();
+      expect(result.error).toContain("resolved to no IPs");
+    });
+
+    it("returns timeout error when fetch times out", async () => {
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams(),
+        auth,
+        noopAudit,
+      );
+
+      const abortError = new DOMException("The operation was aborted", "AbortError");
+      const mockFetch = vi.fn().mockRejectedValue(abortError);
+
+      const result = await testWebhookConfig(
+        asDb(db),
+        systemId,
+        created.id,
+        auth,
+        mockFetch as never,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBeNull();
+      expect(result.error).toBe("Request timed out");
+    });
+
+    it("omits Host header when pinnedUrl equals config.url (IP hostname)", async () => {
+      const ipUrl = "http://127.0.0.1/webhook";
+      const created = await createWebhookConfig(
+        asDb(db),
+        systemId,
+        createParams({ url: ipUrl }),
+        auth,
+        noopAudit,
+      );
+
+      const { resolveAndValidateUrl } = await import("../../lib/ip-validation.js");
+      // Resolving 127.0.0.1 to itself means buildIpPinnedFetchArgs produces pinnedUrl === config.url
+      vi.mocked(resolveAndValidateUrl)
+        .mockResolvedValueOnce(["127.0.0.1"])
+        .mockResolvedValue(["93.184.216.34"]);
+
+      let capturedHeaders: Record<string, string> | undefined;
+      const mockFetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+        capturedHeaders = init?.headers as Record<string, string> | undefined;
+        return Promise.resolve(new Response("OK", { status: 200 }));
+      });
+
+      const result = await testWebhookConfig(
+        asDb(db),
+        systemId,
+        created.id,
+        auth,
+        mockFetch as never,
+      );
+
+      expect(result.success).toBe(true);
+      expect(capturedHeaders?.["Host"]).toBeUndefined();
     });
   });
 

@@ -17,6 +17,19 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+vi.mock("../../../services/recovery-key.service.js", () => ({
+  resetPasswordWithRecoveryKey: vi.fn(),
+  NoActiveRecoveryKeyError: class NoActiveRecoveryKeyError extends Error {
+    override readonly name = "NoActiveRecoveryKeyError" as const;
+  },
+  DecryptionFailedError: class DecryptionFailedError extends Error {
+    override readonly name = "DecryptionFailedError" as const;
+  },
+  InvalidInputError: class InvalidInputError extends Error {
+    override readonly name = "InvalidInputError" as const;
+  },
+}));
+
 vi.mock("../../../services/auth.service.js", () => ({
   registerAccount: vi.fn(),
   loginAccount: vi.fn(),
@@ -46,6 +59,13 @@ const {
   revokeAllSessions,
   LoginThrottledError,
 } = await import("../../../services/auth.service.js");
+
+const {
+  resetPasswordWithRecoveryKey,
+  NoActiveRecoveryKeyError,
+  DecryptionFailedError,
+  InvalidInputError,
+} = await import("../../../services/recovery-key.service.js");
 
 const { authRouter } = await import("../../../trpc/routers/auth.js");
 
@@ -168,6 +188,81 @@ describe("auth router", () => {
         () => caller.auth.login(loginInput),
         "authHeavy",
       );
+    });
+  });
+
+  // ── resetPasswordWithRecoveryKey ──────────────────────────────────
+
+  describe("auth.resetPasswordWithRecoveryKey", () => {
+    const resetInput = {
+      email: "test@example.com",
+      recoveryKey: "AAAA-BBBB-CCCC-DDDD",
+      newPassword: "NewSecret123!",
+    };
+
+    const resetResult = {
+      sessionToken: "sess_550e8400-e29b-41d4-a716-446655440099" as SessionId,
+      recoveryKey: "NEW-RECOVERY-KEY",
+      accountId: MOCK_AUTH.accountId,
+    };
+
+    it("returns result on success", async () => {
+      vi.mocked(resetPasswordWithRecoveryKey).mockResolvedValue(resetResult);
+      const caller = createCaller(null);
+      const result = await caller.auth.resetPasswordWithRecoveryKey(resetInput);
+      expect(result).toEqual(resetResult);
+    });
+
+    it("throws UNAUTHORIZED when service returns null", async () => {
+      vi.mocked(resetPasswordWithRecoveryKey).mockResolvedValue(null);
+      const caller = createCaller(null);
+      await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+
+    it("throws UNAUTHORIZED when NoActiveRecoveryKeyError is thrown", async () => {
+      vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValue(new NoActiveRecoveryKeyError());
+      const caller = createCaller(null);
+      await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+
+    it("throws UNAUTHORIZED when DecryptionFailedError is thrown", async () => {
+      vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValue(new DecryptionFailedError());
+      const caller = createCaller(null);
+      await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+
+    it("throws UNAUTHORIZED when InvalidInputError is thrown", async () => {
+      vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValue(new InvalidInputError());
+      const caller = createCaller(null);
+      await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
+        expect.objectContaining({ code: "UNAUTHORIZED" }),
+      );
+    });
+
+    it("rethrows unknown errors from service as INTERNAL_SERVER_ERROR", async () => {
+      vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValue(new Error("database exploded"));
+      const caller = createCaller(null);
+      await expect(caller.auth.resetPasswordWithRecoveryKey(resetInput)).rejects.toThrow(
+        expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }),
+      );
+    });
+  });
+
+  // ── login error rethrow ───────────────────────────────────────────
+
+  describe("auth.login (error rethrow)", () => {
+    it("rethrows unknown errors from loginAccount as INTERNAL_SERVER_ERROR", async () => {
+      vi.mocked(loginAccount).mockRejectedValue(new Error("unexpected db failure"));
+      const caller = createCaller(null);
+      await expect(
+        caller.auth.login({ email: "test@example.com", password: "Secret123!" }),
+      ).rejects.toThrow(expect.objectContaining({ code: "INTERNAL_SERVER_ERROR" }));
     });
   });
 

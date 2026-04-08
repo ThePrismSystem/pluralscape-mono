@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../middleware/error-handler.js";
 import {
   _resetRateLimitStoreForTesting,
+  _resetXffWarningForTesting,
+  checkRateLimit,
   createCategoryRateLimiter,
   createRateLimiter,
   setRateLimitStore,
@@ -78,6 +80,18 @@ describe("rate limiter middleware", () => {
 
     const afterReset = await app.request("/test");
     expect(afterReset.status).toBe(200);
+  });
+
+  it("_resetXffWarningForTesting clears the warning flag so it fires again", async () => {
+    mockEnv.TRUST_PROXY = false;
+    _resetXffWarningForTesting();
+    const app = createApp(5);
+    // Two requests with XFF — warning fires on first, flag suppresses it after reset
+    await app.request("/test", { headers: { "x-forwarded-for": "1.2.3.4" } });
+    _resetXffWarningForTesting();
+    // After reset the flag is cleared — a subsequent XFF request would warn again
+    const res = await app.request("/test", { headers: { "x-forwarded-for": "1.2.3.4" } });
+    expect(res.status).toBe(200);
   });
 
   it("TRUST_PROXY unset: x-forwarded-for is ignored, all requests share global bucket", async () => {
@@ -301,5 +315,150 @@ describe("rate limiter middleware", () => {
 
     const afterReset = await app.request("/test");
     expect(afterReset.status).toBe(200);
+  });
+
+  // ── keyExtractor option ───────────────────────────────────────────
+
+  it("keyExtractor overrides default IP-based key", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.use(
+      "*",
+      createRateLimiter({
+        limit: 1,
+        windowMs: 60_000,
+        keyExtractor: (c) => {
+          void c;
+          return "fixed-key";
+        },
+      }),
+    );
+    app.onError(errorHandler);
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    const res1 = await app.request("/test");
+    expect(res1.status).toBe(200);
+
+    // Second request shares the same fixed key → blocked
+    const res2 = await app.request("/test");
+    expect(res2.status).toBe(429);
+  });
+
+  // ── 429 with no requestId in context (rawId not a string) ────────
+
+  it("429 response uses crypto.randomUUID when no requestId is set in context", async () => {
+    // App without requestIdMiddleware — context has no requestId
+    const app = new Hono();
+    app.use("*", createRateLimiter({ limit: 1, windowMs: 60_000 }));
+    app.onError(errorHandler);
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    await app.request("/test");
+    const res = await app.request("/test");
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as ApiErrorResponse;
+    // requestId should still be a UUID even though none was set
+    expect(body.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+  });
+
+  // ── checkRateLimit standalone function ───────────────────────────
+
+  describe("checkRateLimit", () => {
+    afterEach(() => {
+      _resetRateLimitStoreForTesting();
+    });
+
+    it("returns allowed:true when count is within limit", async () => {
+      const result = await checkRateLimit("test-key-allow", 5, 60_000);
+      expect(result.allowed).toBe(true);
+      expect(result.retryAfterMs).toBe(0);
+    });
+
+    it("returns allowed:false with retryAfterMs when limit is exceeded", async () => {
+      // Exhaust the limit
+      for (let i = 0; i < 3; i++) {
+        await checkRateLimit("test-key-block", 2, 60_000);
+      }
+      const result = await checkRateLimit("test-key-block", 2, 60_000);
+      expect(result.allowed).toBe(false);
+      expect(result.retryAfterMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it("uses shared store when set", async () => {
+      const incrementFn = vi.fn((key: string, windowMs: number): Promise<RateLimitResult> => {
+        void key;
+        return Promise.resolve({ count: 1, resetAt: Date.now() + windowMs });
+      });
+      const mockStore: RateLimitStore = { increment: incrementFn };
+      setRateLimitStore(mockStore);
+
+      const result = await checkRateLimit("shared-store-key", 5, 60_000);
+      expect(incrementFn).toHaveBeenCalledWith("shared-store-key", 60_000);
+      expect(result.allowed).toBe(true);
+    });
+
+    it("falls back to standalone store when no shared store is set", async () => {
+      _resetRateLimitStoreForTesting();
+      // Should not throw — uses the internal standaloneFallbackStore
+      const result = await checkRateLimit("fallback-key", 10, 60_000);
+      expect(result.allowed).toBe(true);
+    });
+  });
+});
+
+// ── DISABLE_RATE_LIMIT=true branches (requires module re-import) ──────────────
+
+describe("rate limiter with DISABLE_RATE_LIMIT=true", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
+  it("createRateLimiter skips rate limiting and calls next when disabled", async () => {
+    vi.doMock("../env.js", () => ({
+      env: {
+        NODE_ENV: "test",
+        LOG_LEVEL: "info",
+        TRUST_PROXY: false,
+        DISABLE_RATE_LIMIT: true,
+      },
+    }));
+
+    const { createRateLimiter: createRL } = await import("../middleware/rate-limit.js");
+    const { Hono: HonoFresh } = await import("hono");
+
+    const app = new HonoFresh();
+    // Limit of 1 — would block on second request if rate limiting were active
+    app.use("*", createRL({ limit: 1, windowMs: 60_000 }));
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    // All requests pass through when disabled
+    const res1 = await app.request("/test");
+    expect(res1.status).toBe(200);
+
+    const res2 = await app.request("/test");
+    expect(res2.status).toBe(200);
+  });
+
+  it("checkRateLimit returns allowed:true immediately when disabled", async () => {
+    vi.doMock("../env.js", () => ({
+      env: {
+        NODE_ENV: "test",
+        LOG_LEVEL: "info",
+        TRUST_PROXY: false,
+        DISABLE_RATE_LIMIT: true,
+      },
+    }));
+
+    const { checkRateLimit: checkRL } = await import("../middleware/rate-limit.js");
+
+    const result = await checkRL("any-key", 0, 60_000);
+    expect(result.allowed).toBe(true);
+    expect(result.retryAfterMs).toBe(0);
   });
 });

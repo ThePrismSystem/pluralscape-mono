@@ -1,9 +1,13 @@
+import { callProcedure } from "@trpc/server/unstable-core-do-not-import";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../../lib/api-error.js";
+import { router } from "../../../trpc/trpc.js";
 import {
+  MOCK_AUTH,
   MOCK_SYSTEM_ID,
   makeCallerFactory,
+  makeContext,
   type SystemId,
   assertProcedureRateLimited,
 } from "../test-helpers.js";
@@ -18,6 +22,11 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+vi.mock("../../../lib/entity-pubsub.js", () => ({
+  publishEntityChange: vi.fn().mockResolvedValue(true),
+  subscribeToEntityChanges: vi.fn().mockResolvedValue(vi.fn().mockResolvedValue(undefined)),
+}));
+
 vi.mock("../../../services/message.service.js", () => ({
   createMessage: vi.fn(),
   getMessage: vi.fn(),
@@ -25,16 +34,27 @@ vi.mock("../../../services/message.service.js", () => ({
   updateMessage: vi.fn(),
   archiveMessage: vi.fn(),
   restoreMessage: vi.fn(),
+  deleteMessage: vi.fn(),
 }));
 
-const { createMessage, getMessage, listMessages, updateMessage, archiveMessage, restoreMessage } =
-  await import("../../../services/message.service.js");
+const {
+  createMessage,
+  getMessage,
+  listMessages,
+  updateMessage,
+  archiveMessage,
+  restoreMessage,
+  deleteMessage,
+} = await import("../../../services/message.service.js");
+
+const { subscribeToEntityChanges } = await import("../../../lib/entity-pubsub.js");
 
 const { messageRouter } = await import("../../../trpc/routers/message.js");
 
 const createCaller = makeCallerFactory({ message: messageRouter });
 
 const CHANNEL_ID = "ch_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as ChannelId;
+const OTHER_CHANNEL_ID = "ch_bbbbbbbb-cccc-dddd-eeee-ffffffffffff" as ChannelId;
 const MESSAGE_ID = "msg_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" as MessageId;
 const VALID_ENCRYPTED_DATA = "dGVzdGRhdGFmb3JtZXNzYWdl";
 const VALID_TIMESTAMP = 1_700_000_000_000 as UnixMillis;
@@ -53,6 +73,24 @@ const MOCK_MESSAGE_RESULT = {
   createdAt: VALID_TIMESTAMP,
   updatedAt: VALID_TIMESTAMP,
 };
+
+/** Call the onChange subscription procedure directly, bypassing the server-side caller
+ * which does not support subscriptions. Returns the raw async generator. */
+async function callOnChange(channelId: ChannelId, signal: AbortSignal): Promise<AsyncGenerator> {
+  const appRouter = router({ message: messageRouter });
+  const ctx = makeContext(MOCK_AUTH);
+  const input = { systemId: MOCK_SYSTEM_ID, channelId };
+  return callProcedure({
+    router: appRouter,
+    ctx,
+    getRawInput: () => Promise.resolve(input),
+    input,
+    path: "message.onChange",
+    type: "subscription",
+    signal,
+    batchIndex: 0,
+  }) as Promise<AsyncGenerator>;
+}
 
 describe("message router", () => {
   beforeEach(() => {
@@ -205,6 +243,64 @@ describe("message router", () => {
       expect(opts?.limit).toBe(10);
       expect(opts?.includeArchived).toBe(true);
     });
+
+    it("passes undefined cursor when cursor is null (??-branch)", async () => {
+      vi.mocked(listMessages).mockResolvedValue({
+        data: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      });
+      const caller = createCaller();
+      await caller.message.list({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+        cursor: null,
+      });
+
+      const opts = vi.mocked(listMessages).mock.calls[0]?.[4];
+      expect(opts?.cursor).toBeUndefined();
+    });
+
+    it("passes converted before/after timestamps when provided", async () => {
+      vi.mocked(listMessages).mockResolvedValue({
+        data: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      });
+      const caller = createCaller();
+      const BEFORE_TS = 1_700_000_100_000;
+      const AFTER_TS = 1_699_999_900_000;
+      await caller.message.list({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+        before: BEFORE_TS,
+        after: AFTER_TS,
+      });
+
+      const opts = vi.mocked(listMessages).mock.calls[0]?.[4];
+      expect(opts?.before).toBeDefined();
+      expect(opts?.after).toBeDefined();
+    });
+
+    it("passes undefined before/after when not provided", async () => {
+      vi.mocked(listMessages).mockResolvedValue({
+        data: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      });
+      const caller = createCaller();
+      await caller.message.list({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+      });
+
+      const opts = vi.mocked(listMessages).mock.calls[0]?.[4];
+      expect(opts?.before).toBeUndefined();
+      expect(opts?.after).toBeUndefined();
+    });
   });
 
   // ── update ────────────────────────────────────────────────────────
@@ -309,6 +405,165 @@ describe("message router", () => {
       ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
     });
   });
+
+  // ── delete ────────────────────────────────────────────────────────
+
+  describe("message.delete", () => {
+    it("calls deleteMessage and returns success (no timestamp)", async () => {
+      vi.mocked(deleteMessage).mockResolvedValue(undefined);
+      const caller = createCaller();
+      const result = await caller.message.delete({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+        messageId: MESSAGE_ID,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(vi.mocked(deleteMessage)).toHaveBeenCalledOnce();
+      const opts = vi.mocked(deleteMessage).mock.calls[0]?.[5];
+      expect(opts?.timestamp).toBeUndefined();
+    });
+
+    it("passes converted timestamp when provided (timestamp-branch)", async () => {
+      vi.mocked(deleteMessage).mockResolvedValue(undefined);
+      const caller = createCaller();
+      await caller.message.delete({
+        systemId: MOCK_SYSTEM_ID,
+        channelId: CHANNEL_ID,
+        messageId: MESSAGE_ID,
+        timestamp: VALID_TIMESTAMP,
+      });
+
+      const opts = vi.mocked(deleteMessage).mock.calls[0]?.[5];
+      expect(opts?.timestamp).toBeDefined();
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(deleteMessage).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Message not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.message.delete({
+          systemId: MOCK_SYSTEM_ID,
+          channelId: CHANNEL_ID,
+          messageId: MESSAGE_ID,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+  });
+
+  // ── onChange ──────────────────────────────────────────────────────
+
+  describe("message.onChange", () => {
+    it("yields events matching the subscribed channelId (channelId-match branch)", async () => {
+      // Capture the subscription handler so we can drive it from the test.
+      type ChangeHandler = Parameters<typeof subscribeToEntityChanges>[2];
+      let capturedHandler: ChangeHandler = () => undefined;
+      vi.mocked(subscribeToEntityChanges).mockImplementation((_, __, handler) => {
+        capturedHandler = handler;
+        // Emit one matching event synchronously so the queue is pre-loaded.
+        handler({
+          entity: "message",
+          type: "created",
+          messageId: MESSAGE_ID,
+          channelId: CHANNEL_ID,
+        });
+        return Promise.resolve(() => Promise.resolve());
+      });
+
+      const ac = new AbortController();
+      const gen = await callOnChange(CHANNEL_ID, ac.signal);
+
+      // First .next(): drains the pre-loaded queue item and yields it.
+      const first = await gen.next();
+
+      // Start the next iteration (resumes from yield, exits inner while,
+      // reaches line 191 `await new Promise`). Don't await yet — we need to
+      // unblock it first.
+      const pending = gen.next();
+
+      // Flush microtasks so the generator actually reaches line 191.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Abort the signal and fire the handler to call resolve(), unblocking
+      // the `await new Promise`. The generator then checks !signal.aborted,
+      // exits the outer while, and finishes.
+      ac.abort();
+      capturedHandler({
+        entity: "message",
+        type: "created",
+        messageId: MESSAGE_ID,
+        channelId: CHANNEL_ID,
+      });
+
+      // Now await the pending next() — generator finishes (done: true) or
+      // yields the second event; either way we then close.
+      await pending;
+      await gen.return(undefined);
+
+      expect(first.done).toBe(false);
+      expect(first.value).toBeDefined();
+    });
+
+    it("filters out events for a different channelId (channelId-mismatch branch)", async () => {
+      // Capture the handler so we can drive resolve() after the generator is running.
+      type ChangeHandler = Parameters<typeof subscribeToEntityChanges>[2];
+      let capturedMismatchHandler: ChangeHandler = () => undefined;
+      vi.mocked(subscribeToEntityChanges).mockImplementation((_, __, handler) => {
+        capturedMismatchHandler = handler;
+        // Emit an event for a DIFFERENT channel — queue stays empty (false branch of line 177).
+        handler({
+          entity: "message",
+          type: "created",
+          messageId: MESSAGE_ID,
+          channelId: OTHER_CHANNEL_ID,
+        });
+        return Promise.resolve(() => Promise.resolve());
+      });
+
+      const ac = new AbortController();
+      const gen = await callOnChange(CHANNEL_ID, ac.signal);
+
+      // Start the generator — this triggers subscribeToEntityChanges (running the mock
+      // which fires the handler, covering the false branch of line 177). The generator
+      // then enters the outer while with an empty queue and hits `await new Promise`.
+      const pending = gen.next();
+
+      // Flush microtasks so the generator reaches `await new Promise`.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // Abort and fire the handler (any channel) to call resolve() and unblock.
+      ac.abort();
+      capturedMismatchHandler({
+        entity: "message",
+        type: "created",
+        messageId: MESSAGE_ID,
+        channelId: CHANNEL_ID,
+      });
+
+      // Generator exits the outer while (aborted) and finishes.
+      const result = await pending;
+      await gen.return(undefined);
+
+      expect(result.done).toBe(true);
+    });
+
+    it("handles null unsubscribe when pub/sub is not configured (unsubscribe null branch)", async () => {
+      // subscribeToEntityChanges returns null when pub/sub is unavailable.
+      vi.mocked(subscribeToEntityChanges).mockResolvedValue(null);
+
+      const ac = new AbortController();
+      ac.abort();
+      const gen = await callOnChange(CHANNEL_ID, ac.signal);
+      const result = await gen.return(undefined);
+
+      expect(result.done).toBe(true);
+    });
+  });
+
   // ── rate limiting ─────────────────────────────────────────────────
 
   it("applies rate limiting to queries", async () => {

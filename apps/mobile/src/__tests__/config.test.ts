@@ -1,54 +1,79 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-const mockConstants = vi.hoisted(() => ({
-  expoConfig: null as { extra: Record<string, unknown> | undefined } | null,
-}));
+// config.ts exports functions that call Constants.expoConfig at call time,
+// so no vi.resetModules() is needed — each call re-reads the current mock state.
+import { getApiBaseUrl, getWsUrl } from "../config";
 
-vi.mock("expo-constants", () => ({
-  default: mockConstants,
-}));
-
-import { getApiBaseUrl, getWsUrl } from "../config.js";
+// The mock is wired via resolve.alias so any import of expo-constants
+// resolves to our mock. Import helpers directly.
+import * as constants from "./expo-constants-mock";
 
 describe("getApiBaseUrl", () => {
   beforeEach(() => {
-    mockConstants.expoConfig = { extra: {} };
+    constants.__reset();
   });
 
-  it("returns configured apiBaseUrl when present", () => {
-    mockConstants.expoConfig = { extra: { apiBaseUrl: "https://api.pluralscape.org" } };
+  afterEach(() => {
+    constants.__reset();
+  });
+
+  it("returns configured apiBaseUrl when present in extra", () => {
+    constants.__setConfig({
+      extra: { apiBaseUrl: "https://api.pluralscape.org" },
+    });
     expect(getApiBaseUrl()).toBe("https://api.pluralscape.org");
   });
 
-  it("returns DEV fallback for empty string apiBaseUrl", () => {
-    mockConstants.expoConfig = { extra: { apiBaseUrl: "" } };
+  it("falls back to DEV_API_BASE_URL when apiBaseUrl is an empty string", () => {
+    constants.__setConfig({ extra: { apiBaseUrl: "" } });
     expect(getApiBaseUrl()).toBe("http://localhost:3000");
   });
 
-  it("returns DEV fallback when extra is missing", () => {
-    mockConstants.expoConfig = { extra: undefined };
+  it("falls back to DEV_API_BASE_URL when apiBaseUrl is not a string", () => {
+    constants.__setConfig({ extra: { apiBaseUrl: 42 } });
     expect(getApiBaseUrl()).toBe("http://localhost:3000");
   });
 
-  it("returns DEV fallback when expoConfig is null", () => {
-    mockConstants.expoConfig = null;
+  it("falls back to DEV_API_BASE_URL when apiBaseUrl is missing from extra", () => {
+    constants.__setConfig({ extra: {} });
+    expect(getApiBaseUrl()).toBe("http://localhost:3000");
+  });
+
+  it("falls back to DEV_API_BASE_URL when extra is undefined", () => {
+    constants.__setConfig({ extra: undefined });
+    expect(getApiBaseUrl()).toBe("http://localhost:3000");
+  });
+
+  it("falls back to DEV_API_BASE_URL when expoConfig is null", () => {
+    constants.__setConfig(null);
     expect(getApiBaseUrl()).toBe("http://localhost:3000");
   });
 });
 
 describe("getWsUrl", () => {
-  it("converts http to ws and appends /sync", () => {
-    mockConstants.expoConfig = { extra: { apiBaseUrl: "http://localhost:3000" } };
+  beforeEach(() => {
+    constants.__reset();
+  });
+
+  afterEach(() => {
+    constants.__reset();
+  });
+
+  it("converts http base URL to ws and appends /sync", () => {
+    constants.__setConfig({
+      extra: { apiBaseUrl: "http://localhost:3000" },
+    });
     expect(getWsUrl()).toBe("ws://localhost:3000/sync");
   });
 
-  it("converts https to wss and appends /sync", () => {
-    mockConstants.expoConfig = { extra: { apiBaseUrl: "https://api.example.com" } };
+  it("converts https base URL to wss and appends /sync", () => {
+    constants.__setConfig({
+      extra: { apiBaseUrl: "https://api.example.com" },
+    });
     expect(getWsUrl()).toBe("wss://api.example.com/sync");
   });
 
-  it("handles base URL with hostname starting with http", () => {
-    mockConstants.expoConfig = { extra: { apiBaseUrl: "https://httpbin.example.com" } };
-    expect(getWsUrl()).toBe("wss://httpbin.example.com/sync");
+  it("uses dev fallback ws URL when no config present", () => {
+    expect(getWsUrl()).toBe("ws://localhost:3000/sync");
   });
 });

@@ -34,6 +34,20 @@ vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
+
+// Queue mock — exposed so tests can swap behavior per case
+interface EnqueueArg {
+  readonly payload?: { readonly vars?: { readonly deviceInfo?: string } };
+}
+interface MockQueue {
+  enqueue: ReturnType<typeof vi.fn<(arg: EnqueueArg) => Promise<unknown>>>;
+}
+const mockEnqueue = vi.fn<(arg: EnqueueArg) => Promise<unknown>>(() => Promise.resolve({}));
+const mockQueue: MockQueue = { enqueue: mockEnqueue };
+const mockGetQueue = vi.fn<() => MockQueue | null>(() => mockQueue);
+vi.mock("../../../lib/queue.js", () => ({
+  getQueue: () => mockGetQueue(),
+}));
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { createAuditWriter } = await import("../../../lib/audit-writer.js");
@@ -254,5 +268,94 @@ describe("POST /auth/recovery-key/regenerate", () => {
       expect.anything(),
       expect.objectContaining({ accountId: "acct_test001" }),
     );
+  });
+
+  it("succeeds even when getQueue() returns null (queue disabled branch)", async () => {
+    vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
+      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+    });
+    mockGetQueue.mockReturnValueOnce(null);
+    mockEnqueue.mockClear();
+
+    const app = createApp();
+    const res = await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it("enqueues email notification with user-agent when present", async () => {
+    vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
+      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+    });
+    mockEnqueue.mockClear();
+
+    const app = createApp();
+    await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": "test-agent/1.0" },
+      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+    });
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    const callArg = mockEnqueue.mock.calls[0]?.[0] as
+      | { payload?: { vars?: { deviceInfo?: string } } }
+      | undefined;
+    expect(callArg?.payload?.vars?.deviceInfo).toBe("test-agent/1.0");
+  });
+
+  it("falls back to 'Unknown device' when user-agent header is absent", async () => {
+    vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
+      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+    });
+    mockEnqueue.mockClear();
+
+    const app = createApp();
+    await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+    });
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    const callArg = mockEnqueue.mock.calls[0]?.[0] as
+      | { payload?: { vars?: { deviceInfo?: string } } }
+      | undefined;
+    expect(callArg?.payload?.vars?.deviceInfo).toBe("Unknown device");
+  });
+
+  it("does not fail the request when queue.enqueue rejects", async () => {
+    vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
+      recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
+    });
+    mockEnqueue.mockRejectedValueOnce(new Error("queue down"));
+
+    const app = createApp();
+    const res = await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+    });
+
+    expect(res.status).toBe(201);
+  });
+
+  it("re-throws unknown errors from regenerateRecoveryKeyBackup", async () => {
+    // Generic error that is not NoActiveRecoveryKeyError, ValidationError, or ZodError
+    vi.mocked(regenerateRecoveryKeyBackup).mockRejectedValueOnce(new Error("internal db failure"));
+
+    const app = createApp();
+    const res = await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+    });
+
+    // Re-thrown errors surface as 500 from the global error handler
+    expect(res.status).toBe(500);
   });
 });

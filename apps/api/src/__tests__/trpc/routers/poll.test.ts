@@ -18,6 +18,11 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+vi.mock("../../../lib/entity-pubsub.js", () => ({
+  publishEntityChange: vi.fn().mockResolvedValue(undefined),
+  subscribeToEntityChanges: vi.fn().mockResolvedValue(() => undefined),
+}));
+
 vi.mock("../../../services/poll.service.js", () => ({
   createPoll: vi.fn(),
   getPoll: vi.fn(),

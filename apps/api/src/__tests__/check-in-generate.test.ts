@@ -406,4 +406,26 @@ describe("createCheckInGenerateHandler", () => {
 
     await expect(handler(stubJob(), stubCtx())).rejects.toThrow("errored during processing");
   });
+
+  it("paginates across multiple full batches (cursor !== null branch)", async () => {
+    const { CHECK_IN_GENERATE_BATCH_SIZE } = await import("../jobs/jobs.constants.js");
+    const { db, chain } = mockDb();
+
+    const fullBatch = Array.from({ length: CHECK_IN_GENERATE_BATCH_SIZE }, (_, i) =>
+      makeConfig({ id: `tmr_test-batch1-${String(i)}` }),
+    );
+    const partialBatch = [makeConfig({ id: "tmr_test-batch2-0" })];
+
+    // First call returns a full batch (forces second iteration where cursor !== null);
+    // second call returns a partial batch (terminates the loop).
+    chain.limit.mockResolvedValueOnce(fullBatch).mockResolvedValueOnce(partialBatch);
+
+    const handler = createCheckInGenerateHandler(db);
+    await handler(stubJob(), stubCtx());
+
+    // Two select cycles → CHECK_IN_GENERATE_BATCH_SIZE + 1 inserts
+    expect(chain.insert).toHaveBeenCalledTimes(CHECK_IN_GENERATE_BATCH_SIZE + 1);
+    // limit was called twice (once for each batch fetch)
+    expect(chain.limit).toHaveBeenCalledTimes(2);
+  });
 });

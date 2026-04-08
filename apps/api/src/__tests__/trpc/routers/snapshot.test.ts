@@ -22,9 +22,10 @@ vi.mock("../../../services/snapshot.service.js", () => ({
   createSnapshot: vi.fn(),
   getSnapshot: vi.fn(),
   listSnapshots: vi.fn(),
+  deleteSnapshot: vi.fn(),
 }));
 
-const { createSnapshot, getSnapshot, listSnapshots } =
+const { createSnapshot, getSnapshot, listSnapshots, deleteSnapshot } =
   await import("../../../services/snapshot.service.js");
 
 const { snapshotRouter } = await import("../../../trpc/routers/snapshot.js");
@@ -161,7 +162,59 @@ describe("snapshot router", () => {
       expect(vi.mocked(listSnapshots).mock.calls[0]?.[3]).toBe("snap_cursor");
       expect(vi.mocked(listSnapshots).mock.calls[0]?.[4]).toBe(10);
     });
+
+    it("converts null cursor to undefined", async () => {
+      vi.mocked(listSnapshots).mockResolvedValue({
+        data: [],
+        nextCursor: null,
+        hasMore: false,
+        totalCount: null,
+      });
+      const caller = createCaller();
+      await caller.snapshot.list({ systemId: MOCK_SYSTEM_ID, cursor: null });
+
+      expect(vi.mocked(listSnapshots).mock.calls[0]?.[3]).toBeUndefined();
+    });
   });
+
+  // ── delete ────────────────────────────────────────────────────────
+
+  describe("snapshot.delete", () => {
+    it("calls deleteSnapshot and returns success", async () => {
+      vi.mocked(deleteSnapshot).mockResolvedValue(undefined);
+      const caller = createCaller();
+      const result = await caller.snapshot.delete({
+        systemId: MOCK_SYSTEM_ID,
+        snapshotId: SNAPSHOT_ID,
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(vi.mocked(deleteSnapshot)).toHaveBeenCalledOnce();
+      expect(vi.mocked(deleteSnapshot).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
+      expect(vi.mocked(deleteSnapshot).mock.calls[0]?.[2]).toBe(SNAPSHOT_ID);
+    });
+
+    it("rejects invalid snapshotId format", async () => {
+      const caller = createCaller();
+      await expect(
+        caller.snapshot.delete({
+          systemId: MOCK_SYSTEM_ID,
+          snapshotId: "invalid-id" as SystemSnapshotId,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(deleteSnapshot).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Snapshot not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.snapshot.delete({ systemId: MOCK_SYSTEM_ID, snapshotId: SNAPSHOT_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+  });
+
   // ── rate limiting ─────────────────────────────────────────────────
 
   it("applies rate limiting to queries", async () => {

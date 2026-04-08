@@ -5,8 +5,9 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { QuotaExceededError } from "@pluralscape/storage";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   archiveBlob,
@@ -181,6 +182,92 @@ describe("blob.service (PGlite integration)", () => {
         404,
       );
     });
+
+    it("returns confirmed result idempotently when already confirmed", async () => {
+      const storage = createMockBlobStorage();
+      const quota = createMockBlobQuota();
+      const { upload } = await createAndConfirmBlob(storage, quota);
+
+      // Confirm again — should return the existing confirmed blob
+      const result = await confirmUpload(
+        asDb(db),
+        systemId,
+        upload.blobId,
+        { checksum: VALID_CHECKSUM },
+        auth,
+        noopAudit,
+      );
+
+      expect(result.id).toBe(upload.blobId);
+      expect(result.checksum).toBe(VALID_CHECKSUM);
+    });
+
+    it("throws NOT_FOUND when thumbnailOfBlobId target does not exist", async () => {
+      const storage = createMockBlobStorage();
+      const quota = createMockBlobQuota();
+
+      const upload = await createUploadUrl(
+        asDb(db),
+        storage,
+        quota,
+        systemId,
+        uploadParams(),
+        auth,
+        noopAudit,
+      );
+
+      await assertApiError(
+        confirmUpload(
+          asDb(db),
+          systemId,
+          upload.blobId,
+          {
+            checksum: VALID_CHECKSUM,
+            thumbnailOfBlobId: `blob_${crypto.randomUUID()}` as BlobId,
+          },
+          auth,
+          noopAudit,
+        ),
+        "NOT_FOUND",
+        404,
+      );
+    });
+
+    it("confirms upload with thumbnailOfBlobId pointing to an existing confirmed blob", async () => {
+      const storage = createMockBlobStorage();
+      const quota = createMockBlobQuota();
+
+      // Create the target blob first
+      const { confirmed: target } = await createAndConfirmBlob(storage, quota);
+
+      // Create the thumbnail blob (pending)
+      const thumbUpload = await createUploadUrl(
+        asDb(db),
+        storage,
+        quota,
+        systemId,
+        uploadParams(),
+        auth,
+        noopAudit,
+      );
+
+      const result = await confirmUpload(
+        asDb(db),
+        systemId,
+        thumbUpload.blobId,
+        { checksum: VALID_CHECKSUM, thumbnailOfBlobId: target.id },
+        auth,
+        noopAudit,
+      );
+
+      expect(result.thumbnailOfBlobId).toBe(target.id);
+    });
+
+    // Note: the toBlobResult null-checksum branch is structurally unreachable
+    // through the public API: the DB CHECK constraint blob_metadata_check
+    // forbids uploaded_at IS NOT NULL with checksum IS NULL, so the defensive
+    // null-checksum branch in toBlobResult cannot be exercised without bypassing
+    // the constraint.
   });
 
   describe("getBlob", () => {
@@ -230,6 +317,21 @@ describe("blob.service (PGlite integration)", () => {
       expect(result.downloadUrl).toContain("https://mock-s3.test/download/");
       expect(typeof result.expiresAt).toBe("number");
     });
+
+    it("throws VALIDATION_ERROR when storage does not support presigned download URLs", async () => {
+      const storage = createMockBlobStorage();
+      const quota = createMockBlobQuota();
+      const { confirmed } = await createAndConfirmBlob(storage, quota);
+
+      // Override generatePresignedDownloadUrl to return unsupported
+      storage.generatePresignedDownloadUrl = vi.fn().mockResolvedValue({ supported: false });
+
+      await assertApiError(
+        getDownloadUrl(asDb(db), storage, systemId, confirmed.id, auth),
+        "VALIDATION_ERROR",
+        400,
+      );
+    });
   });
 
   describe("listBlobs", () => {
@@ -261,6 +363,23 @@ describe("blob.service (PGlite integration)", () => {
       });
       expect(page2.data).toHaveLength(1);
       expect(page2.data[0]?.id).not.toBe(page1.data[0]?.id);
+    });
+
+    it("includes archived blobs when includeArchived is true", async () => {
+      const storage = createMockBlobStorage();
+      const quota = createMockBlobQuota();
+      const { confirmed } = await createAndConfirmBlob(storage, quota);
+
+      await archiveBlob(asDb(db), systemId, confirmed.id, auth, noopAudit);
+
+      // Default list excludes archived
+      const defaultList = await listBlobs(asDb(db), systemId, auth);
+      expect(defaultList.data).toHaveLength(0);
+
+      // Explicit includeArchived=true shows the archived blob
+      const fullList = await listBlobs(asDb(db), systemId, auth, { includeArchived: true });
+      expect(fullList.data).toHaveLength(1);
+      expect(fullList.data[0]?.id).toBe(confirmed.id);
     });
   });
 
@@ -297,6 +416,23 @@ describe("blob.service (PGlite integration)", () => {
         "QUOTA_EXCEEDED",
         413,
       );
+    });
+
+    it("re-throws non-QuotaExceededError from quota service", async () => {
+      const storage = createMockBlobStorage();
+      const unexpectedError = new Error("storage backend unavailable");
+      const quota = createMockBlobQuota();
+      vi.spyOn(quota, "assertQuota").mockRejectedValueOnce(unexpectedError);
+
+      let caught: unknown;
+      try {
+        await createUploadUrl(asDb(db), storage, quota, systemId, uploadParams(), auth, noopAudit);
+      } catch (err: unknown) {
+        caught = err;
+      }
+
+      expect(caught).toBe(unexpectedError);
+      expect(caught).not.toBeInstanceOf(QuotaExceededError);
     });
   });
 });

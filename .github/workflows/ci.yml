@@ -123,7 +123,7 @@ jobs:
           message: ${{ steps.coverage-data.outputs.message }}
           valColorRange: ${{ steps.coverage-data.outputs.pct }}
           minColorRange: 50
-          maxColorRange: 85
+          maxColorRange: 89
 
   migrations:
     name: Migration Freshness

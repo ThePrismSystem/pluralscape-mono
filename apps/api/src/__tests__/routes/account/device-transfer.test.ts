@@ -325,4 +325,48 @@ describe("POST /account/device-transfer/:id/complete", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
+
+  it("returns 400 when service throws TransferValidationError", async () => {
+    vi.mocked(completeTransfer).mockRejectedValueOnce(
+      new TransferValidationError("Validation failed"),
+    );
+
+    const app = createApp();
+    const res = await postJSON(app, "/account/device-transfer/dtr_test-id/complete", {
+      code: VALID_CODE,
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("re-throws unknown errors as 500", async () => {
+    vi.mocked(completeTransfer).mockRejectedValueOnce(new Error("internal failure"));
+
+    const app = createApp();
+    const res = await postJSON(app, "/account/device-transfer/dtr_test-id/complete", {
+      code: VALID_CODE,
+    });
+
+    expect(res.status).toBe(500);
+  });
+});
+
+describe("POST /account/device-transfer (initiate) — unknown error path", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("re-throws unknown errors as 500", async () => {
+    vi.mocked(initiateTransfer).mockRejectedValueOnce(new Error("internal db failure"));
+
+    const app = createApp();
+    const res = await postJSON(app, "/account/device-transfer", {
+      codeSaltHex: VALID_SALT_HEX,
+      encryptedKeyMaterialHex: VALID_ENCRYPTED_HEX,
+    });
+
+    expect(res.status).toBe(500);
+  });
 });

@@ -300,4 +300,87 @@ describe("splitDocument", () => {
       /does not support time-splitting/,
     );
   });
+
+  it("note: new doc starts empty", () => {
+    const keys = makeKeys(sodium);
+    const doc = Automerge.from({ notes: {} });
+    const session = new EncryptedSyncSession({
+      doc,
+      keys,
+      documentId: asSyncDocId("note-sys_test"),
+      sodium,
+    });
+
+    const result = splitDocument("note-sys_test", session, Date.UTC(2026, 8, 1));
+    expect(result.documentType).toBe("note");
+    // notes use yearly time-split unit
+    expect(result.newDocId).toBe("note-sys_test-2026");
+  });
+
+  it("throws for privacy-config (non-splittable)", () => {
+    const keys = makeKeys(sodium);
+    const doc = Automerge.from({ rules: {} });
+    const session = new EncryptedSyncSession({
+      doc,
+      keys,
+      documentId: asSyncDocId("privacy-config-sys_test"),
+      sodium,
+    });
+
+    expect(() => splitDocument("privacy-config-sys_test", session)).toThrow(
+      /does not support time-splitting/,
+    );
+  });
+
+  it("throws for bucket (non-splittable)", () => {
+    const keys = makeKeys(sodium);
+    const doc = Automerge.from({ entries: {} });
+    const session = new EncryptedSyncSession({
+      doc,
+      keys,
+      documentId: asSyncDocId("bucket-bkt_test"),
+      sodium,
+    });
+
+    expect(() => splitDocument("bucket-bkt_test", session)).toThrow(
+      /does not support time-splitting/,
+    );
+  });
+
+  it("fronting: returns new empty doc when no active sessions exist", () => {
+    const keys = makeKeys(sodium);
+    // Document with only completed sessions (endTime !== null)
+    const doc = Automerge.change(createFrontingDocument(), (d) => {
+      d.sessions[asFrontingSessionId("only_closed")] = {
+        id: new Automerge.ImmutableString("only_closed"),
+        systemId: new Automerge.ImmutableString("sys_test"),
+        memberId: new Automerge.ImmutableString("mem_a"),
+        startTime: 100,
+        endTime: 200,
+        comment: null,
+        customFrontId: null,
+        structureEntityId: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
+        archived: false,
+        createdAt: 100,
+        updatedAt: 200,
+      };
+    });
+
+    const session = new EncryptedSyncSession<FrontingDocument>({
+      doc,
+      keys,
+      documentId: asSyncDocId("fronting-sys_test"),
+      sodium,
+    });
+
+    const result = splitDocument("fronting-sys_test", session, Date.UTC(2026, 0, 1));
+    expect(result.documentType).toBe("fronting");
+    if (result.documentType === "fronting") {
+      // No active sessions migrated → newDoc.sessions is empty
+      expect(Object.keys(result.newDoc.sessions)).toHaveLength(0);
+    }
+  });
 });

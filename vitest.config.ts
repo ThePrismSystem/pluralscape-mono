@@ -85,6 +85,14 @@ export default defineConfig({
             // in a Node/vitest environment. Redirect to a minimal stub so tests
             // that transitively import react-native (e.g. via expo-constants) work.
             "react-native": path.resolve("apps/mobile/src/__tests__/react-native-mock.ts"),
+            // Expo native modules — redirect to in-memory mocks so wrapper logic
+            // (key namespacing, error wrapping, init guards, fallbacks) is testable
+            // without spinning up a real device or simulator.
+            "expo-secure-store": path.resolve(
+              "apps/mobile/src/__tests__/expo-secure-store-mock.ts",
+            ),
+            "expo-sqlite": path.resolve("apps/mobile/src/__tests__/expo-sqlite-mock.ts"),
+            "expo-constants": path.resolve("apps/mobile/src/__tests__/expo-constants-mock.ts"),
           },
         },
         test: {
@@ -149,10 +157,21 @@ export default defineConfig({
         "packages/types/src/search.ts",
         "packages/types/src/snapshot.ts",
         "packages/types/src/webhooks.ts",
+        "packages/types/src/friend-dashboard.ts",
+        "packages/types/src/subscription-events.ts",
         "packages/crypto/src/types.ts",
         "packages/crypto/src/adapter/interface.ts",
         "packages/crypto/src/lifecycle-types.ts",
+        "packages/crypto/src/key-storage.ts",
+        "packages/crypto/src/blob-pipeline/blob-encryption-metadata.ts",
         "packages/db/src/client/types.ts",
+        "packages/db/src/helpers/types.ts",
+        "packages/db/src/views/types.ts",
+        "packages/i18n/src/types.ts",
+        // Auto-generated openapi types
+        "packages/api-client/src/generated/api-types.ts",
+        // sync: event-map is interface-only
+        "packages/sync/src/event-bus/event-map.ts",
         // Drizzle schema files are declarative — callbacks only run during migration generation
         "packages/db/src/schema/**/*.ts",
         // DB query helpers are tested via integration tests, not unit tests
@@ -163,15 +182,19 @@ export default defineConfig({
         "packages/queue/src/heartbeat.ts",
         "packages/queue/src/job-queue.ts",
         "packages/queue/src/job-worker.ts",
-        // queue: BullMQ adapter requires live Valkey — tested via integration tests
-        "packages/queue/src/adapters/bullmq/**/*.ts",
+
         // storage: interface-only files (no executable code)
         "packages/storage/src/interface.ts",
-        // sync: Bun-only adapters — produce 0% coverage in Node-based vitest
-        "packages/sync/src/adapters/sqlite-driver.ts",
         // sync: CRDT schema interfaces and adapter interfaces (no executable code)
         "packages/sync/src/schemas.ts",
-        "packages/sync/src/schemas/**/*.ts",
+        "packages/sync/src/schemas/bucket.ts",
+        "packages/sync/src/schemas/chat.ts",
+        "packages/sync/src/schemas/common.ts",
+        "packages/sync/src/schemas/fronting.ts",
+        "packages/sync/src/schemas/journal.ts",
+        "packages/sync/src/schemas/notes.ts",
+        "packages/sync/src/schemas/privacy-config.ts",
+        "packages/sync/src/schemas/system-core.ts",
         "packages/sync/src/adapters.ts",
         "packages/sync/src/adapters/network-adapter.ts",
         "packages/sync/src/adapters/offline-queue-adapter.ts",
@@ -186,21 +209,20 @@ export default defineConfig({
         // mobile: type-only files
         "apps/mobile/src/auth/auth-types.ts",
         "apps/mobile/src/platform/types.ts",
-        // mobile: Expo-native drivers — require native modules, produce 0% in Node/vitest
-        "apps/mobile/src/auth/expo-secure-token-store.ts",
-        "apps/mobile/src/platform/drivers/expo-sqlite-driver.ts",
-        // mobile: config depends on expo-constants — mocked in tests but not coverable
-        "apps/mobile/src/config.ts",
+        // api: middleware store interfaces and service type definitions
+        "apps/api/src/middleware/idempotency-store.ts",
+        "apps/api/src/middleware/rate-limit-store.ts",
+        "apps/api/src/services/hierarchy-service-types.ts",
       ],
       reporter: ["text", "json-summary", "lcov", "html"],
       reportsDirectory: "./coverage",
       // packages/db has only integration tests currently; unit coverage
       // will be enforced when db schema code (db-2je4) is added
       thresholds: {
-        lines: 85,
-        functions: 85,
-        branches: 85,
-        statements: 85,
+        lines: 89,
+        functions: 89,
+        branches: 89,
+        statements: 89,
       },
     },
   },

@@ -530,4 +530,98 @@ describe("SyncProvider", () => {
       renderHook(() => useSync());
     }).toThrow("useSync must be used within SyncProvider");
   });
+
+  describe("bootstrap error handling", () => {
+    it("captures bootstrapError when bootstrap rejects with an Error", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+      const bootError = new Error("storage init failed");
+      mockBootstrap.mockImplementationOnce(() => Promise.reject(bootError));
+
+      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+      // Allow rejection microtask to flush
+      await act(() => Promise.resolve());
+
+      expect(result.current.bootstrapError).toEqual(bootError);
+      expect(result.current.bootstrapAttempts).toBe(1);
+      expect(result.current.fallbackToRemote).toBe(false);
+    });
+
+    it("wraps non-Error rejection values in Error", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+      // Build a rejected promise via PromiseConstructor.reject so the value
+      // is preserved as a non-Error and exercises the
+      // `err instanceof Error ? err : new Error(String(err))` branch.
+      mockBootstrap.mockImplementationOnce(() => {
+        const literal: unknown = "string failure";
+        return Promise.reject(literal as Error);
+      });
+
+      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+      await act(() => Promise.resolve());
+
+      expect(result.current.bootstrapError).toBeInstanceOf(Error);
+      expect(result.current.bootstrapError?.message).toBe("string failure");
+    });
+
+    it("falls back to remote after MAX_BOOTSTRAP_ATTEMPTS failures", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+      mockBootstrap.mockImplementation(() => Promise.reject(new Error("permanent failure")));
+
+      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+
+      // First attempt fails on initial mount
+      await act(() => Promise.resolve());
+      expect(result.current.bootstrapAttempts).toBe(1);
+      expect(result.current.fallbackToRemote).toBe(false);
+
+      // Trigger retry — second attempt
+      await act(() => {
+        result.current.retryBootstrap();
+        return Promise.resolve();
+      });
+      expect(result.current.bootstrapAttempts).toBe(2);
+      expect(result.current.fallbackToRemote).toBe(false);
+
+      // Third attempt — fallback should kick in
+      await act(() => {
+        result.current.retryBootstrap();
+        return Promise.resolve();
+      });
+      expect(result.current.bootstrapAttempts).toBe(3);
+      expect(result.current.fallbackToRemote).toBe(true);
+
+      // Subsequent retries are no-ops while fallback is active
+      const callsBefore = mockBootstrap.mock.calls.length;
+      await act(() => {
+        result.current.retryBootstrap();
+        return Promise.resolve();
+      });
+      expect(mockBootstrap.mock.calls.length).toBe(callsBefore);
+    });
+
+    it("resets bootstrapError when retryBootstrap is called", async () => {
+      setUnlocked();
+      mockConnectionStatus = "connected";
+      mockBootstrap
+        .mockImplementationOnce(() => Promise.reject(new Error("first")))
+        .mockImplementationOnce(() => Promise.resolve());
+
+      const { result } = renderHook(() => useSync(), { wrapper: makeWrapper() });
+      await act(() => Promise.resolve());
+      expect(result.current.bootstrapError?.message).toBe("first");
+
+      await act(() => {
+        result.current.retryBootstrap();
+        return Promise.resolve();
+      });
+
+      expect(result.current.bootstrapError).toBeNull();
+      expect(result.current.isBootstrapped).toBe(true);
+    });
+  });
 });

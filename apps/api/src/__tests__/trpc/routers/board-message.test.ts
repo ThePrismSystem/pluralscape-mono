@@ -18,6 +18,11 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }));
 
+vi.mock("../../../lib/entity-pubsub.js", () => ({
+  publishEntityChange: vi.fn().mockResolvedValue(undefined),
+  subscribeToEntityChanges: vi.fn().mockResolvedValue(() => undefined),
+}));
+
 vi.mock("../../../services/board-message.service.js", () => ({
   createBoardMessage: vi.fn(),
   getBoardMessage: vi.fn(),
@@ -27,6 +32,8 @@ vi.mock("../../../services/board-message.service.js", () => ({
   restoreBoardMessage: vi.fn(),
   deleteBoardMessage: vi.fn(),
   reorderBoardMessages: vi.fn(),
+  pinBoardMessage: vi.fn(),
+  unpinBoardMessage: vi.fn(),
 }));
 
 const {
@@ -38,6 +45,8 @@ const {
   restoreBoardMessage,
   deleteBoardMessage,
   reorderBoardMessages,
+  pinBoardMessage,
+  unpinBoardMessage,
 } = await import("../../../services/board-message.service.js");
 
 const { boardMessageRouter } = await import("../../../trpc/routers/board-message.js");
@@ -343,6 +352,64 @@ describe("board-message router", () => {
       ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
     });
   });
+
+  // ── pin ───────────────────────────────────────────────────────────
+
+  describe("boardMessage.pin", () => {
+    it("calls pinBoardMessage and returns the result", async () => {
+      vi.mocked(pinBoardMessage).mockResolvedValue({
+        ...MOCK_BOARD_MESSAGE_RESULT,
+        pinned: true,
+      });
+      const caller = createCaller();
+      const result = await caller.boardMessage.pin({
+        systemId: MOCK_SYSTEM_ID,
+        boardMessageId: BOARD_MESSAGE_ID,
+      });
+
+      expect(vi.mocked(pinBoardMessage)).toHaveBeenCalledOnce();
+      expect(vi.mocked(pinBoardMessage).mock.calls[0]?.[2]).toBe(BOARD_MESSAGE_ID);
+      expect(result.pinned).toBe(true);
+    });
+
+    it("rejects invalid boardMessageId format", async () => {
+      const caller = createCaller();
+      await expect(
+        caller.boardMessage.pin({
+          systemId: MOCK_SYSTEM_ID,
+          boardMessageId: "invalid-id" as BoardMessageId,
+        }),
+      ).rejects.toThrow(expect.objectContaining({ code: "BAD_REQUEST" }));
+    });
+  });
+
+  // ── unpin ─────────────────────────────────────────────────────────
+
+  describe("boardMessage.unpin", () => {
+    it("calls unpinBoardMessage and returns the result", async () => {
+      vi.mocked(unpinBoardMessage).mockResolvedValue(MOCK_BOARD_MESSAGE_RESULT);
+      const caller = createCaller();
+      const result = await caller.boardMessage.unpin({
+        systemId: MOCK_SYSTEM_ID,
+        boardMessageId: BOARD_MESSAGE_ID,
+      });
+
+      expect(vi.mocked(unpinBoardMessage)).toHaveBeenCalledOnce();
+      expect(vi.mocked(unpinBoardMessage).mock.calls[0]?.[2]).toBe(BOARD_MESSAGE_ID);
+      expect(result.pinned).toBe(false);
+    });
+
+    it("surfaces ApiHttpError(404) as NOT_FOUND", async () => {
+      vi.mocked(unpinBoardMessage).mockRejectedValue(
+        new ApiHttpError(404, "NOT_FOUND", "Board message not found"),
+      );
+      const caller = createCaller();
+      await expect(
+        caller.boardMessage.unpin({ systemId: MOCK_SYSTEM_ID, boardMessageId: BOARD_MESSAGE_ID }),
+      ).rejects.toThrow(expect.objectContaining({ code: "NOT_FOUND" }));
+    });
+  });
+
   // ── rate limiting ─────────────────────────────────────────────────
 
   it("applies rate limiting to queries", async () => {
