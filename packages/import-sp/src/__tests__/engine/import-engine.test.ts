@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
+import { CHECKPOINT_CHUNK_SIZE } from "../../import-sp.constants.js";
 import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
@@ -333,5 +334,92 @@ describe("runImport — legacy bucket synthesis", () => {
     const bucketUpserts = persister.upserted.filter((e) => e.entityType === "privacy-bucket");
     expect(bucketUpserts).toHaveLength(1);
     expect(bucketUpserts[0]?.sourceEntityId).toBe("b_pub");
+  });
+});
+
+describe("runImport — checkpoint frequency", () => {
+  it("flushes and reports progress every CHECKPOINT_CHUNK_SIZE docs", async () => {
+    const total = CHECKPOINT_CHUNK_SIZE * 2;
+    const members = Array.from({ length: total }, (_, i) => ({
+      _id: `m_${String(i).padStart(4, "0")}`,
+      name: `Member ${String(i)}`,
+    }));
+    const data: FakeSourceData = { members };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    let progressCalls = 0;
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: () => {
+        progressCalls += 1;
+        return Promise.resolve();
+      },
+    });
+    expect(result.outcome).toBe("completed");
+    expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(total);
+    // Two intra-collection chunk flushes plus one final flush at collection
+    // end means at least three onProgress invocations.
+    expect(progressCalls).toBeGreaterThanOrEqual(3);
+    expect(persister.flushCount).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("runImport — category opt-out", () => {
+  it("skips collections whose category is set to false", async () => {
+    const data: FakeSourceData = {
+      members: [{ _id: "m_a", name: "Aria" }],
+      groups: [{ _id: "g_l", name: "Littles", members: ["m_a"] }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: { ...ALL_CATEGORIES_ON, groups: false },
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    expect(persister.upserted.some((e) => e.entityType === "group")).toBe(false);
+    expect(persister.upserted.some((e) => e.entityType === "member")).toBe(true);
+  });
+});
+
+describe("runImport — id translation carry-forward", () => {
+  it("registers persister-returned ids so later mappers can resolve FKs", async () => {
+    const data: FakeSourceData = {
+      members: [{ _id: "m_a", name: "Aria" }],
+      frontHistory: [
+        {
+          _id: "fh_1",
+          member: "m_a",
+          custom: false,
+          live: false,
+          startTime: 0,
+          endTime: 100,
+        },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    expect(persister.upserted.find((e) => e.entityType === "fronting-session")).toBeDefined();
+    expect(persister.upserted.find((e) => e.entityType === "member")).toBeDefined();
   });
 });
