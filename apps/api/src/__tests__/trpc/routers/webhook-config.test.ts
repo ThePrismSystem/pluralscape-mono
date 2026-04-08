@@ -205,6 +205,8 @@ describe("webhookConfig router", () => {
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteWebhookConfig)).toHaveBeenCalledOnce();
+      expect(vi.mocked(deleteWebhookConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
+      expect(vi.mocked(deleteWebhookConfig).mock.calls[0]?.[2]).toBe(WEBHOOK_ID);
     });
   });
 
@@ -221,6 +223,8 @@ describe("webhookConfig router", () => {
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveWebhookConfig)).toHaveBeenCalledOnce();
+      expect(vi.mocked(archiveWebhookConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
+      expect(vi.mocked(archiveWebhookConfig).mock.calls[0]?.[2]).toBe(WEBHOOK_ID);
     });
   });
 
@@ -236,6 +240,8 @@ describe("webhookConfig router", () => {
       });
 
       expect(vi.mocked(restoreWebhookConfig)).toHaveBeenCalledOnce();
+      expect(vi.mocked(restoreWebhookConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
+      expect(vi.mocked(restoreWebhookConfig).mock.calls[0]?.[2]).toBe(WEBHOOK_ID);
     });
   });
 
@@ -272,6 +278,8 @@ describe("webhookConfig router", () => {
       });
 
       expect(vi.mocked(testWebhookConfig)).toHaveBeenCalledOnce();
+      expect(vi.mocked(testWebhookConfig).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
+      expect(vi.mocked(testWebhookConfig).mock.calls[0]?.[2]).toBe(WEBHOOK_ID);
     });
   });
 

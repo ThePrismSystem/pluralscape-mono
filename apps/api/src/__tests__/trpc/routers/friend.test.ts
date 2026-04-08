@@ -187,6 +187,7 @@ describe("friend router", () => {
       await caller.friend.reject({ connectionId: CONNECTION_ID });
 
       expect(vi.mocked(rejectFriendConnection)).toHaveBeenCalledOnce();
+      expect(vi.mocked(rejectFriendConnection).mock.calls[0]?.[2]).toBe(CONNECTION_ID);
     });
   });
 
@@ -199,6 +200,7 @@ describe("friend router", () => {
       await caller.friend.block({ connectionId: CONNECTION_ID });
 
       expect(vi.mocked(blockFriendConnection)).toHaveBeenCalledOnce();
+      expect(vi.mocked(blockFriendConnection).mock.calls[0]?.[2]).toBe(CONNECTION_ID);
     });
   });
 
@@ -211,6 +213,7 @@ describe("friend router", () => {
       await caller.friend.remove({ connectionId: CONNECTION_ID });
 
       expect(vi.mocked(removeFriendConnection)).toHaveBeenCalledOnce();
+      expect(vi.mocked(removeFriendConnection).mock.calls[0]?.[2]).toBe(CONNECTION_ID);
     });
   });
 
@@ -224,6 +227,7 @@ describe("friend router", () => {
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(archiveFriendConnection)).toHaveBeenCalledOnce();
+      expect(vi.mocked(archiveFriendConnection).mock.calls[0]?.[2]).toBe(CONNECTION_ID);
     });
   });
 
@@ -236,6 +240,7 @@ describe("friend router", () => {
       await caller.friend.restore({ connectionId: CONNECTION_ID });
 
       expect(vi.mocked(restoreFriendConnection)).toHaveBeenCalledOnce();
+      expect(vi.mocked(restoreFriendConnection).mock.calls[0]?.[2]).toBe(CONNECTION_ID);
     });
   });
 
@@ -292,6 +297,7 @@ describe("friend router", () => {
       await caller.friend.getDashboardSync({ connectionId: CONNECTION_ID });
 
       expect(vi.mocked(getFriendDashboardSync)).toHaveBeenCalledOnce();
+      expect(vi.mocked(getFriendDashboardSync).mock.calls[0]?.[1]).toBe(CONNECTION_ID);
     });
   });
 
@@ -326,6 +332,7 @@ describe("friend router", () => {
       await caller.friend.exportManifest({ connectionId: CONNECTION_ID });
 
       expect(vi.mocked(getFriendExportManifest)).toHaveBeenCalledOnce();
+      expect(vi.mocked(getFriendExportManifest).mock.calls[0]?.[1]).toBe(CONNECTION_ID);
     });
   });
 

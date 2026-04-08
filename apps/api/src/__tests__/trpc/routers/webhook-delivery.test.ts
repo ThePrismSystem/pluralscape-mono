@@ -135,6 +135,8 @@ describe("webhookDelivery router", () => {
 
       expect(result).toEqual({ success: true });
       expect(vi.mocked(deleteWebhookDelivery)).toHaveBeenCalledOnce();
+      expect(vi.mocked(deleteWebhookDelivery).mock.calls[0]?.[1]).toBe(MOCK_SYSTEM_ID);
+      expect(vi.mocked(deleteWebhookDelivery).mock.calls[0]?.[2]).toBe(DELIVERY_ID);
     });
   });
 
