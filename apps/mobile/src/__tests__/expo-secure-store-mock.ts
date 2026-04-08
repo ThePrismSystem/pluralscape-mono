@@ -6,18 +6,15 @@
 const store = new Map<string, string>();
 let throwOnNextOp: { method: string; error: Error } | null = null;
 
-export const SecureStoreOptions = {
-  WHEN_UNLOCKED: 0,
-  WHEN_UNLOCKED_THIS_DEVICE_ONLY: 1,
-  AFTER_FIRST_UNLOCK: 2,
-  AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY: 3,
-} as const;
-
-export const WHEN_UNLOCKED = SecureStoreOptions.WHEN_UNLOCKED;
-export const WHEN_UNLOCKED_THIS_DEVICE_ONLY = SecureStoreOptions.WHEN_UNLOCKED_THIS_DEVICE_ONLY;
-export const AFTER_FIRST_UNLOCK = SecureStoreOptions.AFTER_FIRST_UNLOCK;
+// Mock the real expo-secure-store KeychainAccessibilityConstant values (strings,
+// not numbers). Production code in this repo does not currently pass options to
+// SecureStore.setItemAsync, but typing these as strings matches the real API so
+// future options-passing code won't fail at runtime against a number-typed mock.
+export const WHEN_UNLOCKED = "AccessibleWhenUnlocked" as const;
+export const WHEN_UNLOCKED_THIS_DEVICE_ONLY = "AccessibleWhenUnlockedThisDeviceOnly" as const;
+export const AFTER_FIRST_UNLOCK = "AccessibleAfterFirstUnlock" as const;
 export const AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY =
-  SecureStoreOptions.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY;
+  "AccessibleAfterFirstUnlockThisDeviceOnly" as const;
 
 function maybeThrow(method: string): void {
   if (throwOnNextOp?.method === method) {
