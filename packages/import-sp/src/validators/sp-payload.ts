@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
 
+function knownKeysOf(schema: z.ZodObject): ReadonlySet<string> {
+  return new Set(Object.keys(schema.shape));
+}
+
 import type {
   SPBoardMessage,
   SPChannel,
@@ -37,14 +41,7 @@ export const SPUserSchema = z.looseObject({
   defaultPrivacyBucket: NullableString,
 }) satisfies z.ZodType<SPUser>;
 
-export const SPUserKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "username",
-  "desc",
-  "avatarUrl",
-  "color",
-  "defaultPrivacyBucket",
-]);
+export const SPUserKnownKeys: ReadonlySet<string> = knownKeysOf(SPUserSchema);
 
 export const SPPrivateSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -53,12 +50,7 @@ export const SPPrivateSchema = z.looseObject({
   messageBoardNotifs: OptionalBool,
 }) satisfies z.ZodType<SPPrivate>;
 
-export const SPPrivateKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "locale",
-  "frontNotifs",
-  "messageBoardNotifs",
-]);
+export const SPPrivateKnownKeys: ReadonlySet<string> = knownKeysOf(SPPrivateSchema);
 
 export const SPMemberSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -81,26 +73,7 @@ export const SPMemberSchema = z.looseObject({
   lastOperationTime: OptionalNumber,
 }) satisfies z.ZodType<SPMember>;
 
-export const SPMemberKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "desc",
-  "pronouns",
-  "color",
-  "avatarUrl",
-  "archived",
-  "archivedReason",
-  "preventTrusted",
-  "private",
-  "buckets",
-  "info",
-  "frame",
-  "preventsFrontNotifs",
-  "receiveMessageBoardNotifs",
-  "supportDescMarkdown",
-  "created",
-  "lastOperationTime",
-]);
+export const SPMemberKnownKeys: ReadonlySet<string> = knownKeysOf(SPMemberSchema);
 
 export const SPFrontStatusSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -112,15 +85,7 @@ export const SPFrontStatusSchema = z.looseObject({
   private: OptionalBool,
 }) satisfies z.ZodType<SPFrontStatus>;
 
-export const SPFrontStatusKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "desc",
-  "color",
-  "avatarUrl",
-  "preventTrusted",
-  "private",
-]);
+export const SPFrontStatusKnownKeys: ReadonlySet<string> = knownKeysOf(SPFrontStatusSchema);
 
 export const SPGroupSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -133,16 +98,7 @@ export const SPGroupSchema = z.looseObject({
   private: OptionalBool,
 }) satisfies z.ZodType<SPGroup>;
 
-export const SPGroupKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "desc",
-  "color",
-  "parent",
-  "members",
-  "preventTrusted",
-  "private",
-]);
+export const SPGroupKnownKeys: ReadonlySet<string> = knownKeysOf(SPGroupSchema);
 
 export const SPCustomFieldSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -154,15 +110,7 @@ export const SPCustomFieldSchema = z.looseObject({
   supportMarkdown: OptionalBool,
 }) satisfies z.ZodType<SPCustomField>;
 
-export const SPCustomFieldKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "type",
-  "order",
-  "preventTrusted",
-  "private",
-  "supportMarkdown",
-]);
+export const SPCustomFieldKnownKeys: ReadonlySet<string> = knownKeysOf(SPCustomFieldSchema);
 
 export const SPFrontHistorySchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -174,15 +122,7 @@ export const SPFrontHistorySchema = z.looseObject({
   customStatus: NullableString,
 }) satisfies z.ZodType<SPFrontHistory>;
 
-export const SPFrontHistoryKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "member",
-  "custom",
-  "live",
-  "startTime",
-  "endTime",
-  "customStatus",
-]);
+export const SPFrontHistoryKnownKeys: ReadonlySet<string> = knownKeysOf(SPFrontHistorySchema);
 
 export const SPCommentSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -191,12 +131,7 @@ export const SPCommentSchema = z.looseObject({
   time: Timestamp,
 }) satisfies z.ZodType<SPComment>;
 
-export const SPCommentKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "documentId",
-  "text",
-  "time",
-]);
+export const SPCommentKnownKeys: ReadonlySet<string> = knownKeysOf(SPCommentSchema);
 
 export const SPNoteSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -208,15 +143,7 @@ export const SPNoteSchema = z.looseObject({
   supportMarkdown: OptionalBool,
 }) satisfies z.ZodType<SPNote>;
 
-export const SPNoteKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "title",
-  "note",
-  "date",
-  "color",
-  "member",
-  "supportMarkdown",
-]);
+export const SPNoteKnownKeys: ReadonlySet<string> = knownKeysOf(SPNoteSchema);
 
 const SPPollOptionSchema = z.looseObject({
   id: z.string().min(1),
@@ -242,17 +169,7 @@ export const SPPollSchema = z.looseObject({
   votes: z.array(SPPollVoteSchema).readonly().optional(),
 }) satisfies z.ZodType<SPPoll>;
 
-export const SPPollKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "desc",
-  "endTime",
-  "custom",
-  "allowAbstain",
-  "allowVeto",
-  "options",
-  "votes",
-]);
+export const SPPollKnownKeys: ReadonlySet<string> = knownKeysOf(SPPollSchema);
 
 export const SPChannelCategorySchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -261,12 +178,7 @@ export const SPChannelCategorySchema = z.looseObject({
   order: OptionalNumber,
 }) satisfies z.ZodType<SPChannelCategory>;
 
-export const SPChannelCategoryKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "description",
-  "order",
-]);
+export const SPChannelCategoryKnownKeys: ReadonlySet<string> = knownKeysOf(SPChannelCategorySchema);
 
 export const SPChannelSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -276,13 +188,7 @@ export const SPChannelSchema = z.looseObject({
   order: OptionalNumber,
 }) satisfies z.ZodType<SPChannel>;
 
-export const SPChannelKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "description",
-  "parentCategory",
-  "order",
-]);
+export const SPChannelKnownKeys: ReadonlySet<string> = knownKeysOf(SPChannelSchema);
 
 export const SPChatMessageSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -293,14 +199,7 @@ export const SPChatMessageSchema = z.looseObject({
   replyTo: NullableString,
 }) satisfies z.ZodType<SPChatMessage>;
 
-export const SPChatMessageKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "channel",
-  "writer",
-  "message",
-  "writtenAt",
-  "replyTo",
-]);
+export const SPChatMessageKnownKeys: ReadonlySet<string> = knownKeysOf(SPChatMessageSchema);
 
 export const SPBoardMessageSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -311,14 +210,7 @@ export const SPBoardMessageSchema = z.looseObject({
   readBy: z.array(z.string()).readonly().optional(),
 }) satisfies z.ZodType<SPBoardMessage>;
 
-export const SPBoardMessageKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "title",
-  "message",
-  "writer",
-  "writtenAt",
-  "readBy",
-]);
+export const SPBoardMessageKnownKeys: ReadonlySet<string> = knownKeysOf(SPBoardMessageSchema);
 
 export const SPPrivacyBucketSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -328,13 +220,7 @@ export const SPPrivacyBucketSchema = z.looseObject({
   icon: NullableString,
 }) satisfies z.ZodType<SPPrivacyBucket>;
 
-export const SPPrivacyBucketKnownKeys: ReadonlySet<string> = new Set([
-  "_id",
-  "name",
-  "desc",
-  "color",
-  "icon",
-]);
+export const SPPrivacyBucketKnownKeys: ReadonlySet<string> = knownKeysOf(SPPrivacyBucketSchema);
 
 export const SPImportPayloadSchema = z.looseObject({
   users: z.array(SPUserSchema).optional(),

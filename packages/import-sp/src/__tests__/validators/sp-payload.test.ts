@@ -4,6 +4,7 @@ import {
   SPBoardMessageSchema,
   SPChannelCategorySchema,
   SPChannelSchema,
+  SPChatMessageKnownKeys,
   SPChatMessageSchema,
   SPCommentSchema,
   SPCustomFieldSchema,
@@ -11,6 +12,7 @@ import {
   SPFrontStatusSchema,
   SPGroupSchema,
   SPImportPayloadSchema,
+  SPMemberKnownKeys,
   SPMemberSchema,
   SPNoteSchema,
   SPPollSchema,
@@ -257,6 +259,22 @@ describe("SPUserSchema and SPPrivateSchema", () => {
         frontNotifs: true,
       }).success,
     ).toBe(true);
+  });
+});
+
+describe("*KnownKeys derivation from schema shape", () => {
+  it("SPMemberKnownKeys contains all declared schema fields", () => {
+    expect(SPMemberKnownKeys.has("_id")).toBe(true);
+    expect(SPMemberKnownKeys.has("name")).toBe(true);
+    expect(SPMemberKnownKeys.has("lastOperationTime")).toBe(true);
+    expect(SPMemberKnownKeys.has("__nonexistent__")).toBe(false);
+  });
+
+  it("SPChatMessageKnownKeys matches the schema shape exactly", () => {
+    expect(SPChatMessageKnownKeys.has("channel")).toBe(true);
+    expect(SPChatMessageKnownKeys.has("writtenAt")).toBe(true);
+    expect(SPChatMessageKnownKeys.has("replyTo")).toBe(true);
+    expect(SPChatMessageKnownKeys.has("__extra__")).toBe(false);
   });
 });
 
