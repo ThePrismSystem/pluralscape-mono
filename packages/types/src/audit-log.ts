@@ -231,7 +231,9 @@ export type AuditEventType =
   | "api-key.revoked"
   // ── Import ──
   | "import-job.created"
-  | "import-job.updated";
+  | "import-job.updated"
+  | "import-job.completed"
+  | "import-job.failed";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

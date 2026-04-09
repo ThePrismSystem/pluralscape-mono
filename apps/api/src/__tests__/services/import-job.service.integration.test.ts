@@ -14,10 +14,17 @@ import {
   listImportJobs,
   updateImportJob,
 } from "../../services/import-job.service.js";
+import { spyAudit } from "../helpers/audit-assertions.js";
 import { asDb, assertApiError, makeAuth, noopAudit } from "../helpers/integration-setup.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { AccountId, ImportCheckpointState, ImportJobId, SystemId } from "@pluralscape/types";
+import type {
+  AccountId,
+  ImportCheckpointState,
+  ImportJobId,
+  ImportJobStatus,
+  SystemId,
+} from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const { importJobs } = schema;
@@ -291,6 +298,14 @@ describe("import-job.service (PGlite integration)", () => {
         noopAudit,
       );
 
+      await updateImportJob(
+        asDb(db),
+        systemId,
+        created.id,
+        { status: "importing" },
+        auth,
+        noopAudit,
+      );
       const result = await updateImportJob(
         asDb(db),
         systemId,
@@ -432,6 +447,278 @@ describe("import-job.service (PGlite integration)", () => {
         "NOT_FOUND",
         404,
       );
+    });
+  });
+
+  // ── State machine ────────────────────────────────────────────────
+
+  async function driveJobToStatus(
+    id: ImportJobId,
+    target: "pending" | "validating" | "importing" | "completed" | "failed",
+  ): Promise<void> {
+    const path: readonly ImportJobStatus[] = (() => {
+      switch (target) {
+        case "pending":
+          return [];
+        case "validating":
+          return ["validating"];
+        case "importing":
+          return ["validating", "importing"];
+        case "completed":
+          return ["validating", "importing", "completed"];
+        case "failed":
+          return ["validating", "importing", "failed"];
+      }
+    })();
+    for (const status of path) {
+      await updateImportJob(asDb(db), systemId, id, { status }, auth, noopAudit);
+    }
+  }
+
+  describe("updateImportJob state machine enforcement", () => {
+    const createBody = {
+      source: "simply-plural" as const,
+      selectedCategories: { member: true },
+      avatarMode: "api" as const,
+    };
+
+    it("allows pending → validating", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      const updated = await updateImportJob(
+        asDb(db),
+        systemId,
+        job.id,
+        { status: "validating" },
+        auth,
+        noopAudit,
+      );
+      expect(updated.status).toBe("validating");
+    });
+
+    it("allows validating → importing", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await driveJobToStatus(job.id, "validating");
+      const updated = await updateImportJob(
+        asDb(db),
+        systemId,
+        job.id,
+        { status: "importing" },
+        auth,
+        noopAudit,
+      );
+      expect(updated.status).toBe("importing");
+    });
+
+    it("allows importing → completed", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await driveJobToStatus(job.id, "importing");
+      const updated = await updateImportJob(
+        asDb(db),
+        systemId,
+        job.id,
+        { status: "completed" },
+        auth,
+        noopAudit,
+      );
+      expect(updated.status).toBe("completed");
+      expect(updated.completedAt).not.toBeNull();
+    });
+
+    it("refuses completed → pending with INVALID_STATE 409", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await driveJobToStatus(job.id, "completed");
+      await assertApiError(
+        updateImportJob(asDb(db), systemId, job.id, { status: "pending" }, auth, noopAudit),
+        "INVALID_STATE",
+        409,
+      );
+    });
+
+    it("refuses completed → importing (terminal immutability)", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await driveJobToStatus(job.id, "completed");
+      await assertApiError(
+        updateImportJob(asDb(db), systemId, job.id, { status: "importing" }, auth, noopAudit),
+        "INVALID_STATE",
+        409,
+      );
+    });
+
+    it("refuses pending → completed (must go through importing)", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await assertApiError(
+        updateImportJob(asDb(db), systemId, job.id, { status: "completed" }, auth, noopAudit),
+        "INVALID_STATE",
+        409,
+      );
+    });
+
+    it("failed → importing is refused without a recoverable error in the log", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await driveJobToStatus(job.id, "importing");
+      await updateImportJob(
+        asDb(db),
+        systemId,
+        job.id,
+        {
+          status: "failed",
+          errorLog: [
+            {
+              entityType: "member",
+              entityId: null,
+              message: "disk full",
+              fatal: true,
+              recoverable: false,
+            },
+          ],
+        },
+        auth,
+        noopAudit,
+      );
+      await assertApiError(
+        updateImportJob(asDb(db), systemId, job.id, { status: "importing" }, auth, noopAudit),
+        "INVALID_STATE",
+        409,
+      );
+    });
+
+    it("failed → importing succeeds when last error is fatal + recoverable", async () => {
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await driveJobToStatus(job.id, "importing");
+      await updateImportJob(
+        asDb(db),
+        systemId,
+        job.id,
+        {
+          status: "failed",
+          errorLog: [
+            {
+              entityType: "member",
+              entityId: null,
+              message: "token expired",
+              fatal: true,
+              recoverable: true,
+            },
+          ],
+        },
+        auth,
+        noopAudit,
+      );
+      const resumed = await updateImportJob(
+        asDb(db),
+        systemId,
+        job.id,
+        { status: "importing" },
+        auth,
+        noopAudit,
+      );
+      expect(resumed.status).toBe("importing");
+      expect(resumed.completedAt).toBeNull();
+    });
+  });
+
+  // ── Checkpoint seeding ───────────────────────────────────────────
+
+  describe("createImportJob checkpoint seeding", () => {
+    it("writes an initial checkpointState with the provided options", async () => {
+      const job = await createImportJob(
+        asDb(db),
+        systemId,
+        {
+          source: "simply-plural",
+          selectedCategories: { member: true, group: true, poll: false },
+          avatarMode: "api",
+        },
+        auth,
+        noopAudit,
+      );
+      expect(job.checkpointState).not.toBeNull();
+      expect(job.checkpointState?.schemaVersion).toBe(1);
+      expect(job.checkpointState?.options.selectedCategories).toEqual({
+        member: true,
+        group: true,
+        poll: false,
+      });
+      expect(job.checkpointState?.options.avatarMode).toBe("api");
+      expect(job.checkpointState?.checkpoint.currentCollection).toBe("member");
+      expect(job.checkpointState?.checkpoint.completedCollections).toEqual([]);
+      expect(job.checkpointState?.checkpoint.currentCollectionLastSourceId).toBeNull();
+      expect(job.checkpointState?.totals.perCollection).toEqual({});
+    });
+
+    it("picks the first selected collection in canonical order", async () => {
+      const job = await createImportJob(
+        asDb(db),
+        systemId,
+        {
+          source: "simply-plural",
+          selectedCategories: { poll: true, group: true },
+          avatarMode: "skip",
+        },
+        auth,
+        noopAudit,
+      );
+      // Canonical order: member, group, fronting-session, switch, ...
+      // First TRUE is "group" (member is absent/falsy).
+      expect(job.checkpointState?.checkpoint.currentCollection).toBe("group");
+    });
+  });
+
+  // ── Audit events ─────────────────────────────────────────────────
+
+  describe("updateImportJob audit events", () => {
+    const createBody = {
+      source: "simply-plural" as const,
+      selectedCategories: { member: true },
+      avatarMode: "api" as const,
+    };
+
+    it("emits import-job.created on create", async () => {
+      const audit = spyAudit();
+      await createImportJob(asDb(db), systemId, createBody, auth, audit);
+      expect(audit.calls.some((c) => c.eventType === "import-job.created")).toBe(true);
+    });
+
+    it("emits import-job.updated on progress update (non-terminal)", async () => {
+      const audit = spyAudit();
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await updateImportJob(asDb(db), systemId, job.id, { status: "importing" }, auth, noopAudit);
+      await updateImportJob(asDb(db), systemId, job.id, { progressPercent: 50 }, auth, audit);
+      expect(audit.calls[audit.calls.length - 1]?.eventType).toBe("import-job.updated");
+    });
+
+    it("emits import-job.completed on terminal success", async () => {
+      const audit = spyAudit();
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await updateImportJob(asDb(db), systemId, job.id, { status: "importing" }, auth, noopAudit);
+      await updateImportJob(asDb(db), systemId, job.id, { status: "completed" }, auth, audit);
+      expect(audit.calls.some((c) => c.eventType === "import-job.completed")).toBe(true);
+    });
+
+    it("emits import-job.failed on terminal failure", async () => {
+      const audit = spyAudit();
+      const job = await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      await updateImportJob(asDb(db), systemId, job.id, { status: "importing" }, auth, noopAudit);
+      await updateImportJob(
+        asDb(db),
+        systemId,
+        job.id,
+        {
+          status: "failed",
+          errorLog: [
+            {
+              entityType: "member",
+              entityId: null,
+              message: "boom",
+              fatal: true,
+              recoverable: false,
+            },
+          ],
+        },
+        auth,
+        audit,
+      );
+      expect(audit.calls.some((c) => c.eventType === "import-job.failed")).toBe(true);
     });
   });
 });

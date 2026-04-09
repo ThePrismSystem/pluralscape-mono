@@ -1,5 +1,12 @@
 import { importJobs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+import {
+  ID_PREFIXES,
+  IMPORT_CHECKPOINT_SCHEMA_VERSION,
+  createId,
+  now,
+  toUnixMillis,
+  toUnixMillisOrNull,
+} from "@pluralscape/types";
 import {
   CreateImportJobBodySchema,
   ImportJobQuerySchema,
@@ -7,7 +14,7 @@ import {
 } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -20,6 +27,7 @@ import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AccountId,
   ImportCheckpointState,
+  ImportCollectionType,
   ImportError,
   ImportJobId,
   ImportJobStatus,
@@ -77,15 +85,74 @@ function toImportJobResult(row: typeof importJobs.$inferSelect): ImportJobResult
   };
 }
 
-function parseBody<T>(
-  schema: { safeParse(data: unknown): { success: true; data: T } | { success: false } },
-  body: unknown,
-): T {
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid request body");
+// ── UPDATE constants & helpers ───────────────────────────────────────
+
+const TERMINAL_STATUSES: ReadonlySet<ImportJobStatus> = new Set(["completed", "failed"]);
+
+/** Allowed status transitions for an import job.
+ *  - `pending`: initial state; can move forward or fail.
+ *  - `validating`: pre-flight checks; can proceed or fail.
+ *  - `importing`: active work; self-loop for progress, terminal on success/failure.
+ *  - `failed`: resumable only if the last error is fatal+recoverable.
+ *  - `completed`: fully terminal.
+ */
+const ALLOWED_TRANSITIONS: Readonly<Record<ImportJobStatus, readonly ImportJobStatus[]>> = {
+  pending: ["pending", "validating", "importing", "failed"],
+  validating: ["validating", "importing", "failed"],
+  importing: ["importing", "completed", "failed"],
+  failed: ["validating", "importing"],
+  completed: [],
+};
+
+/** Canonical order for deciding which collection to start on when seeding
+ *  the initial checkpoint. First TRUE entry in this order wins.
+ *
+ *  `satisfies readonly ImportCollectionType[]` catches membership drift if
+ *  `ImportCollectionType` gains a value that isn't listed here — TypeScript
+ *  will complain at this declaration rather than at a distant caller. */
+const CANONICAL_COLLECTION_ORDER = [
+  "member",
+  "group",
+  "fronting-session",
+  "switch",
+  "custom-field",
+  "note",
+  "chat-message",
+  "board-message",
+  "poll",
+  "timer",
+  "privacy-bucket",
+  "friend",
+] as const satisfies readonly ImportCollectionType[];
+
+function firstSelectedCollection(
+  selected: Partial<Record<ImportCollectionType, boolean>>,
+): ImportCollectionType {
+  for (const collection of CANONICAL_COLLECTION_ORDER) {
+    if (selected[collection] === true) return collection;
   }
-  return parsed.data;
+  // Zod .refine() already rejects empty category maps; this is defensive.
+  throw new ApiHttpError(
+    HTTP_BAD_REQUEST,
+    "VALIDATION_ERROR",
+    "At least one category must be selected",
+  );
+}
+
+function isResumableFromFailed(errorLog: readonly ImportError[] | null): boolean {
+  if (!errorLog || errorLog.length === 0) return false;
+  const last = errorLog[errorLog.length - 1];
+  if (!last) return false;
+  return last.fatal && last.recoverable;
+}
+
+function pickAuditEventType(
+  from: ImportJobStatus,
+  to: ImportJobStatus,
+): "import-job.updated" | "import-job.completed" | "import-job.failed" {
+  if (from !== to && to === "completed") return "import-job.completed";
+  if (from !== to && to === "failed") return "import-job.failed";
+  return "import-job.updated";
 }
 
 // ── CREATE ──────────────────────────────────────────────────────────
@@ -98,12 +165,32 @@ export async function createImportJob(
   audit: AuditWriter,
 ): Promise<ImportJobResult> {
   assertSystemOwnership(systemId, auth);
-  const parsed = parseBody(CreateImportJobBodySchema, params);
+  const parseResult = CreateImportJobBodySchema.safeParse(params);
+  if (!parseResult.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid request body", {
+      issues: parseResult.error.issues,
+    });
+  }
+  const parsed = parseResult.data;
 
   const id = createId(ID_PREFIXES.importJob);
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    const initialCheckpoint: ImportCheckpointState = {
+      schemaVersion: IMPORT_CHECKPOINT_SCHEMA_VERSION,
+      checkpoint: {
+        completedCollections: [],
+        currentCollection: firstSelectedCollection(parsed.selectedCategories),
+        currentCollectionLastSourceId: null,
+      },
+      options: {
+        selectedCategories: parsed.selectedCategories,
+        avatarMode: parsed.avatarMode,
+      },
+      totals: { perCollection: {} },
+    };
+
     const [row] = await tx
       .insert(importJobs)
       .values({
@@ -115,6 +202,7 @@ export async function createImportJob(
         progressPercent: 0,
         warningCount: 0,
         chunksCompleted: 0,
+        checkpointState: initialCheckpoint,
         createdAt: timestamp,
         updatedAt: timestamp,
       })
@@ -195,8 +283,6 @@ export async function listImportJobs(
 
 // ── UPDATE ──────────────────────────────────────────────────────────
 
-const TERMINAL_STATUSES: ReadonlySet<ImportJobStatus> = new Set(["completed", "failed"]);
-
 export async function updateImportJob(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -206,12 +292,72 @@ export async function updateImportJob(
   audit: AuditWriter,
 ): Promise<ImportJobResult> {
   assertSystemOwnership(systemId, auth);
-  const parsed = parseBody(UpdateImportJobBodySchema, params);
+  const parseResult = UpdateImportJobBodySchema.safeParse(params);
+  if (!parseResult.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid request body", {
+      issues: parseResult.error.issues,
+    });
+  }
+  const parsed = parseResult.data;
 
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
+    // SELECT ... FOR UPDATE locks the row for the duration of the transaction
+    // so two concurrent state-machine transitions cannot both pass the guard.
+    // Without this, READ COMMITTED isolation would allow a double-resume:
+    // both callers see `status = "failed"`, both check isResumableFromFailed,
+    // both commit the same transition.
+    const [current] = await tx
+      .select()
+      .from(importJobs)
+      .where(and(eq(importJobs.id, id), eq(importJobs.systemId, systemId)))
+      .for("update")
+      .limit(1);
+
+    if (!current) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Import job not found");
+    }
+
+    // State machine enforcement.
+    //
+    // Note: a same-state write (e.g., `failed → failed` to append an error
+    // entry) is NOT blocked by this guard — the check only fires when the
+    // status actually changes. That's intentional: workers may append new
+    // error entries to an already-failed job without triggering the
+    // resumability check, and progress bumps on `importing → importing`
+    // are the normal hot path.
+    if (parsed.status !== undefined && parsed.status !== current.status) {
+      const allowed = ALLOWED_TRANSITIONS[current.status];
+      if (!allowed.includes(parsed.status)) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "INVALID_STATE",
+          `Illegal transition from ${current.status} to ${parsed.status}`,
+        );
+      }
+      // failed → importing|validating: require last error to be fatal + recoverable
+      if (current.status === "failed") {
+        const currentErrorLog = (current.errorLog as readonly ImportError[] | null) ?? null;
+        if (!isResumableFromFailed(currentErrorLog)) {
+          throw new ApiHttpError(
+            HTTP_CONFLICT,
+            "INVALID_STATE",
+            `Cannot resume ${current.status} → ${parsed.status}: last error is not recoverable`,
+          );
+        }
+      }
+    }
+
     const updates: Partial<typeof importJobs.$inferInsert> = { updatedAt: timestamp };
+    const terminalTransition =
+      parsed.status !== undefined &&
+      TERMINAL_STATUSES.has(parsed.status) &&
+      parsed.status !== current.status;
+    const nonTerminalReentry =
+      parsed.status !== undefined &&
+      !TERMINAL_STATUSES.has(parsed.status) &&
+      TERMINAL_STATUSES.has(current.status);
 
     if (parsed.status !== undefined) updates.status = parsed.status;
     if (parsed.progressPercent !== undefined) updates.progressPercent = parsed.progressPercent;
@@ -225,8 +371,10 @@ export async function updateImportJob(
       updates.checkpointState = parsed.checkpointState;
     }
 
-    if (parsed.status && TERMINAL_STATUSES.has(parsed.status)) {
+    if (terminalTransition) {
       updates.completedAt = timestamp;
+    } else if (nonTerminalReentry) {
+      updates.completedAt = null;
     }
 
     const [row] = await tx
@@ -239,10 +387,11 @@ export async function updateImportJob(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Import job not found");
     }
 
+    const eventType = pickAuditEventType(current.status, row.status);
     await audit(tx, {
-      eventType: "import-job.updated",
+      eventType,
       actor: { kind: "account", id: auth.accountId },
-      detail: `Import job updated (status: ${row.status})`,
+      detail: `Import job ${id} (${current.status} → ${row.status})`,
       systemId,
     });
 

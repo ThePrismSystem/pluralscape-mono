@@ -347,6 +347,11 @@ export const AUDIT_EVENT_TYPES = [
   "device-token.deleted",
   "notification-config.updated",
   "friend-notification-preference.updated",
+  // ── Import ──
+  "import-job.created",
+  "import-job.updated",
+  "import-job.completed",
+  "import-job.failed",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
