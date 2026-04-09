@@ -55,7 +55,7 @@ export function warnDropped(
   ctx.addWarningOnce(`dropped-field:${entityType}:${field}`, {
     entityType,
     entityId,
-    kind: "validation-failed",
+    kind: "schema-mismatch",
     key: `dropped-field:${entityType}:${field}`,
     message: `Dropped ${entityType}.${field}: ${reason}`,
   });
