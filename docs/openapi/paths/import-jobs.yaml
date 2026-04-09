@@ -1,0 +1,189 @@
+/systems/{systemId}/import-jobs:
+  get:
+    operationId: listImportJobs
+    tags: [Import]
+    summary: List import jobs
+    description: |
+      Returns a paginated list of import jobs for the specified system, ordered by creation time descending.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: "../schemas/import-export.yaml#/ImportJobStatus"
+      - name: source
+        in: query
+        required: false
+        schema:
+          $ref: "../schemas/import-export.yaml#/ImportSource"
+    responses:
+      "200":
+        description: Paginated import job list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/import-export.yaml#/ImportJobResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Insufficient permissions to list import jobs for this system
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+  post:
+    operationId: createImportJob
+    tags: [Import]
+    summary: Create an import job
+    description: |
+      Creates a new import job in the `pending` state with an initial checkpoint state seeded from the provided options.
+
+      At least one category in `selectedCategories` must be `true`.
+
+      Rate limit: 60 req/min (write)
+      Idempotency: supports `Idempotency-Key` header.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+        description: Client-generated idempotency key to prevent duplicate jobs
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/import-export.yaml#/CreateImportJobBody"
+    responses:
+      "201":
+        description: Import job created
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/import-export.yaml#/ImportJobResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Insufficient permissions to create import jobs for this system
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/import-jobs/{importJobId}:
+  get:
+    operationId: getImportJob
+    tags: [Import]
+    summary: Get an import job
+    description: |
+      Fetches a single import job by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: importJobId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Import job
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/import-export.yaml#/ImportJobResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Insufficient permissions to access this import job
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+  patch:
+    operationId: updateImportJob
+    tags: [Import]
+    summary: Update an import job
+    description: |
+      Partially updates an import job. The `status` field is constrained by a state machine:
+
+      - `pending` → `pending`, `validating`, `importing`, `failed`
+      - `validating` → `validating`, `importing`, `failed`
+      - `importing` → `importing`, `completed`, `failed`
+      - `failed` → `validating`, `importing` (only if the last error entry is `fatal: true, recoverable: true`)
+      - `completed` → no transitions allowed (terminal)
+
+      An illegal transition returns `409 INVALID_STATE`.
+
+      Rate limit: 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: importJobId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/import-export.yaml#/UpdateImportJobBody"
+    responses:
+      "200":
+        description: Import job updated
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/import-export.yaml#/ImportJobResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Insufficient permissions to update this import job
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

@@ -1,0 +1,259 @@
+ImportSource:
+  type: string
+  enum: [simply-plural, pluralkit, pluralscape]
+  description: Source format for an import job.
+
+ImportJobStatus:
+  type: string
+  enum: [pending, validating, importing, completed, failed]
+
+ImportEntityType:
+  type: string
+  enum:
+    - member
+    - group
+    - fronting-session
+    - switch
+    - custom-field
+    - note
+    - chat-message
+    - board-message
+    - poll
+    - timer
+    - privacy-bucket
+    - friend
+    - unknown
+
+ImportAvatarMode:
+  type: string
+  enum: [api, zip, skip]
+
+ImportErrorNonFatal:
+  type: object
+  required: [entityType, entityId, message, fatal]
+  properties:
+    entityType:
+      $ref: "#/ImportEntityType"
+    entityId:
+      type: string
+      nullable: true
+    message:
+      type: string
+    fatal:
+      type: boolean
+      enum: [false]
+
+ImportErrorFatal:
+  type: object
+  required: [entityType, entityId, message, fatal, recoverable]
+  properties:
+    entityType:
+      $ref: "#/ImportEntityType"
+    entityId:
+      type: string
+      nullable: true
+    message:
+      type: string
+    fatal:
+      type: boolean
+      enum: [true]
+    recoverable:
+      type: boolean
+
+ImportError:
+  oneOf:
+    - $ref: "#/ImportErrorNonFatal"
+    - $ref: "#/ImportErrorFatal"
+
+ImportCollectionTotals:
+  type: object
+  required: [total, imported, updated, skipped, failed]
+  properties:
+    total:
+      type: integer
+      minimum: 0
+    imported:
+      type: integer
+      minimum: 0
+    updated:
+      type: integer
+      minimum: 0
+    skipped:
+      type: integer
+      minimum: 0
+    failed:
+      type: integer
+      minimum: 0
+
+ImportCheckpointState:
+  type: object
+  required: [schemaVersion, checkpoint, options, totals]
+  properties:
+    schemaVersion:
+      type: integer
+      enum: [1]
+    checkpoint:
+      type: object
+      required: [completedCollections, currentCollection, currentCollectionLastSourceId]
+      properties:
+        completedCollections:
+          type: array
+          items:
+            $ref: "#/ImportEntityType"
+        currentCollection:
+          $ref: "#/ImportEntityType"
+        currentCollectionLastSourceId:
+          type: string
+          nullable: true
+    options:
+      type: object
+      required: [selectedCategories, avatarMode]
+      properties:
+        selectedCategories:
+          type: object
+          additionalProperties:
+            type: boolean
+        avatarMode:
+          $ref: "#/ImportAvatarMode"
+    totals:
+      type: object
+      required: [perCollection]
+      properties:
+        perCollection:
+          type: object
+          additionalProperties:
+            $ref: "#/ImportCollectionTotals"
+
+ImportJobResponse:
+  type: object
+  required:
+    - id
+    - accountId
+    - systemId
+    - source
+    - status
+    - progressPercent
+    - errorLog
+    - warningCount
+    - chunksTotal
+    - chunksCompleted
+    - checkpointState
+    - createdAt
+    - updatedAt
+    - completedAt
+  properties:
+    id:
+      type: string
+    accountId:
+      type: string
+    systemId:
+      type: string
+    source:
+      $ref: "#/ImportSource"
+    status:
+      $ref: "#/ImportJobStatus"
+    progressPercent:
+      type: integer
+      minimum: 0
+      maximum: 100
+    errorLog:
+      type: array
+      nullable: true
+      items:
+        $ref: "#/ImportError"
+    warningCount:
+      type: integer
+      minimum: 0
+    chunksTotal:
+      type: integer
+      nullable: true
+      minimum: 0
+    chunksCompleted:
+      type: integer
+      minimum: 0
+    checkpointState:
+      allOf:
+        - $ref: "#/ImportCheckpointState"
+      nullable: true
+    createdAt:
+      type: integer
+    updatedAt:
+      type: integer
+    completedAt:
+      type: integer
+      nullable: true
+
+CreateImportJobBody:
+  type: object
+  required: [source, selectedCategories, avatarMode]
+  properties:
+    source:
+      $ref: "#/ImportSource"
+    selectedCategories:
+      type: object
+      additionalProperties:
+        type: boolean
+      description: Map of ImportEntityType → whether to import. At least one must be true.
+    avatarMode:
+      $ref: "#/ImportAvatarMode"
+
+UpdateImportJobBody:
+  type: object
+  description: At least one field must be provided.
+  properties:
+    status:
+      $ref: "#/ImportJobStatus"
+    progressPercent:
+      type: integer
+      minimum: 0
+      maximum: 100
+    warningCount:
+      type: integer
+      minimum: 0
+    chunksTotal:
+      type: integer
+      nullable: true
+      minimum: 0
+    chunksCompleted:
+      type: integer
+      minimum: 0
+    errorLog:
+      type: array
+      nullable: true
+      items:
+        $ref: "#/ImportError"
+    checkpointState:
+      allOf:
+        - $ref: "#/ImportCheckpointState"
+      nullable: true
+
+ImportEntityRefResponse:
+  type: object
+  required:
+    - id
+    - accountId
+    - systemId
+    - source
+    - sourceEntityType
+    - sourceEntityId
+    - pluralscapeEntityId
+    - importedAt
+  properties:
+    id:
+      type: string
+    accountId:
+      type: string
+    systemId:
+      type: string
+    source:
+      $ref: "#/ImportSource"
+    sourceEntityType:
+      $ref: "#/ImportEntityType"
+    sourceEntityId:
+      type: string
+      maxLength: 128
+    pluralscapeEntityId:
+      type: string
+      description: Brand varies by sourceEntityType (MemberId, GroupId, etc.).
+    importedAt:
+      type: integer
