@@ -41,12 +41,12 @@ export interface MappingContext {
   registerMany(entityType: ImportEntityType, entries: readonly IdTranslationEntry[]): void;
   addWarning(warning: MappingWarning): void;
   /**
-   * Append a warning to the buffer at most once per `kind`. Subsequent calls
-   * with the same `kind` are no-ops. Use this for "field dropped" warnings
-   * where one notice per import run is enough — `addWarning` is for
+   * Append a warning to the buffer at most once per `dedupeKey`. Subsequent
+   * calls with the same `dedupeKey` are no-ops. Use this for "field dropped"
+   * warnings where one notice per import run is enough — `addWarning` is for
    * per-occurrence anomalies that should be surfaced individually.
    */
-  addWarningOnce(kind: string, warning: MappingWarning): void;
+  addWarningOnce(dedupeKey: string, warning: MappingWarning): void;
 }
 
 export function createMappingContext(opts: { sourceMode: SourceMode }): MappingContext {
@@ -84,10 +84,10 @@ export function createMappingContext(opts: { sourceMode: SourceMode }): MappingC
       if (warnings.length >= MAX_WARNING_BUFFER_SIZE) return;
       warnings.push(warning);
     },
-    addWarningOnce(kind, warning) {
-      if (seenWarningKinds.has(kind)) return;
+    addWarningOnce(dedupeKey, warning) {
+      if (seenWarningKinds.has(dedupeKey)) return;
       if (warnings.length >= MAX_WARNING_BUFFER_SIZE) return;
-      seenWarningKinds.add(kind);
+      seenWarningKinds.add(dedupeKey);
       warnings.push(warning);
     },
   };
