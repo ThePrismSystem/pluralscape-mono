@@ -1,5 +1,11 @@
 import { importEntityRefs } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import {
+  assertBrandedTargetId,
+  ID_PREFIXES,
+  createId,
+  now,
+  toUnixMillis,
+} from "@pluralscape/types";
 import { ImportEntityRefQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
@@ -16,7 +22,6 @@ import type {
   AccountId,
   ImportEntityRef,
   ImportEntityRefId,
-  ImportEntityTargetIdMap,
   ImportEntityType,
   ImportSourceFormat,
   PaginatedResult,
@@ -68,27 +73,27 @@ function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRef {
   const sourceEntityType = row.sourceEntityType;
   const rawTargetId = row.pluralscapeEntityId;
 
-  // One cast per variant. This is the single place in the codebase where
-  // the raw DB varchar is narrowed to a branded ID; all consumers get
-  // type-safe narrowing via the sourceEntityType discriminator.
+  // `assertBrandedTargetId` is the single runtime narrowing boundary between
+  // raw DB varchars and branded target IDs; all consumers get type-safe
+  // narrowing via the sourceEntityType discriminator.
   switch (sourceEntityType) {
     case "member":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["member"],
+        pluralscapeEntityId: assertBrandedTargetId("member", rawTargetId),
       };
     case "group":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["group"],
+        pluralscapeEntityId: assertBrandedTargetId("group", rawTargetId),
       };
     case "fronting-session":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["fronting-session"],
+        pluralscapeEntityId: assertBrandedTargetId("fronting-session", rawTargetId),
       };
     case "switch":
       return { ...base, sourceEntityType, pluralscapeEntityId: rawTargetId };
@@ -96,97 +101,97 @@ function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRef {
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["custom-field"],
+        pluralscapeEntityId: assertBrandedTargetId("custom-field", rawTargetId),
       };
     case "note":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["note"],
+        pluralscapeEntityId: assertBrandedTargetId("note", rawTargetId),
       };
     case "chat-message":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["chat-message"],
+        pluralscapeEntityId: assertBrandedTargetId("chat-message", rawTargetId),
       };
     case "board-message":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["board-message"],
+        pluralscapeEntityId: assertBrandedTargetId("board-message", rawTargetId),
       };
     case "poll":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["poll"],
+        pluralscapeEntityId: assertBrandedTargetId("poll", rawTargetId),
       };
     case "timer":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["timer"],
+        pluralscapeEntityId: assertBrandedTargetId("timer", rawTargetId),
       };
     case "privacy-bucket":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["privacy-bucket"],
+        pluralscapeEntityId: assertBrandedTargetId("privacy-bucket", rawTargetId),
       };
     case "custom-front":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["custom-front"],
+        pluralscapeEntityId: assertBrandedTargetId("custom-front", rawTargetId),
       };
     case "fronting-comment":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["fronting-comment"],
+        pluralscapeEntityId: assertBrandedTargetId("fronting-comment", rawTargetId),
       };
     case "field-definition":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["field-definition"],
+        pluralscapeEntityId: assertBrandedTargetId("field-definition", rawTargetId),
       };
     case "field-value":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["field-value"],
+        pluralscapeEntityId: assertBrandedTargetId("field-value", rawTargetId),
       };
     case "journal-entry":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["journal-entry"],
+        pluralscapeEntityId: assertBrandedTargetId("journal-entry", rawTargetId),
       };
     case "channel-category":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["channel-category"],
+        pluralscapeEntityId: assertBrandedTargetId("channel-category", rawTargetId),
       };
     case "channel":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["channel"],
+        pluralscapeEntityId: assertBrandedTargetId("channel", rawTargetId),
       };
     case "system-profile":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["system-profile"],
+        pluralscapeEntityId: assertBrandedTargetId("system-profile", rawTargetId),
       };
     case "system-settings":
       return {
         ...base,
         sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["system-settings"],
+        pluralscapeEntityId: assertBrandedTargetId("system-settings", rawTargetId),
       };
     case "unknown":
       return { ...base, sourceEntityType, pluralscapeEntityId: rawTargetId };
