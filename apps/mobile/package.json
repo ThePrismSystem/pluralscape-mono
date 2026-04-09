@@ -28,6 +28,7 @@
     "@trpc/react-query": "11.16.0",
     "expo": "~55.0.5",
     "expo-constants": "^55.0.9",
+    "expo-document-picker": "~14.0.0",
     "expo-linking": "~55.0.7",
     "expo-localization": "~55.0.8",
     "expo-modules-core": "~55.0.15",
