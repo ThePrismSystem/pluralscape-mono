@@ -91,7 +91,10 @@ describe("classifyError — API source split", () => {
       entityId: null,
     });
     expect(err.fatal).toBe(true);
-    if (err.fatal) expect(err.recoverable).toBe(false);
+    if (err.fatal) {
+      expect(err.recoverable).toBe(false);
+      expect(err.kind).toBe("validation-failed");
+    }
   });
 
   it("classifies ApiSourceTransientError as recoverable fatal", () => {
