@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-
 import * as secureStore from "../../../__tests__/expo-secure-store-mock.js";
 import { createSpTokenStorage } from "../sp-token-storage.js";
 

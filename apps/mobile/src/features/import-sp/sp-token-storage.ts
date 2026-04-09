@@ -4,7 +4,6 @@ import { SP_TOKEN_KEY_PREFIX } from "./import-sp-mobile.constants.js";
 
 import type { SystemId } from "@pluralscape/types";
 
-
 /**
  * Per-system persistent storage for Simply Plural API tokens.
  *
