@@ -249,7 +249,6 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
             entityId: doc.sourceId,
             message: result.message,
             fatal: false,
-            recoverable: false,
           };
           errors.push(error);
           await persister.recordError(error);
@@ -312,7 +311,15 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       // to continue iterating a source whose generator has thrown, so we
       // override `fatal` to make the abort explicit in recorded errors.
       const classified = classifyError(thrown, { entityType, entityId: null });
-      const error: ImportError = { ...classified, fatal: true };
+      const error: ImportError = classified.fatal
+        ? classified
+        : {
+            entityType: classified.entityType,
+            entityId: classified.entityId,
+            message: classified.message,
+            fatal: true,
+            recoverable: true,
+          };
       errors.push(error);
       await persister.recordError(error);
       return {

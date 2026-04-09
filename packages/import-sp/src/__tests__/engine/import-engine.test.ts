@@ -173,8 +173,9 @@ describe("runImport — fatal error", () => {
     });
     expect(result.outcome).toBe("aborted");
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]?.fatal).toBe(true);
-    expect(result.errors[0]?.recoverable).toBe(true);
+    const firstError = result.errors[0];
+    if (!firstError?.fatal) throw new Error("expected fatal error");
+    expect(firstError.recoverable).toBe(true);
     expect(persister.errors).toHaveLength(1);
     expect(result.finalState.checkpoint.completedCollections).toEqual([]);
   });
@@ -357,10 +358,11 @@ describe("runImport — resume cutoff missing from source", () => {
     expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(0);
     // Exactly one error: the resume-cutoff-not-found sentinel.
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]?.fatal).toBe(true);
-    expect(result.errors[0]?.recoverable).toBe(true);
-    expect(result.errors[0]?.message).toContain("resume cutoff not found in members");
-    expect(result.errors[0]?.message).toContain("nonexistent_id");
+    const cutoffError = result.errors[0];
+    if (!cutoffError?.fatal) throw new Error("expected fatal error");
+    expect(cutoffError.recoverable).toBe(true);
+    expect(cutoffError.message).toContain("resume cutoff not found in members");
+    expect(cutoffError.message).toContain("nonexistent_id");
     // Checkpoint must remain unchanged so the operator can retry.
     expect(result.finalState.checkpoint.currentCollection).toBe("member");
     expect(result.finalState.checkpoint.currentCollectionLastSourceId).toBe("nonexistent_id");

@@ -26,7 +26,7 @@ import { runImport } from "../../engine/import-engine.js";
 import { createFileImportSource } from "../../sources/file-source.js";
 import { createInMemoryPersister } from "../helpers/in-memory-persister.js";
 
-import type { ImportCheckpointState, ImportEntityType } from "@pluralscape/types";
+import type { ImportCheckpointState, ImportCollectionType } from "@pluralscape/types";
 
 const RESUME_CUTOFF_SOURCE_ID = "m_00000005";
 const TOTAL_MEMBERS_IN_FIXTURE = 10;
@@ -76,13 +76,13 @@ function buildResumeFixture(): Uint8Array {
  */
 function buildMidMemberCheckpoint(): ImportCheckpointState {
   const memberIndex = DEPENDENCY_ORDER.indexOf("members");
-  const precedingEntityTypes: readonly ImportEntityType[] = DEPENDENCY_ORDER.slice(
+  const precedingEntityTypes: readonly ImportCollectionType[] = DEPENDENCY_ORDER.slice(
     0,
     memberIndex,
   ).map((c) => collectionToEntityType(c));
   // Include `member` itself in completedCollections so the synthesis guard
   // treats the privacy pass as "handled" by a prior run.
-  const completedCollections: readonly ImportEntityType[] = [...precedingEntityTypes, "member"];
+  const completedCollections: readonly ImportCollectionType[] = [...precedingEntityTypes, "member"];
   return {
     schemaVersion: 1,
     checkpoint: {

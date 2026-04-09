@@ -2,11 +2,11 @@ import type {
   ImportAvatarMode,
   ImportCheckpointState,
   ImportCollectionTotals,
-  ImportEntityType,
+  ImportCollectionType,
 } from "@pluralscape/types";
 
 /**
- * Checkpoint state is keyed by `ImportEntityType` (values like `"member"`),
+ * Checkpoint state is keyed by `ImportCollectionType` (values like `"member"`),
  * not `SpCollectionName` (values like `"members"`). Callers walking
  * `DEPENDENCY_ORDER` (which is keyed by `SpCollectionName`) must translate
  * via `collectionToEntityType()` from `entity-type-map.ts` before invoking
@@ -36,7 +36,7 @@ export interface AdvanceDelta {
 /**
  * Build a fresh `ImportCheckpointState` for a new import job.
  *
- * `firstEntityType` must be an `ImportEntityType`, not an `SpCollectionName`.
+ * `firstEntityType` must be an `ImportCollectionType`, not an `SpCollectionName`.
  * When deriving it from `DEPENDENCY_ORDER` (keyed by collection name), translate
  * first:
  *
@@ -48,7 +48,7 @@ export interface AdvanceDelta {
  *   });
  */
 export function emptyCheckpointState(opts: {
-  firstEntityType: ImportEntityType;
+  firstEntityType: ImportCollectionType;
   selectedCategories: Record<string, boolean>;
   avatarMode: ImportAvatarMode;
 }): ImportCheckpointState {
@@ -70,7 +70,7 @@ export function emptyCheckpointState(opts: {
 export function advanceWithinCollection(
   state: ImportCheckpointState,
   args: {
-    entityType: ImportEntityType;
+    entityType: ImportCollectionType;
     lastSourceId: string;
     delta: AdvanceDelta;
   },
@@ -101,7 +101,7 @@ export function advanceWithinCollection(
 
 export function completeCollection(
   state: ImportCheckpointState,
-  args: { nextEntityType: ImportEntityType },
+  args: { nextEntityType: ImportCollectionType },
 ): ImportCheckpointState {
   const completed = state.checkpoint.completedCollections.includes(
     state.checkpoint.currentCollection,
@@ -119,6 +119,6 @@ export function completeCollection(
   };
 }
 
-export function resumeStartCollection(state: ImportCheckpointState): ImportEntityType {
+export function resumeStartCollection(state: ImportCheckpointState): ImportCollectionType {
   return state.checkpoint.currentCollection;
 }

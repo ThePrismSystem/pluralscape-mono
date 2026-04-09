@@ -88,7 +88,6 @@ export function classifyError(thrown: unknown, ctx: ClassifyContext): ImportErro
     entityId: ctx.entityId,
     message,
     fatal: false,
-    recoverable: false,
   };
 }
 

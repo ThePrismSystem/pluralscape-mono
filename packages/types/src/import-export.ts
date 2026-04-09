@@ -4,13 +4,18 @@ import type {
   BlobId,
   BoardMessageId,
   BucketId,
+  ChannelId,
+  CustomFrontId,
   ExportRequestId,
   FieldDefinitionId,
+  FieldValueId,
   FriendConnectionId,
+  FrontingCommentId,
   FrontingSessionId,
   GroupId,
   ImportEntityRefId,
   ImportJobId,
+  JournalEntryId,
   MemberId,
   MessageId,
   NoteId,
@@ -211,16 +216,25 @@ interface ImportEntityRefBase {
 export interface ImportEntityTargetIdMap {
   readonly member: MemberId;
   readonly group: GroupId;
+  readonly "custom-front": CustomFrontId;
   readonly "fronting-session": FrontingSessionId;
+  readonly "fronting-comment": FrontingCommentId;
   readonly switch: string;
   readonly "custom-field": FieldDefinitionId;
+  readonly "field-definition": FieldDefinitionId;
+  readonly "field-value": FieldValueId;
   readonly note: NoteId;
+  readonly "journal-entry": JournalEntryId;
   readonly "chat-message": MessageId;
   readonly "board-message": BoardMessageId;
+  readonly "channel-category": ChannelId;
+  readonly channel: ChannelId;
   readonly poll: PollId;
   readonly timer: TimerId;
   readonly "privacy-bucket": BucketId;
   readonly friend: FriendConnectionId;
+  readonly "system-profile": SystemId;
+  readonly "system-settings": SystemId;
   readonly unknown: string;
 }
 
@@ -347,32 +361,50 @@ export const IMPORT_JOB_STATUSES = [
 export const IMPORT_ENTITY_TYPES = [
   "member",
   "group",
+  "custom-front",
   "fronting-session",
+  "fronting-comment",
   "switch",
   "custom-field",
+  "field-definition",
+  "field-value",
   "note",
+  "journal-entry",
   "chat-message",
   "board-message",
+  "channel-category",
+  "channel",
   "poll",
   "timer",
   "privacy-bucket",
   "friend",
+  "system-profile",
+  "system-settings",
   "unknown",
 ] as const satisfies readonly ImportEntityType[];
 
 export const IMPORT_COLLECTION_TYPES = [
   "member",
   "group",
+  "custom-front",
   "fronting-session",
+  "fronting-comment",
   "switch",
   "custom-field",
+  "field-definition",
+  "field-value",
   "note",
+  "journal-entry",
   "chat-message",
   "board-message",
+  "channel-category",
+  "channel",
   "poll",
   "timer",
   "privacy-bucket",
   "friend",
+  "system-profile",
+  "system-settings",
 ] as const satisfies readonly ImportCollectionType[];
 
 export const IMPORT_AVATAR_MODES = [

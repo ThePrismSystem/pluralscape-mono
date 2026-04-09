@@ -13,7 +13,7 @@ describe("classifyError", () => {
       entityType: "member",
       entityId: null,
     });
-    expect(error.fatal).toBe(true);
+    if (!error.fatal) throw new Error("expected fatal error");
     expect(error.recoverable).toBe(true);
     expect(error.entityType).toBe("unknown");
   });
@@ -23,7 +23,7 @@ describe("classifyError", () => {
       entityType: "member",
       entityId: null,
     });
-    expect(error.fatal).toBe(true);
+    if (!error.fatal) throw new Error("expected fatal error");
     expect(error.recoverable).toBe(true);
   });
 
@@ -33,7 +33,6 @@ describe("classifyError", () => {
       entityId: "src_1",
     });
     expect(error.fatal).toBe(false);
-    expect(error.recoverable).toBe(false);
     expect(error.entityType).toBe("member");
     expect(error.entityId).toBe("src_1");
   });
@@ -41,7 +40,7 @@ describe("classifyError", () => {
   it("classifies ResumeCutoffNotFoundError as fatal + recoverable with cutoff id", () => {
     const thrown = new ResumeCutoffNotFoundError("members", "m_missing");
     const error = classifyError(thrown, { entityType: "member", entityId: "m_missing" });
-    expect(error.fatal).toBe(true);
+    if (!error.fatal) throw new Error("expected fatal error");
     expect(error.recoverable).toBe(true);
     expect(error.entityType).toBe("unknown");
     expect(error.entityId).toBe("m_missing");
@@ -54,7 +53,7 @@ describe("classifyError", () => {
       entityType: "member",
       entityId: null,
     });
-    expect(error.fatal).toBe(true);
+    if (!error.fatal) throw new Error("expected fatal error");
     expect(error.recoverable).toBe(false);
   });
 

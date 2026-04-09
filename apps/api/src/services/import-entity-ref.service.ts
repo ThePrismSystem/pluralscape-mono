@@ -140,6 +140,60 @@ function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRef {
         sourceEntityType,
         pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["friend"],
       };
+    case "custom-front":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["custom-front"],
+      };
+    case "fronting-comment":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["fronting-comment"],
+      };
+    case "field-definition":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["field-definition"],
+      };
+    case "field-value":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["field-value"],
+      };
+    case "journal-entry":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["journal-entry"],
+      };
+    case "channel-category":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["channel-category"],
+      };
+    case "channel":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["channel"],
+      };
+    case "system-profile":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["system-profile"],
+      };
+    case "system-settings":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["system-settings"],
+      };
     case "unknown":
       return { ...base, sourceEntityType, pluralscapeEntityId: rawTargetId };
     default: {
