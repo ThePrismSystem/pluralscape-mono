@@ -10,9 +10,10 @@
  *  - `color` (as-is)
  *  - `avatarUrl` (persister hands this to the avatar fetcher)
  *  - `defaultPrivacyBucket` resolved via `ctx.translate("privacy-bucket", _)`;
- *    misses become `null` with a warning rather than failing the profile.
+ *    fails closed on miss — the profile cannot be materialised without its
+ *    default bucket reference.
  */
-import { mapped, type MapperResult } from "./mapper-result.js";
+import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPUser } from "../sources/sp-types.js";
@@ -33,14 +34,14 @@ export function mapSystemProfile(
   if (sp.defaultPrivacyBucket !== undefined && sp.defaultPrivacyBucket !== null) {
     const resolved = ctx.translate("privacy-bucket", sp.defaultPrivacyBucket);
     if (resolved === null) {
-      ctx.addWarning({
-        entityType: "system-profile",
-        entityId: sp._id,
-        message: `default privacy bucket ${sp.defaultPrivacyBucket} not in translation table; dropping`,
+      return failed({
+        kind: "fk-miss",
+        message: `FK miss: privacy-bucket ${sp.defaultPrivacyBucket} not in translation table`,
+        missingRefs: [sp.defaultPrivacyBucket],
+        targetField: "defaultPrivacyBucket",
       });
-    } else {
-      defaultBucketId = resolved;
     }
+    defaultBucketId = resolved;
   }
 
   const payload: MappedSystemProfile = {

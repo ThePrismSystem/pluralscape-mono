@@ -52,7 +52,7 @@ describe("mapSystemProfile", () => {
     expect(ctx.warnings).toHaveLength(0);
   });
 
-  it("leaves defaultBucketId null with a warning on bucket FK miss", () => {
+  it("returns failed on bucket FK miss", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPUser = {
       _id: "u4",
@@ -60,11 +60,50 @@ describe("mapSystemProfile", () => {
       defaultPrivacyBucket: "src_missing",
     };
     const result = mapSystemProfile(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("defaultPrivacyBucket");
+      expect(result.missingRefs).toContain("src_missing");
+    }
+  });
+});
+
+describe("system-profile FK-miss handling", () => {
+  it("returns failed with kind fk-miss when defaultPrivacyBucket cannot be resolved", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    const result = mapSystemProfile(
+      { _id: "sp_u_1", username: "Prism", defaultPrivacyBucket: "sp_bk_missing" },
+      ctx,
+    );
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("defaultPrivacyBucket");
+      expect(result.missingRefs).toContain("sp_bk_missing");
+    }
+  });
+
+  it("returns mapped when defaultPrivacyBucket resolves", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    ctx.register("privacy-bucket", "sp_bk_1", "ps_bk_real");
+    const result = mapSystemProfile(
+      { _id: "sp_u_2", username: "Prism", defaultPrivacyBucket: "sp_bk_1" },
+      ctx,
+    );
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.defaultBucketId).toBe("ps_bk_real");
+    }
+  });
+
+  it("returns mapped when defaultPrivacyBucket is absent", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    const result = mapSystemProfile({ _id: "sp_u_3", username: "Prism" }, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.defaultBucketId).toBeNull();
     }
-    expect(ctx.warnings).toHaveLength(1);
-    expect(ctx.warnings[0]?.entityType).toBe("system-profile");
   });
 });
