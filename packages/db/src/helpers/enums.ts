@@ -7,6 +7,9 @@
 import {
   ALL_API_KEY_SCOPES,
   BUCKET_CONTENT_ENTITY_TYPES,
+  IMPORT_ENTITY_TYPES,
+  IMPORT_JOB_STATUSES,
+  IMPORT_SOURCES,
   type AccountPurgeStatus,
   type AccountType,
   type ApiKey,
@@ -23,9 +26,6 @@ import {
   type ExportRequestStatus,
   type FieldDefinitionScopeType,
   type FriendConnectionStatus,
-  type ImportEntityType,
-  type ImportJobStatus,
-  type ImportSourceFormat,
   type JobStatus,
   type JobType,
   type KnownSaturationLevel,
@@ -45,7 +45,7 @@ import {
   type WebhookEventType,
 } from "@pluralscape/types";
 
-export { BUCKET_CONTENT_ENTITY_TYPES };
+export { BUCKET_CONTENT_ENTITY_TYPES, IMPORT_ENTITY_TYPES, IMPORT_JOB_STATUSES, IMPORT_SOURCES };
 
 export const ACCOUNT_TYPES = ["system", "viewer"] as const satisfies readonly AccountType[];
 export const KNOWN_SATURATION_LEVELS = [
@@ -458,41 +458,6 @@ export const BLOB_PURPOSES = [
   "export",
   "littles-safe-mode",
 ] as const satisfies readonly BlobPurpose[];
-export const IMPORT_SOURCES = [
-  "simply-plural",
-  "pluralkit",
-  "pluralscape",
-] as const satisfies readonly ImportSourceFormat[];
-export const IMPORT_JOB_STATUSES = [
-  "pending",
-  "validating",
-  "importing",
-  "completed",
-  "failed",
-] as const satisfies readonly ImportJobStatus[];
-export const IMPORT_ENTITY_TYPES = [
-  "member",
-  "group",
-  "custom-front",
-  "fronting-session",
-  "fronting-comment",
-  "switch",
-  "custom-field",
-  "field-definition",
-  "field-value",
-  "note",
-  "journal-entry",
-  "chat-message",
-  "board-message",
-  "channel-category",
-  "channel",
-  "poll",
-  "timer",
-  "privacy-bucket",
-  "system-profile",
-  "system-settings",
-  "unknown",
-] as const satisfies readonly ImportEntityType[];
 export const EXPORT_FORMATS = ["json", "csv"] as const satisfies readonly ExportFormat[];
 export const EXPORT_REQUEST_STATUSES = [
   "pending",
