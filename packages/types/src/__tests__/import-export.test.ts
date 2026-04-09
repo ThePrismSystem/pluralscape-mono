@@ -26,7 +26,7 @@ import type {
   ImportJob,
   ImportJobStatus,
   ImportProgress,
-  ImportSource,
+  ImportSourceFormat,
   MemberReport,
   SystemOverviewReport,
   PKImportGroup,
@@ -69,20 +69,20 @@ describe("PKProxyTag", () => {
   });
 });
 
-describe("ImportSource", () => {
+describe("ImportSourceFormat", () => {
   it("accepts valid sources", () => {
-    assertType<ImportSource>("simply-plural");
-    assertType<ImportSource>("pluralkit");
-    assertType<ImportSource>("pluralscape");
+    assertType<ImportSourceFormat>("simply-plural");
+    assertType<ImportSourceFormat>("pluralkit");
+    assertType<ImportSourceFormat>("pluralscape");
   });
 
   it("rejects invalid sources", () => {
     // @ts-expect-error invalid import source
-    assertType<ImportSource>("tupperbox");
+    assertType<ImportSourceFormat>("tupperbox");
   });
 
   it("is exhaustive in a switch", () => {
-    function handleSource(source: ImportSource): string {
+    function handleSource(source: ImportSourceFormat): string {
       switch (source) {
         case "simply-plural":
         case "pluralkit":
@@ -212,7 +212,7 @@ describe("ImportJob", () => {
     expectTypeOf<ImportJob["id"]>().toEqualTypeOf<ImportJobId>();
     expectTypeOf<ImportJob["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<ImportJob["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ImportJob["source"]>().toEqualTypeOf<ImportSource>();
+    expectTypeOf<ImportJob["source"]>().toEqualTypeOf<ImportSourceFormat>();
     expectTypeOf<ImportJob["status"]>().toEqualTypeOf<ImportJobStatus>();
     expectTypeOf<ImportJob["progressPercent"]>().toEqualTypeOf<number>();
     expectTypeOf<ImportJob["errorLog"]>().toEqualTypeOf<readonly ImportError[] | null>();
@@ -407,7 +407,7 @@ describe("ImportEntityRef", () => {
       pluralscapeEntityId: "mem_01HX000000000000000000000D" as MemberId,
       importedAt: 1234567890 as UnixMillis,
     };
-    expectTypeOf(ref.source).toExtend<ImportSource>();
+    expectTypeOf(ref.source).toExtend<ImportSourceFormat>();
     expectTypeOf(ref.sourceEntityType).toExtend<ImportEntityType>();
     expectTypeOf(ref.id).toEqualTypeOf<ImportEntityRefId>();
   });

@@ -37,7 +37,7 @@ import type {
   ImportCheckpointState,
   ImportEntityType,
   ImportJobStatus,
-  ImportSource,
+  ImportSourceFormat,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -49,7 +49,7 @@ export const importJobs = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH }).notNull(),
-    source: varchar("source", { length: ENUM_MAX_LENGTH }).notNull().$type<ImportSource>(),
+    source: varchar("source", { length: ENUM_MAX_LENGTH }).notNull().$type<ImportSourceFormat>(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("pending")
@@ -105,7 +105,7 @@ export const importEntityRefs = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH }).notNull(),
-    source: varchar("source", { length: ENUM_MAX_LENGTH }).notNull().$type<ImportSource>(),
+    source: varchar("source", { length: ENUM_MAX_LENGTH }).notNull().$type<ImportSourceFormat>(),
     sourceEntityType: varchar("source_entity_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .$type<ImportEntityType>(),

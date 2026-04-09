@@ -18,7 +18,7 @@ import type {
   ImportEntityRefId,
   ImportEntityTargetIdMap,
   ImportEntityType,
-  ImportSource,
+  ImportSourceFormat,
   PaginatedResult,
   SystemId,
 } from "@pluralscape/types";
@@ -34,14 +34,14 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 export type ImportEntityRefResult = ImportEntityRef;
 
 export interface RecordImportEntityRefInput {
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly sourceEntityType: ImportEntityType;
   readonly sourceEntityId: string;
   readonly pluralscapeEntityId: string;
 }
 
 export interface LookupImportEntityRefInput {
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly sourceEntityType: ImportEntityType;
   readonly sourceEntityId: string;
 }
@@ -49,7 +49,7 @@ export interface LookupImportEntityRefInput {
 interface ListImportEntityRefsOpts {
   readonly cursor?: string;
   readonly limit?: number;
-  readonly source?: ImportSource;
+  readonly source?: ImportSourceFormat;
   readonly entityType?: ImportEntityType;
   readonly sourceEntityId?: string;
 }

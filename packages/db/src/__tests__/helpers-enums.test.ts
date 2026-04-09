@@ -183,7 +183,7 @@ describe("enum arrays", () => {
     expect(BLOB_PURPOSES).toContain("littles-safe-mode");
   });
 
-  it("IMPORT_SOURCES matches ImportSource union", () => {
+  it("IMPORT_SOURCES matches ImportSourceFormat union", () => {
     expect(IMPORT_SOURCES).toEqual(["simply-plural", "pluralkit", "pluralscape"]);
   });
 

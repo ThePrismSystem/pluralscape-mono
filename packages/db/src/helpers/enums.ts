@@ -25,7 +25,7 @@ import {
   type FriendConnectionStatus,
   type ImportEntityType,
   type ImportJobStatus,
-  type ImportSource,
+  type ImportSourceFormat,
   type JobStatus,
   type JobType,
   type KnownSaturationLevel,
@@ -462,7 +462,7 @@ export const IMPORT_SOURCES = [
   "simply-plural",
   "pluralkit",
   "pluralscape",
-] as const satisfies readonly ImportSource[];
+] as const satisfies readonly ImportSourceFormat[];
 export const IMPORT_JOB_STATUSES = [
   "pending",
   "validating",

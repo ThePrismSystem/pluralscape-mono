@@ -1,4 +1,4 @@
-import type { ImportEntityType, ImportError, ImportSource } from "@pluralscape/types";
+import type { ImportEntityType, ImportError, ImportSourceFormat } from "@pluralscape/types";
 
 /**
  * The result of a persister upsert call.
@@ -27,7 +27,7 @@ export interface PersisterUpsertResult {
 export interface PersistableEntity {
   readonly entityType: ImportEntityType;
   readonly sourceEntityId: string;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly payload: unknown;
 }
 

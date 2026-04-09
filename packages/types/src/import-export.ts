@@ -78,7 +78,7 @@ export interface PKImportPayload {
 // ── Import job tracking ─────────────────────────────────────────────
 
 /** Source format for an import job. */
-export type ImportSource = "simply-plural" | "pluralkit" | "pluralscape";
+export type ImportSourceFormat = "simply-plural" | "pluralkit" | "pluralscape";
 
 /** Status of an import job. */
 export type ImportJobStatus = "pending" | "validating" | "importing" | "completed" | "failed";
@@ -146,7 +146,7 @@ export interface ImportJob {
   readonly id: ImportJobId;
   readonly accountId: AccountId;
   readonly systemId: SystemId;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly status: ImportJobStatus;
   readonly progressPercent: number;
   readonly errorLog: readonly ImportError[] | null;
@@ -201,7 +201,7 @@ interface ImportEntityRefBase {
   readonly id: ImportEntityRefId;
   readonly accountId: AccountId;
   readonly systemId: SystemId;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   /** Opaque identifier from the source system (e.g., Mongo ObjectId for SP). */
   readonly sourceEntityId: string;
   readonly importedAt: UnixMillis;
@@ -348,7 +348,7 @@ export const IMPORT_SOURCES = [
   "simply-plural",
   "pluralkit",
   "pluralscape",
-] as const satisfies readonly ImportSource[];
+] as const satisfies readonly ImportSourceFormat[];
 
 export const IMPORT_JOB_STATUSES = [
   "pending",
