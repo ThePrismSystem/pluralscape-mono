@@ -2,11 +2,21 @@ import type {
   AccountId,
   AccountPurgeRequestId,
   BlobId,
+  BoardMessageId,
   BucketId,
   ExportRequestId,
+  FieldDefinitionId,
+  FriendConnectionId,
+  FrontingSessionId,
+  GroupId,
+  ImportEntityRefId,
   ImportJobId,
   MemberId,
+  MessageId,
+  NoteId,
+  PollId,
   SystemId,
+  TimerId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
@@ -201,6 +211,13 @@ export type ImportEntityType =
   | "friend"
   | "unknown";
 
+/**
+ * ImportEntityType minus "unknown". Used for collections the importer
+ * actually traverses; "unknown" is reserved for error-log categorization
+ * only.
+ */
+export type ImportCollectionType = Exclude<ImportEntityType, "unknown">;
+
 /** Progress of an import job. */
 export interface ImportProgress {
   readonly totalItems: number;
@@ -209,13 +226,23 @@ export interface ImportProgress {
   readonly errors: readonly ImportError[];
 }
 
-/** An error that occurred during import. */
-export interface ImportError {
+interface ImportErrorBase {
   readonly entityType: ImportEntityType;
   readonly entityId: string | null;
   readonly message: string;
-  readonly fatal: boolean;
 }
+
+/**
+ * An error that occurred during import. Discriminated on `fatal`:
+ *
+ * - Non-fatal errors are per-entity: log, skip, continue. Always resumable.
+ * - Fatal errors halt the import. `recoverable: true` means the engine
+ *   can resume from the last checkpoint. `recoverable: false` means the
+ *   user must restart from scratch.
+ */
+export type ImportError =
+  | (ImportErrorBase & { readonly fatal: false })
+  | (ImportErrorBase & { readonly fatal: true; readonly recoverable: boolean });
 
 /** An import job. */
 export interface ImportJob {
@@ -233,6 +260,91 @@ export interface ImportJob {
   readonly updatedAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
 }
+
+/** Schema version for `ImportCheckpointState`. Bumped when the shape changes. */
+export type ImportCheckpointSchemaVersion = 1;
+
+/** Avatar handling mode during an import. */
+export type ImportAvatarMode = "api" | "zip" | "skip";
+
+/** Per-collection running counts during an import. */
+export interface ImportCollectionTotals {
+  readonly total: number;
+  readonly imported: number;
+  readonly updated: number;
+  readonly skipped: number;
+  readonly failed: number;
+}
+
+/**
+ * Resumption state stored in `import_jobs.checkpoint_state`.
+ *
+ * The `schemaVersion` discriminator allows forward-compatible migration:
+ * add `ImportCheckpointStateV2` as a union member when the shape changes.
+ */
+export interface ImportCheckpointStateV1 {
+  readonly schemaVersion: 1;
+  readonly checkpoint: {
+    readonly completedCollections: readonly ImportCollectionType[];
+    readonly currentCollection: ImportCollectionType;
+    readonly currentCollectionLastSourceId: string | null;
+  };
+  readonly options: {
+    readonly selectedCategories: Partial<Record<ImportCollectionType, boolean>>;
+    readonly avatarMode: ImportAvatarMode;
+  };
+  readonly totals: {
+    readonly perCollection: Partial<Record<ImportCollectionType, ImportCollectionTotals>>;
+  };
+}
+
+export type ImportCheckpointState = ImportCheckpointStateV1;
+
+interface ImportEntityRefBase {
+  readonly id: ImportEntityRefId;
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly source: ImportSource;
+  /** Opaque identifier from the source system (e.g., Mongo ObjectId for SP). */
+  readonly sourceEntityId: string;
+  readonly importedAt: UnixMillis;
+}
+
+/**
+ * Maps each ImportEntityType to the branded Pluralscape ID it resolves to.
+ * Used to type-scope `ImportEntityRef.pluralscapeEntityId` via a
+ * discriminated union. "switch" and "unknown" resolve to raw string because
+ * no dedicated branded IDs exist for those categories.
+ */
+export interface ImportEntityTargetIdMap {
+  readonly member: MemberId;
+  readonly group: GroupId;
+  readonly "fronting-session": FrontingSessionId;
+  readonly switch: string;
+  readonly "custom-field": FieldDefinitionId;
+  readonly note: NoteId;
+  readonly "chat-message": MessageId;
+  readonly "board-message": BoardMessageId;
+  readonly poll: PollId;
+  readonly timer: TimerId;
+  readonly "privacy-bucket": BucketId;
+  readonly friend: FriendConnectionId;
+  readonly unknown: string;
+}
+
+/**
+ * A source-entity to target-entity mapping recorded during an import.
+ * Enables idempotent re-imports and cross-device dedup.
+ *
+ * Discriminated on `sourceEntityType` so consumers get the correct branded
+ * target ID via narrowing (no manual cast).
+ */
+export type ImportEntityRef = {
+  [K in ImportEntityType]: ImportEntityRefBase & {
+    readonly sourceEntityType: K;
+    readonly pluralscapeEntityId: ImportEntityTargetIdMap[K];
+  };
+}[ImportEntityType];
 
 // ── Export types ─────────────────────────────────────────────────────
 
@@ -321,3 +433,60 @@ export interface SystemOverviewReport extends DownloadableReport {
   readonly bucketId: BucketId;
   readonly format: ReportFormat;
 }
+
+// ── Canonical SSOT enum tuples ──────────────────────────────────────
+// Imported by @pluralscape/db, @pluralscape/validation, and API router
+// files. Never redefine these values anywhere else.
+
+export const IMPORT_SOURCES = [
+  "simply-plural",
+  "pluralkit",
+  "pluralscape",
+] as const satisfies readonly ImportSource[];
+
+export const IMPORT_JOB_STATUSES = [
+  "pending",
+  "validating",
+  "importing",
+  "completed",
+  "failed",
+] as const satisfies readonly ImportJobStatus[];
+
+export const IMPORT_ENTITY_TYPES = [
+  "member",
+  "group",
+  "fronting-session",
+  "switch",
+  "custom-field",
+  "note",
+  "chat-message",
+  "board-message",
+  "poll",
+  "timer",
+  "privacy-bucket",
+  "friend",
+  "unknown",
+] as const satisfies readonly ImportEntityType[];
+
+export const IMPORT_COLLECTION_TYPES = [
+  "member",
+  "group",
+  "fronting-session",
+  "switch",
+  "custom-field",
+  "note",
+  "chat-message",
+  "board-message",
+  "poll",
+  "timer",
+  "privacy-bucket",
+  "friend",
+] as const satisfies readonly ImportCollectionType[];
+
+export const IMPORT_AVATAR_MODES = [
+  "api",
+  "zip",
+  "skip",
+] as const satisfies readonly ImportAvatarMode[];
+
+export const IMPORT_CHECKPOINT_SCHEMA_VERSION = 1 as const;

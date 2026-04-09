@@ -1254,3 +1254,312 @@ describe("RLS cross-tenant isolation — account-fk scope (PGlite)", () => {
     ).rejects.toThrow();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 10. RLS cross-tenant isolation — import_jobs (dual scope, PGlite)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — import_jobs (PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const systemIdA = crypto.randomUUID();
+  const systemIdB = crypto.randomUUID();
+  const jobIdA = crypto.randomUUID();
+  const jobIdB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await client.query(`
+      CREATE TABLE accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        email_hash VARCHAR(255) NOT NULL UNIQUE,
+        email_salt VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
+        encrypted_master_key BYTEA,
+        encrypted_email BYTEA,
+        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE systems (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        encrypted_data BYTEA,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
+      )
+    `);
+    await client.query(`
+      CREATE TABLE import_jobs (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+        source VARCHAR(50) NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
+        status VARCHAR(50) NOT NULL DEFAULT 'pending',
+        progress_percent INTEGER NOT NULL DEFAULT 0,
+        warning_count INTEGER NOT NULL DEFAULT 0,
+        chunks_completed INTEGER NOT NULL DEFAULT 0,
+        chunks_total INTEGER,
+        error_log JSONB,
+        checkpoint_state JSONB,
+        created_at BIGINT NOT NULL,
+        updated_at BIGINT NOT NULL,
+        completed_at BIGINT
+      )
+    `);
+
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+    await pgInsertSystem(db, accountIdA, systemIdA);
+    await pgInsertSystem(db, accountIdB, systemIdB);
+
+    const now = Date.now();
+    await client.query(
+      `INSERT INTO import_jobs (id, account_id, system_id, source, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [jobIdA, accountIdA, systemIdA, "simply-plural", now, now],
+    );
+    await client.query(
+      `INSERT INTO import_jobs (id, account_id, system_id, source, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [jobIdB, accountIdB, systemIdB, "simply-plural", now, now],
+    );
+
+    await client.query(`CREATE ROLE ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON import_jobs TO ${APP_ROLE}`);
+
+    for (const stmt of enableRls("import_jobs")) {
+      await client.query(stmt);
+    }
+    await client.query(dualTenantRlsPolicy("import_jobs"));
+
+    await client.query(`SET ROLE ${APP_ROLE}`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("only sees import_jobs for correct tenant (both GUCs set)", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM import_jobs`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(jobIdA);
+  });
+
+  it("returns empty when GUCs cleared (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM import_jobs`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant INSERT blocked", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const now = Date.now();
+    await expect(
+      client.query(
+        `INSERT INTO import_jobs (id, account_id, system_id, source, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [crypto.randomUUID(), accountIdB, systemIdB, "simply-plural", now, now],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("cross-tenant UPDATE affects 0 rows", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(
+      sql`UPDATE import_jobs SET progress_percent = 50 WHERE id = ${jobIdB}`,
+    );
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant DELETE affects 0 rows", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    await db.execute(sql`DELETE FROM import_jobs WHERE id = ${jobIdB}`);
+
+    // Verify row still exists under tenant B
+    await setSessionAccountId(db, accountIdB);
+    await setSessionSystemId(db, systemIdB);
+    const result = await db.execute(sql`SELECT * FROM import_jobs WHERE id = ${jobIdB}`);
+    expect(result.rows).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. RLS cross-tenant isolation — import_entity_refs (dual scope, PGlite)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — import_entity_refs (PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const systemIdA = crypto.randomUUID();
+  const systemIdB = crypto.randomUUID();
+  const refIdA = crypto.randomUUID();
+  const refIdB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await client.query(`
+      CREATE TABLE accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        email_hash VARCHAR(255) NOT NULL UNIQUE,
+        email_salt VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
+        encrypted_master_key BYTEA,
+        encrypted_email BYTEA,
+        account_type VARCHAR(50) NOT NULL DEFAULT 'system',
+        audit_log_ip_tracking BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE systems (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        encrypted_data BYTEA,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        archived BOOLEAN NOT NULL DEFAULT false,
+        archived_at TIMESTAMPTZ
+      )
+    `);
+    await client.query(`
+      CREATE TABLE import_entity_refs (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+        source VARCHAR(50) NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
+        source_entity_type VARCHAR(50) NOT NULL,
+        source_entity_id VARCHAR(255) NOT NULL,
+        pluralscape_entity_id VARCHAR(255) NOT NULL,
+        imported_at BIGINT NOT NULL
+      )
+    `);
+
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+    await pgInsertSystem(db, accountIdA, systemIdA);
+    await pgInsertSystem(db, accountIdB, systemIdB);
+
+    const now = Date.now();
+    await client.query(
+      `INSERT INTO import_entity_refs (id, account_id, system_id, source, source_entity_type, source_entity_id, pluralscape_entity_id, imported_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [refIdA, accountIdA, systemIdA, "simply-plural", "member", "sp-a", "mem_a", now],
+    );
+    await client.query(
+      `INSERT INTO import_entity_refs (id, account_id, system_id, source, source_entity_type, source_entity_id, pluralscape_entity_id, imported_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [refIdB, accountIdB, systemIdB, "simply-plural", "member", "sp-b", "mem_b", now],
+    );
+
+    await client.query(`CREATE ROLE ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON import_entity_refs TO ${APP_ROLE}`);
+
+    for (const stmt of enableRls("import_entity_refs")) {
+      await client.query(stmt);
+    }
+    await client.query(dualTenantRlsPolicy("import_entity_refs"));
+
+    await client.query(`SET ROLE ${APP_ROLE}`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("only sees import_entity_refs for correct tenant (both GUCs set)", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM import_entity_refs`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(refIdA);
+  });
+
+  it("returns empty when GUCs cleared (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM import_entity_refs`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant INSERT blocked", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const now = Date.now();
+    await expect(
+      client.query(
+        `INSERT INTO import_entity_refs (id, account_id, system_id, source, source_entity_type, source_entity_id, pluralscape_entity_id, imported_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          crypto.randomUUID(),
+          accountIdB,
+          systemIdB,
+          "simply-plural",
+          "member",
+          "sp-x",
+          "mem_x",
+          now,
+        ],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("cross-tenant UPDATE affects 0 rows", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(
+      sql`UPDATE import_entity_refs SET source_entity_id = 'modified' WHERE id = ${refIdB}`,
+    );
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant DELETE affects 0 rows", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    await db.execute(sql`DELETE FROM import_entity_refs WHERE id = ${refIdB}`);
+
+    // Verify row still exists under tenant B
+    await setSessionAccountId(db, accountIdB);
+    await setSessionSystemId(db, systemIdB);
+    const result = await db.execute(sql`SELECT * FROM import_entity_refs WHERE id = ${refIdB}`);
+    expect(result.rows).toHaveLength(1);
+  });
+});

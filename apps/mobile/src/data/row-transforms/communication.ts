@@ -136,7 +136,7 @@ export function rowToPoll(row: Record<string, unknown>): Poll | ArchivedPoll {
   const base: Poll = {
     id: guardedStr(row["id"], "polls", "id", id) as Poll["id"],
     systemId: guardedStr(row["system_id"], "polls", "system_id", id) as Poll["systemId"],
-    createdByMemberId: guardedStr(
+    createdByMemberId: strOrNull(
       row["created_by_member_id"],
       "polls",
       "created_by_member_id",
@@ -175,7 +175,7 @@ export function rowToAcknowledgement(
       "system_id",
       id,
     ) as AcknowledgementRequest["systemId"],
-    createdByMemberId: guardedStr(
+    createdByMemberId: strOrNull(
       row["created_by_member_id"],
       "acknowledgements",
       "created_by_member_id",

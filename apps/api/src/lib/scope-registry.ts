@@ -314,6 +314,16 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   ["GET /systems/:systemId/snapshots/:snapshotId", "read:system"],
   ["DELETE /systems/:systemId/snapshots/:snapshotId", "delete:system"],
 
+  // Import jobs
+  ["GET /systems/:systemId/import-jobs", "read:system"],
+  ["POST /systems/:systemId/import-jobs", "write:system"],
+  ["GET /systems/:systemId/import-jobs/:importJobId", "read:system"],
+  ["PATCH /systems/:systemId/import-jobs/:importJobId", "write:system"],
+
+  // Import entity refs
+  ["GET /systems/:systemId/import-entity-refs", "read:system"],
+  ["GET /systems/:systemId/import-entity-refs/lookup", "read:system"],
+
   // Structure Entity Types
   ["GET /systems/:systemId/structure/entity-types", "read:structure"],
   ["POST /systems/:systemId/structure/entity-types", "write:structure"],
@@ -661,6 +671,16 @@ const TRPC_ENTRIES: readonly [string, RequiredScope][] = [
   ["snapshot.get", "read:system"],
   ["snapshot.list", "read:system"],
   ["snapshot.delete", "delete:system"],
+
+  // importJob
+  ["importJob.create", "write:system"],
+  ["importJob.get", "read:system"],
+  ["importJob.list", "read:system"],
+  ["importJob.update", "write:system"],
+
+  // importEntityRef
+  ["importEntityRef.list", "read:system"],
+  ["importEntityRef.lookup", "read:system"],
 
   // deviceToken
   ["deviceToken.register", "write:notifications"],

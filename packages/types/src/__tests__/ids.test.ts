@@ -55,6 +55,7 @@ import type {
   SyncChangeId,
   SyncSnapshotId,
   ImportJobId,
+  ImportEntityRefId,
   ExportRequestId,
   FrontingReportId,
   FrontingCommentId,
@@ -109,7 +110,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 63 branded types as string-based", () => {
+  it("defines all 64 branded types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -161,6 +162,7 @@ describe("branded ID types", () => {
     expectTypeOf<SyncChangeId>().toExtend<string>();
     expectTypeOf<SyncSnapshotId>().toExtend<string>();
     expectTypeOf<ImportJobId>().toExtend<string>();
+    expectTypeOf<ImportEntityRefId>().toExtend<string>();
     expectTypeOf<ExportRequestId>().toExtend<string>();
     expectTypeOf<FrontingReportId>().toExtend<string>();
     expectTypeOf<FrontingCommentId>().toExtend<string>();
@@ -211,7 +213,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(63);
+    expect(prefixCount).toBe(64);
   });
 });
 

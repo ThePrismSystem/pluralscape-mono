@@ -23,8 +23,6 @@ import {
   type ExportRequestStatus,
   type FieldDefinitionScopeType,
   type FriendConnectionStatus,
-  type ImportJobStatus,
-  type ImportSource,
   type JobStatus,
   type JobType,
   type KnownSaturationLevel,
@@ -349,6 +347,11 @@ export const AUDIT_EVENT_TYPES = [
   "device-token.deleted",
   "notification-config.updated",
   "friend-notification-preference.updated",
+  // ── Import ──
+  "import-job.created",
+  "import-job.updated",
+  "import-job.completed",
+  "import-job.failed",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
@@ -452,18 +455,13 @@ export const BLOB_PURPOSES = [
   "export",
   "littles-safe-mode",
 ] as const satisfies readonly BlobPurpose[];
-export const IMPORT_SOURCES = [
-  "simply-plural",
-  "pluralkit",
-  "pluralscape",
-] as const satisfies readonly ImportSource[];
-export const IMPORT_JOB_STATUSES = [
-  "pending",
-  "validating",
-  "importing",
-  "completed",
-  "failed",
-] as const satisfies readonly ImportJobStatus[];
+export {
+  IMPORT_AVATAR_MODES,
+  IMPORT_COLLECTION_TYPES,
+  IMPORT_ENTITY_TYPES,
+  IMPORT_JOB_STATUSES,
+  IMPORT_SOURCES,
+} from "@pluralscape/types";
 export const EXPORT_FORMATS = ["json", "csv"] as const satisfies readonly ExportFormat[];
 export const EXPORT_REQUEST_STATUSES = [
   "pending",

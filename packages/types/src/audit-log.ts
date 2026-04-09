@@ -228,7 +228,12 @@ export type AuditEventType =
   | "friend-notification-preference.updated"
   // ── API Keys ──
   | "api-key.created"
-  | "api-key.revoked";
+  | "api-key.revoked"
+  // ── Import ──
+  | "import-job.created"
+  | "import-job.updated"
+  | "import-job.completed"
+  | "import-job.failed";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

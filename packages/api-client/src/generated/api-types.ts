@@ -5270,6 +5270,119 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/systems/{systemId}/import-jobs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List import jobs
+     * @description Returns a paginated list of import jobs for the specified system, ordered by creation time descending.
+     *
+     *     Rate limit: 60 req/min (readDefault)
+     */
+    get: operations["listImportJobs"];
+    put?: never;
+    /**
+     * Create an import job
+     * @description Creates a new import job in the `pending` state with an initial checkpoint state seeded from the provided options.
+     *
+     *     At least one category in `selectedCategories` must be `true`.
+     *
+     *     Rate limit: 60 req/min (write)
+     *     Idempotency: supports `Idempotency-Key` header.
+     */
+    post: operations["createImportJob"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/systems/{systemId}/import-jobs/{importJobId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get an import job
+     * @description Fetches a single import job by ID.
+     *
+     *     Rate limit: 60 req/min (readDefault)
+     */
+    get: operations["getImportJob"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Update an import job
+     * @description Partially updates an import job. The `status` field is constrained by a state machine:
+     *
+     *     - `pending` → `pending`, `validating`, `importing`, `failed`
+     *     - `validating` → `validating`, `importing`, `failed`
+     *     - `importing` → `importing`, `completed`, `failed`
+     *     - `failed` → `validating`, `importing` (only if the last error entry is `fatal: true, recoverable: true`)
+     *     - `completed` → no transitions allowed (terminal)
+     *
+     *     An illegal transition returns `409 INVALID_STATE`.
+     *
+     *     Rate limit: 60 req/min (write)
+     */
+    patch: operations["updateImportJob"];
+    trace?: never;
+  };
+  "/systems/{systemId}/import-entity-refs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List import entity refs
+     * @description Returns a paginated list of source-to-Pluralscape entity ID mappings recorded during imports.
+     *
+     *     Rate limit: 60 req/min (readDefault)
+     */
+    get: operations["listImportEntityRefs"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/systems/{systemId}/import-entity-refs/lookup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Look up a single entity ref by source identity
+     * @description Looks up a single import entity ref by its (source, sourceEntityType, sourceEntityId) triple.
+     *
+     *     Returns `404 NOT_FOUND` if no mapping exists.
+     *
+     *     Rate limit: 60 req/min (readDefault)
+     */
+    get: operations["lookupImportEntityRef"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8223,6 +8336,120 @@ export interface components {
     ConfirmAcknowledgementRequest: {
       /** @description Optional T1-encrypted confirmation data (replaces existing encryptedData) */
       encryptedData?: string;
+    };
+    /** @enum {string} */
+    ImportJobStatus: "pending" | "validating" | "importing" | "completed" | "failed";
+    /**
+     * @description Source format for an import job.
+     * @enum {string}
+     */
+    ImportSource: "simply-plural" | "pluralkit" | "pluralscape";
+    /** @enum {string} */
+    ImportEntityType:
+      | "member"
+      | "group"
+      | "fronting-session"
+      | "switch"
+      | "custom-field"
+      | "note"
+      | "chat-message"
+      | "board-message"
+      | "poll"
+      | "timer"
+      | "privacy-bucket"
+      | "friend"
+      | "unknown";
+    ImportErrorNonFatal: {
+      entityType: components["schemas"]["ImportEntityType"];
+      entityId: string | null;
+      message: string;
+      /** @enum {boolean} */
+      fatal: false;
+    };
+    ImportErrorFatal: {
+      entityType: components["schemas"]["ImportEntityType"];
+      entityId: string | null;
+      message: string;
+      /** @enum {boolean} */
+      fatal: true;
+      recoverable: boolean;
+    };
+    ImportError:
+      | components["schemas"]["ImportErrorNonFatal"]
+      | components["schemas"]["ImportErrorFatal"];
+    /** @enum {string} */
+    ImportAvatarMode: "api" | "zip" | "skip";
+    ImportCollectionTotals: {
+      total: number;
+      imported: number;
+      updated: number;
+      skipped: number;
+      failed: number;
+    };
+    ImportCheckpointState: {
+      /** @enum {integer} */
+      schemaVersion: 1;
+      checkpoint: {
+        completedCollections: components["schemas"]["ImportEntityType"][];
+        currentCollection: components["schemas"]["ImportEntityType"];
+        currentCollectionLastSourceId: string | null;
+      };
+      options: {
+        selectedCategories: {
+          [key: string]: boolean;
+        };
+        avatarMode: components["schemas"]["ImportAvatarMode"];
+      };
+      totals: {
+        perCollection: {
+          [key: string]: components["schemas"]["ImportCollectionTotals"];
+        };
+      };
+    };
+    ImportJobResponse: {
+      id: string;
+      accountId: string;
+      systemId: string;
+      source: components["schemas"]["ImportSource"];
+      status: components["schemas"]["ImportJobStatus"];
+      progressPercent: number;
+      errorLog: components["schemas"]["ImportError"][] | null;
+      warningCount: number;
+      chunksTotal: number | null;
+      chunksCompleted: number;
+      checkpointState: components["schemas"]["ImportCheckpointState"] | null;
+      createdAt: number;
+      updatedAt: number;
+      completedAt: number | null;
+    };
+    CreateImportJobBody: {
+      source: components["schemas"]["ImportSource"];
+      /** @description Map of ImportEntityType → whether to import. At least one must be true. */
+      selectedCategories: {
+        [key: string]: boolean;
+      };
+      avatarMode: components["schemas"]["ImportAvatarMode"];
+    };
+    /** @description At least one field must be provided. */
+    UpdateImportJobBody: {
+      status?: components["schemas"]["ImportJobStatus"];
+      progressPercent?: number;
+      warningCount?: number;
+      chunksTotal?: number | null;
+      chunksCompleted?: number;
+      errorLog?: components["schemas"]["ImportError"][] | null;
+      checkpointState?: components["schemas"]["ImportCheckpointState"] | null;
+    };
+    ImportEntityRefResponse: {
+      id: string;
+      accountId: string;
+      systemId: string;
+      source: components["schemas"]["ImportSource"];
+      sourceEntityType: components["schemas"]["ImportEntityType"];
+      sourceEntityId: string;
+      /** @description Brand varies by sourceEntityType (MemberId, GroupId, etc.). */
+      pluralscapeEntityId: string;
+      importedAt: number;
     };
   };
   responses: {
@@ -17079,6 +17306,251 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthenticated"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  listImportJobs: {
+    parameters: {
+      query?: {
+        /** @description Opaque pagination cursor from a previous response */
+        cursor?: components["parameters"]["Cursor"];
+        /** @description Maximum number of items to return (default 25, max 100) */
+        limit?: components["parameters"]["Limit"];
+        status?: components["schemas"]["ImportJobStatus"];
+        source?: components["schemas"]["ImportSource"];
+      };
+      header?: never;
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated import job list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            items: components["schemas"]["ImportJobResponse"][];
+          } & components["schemas"]["PaginationMeta"];
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions to list import jobs for this system */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  createImportJob: {
+    parameters: {
+      query?: never;
+      header?: {
+        /** @description Client-generated idempotency key to prevent duplicate jobs */
+        "Idempotency-Key"?: string;
+      };
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateImportJobBody"];
+      };
+    };
+    responses: {
+      /** @description Import job created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: components["schemas"]["ImportJobResponse"];
+          };
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions to create import jobs for this system */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  getImportJob: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+        importJobId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Import job */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: components["schemas"]["ImportJobResponse"];
+          };
+        };
+      };
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions to access this import job */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  updateImportJob: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+        importJobId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UpdateImportJobBody"];
+      };
+    };
+    responses: {
+      /** @description Import job updated */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: components["schemas"]["ImportJobResponse"];
+          };
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions to update this import job */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  listImportEntityRefs: {
+    parameters: {
+      query?: {
+        /** @description Opaque pagination cursor from a previous response */
+        cursor?: components["parameters"]["Cursor"];
+        /** @description Maximum number of items to return (default 25, max 100) */
+        limit?: components["parameters"]["Limit"];
+        source?: components["schemas"]["ImportSource"];
+        entityType?: components["schemas"]["ImportEntityType"];
+        sourceEntityId?: string;
+      };
+      header?: never;
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Paginated entity ref list */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            items: components["schemas"]["ImportEntityRefResponse"][];
+          } & components["schemas"]["PaginationMeta"];
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions to list import entity refs for this system */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      429: components["responses"]["RateLimited"];
+    };
+  };
+  lookupImportEntityRef: {
+    parameters: {
+      query: {
+        source: components["schemas"]["ImportSource"];
+        sourceEntityType: components["schemas"]["ImportEntityType"];
+        sourceEntityId: string;
+      };
+      header?: never;
+      path: {
+        /** @description System ID (prefixed with `sys_`) */
+        systemId: components["parameters"]["SystemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Entity ref */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            data: components["schemas"]["ImportEntityRefResponse"];
+          };
+        };
+      };
+      400: components["responses"]["ValidationError"];
+      401: components["responses"]["Unauthenticated"];
+      /** @description Insufficient permissions to look up import entity refs for this system */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       404: components["responses"]["NotFound"];
       429: components["responses"]["RateLimited"];
     };

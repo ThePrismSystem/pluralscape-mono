@@ -21,6 +21,7 @@ import {
   ACCOUNT_PURGE_STATUSES,
   EXPORT_FORMATS,
   EXPORT_REQUEST_STATUSES,
+  IMPORT_ENTITY_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
 } from "../../helpers/enums.js";
@@ -33,6 +34,8 @@ import type {
   AccountPurgeStatus,
   ExportFormat,
   ExportRequestStatus,
+  ImportCheckpointState,
+  ImportEntityType,
   ImportJobStatus,
   ImportSource,
 } from "@pluralscape/types";
@@ -54,6 +57,8 @@ export const importJobs = pgTable(
     progressPercent: integer("progress_percent").notNull().default(0),
     /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
     errorLog: jsonb("error_log"),
+    /** Resumption state for interrupted imports. See ImportCheckpointState in @pluralscape/types. */
+    checkpointState: jsonb("checkpoint_state").$type<ImportCheckpointState>(),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
@@ -77,6 +82,51 @@ export const importJobs = pgTable(
     check(
       "import_jobs_error_log_length_check",
       sql`${t.errorLog} IS NULL OR jsonb_array_length(${t.errorLog}) <= ${sql.raw(String(MAX_ERROR_LOG_ENTRIES))}`,
+    ),
+    foreignKey({
+      columns: [t.systemId, t.accountId],
+      foreignColumns: [systems.id, systems.accountId],
+    }).onDelete("cascade"),
+  ],
+);
+
+/**
+ * Source-entity to target-entity mapping recorded during an import.
+ * Enables idempotent re-imports and cross-device dedup.
+ *
+ * T3 operational metadata. Opaque source IDs contain no identifying user data.
+ * RLS: account + system scoped (same pattern as import_jobs).
+ */
+export const importEntityRefs = pgTable(
+  "import_entity_refs",
+  {
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH }).notNull(),
+    source: varchar("source", { length: ENUM_MAX_LENGTH }).notNull().$type<ImportSource>(),
+    sourceEntityType: varchar("source_entity_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<ImportEntityType>(),
+    sourceEntityId: varchar("source_entity_id", { length: 128 }).notNull(),
+    pluralscapeEntityId: varchar("pluralscape_entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    importedAt: pgTimestamp("imported_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("import_entity_refs_source_unique_idx").on(
+      t.accountId,
+      t.systemId,
+      t.source,
+      t.sourceEntityType,
+      t.sourceEntityId,
+    ),
+    index("import_entity_refs_pluralscape_entity_id_idx").on(t.pluralscapeEntityId),
+    index("import_entity_refs_account_system_idx").on(t.accountId, t.systemId),
+    check("import_entity_refs_source_check", enumCheck(t.source, IMPORT_SOURCES)),
+    check(
+      "import_entity_refs_source_entity_type_check",
+      enumCheck(t.sourceEntityType, IMPORT_ENTITY_TYPES),
     ),
     foreignKey({
       columns: [t.systemId, t.accountId],
@@ -148,6 +198,8 @@ export const accountPurgeRequests = pgTable(
 
 export type ImportJobRow = InferSelectModel<typeof importJobs>;
 export type NewImportJob = InferInsertModel<typeof importJobs>;
+export type ImportEntityRefRow = InferSelectModel<typeof importEntityRefs>;
+export type NewImportEntityRef = InferInsertModel<typeof importEntityRefs>;
 export type ExportRequestRow = InferSelectModel<typeof exportRequests>;
 export type NewExportRequest = InferInsertModel<typeof exportRequests>;
 export type AccountPurgeRequestRow = InferSelectModel<typeof accountPurgeRequests>;

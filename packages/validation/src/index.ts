@@ -201,3 +201,11 @@ export {
 export { CreateApiKeyBodySchema } from "./api-key.js";
 export { PurgeSystemBodySchema } from "./system-purge.js";
 export { CreateSnapshotBodySchema, DuplicateSystemBodySchema } from "./snapshot.js";
+export {
+  CreateImportJobBodySchema,
+  UpdateImportJobBodySchema,
+  ImportJobQuerySchema,
+  ImportErrorSchema,
+  ImportCheckpointStateSchema,
+} from "./import-job.js";
+export { ImportEntityRefQuerySchema } from "./import-entity-ref.js";

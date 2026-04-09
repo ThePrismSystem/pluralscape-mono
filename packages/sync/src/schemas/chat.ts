@@ -69,7 +69,7 @@ export interface CrdtBoardMessage extends CrdtAuditFields {
 export interface CrdtPoll extends CrdtAuditFields {
   id: CrdtString;
   systemId: CrdtString;
-  createdByMemberId: CrdtString;
+  createdByMemberId: CrdtOptionalString;
   title: CrdtString;
   description: CrdtOptionalString;
   /** PollKind string: "standard" | "custom" */
@@ -126,7 +126,7 @@ export interface CrdtPollVote {
 export interface CrdtAcknowledgementRequest extends CrdtAuditFields {
   id: CrdtString;
   systemId: CrdtString;
-  createdByMemberId: CrdtString;
+  createdByMemberId: CrdtOptionalString;
   targetMemberId: CrdtString;
   message: CrdtString;
   /** LWW — set to true when target member confirms. */

@@ -21,6 +21,7 @@ import {
   EXPORT_REQUEST_STATUSES,
   FRIEND_CONNECTION_STATUSES,
   FRONTING_REPORT_FORMATS,
+  IMPORT_ENTITY_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
   JOB_STATUSES,
@@ -43,6 +44,7 @@ import {
   WEBHOOK_EVENT_TYPES,
 } from "../helpers/enums.js";
 
+import type { ImportEntityType } from "@pluralscape/types";
 import type { AnyColumn } from "drizzle-orm";
 
 describe("enumCheck", () => {
@@ -122,7 +124,7 @@ describe("enum arrays", () => {
   });
 
   it("AUDIT_EVENT_TYPES matches AuditEventType union", () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(214);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(218);
     expect(AUDIT_EVENT_TYPES).toContain("auth.login");
     expect(AUDIT_EVENT_TYPES).toContain("device.security.jailbreak_warning_shown");
     expect(AUDIT_EVENT_TYPES).toContain("auth.password-reset-via-recovery");
@@ -306,7 +308,7 @@ describe("enum arrays", () => {
     expect(SYNC_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(68);
-    expect(AUDIT_EVENT_TYPES).toHaveLength(214);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(218);
     expect(CHANNEL_TYPES).toHaveLength(2);
     expect(POLL_STATUSES).toHaveLength(2);
     expect(POLL_KINDS).toHaveLength(2);
@@ -370,5 +372,26 @@ describe("parseSearchableEntityType", () => {
 
   it("throws for unknown string", () => {
     expect(() => parseSearchableEntityType("nonexistent")).toThrow("Unknown SearchableEntityType");
+  });
+});
+
+describe("IMPORT_ENTITY_TYPES", () => {
+  it("includes every ImportEntityType variant", () => {
+    const expected: readonly ImportEntityType[] = [
+      "member",
+      "group",
+      "fronting-session",
+      "switch",
+      "custom-field",
+      "note",
+      "chat-message",
+      "board-message",
+      "poll",
+      "timer",
+      "privacy-bucket",
+      "friend",
+      "unknown",
+    ];
+    expect([...IMPORT_ENTITY_TYPES].sort()).toEqual([...expected].sort());
   });
 });

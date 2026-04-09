@@ -1,0 +1,108 @@
+/systems/{systemId}/import-entity-refs:
+  get:
+    operationId: listImportEntityRefs
+    tags: [Import]
+    summary: List import entity refs
+    description: |
+      Returns a paginated list of source-to-Pluralscape entity ID mappings recorded during imports.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: source
+        in: query
+        required: false
+        schema:
+          $ref: "../schemas/import-export.yaml#/ImportSource"
+      - name: entityType
+        in: query
+        required: false
+        schema:
+          $ref: "../schemas/import-export.yaml#/ImportEntityType"
+      - name: sourceEntityId
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 128
+    responses:
+      "200":
+        description: Paginated entity ref list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/import-export.yaml#/ImportEntityRefResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Insufficient permissions to list import entity refs for this system
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/import-entity-refs/lookup:
+  get:
+    operationId: lookupImportEntityRef
+    tags: [Import]
+    summary: Look up a single entity ref by source identity
+    description: |
+      Looks up a single import entity ref by its (source, sourceEntityType, sourceEntityId) triple.
+
+      Returns `404 NOT_FOUND` if no mapping exists.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: source
+        in: query
+        required: true
+        schema:
+          $ref: "../schemas/import-export.yaml#/ImportSource"
+      - name: sourceEntityType
+        in: query
+        required: true
+        schema:
+          $ref: "../schemas/import-export.yaml#/ImportEntityType"
+      - name: sourceEntityId
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 128
+    responses:
+      "200":
+        description: Entity ref
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/import-export.yaml#/ImportEntityRefResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "403":
+        description: Insufficient permissions to look up import entity refs for this system
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

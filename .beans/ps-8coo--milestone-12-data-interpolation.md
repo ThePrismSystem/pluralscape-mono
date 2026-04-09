@@ -1,11 +1,11 @@
 ---
 # ps-8coo
-title: "Milestone 11: Data Interpolation"
+title: "Milestone 12: Data Interpolation"
 status: todo
 type: milestone
 priority: normal
 created_at: 2026-03-31T23:10:19Z
-updated_at: 2026-03-31T23:48:36Z
+updated_at: 2026-04-08T07:09:31Z
 blocked_by:
   - ps-vq2h
 ---

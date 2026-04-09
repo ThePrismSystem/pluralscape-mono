@@ -65,6 +65,7 @@ export type SyncDocumentId = Brand<string, "SyncDocumentId">;
 export type SyncChangeId = Brand<string, "SyncChangeId">;
 export type SyncSnapshotId = Brand<string, "SyncSnapshotId">;
 export type ImportJobId = Brand<string, "ImportJobId">;
+export type ImportEntityRefId = Brand<string, "ImportEntityRefId">;
 export type PKBridgeConfigId = Brand<string, "PKBridgeConfigId">;
 export type AccountPurgeRequestId = Brand<string, "AccountPurgeRequestId">;
 export type ExportRequestId = Brand<string, "ExportRequestId">;
@@ -145,6 +146,7 @@ export const ID_PREFIXES = {
   syncChange: "schg_",
   syncSnapshot: "ssnp_",
   importJob: "ij_",
+  importEntityRef: "ier_",
   pkBridgeConfig: "pkb_",
   accountPurgeRequest: "apr_",
   exportRequest: "er_",
@@ -212,6 +214,7 @@ export interface IdPrefixBrandMap {
   schg_: "SyncChangeId";
   ssnp_: "SyncSnapshotId";
   ij_: "ImportJobId";
+  ier_: "ImportEntityRefId";
   pkb_: "PKBridgeConfigId";
   apr_: "AccountPurgeRequestId";
   er_: "ExportRequestId";

@@ -1571,6 +1571,11 @@ describe("rowToPoll", () => {
     expect(result.closedAt).toBe(1_700_000_001_000);
     expect(result.endsAt).toBe(1_700_000_002_000);
   });
+
+  it("allows null createdByMemberId for SP-imported polls", () => {
+    const result = rowToPoll(basePollRow({ created_by_member_id: null }));
+    expect(result.createdByMemberId).toBeNull();
+  });
 });
 
 describe("rowToAcknowledgement", () => {
@@ -1614,6 +1619,11 @@ describe("rowToAcknowledgement", () => {
     if (result.archived) {
       expect(result.archivedAt).toBe(1_700_000_888_000);
     }
+  });
+
+  it("allows null createdByMemberId", () => {
+    const result = rowToAcknowledgement(baseAckRow({ created_by_member_id: null }));
+    expect(result.createdByMemberId).toBeNull();
   });
 });
 

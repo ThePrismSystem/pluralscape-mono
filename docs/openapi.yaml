@@ -159,6 +159,8 @@ tags:
     description: Recurring check-in timer configurations
   - name: Check-In Records
     description: Scheduled check-in instances with respond/dismiss lifecycle
+  - name: Import
+    description: Data import jobs and source entity mappings.
 paths:
   /auth/register:
     post:
@@ -11080,6 +11082,311 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/import-jobs:
+    get:
+      operationId: listImportJobs
+      tags:
+        - Import
+      summary: List import jobs
+      description: |
+        Returns a paginated list of import jobs for the specified system, ordered by creation time descending.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ImportJobStatus"
+        - name: source
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ImportSource"
+      responses:
+        "200":
+          description: Paginated import job list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ImportJobResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions to list import jobs for this system
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    post:
+      operationId: createImportJob
+      tags:
+        - Import
+      summary: Create an import job
+      description: |
+        Creates a new import job in the `pending` state with an initial checkpoint state seeded from the provided options.
+
+        At least one category in `selectedCategories` must be `true`.
+
+        Rate limit: 60 req/min (write)
+        Idempotency: supports `Idempotency-Key` header.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Client-generated idempotency key to prevent duplicate jobs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateImportJobBody"
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportJobResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions to create import jobs for this system
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/import-jobs/{importJobId}:
+    get:
+      operationId: getImportJob
+      tags:
+        - Import
+      summary: Get an import job
+      description: |
+        Fetches a single import job by ID.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: importJobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Import job
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportJobResponse"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions to access this import job
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    patch:
+      operationId: updateImportJob
+      tags:
+        - Import
+      summary: Update an import job
+      description: |
+        Partially updates an import job. The `status` field is constrained by a state machine:
+
+        - `pending` → `pending`, `validating`, `importing`, `failed`
+        - `validating` → `validating`, `importing`, `failed`
+        - `importing` → `importing`, `completed`, `failed`
+        - `failed` → `validating`, `importing` (only if the last error entry is `fatal: true, recoverable: true`)
+        - `completed` → no transitions allowed (terminal)
+
+        An illegal transition returns `409 INVALID_STATE`.
+
+        Rate limit: 60 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: importJobId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateImportJobBody"
+      responses:
+        "200":
+          description: Import job updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportJobResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions to update this import job
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/import-entity-refs:
+    get:
+      operationId: listImportEntityRefs
+      tags:
+        - Import
+      summary: List import entity refs
+      description: |
+        Returns a paginated list of source-to-Pluralscape entity ID mappings recorded during imports.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+        - name: source
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ImportSource"
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ImportEntityType"
+        - name: sourceEntityId
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        "200":
+          description: Paginated entity ref list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ImportEntityRefResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions to list import entity refs for this system
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/import-entity-refs/lookup:
+    get:
+      operationId: lookupImportEntityRef
+      tags:
+        - Import
+      summary: Look up a single entity ref by source identity
+      description: |
+        Looks up a single import entity ref by its (source, sourceEntityType, sourceEntityId) triple.
+
+        Returns `404 NOT_FOUND` if no mapping exists.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+        - name: source
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/ImportSource"
+        - name: sourceEntityType
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/ImportEntityType"
+        - name: sourceEntityId
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Entity ref
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportEntityRefResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions to look up import entity refs for this system
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
 components:
   securitySchemes:
     bearerAuth:
@@ -16402,6 +16709,294 @@ components:
           minLength: 1
           maxLength: 87382
           description: Optional T1-encrypted confirmation data (replaces existing encryptedData)
+    ImportJobStatus:
+      type: string
+      enum:
+        - pending
+        - validating
+        - importing
+        - completed
+        - failed
+    ImportSource:
+      type: string
+      enum:
+        - simply-plural
+        - pluralkit
+        - pluralscape
+      description: Source format for an import job.
+    ImportEntityType:
+      type: string
+      enum:
+        - member
+        - group
+        - fronting-session
+        - switch
+        - custom-field
+        - note
+        - chat-message
+        - board-message
+        - poll
+        - timer
+        - privacy-bucket
+        - friend
+        - unknown
+    ImportErrorNonFatal:
+      type: object
+      required:
+        - entityType
+        - entityId
+        - message
+        - fatal
+      properties:
+        entityType:
+          $ref: "#/components/schemas/ImportEntityType"
+        entityId:
+          type: string
+          nullable: true
+        message:
+          type: string
+        fatal:
+          type: boolean
+          enum:
+            - false
+    ImportErrorFatal:
+      type: object
+      required:
+        - entityType
+        - entityId
+        - message
+        - fatal
+        - recoverable
+      properties:
+        entityType:
+          $ref: "#/components/schemas/ImportEntityType"
+        entityId:
+          type: string
+          nullable: true
+        message:
+          type: string
+        fatal:
+          type: boolean
+          enum:
+            - true
+        recoverable:
+          type: boolean
+    ImportError:
+      oneOf:
+        - $ref: "#/components/schemas/ImportErrorNonFatal"
+        - $ref: "#/components/schemas/ImportErrorFatal"
+    ImportAvatarMode:
+      type: string
+      enum:
+        - api
+        - zip
+        - skip
+    ImportCollectionTotals:
+      type: object
+      required:
+        - total
+        - imported
+        - updated
+        - skipped
+        - failed
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        imported:
+          type: integer
+          minimum: 0
+        updated:
+          type: integer
+          minimum: 0
+        skipped:
+          type: integer
+          minimum: 0
+        failed:
+          type: integer
+          minimum: 0
+    ImportCheckpointState:
+      type: object
+      required:
+        - schemaVersion
+        - checkpoint
+        - options
+        - totals
+      properties:
+        schemaVersion:
+          type: integer
+          enum:
+            - 1
+        checkpoint:
+          type: object
+          required:
+            - completedCollections
+            - currentCollection
+            - currentCollectionLastSourceId
+          properties:
+            completedCollections:
+              type: array
+              items:
+                $ref: "#/components/schemas/ImportEntityType"
+            currentCollection:
+              $ref: "#/components/schemas/ImportEntityType"
+            currentCollectionLastSourceId:
+              type: string
+              nullable: true
+        options:
+          type: object
+          required:
+            - selectedCategories
+            - avatarMode
+          properties:
+            selectedCategories:
+              type: object
+              additionalProperties:
+                type: boolean
+            avatarMode:
+              $ref: "#/components/schemas/ImportAvatarMode"
+        totals:
+          type: object
+          required:
+            - perCollection
+          properties:
+            perCollection:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/ImportCollectionTotals"
+    ImportJobResponse:
+      type: object
+      required:
+        - id
+        - accountId
+        - systemId
+        - source
+        - status
+        - progressPercent
+        - errorLog
+        - warningCount
+        - chunksTotal
+        - chunksCompleted
+        - checkpointState
+        - createdAt
+        - updatedAt
+        - completedAt
+      properties:
+        id:
+          type: string
+        accountId:
+          type: string
+        systemId:
+          type: string
+        source:
+          $ref: "#/components/schemas/ImportSource"
+        status:
+          $ref: "#/components/schemas/ImportJobStatus"
+        progressPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        errorLog:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/ImportError"
+        warningCount:
+          type: integer
+          minimum: 0
+        chunksTotal:
+          type: integer
+          nullable: true
+          minimum: 0
+        chunksCompleted:
+          type: integer
+          minimum: 0
+        checkpointState:
+          allOf:
+            - $ref: "#/components/schemas/ImportCheckpointState"
+          nullable: true
+        createdAt:
+          type: integer
+        updatedAt:
+          type: integer
+        completedAt:
+          type: integer
+          nullable: true
+    CreateImportJobBody:
+      type: object
+      required:
+        - source
+        - selectedCategories
+        - avatarMode
+      properties:
+        source:
+          $ref: "#/components/schemas/ImportSource"
+        selectedCategories:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Map of ImportEntityType → whether to import. At least one must be true.
+        avatarMode:
+          $ref: "#/components/schemas/ImportAvatarMode"
+    UpdateImportJobBody:
+      type: object
+      description: At least one field must be provided.
+      properties:
+        status:
+          $ref: "#/components/schemas/ImportJobStatus"
+        progressPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        warningCount:
+          type: integer
+          minimum: 0
+        chunksTotal:
+          type: integer
+          nullable: true
+          minimum: 0
+        chunksCompleted:
+          type: integer
+          minimum: 0
+        errorLog:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/ImportError"
+        checkpointState:
+          allOf:
+            - $ref: "#/components/schemas/ImportCheckpointState"
+          nullable: true
+    ImportEntityRefResponse:
+      type: object
+      required:
+        - id
+        - accountId
+        - systemId
+        - source
+        - sourceEntityType
+        - sourceEntityId
+        - pluralscapeEntityId
+        - importedAt
+      properties:
+        id:
+          type: string
+        accountId:
+          type: string
+        systemId:
+          type: string
+        source:
+          $ref: "#/components/schemas/ImportSource"
+        sourceEntityType:
+          $ref: "#/components/schemas/ImportEntityType"
+        sourceEntityId:
+          type: string
+          maxLength: 128
+        pluralscapeEntityId:
+          type: string
+          description: Brand varies by sourceEntityType (MemberId, GroupId, etc.).
+        importedAt:
+          type: integer
   responses:
     NoContent:
       description: Success with no response body

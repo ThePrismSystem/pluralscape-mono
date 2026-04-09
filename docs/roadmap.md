@@ -1,89 +1,5 @@
 # Roadmap
 
-## Milestone: Milestone 8: App Foundation & Data Layer ([ps-7j8n](.beans/ps-7j8n--milestone-8-client-app.md))
-
-> App skeleton, navigation infrastructure, provider tree, and the complete data interaction layer
-
-### Epic: Communication data hooks ([ps-21ff](.beans/ps-21ff--communication-data-hooks.md))
-
-> Chat channels/messages, board messages, private notes, polls, acknowledgements
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Polls hooks ([ps-4wka](.beans/ps-4wka--polls-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Board messages hooks ([ps-58xu](.beans/ps-58xu--board-messages-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Messages hooks ([ps-7drn](.beans/ps-7drn--messages-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Acknowledgements hooks ([ps-p13l](.beans/ps-p13l--acknowledgements-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Channels hooks ([ps-rruj](.beans/ps-rruj--channels-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Private notes hooks ([ps-sz9l](.beans/ps-sz9l--private-notes-hooks.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Pass timestamp query param on message single-entity API calls ([client-ensq](.beans/client-ensq--pass-timestamp-query-param-on-message-single-entit.md))
-
-### Epic: Fronting data hooks ([ps-0ph3](.beans/ps-0ph3--fronting-data-hooks.md))
-
-> Fronting sessions, co-fronting, analytics queries, timers, check-ins, fronting comments
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Fronting sessions hooks ([ps-2ppj](.beans/ps-2ppj--fronting-sessions-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Fronting reports hooks ([ps-7lmq](.beans/ps-7lmq--fronting-reports-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Timer & check-in hooks ([ps-ef4p](.beans/ps-ef4p--timer-check-in-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Fronting analytics hooks ([ps-p37d](.beans/ps-p37d--fronting-analytics-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Fronting comments hooks ([ps-vqoq](.beans/ps-vqoq--fronting-comments-hooks.md))
-
-### Epic: Identity data hooks ([ps-s6nr](.beans/ps-s6nr--identity-data-hooks.md))
-
-> Members, groups/folders, custom fields, custom fronts, system settings, member duplication, archival
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Custom fronts hooks ([ps-5ypw](.beans/ps-5ypw--custom-fronts-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Custom fields hooks ([ps-6o80](.beans/ps-6o80--custom-fields-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Groups hooks ([ps-ct26](.beans/ps-ct26--groups-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) System settings hooks ([ps-mmwc](.beans/ps-mmwc--system-settings-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Members hooks ([ps-xkgs](.beans/ps-xkgs--members-hooks.md))
-
-### Epic: PluralKit import ([client-f61z](.beans/client-f61z--pluralkit-import.md))
-
-> Client-side: parse PK JSON v2 export — 5-char hids, ISO 8601, members/switches/groups only
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Convert PluralKit switches to fronting sessions on import ([client-jusn](.beans/client-jusn--convert-pluralkit-switches-to-fronting-sessions-on.md))
-
-### Epic: Provider tree & auth flow ([ps-o72l](.beans/ps-o72l--provider-tree-auth-flow.md))
-
-> React Query provider, auth context (login/register/session/biometric), encryption key management, i18n provider
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
-
-### Epic: Social data hooks ([ps-sxcy](.beans/ps-sxcy--social-data-hooks.md))
-
-> Privacy buckets, friend network, push notification config, external dashboard, friend search
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Notification config hooks ([ps-7qoj](.beans/ps-7qoj--notification-config-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Device token hooks ([ps-icuj](.beans/ps-icuj--device-token-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Friend network hooks ([ps-s3vv](.beans/ps-s3vv--friend-network-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Privacy buckets hooks ([ps-wfvb](.beans/ps-wfvb--privacy-buckets-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Friend dashboard hooks ([ps-wv47](.beans/ps-wv47--friend-dashboard-hooks.md))
-
-### Epic: Structure & journaling data hooks ([ps-yspo](.beans/ps-yspo--structure-journaling-data-hooks.md))
-
-> System structure entities/links, journaling entries
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Journal/snapshot hooks ([ps-oa72](.beans/ps-oa72--journalsnapshot-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Inner world hooks ([ps-rjpa](.beans/ps-rjpa--inner-world-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Structure entities & links hooks ([ps-szmv](.beans/ps-szmv--structure-entities-links-hooks.md))
-
-### Epic: Utility data hooks ([ps-j47j](.beans/ps-j47j--utility-data-hooks.md))
-
-> Search, API key management, audit log, lifecycle events, media upload, account management (deletion, PIN, device transfer)
-
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Audit log hooks ([ps-0lcl](.beans/ps-0lcl--audit-log-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Account management hooks ([ps-h7nj](.beans/ps-h7nj--account-management-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Media upload hooks ([ps-p97u](.beans/ps-p97u--media-upload-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Lifecycle events hooks ([ps-tid8](.beans/ps-tid8--lifecycle-events-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) API key hooks ([ps-vw2v](.beans/ps-vw2v--api-key-hooks.md))
-- ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Search hooks ([ps-w5o7](.beans/ps-w5o7--search-hooks.md))
-
-## Milestone: Milestone 13: Self-Hosted ([ps-qcfr](.beans/ps-qcfr--milestone-9-self-hosted.md))
-
-> Two-tier self-hosted deployment (minimal single binary + full Docker Compose)
-
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SQLite schema codegen from PG (Phase B) ([db-k19k](.beans/db-k19k--sqlite-schema-codegen-from-pg-phase-b.md))
-
 ## Milestone: Milestone 14: Polish and Launch ([ps-9u4w](.beans/ps-9u4w--milestone-10-polish-and-launch.md))
 
 > Security audit, performance, beta testing
@@ -91,6 +7,19 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) OpenAPI reconciliation: constraint-aware and full deep comparison ([api-yxvn](.beans/api-yxvn--openapi-reconciliation-constraint-aware-and-full-d.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Drop messages_system_id_idx after partitioning is stable ([db-1aw7](.beans/db-1aw7--drop-messages-system-id-idx-after-partitioning-is.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Schedule audit log PII cleanup as recurring job ([infra-gvgo](.beans/infra-gvgo--schedule-audit-log-pii-cleanup-as-recurring-job.md))
+
+## Milestone: Milestone 13: Self-Hosted ([ps-qcfr](.beans/ps-qcfr--milestone-13-self-hosted.md))
+
+> Two-tier self-hosted deployment (minimal single binary + full Docker Compose)
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Two-factor device transfer (remove code from QR) ([api-v2ar](.beans/api-v2ar--two-factor-device-transfer-remove-code-from-qr.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) SQLite schema codegen from PG (Phase B) ([db-k19k](.beans/db-k19k--sqlite-schema-codegen-from-pg-phase-b.md))
+
+## Milestone: Milestone 11: UI/UX Buildout ([ps-vq2h](.beans/ps-vq2h--milestone-11-uiux-buildout.md))
+
+> Translate Stitch HTML mockups into React Native/Expo components with placeholder data
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Validate ReactNativeSodiumAdapter tests in real RN environment ([crypto-jz77](.beans/crypto-jz77--validate-reactnativesodiumadapter-tests-in-real-rn.md))
 
 ## Milestone: Milestone 6: Privacy and Social ([ps-6itw](.beans/ps-6itw--milestone-6-privacy-and-social.md))
 
@@ -123,6 +52,16 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire identity webhook events (9 events) ([api-q642](.beans/api-q642--wire-identity-webhook-events-9-events.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire friend webhook events (4 events) ([api-smlf](.beans/api-smlf--wire-friend-webhook-events-4-events.md))
 
+## Milestone: Milestone 8: App Foundation & Data Layer ([ps-7j8n](.beans/ps-7j8n--milestone-8-client-app.md))
+
+> App skeleton, navigation infrastructure, provider tree, and the complete data interaction layer
+
+### Epic: PluralKit import ([client-f61z](.beans/client-f61z--pluralkit-import.md))
+
+> Client-side: parse PK JSON v2 export — 5-char hids, ISO 8601, members/switches/groups only
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Convert PluralKit switches to fronting sessions on import ([client-jusn](.beans/client-jusn--convert-pluralkit-switches-to-fronting-sessions-on.md))
+
 ## No Milestone
 
 ### Epic: M4 audit remediation ([ps-4ioj](.beans/ps-4ioj--m4-audit-remediation.md))
@@ -130,7 +69,6 @@
 > Address must-fix and should-fix findings from the M4 comprehensive audit. 12 items: 4 critical/high data integrity + security, 8 should-fix performance/quality/testing.
 
 - ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix SQLite getCurrentFrontingComments join missing systemId ([db-vguh](.beans/db-vguh--fix-sqlite-getcurrentfrontingcomments-join-missing.md))
-- ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix poll-vote fieldName mismatch in CRDT strategies ([sync-uxaf](.beans/sync-uxaf--fix-poll-vote-fieldname-mismatch-in-crdt-strategie.md))
 - ![bug](https://img.shields.io/badge/bug-d73a4a?style=flat-square) Fix WebhookConfig.secret typed as EncryptedString ([types-yp3m](.beans/types-yp3m--fix-webhookconfigsecret-typed-as-encryptedstring.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add webhook-delivery-cleanup unit test ([api-3rtc](.beans/api-3rtc--add-webhook-delivery-cleanup-unit-test.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add next_check_in_at column to optimize timer scheduling ([api-4kp6](.beans/api-4kp6--add-next-check-in-at-column-to-optimize-timer-sche.md))
@@ -151,7 +89,6 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add M4 tables to RLS integration test ([db-afev](.beans/db-afev--add-m4-tables-to-rls-integration-test.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add LIMIT to view query helpers ([db-cwqh](.beans/db-cwqh--add-limit-to-view-query-helpers.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Remove encryptedMasterKey nullable/legacy pattern ([db-z6rp](.beans/db-z6rp--remove-encryptedmasterkey-nullablelegacy-pattern.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add post-merge validation for fronting-comment author constraint ([sync-ht2e](.beans/sync-ht2e--add-post-merge-validation-for-fronting-comment-aut.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Handle comment/check-in migration in time-split ([sync-wh96](.beans/sync-wh96--handle-commentcheck-in-migration-in-time-split.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Deduplicate webhook event types across packages ([types-26v8](.beans/types-26v8--deduplicate-webhook-event-types-across-packages.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add sessionStartTime to FrontingComment type or document omission ([types-jf54](.beans/types-jf54--add-sessionstarttime-to-frontingcomment-type-or-do.md))
@@ -163,12 +100,13 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-a2x5](.beans/api-a2x5--fix-friend-dashboard-review-issues.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix PR #333 review findings ([api-l879](.beans/api-l879--fix-pr-333-review-findings.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fix friend dashboard review issues ([api-wk6u](.beans/api-wk6u--fix-friend-dashboard-review-issues.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) PR #373 review fixes ([ps-51wq](.beans/ps-51wq--pr-373-review-fixes.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) M4 comprehensive audit ([ps-6u44](.beans/ps-6u44--m4-comprehensive-audit.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Full documentation update for M7 completion and M8 prep ([ps-bqxy](.beans/ps-bqxy--full-documentation-update-for-m7-completion-and-m8.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Audit PGlite integration tests against Testcontainers requirement ([api-9kl9](.beans/api-9kl9--audit-pglite-integration-tests-against-testcontain.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add integration tests for tRPC routers ([api-kt5h](.beans/api-kt5h--add-integration-tests-for-trpc-routers.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add structure entity service with HAS_DEPENDENTS checking ([api-l9ar](.beans/api-l9ar--add-structure-entity-service-with-has-dependents-c.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Structure-entity deletion must check note dependencies ([api-m3up](.beans/api-m3up--structure-entity-deletion-must-check-note-dependen.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add getDocumentSnapshot() to SyncEngine ([sync-f5f8](.beans/sync-f5f8--add-getdocumentsnapshot-to-syncengine.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Add real-SQLite smoke test for expo-sqlite-driver ([mobile-l0fq](.beans/mobile-l0fq--add-real-sqlite-smoke-test-for-expo-sqlite-driver.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Bucket rotation full lifecycle E2E tests ([api-7spq](.beans/api-7spq--bucket-rotation-full-lifecycle-e2e-tests.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Use branded ID keys in CRDT sync schema Record types ([sync-sqfo](.beans/sync-sqfo--use-branded-id-keys-in-crdt-sync-schema-record-typ.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Investigate non-table-drive refactor options for row-transforms.test.ts ([mobile-thuh](.beans/mobile-thuh--investigate-non-table-drive-refactor-options-for-r.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Shared brandId<T> utility for Drizzle inferSelect to branded ID casts ([types-jmk7](.beans/types-jmk7--shared-brandidt-utility-for-drizzle-inferselect-to.md))

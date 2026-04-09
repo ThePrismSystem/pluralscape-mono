@@ -186,6 +186,8 @@ tags:
     description: Recurring check-in timer configurations
   - name: Check-In Records
     description: Scheduled check-in instances with respond/dismiss lifecycle
+  - name: Import
+    description: Data import jobs and source entity mappings.
 
 components:
   securitySchemes:
@@ -1163,3 +1165,12 @@ paths:
   # Structure Entity Hierarchy
   /systems/{systemId}/structure/entities/{entityId}/hierarchy:
     $ref: "./paths/structure-entities.yaml#/~1systems~1%7BsystemId%7D~1structure~1entities~1%7BentityId%7D~1hierarchy"
+  # Import
+  /systems/{systemId}/import-jobs:
+    $ref: "./paths/import-jobs.yaml#/~1systems~1%7BsystemId%7D~1import-jobs"
+  /systems/{systemId}/import-jobs/{importJobId}:
+    $ref: "./paths/import-jobs.yaml#/~1systems~1%7BsystemId%7D~1import-jobs~1%7BimportJobId%7D"
+  /systems/{systemId}/import-entity-refs:
+    $ref: "./paths/import-entity-refs.yaml#/~1systems~1%7BsystemId%7D~1import-entity-refs"
+  /systems/{systemId}/import-entity-refs/lookup:
+    $ref: "./paths/import-entity-refs.yaml#/~1systems~1%7BsystemId%7D~1import-entity-refs~1lookup"
