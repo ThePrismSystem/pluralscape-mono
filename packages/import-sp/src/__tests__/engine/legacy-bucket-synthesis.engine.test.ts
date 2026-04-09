@@ -24,6 +24,7 @@ import { describe, expect, it } from "vitest";
 import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { runImport } from "../../engine/import-engine.js";
+import { createFakeImportSource } from "../../sources/fake-source.js";
 import { createFileImportSource } from "../../sources/file-source.js";
 import { createInMemoryPersister } from "../helpers/in-memory-persister.js";
 
@@ -94,5 +95,71 @@ describe("import engine — legacy bucket synthesis", () => {
     // its FK against the persisted member — confirming the engine processes
     // legacy-synthesis members just like modern ones.
     expect(state.countByType("fronting-session")).toBe(1);
+  });
+});
+
+describe("synthesized bucket count and flush", () => {
+  // Critical #1: synthesized buckets must be counted in checkpoint totals.
+  // Currently `persistSynthesizedBuckets` never calls `advanceWithinCollection`,
+  // so `perCollection["privacy-bucket"]` is undefined after a legacy-synthesis run.
+  it.fails("advances totals.perCollection['privacy-bucket'] after synthesis", async () => {
+    const source = createFakeImportSource({
+      members: [{ _id: "sp_m_1", name: "Alex", private: true }],
+    });
+    const { persister } = createInMemoryPersister();
+
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: () => Promise.resolve(),
+    });
+
+    expect(result.finalState.totals.perCollection["privacy-bucket"]).toBeDefined();
+    expect(result.finalState.totals.perCollection["privacy-bucket"]?.imported).toBe(3);
+  });
+
+  // Critical #2: synthesized buckets must be explicitly flushed after
+  // persistence so a crash-resume can rely on them being durable. This test
+  // verifies the flush happens before any member upsert by tracking the flush
+  // count at the moment the first member entity hits the persister.
+  //
+  // Note: because the engine already flushes at end of every prior collection,
+  // `flushCount >= 1` before members is structurally guaranteed today. The
+  // specific invariant we add in T30 is an *explicit* flush+progress call
+  // immediately after synthesis (not incidentally from prior collections).
+  // That structural guarantee is tested end-to-end through the totals test
+  // above; this marker comment documents the design intent for T30.
+  it("flush is already called before member loop via prior collection completions", async () => {
+    const source = createFakeImportSource({
+      members: [{ _id: "sp_m_1", name: "Alex", private: true }],
+    });
+    let flushCountBeforeFirstMember = -1;
+    let flushCount = 0;
+    const { persister: inner } = createInMemoryPersister();
+    const trackingPersister = {
+      upsertEntity(entity: Parameters<typeof inner.upsertEntity>[0]) {
+        if (entity.entityType === "member" && flushCountBeforeFirstMember === -1) {
+          flushCountBeforeFirstMember = flushCount;
+        }
+        return inner.upsertEntity(entity);
+      },
+      recordError(error: Parameters<typeof inner.recordError>[0]) {
+        return inner.recordError(error);
+      },
+      flush() {
+        flushCount += 1;
+        return inner.flush();
+      },
+    };
+
+    await runImport({
+      source,
+      persister: trackingPersister,
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: () => Promise.resolve(),
+    });
+
+    expect(flushCountBeforeFirstMember).toBeGreaterThanOrEqual(1);
   });
 });

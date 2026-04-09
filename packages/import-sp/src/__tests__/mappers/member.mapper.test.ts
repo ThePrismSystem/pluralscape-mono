@@ -165,3 +165,36 @@ describe("mapMember", () => {
     expect(ctx.warnings.some((w) => w.message.includes("notification"))).toBe(true);
   });
 });
+
+describe("member bucket reference resolution", () => {
+  it.fails("returns failed with kind fk-miss when a bucket ref is unresolvable", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    // No bucket registered in translation table
+
+    const result = mapMember(
+      { _id: "sp_m_1", name: "Alex", buckets: ["sp_bucket_unknown"] } as SPMember,
+      ctx,
+    );
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.missingRefs).toContain("sp_bucket_unknown");
+      expect(result.targetField).toBe("buckets");
+    }
+  });
+
+  it.fails("returns mapped with resolved bucket IDs when all buckets are registered", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("privacy-bucket", "synthetic:private", "ps_bucket_private");
+
+    const result = mapMember({ _id: "sp_m_1", name: "Alex", private: true } as SPMember, ctx);
+
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      // After T31 this field will be `bucketIds` carrying resolved PS IDs.
+      // For T28 (red) we assert the intent: the resolved ID must appear.
+      expect(result.payload.bucketSourceIds).toContain("ps_bucket_private");
+    }
+  });
+});
