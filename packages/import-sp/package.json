@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./avatar-fetcher-types": "./src/persistence/avatar-fetcher.types.ts"
+    "./avatar-fetcher-types": "./src/persistence/avatar-fetcher.types.ts",
+    "./persister-types": "./src/persistence/persister.types.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
