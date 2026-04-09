@@ -22,6 +22,13 @@
       "when": 1775654784563,
       "tag": "0002_curly_stellaris",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1775730640345,
+      "tag": "0003_panoramic_kronos",
+      "breakpoints": true
     }
   ]
 }
