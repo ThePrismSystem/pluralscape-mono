@@ -25,7 +25,7 @@
  *    recorded against the failing document and iteration continues.
  */
 import { CHECKPOINT_CHUNK_SIZE } from "../import-sp.constants.js";
-import { synthesizeLegacyBuckets, type MappedBucket } from "../mappers/bucket.mapper.js";
+import { synthesizeLegacyBuckets, type MappedPrivacyBucket } from "../mappers/bucket.mapper.js";
 import {
   createMappingContext,
   type MappingContext,
@@ -44,10 +44,15 @@ import { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine
 import { collectionToEntityType, entityTypeToCollection } from "./entity-type-map.js";
 import { MAPPER_DISPATCH } from "./mapper-dispatch.js";
 
-import type { Persister } from "../persistence/persister.types.js";
+import type { PersistableEntity, Persister } from "../persistence/persister.types.js";
 import type { ImportSource } from "../sources/source.types.js";
 import type { SpCollectionName } from "../sources/sp-collections.js";
-import type { ImportAvatarMode, ImportCheckpointState, ImportError } from "@pluralscape/types";
+import type {
+  ImportAvatarMode,
+  ImportCheckpointState,
+  ImportCollectionType,
+  ImportError,
+} from "@pluralscape/types";
 
 /**
  * Build a single-document `AdvanceDelta` for one of the four terminal outcomes.
@@ -63,6 +68,31 @@ function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelt
     failed: kind === "failed" ? 1 : 0,
     total: 1,
   };
+}
+
+/**
+ * Narrow a dispatch result into a {@link PersistableEntity} variant at the
+ * upsert boundary.
+ *
+ * Invariant: `MAPPER_DISPATCH` guarantees that for each collection, the
+ * mapper returns a payload whose shape matches the `Mapped<Entity>` type
+ * bound to the corresponding `entityType` variant of `PersistableEntity`. We
+ * therefore construct the variant with a single controlled cast — avoiding
+ * widening the persister's input type or threading a generic through the
+ * dispatch table — and the TypeScript compiler enforces the shape of every
+ * consumer of the narrowed result.
+ */
+function buildPersistableEntity(
+  entityType: ImportCollectionType,
+  sourceEntityId: string,
+  payload: unknown,
+): PersistableEntity {
+  return {
+    entityType,
+    sourceEntityId,
+    source: "simply-plural",
+    payload,
+  } as PersistableEntity;
 }
 
 export interface RunImportArgs {
@@ -114,7 +144,7 @@ async function persistSynthesizedBuckets(
   let persisted = 0;
   let lastSourceId: string | null = null;
   for (const bucket of synthesized) {
-    const payload: MappedBucket = {
+    const payload: MappedPrivacyBucket = {
       name: bucket.name,
       description: bucket.description,
       color: null,
@@ -260,12 +290,9 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
         } else {
           // status === "mapped"
           try {
-            const upsert = await persister.upsertEntity({
-              entityType,
-              sourceEntityId: doc.sourceId,
-              source: "simply-plural",
-              payload: result.payload,
-            });
+            const upsert = await persister.upsertEntity(
+              buildPersistableEntity(entityType, doc.sourceId, result.payload),
+            );
             ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
             if (collection === "privacyBuckets") privacyBucketsMapped += 1;
             const upsertDelta =
