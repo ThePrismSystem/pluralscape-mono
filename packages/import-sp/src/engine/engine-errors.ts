@@ -40,8 +40,8 @@ export class ResumeCutoffNotFoundError extends Error {
  *   recoverable: the user can retry from the last checkpoint after fixing
  *   credentials or letting backoff conditions clear.
  * - `ApiSourcePermanentError` is fatal + non-recoverable: the SP API returned
- *   a shape Pluralscape does not model (non-array body, missing `_id`, etc.),
- *   retry will not succeed. Carries `kind: "schema-mismatch"`.
+ *   a shape that fails structural validation (non-array body, missing `_id`,
+ *   etc.), retry will not succeed. Carries `kind: "validation-failed"`.
  * - `SyntaxError` indicates an unparseable payload: fatal and non-recoverable
  *   (the user must restart the import or fix the source data).
  * - Anything else is treated as a per-document failure: non-fatal so the
@@ -58,7 +58,7 @@ export function classifyError(thrown: unknown, ctx: ClassifyContext): ImportErro
       entityType: "unknown",
       entityId: null,
       message: thrown.message,
-      kind: "schema-mismatch",
+      kind: "validation-failed",
       fatal: true,
       recoverable: false,
     };
