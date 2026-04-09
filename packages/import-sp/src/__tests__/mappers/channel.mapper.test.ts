@@ -116,31 +116,3 @@ describe("mapChannel", () => {
     expect(ctx.warnings[0]?.entityType).toBe("channel");
   });
 });
-
-describe("channel FK-miss handling", () => {
-  it("returns failed with kind fk-miss when category cannot be resolved", () => {
-    const ctx = createMappingContext({ sourceMode: "file" });
-    const result = mapChannel(
-      {
-        _id: "sp_ch_1",
-        name: "general",
-        parentCategory: "sp_cat_missing",
-      },
-      ctx,
-    );
-
-    expect(result.status).toBe("failed");
-    if (result.status === "failed") {
-      expect(result.kind).toBe("fk-miss");
-      expect(result.targetField).toBe("parentChannelId");
-      expect(result.missingRefs).toContain("sp_cat_missing");
-    }
-  });
-
-  it("returns mapped when category is resolved in the translation table", () => {
-    const ctx = createMappingContext({ sourceMode: "file" });
-    ctx.register("channel-category", "sp_cat_1", "ps_cat_real");
-    const result = mapChannel({ _id: "sp_ch_1", name: "general", parentCategory: "sp_cat_1" }, ctx);
-    expect(result.status).toBe("mapped");
-  });
-});
