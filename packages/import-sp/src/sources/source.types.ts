@@ -27,6 +27,11 @@ export interface SourceDocument {
  * - `iterate(collection)` yields documents in source-emission order. Sources MUST
  *   produce a stable order across calls so the engine's checkpoint
  *   `currentCollectionLastSourceId` is meaningful.
+ * - `listCollections()` returns the names of every top-level collection the
+ *   source can yield. The engine compares this against its known collections
+ *   and emits a `dropped-collection` warning for any name it does not iterate.
+ *   Names need not be valid {@link SpCollectionName} values — returning an
+ *   unknown name is exactly the signal the engine uses to warn.
  * - Network or parse errors are surfaced as exceptions; the engine catches them
  *   and classifies them per its error policy.
  * - `close()` releases any held resources (file handles, sockets). Idempotent.
@@ -34,5 +39,6 @@ export interface SourceDocument {
 export interface ImportSource {
   readonly mode: SourceMode;
   iterate(collection: SpCollectionName): AsyncIterable<SourceDocument>;
+  listCollections(): Promise<readonly string[]>;
   close(): Promise<void>;
 }

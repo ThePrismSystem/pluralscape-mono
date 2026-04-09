@@ -46,15 +46,30 @@ function assignToTop(stack: Frame[], value: unknown): void {
 }
 
 /**
- * Build a `Map<collection, document[]>` from raw export bytes by streaming the
- * JSON via clarinet. Only top-level keys matching `SP_COLLECTION_NAMES` are
- * retained; other top-level keys are still structurally consumed but not stored.
+ * Result of parsing the SP export bytes.
+ *
+ * `collections` is the filtered index of supported SP collections (keys that
+ * pass `isSpCollectionName`); `topLevelKeys` is every top-level key present
+ * in the root object, including keys the engine does not iterate (e.g.,
+ * `friends`). The engine uses `topLevelKeys` to emit dropped-collection
+ * warnings for unknown entries without losing that signal to filtering.
+ */
+interface ParsedExport {
+  readonly collections: Map<SpCollectionName, unknown[]>;
+  readonly topLevelKeys: readonly string[];
+}
+
+/**
+ * Build a `ParsedExport` from raw export bytes by streaming the JSON via
+ * clarinet. Only top-level keys matching `SP_COLLECTION_NAMES` are retained
+ * in `collections`; every top-level key (including unknown ones) is recorded
+ * in `topLevelKeys` so the engine can warn about unsupported collections.
  *
  * Throws synchronously on JSON parse failure or on a document missing `_id`.
  */
-function parseExportBytes(jsonBytes: Uint8Array): Map<SpCollectionName, unknown[]> {
+function parseExportBytes(jsonBytes: Uint8Array): ParsedExport {
   const parser = clarinet.parser();
-  const result = new Map<SpCollectionName, unknown[]>();
+  const collections = new Map<SpCollectionName, unknown[]>();
 
   // The stack tracks the path from the root into the current container. It
   // starts empty; the first open-object or open-array event installs the root.
@@ -133,15 +148,17 @@ function parseExportBytes(jsonBytes: Uint8Array): Map<SpCollectionName, unknown[
   // (`{}` or no root at all) produces an empty result.
   const rootValue = state.root;
   if (rootValue === null) {
-    return result;
+    return { collections, topLevelKeys: [] };
   }
   if (Array.isArray(rootValue)) {
     throw new Error("FileImportSource: expected JSON object at root, got array");
   }
 
+  const topLevelKeys: string[] = Object.keys(rootValue);
+
   // Extract only SP collections from the root. Other top-level keys (e.g. an
-  // unexpected "schemaVersion") are silently dropped — validation happens later
-  // in the engine against the per-collection Zod schema.
+  // unexpected "schemaVersion" or a dropped collection like "friends") are
+  // still captured in `topLevelKeys` above so the engine can warn about them.
   for (const [key, value] of Object.entries(rootValue)) {
     if (!isSpCollectionName(key)) {
       continue;
@@ -162,10 +179,10 @@ function parseExportBytes(jsonBytes: Uint8Array): Map<SpCollectionName, unknown[
         );
       }
     }
-    result.set(key, value);
+    collections.set(key, value);
   }
 
-  return result;
+  return { collections, topLevelKeys };
 }
 
 /**
@@ -184,13 +201,14 @@ export function createFileImportSource(input: FileSourceInput): Promise<ImportSo
   // Wrap in a resolved/rejected promise — the parse itself is synchronous, but
   // the API is async so callers can swap in a streaming implementation later.
   return new Promise<ImportSource>((resolve, reject) => {
-    let indexed: Map<SpCollectionName, unknown[]>;
+    let parsed: ParsedExport;
     try {
-      indexed = parseExportBytes(input.jsonBytes);
+      parsed = parseExportBytes(input.jsonBytes);
     } catch (err) {
       reject(err instanceof Error ? err : new Error(String(err)));
       return;
     }
+    const { collections: indexed, topLevelKeys } = parsed;
 
     const source: ImportSource = {
       mode: "file",
@@ -208,6 +226,13 @@ export function createFileImportSource(input: FileSourceInput): Promise<ImportSo
           }
           yield { collection, sourceId, document };
         }
+      },
+      listCollections() {
+        // Snapshot the top-level key list captured during parse. Includes
+        // both supported SP collection names and any unknown keys the export
+        // contained (e.g., `friends`), which the engine uses to emit
+        // dropped-collection warnings.
+        return Promise.resolve(topLevelKeys);
       },
       async close(): Promise<void> {
         // No held resources — parsing happened eagerly in the constructor.

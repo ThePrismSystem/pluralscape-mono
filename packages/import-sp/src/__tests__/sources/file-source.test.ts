@@ -110,4 +110,26 @@ describe("createFileImportSource", () => {
     expect(source.mode).toBe("file");
     await source.close();
   });
+
+  it("listCollections reports every top-level JSON key including unknown ones", async () => {
+    // Build a JSON with one supported SP collection plus an unknown top-level
+    // key ("friends"). The engine uses the unknown key to emit a
+    // `dropped-collection` warning, so the source must surface it here.
+    const raw = JSON.stringify({
+      members: [{ _id: "m1", name: "A" }],
+      friends: [{ _id: "f1" }],
+      schemaVersion: 2,
+    });
+    const source = await createFileImportSource({ jsonBytes: bytes(raw) });
+    const names = await source.listCollections();
+    await source.close();
+    expect([...names].sort()).toEqual(["friends", "members", "schemaVersion"]);
+  });
+
+  it("listCollections returns empty array for an empty object root", async () => {
+    const source = await createFileImportSource({ jsonBytes: bytes("{}") });
+    const names = await source.listCollections();
+    await source.close();
+    expect(names).toEqual([]);
+  });
 });

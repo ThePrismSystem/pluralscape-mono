@@ -218,6 +218,15 @@ export function createApiImportSource(input: ApiSourceInput): ImportSource {
         }
       }
     },
+    listCollections() {
+      // The SP API exposes one endpoint per `SpCollectionName`; we simply
+      // report the static list we can fetch. Because we cannot cheaply
+      // probe the server for unknown collections, the api source can only
+      // ever report known names — any server-side additions will surface
+      // through `iterate`/mapper drift, not through dropped-collection
+      // warnings.
+      return Promise.resolve(Object.keys(ENDPOINT_PATHS));
+    },
     async close(): Promise<void> {
       // No held resources — fetch is request-scoped.
     },

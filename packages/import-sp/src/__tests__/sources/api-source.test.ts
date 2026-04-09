@@ -126,4 +126,17 @@ describe("createApiImportSource", () => {
     const source = createApiImportSource({ token: "tk_x", baseUrl: "https://api.test" });
     expect(source.mode).toBe("api");
   });
+
+  it("listCollections returns the static list of SP collection names the API exposes", async () => {
+    const source = createApiImportSource({ token: "tk_x", baseUrl: "https://api.test" });
+    const names = await source.listCollections();
+    // The api source hardcodes `ENDPOINT_PATHS`, so every known SP
+    // collection must be reported. Spot-check a handful of names rather
+    // than re-asserting the full list (which would duplicate
+    // `ENDPOINT_PATHS` in the test).
+    expect(names).toContain("members");
+    expect(names).toContain("groups");
+    expect(names).toContain("frontHistory");
+    expect(names).toContain("channels");
+  });
 });

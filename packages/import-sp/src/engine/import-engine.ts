@@ -175,10 +175,32 @@ async function persistSynthesizedBuckets(
   return { persisted, aborted: false, lastSourceId };
 }
 
+/** Set of SP collection names the engine iterates. Computed once per run. */
+const KNOWN_DEPENDENCY_ORDER_SET = new Set<string>(DEPENDENCY_ORDER);
+
 export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
   const { source, persister, options, onProgress } = args;
   const ctx = createMappingContext({ sourceMode: source.mode });
   const errors: ImportError[] = [];
+
+  // Inspect the source's top-level collections before iterating. Any name
+  // the engine does not know about (e.g. SP's `friends` or
+  // `pendingFriendRequests`) is surfaced as a `dropped-collection` warning
+  // so the final report tells the operator we did not import that data.
+  // We deliberately do this before the main loop — even when resuming from a
+  // checkpoint — so the warning is visible on every run.
+  const sourceCollections = await source.listCollections();
+  for (const name of sourceCollections) {
+    if (!KNOWN_DEPENDENCY_ORDER_SET.has(name)) {
+      ctx.addWarningOnce(`dropped-collection:${name}`, {
+        entityType: "unknown",
+        entityId: null,
+        kind: "dropped-collection",
+        key: `dropped-collection:${name}`,
+        message: `Collection "${name}" is not supported by the importer and was dropped`,
+      });
+    }
+  }
 
   let state: ImportCheckpointState =
     args.initialCheckpoint ??

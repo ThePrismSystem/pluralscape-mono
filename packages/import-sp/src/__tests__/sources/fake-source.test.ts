@@ -49,6 +49,24 @@ describe("createFakeImportSource", () => {
     await source.close();
   });
 
+  it("listCollections returns the keys of the data object", async () => {
+    const source = createFakeImportSource({
+      members: [{ _id: "m1", name: "A" }],
+      groups: [{ _id: "g1", name: "G" }],
+    });
+    const names = await source.listCollections();
+    expect([...names].sort()).toEqual(["groups", "members"]);
+  });
+
+  it("listCollections includes extraCollections injected via options", async () => {
+    const source = createFakeImportSource(
+      { members: [{ _id: "m1", name: "A" }] },
+      { extraCollections: ["friends"] },
+    );
+    const names = await source.listCollections();
+    expect([...names].sort()).toEqual(["friends", "members"]);
+  });
+
   it("rejects documents missing _id", async () => {
     const source = createFakeImportSource({
       members: [{ name: "no id" }],

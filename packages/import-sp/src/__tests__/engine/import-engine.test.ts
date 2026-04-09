@@ -155,6 +155,9 @@ describe("runImport — fatal error", () => {
         }
         return gen();
       },
+      listCollections(): Promise<readonly string[]> {
+        return Promise.resolve([]);
+      },
       close(): Promise<void> {
         return Promise.resolve();
       },
@@ -190,6 +193,9 @@ describe("runImport — fatal error", () => {
           throw new Error("generic boom");
         }
         return gen();
+      },
+      listCollections(): Promise<readonly string[]> {
+        return Promise.resolve([]);
       },
       close(): Promise<void> {
         return Promise.resolve();
@@ -536,6 +542,57 @@ describe("runImport — selectedCategories opt-out", () => {
     // The opt-out must have been honored — no custom-front upsert should
     // have occurred.
     expect(persister.upserted.filter((e) => e.entityType === "custom-front")).toHaveLength(0);
+  });
+});
+
+describe("runImport — dropped collections", () => {
+  it("emits a dropped-collection warning when the source reports an unknown top-level key", async () => {
+    const data: FakeSourceData = {
+      members: [{ _id: "m_a", name: "Aria" }],
+    };
+    const source = createFakeImportSource(data, {
+      extraCollections: ["friends", "pendingFriendRequests"],
+    });
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const dropped = result.warnings.filter((w) => w.kind === "dropped-collection");
+    expect(dropped.map((w) => w.key).sort()).toEqual([
+      "dropped-collection:friends",
+      "dropped-collection:pendingFriendRequests",
+    ]);
+    for (const warning of dropped) {
+      expect(warning.entityType).toBe("unknown");
+      expect(warning.entityId).toBeNull();
+    }
+  });
+
+  it("does not warn for known SP collections", async () => {
+    const data: FakeSourceData = {
+      members: [{ _id: "m_a", name: "Aria" }],
+      groups: [{ _id: "g_1", name: "Littles", members: ["m_a"] }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    expect(result.warnings.some((w) => w.kind === "dropped-collection")).toBe(false);
   });
 });
 
