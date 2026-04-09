@@ -99,6 +99,44 @@ describe("mapFrontingSession", () => {
     }
   });
 
+  it("exposes kind, targetField, and missingRefs on member FK miss", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPFrontHistory = {
+      _id: "fh7",
+      member: "src_missing",
+      custom: false,
+      live: false,
+      startTime: 0,
+      endTime: 0,
+    };
+    const result = mapFrontingSession(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("member");
+      expect(result.missingRefs).toContain("src_missing");
+    }
+  });
+
+  it("exposes kind, targetField, and missingRefs on custom-front FK miss", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPFrontHistory = {
+      _id: "fh8",
+      member: "src_missing_cf",
+      custom: true,
+      live: false,
+      startTime: 0,
+      endTime: 0,
+    };
+    const result = mapFrontingSession(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("member");
+      expect(result.missingRefs).toContain("src_missing_cf");
+    }
+  });
+
   it("preserves customStatus as comment", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
@@ -115,5 +153,68 @@ describe("mapFrontingSession", () => {
     if (result.status === "mapped") {
       expect(result.payload.comment).toBe("feeling blurry");
     }
+  });
+});
+
+describe("fronting-session FK-miss handling", () => {
+  it("returns failed with kind fk-miss when member ref is unresolved (custom=false)", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    const result = mapFrontingSession(
+      {
+        _id: "sp_fh_1",
+        member: "sp_m_missing",
+        custom: false,
+        live: false,
+        startTime: 0,
+        endTime: 0,
+      },
+      ctx,
+    );
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("member");
+      expect(result.missingRefs).toContain("sp_m_missing");
+    }
+  });
+
+  it("returns failed with kind fk-miss when custom-front ref is unresolved (custom=true)", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    const result = mapFrontingSession(
+      {
+        _id: "sp_fh_2",
+        member: "sp_cf_missing",
+        custom: true,
+        live: false,
+        startTime: 0,
+        endTime: 0,
+      },
+      ctx,
+    );
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("member");
+      expect(result.missingRefs).toContain("sp_cf_missing");
+    }
+  });
+
+  it("returns mapped when member ref resolves", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    ctx.register("member", "sp_m_1", "ps_m_real_1");
+    const result = mapFrontingSession(
+      {
+        _id: "sp_fh_3",
+        member: "sp_m_1",
+        custom: false,
+        live: false,
+        startTime: 100,
+        endTime: 200,
+      },
+      ctx,
+    );
+    expect(result.status).toBe("mapped");
   });
 });
