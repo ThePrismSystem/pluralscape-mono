@@ -11,7 +11,7 @@
     "./templates": "./src/templates/index.ts"
   },
   "dependencies": {
-    "nodemailer": "^8.0.4",
+    "nodemailer": "^8.0.5",
     "resend": "^6.0.0"
   },
   "devDependencies": {
