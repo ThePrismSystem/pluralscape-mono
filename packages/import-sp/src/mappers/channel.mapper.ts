@@ -23,10 +23,25 @@ export interface MappedChannel {
   readonly order: number | null;
 }
 
+/**
+ * Channel-category payload. Structurally identical to {@link MappedChannel}
+ * today (both are persisted into the flattened `channels` collection with a
+ * `type` discriminant), but kept as a distinct named type so the
+ * {@link PersistableEntity} discriminated union can carry separate
+ * `"channel-category"` and `"channel"` variants.
+ */
+export interface MappedChannelCategory {
+  readonly name: string;
+  readonly description: string | null;
+  readonly type: "category";
+  readonly parentChannelId: null;
+  readonly order: number | null;
+}
+
 export function mapChannelCategory(
   sp: SPChannelCategory,
   ctx: MappingContext,
-): MapperResult<MappedChannel> {
+): MapperResult<MappedChannelCategory> {
   if (!sp.name || sp.name.length === 0) {
     ctx.addWarning({
       entityType: "channel-category",
@@ -35,7 +50,7 @@ export function mapChannelCategory(
     });
     return skipped("empty name");
   }
-  const payload: MappedChannel = {
+  const payload: MappedChannelCategory = {
     name: sp.name,
     description: sp.description ?? null,
     type: "category",

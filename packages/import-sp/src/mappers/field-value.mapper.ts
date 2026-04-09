@@ -18,6 +18,14 @@ export interface ExtractedFieldValue {
   readonly value: string;
 }
 
+/**
+ * Canonical `Mapped<Entity>` alias for parity with the rest of the mapper
+ * family. Field values are never upserted as their own entity — they travel
+ * embedded in the member mapper's output and are persisted by the member
+ * persister — so this alias exists solely for naming consistency.
+ */
+export type MappedFieldValue = ExtractedFieldValue;
+
 export function extractFieldValues(
   input: {
     readonly memberSourceId: string;

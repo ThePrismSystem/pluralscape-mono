@@ -48,6 +48,13 @@ export interface MappedPollOutput {
   readonly votes: readonly MappedPollVote[];
 }
 
+/**
+ * Canonical name for the persister payload. The poll mapper produces
+ * {@link MappedPollOutput}; this alias aligns the entity-level name with the
+ * rest of the `Mapped<Entity>` family consumed by {@link PersistableEntity}.
+ */
+export type MappedPoll = MappedPollOutput;
+
 const VETO_SENTINEL = "veto";
 
 export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPollOutput> {

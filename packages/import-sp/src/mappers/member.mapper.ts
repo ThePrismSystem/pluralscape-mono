@@ -40,6 +40,13 @@ export interface MappedMemberOutput {
 }
 
 /**
+ * Canonical name for the persister payload. The member mapper produces
+ * {@link MappedMemberOutput}; this alias aligns the entity-level name with the
+ * rest of the `Mapped<Entity>` family consumed by {@link PersistableEntity}.
+ */
+export type MappedMember = MappedMemberOutput;
+
+/**
  * Resolve a member's privacy bucket source IDs.
  *
  * Precedence:

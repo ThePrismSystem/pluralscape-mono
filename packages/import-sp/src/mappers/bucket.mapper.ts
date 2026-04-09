@@ -25,14 +25,23 @@ import type { MappingContext } from "./context.js";
 import type { SPPrivacyBucket } from "../sources/sp-types.js";
 
 /** The Pluralscape-shaped bucket payload the persister consumes. */
-export interface MappedBucket {
+export interface MappedPrivacyBucket {
   readonly name: string;
   readonly description: string | null;
   readonly color: string | null;
   readonly icon: string | null;
 }
 
-export function mapBucket(sp: SPPrivacyBucket, ctx: MappingContext): MapperResult<MappedBucket> {
+/**
+ * Backwards-compatible alias. `MappedPrivacyBucket` is the canonical name
+ * used by {@link PersistableEntity}; `MappedBucket` remains for older imports.
+ */
+export type MappedBucket = MappedPrivacyBucket;
+
+export function mapBucket(
+  sp: SPPrivacyBucket,
+  ctx: MappingContext,
+): MapperResult<MappedPrivacyBucket> {
   if (!sp.name || sp.name.length === 0) {
     ctx.addWarning({
       entityType: "privacy-bucket",
@@ -41,7 +50,7 @@ export function mapBucket(sp: SPPrivacyBucket, ctx: MappingContext): MapperResul
     });
     return skipped("empty name");
   }
-  const payload: MappedBucket = {
+  const payload: MappedPrivacyBucket = {
     name: sp.name,
     description: sp.desc ?? null,
     color: sp.color ?? null,
