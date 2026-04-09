@@ -76,7 +76,7 @@ function entry<TSchema extends z.ZodType>(
       if (!parsed.success) {
         const firstIssue = parsed.error.issues[0];
         const message = firstIssue?.message ?? "invalid document";
-        return failed(`validation: ${message}`);
+        return failed({ kind: "validation-failed", message: `validation: ${message}` });
       }
       return mapper(parsed.data, ctx);
     },

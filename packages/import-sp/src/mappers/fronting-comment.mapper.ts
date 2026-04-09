@@ -23,7 +23,12 @@ export function mapFrontingComment(
 ): MapperResult<MappedFrontingComment> {
   const resolved = ctx.translate("fronting-session", sp.documentId);
   if (resolved === null) {
-    return failed(`FK miss: fronting-session ${sp.documentId} not in translation table`);
+    return failed({
+      kind: "fk-miss",
+      message: `FK miss: fronting-session ${sp.documentId} not in translation table`,
+      missingRefs: [sp.documentId],
+      targetField: "documentId",
+    });
   }
 
   const payload: MappedFrontingComment = {

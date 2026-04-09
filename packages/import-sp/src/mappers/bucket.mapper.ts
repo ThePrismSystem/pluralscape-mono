@@ -48,7 +48,7 @@ export function mapBucket(
       entityId: sp._id,
       message: "bucket has empty name; skipping",
     });
-    return skipped("empty name");
+    return skipped({ kind: "empty-name", reason: "empty name" });
   }
   const payload: MappedPrivacyBucket = {
     name: sp.name,

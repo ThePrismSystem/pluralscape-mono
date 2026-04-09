@@ -48,7 +48,7 @@ export function mapChannelCategory(
       entityId: sp._id,
       message: "channel category has empty name; skipping",
     });
-    return skipped("empty name");
+    return skipped({ kind: "empty-name", reason: "empty name" });
   }
   const payload: MappedChannelCategory = {
     name: sp.name,
@@ -67,7 +67,7 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
       entityId: sp._id,
       message: "channel has empty name; skipping",
     });
-    return skipped("empty name");
+    return skipped({ kind: "empty-name", reason: "empty name" });
   }
 
   let parentChannelId: string | null = null;

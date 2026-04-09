@@ -73,7 +73,7 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
       entityId: sp._id,
       message: "member has empty name; skipping",
     });
-    return skipped("empty name");
+    return skipped({ kind: "empty-name", reason: "empty name" });
   }
 
   if (sp.frame !== undefined && sp.frame !== null) {

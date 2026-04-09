@@ -9,22 +9,48 @@
  *   payload ready for persistence.
  * - `skipped` — the source document is valid but intentionally not imported
  *   (e.g., user deselected the category, empty required field, duplicate).
+ *   Carries an {@link ImportFailureKind} so the engine can categorise skips.
  * - `failed` — the source document is malformed or references an unknown
- *   foreign key. The engine records a non-fatal error and continues.
+ *   foreign key. Carries a structured {@link ImportFailureKind}, the human
+ *   message, any unresolved source refs, and the field that triggered the
+ *   failure. The engine records a non-fatal error and continues.
  */
+import type { ImportFailureKind } from "@pluralscape/types";
+
 export type MapperResult<T> =
   | { readonly status: "mapped"; readonly payload: T }
-  | { readonly status: "skipped"; readonly reason: string }
-  | { readonly status: "failed"; readonly message: string };
+  | {
+      readonly status: "skipped";
+      readonly kind: ImportFailureKind;
+      readonly reason: string;
+    }
+  | {
+      readonly status: "failed";
+      readonly kind: ImportFailureKind;
+      readonly message: string;
+      readonly missingRefs?: readonly string[];
+      readonly targetField?: string;
+    };
 
 export function mapped<T>(payload: T): MapperResult<T> {
   return { status: "mapped", payload };
 }
 
-export function skipped<T>(reason: string): MapperResult<T> {
-  return { status: "skipped", reason };
+export function skipped<T>(args: { kind: ImportFailureKind; reason: string }): MapperResult<T> {
+  return { status: "skipped", kind: args.kind, reason: args.reason };
 }
 
-export function failed<T>(message: string): MapperResult<T> {
-  return { status: "failed", message };
+export function failed<T>(args: {
+  kind: ImportFailureKind;
+  message: string;
+  missingRefs?: readonly string[];
+  targetField?: string;
+}): MapperResult<T> {
+  return {
+    status: "failed",
+    kind: args.kind,
+    message: args.message,
+    missingRefs: args.missingRefs,
+    targetField: args.targetField,
+  };
 }

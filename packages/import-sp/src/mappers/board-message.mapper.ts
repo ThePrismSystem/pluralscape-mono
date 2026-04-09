@@ -28,7 +28,12 @@ export function mapBoardMessage(
 ): MapperResult<MappedBoardMessage> {
   const authorMemberId = ctx.translate("member", sp.writer);
   if (authorMemberId === null) {
-    return failed(`FK miss: member ${sp.writer} not in translation table`);
+    return failed({
+      kind: "fk-miss",
+      message: `FK miss: member ${sp.writer} not in translation table`,
+      missingRefs: [sp.writer],
+      targetField: "writer",
+    });
   }
 
   if (sp.readBy !== undefined) {

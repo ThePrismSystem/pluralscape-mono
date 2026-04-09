@@ -25,7 +25,7 @@ export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedG
       entityId: sp._id,
       message: "group has empty name; skipping",
     });
-    return skipped("empty name");
+    return skipped({ kind: "empty-name", reason: "empty name" });
   }
 
   const resolved: string[] = [];

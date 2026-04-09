@@ -42,7 +42,12 @@ export interface MappedJournalEntry {
 export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<MappedJournalEntry> {
   const resolved = ctx.translate("member", sp.member);
   if (resolved === null) {
-    return failed(`FK miss: member ${sp.member} not in translation table`);
+    return failed({
+      kind: "fk-miss",
+      message: `FK miss: member ${sp.member} not in translation table`,
+      missingRefs: [sp.member],
+      targetField: "member",
+    });
   }
 
   if (sp.color !== undefined && sp.color !== null) {

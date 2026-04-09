@@ -27,7 +27,7 @@ export function mapCustomFront(
       entityId: sp._id,
       message: "custom front has empty name; skipping",
     });
-    return skipped("empty name");
+    return skipped({ kind: "empty-name", reason: "empty name" });
   }
   const payload: MappedCustomFront = {
     name: sp.name,

@@ -30,7 +30,12 @@ export function mapFrontingSession(
   const entityType = sp.custom ? "custom-front" : "member";
   const resolved = ctx.translate(entityType, sp.member);
   if (resolved === null) {
-    return failed(`FK miss: ${entityType} ${sp.member} not in translation table`);
+    return failed({
+      kind: "fk-miss",
+      message: `FK miss: ${entityType} ${sp.member} not in translation table`,
+      missingRefs: [sp.member],
+      targetField: "member",
+    });
   }
 
   const endTime = sp.live ? null : sp.endTime;

@@ -278,6 +278,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
             entityType,
             entityId: doc.sourceId,
             message: result.message,
+            kind: result.kind,
             fatal: false,
           };
           errors.push(error);

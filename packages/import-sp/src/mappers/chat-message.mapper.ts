@@ -1,11 +1,13 @@
 /**
  * Chat message mapper.
  *
- * SP `chatMessages` → Pluralscape chat messages. Resolves channel and
- * writer through the translation table (hard fail on miss — a message
- * without a channel or writer can't be materialised). `replyTo` is
- * soft-resolved: misses become `null` with a warning so the message still
- * lands, just as a top-level post.
+ * SP `chatMessages` → Pluralscape chat messages. Resolves channel, writer,
+ * and (optional) `replyTo` through the translation table. Fail-closed on
+ * every FK miss: an unresolvable channel, writer, or replyTo all surface as
+ * `MapperResult.failed` with `kind: "fk-miss"`, the offending source ref in
+ * `missingRefs`, and the field name in `targetField`. The engine records
+ * each failure and continues — callers never see a partially-materialised
+ * message.
  */
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
@@ -26,25 +28,35 @@ export function mapChatMessage(
 ): MapperResult<MappedChatMessage> {
   const channelId = ctx.translate("channel", sp.channel);
   if (channelId === null) {
-    return failed(`FK miss: channel ${sp.channel} not in translation table`);
+    return failed({
+      kind: "fk-miss",
+      message: `FK miss: channel ${sp.channel} not in translation table`,
+      missingRefs: [sp.channel],
+      targetField: "channel",
+    });
   }
   const writerMemberId = ctx.translate("member", sp.writer);
   if (writerMemberId === null) {
-    return failed(`FK miss: member ${sp.writer} not in translation table`);
+    return failed({
+      kind: "fk-miss",
+      message: `FK miss: member ${sp.writer} not in translation table`,
+      missingRefs: [sp.writer],
+      targetField: "writer",
+    });
   }
 
   let replyToChatMessageId: string | null = null;
   if (sp.replyTo !== undefined && sp.replyTo !== null) {
     const resolved = ctx.translate("chat-message", sp.replyTo);
     if (resolved === null) {
-      ctx.addWarning({
-        entityType: "chat-message",
-        entityId: sp._id,
-        message: `replyTo ${sp.replyTo} not in translation table; dropping thread link`,
+      return failed({
+        kind: "fk-miss",
+        message: `FK miss: replyTo ${sp.replyTo} not in translation table`,
+        missingRefs: [sp.replyTo],
+        targetField: "replyTo",
       });
-    } else {
-      replyToChatMessageId = resolved;
     }
+    replyToChatMessageId = resolved;
   }
 
   const payload: MappedChatMessage = {
