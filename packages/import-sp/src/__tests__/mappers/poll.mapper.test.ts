@@ -39,6 +39,7 @@ describe("mapPoll", () => {
       ],
     };
     const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.poll.options).toEqual([
         { id: "o1", label: "Red", color: "#ff0000" },
@@ -61,6 +62,7 @@ describe("mapPoll", () => {
       ],
     };
     const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.votes).toHaveLength(2);
       expect(result.payload.votes[0]).toEqual({
@@ -88,6 +90,7 @@ describe("mapPoll", () => {
       votes: [{ id: "src_x", vote: "veto", comment: "no way" }],
     };
     const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.votes).toHaveLength(1);
       expect(result.payload.votes[0]).toEqual({
@@ -136,6 +139,7 @@ describe("mapPoll", () => {
       options: [],
     };
     const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.poll.kind).toBe("custom");
       expect(result.payload.poll.description).toBe("Plans?");

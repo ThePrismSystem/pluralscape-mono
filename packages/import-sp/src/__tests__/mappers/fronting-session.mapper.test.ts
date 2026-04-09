@@ -59,6 +59,7 @@ describe("mapFrontingSession", () => {
       endTime: 5_000, // ignored when live=true
     };
     const result = mapFrontingSession(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.endTime).toBeNull();
     }
@@ -150,6 +151,7 @@ describe("mapFrontingSession", () => {
       customStatus: "feeling blurry",
     };
     const result = mapFrontingSession(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.comment).toBe("feeling blurry");
     }

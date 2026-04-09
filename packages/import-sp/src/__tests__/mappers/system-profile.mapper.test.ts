@@ -30,6 +30,7 @@ describe("mapSystemProfile", () => {
       avatarUrl: "https://x/y.png",
     };
     const result = mapSystemProfile(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.description).toBe("a system of many");
       expect(result.payload.color).toBe("#aabbcc");
@@ -46,6 +47,7 @@ describe("mapSystemProfile", () => {
       defaultPrivacyBucket: "src_bk1",
     };
     const result = mapSystemProfile(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.defaultBucketId).toBe("ps_bk1");
     }

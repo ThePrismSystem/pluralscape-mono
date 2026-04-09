@@ -24,6 +24,7 @@ describe("mapMember", () => {
   it("converts the SP single color to a one-entry colors array", () => {
     const sp: SPMember = { _id: "m1", name: "A", color: "#fa0" };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.member.colors).toEqual(["#fa0"]);
     }
@@ -39,6 +40,7 @@ describe("mapMember", () => {
       archived: true,
     };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.member.description).toBe("hi");
       expect(result.payload.member.pronouns).toBe("they/them");
@@ -54,6 +56,7 @@ describe("mapMember", () => {
       info: { fld_1: "blue", fld_2: "42" },
     };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.fieldValues).toHaveLength(2);
       expect(result.payload.fieldValues[0]?.memberSourceId).toBe("m1");
@@ -63,6 +66,7 @@ describe("mapMember", () => {
   it("forwards modern bucket assignments to bucketSourceIds", () => {
     const sp: SPMember = { _id: "m1", name: "A", buckets: ["bk1", "bk2"] };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.bucketSourceIds).toEqual(["bk1", "bk2"]);
     }
@@ -71,6 +75,7 @@ describe("mapMember", () => {
   it("translates legacy private:true to synthetic:private", () => {
     const sp: SPMember = { _id: "m1", name: "A", private: true };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.bucketSourceIds).toEqual(["synthetic:private"]);
     }
@@ -79,6 +84,7 @@ describe("mapMember", () => {
   it("translates legacy preventTrusted:true (not private) to public-only", () => {
     const sp: SPMember = { _id: "m1", name: "A", private: false, preventTrusted: true };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.bucketSourceIds).toEqual(["synthetic:public"]);
     }
@@ -92,6 +98,7 @@ describe("mapMember", () => {
       preventTrusted: false,
     };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.bucketSourceIds).toEqual(["synthetic:public", "synthetic:trusted"]);
     }
@@ -100,6 +107,7 @@ describe("mapMember", () => {
   it("fails closed to synthetic:private when no bucket info is available", () => {
     const sp: SPMember = { _id: "m1", name: "A" };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.bucketSourceIds).toEqual(["synthetic:private"]);
     }
@@ -114,6 +122,7 @@ describe("mapMember", () => {
       preventTrusted: true,
     };
     const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.bucketSourceIds).toEqual(["bk1"]);
     }

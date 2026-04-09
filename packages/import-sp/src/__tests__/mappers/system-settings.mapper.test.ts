@@ -22,6 +22,7 @@ describe("mapSystemSettings", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPPrivate = { _id: "pr2", locale: "en-GB" };
     const result = mapSystemSettings(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.locale).toBe("en-GB");
     }
@@ -36,6 +37,7 @@ describe("mapSystemSettings", () => {
       messageBoardNotifs: true,
     };
     const result = mapSystemSettings(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.frontingNotificationsEnabled).toBe(true);
       expect(result.payload.boardNotificationsEnabled).toBe(true);
@@ -46,6 +48,7 @@ describe("mapSystemSettings", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPPrivate = { _id: "pr4", locale: null };
     const result = mapSystemSettings(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.locale).toBeNull();
     }

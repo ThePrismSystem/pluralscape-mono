@@ -97,6 +97,7 @@ describe("mapJournalEntry", () => {
       member: "src_m1",
     };
     const result = mapJournalEntry(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.title).toBe("Specific Title");
       expect(result.payload.createdAt).toBe(42);

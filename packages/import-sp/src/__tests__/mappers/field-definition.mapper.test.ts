@@ -27,6 +27,7 @@ describe("mapFieldDefinition", () => {
       supportMarkdown: true,
     };
     const result = mapFieldDefinition(sp, createMappingContext({ sourceMode: "fake" }));
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.supportMarkdown).toBe(true);
     }
@@ -37,6 +38,7 @@ describe("mapFieldDefinition", () => {
     for (const type of ["number", "date", "color", "url"] as const) {
       const sp: SPCustomField = { _id: `f_${type}`, name: type, type, order: 0 };
       const result = mapFieldDefinition(sp, ctx);
+      expect(result.status).toBe("mapped");
       if (result.status === "mapped") {
         expect(result.payload.fieldType).toBe(type);
       }

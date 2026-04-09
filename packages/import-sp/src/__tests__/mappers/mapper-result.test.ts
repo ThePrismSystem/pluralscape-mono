@@ -38,6 +38,7 @@ describe("MapperResult constructors", () => {
 
   it("failed leaves missingRefs and targetField undefined when omitted", () => {
     const result = failed({ kind: "validation-failed", message: "boom" });
+    expect(result.status).toBe("failed");
     if (result.status === "failed") {
       expect(result.missingRefs).toBeUndefined();
       expect(result.targetField).toBeUndefined();

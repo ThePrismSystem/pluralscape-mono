@@ -54,6 +54,7 @@ describe("mapBoardMessage", () => {
       writtenAt: 42,
     };
     const result = mapBoardMessage(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.title).toBe("Specific Title!");
       expect(result.payload.body).toBe("multi\nline\nbody");

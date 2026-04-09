@@ -29,6 +29,7 @@ describe("mapChannelCategory", () => {
       order: 3,
     };
     const result = mapChannelCategory(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.description).toBe("creative stuff");
       expect(result.payload.order).toBe(3);
@@ -99,6 +100,7 @@ describe("mapChannel", () => {
       order: 7,
     };
     const result = mapChannel(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.description).toBe("voice chat");
       expect(result.payload.order).toBe(7);

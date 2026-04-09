@@ -66,6 +66,7 @@ describe("mapFrontingComment", () => {
       time: 1_700_000_000_000,
     };
     const result = mapFrontingComment(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.createdAt).toBe(1_700_000_000_000);
     }
