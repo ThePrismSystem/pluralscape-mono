@@ -5,6 +5,7 @@ import {
 } from "./import-sp-mobile.constants.js";
 
 import type { AvatarFetchResult, AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
+import type JSZip from "jszip";
 
 const HTTP_NOT_FOUND = 404;
 const MIN_HTTP_OK = 200;
@@ -12,6 +13,22 @@ const MAX_HTTP_OK = 299;
 const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 const SIZE_ERROR_MESSAGE = "avatar exceeds maximum size";
 const TIMEOUT_ERROR_MESSAGE = "avatar fetch timed out";
+
+/**
+ * Content-type mappings for common avatar extensions found in SP ZIP exports.
+ *
+ * JSZip does not expose MIME metadata, so we derive it from the filename
+ * suffix. Unknown extensions fall back to `application/octet-stream`.
+ */
+const EXTENSION_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  bmp: "image/bmp",
+  svg: "image/svg+xml",
+};
 
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === "AbortError";
@@ -157,19 +174,96 @@ function createLimiter(limit: number): {
 }
 
 /**
- * Creates an `AvatarFetcher` for mobile clients in API mode.
- *
- * Downloads avatars via HTTPS using the URL SP publishes in the member/system
- * payload, enforcing a per-request timeout and a maximum payload size. A
- * follow-up task will add ZIP and skip variants as a discriminated-union
- * factory signature.
+ * Extracts the file extension from a zip entry path, lowercased and without
+ * the leading dot. Returns an empty string if no extension is present.
  */
-export function createMobileAvatarFetcher(): AvatarFetcher {
+function extensionOf(path: string): string {
+  const slash = path.lastIndexOf("/");
+  const base = slash === -1 ? path : path.slice(slash + 1);
+  const dot = base.lastIndexOf(".");
+  if (dot === -1) {
+    return "";
+  }
+  return base.slice(dot + 1).toLowerCase();
+}
+
+/**
+ * Returns the zip entry whose filename (sans extension) equals `key`.
+ *
+ * JSZip stores entries under their full path; SP exports keep avatars at
+ * `avatars/{id}.{ext}`. We scan once per lookup — the export footprint is
+ * small enough that a prebuilt index adds complexity without measurable
+ * benefit.
+ */
+function findZipEntry(zip: JSZip, key: string): { path: string; file: JSZip.JSZipObject } | null {
+  for (const [path, file] of Object.entries(zip.files)) {
+    if (file.dir) {
+      continue;
+    }
+    const slash = path.lastIndexOf("/");
+    const base = slash === -1 ? path : path.slice(slash + 1);
+    const dot = base.lastIndexOf(".");
+    const stem = dot === -1 ? base : base.slice(0, dot);
+    if (stem === key) {
+      return { path, file };
+    }
+  }
+  return null;
+}
+
+async function fetchAvatarViaZip(zip: JSZip, key: string): Promise<AvatarFetchResult> {
+  const hit = findZipEntry(zip, key);
+  if (hit === null) {
+    return { status: "not-found" };
+  }
+
+  const raw = await hit.file.async("uint8array");
+  if (raw.byteLength > AVATAR_MAX_BYTES) {
+    return { status: "error", message: SIZE_ERROR_MESSAGE };
+  }
+
+  const ext = extensionOf(hit.path);
+  const contentType = EXTENSION_CONTENT_TYPES[ext] ?? DEFAULT_CONTENT_TYPE;
+  return { status: "ok", bytes: raw, contentType };
+}
+
+/**
+ * Arguments for `createMobileAvatarFetcher`.
+ *
+ * - `api` — download via HTTPS using the URL SP publishes per member/system.
+ * - `zip` — read from a loaded JSZip instance (companion export file).
+ * - `skip` — synthesize `not-found` for every key, used when the user opts
+ *   out of avatar import entirely.
+ */
+export type MobileAvatarFetcherArgs =
+  | { readonly mode: "api" }
+  | { readonly mode: "zip"; readonly zip: JSZip }
+  | { readonly mode: "skip" };
+
+/**
+ * Creates an `AvatarFetcher` for mobile clients.
+ *
+ * Dispatches to API, ZIP, or skip implementations based on the caller's
+ * chosen mode. API and ZIP modes share the same concurrency limiter so the
+ * persister cannot exhaust the device's resources regardless of source.
+ */
+export function createMobileAvatarFetcher(args: MobileAvatarFetcherArgs): AvatarFetcher {
   const limiter = createLimiter(AVATAR_CONCURRENCY);
 
   return {
     async fetchAvatar(key: string): Promise<AvatarFetchResult> {
-      return limiter.run(() => fetchAvatarViaApi(key));
+      switch (args.mode) {
+        case "api":
+          return limiter.run(() => fetchAvatarViaApi(key));
+        case "zip": {
+          const { zip } = args;
+          return limiter.run(() => fetchAvatarViaZip(zip, key));
+        }
+        case "skip":
+          return { status: "not-found" };
+        default:
+          return args satisfies never;
+      }
     },
   };
 }
