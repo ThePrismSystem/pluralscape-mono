@@ -43,7 +43,7 @@ describe("mapGroup", () => {
     }
   });
 
-  it("skips unresolvable members with a warning and keeps resolved ones", () => {
+  it("returns failed when any member reference cannot be resolved", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const sp: SPGroup = {
@@ -52,15 +52,16 @@ describe("mapGroup", () => {
       members: ["src_m1", "src_missing", "src_also_missing"],
     };
     const result = mapGroup(sp, ctx);
-    expect(result.status).toBe("mapped");
-    if (result.status === "mapped") {
-      expect(result.payload.memberIds).toEqual(["ps_m1"]);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("members");
+      expect(result.missingRefs).toContain("src_missing");
+      expect(result.missingRefs).toContain("src_also_missing");
     }
-    expect(ctx.warnings).toHaveLength(2);
-    expect(ctx.warnings.every((w) => w.entityType === "group")).toBe(true);
   });
 
-  it("emits an aggregate warning when every member is unresolved", () => {
+  it("returns failed when every member is unresolved", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPGroup = {
       _id: "g4",
@@ -68,13 +69,12 @@ describe("mapGroup", () => {
       members: ["src_x", "src_y"],
     };
     const result = mapGroup(sp, ctx);
-    expect(result.status).toBe("mapped");
-    if (result.status === "mapped") {
-      expect(result.payload.memberIds).toEqual([]);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.missingRefs).toContain("src_x");
+      expect(result.missingRefs).toContain("src_y");
     }
-    // 2 per-miss warnings + 1 aggregate
-    expect(ctx.warnings.length).toBeGreaterThanOrEqual(3);
-    expect(ctx.warnings.some((w) => w.message.includes("all members unresolved"))).toBe(true);
   });
 
   it("skips when name is empty and emits a warning", () => {
@@ -85,5 +85,44 @@ describe("mapGroup", () => {
     expect(ctx.warnings).toHaveLength(1);
     expect(ctx.warnings[0]?.entityType).toBe("group");
     expect(ctx.warnings[0]?.entityId).toBe("g5");
+  });
+});
+
+describe("group FK-miss handling", () => {
+  it("returns failed when a member reference cannot be resolved", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    ctx.register("member", "sp_m_known", "ps_m_real");
+
+    const result = mapGroup(
+      {
+        _id: "sp_g_1",
+        name: "close friends",
+        members: ["sp_m_known", "sp_m_missing"],
+      },
+      ctx,
+    );
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.missingRefs).toContain("sp_m_missing");
+      expect(result.targetField).toBe("members");
+    }
+  });
+
+  it("returns mapped when all member refs resolve", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    ctx.register("member", "sp_m_1", "ps_m_real_1");
+    ctx.register("member", "sp_m_2", "ps_m_real_2");
+
+    const result = mapGroup(
+      {
+        _id: "sp_g_1",
+        name: "close friends",
+        members: ["sp_m_1", "sp_m_2"],
+      },
+      ctx,
+    );
+    expect(result.status).toBe("mapped");
   });
 });
