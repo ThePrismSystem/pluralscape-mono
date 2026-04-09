@@ -79,6 +79,14 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             return rq.useQuery(queryOpts);
           },
         },
+        list: {
+          useQuery: (input: unknown) =>
+            rq.useQuery({
+              queryKey: ["importJob.list", input],
+              queryFn: () =>
+                Promise.resolve(fixtures.get("importJob.list") ?? { data: [], nextCursor: null }),
+            }),
+        },
       },
       useUtils: () => ({}),
     },
@@ -102,7 +110,14 @@ vi.mock("expo-secure-store", () => {
 });
 
 // Must import AFTER all mocks
-const { useStartImport, useImportJob, useImportProgress } = await import("../import.hooks.js");
+const {
+  useStartImport,
+  useImportJob,
+  useImportProgress,
+  useImportSummary,
+  useResumeActiveImport,
+  useCancelImport,
+} = await import("../import.hooks.js");
 const { IMPORT_PROGRESS_POLL_INTERVAL_MS } = await import("../import-sp-mobile.constants.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -312,5 +327,170 @@ describe("useImportProgress", () => {
       errorCount: 1,
       status: "importing",
     });
+  });
+});
+
+// ── useImportSummary ─────────────────────────────────────────────────
+describe("useImportSummary", () => {
+  it("returns null for a null jobId", () => {
+    const { result } = renderHookWithProviders(() => useImportSummary(null));
+    expect(result.current).toBeNull();
+  });
+
+  it("derives the summary for a completed job", async () => {
+    const job = makeJob("ij_sum", "completed");
+    fixtures.set("importJob.get", {
+      ...job,
+      errorLog: [
+        {
+          entityType: "member",
+          entityId: "mid_1",
+          message: "non-fatal",
+          fatal: false,
+          recoverable: false,
+        },
+      ],
+      checkpointState: {
+        schemaVersion: 1,
+        checkpoint: {
+          completedCollections: [],
+          currentCollection: "member",
+          currentCollectionLastSourceId: null,
+        },
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        totals: {
+          perCollection: {
+            member: { total: 10, imported: 10, updated: 0, skipped: 0, failed: 0 },
+          },
+        },
+      },
+    });
+
+    const { result } = renderHookWithProviders(() => useImportSummary("ij_sum" as ImportJobId));
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+    const snapshot = result.current;
+    expect(snapshot?.status).toBe("completed");
+    expect(snapshot?.completedAt).toBe(NOW);
+    expect(snapshot?.errors).toHaveLength(1);
+    expect(snapshot?.perCollection.member).toEqual({
+      total: 10,
+      imported: 10,
+      updated: 0,
+      skipped: 0,
+      failed: 0,
+    });
+  });
+});
+
+// ── useResumeActiveImport ────────────────────────────────────────────
+describe("useResumeActiveImport", () => {
+  it("exposes the first importing job as the active job", async () => {
+    const job = makeJob("ij_active", "importing");
+    fixtures.set("importJob.list", { data: [job], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+
+    await waitFor(() => {
+      expect(result.current.activeJob).not.toBeNull();
+    });
+    expect(result.current.activeJob?.id).toBe("ij_active");
+  });
+
+  it("resume() kicks runSpImport off with the preserved checkpoint", async () => {
+    const job = {
+      ...makeJob("ij_active", "importing"),
+      checkpointState: {
+        schemaVersion: 1,
+        checkpoint: {
+          completedCollections: ["privacy-bucket"],
+          currentCollection: "member",
+          currentCollectionLastSourceId: null,
+        },
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        totals: { perCollection: {} },
+      },
+    };
+    fixtures.set("importJob.list", { data: [job], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+
+    await waitFor(() => {
+      expect(result.current.activeJob).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.resume();
+    });
+
+    expect(runSpImportMock).toHaveBeenCalled();
+    const call = runSpImportMock.mock.calls[runSpImportMock.mock.calls.length - 1];
+    const passed = call?.[0] as {
+      initialCheckpoint?: { checkpoint: { currentCollection: string } };
+    };
+    expect(passed.initialCheckpoint).toBeDefined();
+    expect(passed.initialCheckpoint?.checkpoint.currentCollection).toBe("member");
+  });
+
+  it("resume() is a no-op when there is no active job", async () => {
+    fixtures.set("importJob.list", { data: [], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+    await waitFor(() => {
+      expect(result.current.activeJob).toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.resume();
+    });
+    // No runSpImport call should have been recorded since the last reset.
+    expect(runSpImportMock).not.toHaveBeenCalled();
+  });
+});
+
+// ── useCancelImport ──────────────────────────────────────────────────
+describe("useCancelImport", () => {
+  it("calls importJob.update with status=failed and preserves checkpoint", async () => {
+    const job = {
+      ...makeJob("ij_cancel", "importing"),
+      checkpointState: {
+        schemaVersion: 1,
+        checkpoint: {
+          completedCollections: ["privacy-bucket"],
+          currentCollection: "member",
+          currentCollectionLastSourceId: "src_1",
+        },
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        totals: { perCollection: {} },
+      },
+    };
+    fixtures.set("importJob.get", job);
+
+    // Render both useCancelImport and useImportJob so we can wait for
+    // the job get query to populate cache before triggering cancel.
+    const { result } = renderHookWithProviders(() => {
+      const job = useImportJob("ij_cancel" as ImportJobId);
+      const cancel = useCancelImport("ij_cancel" as ImportJobId);
+      return { job, cancel };
+    });
+
+    await waitFor(() => {
+      expect(result.current.job.data).toBeDefined();
+    });
+
+    await act(async () => {
+      await result.current.cancel.cancel();
+    });
+
+    const patch = fixtures.get("importJob.update.lastInput") as {
+      importJobId: string;
+      status: string;
+      checkpointState?: { checkpoint: { currentCollection: string } };
+    };
+    expect(patch.importJobId).toBe("ij_cancel");
+    expect(patch.status).toBe("failed");
+    expect(patch.checkpointState?.checkpoint.currentCollection).toBe("member");
   });
 });

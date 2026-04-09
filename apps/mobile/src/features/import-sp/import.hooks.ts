@@ -435,3 +435,189 @@ function deriveProgressSnapshot(job: ImportJobRow): ImportProgressSnapshot {
     status: job.status,
   };
 }
+
+// ── useImportSummary ─────────────────────────────────────────────────
+
+/**
+ * A post-run summary of an SP import, suitable for the wizard's "done"
+ * screen. `perCollection` mirrors the engine's checkpoint totals so
+ * callers can list imported/updated/skipped/failed counts per entity
+ * type; `errors` is the full non-fatal error log; `completedAt` is
+ * `null` for failed runs.
+ */
+export interface ImportSummary {
+  readonly perCollection: ImportCheckpointState["totals"]["perCollection"];
+  readonly errors: readonly {
+    readonly entityType: ImportEntityType;
+    readonly entityId: string | null;
+    readonly message: string;
+    readonly fatal: boolean;
+    readonly recoverable: boolean;
+  }[];
+  readonly status: ImportJobStatus;
+  readonly completedAt: number | null;
+}
+
+/**
+ * Read a terminal import job and derive a summary suitable for the
+ * wizard's done screen. Returns `null` while the first fetch is in
+ * flight or when `jobId` is `null`.
+ */
+export function useImportSummary(jobId: ImportJobId | null): ImportSummary | null {
+  const activeSystemId = useActiveSystemId();
+  const query = trpc.importJob.get.useQuery(
+    { systemId: activeSystemId, importJobId: jobId ?? ("ij_placeholder" as ImportJobId) },
+    { enabled: jobId !== null },
+  );
+  const job = query.data;
+  if (jobId === null || job === undefined) return null;
+  return {
+    perCollection: job.checkpointState?.totals.perCollection ?? {},
+    errors: job.errorLog ?? [],
+    status: job.status,
+    completedAt: job.completedAt,
+  };
+}
+
+// ── useResumeActiveImport ────────────────────────────────────────────
+
+/** Return type of `useResumeActiveImport`. */
+export interface UseResumeActiveImportReturn {
+  readonly activeJob: ImportJobRow | null;
+  /**
+   * Kick off a runner using the active job's checkpoint as the resume
+   * point. The caller is responsible for first prompting the user to
+   * re-supply the SP token (for API-mode resumes) or re-pick the export
+   * file (for file-mode resumes) — this hook only threads an existing
+   * checkpoint through to `runSpImport`.
+   */
+  readonly resume: () => Promise<void>;
+  readonly isResuming: boolean;
+}
+
+/**
+ * Discover the first in-flight SP import for the active system and
+ * expose a `resume()` callback that restarts it from the persisted
+ * checkpoint.
+ */
+export function useResumeActiveImport(): UseResumeActiveImportReturn {
+  const activeSystemId = useActiveSystemId();
+  const masterKey = useMasterKey();
+  const listQuery = trpc.importJob.list.useQuery({
+    systemId: activeSystemId,
+    status: "importing",
+  });
+  const updateJobMutation = trpc.importJob.update.useMutation();
+  const updateJobAsync = updateJobMutation.mutateAsync;
+  const [isResuming, setIsResuming] = useState(false);
+
+  const firstJob = listQuery.data?.data[0] ?? null;
+
+  const updateJobFn: UpdateJobFn = useCallback(
+    async (importJobId, patch) => {
+      const { errorLog, checkpointState, ...rest } = patch;
+      const checkpointClone =
+        checkpointState !== undefined
+          ? {
+              ...checkpointState,
+              checkpoint: {
+                ...checkpointState.checkpoint,
+                completedCollections: [...checkpointState.checkpoint.completedCollections],
+              },
+            }
+          : undefined;
+      await updateJobAsync({
+        systemId: activeSystemId,
+        importJobId,
+        ...rest,
+        ...(errorLog !== undefined ? { errorLog: [...errorLog] } : {}),
+        ...(checkpointClone !== undefined ? { checkpointState: checkpointClone } : {}),
+      });
+    },
+    [activeSystemId, updateJobAsync],
+  );
+
+  const resume = useCallback(async (): Promise<void> => {
+    if (firstJob === null) return;
+    if (masterKey === null) {
+      throw new Error("useResumeActiveImport requires an unlocked crypto provider");
+    }
+    setIsResuming(true);
+    try {
+      await startImportRun({
+        importJobId: firstJob.id,
+        systemId: firstJob.systemId,
+        masterKey,
+        source: createPlaceholderSource("api"),
+        avatarFetcher: createMobileAvatarFetcher({ mode: "skip" }),
+        options: {
+          selectedCategories: firstJob.checkpointState?.options.selectedCategories ?? {},
+          avatarMode: firstJob.checkpointState?.options.avatarMode ?? "skip",
+        },
+        ...(firstJob.checkpointState !== null
+          ? { initialCheckpoint: firstJob.checkpointState }
+          : {}),
+        updateJobFn,
+      });
+    } finally {
+      setIsResuming(false);
+    }
+  }, [firstJob, masterKey, updateJobFn]);
+
+  return {
+    activeJob: firstJob,
+    resume,
+    isResuming,
+  };
+}
+
+// ── useCancelImport ──────────────────────────────────────────────────
+
+/** Return type of `useCancelImport`. */
+export interface UseCancelImportReturn {
+  readonly cancel: () => Promise<void>;
+  readonly isCancelling: boolean;
+}
+
+/**
+ * Cancel an in-flight SP import by setting the job's status to `failed`
+ * and marking the checkpoint as cancelled. The checkpoint is preserved
+ * so a subsequent resume would still be theoretically possible, though
+ * the wizard typically hides the resume path once the user cancels.
+ */
+export function useCancelImport(jobId: ImportJobId): UseCancelImportReturn {
+  const activeSystemId = useActiveSystemId();
+  const updateMutation = trpc.importJob.update.useMutation();
+  const getQuery = trpc.importJob.get.useQuery({ systemId: activeSystemId, importJobId: jobId });
+
+  const [isCancelling, setIsCancelling] = useState(false);
+  const updateAsync = updateMutation.mutateAsync;
+  const currentJob = getQuery.data;
+
+  const cancel = useCallback(async (): Promise<void> => {
+    setIsCancelling(true);
+    try {
+      const existingCheckpoint = currentJob?.checkpointState ?? null;
+      const clone =
+        existingCheckpoint !== null
+          ? {
+              ...existingCheckpoint,
+              checkpoint: {
+                ...existingCheckpoint.checkpoint,
+                completedCollections: [...existingCheckpoint.checkpoint.completedCollections],
+              },
+            }
+          : null;
+      await updateAsync({
+        systemId: activeSystemId,
+        importJobId: jobId,
+        status: "failed",
+        ...(clone !== null ? { checkpointState: clone } : {}),
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  }, [activeSystemId, currentJob, jobId, updateAsync]);
+
+  return { cancel, isCancelling };
+}
