@@ -392,6 +392,7 @@ export {
   IMPORT_AVATAR_MODES,
   IMPORT_CHECKPOINT_SCHEMA_VERSION,
 } from "./import-export.js";
+export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.js";
 
 // ── Scope domains ────────────────────────────────────────────
 export type { ScopeDomain, ScopeTier, RequiredScope } from "./scope-domains.js";
