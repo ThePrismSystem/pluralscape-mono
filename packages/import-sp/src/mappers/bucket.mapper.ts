@@ -32,12 +32,6 @@ export interface MappedPrivacyBucket {
   readonly icon: string | null;
 }
 
-/**
- * Backwards-compatible alias. `MappedPrivacyBucket` is the canonical name
- * used by {@link PersistableEntity}; `MappedBucket` remains for older imports.
- */
-export type MappedBucket = MappedPrivacyBucket;
-
 export function mapBucket(
   sp: SPPrivacyBucket,
   ctx: MappingContext,
