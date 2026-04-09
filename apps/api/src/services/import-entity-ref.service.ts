@@ -5,7 +5,7 @@ import { and, desc, eq, lt } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_INTERNAL_SERVER_ERROR } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
+import { buildPaginatedResult, parseCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -294,7 +294,8 @@ export async function listImportEntityRefs(
     if (parsedQuery.sourceEntityId) {
       conditions.push(eq(importEntityRefs.sourceEntityId, parsedQuery.sourceEntityId));
     }
-    if (opts.cursor) conditions.push(lt(importEntityRefs.id, opts.cursor));
+    const decodedCursor = parseCursor(opts.cursor);
+    if (decodedCursor) conditions.push(lt(importEntityRefs.id, decodedCursor));
 
     const rows = await tx
       .select()

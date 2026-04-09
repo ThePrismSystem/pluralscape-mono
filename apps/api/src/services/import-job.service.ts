@@ -24,7 +24,7 @@ import {
   HTTP_NOT_FOUND,
 } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
+import { buildPaginatedResult, parseCursor } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { tenantCtx } from "../lib/tenant-context.js";
@@ -311,7 +311,8 @@ export async function listImportJobs(
     const conditions = [eq(importJobs.systemId, systemId)];
     if (parsedQuery.status) conditions.push(eq(importJobs.status, parsedQuery.status));
     if (parsedQuery.source) conditions.push(eq(importJobs.source, parsedQuery.source));
-    if (opts.cursor) conditions.push(lt(importJobs.id, opts.cursor));
+    const decodedCursor = parseCursor(opts.cursor);
+    if (decodedCursor) conditions.push(lt(importJobs.id, decodedCursor));
 
     const rows = await tx
       .select()

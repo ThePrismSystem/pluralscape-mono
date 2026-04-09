@@ -723,6 +723,57 @@ describe("import-job.service (PGlite integration)", () => {
     });
   });
 
+  // ── Pagination and limit clamping ────────────────────────────────
+
+  describe("listImportJobs pagination and limit clamping", () => {
+    const createBody = {
+      source: "simply-plural" as const,
+      selectedCategories: { member: true },
+      avatarMode: "api" as const,
+    };
+
+    it("paginates with cursor over 15 jobs in pages of 5", async () => {
+      for (let i = 0; i < 15; i++) {
+        await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      }
+
+      const page1 = await listImportJobs(asDb(db), systemId, auth, { limit: 5 });
+      expect(page1.data).toHaveLength(5);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.nextCursor).not.toBeNull();
+
+      const page2 = await listImportJobs(asDb(db), systemId, auth, {
+        limit: 5,
+        cursor: page1.nextCursor ?? undefined,
+      });
+      expect(page2.data).toHaveLength(5);
+      expect(page2.hasMore).toBe(true);
+
+      const page3 = await listImportJobs(asDb(db), systemId, auth, {
+        limit: 5,
+        cursor: page2.nextCursor ?? undefined,
+      });
+      expect(page3.data).toHaveLength(5);
+      expect(page3.hasMore).toBe(false);
+
+      // No overlap across pages
+      const ids = new Set([
+        ...page1.data.map((j) => j.id),
+        ...page2.data.map((j) => j.id),
+        ...page3.data.map((j) => j.id),
+      ]);
+      expect(ids.size).toBe(15);
+    });
+
+    it("clamps limit to MAX_PAGE_LIMIT (100)", async () => {
+      for (let i = 0; i < 3; i++) {
+        await createImportJob(asDb(db), systemId, createBody, auth, noopAudit);
+      }
+      const result = await listImportJobs(asDb(db), systemId, auth, { limit: 99999 });
+      expect(result.data.length).toBeLessThanOrEqual(100);
+    });
+  });
+
   describe("getImportJob corrupt JSONB handling", () => {
     it("throws INTERNAL_ERROR when errorLog has wrong shape", async () => {
       const job = await createImportJob(

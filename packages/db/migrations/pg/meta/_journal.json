@@ -15,6 +15,13 @@
       "when": 1775654716161,
       "tag": "0002_pretty_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775729222733,
+      "tag": "0003_chubby_ikaris",
+      "breakpoints": true
     }
   ]
 }

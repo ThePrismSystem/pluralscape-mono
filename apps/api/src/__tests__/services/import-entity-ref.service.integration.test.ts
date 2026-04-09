@@ -304,4 +304,122 @@ describe("import-entity-ref.service (PGlite integration)", () => {
       );
     });
   });
+
+  // ── Pagination and limit clamping ─────────────────────────────────
+
+  describe("listImportEntityRefs pagination and limit clamping", () => {
+    it("paginates with cursor over 12 refs in pages of 5", async () => {
+      for (let i = 0; i < 12; i++) {
+        await recordImportEntityRef(
+          asDb(db),
+          systemId,
+          {
+            source: "simply-plural",
+            sourceEntityType: "member",
+            sourceEntityId: `sp-paginate-${String(i)}`,
+            pluralscapeEntityId: `mem_paginate_${String(i)}`,
+          },
+          auth,
+        );
+      }
+
+      const page1 = await listImportEntityRefs(asDb(db), systemId, auth, { limit: 5 });
+      expect(page1.data).toHaveLength(5);
+      expect(page1.hasMore).toBe(true);
+      expect(page1.nextCursor).not.toBeNull();
+
+      const page2 = await listImportEntityRefs(asDb(db), systemId, auth, {
+        limit: 5,
+        cursor: page1.nextCursor ?? undefined,
+      });
+      expect(page2.data).toHaveLength(5);
+      expect(page2.hasMore).toBe(true);
+
+      const page3 = await listImportEntityRefs(asDb(db), systemId, auth, {
+        limit: 5,
+        cursor: page2.nextCursor ?? undefined,
+      });
+      expect(page3.data).toHaveLength(2);
+      expect(page3.hasMore).toBe(false);
+
+      // No overlap across pages
+      const ids = new Set([
+        ...page1.data.map((r) => r.id),
+        ...page2.data.map((r) => r.id),
+        ...page3.data.map((r) => r.id),
+      ]);
+      expect(ids.size).toBe(12);
+    });
+
+    it("filters by sourceEntityId", async () => {
+      await recordImportEntityRef(
+        asDb(db),
+        systemId,
+        {
+          source: "simply-plural",
+          sourceEntityType: "member",
+          sourceEntityId: "sp-filter-target",
+          pluralscapeEntityId: "mem_filter_one",
+        },
+        auth,
+      );
+      await recordImportEntityRef(
+        asDb(db),
+        systemId,
+        {
+          source: "simply-plural",
+          sourceEntityType: "member",
+          sourceEntityId: "sp-filter-other",
+          pluralscapeEntityId: "mem_filter_two",
+        },
+        auth,
+      );
+
+      const result = await listImportEntityRefs(asDb(db), systemId, auth, {
+        sourceEntityId: "sp-filter-target",
+      });
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]?.sourceEntityId).toBe("sp-filter-target");
+    });
+
+    it("clamps limit to MAX_PAGE_LIMIT (100)", async () => {
+      const result = await listImportEntityRefs(asDb(db), systemId, auth, { limit: 99999 });
+      expect(result.data.length).toBeLessThanOrEqual(100);
+    });
+  });
+
+  // ── Validation ───────────────────────────────────────────────────
+
+  describe("recordImportEntityRef validation", () => {
+    const baseInput = {
+      source: "simply-plural" as const,
+      sourceEntityType: "member" as const,
+    };
+
+    it("rejects empty sourceEntityId with VALIDATION_ERROR", async () => {
+      await assertApiError(
+        recordImportEntityRef(
+          asDb(db),
+          systemId,
+          { ...baseInput, sourceEntityId: "", pluralscapeEntityId: "mem_x" },
+          auth,
+        ),
+        "VALIDATION_ERROR",
+        400,
+      );
+    });
+
+    it("rejects empty pluralscapeEntityId with VALIDATION_ERROR", async () => {
+      await assertApiError(
+        recordImportEntityRef(
+          asDb(db),
+          systemId,
+          { ...baseInput, sourceEntityId: "sp-x", pluralscapeEntityId: "" },
+          auth,
+        ),
+        "VALIDATION_ERROR",
+        400,
+      );
+    });
+  });
 });

@@ -901,6 +901,48 @@ describe("PG import-export schema", () => {
       ).rejects.toThrow();
     });
 
+    it("rejects invalid source via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      await expect(
+        db.insert(importEntityRefs).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          source: "not-a-valid-source" as "simply-plural",
+          sourceEntityType: "member",
+          sourceEntityId: "x",
+          pluralscapeEntityId: "y",
+          importedAt: Date.now(),
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      await db.insert(importEntityRefs).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        source: "simply-plural",
+        sourceEntityType: "member",
+        sourceEntityId: "sys-cascade-check",
+        pluralscapeEntityId: "mem_sys_cascade",
+        importedAt: Date.now(),
+      });
+
+      await db.delete(systems).where(eq(systems.id, systemId));
+
+      const remaining = await db
+        .select()
+        .from(importEntityRefs)
+        .where(eq(importEntityRefs.systemId, systemId));
+      expect(remaining).toHaveLength(0);
+    });
+
     it("rejects invalid source_entity_type via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
