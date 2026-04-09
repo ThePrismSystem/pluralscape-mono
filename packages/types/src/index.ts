@@ -357,6 +357,7 @@ export type {
   PKImportGroup,
   PKImportSwitch,
   PKImportPayload,
+  ImportFailureKind,
   ImportSourceFormat,
   ImportEntityType,
   ImportCollectionType,

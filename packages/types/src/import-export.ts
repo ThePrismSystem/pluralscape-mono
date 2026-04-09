@@ -123,10 +123,26 @@ export interface ImportProgress {
   readonly errors: readonly ImportError[];
 }
 
+/**
+ * Structured classification for import failures and warnings.
+ *
+ * Consumers (the engine, the final report, the mobile wizard UI) use this to
+ * group issues by kind instead of parsing free-form message strings.
+ */
+export type ImportFailureKind =
+  | "fk-miss"
+  | "unknown-field"
+  | "empty-name"
+  | "dropped-collection"
+  | "warnings-truncated"
+  | "schema-mismatch"
+  | "validation-failed";
+
 interface ImportErrorBase {
   readonly entityType: ImportEntityType;
   readonly entityId: string | null;
   readonly message: string;
+  readonly kind?: ImportFailureKind;
 }
 
 /**
