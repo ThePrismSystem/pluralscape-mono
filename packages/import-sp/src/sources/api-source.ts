@@ -9,6 +9,18 @@ import {
 import type { ImportSource, SourceDocument } from "./source.types.js";
 import type { SpCollectionName } from "./sp-collections.js";
 
+/**
+ * Permanent failure fetching from the SP API: non-array response, missing
+ * `_id` on a document, or a malformed document shape. Retry will not succeed.
+ * Classifier maps this to `{ recoverable: false, fatal: true }`.
+ */
+export class ApiSourcePermanentError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "ApiSourcePermanentError";
+  }
+}
+
 /** Thrown when SP rejects the bearer token (HTTP 401). Fatal-recoverable. */
 export class ApiSourceTokenRejectedError extends Error {
   constructor() {
@@ -92,6 +104,10 @@ function backoffFor(attempt: number): number {
  *   `ApiSourceTransientError`.
  * - Any other non-2xx → `ApiSourceTransientError` without retrying (4xx other
  *   than 401 is unlikely to resolve on a retry).
+ * - Shape failures (non-array response body, document missing `_id`,
+ *   non-object document) → `ApiSourcePermanentError`. Retrying will not
+ *   resolve a schema mismatch; the classifier maps this to fatal +
+ *   non-recoverable so the operator must fix the source.
  *
  * Pagination stops when the server returns an empty page. We deliberately do
  * **not** stop on a short page because SP's exact page-size semantics have not
@@ -157,7 +173,7 @@ export function createApiImportSource(input: ApiSourceInput): ImportSource {
 
       const body: unknown = await response.json();
       if (!Array.isArray(body)) {
-        throw new ApiSourceTransientError(
+        throw new ApiSourcePermanentError(
           `SP API returned non-array body for ${url} (got ${typeof body})`,
         );
       }
@@ -187,9 +203,14 @@ export function createApiImportSource(input: ApiSourceInput): ImportSource {
           return;
         }
         for (const document of docs) {
+          if (document === null || typeof document !== "object") {
+            throw new ApiSourcePermanentError(
+              `ApiImportSource: ${collection} contained a non-object document (got ${typeof document})`,
+            );
+          }
           const sourceId = (document as { _id?: unknown })._id;
           if (typeof sourceId !== "string" || sourceId.length === 0) {
-            throw new ApiSourceTransientError(
+            throw new ApiSourcePermanentError(
               `ApiImportSource: ${collection} document missing _id`,
             );
           }

@@ -5,7 +5,11 @@ import {
   isFatalError,
   ResumeCutoffNotFoundError,
 } from "../../engine/engine-errors.js";
-import { ApiSourceTokenRejectedError, ApiSourceTransientError } from "../../sources/api-source.js";
+import {
+  ApiSourcePermanentError,
+  ApiSourceTokenRejectedError,
+  ApiSourceTransientError,
+} from "../../sources/api-source.js";
 
 describe("classifyError", () => {
   it("classifies token rejection as fatal + recoverable", () => {
@@ -77,5 +81,25 @@ describe("classifyError", () => {
     expect(result2.fatal).toBe(false);
     expect(result2.entityType).toBe("member");
     expect(result2.entityId).toBe("src_2");
+  });
+});
+
+describe("classifyError — API source split", () => {
+  it("classifies ApiSourcePermanentError as non-recoverable fatal", () => {
+    const err = classifyError(new ApiSourcePermanentError("bad shape"), {
+      entityType: "member",
+      entityId: null,
+    });
+    expect(err.fatal).toBe(true);
+    if (err.fatal) expect(err.recoverable).toBe(false);
+  });
+
+  it("classifies ApiSourceTransientError as recoverable fatal", () => {
+    const err = classifyError(new ApiSourceTransientError("429"), {
+      entityType: "member",
+      entityId: null,
+    });
+    expect(err.fatal).toBe(true);
+    if (err.fatal) expect(err.recoverable).toBe(true);
   });
 });

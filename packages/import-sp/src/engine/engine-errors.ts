@@ -1,4 +1,8 @@
-import { ApiSourceTokenRejectedError, ApiSourceTransientError } from "../sources/api-source.js";
+import {
+  ApiSourcePermanentError,
+  ApiSourceTokenRejectedError,
+  ApiSourceTransientError,
+} from "../sources/api-source.js";
 
 import type { SpCollectionName } from "../sources/sp-collections.js";
 import type { ImportEntityType, ImportError } from "@pluralscape/types";
@@ -32,9 +36,12 @@ export class ResumeCutoffNotFoundError extends Error {
  * Convert an arbitrary thrown value into the structured `ImportError` shape
  * the persister stores on `import_jobs.error_log`.
  *
- * - Source-level transport errors (`ApiSourceTokenRejectedError`,
- *   `ApiSourceTransientError`) are fatal but recoverable: the user can retry
- *   from the last checkpoint after fixing credentials or backoff conditions.
+ * - `ApiSourceTokenRejectedError` and `ApiSourceTransientError` are fatal +
+ *   recoverable: the user can retry from the last checkpoint after fixing
+ *   credentials or letting backoff conditions clear.
+ * - `ApiSourcePermanentError` is fatal + non-recoverable: the SP API returned
+ *   a shape Pluralscape does not model (non-array body, missing `_id`, etc.),
+ *   retry will not succeed. Carries `kind: "schema-mismatch"`.
  * - `SyntaxError` indicates an unparseable payload: fatal and non-recoverable
  *   (the user must restart the import or fix the source data).
  * - Anything else is treated as a per-document failure: non-fatal so the
@@ -46,6 +53,16 @@ export class ResumeCutoffNotFoundError extends Error {
  * the persister can record per-document failures.
  */
 export function classifyError(thrown: unknown, ctx: ClassifyContext): ImportError {
+  if (thrown instanceof ApiSourcePermanentError) {
+    return {
+      entityType: "unknown",
+      entityId: null,
+      message: thrown.message,
+      kind: "schema-mismatch",
+      fatal: true,
+      recoverable: false,
+    };
+  }
   if (thrown instanceof ApiSourceTokenRejectedError) {
     return {
       entityType: "unknown",
