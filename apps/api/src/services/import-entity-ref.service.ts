@@ -3,7 +3,7 @@ import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { ImportEntityRefQuerySchema } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_INTERNAL_SERVER_ERROR } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -167,28 +167,7 @@ export async function recordImportEntityRef(
   const timestamp = now();
 
   return withTenantTransaction(db, tenantCtx(systemId, auth), async (tx) => {
-    const existing = await tx
-      .select()
-      .from(importEntityRefs)
-      .where(
-        and(
-          eq(importEntityRefs.systemId, systemId),
-          eq(importEntityRefs.source, input.source),
-          eq(importEntityRefs.sourceEntityType, input.sourceEntityType),
-          eq(importEntityRefs.sourceEntityId, input.sourceEntityId),
-        ),
-      )
-      .limit(1);
-
-    if (existing.length > 0) {
-      throw new ApiHttpError(
-        HTTP_CONFLICT,
-        "CONFLICT",
-        "Import entity ref already exists for this source",
-      );
-    }
-
-    const [row] = await tx
+    const inserted = await tx
       .insert(importEntityRefs)
       .values({
         id,
@@ -200,13 +179,64 @@ export async function recordImportEntityRef(
         pluralscapeEntityId: input.pluralscapeEntityId,
         importedAt: timestamp,
       })
+      .onConflictDoNothing({
+        target: [
+          importEntityRefs.accountId,
+          importEntityRefs.systemId,
+          importEntityRefs.source,
+          importEntityRefs.sourceEntityType,
+          importEntityRefs.sourceEntityId,
+        ],
+      })
       .returning();
 
-    if (!row) {
-      throw new Error("Failed to record import entity ref — INSERT returned no rows");
+    if (inserted.length > 0) {
+      const row = inserted[0];
+      if (!row) {
+        throw new ApiHttpError(
+          HTTP_INTERNAL_SERVER_ERROR,
+          "INTERNAL_ERROR",
+          "INSERT returned empty row",
+          { reason: "insert_returned_empty" },
+        );
+      }
+      return toResult(row);
     }
 
-    return toResult(row);
+    // Conflict path: fetch the existing row and check for divergence.
+    const [existing] = await tx
+      .select()
+      .from(importEntityRefs)
+      .where(
+        and(
+          eq(importEntityRefs.accountId, auth.accountId),
+          eq(importEntityRefs.systemId, systemId),
+          eq(importEntityRefs.source, input.source),
+          eq(importEntityRefs.sourceEntityType, input.sourceEntityType),
+          eq(importEntityRefs.sourceEntityId, input.sourceEntityId),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(
+        HTTP_INTERNAL_SERVER_ERROR,
+        "INTERNAL_ERROR",
+        "Race detected — insert skipped but no row found",
+        { reason: "race_detected" },
+      );
+    }
+
+    if (existing.pluralscapeEntityId !== input.pluralscapeEntityId) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "CONFLICT",
+        "Source entity is already mapped to a different target",
+        { reason: "source_already_mapped" },
+      );
+    }
+
+    return toResult(existing);
   });
 }
 

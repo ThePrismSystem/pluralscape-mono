@@ -72,7 +72,22 @@ describe("import-entity-ref.service (PGlite integration)", () => {
       expect(result.importedAt).toEqual(expect.any(Number));
     });
 
-    it("rejects recording a duplicate (source, entity-type, source-id)", async () => {
+    it("returns the existing row when called with identical input twice (idempotent)", async () => {
+      const input = {
+        source: "simply-plural" as const,
+        sourceEntityType: "member" as const,
+        sourceEntityId: "sp-member-idem",
+        pluralscapeEntityId: "mem_pluralscape_idem",
+      };
+
+      const first = await recordImportEntityRef(asDb(db), systemId, input, auth);
+      const second = await recordImportEntityRef(asDb(db), systemId, input, auth);
+
+      expect(second.id).toBe(first.id);
+      expect(second.pluralscapeEntityId).toBe(first.pluralscapeEntityId);
+    });
+
+    it("throws CONFLICT when the same source entity is re-mapped to a different target", async () => {
       await recordImportEntityRef(
         asDb(db),
         systemId,
