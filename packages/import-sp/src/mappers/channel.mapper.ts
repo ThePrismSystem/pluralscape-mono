@@ -81,7 +81,7 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
         kind: "fk-miss",
         message: `Channel "${sp.name}" has unresolved parentCategory "${sp.parentCategory}"`,
         missingRefs: [sp.parentCategory],
-        targetField: "parentCategory",
+        targetField: "parentChannelId",
       });
     }
     parentChannelId = resolved;

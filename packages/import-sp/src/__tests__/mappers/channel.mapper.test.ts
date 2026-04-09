@@ -84,7 +84,7 @@ describe("mapChannel", () => {
     expect(result.status).toBe("failed");
     if (result.status === "failed") {
       expect(result.kind).toBe("fk-miss");
-      expect(result.targetField).toBe("parentCategory");
+      expect(result.targetField).toBe("parentChannelId");
       expect(result.missingRefs).toContain("src_missing");
     }
   });
@@ -130,7 +130,7 @@ describe("channel FK-miss handling", () => {
     expect(result.status).toBe("failed");
     if (result.status === "failed") {
       expect(result.kind).toBe("fk-miss");
-      expect(result.targetField).toBe("parentCategory");
+      expect(result.targetField).toBe("parentChannelId");
       expect(result.missingRefs).toContain("sp_cat_missing");
     }
   });
