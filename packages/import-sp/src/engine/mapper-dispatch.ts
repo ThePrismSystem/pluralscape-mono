@@ -23,6 +23,7 @@ import { mapFieldDefinition } from "../mappers/field-definition.mapper.js";
 import { mapFrontingComment } from "../mappers/fronting-comment.mapper.js";
 import { mapFrontingSession } from "../mappers/fronting-session.mapper.js";
 import { mapGroup } from "../mappers/group.mapper.js";
+import { warnUnknownKeys } from "../mappers/helpers.js";
 import { mapJournalEntry } from "../mappers/journal-entry.mapper.js";
 import { failed, type MapperResult } from "../mappers/mapper-result.js";
 import { mapMember } from "../mappers/member.mapper.js";
@@ -30,20 +31,35 @@ import { mapPoll } from "../mappers/poll.mapper.js";
 import { mapSystemProfile } from "../mappers/system-profile.mapper.js";
 import { mapSystemSettings } from "../mappers/system-settings.mapper.js";
 import {
+  SPBoardMessageKnownKeys,
   SPBoardMessageSchema,
+  SPChannelCategoryKnownKeys,
   SPChannelCategorySchema,
+  SPChannelKnownKeys,
   SPChannelSchema,
+  SPChatMessageKnownKeys,
   SPChatMessageSchema,
+  SPCommentKnownKeys,
   SPCommentSchema,
+  SPCustomFieldKnownKeys,
   SPCustomFieldSchema,
+  SPFrontHistoryKnownKeys,
   SPFrontHistorySchema,
+  SPFrontStatusKnownKeys,
   SPFrontStatusSchema,
+  SPGroupKnownKeys,
   SPGroupSchema,
+  SPMemberKnownKeys,
   SPMemberSchema,
+  SPNoteKnownKeys,
   SPNoteSchema,
+  SPPollKnownKeys,
   SPPollSchema,
+  SPPrivacyBucketKnownKeys,
   SPPrivacyBucketSchema,
+  SPPrivateKnownKeys,
   SPPrivateSchema,
+  SPUserKnownKeys,
   SPUserSchema,
 } from "../validators/sp-payload.js";
 
@@ -52,6 +68,39 @@ import { collectionToEntityType } from "./entity-type-map.js";
 import type { MappingContext } from "../mappers/context.js";
 import type { SpCollectionName } from "../sources/sp-collections.js";
 import type { ImportEntityType } from "@pluralscape/types";
+
+/**
+ * Converts a narrowed `object` value to `Record<string, unknown>` for key
+ * iteration. The caller must have already verified `typeof v === "object" &&
+ * v !== null` — this helper centralises the unavoidable widening cast so it
+ * does not appear inline in business logic.
+ */
+function toRecord(v: object): Record<string, unknown> {
+  return v as Record<string, unknown>;
+}
+
+/**
+ * Known-key sets for every SP collection, used by the dispatch loop to
+ * surface unknown fields via `warnUnknownKeys` after successful Zod parse.
+ * All 15 collections have looseObject schemas, so the map is exhaustive.
+ */
+const KNOWN_KEYS_BY_COLLECTION: Readonly<Record<SpCollectionName, ReadonlySet<string>>> = {
+  users: SPUserKnownKeys,
+  private: SPPrivateKnownKeys,
+  privacyBuckets: SPPrivacyBucketKnownKeys,
+  customFields: SPCustomFieldKnownKeys,
+  frontStatuses: SPFrontStatusKnownKeys,
+  members: SPMemberKnownKeys,
+  groups: SPGroupKnownKeys,
+  frontHistory: SPFrontHistoryKnownKeys,
+  comments: SPCommentKnownKeys,
+  notes: SPNoteKnownKeys,
+  polls: SPPollKnownKeys,
+  channelCategories: SPChannelCategoryKnownKeys,
+  channels: SPChannelKnownKeys,
+  chatMessages: SPChatMessageKnownKeys,
+  boardMessages: SPBoardMessageKnownKeys,
+};
 
 /**
  * One entry in the dispatch table. The `map` callback validates the raw
@@ -69,14 +118,19 @@ function entry<TSchema extends z.ZodType>(
   schema: TSchema,
   mapper: (sp: z.infer<TSchema>, ctx: MappingContext) => MapperResult<unknown>,
 ): MapperEntry {
+  const entityType = collectionToEntityType(collection);
+  const knownKeys = KNOWN_KEYS_BY_COLLECTION[collection];
   return {
-    entityType: collectionToEntityType(collection),
+    entityType,
     map: (document, ctx) => {
       const parsed = schema.safeParse(document);
       if (!parsed.success) {
         const firstIssue = parsed.error.issues[0];
         const message = firstIssue?.message ?? "invalid document";
         return failed({ kind: "validation-failed", message: `validation: ${message}` });
+      }
+      if (typeof parsed.data === "object" && parsed.data !== null) {
+        warnUnknownKeys(ctx, entityType, knownKeys, toRecord(parsed.data));
       }
       return mapper(parsed.data, ctx);
     },

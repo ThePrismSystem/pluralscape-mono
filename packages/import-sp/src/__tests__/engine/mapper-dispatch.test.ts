@@ -50,4 +50,20 @@ describe("MAPPER_DISPATCH", () => {
       expect(result.message).toContain("validation");
     }
   });
+
+  it("emits unknown-field warning for unrecognised keys on a valid document", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    MAPPER_DISPATCH.members.map(
+      {
+        _id: "m_unk1",
+        name: "Aria",
+        _unknownFutureField: "some-value",
+      },
+      ctx,
+    );
+    const warning = ctx.warnings.find((w) => w.kind === "unknown-field");
+    expect(warning).toBeDefined();
+    expect(warning?.message).toContain("_unknownFutureField");
+    expect(warning?.entityType).toBe("member");
+  });
 });

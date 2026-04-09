@@ -699,12 +699,23 @@ describe("runImport — surprise policy end-to-end", () => {
     // warnings are wired through the dispatch table.
   });
 
-  // TODO: No mapper currently calls `warnUnknownKeys`, so an unknown SP
-  // field on a member never produces a `kind: "unknown-field"` warning at
-  // the engine layer. The helper is unit-tested in
-  // `helpers.test.ts`. Skipped until mappers opt into passthrough warnings.
-  it.skip("surfaces unknown-field warnings from passthrough validators (pending mapper wiring)", () => {
-    // Left intentionally empty — unskip once mappers invoke
-    // warnUnknownKeys from the dispatch path.
+  it("surfaces unknown-field warnings from passthrough validators", async () => {
+    const data: FakeSourceData = {
+      members: [{ _id: "m_unk_warn_1", name: "Aria", _unknownFutureField: "drift-value" }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: ALL_CATEGORIES_ON, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const unkWarning = result.warnings.find(
+      (w) => w.kind === "unknown-field" && w.message.includes("_unknownFutureField"),
+    );
+    expect(unkWarning).toBeDefined();
+    expect(unkWarning?.entityType).toBe("member");
   });
 });
