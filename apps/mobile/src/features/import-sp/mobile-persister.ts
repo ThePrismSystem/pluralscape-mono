@@ -2,15 +2,22 @@
  * Mobile implementation of the `@pluralscape/import-sp` `Persister`
  * boundary.
  *
- * Assembles an `IdTranslationTable` seeded from preload hints (populated
- * from `importEntityRef.lookupBatch` before construction), a recorded-error
- * queue, and a batched ref upsert queue. The actual `upsertEntity`
- * dispatch table is wired in Task 16 — the skeleton here throws a
- * "dispatch not implemented" error so that the persister can be
- * constructed and its seeding exercised before the 17 helpers land.
+ * Responsibilities:
+ *
+ * - Seed an in-memory `IdTranslationTable` from caller-supplied preload
+ *   hints (populated from `importEntityRef.lookupBatch` before
+ *   construction). Resumes pick up existing refs this way.
+ * - Dispatch `upsertEntity` calls through `PERSISTER_DISPATCH`, routing
+ *   to `create` when no existing ID is cached and `update` otherwise.
+ * - Batch-flush new source→target mappings to
+ *   `importEntityRef.upsertBatch` when the ref queue crosses
+ *   `PERSISTER_REF_BATCH_SIZE`.
+ * - Accumulate non-fatal errors so the runner can drain them at chunk
+ *   boundaries and push them into `importJob.update({ errorLog })`.
  */
 
 import { PERSISTER_REF_BATCH_SIZE } from "./import-sp-mobile.constants.js";
+import { PERSISTER_DISPATCH } from "./persister/persister-dispatch.js";
 
 import type {
   IdTranslationTable,
@@ -29,8 +36,8 @@ import type { ImportError, ImportSource, SystemId } from "@pluralscape/types";
 // ── Preload hint shape ───────────────────────────────────────────────
 
 /**
- * Shape of a single source→target mapping the caller supplies to seed the
- * IdTranslationTable. Usually produced by a prior call to
+ * Shape of a single source→target mapping the caller supplies to seed
+ * the IdTranslationTable. Usually produced by a prior call to
  * `importEntityRef.lookupBatch`.
  */
 export interface PreloadHint {
@@ -64,8 +71,8 @@ export interface CreateMobilePersisterArgs {
 
 /**
  * Extended persister interface exposed to the import runner. Adds the
- * `drainErrors` method the runner uses at chunk boundaries to flush the
- * accumulated error list into `importJob.update({ errorLog })`.
+ * `drainErrors` method the runner uses at chunk boundaries to flush
+ * the accumulated error list into `importJob.update({ errorLog })`.
  */
 export interface MobilePersister extends Persister {
   drainErrors(): readonly ImportError[];
@@ -97,20 +104,12 @@ function createIdTranslationTable(preload: readonly PreloadHint[]): IdTranslatio
  * non-fatal failures, and `flush` at chunk boundaries. The persister
  * buffers ref upserts up to `PERSISTER_REF_BATCH_SIZE` before flushing
  * them to `importEntityRef.upsertBatch` to minimise round trips.
- *
- * The dispatch table is wired in Task 16. Until then, `upsertEntity`
- * throws a `Persister dispatch not implemented` error — calling code that
- * exercises the preload seeding (tests, or the runner before any
- * entities are processed) can still construct the persister.
  */
 export function createMobilePersister(args: CreateMobilePersisterArgs): MobilePersister {
   const idTranslation = createIdTranslationTable(args.preloadHints);
   const refQueue: QueuedRefUpsert[] = [];
   const errorLog: ImportError[] = [];
 
-  // ctx is referenced here to hold the collaborators the dispatch table
-  // will need in Task 16. Marked with `void` so the no-unused-vars lint
-  // does not fire on the skeleton.
   const ctx: PersisterContext = {
     systemId: args.systemId,
     source: args.source,
@@ -125,9 +124,8 @@ export function createMobilePersister(args: CreateMobilePersisterArgs): MobilePe
       refQueue.push({ sourceEntityType, sourceEntityId, pluralscapeEntityId });
     },
   };
-  void ctx;
 
-  async function flushRefQueue(): Promise<void> {
+  async function flushRefQueueBatches(): Promise<void> {
     while (refQueue.length >= PERSISTER_REF_BATCH_SIZE) {
       const batch = refQueue.splice(0, PERSISTER_REF_BATCH_SIZE);
       await args.api.importEntityRef.upsertBatch(args.systemId, {
@@ -137,20 +135,30 @@ export function createMobilePersister(args: CreateMobilePersisterArgs): MobilePe
     }
   }
 
+  async function upsertEntity(entity: PersistableEntity): Promise<PersisterUpsertResult> {
+    const helper = PERSISTER_DISPATCH[entity.entityType];
+    const existingId = idTranslation.get(entity.entityType, entity.sourceEntityId);
+
+    if (existingId !== null) {
+      const result = await helper.update(ctx, entity.payload, existingId);
+      return { action: "updated", pluralscapeEntityId: result.pluralscapeEntityId };
+    }
+
+    const result = await helper.create(ctx, entity.payload);
+    idTranslation.set(entity.entityType, entity.sourceEntityId, result.pluralscapeEntityId);
+    ctx.queueRefUpsert(entity.entityType, entity.sourceEntityId, result.pluralscapeEntityId);
+    await flushRefQueueBatches();
+    return { action: "created", pluralscapeEntityId: result.pluralscapeEntityId };
+  }
+
   return {
-    upsertEntity(entity: PersistableEntity): Promise<PersisterUpsertResult> {
-      return Promise.reject(
-        new Error(
-          `Persister dispatch not implemented for ${entity.entityType}:${entity.sourceEntityId}`,
-        ),
-      );
-    },
+    upsertEntity,
     recordError(error: ImportError): Promise<void> {
       errorLog.push(error);
       return Promise.resolve();
     },
     async flush(): Promise<void> {
-      await flushRefQueue();
+      await flushRefQueueBatches();
       if (refQueue.length > 0) {
         const batch = refQueue.splice(0, refQueue.length);
         await args.api.importEntityRef.upsertBatch(args.systemId, {
