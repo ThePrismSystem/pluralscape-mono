@@ -99,7 +99,7 @@ describe("mapPoll", () => {
     }
   });
 
-  it("leaves voter memberId null on FK miss without failing the poll", () => {
+  it("returns failed on voter FK miss", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPPoll = {
       _id: "p5",
@@ -108,12 +108,19 @@ describe("mapPoll", () => {
       votes: [{ id: "src_unknown", vote: "o1" }],
     };
     const result = mapPoll(sp, ctx);
-    expect(result.status).toBe("mapped");
-    if (result.status === "mapped") {
-      expect(result.payload.votes[0]?.memberId).toBeNull();
-      expect(result.payload.votes[0]?.optionId).toBe("o1");
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("votes");
+      expect(result.missingRefs).toContain("src_unknown");
     }
-    expect(ctx.warnings.some((w) => w.entityType === "poll")).toBe(true);
+  });
+
+  it("maps a poll with no votes when votes array is absent", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPPoll = { _id: "p_nov", name: "Simple", options: [] };
+    const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
   });
 
   it("maps custom kind and flags, preserves desc and endTime", () => {
@@ -136,5 +143,60 @@ describe("mapPoll", () => {
       expect(result.payload.poll.allowAbstain).toBe(true);
       expect(result.payload.poll.allowVeto).toBe(true);
     }
+  });
+});
+
+describe("poll FK-miss handling", () => {
+  it("returns failed on unresolved vote member ref", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    const sp: SPPoll = {
+      _id: "sp_p_1",
+      name: "Dinner?",
+      options: [{ id: "o1", name: "Pizza" }],
+      votes: [{ id: "sp_m_missing", vote: "o1" }],
+    };
+    const result = mapPoll(sp, ctx);
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.targetField).toBe("votes");
+      expect(result.missingRefs).toContain("sp_m_missing");
+    }
+  });
+
+  it("returns failed with all missing voter refs when multiple are unresolved", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    ctx.register("member", "sp_m_known", "ps_m_real");
+    const sp: SPPoll = {
+      _id: "sp_p_2",
+      name: "Lunch?",
+      options: [{ id: "o1", name: "Tacos" }],
+      votes: [
+        { id: "sp_m_known", vote: "o1" },
+        { id: "sp_m_miss1", vote: "o1" },
+        { id: "sp_m_miss2", vote: "o1" },
+      ],
+    };
+    const result = mapPoll(sp, ctx);
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.missingRefs).toContain("sp_m_miss1");
+      expect(result.missingRefs).toContain("sp_m_miss2");
+    }
+  });
+
+  it("returns mapped when all voter refs resolve", () => {
+    const ctx = createMappingContext({ sourceMode: "file" });
+    ctx.register("member", "sp_m_1", "ps_m_real_1");
+    const sp: SPPoll = {
+      _id: "sp_p_3",
+      name: "Movie?",
+      options: [{ id: "o1", name: "Yes" }],
+      votes: [{ id: "sp_m_1", vote: "o1" }],
+    };
+    const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
   });
 });

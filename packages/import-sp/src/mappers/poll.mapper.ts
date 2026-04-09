@@ -14,7 +14,7 @@
  * can't be resolved become `{memberId: null, isVeto: false}` with a warning —
  * the vote is still preserved, just unattributed.
  */
-import { mapped, type MapperResult } from "./mapper-result.js";
+import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPPoll } from "../sources/sp-types.js";
@@ -65,6 +65,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
   }));
 
   const votes: MappedPollVote[] = [];
+  const missingVoterRefs: string[] = [];
   for (const v of sp.votes ?? []) {
     if (v.vote === VETO_SENTINEL) {
       votes.push({
@@ -77,17 +78,23 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
     }
     const resolved = ctx.translate("member", v.id);
     if (resolved === null) {
-      ctx.addWarning({
-        entityType: "poll",
-        entityId: sp._id,
-        message: `poll voter ${v.id} not in translation table; keeping vote unattributed`,
+      missingVoterRefs.push(v.id);
+    } else {
+      votes.push({
+        optionId: v.vote,
+        memberId: resolved,
+        isVeto: false,
+        comment: v.comment ?? null,
       });
     }
-    votes.push({
-      optionId: v.vote,
-      memberId: resolved,
-      isVeto: false,
-      comment: v.comment ?? null,
+  }
+
+  if (missingVoterRefs.length > 0) {
+    return failed({
+      kind: "fk-miss",
+      message: `Poll "${sp.name}" has unresolved voter reference(s): ${missingVoterRefs.join(", ")}`,
+      missingRefs: missingVoterRefs,
+      targetField: "votes",
     });
   }
 
