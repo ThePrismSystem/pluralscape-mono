@@ -45,6 +45,7 @@ export function mapSystemProfile(
   }
 
   const payload: MappedSystemProfile = {
+    // SP guarantees username is non-empty at the schema level (z.string().min(1)).
     name: sp.username,
     description: sp.desc ?? null,
     color: sp.color ?? null,
