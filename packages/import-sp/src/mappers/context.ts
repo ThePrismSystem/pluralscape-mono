@@ -49,10 +49,21 @@ export interface MappingContext {
   addWarningOnce(dedupeKey: string, warning: MappingWarning): void;
 }
 
+/**
+ * Index of the final slot reserved for the {@link TRUNCATED_MARKER}. When a
+ * call to `addWarning`/`addWarningOnce` would push past
+ * `MAX_WARNING_BUFFER_SIZE - 1`, we instead emit the marker into the last
+ * slot and drop subsequent warnings. This keeps the buffer bounded at
+ * exactly `MAX_WARNING_BUFFER_SIZE` entries while still signalling loss to
+ * downstream consumers.
+ */
+const WARNING_BUFFER_RESERVED_SLOT = MAX_WARNING_BUFFER_SIZE - 1;
+
 export function createMappingContext(opts: { sourceMode: SourceMode }): MappingContext {
   const tables = new Map<ImportEntityType, Map<string, string>>();
   const warnings: MappingWarning[] = [];
   const seenWarningKinds = new Set<string>();
+  let truncatedMarkerEmitted = false;
 
   function tableFor(entityType: ImportEntityType): Map<string, string> {
     let table = tables.get(entityType);
@@ -61,6 +72,18 @@ export function createMappingContext(opts: { sourceMode: SourceMode }): MappingC
       tables.set(entityType, table);
     }
     return table;
+  }
+
+  function maybeEmitTruncatedMarker(): void {
+    if (truncatedMarkerEmitted) return;
+    truncatedMarkerEmitted = true;
+    warnings.push({
+      entityType: "unknown",
+      entityId: null,
+      kind: "warnings-truncated",
+      key: "warnings-truncated",
+      message: `Warnings buffer exceeded ${String(MAX_WARNING_BUFFER_SIZE)}; further warnings dropped`,
+    });
   }
 
   return {
@@ -81,12 +104,18 @@ export function createMappingContext(opts: { sourceMode: SourceMode }): MappingC
       }
     },
     addWarning(warning) {
-      if (warnings.length >= MAX_WARNING_BUFFER_SIZE) return;
+      if (warnings.length >= WARNING_BUFFER_RESERVED_SLOT) {
+        maybeEmitTruncatedMarker();
+        return;
+      }
       warnings.push(warning);
     },
     addWarningOnce(dedupeKey, warning) {
       if (seenWarningKinds.has(dedupeKey)) return;
-      if (warnings.length >= MAX_WARNING_BUFFER_SIZE) return;
+      if (warnings.length >= WARNING_BUFFER_RESERVED_SLOT) {
+        maybeEmitTruncatedMarker();
+        return;
+      }
       seenWarningKinds.add(dedupeKey);
       warnings.push(warning);
     },

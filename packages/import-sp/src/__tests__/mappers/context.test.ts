@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { MAX_WARNING_BUFFER_SIZE } from "../../import-sp.constants.js";
 import { createMappingContext } from "../../mappers/context.js";
 
 const WARNING_OVERFLOW_COUNT = 1_500;
-const WARNING_CAP = 1_000;
+const WARNING_OVERFLOW_PAD = 100;
 
 describe("MappingContext", () => {
   it("starts with an empty translation table and no warnings", () => {
@@ -48,7 +49,7 @@ describe("MappingContext", () => {
     for (let i = 0; i < WARNING_OVERFLOW_COUNT; i++) {
       ctx.addWarning({ entityType: "member", entityId: String(i), message: "x" });
     }
-    expect(ctx.warnings.length).toBeLessThanOrEqual(WARNING_CAP);
+    expect(ctx.warnings.length).toBeLessThanOrEqual(MAX_WARNING_BUFFER_SIZE);
   });
 
   it("addWarningOnce records only the first warning for a given kind", () => {
@@ -81,5 +82,59 @@ describe("MappingContext", () => {
     ctx.addWarning({ entityType: "member", entityId: "c", message: "per-occurrence" });
     ctx.addWarningOnce("kind", { entityType: "member", entityId: "d", message: "once" });
     expect(ctx.warnings).toHaveLength(3);
+  });
+});
+
+describe("warnings buffer truncation", () => {
+  it("emits one terminal warnings-truncated marker when buffer overflows", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const overflow = MAX_WARNING_BUFFER_SIZE + WARNING_OVERFLOW_PAD;
+    for (let i = 0; i < overflow; i += 1) {
+      ctx.addWarning({
+        entityType: "member",
+        entityId: `sp_${String(i)}`,
+        kind: "validation-failed",
+        message: `msg ${String(i)}`,
+      });
+    }
+    const truncated = ctx.warnings.filter((w) => w.kind === "warnings-truncated");
+    expect(truncated).toHaveLength(1);
+    expect(truncated[0]?.kind).toBe("warnings-truncated");
+    expect(truncated[0]?.message).toMatch(/dropped/i);
+    expect(ctx.warnings.length).toBeLessThanOrEqual(MAX_WARNING_BUFFER_SIZE);
+  });
+
+  it("keeps the warnings buffer bounded at MAX_WARNING_BUFFER_SIZE after overflow", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const overflow = MAX_WARNING_BUFFER_SIZE + WARNING_OVERFLOW_PAD;
+    for (let i = 0; i < overflow; i += 1) {
+      ctx.addWarning({ entityType: "member", entityId: `sp_${String(i)}`, message: "boom" });
+    }
+    expect(ctx.warnings.length).toBe(MAX_WARNING_BUFFER_SIZE);
+  });
+
+  it("does not emit a marker when warnings stay under the buffer limit", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.addWarning({
+      entityType: "member",
+      entityId: "sp_1",
+      kind: "validation-failed",
+      message: "first",
+    });
+    expect(ctx.warnings.some((w) => w.kind === "warnings-truncated")).toBe(false);
+  });
+
+  it("emits the marker when addWarningOnce overflows the buffer", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const overflow = MAX_WARNING_BUFFER_SIZE + WARNING_OVERFLOW_PAD;
+    for (let i = 0; i < overflow; i += 1) {
+      ctx.addWarningOnce(`k-${String(i)}`, {
+        entityType: "member",
+        entityId: `sp_${String(i)}`,
+        message: "once",
+      });
+    }
+    const truncated = ctx.warnings.filter((w) => w.kind === "warnings-truncated");
+    expect(truncated).toHaveLength(1);
   });
 });
