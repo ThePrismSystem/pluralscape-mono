@@ -13,11 +13,6 @@
  *    `import_entity_refs` under synthetic source IDs (`synthetic:public`,
  *    `synthetic:trusted`, `synthetic:private`) so re-imports update them
  *    instead of duplicating.
- *
- *    If the user already has Pluralscape buckets named "Public" / "Trusted" /
- *    "Private" (case-insensitive), the synthesizer reuses them by name via
- *    `reusedPluralscapeId` — the engine then registers the source → target
- *    mapping directly without creating a new bucket.
  */
 import { requireName } from "./helpers.js";
 import { mapped, skipped, type MapperResult } from "./mapper-result.js";
@@ -66,8 +61,6 @@ export interface SynthesizedBucket {
   readonly name: LegacyBucketName;
   readonly syntheticSourceId: LegacyBucketSourceId;
   readonly description: string;
-  /** If a Pluralscape bucket with this name (case-insensitive) already exists, its ID. */
-  readonly reusedPluralscapeId?: string;
 }
 
 const SYNTH_DESCRIPTIONS: Record<LegacyBucketName, string> = {
@@ -84,19 +77,10 @@ const SYNTH_SOURCE_IDS: Record<LegacyBucketName, LegacyBucketSourceId> = {
 
 const LEGACY_BUCKET_NAMES: readonly LegacyBucketName[] = ["Public", "Trusted", "Private"];
 
-export function synthesizeLegacyBuckets(opts: {
-  readonly existingBucketNames: readonly { name: string; pluralscapeId: string }[];
-}): readonly SynthesizedBucket[] {
-  const lookup = new Map(
-    opts.existingBucketNames.map((b) => [b.name.toLowerCase(), b.pluralscapeId] as const),
-  );
-  return LEGACY_BUCKET_NAMES.map((name) => {
-    const reused = lookup.get(name.toLowerCase());
-    const base = {
-      name,
-      syntheticSourceId: SYNTH_SOURCE_IDS[name],
-      description: SYNTH_DESCRIPTIONS[name],
-    } as const;
-    return reused === undefined ? base : { ...base, reusedPluralscapeId: reused };
-  });
+export function synthesizeLegacyBuckets(): readonly SynthesizedBucket[] {
+  return LEGACY_BUCKET_NAMES.map((name) => ({
+    name,
+    syntheticSourceId: SYNTH_SOURCE_IDS[name],
+    description: SYNTH_DESCRIPTIONS[name],
+  }));
 }

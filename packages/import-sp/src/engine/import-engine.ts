@@ -140,7 +140,7 @@ async function persistSynthesizedBuckets(
   ctx: MappingContext,
   errors: ImportError[],
 ): Promise<{ persisted: number; aborted: boolean; lastSourceId: string | null }> {
-  const synthesized = synthesizeLegacyBuckets({ existingBucketNames: [] });
+  const synthesized = synthesizeLegacyBuckets();
   let persisted = 0;
   let lastSourceId: string | null = null;
   for (const bucket of synthesized) {

@@ -47,8 +47,8 @@ describe("mapBucket", () => {
 });
 
 describe("synthesizeLegacyBuckets", () => {
-  it("returns three synthetic buckets when no existing buckets match", () => {
-    const result = synthesizeLegacyBuckets({ existingBucketNames: [] });
+  it("returns three synthetic buckets with canonical names and source IDs", () => {
+    const result = synthesizeLegacyBuckets();
     expect(result).toHaveLength(3);
     expect(result.map((b) => b.name)).toEqual(["Public", "Trusted", "Private"]);
     expect(result.map((b) => b.syntheticSourceId)).toEqual([
@@ -56,18 +56,12 @@ describe("synthesizeLegacyBuckets", () => {
       "synthetic:trusted",
       "synthetic:private",
     ]);
-    expect(result.every((b) => b.reusedPluralscapeId === undefined)).toBe(true);
   });
 
-  it("reuses existing buckets matched case-insensitively by name", () => {
-    const result = synthesizeLegacyBuckets({
-      existingBucketNames: [
-        { name: "public", pluralscapeId: "bkt_pub" },
-        { name: "PRIVATE", pluralscapeId: "bkt_priv" },
-      ],
-    });
-    expect(result.find((b) => b.name === "Public")?.reusedPluralscapeId).toBe("bkt_pub");
-    expect(result.find((b) => b.name === "Private")?.reusedPluralscapeId).toBe("bkt_priv");
-    expect(result.find((b) => b.name === "Trusted")?.reusedPluralscapeId).toBeUndefined();
+  it("each bucket has a non-empty description", () => {
+    const result = synthesizeLegacyBuckets();
+    for (const bucket of result) {
+      expect(bucket.description.length).toBeGreaterThan(0);
+    }
   });
 });
