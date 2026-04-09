@@ -785,13 +785,20 @@ describe("PG import-export schema", () => {
           currentCollectionLastSourceId: "507f1f77bcf86cd799439011",
         },
         options: {
-          selectedCategories: { identity: true, fronting: true },
+          selectedCategories: {
+            member: true,
+            group: true,
+          } as Record<string, boolean | undefined>,
           avatarMode: "api",
         },
         totals: {
           perCollection: {
             member: { total: 20, imported: 20, updated: 0, skipped: 0, failed: 0 },
-          },
+          } as Record<
+            string,
+            | { total: number; imported: number; updated: number; skipped: number; failed: number }
+            | undefined
+          >,
         },
       };
 

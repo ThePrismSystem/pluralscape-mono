@@ -205,5 +205,7 @@ export {
   CreateImportJobBodySchema,
   UpdateImportJobBodySchema,
   ImportJobQuerySchema,
+  ImportErrorSchema,
+  ImportCheckpointStateSchema,
 } from "./import-job.js";
 export { ImportEntityRefQuerySchema } from "./import-entity-ref.js";

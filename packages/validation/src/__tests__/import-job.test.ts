@@ -10,7 +10,7 @@ describe("CreateImportJobBodySchema", () => {
   it("accepts a valid simply-plural create body", () => {
     const result = CreateImportJobBodySchema.safeParse({
       source: "simply-plural",
-      selectedCategories: { members: true, groups: true },
+      selectedCategories: { member: true, group: true },
       avatarMode: "api",
     });
     expect(result.success).toBe(true);
@@ -19,7 +19,7 @@ describe("CreateImportJobBodySchema", () => {
   it("accepts pluralkit source", () => {
     const result = CreateImportJobBodySchema.safeParse({
       source: "pluralkit",
-      selectedCategories: {},
+      selectedCategories: { member: true },
       avatarMode: "skip",
     });
     expect(result.success).toBe(true);
@@ -28,7 +28,7 @@ describe("CreateImportJobBodySchema", () => {
   it("accepts pluralscape source", () => {
     const result = CreateImportJobBodySchema.safeParse({
       source: "pluralscape",
-      selectedCategories: {},
+      selectedCategories: { member: true },
       avatarMode: "zip",
     });
     expect(result.success).toBe(true);
@@ -88,7 +88,7 @@ describe("CreateImportJobBodySchema", () => {
   it("strips unknown properties", () => {
     const result = CreateImportJobBodySchema.safeParse({
       source: "simply-plural",
-      selectedCategories: {},
+      selectedCategories: { member: true },
       avatarMode: "api",
       extra: "nope",
     });
@@ -241,7 +241,7 @@ describe("UpdateImportJobBodySchema", () => {
           currentCollectionLastSourceId: "abc",
         },
         options: {
-          selectedCategories: { members: true },
+          selectedCategories: { member: true },
           avatarMode: "api",
         },
         totals: {

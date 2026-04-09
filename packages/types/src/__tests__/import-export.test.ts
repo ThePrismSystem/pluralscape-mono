@@ -18,6 +18,8 @@ import type {
   ExportSection,
   ImportAvatarMode,
   ImportCheckpointState,
+  ImportCollectionTotals,
+  ImportCollectionType,
   ImportEntityRef,
   ImportEntityType,
   ImportError,
@@ -281,23 +283,21 @@ describe("ImportProgress", () => {
 });
 
 describe("ImportError", () => {
-  it("has correct field types", () => {
+  it("has correct field types on the union base", () => {
     expectTypeOf<ImportError["entityType"]>().toEqualTypeOf<ImportEntityType>();
     expectTypeOf<ImportError["entityId"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ImportError["message"]>().toBeString();
     expectTypeOf<ImportError["fatal"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ImportError["recoverable"]>().toEqualTypeOf<boolean>();
   });
 
-  it("has a recoverable flag defaulting false in construction", () => {
+  it("non-fatal errors do not carry recoverable", () => {
     const err: ImportError = {
       entityType: "member",
       entityId: "abc",
       message: "validation failed",
       fatal: false,
-      recoverable: false,
     };
-    expectTypeOf(err.recoverable).toEqualTypeOf<boolean>();
+    expectTypeOf(err.fatal).toExtend<boolean>();
   });
 
   it("allows fatal recoverable errors (token rejected, network unreachable)", () => {
@@ -308,8 +308,7 @@ describe("ImportError", () => {
       fatal: true,
       recoverable: true,
     };
-    expectTypeOf(err.fatal).toEqualTypeOf<boolean>();
-    expectTypeOf(err.recoverable).toEqualTypeOf<boolean>();
+    expectTypeOf(err.fatal).toExtend<boolean>();
   });
 });
 
@@ -483,20 +482,20 @@ describe("ImportCheckpointState", () => {
       },
       options: {
         selectedCategories: {
-          identity: true,
-          fronting: true,
-          communication: false,
-        },
+          member: true,
+          group: true,
+          note: false,
+        } as Record<ImportCollectionType, boolean | undefined>,
         avatarMode: "api",
       },
       totals: {
         perCollection: {
           member: { total: 20, imported: 20, updated: 0, skipped: 0, failed: 0 },
-        },
+        } as Record<ImportCollectionType, ImportCollectionTotals | undefined>,
       },
     };
     expectTypeOf(state.schemaVersion).toEqualTypeOf<1>();
-    expectTypeOf(state.checkpoint.currentCollection).toEqualTypeOf<ImportEntityType>();
+    expectTypeOf(state.checkpoint.currentCollection).toEqualTypeOf<ImportCollectionType>();
     expectTypeOf(state.options.avatarMode).toEqualTypeOf<ImportAvatarMode>();
   });
 });
@@ -510,11 +509,35 @@ describe("ImportEntityRef", () => {
       source: "simply-plural",
       sourceEntityType: "member",
       sourceEntityId: "507f1f77bcf86cd799439011",
-      pluralscapeEntityId: "mem_01HX000000000000000000000D",
+      pluralscapeEntityId: "mem_01HX000000000000000000000D" as MemberId,
       importedAt: 1234567890 as UnixMillis,
     };
-    expectTypeOf(ref.source).toEqualTypeOf<ImportSource>();
-    expectTypeOf(ref.sourceEntityType).toEqualTypeOf<ImportEntityType>();
+    expectTypeOf(ref.source).toExtend<ImportSource>();
+    expectTypeOf(ref.sourceEntityType).toExtend<ImportEntityType>();
     expectTypeOf(ref.id).toEqualTypeOf<ImportEntityRefId>();
+  });
+
+  it("narrows pluralscapeEntityId by sourceEntityType discriminator", () => {
+    // Distributed mapped-type check: extracting a single variant should yield
+    // a type whose pluralscapeEntityId is the brand-specific ID, not the
+    // joint string type. If ImportEntityRef were a flat intersection rather
+    // than a distributed union, Extract<> would collapse to `never` or the
+    // pluralscapeEntityId would be `string`, and these assertions would fail.
+    type MemberRef = Extract<ImportEntityRef, { sourceEntityType: "member" }>;
+    type GroupRef = Extract<ImportEntityRef, { sourceEntityType: "group" }>;
+    type SwitchRef = Extract<ImportEntityRef, { sourceEntityType: "switch" }>;
+
+    expectTypeOf<MemberRef["pluralscapeEntityId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<GroupRef["pluralscapeEntityId"]>().not.toEqualTypeOf<MemberId>();
+    expectTypeOf<SwitchRef["pluralscapeEntityId"]>().toEqualTypeOf<string>();
+
+    // Runtime narrowing sanity: a value typed as the wider union narrows via
+    // a function parameter (avoiding literal narrowing at the declaration site).
+    const narrow = (ref: ImportEntityRef): void => {
+      if (ref.sourceEntityType === "member") {
+        expectTypeOf(ref.pluralscapeEntityId).toEqualTypeOf<MemberId>();
+      }
+    };
+    expectTypeOf(narrow).toBeFunction();
   });
 });

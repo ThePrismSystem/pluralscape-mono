@@ -372,6 +372,7 @@ export type {
   PKImportPayload,
   ImportSource,
   ImportEntityType,
+  ImportCollectionType,
   ImportJobStatus,
   ImportProgress,
   ImportError,
@@ -380,7 +381,9 @@ export type {
   ImportAvatarMode,
   ImportCollectionTotals,
   ImportCheckpointState,
+  ImportCheckpointStateV1,
   ImportEntityRef,
+  ImportEntityTargetIdMap,
   ExportFormat,
   ExportRequestStatus,
   ExportSection,
@@ -392,6 +395,14 @@ export type {
   AccountPurgeRequest,
   MemberReport,
   SystemOverviewReport,
+} from "./import-export.js";
+export {
+  IMPORT_SOURCES,
+  IMPORT_JOB_STATUSES,
+  IMPORT_ENTITY_TYPES,
+  IMPORT_COLLECTION_TYPES,
+  IMPORT_AVATAR_MODES,
+  IMPORT_CHECKPOINT_SCHEMA_VERSION,
 } from "./import-export.js";
 
 // ── Scope domains ────────────────────────────────────────────

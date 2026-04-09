@@ -1,4 +1,4 @@
-import { ID_PREFIXES } from "@pluralscape/types";
+import { ID_PREFIXES, IMPORT_ENTITY_TYPES, IMPORT_SOURCES } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_OK } from "../../../http.constants.js";
@@ -11,23 +11,6 @@ import { lookupImportEntityRef } from "../../../services/import-entity-ref.servi
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 import type { ImportEntityType, ImportSource } from "@pluralscape/types";
-
-const VALID_SOURCES: readonly ImportSource[] = ["simply-plural", "pluralkit", "pluralscape"];
-const VALID_ENTITY_TYPES: readonly ImportEntityType[] = [
-  "member",
-  "group",
-  "fronting-session",
-  "switch",
-  "custom-field",
-  "note",
-  "chat-message",
-  "board-message",
-  "poll",
-  "timer",
-  "privacy-bucket",
-  "friend",
-  "unknown",
-];
 
 export const lookupRoute = new Hono<AuthEnv>();
 
@@ -45,8 +28,8 @@ lookupRoute.get("/lookup", async (c) => {
     !source ||
     !sourceEntityType ||
     !sourceEntityId ||
-    !VALID_SOURCES.includes(source as ImportSource) ||
-    !VALID_ENTITY_TYPES.includes(sourceEntityType as ImportEntityType)
+    !(IMPORT_SOURCES as readonly string[]).includes(source) ||
+    !(IMPORT_ENTITY_TYPES as readonly string[]).includes(sourceEntityType)
   ) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid lookup parameters");
   }

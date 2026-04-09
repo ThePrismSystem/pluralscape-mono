@@ -31,7 +31,7 @@ function makeCheckpointState(): ImportCheckpointState {
       currentCollectionLastSourceId: "src_abc",
     },
     options: {
-      selectedCategories: { members: true, groups: true },
+      selectedCategories: { member: true, group: true },
       avatarMode: "api",
     },
     totals: {
@@ -76,7 +76,7 @@ describe("import-job.service (PGlite integration)", () => {
         systemId,
         {
           source: "simply-plural",
-          selectedCategories: { members: true, groups: true },
+          selectedCategories: { member: true, group: true },
           avatarMode: "api",
         },
         auth,
@@ -103,7 +103,7 @@ describe("import-job.service (PGlite integration)", () => {
         const result = await createImportJob(
           asDb(db),
           systemId,
-          { source, selectedCategories: {}, avatarMode: "skip" },
+          { source, selectedCategories: { member: true }, avatarMode: "skip" },
           auth,
           noopAudit,
         );
@@ -117,7 +117,7 @@ describe("import-job.service (PGlite integration)", () => {
         createImportJob(
           asDb(db),
           otherSystemId,
-          { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+          { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
           auth,
           noopAudit,
         ),
@@ -148,7 +148,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -170,7 +170,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -190,14 +190,14 @@ describe("import-job.service (PGlite integration)", () => {
       await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
       await createImportJob(
         asDb(db),
         systemId,
-        { source: "pluralkit", selectedCategories: {}, avatarMode: "skip" },
+        { source: "pluralkit", selectedCategories: { member: true }, avatarMode: "skip" },
         auth,
         noopAudit,
       );
@@ -211,7 +211,7 @@ describe("import-job.service (PGlite integration)", () => {
       const job = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -219,7 +219,7 @@ describe("import-job.service (PGlite integration)", () => {
       await createImportJob(
         asDb(db),
         systemId,
-        { source: "pluralkit", selectedCategories: {}, avatarMode: "skip" },
+        { source: "pluralkit", selectedCategories: { member: true }, avatarMode: "skip" },
         auth,
         noopAudit,
       );
@@ -233,14 +233,14 @@ describe("import-job.service (PGlite integration)", () => {
       await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
       await createImportJob(
         asDb(db),
         systemId,
-        { source: "pluralkit", selectedCategories: {}, avatarMode: "skip" },
+        { source: "pluralkit", selectedCategories: { member: true }, avatarMode: "skip" },
         auth,
         noopAudit,
       );
@@ -263,7 +263,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -286,7 +286,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -308,7 +308,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -330,7 +330,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -353,7 +353,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -369,7 +369,6 @@ describe("import-job.service (PGlite integration)", () => {
               entityId: "abc",
               message: "failed to import",
               fatal: false,
-              recoverable: true,
             },
           ],
         },
@@ -400,7 +399,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );
@@ -416,7 +415,7 @@ describe("import-job.service (PGlite integration)", () => {
       const created = await createImportJob(
         asDb(db),
         systemId,
-        { source: "simply-plural", selectedCategories: {}, avatarMode: "api" },
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
         auth,
         noopAudit,
       );

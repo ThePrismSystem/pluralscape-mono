@@ -14,27 +14,24 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   AccountId,
+  ImportEntityRef,
   ImportEntityRefId,
+  ImportEntityTargetIdMap,
   ImportEntityType,
   ImportSource,
   PaginatedResult,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
-export interface ImportEntityRefResult {
-  readonly id: ImportEntityRefId;
-  readonly accountId: AccountId;
-  readonly systemId: SystemId;
-  readonly source: ImportSource;
-  readonly sourceEntityType: ImportEntityType;
-  readonly sourceEntityId: string;
-  readonly pluralscapeEntityId: string;
-  readonly importedAt: UnixMillis;
-}
+/**
+ * Canonical service result type — delegates to the discriminated union
+ * in @pluralscape/types. Consumers narrow via sourceEntityType to get
+ * the correct branded target ID without manual casting.
+ */
+export type ImportEntityRefResult = ImportEntityRef;
 
 export interface RecordImportEntityRefInput {
   readonly source: ImportSource;
@@ -59,17 +56,97 @@ interface ListImportEntityRefsOpts {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRefResult {
-  return {
+function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRef {
+  const base = {
     id: row.id as ImportEntityRefId,
     accountId: row.accountId as AccountId,
     systemId: row.systemId as SystemId,
     source: row.source,
-    sourceEntityType: row.sourceEntityType,
     sourceEntityId: row.sourceEntityId,
-    pluralscapeEntityId: row.pluralscapeEntityId,
     importedAt: toUnixMillis(row.importedAt),
   };
+  const sourceEntityType = row.sourceEntityType;
+  const rawTargetId = row.pluralscapeEntityId;
+
+  // One cast per variant. This is the single place in the codebase where
+  // the raw DB varchar is narrowed to a branded ID; all consumers get
+  // type-safe narrowing via the sourceEntityType discriminator.
+  switch (sourceEntityType) {
+    case "member":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["member"],
+      };
+    case "group":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["group"],
+      };
+    case "fronting-session":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["fronting-session"],
+      };
+    case "switch":
+      return { ...base, sourceEntityType, pluralscapeEntityId: rawTargetId };
+    case "custom-field":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["custom-field"],
+      };
+    case "note":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["note"],
+      };
+    case "chat-message":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["chat-message"],
+      };
+    case "board-message":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["board-message"],
+      };
+    case "poll":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["poll"],
+      };
+    case "timer":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["timer"],
+      };
+    case "privacy-bucket":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["privacy-bucket"],
+      };
+    case "friend":
+      return {
+        ...base,
+        sourceEntityType,
+        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["friend"],
+      };
+    case "unknown":
+      return { ...base, sourceEntityType, pluralscapeEntityId: rawTargetId };
+    default: {
+      const _exhaustive: never = sourceEntityType;
+      throw new Error(`Unhandled import entity type: ${String(_exhaustive)}`);
+    }
+  }
 }
 
 // ── RECORD ──────────────────────────────────────────────────────────

@@ -1,5 +1,7 @@
+import { IMPORT_ENTITY_TYPES, IMPORT_SOURCES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
+import { MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   listImportEntityRefs,
   lookupImportEntityRef,
@@ -10,28 +12,8 @@ import { router } from "../trpc.js";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 
-/** Maximum items per page for entity-ref list queries. */
-const MAX_LIST_LIMIT = 100;
-
 /** Maximum length of a source-side identifier. Matches the PG varchar(128). */
 const MAX_SOURCE_ENTITY_ID_LENGTH = 128;
-
-const IMPORT_SOURCES = ["simply-plural", "pluralkit", "pluralscape"] as const;
-const IMPORT_ENTITY_TYPES = [
-  "member",
-  "group",
-  "fronting-session",
-  "switch",
-  "custom-field",
-  "note",
-  "chat-message",
-  "board-message",
-  "poll",
-  "timer",
-  "privacy-bucket",
-  "friend",
-  "unknown",
-] as const;
 
 export const importEntityRefRouter = router({
   list: systemProcedure
@@ -39,7 +21,7 @@ export const importEntityRefRouter = router({
     .input(
       z.object({
         cursor: z.string().nullish(),
-        limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
+        limit: z.number().int().min(1).max(MAX_PAGE_LIMIT).optional(),
         source: z.enum(IMPORT_SOURCES).optional(),
         entityType: z.enum(IMPORT_ENTITY_TYPES).optional(),
         sourceEntityId: z.string().min(1).max(MAX_SOURCE_ENTITY_ID_LENGTH).optional(),

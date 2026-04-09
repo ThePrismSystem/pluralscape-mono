@@ -8,12 +8,6 @@ describe("ImportEntityRefQuerySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts importJobId filter", () => {
-    const result = ImportEntityRefQuerySchema.safeParse({ importJobId: "imp_abc" });
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.importJobId).toBe("imp_abc");
-  });
-
   it("accepts source filter", () => {
     const result = ImportEntityRefQuerySchema.safeParse({ source: "simply-plural" });
     expect(result.success).toBe(true);
@@ -55,16 +49,10 @@ describe("ImportEntityRefQuerySchema", () => {
 
   it("accepts all filters combined", () => {
     const result = ImportEntityRefQuerySchema.safeParse({
-      importJobId: "imp_1",
       source: "simply-plural",
       entityType: "member",
       sourceEntityId: "abc",
     });
     expect(result.success).toBe(true);
-  });
-
-  it("rejects empty importJobId", () => {
-    const result = ImportEntityRefQuerySchema.safeParse({ importJobId: "" });
-    expect(result.success).toBe(false);
   });
 });

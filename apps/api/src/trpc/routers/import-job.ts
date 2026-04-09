@@ -1,3 +1,4 @@
+import { IMPORT_JOB_STATUSES, IMPORT_SOURCES } from "@pluralscape/types";
 import {
   CreateImportJobBodySchema,
   UpdateImportJobBodySchema,
@@ -5,6 +6,7 @@ import {
 } from "@pluralscape/validation";
 import { z } from "zod/v4";
 
+import { MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   createImportJob,
   getImportJob,
@@ -17,12 +19,6 @@ import { router } from "../trpc.js";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
 const writeLimiter = createTRPCCategoryRateLimiter("write");
-
-/** Maximum items per page for import-job list queries. */
-const MAX_LIST_LIMIT = 100;
-
-const IMPORT_SOURCES = ["simply-plural", "pluralkit", "pluralscape"] as const;
-const IMPORT_JOB_STATUSES = ["pending", "validating", "importing", "completed", "failed"] as const;
 
 const ImportJobIdSchema = z.object({
   importJobId: brandedIdQueryParam("ij_"),
@@ -49,7 +45,7 @@ export const importJobRouter = router({
     .input(
       z.object({
         cursor: z.string().nullish(),
-        limit: z.number().int().min(1).max(MAX_LIST_LIMIT).optional(),
+        limit: z.number().int().min(1).max(MAX_PAGE_LIMIT).optional(),
         status: z.enum(IMPORT_JOB_STATUSES).optional(),
         source: z.enum(IMPORT_SOURCES).optional(),
       }),
