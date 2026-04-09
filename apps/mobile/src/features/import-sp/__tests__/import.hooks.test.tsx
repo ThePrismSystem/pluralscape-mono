@@ -65,12 +65,19 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             }),
         },
         get: {
-          useQuery: (input: unknown, opts: Record<string, unknown> = {}) =>
-            rq.useQuery({
+          useQuery: (input: unknown, opts: Record<string, unknown> = {}) => {
+            const queryOpts: Parameters<typeof rq.useQuery>[0] = {
               queryKey: ["importJob.get", input],
               queryFn: () => Promise.resolve(fixtures.get("importJob.get")),
               enabled: opts.enabled as boolean | undefined,
-            }),
+            };
+            if (opts.refetchInterval !== undefined) {
+              // Record the refetchInterval so tests can assert it was wired.
+              fixtures.set("importJob.get.lastRefetchInterval", opts.refetchInterval);
+              queryOpts.refetchInterval = opts.refetchInterval as never;
+            }
+            return rq.useQuery(queryOpts);
+          },
         },
       },
       useUtils: () => ({}),
@@ -95,7 +102,8 @@ vi.mock("expo-secure-store", () => {
 });
 
 // Must import AFTER all mocks
-const { useStartImport, useImportJob } = await import("../import.hooks.js");
+const { useStartImport, useImportJob, useImportProgress } = await import("../import.hooks.js");
+const { IMPORT_PROGRESS_POLL_INTERVAL_MS } = await import("../import-sp-mobile.constants.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 const NOW = 1_700_000_000_000 as UnixMillis;
@@ -225,5 +233,84 @@ describe("useImportJob", () => {
     const { result } = renderHookWithProviders(() => useImportJob(null));
     expect(result.current.fetchStatus).toBe("idle");
     expect(result.current.data).toBeUndefined();
+  });
+});
+
+// ── useImportProgress ────────────────────────────────────────────────
+describe("useImportProgress", () => {
+  it("returns null for a null jobId", () => {
+    const { result } = renderHookWithProviders(() => useImportProgress(null));
+    expect(result.current).toBeNull();
+  });
+
+  it("wires refetchInterval with the poll constant for non-terminal jobs", async () => {
+    const job = makeJob("ij_poll", "importing");
+    fixtures.set("importJob.get", job);
+
+    renderHookWithProviders(() => useImportProgress("ij_poll" as ImportJobId));
+
+    await waitFor(() => {
+      expect(fixtures.get("importJob.get.lastRefetchInterval")).toBeDefined();
+    });
+
+    // Exercise the function form with a synthetic query-like shape and
+    // assert it returns the poll interval for non-terminal, and false for
+    // terminal.
+    const refetchIntervalFn = fixtures.get("importJob.get.lastRefetchInterval") as (q: {
+      state: { data: ImportJob | undefined };
+    }) => number | false;
+    expect(refetchIntervalFn({ state: { data: makeJob("ij_poll", "importing") } })).toBe(
+      IMPORT_PROGRESS_POLL_INTERVAL_MS,
+    );
+    expect(refetchIntervalFn({ state: { data: makeJob("ij_poll", "completed") } })).toBe(false);
+    expect(refetchIntervalFn({ state: { data: makeJob("ij_poll", "failed") } })).toBe(false);
+    expect(refetchIntervalFn({ state: { data: undefined } })).toBe(
+      IMPORT_PROGRESS_POLL_INTERVAL_MS,
+    );
+  });
+
+  it("derives the snapshot fields from the job row", async () => {
+    const job = makeJob("ij_snap", "importing");
+    fixtures.set("importJob.get", {
+      ...job,
+      progressPercent: 42,
+      errorLog: [
+        {
+          entityType: "member",
+          entityId: "mid_1",
+          message: "test",
+          fatal: false,
+          recoverable: false,
+        },
+      ],
+      checkpointState: {
+        schemaVersion: 1,
+        checkpoint: {
+          completedCollections: [],
+          currentCollection: "member",
+          currentCollectionLastSourceId: null,
+        },
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        totals: {
+          perCollection: {
+            member: { total: 10, imported: 4, updated: 2, skipped: 1, failed: 0 },
+          },
+        },
+      },
+    });
+
+    const { result } = renderHookWithProviders(() => useImportProgress("ij_snap" as ImportJobId));
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
+    expect(result.current).toEqual({
+      progressPercent: 42,
+      currentCollection: "member",
+      processedItems: 7, // 4 + 2 + 1
+      totalItems: 10,
+      errorCount: 1,
+      status: "importing",
+    });
   });
 });
