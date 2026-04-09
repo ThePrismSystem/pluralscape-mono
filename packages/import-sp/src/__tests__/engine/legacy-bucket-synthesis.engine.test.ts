@@ -130,35 +130,35 @@ describe("synthesized bucket count and flush", () => {
   });
 
   // Critical #2: synthesized buckets must be explicitly flushed after
-  // persistence so a crash-resume can rely on them being durable. This test
-  // verifies the flush happens before any member upsert by tracking the flush
-  // count at the moment the first member entity hits the persister.
+  // persistence (T30) so a crash-resume can rely on them being durable. The
+  // source contains ONLY a members collection — no privacyBuckets — so the
+  // only flushes that can fire are those the engine triggers itself. This
+  // removes the ambiguity in the prior test, which asserted `flushCount >= 1`
+  // before the first member upsert, a condition already guaranteed by
+  // incidental prior-collection flushes even without T30.
   //
-  // Note: because the engine already flushes at end of every prior collection,
-  // `flushCount >= 1` before members is structurally guaranteed today. The
-  // specific invariant we add in T30 is an *explicit* flush+progress call
-  // immediately after synthesis (not incidentally from prior collections).
-  // That structural guarantee is tested end-to-end through the totals test
-  // above; this marker comment documents the design intent for T30.
-  it("flush is already called before member loop via prior collection completions", async () => {
+  // The correct invariant is a strict ordering: all three synthetic
+  // privacy-bucket upserts complete → flush → first member upsert. We capture
+  // this as an ordered event log and assert:
+  //   1. At least one flush fires before the first member upsert.
+  //   2. All three privacy-bucket upserts precede that first flush (proving
+  //      the flush is the post-synthesis durability flush, not a later one).
+  it("synthesized bucket count and flush: buckets are flushed before first member upsert", async () => {
     const source = createFakeImportSource({
       members: [{ _id: "sp_m_1", name: "Alex", private: true }],
     });
-    let flushCountBeforeFirstMember = -1;
-    let flushCount = 0;
+    const events: Array<"flush" | { upsert: string }> = [];
     const { persister: inner } = createInMemoryPersister();
-    const trackingPersister = {
+    const trackingPersister: import("../../persistence/persister.types.js").Persister = {
       upsertEntity(entity: Parameters<typeof inner.upsertEntity>[0]) {
-        if (entity.entityType === "member" && flushCountBeforeFirstMember === -1) {
-          flushCountBeforeFirstMember = flushCount;
-        }
+        events.push({ upsert: entity.entityType });
         return inner.upsertEntity(entity);
       },
       recordError(error: Parameters<typeof inner.recordError>[0]) {
         return inner.recordError(error);
       },
       flush() {
-        flushCount += 1;
+        events.push("flush");
         return inner.flush();
       },
     };
@@ -170,6 +170,29 @@ describe("synthesized bucket count and flush", () => {
       onProgress: () => Promise.resolve(),
     });
 
-    expect(flushCountBeforeFirstMember).toBeGreaterThanOrEqual(1);
+    const firstMemberIdx = events.findIndex((e) => typeof e === "object" && e.upsert === "member");
+    expect(firstMemberIdx).toBeGreaterThan(-1); // sanity: member was upserted
+
+    // At least one flush precedes the first member upsert.
+    const flushesBeforeFirstMember = events
+      .slice(0, firstMemberIdx)
+      .filter((e) => e === "flush").length;
+    expect(flushesBeforeFirstMember).toBeGreaterThanOrEqual(1);
+
+    // The three synthetic privacy-bucket upserts all precede the first member
+    // upsert — and crucially, there is at least one flush BETWEEN the last
+    // bucket upsert and the first member upsert. That flush is the explicit
+    // post-synthesis durability flush added by T30. Without T30, buckets would
+    // be upserted and then the member loop would start immediately with no
+    // intervening flush.
+    const lastBucketIdx = events.reduce((acc, e, i) => {
+      return typeof e === "object" && e.upsert === "privacy-bucket" ? i : acc;
+    }, -1);
+    expect(lastBucketIdx).toBeGreaterThan(-1); // sanity: buckets were synthesized
+
+    const flushBetweenBucketAndMember = events
+      .slice(lastBucketIdx + 1, firstMemberIdx)
+      .filter((e) => e === "flush").length;
+    expect(flushBetweenBucketAndMember).toBeGreaterThanOrEqual(1);
   });
 });
