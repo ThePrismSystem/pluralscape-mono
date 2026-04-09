@@ -178,25 +178,21 @@ async function persistSynthesizedBuckets(
       await persister.recordError(error);
       failedCount += 1;
       if (isFatalError(error)) {
-        const partialDelta: AdvanceDelta = {
-          imported: importedCount,
-          updated: updatedCount,
-          skipped: skippedCount,
-          failed: failedCount,
-          total: importedCount + updatedCount + skippedCount + failedCount,
-        };
-        return { delta: partialDelta, aborted: true, lastSourceId };
+        return { delta: buildDelta(), aborted: true, lastSourceId };
       }
     }
   }
-  const finalDelta: AdvanceDelta = {
-    imported: importedCount,
-    updated: updatedCount,
-    skipped: skippedCount,
-    failed: failedCount,
-    total: importedCount + updatedCount + skippedCount + failedCount,
-  };
-  return { delta: finalDelta, aborted: false, lastSourceId };
+  return { delta: buildDelta(), aborted: false, lastSourceId };
+
+  function buildDelta(): AdvanceDelta {
+    return {
+      imported: importedCount,
+      updated: updatedCount,
+      skipped: skippedCount,
+      failed: failedCount,
+      total: importedCount + updatedCount + skippedCount + failedCount,
+    };
+  }
 }
 
 /** Set of SP collection names the engine iterates. Computed once per run. */
