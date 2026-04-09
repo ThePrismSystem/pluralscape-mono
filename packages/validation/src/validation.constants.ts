@@ -19,6 +19,13 @@ export const MAX_ENCRYPTED_DATA_SIZE = 87_382;
 export const MAX_REORDER_OPERATIONS = 100;
 
 /**
+ * Maximum entries per import-entity-ref batch lookup or upsert request.
+ * Caps payload size to keep round-trips small and prevent unbounded
+ * server-side work during mobile imports.
+ */
+export const IMPORT_ENTITY_REF_BATCH_MAX = 200;
+
+/**
  * Maximum byte length for encrypted system data fields.
  * Set to 128 KiB (half the 256 KiB global body limit) to leave room for
  * other fields and JSON overhead.
