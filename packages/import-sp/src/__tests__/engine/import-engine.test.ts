@@ -627,3 +627,84 @@ describe("runImport — id translation carry-forward", () => {
     expect(persister.upserted.find((e) => e.entityType === "member")).toBeDefined();
   });
 });
+
+describe("runImport — surprise policy end-to-end", () => {
+  it("reports fk-miss failures in the final error list with structured kind", async () => {
+    // A channel references a parentCategory that does not exist in the
+    // source. The channel mapper returns `failed({ kind: "fk-miss" })`,
+    // which the engine plumbs into `ImportError.kind`.
+    const data: FakeSourceData = {
+      channelCategories: [{ _id: "cat_a", name: "General" }],
+      channels: [
+        { _id: "ch_ok", name: "welcome", parentCategory: "cat_a", description: null },
+        { _id: "ch_orphan", name: "orphan", parentCategory: "cat_missing", description: null },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const fkMissErrors = result.errors.filter((e) => e.kind === "fk-miss");
+    expect(fkMissErrors).toHaveLength(1);
+    const firstFkMiss = fkMissErrors[0];
+    expect(firstFkMiss?.entityType).toBe("channel");
+    expect(firstFkMiss?.entityId).toBe("ch_orphan");
+    expect(firstFkMiss?.fatal).toBe(false);
+    // The healthy channel still imports successfully.
+    expect(
+      persister.upserted.filter((e) => e.entityType === "channel").map((e) => e.sourceEntityId),
+    ).toEqual(["ch_ok"]);
+  });
+
+  it("emits dropped-collection warning for the SP friends collection", async () => {
+    const data: FakeSourceData = {
+      members: [{ _id: "m_a", name: "Aria" }],
+    };
+    const source = createFakeImportSource(data, {
+      extraCollections: ["friends"],
+    });
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const dropped = result.warnings.filter((w) => w.kind === "dropped-collection");
+    expect(dropped).toHaveLength(1);
+    expect(dropped[0]?.message).toContain("friends");
+  });
+
+  // TODO: Exercising the warnings-truncated marker via the engine requires a
+  // mapper pipeline that emits `MAX_WARNING_BUFFER_SIZE + 1` warnings from
+  // real documents. The marker behaviour is already covered at the context
+  // unit level in `context.test.ts`; a full E2E variant depends on T28+
+  // wiring `warnUnknownKeys` through the dispatch table so unknown-field
+  // drift actually produces per-doc warnings. Skipped deliberately — see
+  // the import-sp Phase 2 follow-up.
+  it.skip("emits warnings-truncated marker when warning buffer overflows (pending mapper wiring)", () => {
+    // Left intentionally empty — unskip once passthrough unknown-field
+    // warnings are wired through the dispatch table.
+  });
+
+  // TODO: No mapper currently calls `warnUnknownKeys`, so an unknown SP
+  // field on a member never produces a `kind: "unknown-field"` warning at
+  // the engine layer. The helper is unit-tested in
+  // `helpers.test.ts`. Skipped until mappers opt into passthrough warnings.
+  it.skip("surfaces unknown-field warnings from passthrough validators (pending mapper wiring)", () => {
+    // Left intentionally empty — unskip once mappers invoke
+    // warnUnknownKeys from the dispatch path.
+  });
+});
