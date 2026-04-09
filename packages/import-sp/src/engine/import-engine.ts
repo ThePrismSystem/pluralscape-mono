@@ -134,14 +134,21 @@ function indexOfResumeCollection(state: ImportCheckpointState): number {
  * each in the translation table so member mappers can resolve their
  * `synthetic:*` references. Called only when the source has no
  * `privacyBuckets` collection.
+ *
+ * Returns the accumulated {@link AdvanceDelta} across all three buckets so
+ * the caller can thread it through {@link advanceWithinCollection} and then
+ * call {@link completeCollection} before entering the member loop.
  */
 async function persistSynthesizedBuckets(
   persister: Persister,
   ctx: MappingContext,
   errors: ImportError[],
-): Promise<{ persisted: number; aborted: boolean; lastSourceId: string | null }> {
+): Promise<{ delta: AdvanceDelta; aborted: boolean; lastSourceId: string | null }> {
   const synthesized = synthesizeLegacyBuckets();
-  let persisted = 0;
+  let importedCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let failedCount = 0;
   let lastSourceId: string | null = null;
   for (const bucket of synthesized) {
     const payload: MappedPrivacyBucket = {
@@ -158,7 +165,9 @@ async function persistSynthesizedBuckets(
         payload,
       });
       ctx.register("privacy-bucket", bucket.syntheticSourceId, result.pluralscapeEntityId);
-      persisted += 1;
+      if (result.action === "created") importedCount += 1;
+      else if (result.action === "updated") updatedCount += 1;
+      else skippedCount += 1;
       lastSourceId = bucket.syntheticSourceId;
     } catch (thrown) {
       const error = classifyError(thrown, {
@@ -167,12 +176,27 @@ async function persistSynthesizedBuckets(
       });
       errors.push(error);
       await persister.recordError(error);
+      failedCount += 1;
       if (isFatalError(error)) {
-        return { persisted, aborted: true, lastSourceId };
+        const partialDelta: AdvanceDelta = {
+          imported: importedCount,
+          updated: updatedCount,
+          skipped: skippedCount,
+          failed: failedCount,
+          total: importedCount + updatedCount + skippedCount + failedCount,
+        };
+        return { delta: partialDelta, aborted: true, lastSourceId };
       }
     }
   }
-  return { persisted, aborted: false, lastSourceId };
+  const finalDelta: AdvanceDelta = {
+    imported: importedCount,
+    updated: updatedCount,
+    skipped: skippedCount,
+    failed: failedCount,
+    total: importedCount + updatedCount + skippedCount + failedCount,
+  };
+  return { delta: finalDelta, aborted: false, lastSourceId };
 }
 
 /** Set of SP collection names the engine iterates. Computed once per run. */
@@ -246,6 +270,18 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       continue;
     }
 
+    // Capture the resume cutoff at collection entry BEFORE any bookkeeping
+    // (including legacy bucket synthesis below) can mutate
+    // `currentCollectionLastSourceId`. We only honour the cutoff against the
+    // original checkpoint and stop honouring it once we walk past the
+    // resumed source ID. This correctly handles sources whose IDs are not
+    // lexicographically sortable: we walk the (stable) iteration order and
+    // skip every doc up to and including the cutoff.
+    const resumeCutoffSourceId =
+      state.checkpoint.currentCollection === entityType
+        ? state.checkpoint.currentCollectionLastSourceId
+        : null;
+
     // Legacy bucket synthesis: when we enter members and the privacyBuckets
     // pass produced zero successfully-mapped documents, synthesize the three
     // legacy buckets so members can resolve their `synthetic:*` references.
@@ -259,22 +295,38 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
           outcome: "aborted",
         };
       }
+      // Advance checkpoint totals for the synthesized buckets, mark the
+      // privacy-bucket collection complete, then flush and report progress
+      // before entering the member loop so a crash here is recoverable.
+      if (synth.lastSourceId !== null) {
+        state = advanceWithinCollection(state, {
+          entityType: "privacy-bucket",
+          lastSourceId: synth.lastSourceId,
+          delta: synth.delta,
+        });
+      }
+      state = completeCollection(state, { nextEntityType: entityType });
+      // If we entered the member collection mid-resume, preserve the
+      // original cutoff so the iteration loop below (and the
+      // resume-cutoff-not-found abort path) still sees the pre-synthesis
+      // checkpoint position.
+      if (resumeCutoffSourceId !== null) {
+        state = {
+          ...state,
+          checkpoint: {
+            ...state.checkpoint,
+            currentCollectionLastSourceId: resumeCutoffSourceId,
+          },
+        };
+      }
+      await persister.flush();
+      await onProgress(state);
       // Mark as handled so a downstream resume doesn't re-trigger.
-      privacyBucketsMapped = synth.persisted;
+      privacyBucketsMapped = synth.delta.imported + synth.delta.updated + synth.delta.skipped;
     }
 
     let docsSinceCheckpoint = 0;
     let collectionAborted = false;
-    // Capture the resume cutoff at collection entry. We only honour the
-    // cutoff against the original checkpoint (`resumeCutoffSourceId`) and
-    // stop honouring it once we walk past the resumed source ID. This
-    // correctly handles sources whose IDs are not lexicographically
-    // sortable: we walk the (stable) iteration order and skip every doc up
-    // to and including the cutoff.
-    const resumeCutoffSourceId =
-      state.checkpoint.currentCollection === entityType
-        ? state.checkpoint.currentCollectionLastSourceId
-        : null;
     let pastResumeCutoff = resumeCutoffSourceId === null;
 
     try {

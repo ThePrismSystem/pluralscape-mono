@@ -100,9 +100,9 @@ describe("import engine — legacy bucket synthesis", () => {
 
 describe("synthesized bucket count and flush", () => {
   // Critical #1: synthesized buckets must be counted in checkpoint totals.
-  // Currently `persistSynthesizedBuckets` never calls `advanceWithinCollection`,
-  // so `perCollection["privacy-bucket"]` is undefined after a legacy-synthesis run.
-  it.fails("advances totals.perCollection['privacy-bucket'] after synthesis", async () => {
+  // `persistSynthesizedBuckets` returns an `AdvanceDelta` that is threaded
+  // through `advanceWithinCollection` before the member loop starts.
+  it("advances totals.perCollection['privacy-bucket'] after synthesis", async () => {
     const source = createFakeImportSource({
       members: [{ _id: "sp_m_1", name: "Alex", private: true }],
     });
