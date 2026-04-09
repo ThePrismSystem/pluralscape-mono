@@ -323,6 +323,8 @@ const REST_ENTRIES: readonly [string, RequiredScope][] = [
   // Import entity refs
   ["GET /systems/:systemId/import-entity-refs", "read:system"],
   ["GET /systems/:systemId/import-entity-refs/lookup", "read:system"],
+  ["POST /systems/:systemId/import-entity-refs/lookup-batch", "read:system"],
+  ["POST /systems/:systemId/import-entity-refs/upsert-batch", "write:system"],
 
   // Structure Entity Types
   ["GET /systems/:systemId/structure/entity-types", "read:structure"],

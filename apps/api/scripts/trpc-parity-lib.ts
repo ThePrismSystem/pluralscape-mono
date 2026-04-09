@@ -960,6 +960,8 @@ const MAPPING_OVERRIDES: Record<string, string> = {
   // Import entity refs
   "GET /v1/systems/:systemId/import-entity-refs": "importEntityRef.list",
   "GET /v1/systems/:systemId/import-entity-refs/lookup": "importEntityRef.lookup",
+  "POST /v1/systems/:systemId/import-entity-refs/lookup-batch": "importEntityRef.lookupBatch",
+  "POST /v1/systems/:systemId/import-entity-refs/upsert-batch": "importEntityRef.upsertBatch",
 
   // Structure - entity types
   "POST /v1/systems/:systemId/structure/entity-types": "structure.entityType.create",
