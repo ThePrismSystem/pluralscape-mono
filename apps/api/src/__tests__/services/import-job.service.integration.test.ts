@@ -5,6 +5,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
 } from "@pluralscape/db/test-helpers/pg-helpers";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -719,6 +720,42 @@ describe("import-job.service (PGlite integration)", () => {
         audit,
       );
       expect(audit.calls.some((c) => c.eventType === "import-job.failed")).toBe(true);
+    });
+  });
+
+  describe("getImportJob corrupt JSONB handling", () => {
+    it("throws INTERNAL_ERROR when errorLog has wrong shape", async () => {
+      const job = await createImportJob(
+        asDb(db),
+        systemId,
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
+        auth,
+        noopAudit,
+      );
+      await db.execute(sql`
+        UPDATE import_jobs
+        SET error_log = '[{"garbage": true}]'::jsonb
+        WHERE id = ${job.id}
+      `);
+
+      await assertApiError(getImportJob(asDb(db), systemId, job.id, auth), "INTERNAL_ERROR", 500);
+    });
+
+    it("throws INTERNAL_ERROR when checkpointState has wrong shape", async () => {
+      const job = await createImportJob(
+        asDb(db),
+        systemId,
+        { source: "simply-plural", selectedCategories: { member: true }, avatarMode: "api" },
+        auth,
+        noopAudit,
+      );
+      await db.execute(sql`
+        UPDATE import_jobs
+        SET checkpoint_state = '{"schemaVersion": 99}'::jsonb
+        WHERE id = ${job.id}
+      `);
+
+      await assertApiError(getImportJob(asDb(db), systemId, job.id, auth), "INTERNAL_ERROR", 500);
     });
   });
 });

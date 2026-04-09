@@ -9,12 +9,20 @@ import {
 } from "@pluralscape/types";
 import {
   CreateImportJobBodySchema,
+  ImportCheckpointStateSchema,
+  ImportErrorSchema,
   ImportJobQuerySchema,
   UpdateImportJobBodySchema,
 } from "@pluralscape/validation";
 import { and, desc, eq, lt } from "drizzle-orm";
+import { z } from "zod/v4";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_CONFLICT,
+  HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_NOT_FOUND,
+} from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { withTenantRead, withTenantTransaction } from "../lib/rls-context.js";
@@ -64,6 +72,41 @@ interface ListImportJobOpts {
   readonly source?: ImportSource;
 }
 
+// ── JSONB read validators ────────────────────────────────────────────
+// Every read of a JSONB column goes through these helpers. Corrupt rows
+// (schema drift, stale worker writes, manual SQL) surface as structured
+// INTERNAL_ERROR responses rather than returning silently-wrong data.
+
+const ImportErrorLogSchema = z.array(ImportErrorSchema).nullable();
+
+function parseErrorLog(raw: unknown): readonly ImportError[] | null {
+  if (raw === null || raw === undefined) return null;
+  const result = ImportErrorLogSchema.safeParse(raw);
+  if (!result.success) {
+    throw new ApiHttpError(
+      HTTP_INTERNAL_SERVER_ERROR,
+      "INTERNAL_ERROR",
+      "Corrupt import job error log",
+      { reason: "corrupt_error_log", issues: result.error.issues },
+    );
+  }
+  return result.data;
+}
+
+function parseCheckpointState(raw: unknown): ImportCheckpointState | null {
+  if (raw === null || raw === undefined) return null;
+  const result = ImportCheckpointStateSchema.safeParse(raw);
+  if (!result.success) {
+    throw new ApiHttpError(
+      HTTP_INTERNAL_SERVER_ERROR,
+      "INTERNAL_ERROR",
+      "Corrupt import checkpoint state",
+      { reason: "corrupt_checkpoint_state", issues: result.error.issues },
+    );
+  }
+  return result.data;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 function toImportJobResult(row: typeof importJobs.$inferSelect): ImportJobResult {
@@ -74,11 +117,11 @@ function toImportJobResult(row: typeof importJobs.$inferSelect): ImportJobResult
     source: row.source,
     status: row.status,
     progressPercent: row.progressPercent,
-    errorLog: (row.errorLog as readonly ImportError[] | null) ?? null,
+    errorLog: parseErrorLog(row.errorLog),
     warningCount: row.warningCount,
     chunksTotal: row.chunksTotal,
     chunksCompleted: row.chunksCompleted,
-    checkpointState: row.checkpointState ?? null,
+    checkpointState: parseCheckpointState(row.checkpointState),
     createdAt: toUnixMillis(row.createdAt),
     updatedAt: toUnixMillis(row.updatedAt),
     completedAt: toUnixMillisOrNull(row.completedAt),
@@ -338,7 +381,7 @@ export async function updateImportJob(
       }
       // failed → importing|validating: require last error to be fatal + recoverable
       if (current.status === "failed") {
-        const currentErrorLog = (current.errorLog as readonly ImportError[] | null) ?? null;
+        const currentErrorLog = parseErrorLog(current.errorLog);
         if (!isResumableFromFailed(currentErrorLog)) {
           throw new ApiHttpError(
             HTTP_CONFLICT,
