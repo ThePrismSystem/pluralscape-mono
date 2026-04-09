@@ -1,5 +1,5 @@
 {
-  "id": "7b153088-84f0-4395-a939-9a47f1988ec2",
+  "id": "59edb991-4ef4-4e34-83e4-552bc3d785a4",
   "prevId": "1e228a73-eaf2-43b2-b298-565d921192db",
   "version": "7",
   "dialect": "postgresql",
@@ -5034,7 +5034,7 @@
         },
         "import_entity_refs_source_entity_type_check": {
           "name": "import_entity_refs_source_entity_type_check",
-          "value": "\"import_entity_refs\".\"source_entity_type\" IS NULL OR \"import_entity_refs\".\"source_entity_type\" IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'friend', 'system-profile', 'system-settings', 'unknown')"
+          "value": "\"import_entity_refs\".\"source_entity_type\" IS NULL OR \"import_entity_refs\".\"source_entity_type\" IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'system-profile', 'system-settings', 'unknown')"
         }
       },
       "isRLSEnabled": false

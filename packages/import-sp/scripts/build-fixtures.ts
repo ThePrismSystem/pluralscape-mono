@@ -150,7 +150,6 @@ function buildRealistic(): unknown {
         writtenAt: REALISTIC_BASE_TIME_MS + 3_000,
       },
     ],
-    friends: [{ _id: id("fr", 1), frienduid: "remote_user_1" }],
   };
 }
 

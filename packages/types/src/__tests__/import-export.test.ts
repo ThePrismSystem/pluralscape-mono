@@ -120,7 +120,6 @@ describe("ImportEntityType", () => {
         case "poll":
         case "timer":
         case "privacy-bucket":
-        case "friend":
         case "system-profile":
         case "system-settings":
         case "unknown":

@@ -134,12 +134,6 @@ function toResult(row: typeof importEntityRefs.$inferSelect): ImportEntityRef {
         sourceEntityType,
         pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["privacy-bucket"],
       };
-    case "friend":
-      return {
-        ...base,
-        sourceEntityType,
-        pluralscapeEntityId: rawTargetId as ImportEntityTargetIdMap["friend"],
-      };
     case "custom-front":
       return {
         ...base,

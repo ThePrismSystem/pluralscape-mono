@@ -206,22 +206,3 @@ export interface SPPrivacyBucket extends SPDocument {
   readonly color?: string | null;
   readonly icon?: string | null;
 }
-
-// ── friends + pendingFriendRequests ──────────────────────────────────
-
-export interface SPFriend extends SPDocument {
-  /** SP-side identifier for the remote user. Treated as opaque on Pluralscape. */
-  readonly frienduid: string;
-  readonly seenSources?: readonly string[];
-  readonly seeMembers?: boolean;
-  readonly seeFront?: boolean;
-  readonly trusted?: boolean;
-  readonly getFrontNotif?: boolean;
-}
-
-export interface SPPendingFriendRequest extends SPDocument {
-  readonly sender: string;
-  readonly receiver: string;
-  readonly time: number;
-  readonly message?: string | null;
-}

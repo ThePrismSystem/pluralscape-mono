@@ -23,8 +23,6 @@ export const DEPENDENCY_ORDER: readonly SpCollectionName[] = [
   "channels", // channels reference categories
   "chatMessages", // messages reference channels and writers
   "boardMessages", // board messages reference writers
-  "friends", // social
-  "pendingFriendRequests", // social
 ];
 
 const ORDER_INDEX = new Map<SpCollectionName, number>(

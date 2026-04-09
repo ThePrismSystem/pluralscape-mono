@@ -50,8 +50,6 @@ const ENDPOINT_PATHS: Record<SpCollectionName, string> = {
   channels: "/v1/channels",
   chatMessages: "/v1/chatMessages",
   boardMessages: "/v1/boardMessages",
-  friends: "/v1/friends",
-  pendingFriendRequests: "/v1/friends/requests/pending",
 };
 
 /** HTTP 401 Unauthorized — the bearer token is missing or invalid. */

@@ -21,15 +21,8 @@ describe("entity-type-map", () => {
   it("maps privacyBuckets → privacy-bucket", () => {
     expect(collectionToEntityType("privacyBuckets")).toBe("privacy-bucket");
   });
-  it("maps friends → friend", () => {
-    expect(collectionToEntityType("friends")).toBe("friend");
-  });
   it("entityTypeToCollection inverses the mapping", () => {
     expect(entityTypeToCollection("member")).toBe("members");
     expect(entityTypeToCollection("custom-front")).toBe("frontStatuses");
-  });
-  it("resolves friend → friends as the canonical collection (not pendingFriendRequests)", () => {
-    expect(entityTypeToCollection("friend")).toBe("friends");
-    expect(collectionToEntityType("pendingFriendRequests")).toBe("friend");
   });
 });

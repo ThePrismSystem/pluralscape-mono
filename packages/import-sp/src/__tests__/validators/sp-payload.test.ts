@@ -7,14 +7,12 @@ import {
   SPChatMessageSchema,
   SPCommentSchema,
   SPCustomFieldSchema,
-  SPFriendSchema,
   SPFrontHistorySchema,
   SPFrontStatusSchema,
   SPGroupSchema,
   SPImportPayloadSchema,
   SPMemberSchema,
   SPNoteSchema,
-  SPPendingFriendRequestSchema,
   SPPollSchema,
   SPPrivacyBucketSchema,
   SPPrivateSchema,
@@ -244,22 +242,6 @@ describe("SPBoardMessageSchema", () => {
 describe("SPPrivacyBucketSchema", () => {
   it("accepts a bucket", () => {
     expect(SPPrivacyBucketSchema.safeParse({ _id: validId, name: "Trusted" }).success).toBe(true);
-  });
-});
-
-describe("SPFriendSchema and SPPendingFriendRequestSchema", () => {
-  it("accepts a friend with frienduid", () => {
-    expect(SPFriendSchema.safeParse({ _id: validId, frienduid: "u_remote" }).success).toBe(true);
-  });
-  it("accepts a pending friend request", () => {
-    expect(
-      SPPendingFriendRequestSchema.safeParse({
-        _id: validId,
-        sender: "u_a",
-        receiver: "u_b",
-        time: 1_000_000,
-      }).success,
-    ).toBe(true);
   });
 });
 

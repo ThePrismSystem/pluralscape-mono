@@ -21,8 +21,6 @@ export const SP_COLLECTION_NAMES = [
   "channels",
   "chatMessages",
   "boardMessages",
-  "friends",
-  "pendingFriendRequests",
 ] as const;
 
 export type SpCollectionName = (typeof SP_COLLECTION_NAMES)[number];

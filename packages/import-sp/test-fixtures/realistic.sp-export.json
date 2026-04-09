@@ -725,11 +725,5 @@
       "writer": "m_00000001",
       "writtenAt": 1700000003000
     }
-  ],
-  "friends": [
-    {
-      "_id": "fr_00000001",
-      "frienduid": "remote_user_1"
-    }
   ]
 }

@@ -9,7 +9,6 @@ import type {
   ExportRequestId,
   FieldDefinitionId,
   FieldValueId,
-  FriendConnectionId,
   FrontingCommentId,
   FrontingSessionId,
   GroupId,
@@ -103,7 +102,6 @@ export type ImportEntityType =
   | "poll"
   | "timer"
   | "privacy-bucket"
-  | "friend"
   | "system-profile"
   | "system-settings"
   | "unknown";
@@ -248,7 +246,6 @@ export interface ImportEntityTargetIdMap {
   readonly poll: PollId;
   readonly timer: TimerId;
   readonly "privacy-bucket": BucketId;
-  readonly friend: FriendConnectionId;
   readonly "system-profile": SystemId;
   readonly "system-settings": SystemId;
   readonly unknown: string;
@@ -393,7 +390,6 @@ export const IMPORT_ENTITY_TYPES = [
   "poll",
   "timer",
   "privacy-bucket",
-  "friend",
   "system-profile",
   "system-settings",
   "unknown",
@@ -418,7 +414,6 @@ export const IMPORT_COLLECTION_TYPES = [
   "poll",
   "timer",
   "privacy-bucket",
-  "friend",
   "system-profile",
   "system-settings",
 ] as const satisfies readonly ImportCollectionType[];

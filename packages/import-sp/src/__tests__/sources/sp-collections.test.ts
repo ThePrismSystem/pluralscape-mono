@@ -17,8 +17,6 @@ describe("SP_COLLECTION_NAMES", () => {
     expect(SP_COLLECTION_NAMES).toContain("chatMessages");
     expect(SP_COLLECTION_NAMES).toContain("boardMessages");
     expect(SP_COLLECTION_NAMES).toContain("privacyBuckets");
-    expect(SP_COLLECTION_NAMES).toContain("friends");
-    expect(SP_COLLECTION_NAMES).toContain("pendingFriendRequests");
     expect(SP_COLLECTION_NAMES).toContain("users");
     expect(SP_COLLECTION_NAMES).toContain("private");
   });

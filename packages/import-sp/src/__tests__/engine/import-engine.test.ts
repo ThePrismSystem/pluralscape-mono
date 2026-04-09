@@ -76,8 +76,6 @@ const ALL_CATEGORIES_ON: Record<string, boolean> = {
   channels: true,
   chatMessages: true,
   boardMessages: true,
-  friends: true,
-  pendingFriendRequests: true,
 };
 
 describe("runImport — happy path", () => {

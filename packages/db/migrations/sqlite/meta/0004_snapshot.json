@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "07e780f2-2817-42b3-9f53-146af39f89cf",
+  "id": "22124e5d-affc-40b4-9858-ffd9dd48050d",
   "prevId": "5914edb2-3d11-41ad-95a5-e08cefb19874",
   "tables": {
     "account_purge_requests": {
@@ -3998,7 +3998,7 @@
         },
         "import_entity_refs_source_entity_type_check": {
           "name": "import_entity_refs_source_entity_type_check",
-          "value": "\"import_entity_refs\".\"source_entity_type\" IS NULL OR \"import_entity_refs\".\"source_entity_type\" IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'friend', 'system-profile', 'system-settings', 'unknown')"
+          "value": "\"import_entity_refs\".\"source_entity_type\" IS NULL OR \"import_entity_refs\".\"source_entity_type\" IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'system-profile', 'system-settings', 'unknown')"
         }
       }
     },

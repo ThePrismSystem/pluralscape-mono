@@ -20,7 +20,6 @@ import { mapChannel, mapChannelCategory } from "../mappers/channel.mapper.js";
 import { mapChatMessage } from "../mappers/chat-message.mapper.js";
 import { mapCustomFront } from "../mappers/custom-front.mapper.js";
 import { mapFieldDefinition } from "../mappers/field-definition.mapper.js";
-import { mapFriendship, mapPendingFriendRequest } from "../mappers/friendship.mapper.js";
 import { mapFrontingComment } from "../mappers/fronting-comment.mapper.js";
 import { mapFrontingSession } from "../mappers/fronting-session.mapper.js";
 import { mapGroup } from "../mappers/group.mapper.js";
@@ -37,13 +36,11 @@ import {
   SPChatMessageSchema,
   SPCommentSchema,
   SPCustomFieldSchema,
-  SPFriendSchema,
   SPFrontHistorySchema,
   SPFrontStatusSchema,
   SPGroupSchema,
   SPMemberSchema,
   SPNoteSchema,
-  SPPendingFriendRequestSchema,
   SPPollSchema,
   SPPrivacyBucketSchema,
   SPPrivateSchema,
@@ -102,10 +99,4 @@ export const MAPPER_DISPATCH: Readonly<Record<SpCollectionName, MapperEntry>> = 
   channels: entry("channels", SPChannelSchema, mapChannel),
   chatMessages: entry("chatMessages", SPChatMessageSchema, mapChatMessage),
   boardMessages: entry("boardMessages", SPBoardMessageSchema, mapBoardMessage),
-  friends: entry("friends", SPFriendSchema, mapFriendship),
-  pendingFriendRequests: entry(
-    "pendingFriendRequests",
-    SPPendingFriendRequestSchema,
-    mapPendingFriendRequest,
-  ),
 };

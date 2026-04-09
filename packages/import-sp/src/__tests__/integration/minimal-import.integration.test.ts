@@ -88,11 +88,10 @@ describe("import engine — minimal end-to-end import", () => {
     // Checkpoint lands with the last completed collection as `currentCollection`
     // (the engine advances past the last one after the loop exits).
     expect(result.finalState.checkpoint.currentCollection).toBe(
-      collectionToEntityType("pendingFriendRequests"),
+      collectionToEntityType("boardMessages"),
     );
 
-    // Flush is called at least once per collection — DEPENDENCY_ORDER has
-    // 17 entries, so we expect at least 17 flushes for a clean run.
+    // Flush is called at least once per collection.
     expect(state.flushCount).toBeGreaterThanOrEqual(DEPENDENCY_ORDER.length);
   });
 });

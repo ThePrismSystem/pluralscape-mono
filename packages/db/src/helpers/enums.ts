@@ -489,7 +489,6 @@ export const IMPORT_ENTITY_TYPES = [
   "poll",
   "timer",
   "privacy-bucket",
-  "friend",
   "system-profile",
   "system-settings",
   "unknown",

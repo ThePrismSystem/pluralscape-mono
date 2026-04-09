@@ -1256,7 +1256,7 @@ export const SQLITE_DDL = {
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       source TEXT NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
-      source_entity_type TEXT NOT NULL CHECK (source_entity_type IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'friend', 'system-profile', 'system-settings', 'unknown')),
+      source_entity_type TEXT NOT NULL CHECK (source_entity_type IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'system-profile', 'system-settings', 'unknown')),
       source_entity_id TEXT NOT NULL,
       pluralscape_entity_id TEXT NOT NULL,
       imported_at INTEGER NOT NULL

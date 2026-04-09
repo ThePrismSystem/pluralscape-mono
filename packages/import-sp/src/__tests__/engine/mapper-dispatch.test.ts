@@ -21,8 +21,6 @@ const ALL_COLLECTIONS: readonly SpCollectionName[] = [
   "channels",
   "chatMessages",
   "boardMessages",
-  "friends",
-  "pendingFriendRequests",
 ];
 
 describe("MAPPER_DISPATCH", () => {
@@ -42,8 +40,6 @@ describe("MAPPER_DISPATCH", () => {
     expect(MAPPER_DISPATCH.privacyBuckets.entityType).toBe("privacy-bucket");
     expect(MAPPER_DISPATCH.channelCategories.entityType).toBe("channel-category");
     expect(MAPPER_DISPATCH.channels.entityType).toBe("channel");
-    expect(MAPPER_DISPATCH.friends.entityType).toBe("friend");
-    expect(MAPPER_DISPATCH.pendingFriendRequests.entityType).toBe("friend");
   });
 
   it("users entry maps a valid SP user to system-profile", () => {
@@ -177,21 +173,6 @@ describe("MAPPER_DISPATCH", () => {
       ctx,
     );
     expect(result.status).toBe("failed");
-  });
-
-  it("friends entry maps a valid friend", () => {
-    const ctx = createMappingContext({ sourceMode: "fake" });
-    const result = MAPPER_DISPATCH.friends.map({ _id: "fr1", frienduid: "remote-1" }, ctx);
-    expect(result.status).toBe("mapped");
-  });
-
-  it("pendingFriendRequests entry maps a valid pending request", () => {
-    const ctx = createMappingContext({ sourceMode: "fake" });
-    const result = MAPPER_DISPATCH.pendingFriendRequests.map(
-      { _id: "pfr1", sender: "remote-1", receiver: "self", time: 0 },
-      ctx,
-    );
-    expect(result.status).toBe("mapped");
   });
 
   it("returns failed with validation prefix when document is malformed", () => {

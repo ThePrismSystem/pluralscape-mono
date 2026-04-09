@@ -165,7 +165,6 @@ const CANONICAL_COLLECTION_ORDER = [
   "poll",
   "timer",
   "privacy-bucket",
-  "friend",
 ] as const satisfies readonly ImportCollectionType[];
 
 function firstSelectedCollection(

@@ -7,13 +7,11 @@ import type {
   SPChatMessage,
   SPComment,
   SPCustomField,
-  SPFriend,
   SPFrontHistory,
   SPFrontStatus,
   SPGroup,
   SPMember,
   SPNote,
-  SPPendingFriendRequest,
   SPPoll,
   SPPollOption,
   SPPollVote,
@@ -224,28 +222,6 @@ export const SPPrivacyBucketSchema = z
   })
   .strip() satisfies z.ZodType<SPPrivacyBucket>;
 
-export const SPFriendSchema = z
-  .object({
-    _id: SPDocumentIdSchema,
-    frienduid: z.string().min(1),
-    seenSources: z.array(z.string()).readonly().optional(),
-    seeMembers: OptionalBool,
-    seeFront: OptionalBool,
-    trusted: OptionalBool,
-    getFrontNotif: OptionalBool,
-  })
-  .strip() satisfies z.ZodType<SPFriend>;
-
-export const SPPendingFriendRequestSchema = z
-  .object({
-    _id: SPDocumentIdSchema,
-    sender: z.string().min(1),
-    receiver: z.string().min(1),
-    time: Timestamp,
-    message: NullableString,
-  })
-  .strip() satisfies z.ZodType<SPPendingFriendRequest>;
-
 export const SPImportPayloadSchema = z
   .object({
     users: z.array(SPUserSchema).optional(),
@@ -263,7 +239,5 @@ export const SPImportPayloadSchema = z
     channels: z.array(SPChannelSchema).optional(),
     chatMessages: z.array(SPChatMessageSchema).optional(),
     boardMessages: z.array(SPBoardMessageSchema).optional(),
-    friends: z.array(SPFriendSchema).optional(),
-    pendingFriendRequests: z.array(SPPendingFriendRequestSchema).optional(),
   })
   .strip();

@@ -11,7 +11,7 @@ CREATE TABLE `__new_import_entity_refs` (
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "import_entity_refs_source_check" CHECK("__new_import_entity_refs"."source" IS NULL OR "__new_import_entity_refs"."source" IN ('simply-plural', 'pluralkit', 'pluralscape')),
-	CONSTRAINT "import_entity_refs_source_entity_type_check" CHECK("__new_import_entity_refs"."source_entity_type" IS NULL OR "__new_import_entity_refs"."source_entity_type" IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'friend', 'system-profile', 'system-settings', 'unknown'))
+	CONSTRAINT "import_entity_refs_source_entity_type_check" CHECK("__new_import_entity_refs"."source_entity_type" IS NULL OR "__new_import_entity_refs"."source_entity_type" IN ('member', 'group', 'custom-front', 'fronting-session', 'fronting-comment', 'switch', 'custom-field', 'field-definition', 'field-value', 'note', 'journal-entry', 'chat-message', 'board-message', 'channel-category', 'channel', 'poll', 'timer', 'privacy-bucket', 'system-profile', 'system-settings', 'unknown'))
 );
 --> statement-breakpoint
 INSERT INTO `__new_import_entity_refs`("id", "account_id", "system_id", "source", "source_entity_type", "source_entity_id", "pluralscape_entity_id", "imported_at") SELECT "id", "account_id", "system_id", "source", "source_entity_type", "source_entity_id", "pluralscape_entity_id", "imported_at" FROM `import_entity_refs`;--> statement-breakpoint
