@@ -20,6 +20,7 @@
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/data": "workspace:*",
     "@pluralscape/i18n": "workspace:*",
+    "@pluralscape/import-sp": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@tanstack/react-query": "^5.66.9",

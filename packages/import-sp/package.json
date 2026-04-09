@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./avatar-fetcher-types": "./src/persistence/avatar-fetcher.types.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",

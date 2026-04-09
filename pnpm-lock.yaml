@@ -211,6 +211,9 @@ importers:
       '@pluralscape/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@pluralscape/import-sp':
+        specifier: workspace:*
+        version: link:../../packages/import-sp
       '@pluralscape/sync':
         specifier: workspace:*
         version: link:../../packages/sync
