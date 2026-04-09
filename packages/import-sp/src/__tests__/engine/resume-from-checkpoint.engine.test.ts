@@ -37,16 +37,20 @@ const FIXTURE_BASE_TIME = 1_700_000_000_000;
 const ID_PAD_WIDTH = 8;
 
 /**
- * Build the resume-test fixture.  Members 1..10 are identical shells; all
- * downstream collections reference `m_00000010`, which is guaranteed to be
- * present both in a clean run and in the mid-collection resume because it
- * comes after the cutoff.
+ * Build the resume-test fixture.  Members 1..10 are identical shells using
+ * legacy SP privacy flags (`private: true`) rather than modern `buckets`
+ * references; this lets the engine's legacy-bucket-synthesis path hydrate
+ * the in-run translation table with the three synthetic buckets during the
+ * resumed member pass so bucket FK resolution can succeed. All downstream
+ * collections reference `m_00000010`, which is guaranteed to be present
+ * both in a clean run and in the mid-collection resume because it comes
+ * after the cutoff.
  */
 function buildResumeFixture(): Uint8Array {
   const members = Array.from({ length: TOTAL_MEMBERS_IN_FIXTURE }, (_, i) => ({
     _id: `m_${String(i + 1).padStart(ID_PAD_WIDTH, "0")}`,
     name: `Member ${String(i + 1)}`,
-    buckets: ["bk_00000001"],
+    private: true,
   }));
   const lastMemberId = members[members.length - 1]?._id ?? "m_00000010";
   const sessions = Array.from({ length: SESSIONS_AFTER_CUTOFF }, (_, i) => ({
@@ -57,8 +61,8 @@ function buildResumeFixture(): Uint8Array {
     startTime: FIXTURE_BASE_TIME + i * 1_000,
     endTime: i === SESSIONS_AFTER_CUTOFF - 1 ? null : FIXTURE_BASE_TIME + i * 1_000 + 500,
   }));
+  // Omit `privacyBuckets` so legacy synthesis fires on the resumed run.
   const data = {
-    privacyBuckets: [{ _id: "bk_00000001", name: "Public" }],
     members,
     groups: [{ _id: "g_00000001", name: "Pod Omega", members: [lastMemberId] }],
     frontHistory: sessions,
@@ -69,20 +73,18 @@ function buildResumeFixture(): Uint8Array {
 /**
  * Build a checkpoint state that signals "mid-member, last processed id was
  * m_00000005". `completedCollections` is populated with every entity type
- * preceding `member` so the engine's legacy-bucket-synthesis short-circuit
- * (`completedCollections.includes("member")`) marks the privacy-bucket pass
- * as already handled — this prevents the engine from synthesizing the three
- * legacy buckets when resuming into a modern-SP member collection.
+ * preceding `member` (so those iterations are skipped entirely) but NOT
+ * `"member"` itself — the member loop is still running. Leaving `"member"`
+ * out also lets legacy-bucket synthesis fire on resume so the in-memory
+ * translation table gets hydrated with the synthetic privacy buckets that
+ * the resumed members will resolve against.
  */
 function buildMidMemberCheckpoint(): ImportCheckpointState {
   const memberIndex = DEPENDENCY_ORDER.indexOf("members");
-  const precedingEntityTypes: readonly ImportCollectionType[] = DEPENDENCY_ORDER.slice(
+  const completedCollections: readonly ImportCollectionType[] = DEPENDENCY_ORDER.slice(
     0,
     memberIndex,
   ).map((c) => collectionToEntityType(c));
-  // Include `member` itself in completedCollections so the synthesis guard
-  // treats the privacy pass as "handled" by a prior run.
-  const completedCollections: readonly ImportCollectionType[] = [...precedingEntityTypes, "member"];
   return {
     schemaVersion: 1,
     checkpoint: {
@@ -115,21 +117,28 @@ describe("import engine — resume from mid-collection checkpoint", () => {
     const state = snapshot();
 
     // Collections earlier than `member` in DEPENDENCY_ORDER are entirely
-    // skipped — no upserts into the store and no totals recorded.
+    // skipped — no upserts into the store and no totals recorded — EXCEPT
+    // for privacy-bucket, which is re-synthesized on resume because the
+    // in-memory ID translation table does not survive across runs. Legacy
+    // bucket synthesis runs before the member loop so the resumed members
+    // (1..10 using `private: true`) can resolve their synthetic bucket
+    // references.
     expect(state.countByType("system-profile")).toBe(0);
     expect(state.countByType("system-settings")).toBe(0);
-    expect(state.countByType("privacy-bucket")).toBe(0);
     expect(state.countByType("field-definition")).toBe(0);
     expect(state.countByType("custom-front")).toBe(0);
+    // Legacy synthesis re-creates all three buckets.
+    expect(state.countByType("privacy-bucket")).toBe(3);
     for (const earlierType of [
       "system-profile",
       "system-settings",
-      "privacy-bucket",
       "field-definition",
       "custom-front",
     ] as const) {
       expect(result.finalState.totals.perCollection[earlierType]).toBeUndefined();
     }
+    // Privacy-bucket totals reflect the three synthesized buckets.
+    expect(result.finalState.totals.perCollection["privacy-bucket"]?.imported).toBe(3);
 
     // Only members 6..10 were persisted. Members 1..5 (inclusive of the
     // cutoff) must not appear in the store.

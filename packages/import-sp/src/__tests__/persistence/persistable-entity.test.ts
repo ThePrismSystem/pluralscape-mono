@@ -39,7 +39,7 @@ describe("PersistableEntity discriminated union", () => {
           archived: false,
         },
         fieldValues: [],
-        bucketSourceIds: [],
+        bucketIds: [],
       },
     };
     const narrowed = narrowMember(entity);

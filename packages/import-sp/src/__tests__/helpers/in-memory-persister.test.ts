@@ -32,7 +32,7 @@ const MEMBER_PAYLOAD: MappedMember = {
     archived: false,
   },
   fieldValues: [],
-  bucketSourceIds: [],
+  bucketIds: [],
 };
 
 const GROUP_PAYLOAD: MappedGroup = {

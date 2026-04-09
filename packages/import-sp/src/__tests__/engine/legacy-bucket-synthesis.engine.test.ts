@@ -78,18 +78,28 @@ describe("import engine — legacy bucket synthesis", () => {
     // All four members from the fixture were persisted.
     expect(state.countByType("member")).toBe(4);
 
-    // Each member carries the bucket source ids derived from its legacy
-    // privacy flags. See `deriveBucketSourceIds` in `member.mapper.ts`.
+    // Each member carries the *resolved* Pluralscape bucket IDs derived from
+    // its legacy privacy flags. See `deriveBucketSourceIds` in
+    // `member.mapper.ts`, then resolved via `ctx.translate(...)`.
     const memberPrivate = state.find("member", "m_00000001")?.payload as MappedMemberOutput;
     const memberPrevented = state.find("member", "m_00000002")?.payload as MappedMemberOutput;
     const memberPublic = state.find("member", "m_00000003")?.payload as MappedMemberOutput;
     const memberDefault = state.find("member", "m_00000004")?.payload as MappedMemberOutput;
 
-    expect(memberPrivate.bucketSourceIds).toEqual(["synthetic:private"]);
-    expect(memberPrevented.bucketSourceIds).toEqual(["synthetic:public"]);
-    expect(memberPublic.bucketSourceIds).toEqual(["synthetic:public", "synthetic:trusted"]);
+    // Look up the resolved Pluralscape IDs for each synthesized bucket so we
+    // can compare the member's `bucketIds` against the actual FK values.
+    const publicPsId = publicBucket?.pluralscapeEntityId;
+    const trustedPsId = trustedBucket?.pluralscapeEntityId;
+    const privatePsId = privateBucket?.pluralscapeEntityId;
+    expect(publicPsId).toBeDefined();
+    expect(trustedPsId).toBeDefined();
+    expect(privatePsId).toBeDefined();
+
+    expect(memberPrivate.bucketIds).toEqual([privatePsId]);
+    expect(memberPrevented.bucketIds).toEqual([publicPsId]);
+    expect(memberPublic.bucketIds).toEqual([publicPsId, trustedPsId]);
     // Fail-closed default when no privacy info is present.
-    expect(memberDefault.bucketSourceIds).toEqual(["synthetic:private"]);
+    expect(memberDefault.bucketIds).toEqual([privatePsId]);
 
     // The downstream fronting session for memberPrivate should have resolved
     // its FK against the persisted member — confirming the engine processes

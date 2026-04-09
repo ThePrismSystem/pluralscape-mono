@@ -8,11 +8,15 @@
  * 2. An array of {@link ExtractedFieldValue} rows sourced from SP's `info`
  *    map — SP stores custom-field values inline on the member document, but
  *    Pluralscape persists them separately.
- * 3. An array of bucket source IDs. Modern SP populates `buckets` directly;
- *    legacy SP encodes privacy with the `private` / `preventTrusted` boolean
- *    pair, which we translate to synthetic bucket IDs (see
- *    {@link deriveBucketSourceIds}). When neither modern nor legacy privacy
- *    info is available, we fail closed to `synthetic:private`.
+ * 3. An array of *resolved* Pluralscape bucket IDs (`bucketIds`). Modern SP
+ *    populates `buckets` directly; legacy SP encodes privacy with the
+ *    `private` / `preventTrusted` boolean pair, which we translate to
+ *    synthetic bucket source IDs (see {@link deriveBucketSourceIds}). Each
+ *    source ID is then resolved against the `IdTranslationTable` via
+ *    `ctx.translate("privacy-bucket", ...)` so the persister receives
+ *    already-resolved foreign keys and never has to re-resolve. Any
+ *    unresolved reference is a fail-closed `fk-miss` failure — unlike
+ *    `skipped`, which would silently drop the member.
  *
  * SP fields without a Pluralscape equivalent (`frame`, `supportDescMarkdown`,
  * `preventsFrontNotifs`, `receiveMessageBoardNotifs`) are dropped with a
@@ -20,7 +24,7 @@
  */
 import { extractFieldValues, type ExtractedFieldValue } from "./field-value.mapper.js";
 import { requireName } from "./helpers.js";
-import { mapped, skipped, type MapperResult } from "./mapper-result.js";
+import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPMember } from "../sources/sp-types.js";
@@ -37,7 +41,12 @@ export interface MappedMemberCore {
 export interface MappedMemberOutput {
   readonly member: MappedMemberCore;
   readonly fieldValues: readonly ExtractedFieldValue[];
-  readonly bucketSourceIds: readonly string[];
+  /**
+   * Pluralscape privacy-bucket IDs resolved from the source document's
+   * bucket references. Every ID here is already translated through
+   * {@link MappingContext.translate} — consumers never need to re-resolve.
+   */
+  readonly bucketIds: readonly string[];
 }
 
 /**
@@ -100,6 +109,30 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
     });
   }
 
+  // Resolve every bucket source ID through the translation table BEFORE
+  // constructing the payload. Any unresolved reference is a fail-closed
+  // `fk-miss` failure — the engine records a non-fatal error and moves on.
+  const bucketSourceIds = deriveBucketSourceIds(sp);
+  const bucketIds: string[] = [];
+  const missingRefs: string[] = [];
+  for (const sourceId of bucketSourceIds) {
+    const resolved = ctx.translate("privacy-bucket", sourceId);
+    if (resolved === null) {
+      missingRefs.push(sourceId);
+    } else {
+      bucketIds.push(resolved);
+    }
+  }
+
+  if (missingRefs.length > 0) {
+    return failed({
+      kind: "fk-miss",
+      message: `Member "${sp.name}" has ${String(missingRefs.length)} unresolved privacy bucket reference(s)`,
+      missingRefs,
+      targetField: "buckets",
+    });
+  }
+
   const member: MappedMemberCore = {
     name: sp.name,
     description: sp.desc ?? null,
@@ -110,8 +143,7 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
   };
 
   const fieldValues = extractFieldValues({ memberSourceId: sp._id, info: sp.info }, ctx);
-  const bucketSourceIds = deriveBucketSourceIds(sp);
 
-  const payload: MappedMemberOutput = { member, fieldValues, bucketSourceIds };
+  const payload: MappedMemberOutput = { member, fieldValues, bucketIds };
   return mapped(payload);
 }

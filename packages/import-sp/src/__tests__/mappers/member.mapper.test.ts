@@ -1,14 +1,29 @@
 import { describe, expect, it } from "vitest";
 
-import { createMappingContext } from "../../mappers/context.js";
+import { createMappingContext, type MappingContext } from "../../mappers/context.js";
 import { mapMember } from "../../mappers/member.mapper.js";
 
 import type { SPMember } from "../../sources/sp-types.js";
 
+/**
+ * Build a mapping context with all three synthetic privacy buckets
+ * pre-registered in the translation table. Used by every test that exercises
+ * the legacy privacy flags so the member mapper can resolve the synthetic
+ * source IDs through `ctx.translate(...)` without hitting the fail-closed
+ * `fk-miss` path.
+ */
+function createCtxWithSyntheticBuckets(): MappingContext {
+  const ctx = createMappingContext({ sourceMode: "fake" });
+  ctx.register("privacy-bucket", "synthetic:public", "ps_bucket_public");
+  ctx.register("privacy-bucket", "synthetic:trusted", "ps_bucket_trusted");
+  ctx.register("privacy-bucket", "synthetic:private", "ps_bucket_private");
+  return ctx;
+}
+
 describe("mapMember", () => {
   it("maps a minimal member", () => {
     const sp: SPMember = { _id: "m1", name: "Aria" };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, createCtxWithSyntheticBuckets());
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.member.name).toBe("Aria");
@@ -23,7 +38,7 @@ describe("mapMember", () => {
 
   it("converts the SP single color to a one-entry colors array", () => {
     const sp: SPMember = { _id: "m1", name: "A", color: "#fa0" };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, createCtxWithSyntheticBuckets());
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.member.colors).toEqual(["#fa0"]);
@@ -39,7 +54,7 @@ describe("mapMember", () => {
       avatarUrl: "https://x/y.png",
       archived: true,
     };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, createCtxWithSyntheticBuckets());
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.member.description).toBe("hi");
@@ -55,7 +70,7 @@ describe("mapMember", () => {
       name: "A",
       info: { fld_1: "blue", fld_2: "42" },
     };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, createCtxWithSyntheticBuckets());
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.fieldValues).toHaveLength(2);
@@ -63,57 +78,66 @@ describe("mapMember", () => {
     }
   });
 
-  it("forwards modern bucket assignments to bucketSourceIds", () => {
+  it("resolves modern bucket assignments through the translation table", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("privacy-bucket", "bk1", "ps_bucket_1");
+    ctx.register("privacy-bucket", "bk2", "ps_bucket_2");
     const sp: SPMember = { _id: "m1", name: "A", buckets: ["bk1", "bk2"] };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.bucketSourceIds).toEqual(["bk1", "bk2"]);
+      expect(result.payload.bucketIds).toEqual(["ps_bucket_1", "ps_bucket_2"]);
     }
   });
 
-  it("translates legacy private:true to synthetic:private", () => {
+  it("translates legacy private:true to synthetic:private and resolves it", () => {
+    const ctx = createCtxWithSyntheticBuckets();
     const sp: SPMember = { _id: "m1", name: "A", private: true };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.bucketSourceIds).toEqual(["synthetic:private"]);
+      expect(result.payload.bucketIds).toEqual(["ps_bucket_private"]);
     }
   });
 
-  it("translates legacy preventTrusted:true (not private) to public-only", () => {
+  it("translates legacy preventTrusted:true (not private) to public-only and resolves it", () => {
+    const ctx = createCtxWithSyntheticBuckets();
     const sp: SPMember = { _id: "m1", name: "A", private: false, preventTrusted: true };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.bucketSourceIds).toEqual(["synthetic:public"]);
+      expect(result.payload.bucketIds).toEqual(["ps_bucket_public"]);
     }
   });
 
-  it("translates legacy private:false, preventTrusted:false to public + trusted", () => {
+  it("translates legacy private:false, preventTrusted:false to public + trusted and resolves them", () => {
+    const ctx = createCtxWithSyntheticBuckets();
     const sp: SPMember = {
       _id: "m1",
       name: "A",
       private: false,
       preventTrusted: false,
     };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.bucketSourceIds).toEqual(["synthetic:public", "synthetic:trusted"]);
+      expect(result.payload.bucketIds).toEqual(["ps_bucket_public", "ps_bucket_trusted"]);
     }
   });
 
-  it("fails closed to synthetic:private when no bucket info is available", () => {
+  it("fails closed to synthetic:private when no bucket info is available and resolves it", () => {
+    const ctx = createCtxWithSyntheticBuckets();
     const sp: SPMember = { _id: "m1", name: "A" };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.bucketSourceIds).toEqual(["synthetic:private"]);
+      expect(result.payload.bucketIds).toEqual(["ps_bucket_private"]);
     }
   });
 
   it("modern buckets override legacy private/preventTrusted flags", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("privacy-bucket", "bk1", "ps_bucket_1");
     const sp: SPMember = {
       _id: "m1",
       name: "A",
@@ -121,10 +145,10 @@ describe("mapMember", () => {
       private: true,
       preventTrusted: true,
     };
-    const result = mapMember(sp, createMappingContext({ sourceMode: "fake" }));
+    const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.bucketSourceIds).toEqual(["bk1"]);
+      expect(result.payload.bucketIds).toEqual(["ps_bucket_1"]);
     }
   });
 
@@ -144,7 +168,7 @@ describe("mapMember", () => {
       frame: "vintage",
       supportDescMarkdown: true,
     };
-    const ctx = createMappingContext({ sourceMode: "fake" });
+    const ctx = createCtxWithSyntheticBuckets();
     const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     const messages = ctx.warnings.map((w) => w.message);
@@ -159,7 +183,7 @@ describe("mapMember", () => {
       preventsFrontNotifs: true,
       receiveMessageBoardNotifs: false,
     };
-    const ctx = createMappingContext({ sourceMode: "fake" });
+    const ctx = createCtxWithSyntheticBuckets();
     const result = mapMember(sp, ctx);
     expect(result.status).toBe("mapped");
     expect(ctx.warnings.some((w) => w.message.includes("notification"))).toBe(true);
@@ -167,14 +191,12 @@ describe("mapMember", () => {
 });
 
 describe("member bucket reference resolution", () => {
-  it.fails("returns failed with kind fk-miss when a bucket ref is unresolvable", () => {
+  it("returns failed with kind fk-miss when a bucket ref is unresolvable", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
-    // No bucket registered in translation table
+    // No bucket registered in translation table.
 
-    const result = mapMember(
-      { _id: "sp_m_1", name: "Alex", buckets: ["sp_bucket_unknown"] } as SPMember,
-      ctx,
-    );
+    const sp: SPMember = { _id: "sp_m_1", name: "Alex", buckets: ["sp_bucket_unknown"] };
+    const result = mapMember(sp, ctx);
 
     expect(result.status).toBe("failed");
     if (result.status === "failed") {
@@ -184,17 +206,35 @@ describe("member bucket reference resolution", () => {
     }
   });
 
-  it.fails("returns mapped with resolved bucket IDs when all buckets are registered", () => {
+  it("returns mapped with resolved bucket IDs when all buckets are registered", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("privacy-bucket", "synthetic:private", "ps_bucket_private");
 
-    const result = mapMember({ _id: "sp_m_1", name: "Alex", private: true } as SPMember, ctx);
+    const sp: SPMember = { _id: "sp_m_1", name: "Alex", private: true };
+    const result = mapMember(sp, ctx);
 
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      // After T31 this field will be `bucketIds` carrying resolved PS IDs.
-      // For T28 (red) we assert the intent: the resolved ID must appear.
-      expect(result.payload.bucketSourceIds).toContain("ps_bucket_private");
+      expect(result.payload.bucketIds).toEqual(["ps_bucket_private"]);
+    }
+  });
+
+  it("surfaces every missing ref in missingRefs when multiple buckets are unresolvable", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("privacy-bucket", "bk_known", "ps_bucket_known");
+
+    const sp: SPMember = {
+      _id: "sp_m_1",
+      name: "Alex",
+      buckets: ["bk_known", "bk_miss_1", "bk_miss_2"],
+    };
+    const result = mapMember(sp, ctx);
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.kind).toBe("fk-miss");
+      expect(result.missingRefs).toEqual(["bk_miss_1", "bk_miss_2"]);
+      expect(result.targetField).toBe("buckets");
     }
   });
 });
