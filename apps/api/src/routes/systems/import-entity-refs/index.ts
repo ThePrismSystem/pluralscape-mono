@@ -5,8 +5,6 @@ import { lookupRoute } from "./lookup.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 
-export const importEntityRefRoutes = new Hono<AuthEnv>();
-
-// lookupRoute (/lookup) before listRoute (/) so /lookup is not captured.
-importEntityRefRoutes.route("/", lookupRoute);
-importEntityRefRoutes.route("/", listRoute);
+export const importEntityRefsRoute = new Hono<AuthEnv>()
+  .route("/lookup", lookupRoute)
+  .route("/", listRoute);

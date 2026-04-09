@@ -26,7 +26,7 @@ export const lookupRoute = new Hono<AuthEnv>();
 
 lookupRoute.use("*", createCategoryRateLimiter("readDefault"));
 
-lookupRoute.get("/lookup", async (c) => {
+lookupRoute.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const rawQuery = Object.fromEntries(new URL(c.req.url).searchParams);
