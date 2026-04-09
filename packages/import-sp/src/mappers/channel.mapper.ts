@@ -6,11 +6,11 @@
  * both into a single `channels` collection with a `type` discriminator, so
  * this file exports two mappers producing the same `MappedChannel` shape.
  *
- * Orphaned channels — whose parent category either doesn't exist upstream
- * or was skipped during the category pass — still map successfully with
- * `parentChannelId: null` and a warning, so no messages are lost downstream.
+ * Fail-closed on FK miss: a channel whose `parentCategory` cannot be resolved
+ * returns `MapperResult.failed` with `kind: "fk-miss"` so the engine can
+ * record the failure and continue.
  */
-import { mapped, skipped, type MapperResult } from "./mapper-result.js";
+import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPChannel, SPChannelCategory } from "../sources/sp-types.js";
@@ -74,14 +74,14 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
   if (sp.parentCategory !== null) {
     const resolved = ctx.translate("channel-category", sp.parentCategory);
     if (resolved === null) {
-      ctx.addWarning({
-        entityType: "channel",
-        entityId: sp._id,
-        message: `parent category ${sp.parentCategory} not in translation table; orphaning channel`,
+      return failed({
+        kind: "fk-miss",
+        message: `Channel "${sp.name}" has unresolved parentCategory "${sp.parentCategory}"`,
+        missingRefs: [sp.parentCategory],
+        targetField: "parentCategory",
       });
-    } else {
-      parentChannelId = resolved;
     }
+    parentChannelId = resolved;
   }
 
   const payload: MappedChannel = {
