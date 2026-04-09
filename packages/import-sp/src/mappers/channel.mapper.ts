@@ -10,6 +10,7 @@
  * returns `MapperResult.failed` with `kind: "fk-miss"` so the engine can
  * record the failure and continue.
  */
+import { requireName } from "./helpers.js";
 import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -42,13 +43,14 @@ export function mapChannelCategory(
   sp: SPChannelCategory,
   ctx: MappingContext,
 ): MapperResult<MappedChannelCategory> {
-  if (!sp.name || sp.name.length === 0) {
+  const nameError = requireName(sp.name, "channel-category", sp._id);
+  if (nameError !== null) {
     ctx.addWarning({
       entityType: "channel-category",
       entityId: sp._id,
-      message: "channel category has empty name; skipping",
+      message: nameError.message,
     });
-    return skipped({ kind: "empty-name", reason: "empty name" });
+    return skipped({ kind: nameError.kind, reason: nameError.message });
   }
   const payload: MappedChannelCategory = {
     name: sp.name,
@@ -61,13 +63,14 @@ export function mapChannelCategory(
 }
 
 export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<MappedChannel> {
-  if (!sp.name || sp.name.length === 0) {
+  const nameError = requireName(sp.name, "channel", sp._id);
+  if (nameError !== null) {
     ctx.addWarning({
       entityType: "channel",
       entityId: sp._id,
-      message: "channel has empty name; skipping",
+      message: nameError.message,
     });
-    return skipped({ kind: "empty-name", reason: "empty name" });
+    return skipped({ kind: nameError.kind, reason: nameError.message });
   }
 
   let parentChannelId: string | null = null;

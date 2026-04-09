@@ -19,6 +19,7 @@
  *    `reusedPluralscapeId` — the engine then registers the source → target
  *    mapping directly without creating a new bucket.
  */
+import { requireName } from "./helpers.js";
 import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -36,13 +37,14 @@ export function mapBucket(
   sp: SPPrivacyBucket,
   ctx: MappingContext,
 ): MapperResult<MappedPrivacyBucket> {
-  if (!sp.name || sp.name.length === 0) {
+  const nameError = requireName(sp.name, "privacy-bucket", sp._id);
+  if (nameError !== null) {
     ctx.addWarning({
       entityType: "privacy-bucket",
       entityId: sp._id,
-      message: "bucket has empty name; skipping",
+      message: nameError.message,
     });
-    return skipped({ kind: "empty-name", reason: "empty name" });
+    return skipped({ kind: nameError.kind, reason: nameError.message });
   }
   const payload: MappedPrivacyBucket = {
     name: sp.name,

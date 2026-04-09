@@ -6,6 +6,7 @@
  * `MapperResult.failed` with `kind: "fk-miss"` and the full list of missing
  * refs. Empty-named groups are skipped.
  */
+import { requireName } from "./helpers.js";
 import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -19,13 +20,14 @@ export interface MappedGroup {
 }
 
 export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedGroup> {
-  if (!sp.name || sp.name.length === 0) {
+  const nameError = requireName(sp.name, "group", sp._id);
+  if (nameError !== null) {
     ctx.addWarning({
       entityType: "group",
       entityId: sp._id,
-      message: "group has empty name; skipping",
+      message: nameError.message,
     });
-    return skipped({ kind: "empty-name", reason: "empty name" });
+    return skipped({ kind: nameError.kind, reason: nameError.message });
   }
 
   const memberIds: string[] = [];

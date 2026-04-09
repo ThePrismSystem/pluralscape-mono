@@ -5,6 +5,7 @@
  * each SP front status becomes a custom front with the same name, description,
  * color, and avatar URL. Empty-named documents are skipped with a warning.
  */
+import { requireName } from "./helpers.js";
 import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -21,13 +22,14 @@ export function mapCustomFront(
   sp: SPFrontStatus,
   ctx: MappingContext,
 ): MapperResult<MappedCustomFront> {
-  if (!sp.name || sp.name.length === 0) {
+  const nameError = requireName(sp.name, "custom-front", sp._id);
+  if (nameError !== null) {
     ctx.addWarning({
       entityType: "custom-front",
       entityId: sp._id,
-      message: "custom front has empty name; skipping",
+      message: nameError.message,
     });
-    return skipped({ kind: "empty-name", reason: "empty name" });
+    return skipped({ kind: nameError.kind, reason: nameError.message });
   }
   const payload: MappedCustomFront = {
     name: sp.name,

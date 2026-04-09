@@ -19,6 +19,7 @@
  * warning so users can audit what was lost during import.
  */
 import { extractFieldValues, type ExtractedFieldValue } from "./field-value.mapper.js";
+import { requireName } from "./helpers.js";
 import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -67,13 +68,14 @@ function deriveBucketSourceIds(sp: SPMember): readonly string[] {
 }
 
 export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<MappedMemberOutput> {
-  if (!sp.name || sp.name.length === 0) {
+  const nameError = requireName(sp.name, "member", sp._id);
+  if (nameError !== null) {
     ctx.addWarning({
       entityType: "member",
       entityId: sp._id,
-      message: "member has empty name; skipping",
+      message: nameError.message,
     });
-    return skipped({ kind: "empty-name", reason: "empty name" });
+    return skipped({ kind: nameError.kind, reason: nameError.message });
   }
 
   if (sp.frame !== undefined && sp.frame !== null) {
