@@ -49,15 +49,15 @@ describe("SPMemberSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("strips unknown fields", () => {
+  it("passes through unknown fields so mappers can emit unknown-field warnings", () => {
     const result = SPMemberSchema.safeParse({
       _id: validId,
       name: "Aria",
-      __forbidden__: "drop me",
+      __unknown__: "keep me",
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect("__forbidden__" in result.data).toBe(false);
+      expect("__unknown__" in result.data).toBe(true);
     }
   });
 });

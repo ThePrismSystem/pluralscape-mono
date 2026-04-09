@@ -16,11 +16,14 @@
 import { MAX_WARNING_BUFFER_SIZE } from "../import-sp.constants.js";
 
 import type { SourceMode } from "../sources/source.types.js";
-import type { ImportEntityType } from "@pluralscape/types";
+import type { ImportEntityType, ImportFailureKind } from "@pluralscape/types";
 
 export interface MappingWarning {
   readonly entityType: ImportEntityType;
   readonly entityId: string | null;
+  readonly kind?: ImportFailureKind;
+  /** Deduplication key used by addWarningOnce. */
+  readonly key?: string;
   readonly message: string;
 }
 
