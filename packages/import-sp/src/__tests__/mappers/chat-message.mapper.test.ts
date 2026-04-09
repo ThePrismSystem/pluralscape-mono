@@ -76,6 +76,7 @@ describe("mapChatMessage", () => {
       replyTo: "src_parent",
     };
     const result = mapChatMessage(sp, ctx);
+    expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.replyToChatMessageId).toBe("ps_parent");
     }
