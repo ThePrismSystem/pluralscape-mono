@@ -49,7 +49,7 @@ export interface AdvanceDelta {
  */
 export function emptyCheckpointState(opts: {
   firstEntityType: ImportCollectionType;
-  selectedCategories: Record<string, boolean>;
+  selectedCategories: Partial<Record<ImportCollectionType, boolean>>;
   avatarMode: ImportAvatarMode;
 }): ImportCheckpointState {
   return {

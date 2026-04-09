@@ -8,7 +8,7 @@ import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
 import type { Persister, PersistableEntity } from "../../persistence/persister.types.js";
-import type { ImportCheckpointState, ImportError } from "@pluralscape/types";
+import type { ImportCheckpointState, ImportCollectionType, ImportError } from "@pluralscape/types";
 
 interface RecordingPersister extends Persister {
   readonly upserted: readonly PersistableEntity[];
@@ -60,22 +60,22 @@ function createFakePersister(opts: CreateFakePersisterOptions = {}): RecordingPe
 
 const noopProgress = (): Promise<void> => Promise.resolve();
 
-const ALL_CATEGORIES_ON: Record<string, boolean> = {
-  users: true,
-  private: true,
-  privacyBuckets: true,
-  customFields: true,
-  frontStatuses: true,
-  members: true,
-  groups: true,
-  frontHistory: true,
-  comments: true,
-  notes: true,
-  polls: true,
-  channelCategories: true,
-  channels: true,
-  chatMessages: true,
-  boardMessages: true,
+const ALL_CATEGORIES_ON: Partial<Record<ImportCollectionType, boolean>> = {
+  "system-profile": true,
+  "system-settings": true,
+  "privacy-bucket": true,
+  "field-definition": true,
+  "custom-front": true,
+  member: true,
+  group: true,
+  "fronting-session": true,
+  "fronting-comment": true,
+  "journal-entry": true,
+  poll: true,
+  "channel-category": true,
+  channel: true,
+  "chat-message": true,
+  "board-message": true,
 };
 
 describe("runImport — happy path", () => {
@@ -504,7 +504,7 @@ describe("runImport — category opt-out", () => {
       source,
       persister,
       options: {
-        selectedCategories: { ...ALL_CATEGORIES_ON, groups: false },
+        selectedCategories: { ...ALL_CATEGORIES_ON, group: false },
         avatarMode: "skip",
       },
       onProgress: noopProgress,
@@ -512,6 +512,30 @@ describe("runImport — category opt-out", () => {
     expect(result.outcome).toBe("completed");
     expect(persister.upserted.some((e) => e.entityType === "group")).toBe(false);
     expect(persister.upserted.some((e) => e.entityType === "member")).toBe(true);
+  });
+});
+
+describe("runImport — selectedCategories opt-out", () => {
+  it("skips a collection when user opts out via ImportCollectionType key", async () => {
+    const data: FakeSourceData = {
+      frontStatuses: [{ _id: "sp_cf_1", name: "Blurry" }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: { ...ALL_CATEGORIES_ON, "custom-front": false },
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+
+    expect(result.outcome).toBe("completed");
+    // The opt-out must have been honored — no custom-front upsert should
+    // have occurred.
+    expect(persister.upserted.filter((e) => e.entityType === "custom-front")).toHaveLength(0);
   });
 });
 

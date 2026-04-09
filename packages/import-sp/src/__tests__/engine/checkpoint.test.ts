@@ -11,7 +11,7 @@ describe("checkpoint helpers", () => {
   it("emptyCheckpointState starts at the first entity type with no completed collections", () => {
     const state = emptyCheckpointState({
       firstEntityType: "member",
-      selectedCategories: { members: true },
+      selectedCategories: { member: true },
       avatarMode: "api",
     });
     expect(state.schemaVersion).toBe(1);

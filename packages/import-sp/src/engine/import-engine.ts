@@ -100,7 +100,7 @@ export interface RunImportArgs {
   readonly persister: Persister;
   readonly initialCheckpoint?: ImportCheckpointState;
   readonly options: {
-    readonly selectedCategories: Record<string, boolean>;
+    readonly selectedCategories: Partial<Record<ImportCollectionType, boolean>>;
     readonly avatarMode: ImportAvatarMode;
   };
   readonly onProgress: (state: ImportCheckpointState) => Promise<void>;
@@ -213,7 +213,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     if (collection === undefined) continue;
     const entityType = collectionToEntityType(collection);
 
-    if (options.selectedCategories[collection] === false) {
+    if (options.selectedCategories[entityType] === false) {
       // User opted out: advance the checkpoint past this collection without
       // touching the source.
       const nextCollection = DEPENDENCY_ORDER[collectionIndex + 1];
