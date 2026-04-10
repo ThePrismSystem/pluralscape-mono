@@ -46,7 +46,7 @@ const MAX_PROGRESS_PERCENT = 100;
 
 /** Common options a caller supplies to any start-import path. */
 export interface ImportStartCommonOptions {
-  readonly selectedCategories: Record<string, boolean>;
+  readonly selectedCategories: Partial<Record<string, boolean>>;
   readonly avatarMode: ImportAvatarMode;
   /** Whether to persist the SP API token to SecureStore after a successful start. */
   readonly persistToken?: boolean;
