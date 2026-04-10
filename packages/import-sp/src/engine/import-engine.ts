@@ -480,3 +480,4 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
 }
 
 export { collectionToEntityType, entityTypeToCollection };
+export { emptyCheckpointState } from "./checkpoint.js";

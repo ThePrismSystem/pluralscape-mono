@@ -26,10 +26,12 @@
  *   Phase C carries through unchanged; the runner does not attempt to patch it.
  */
 
-import { collectionToEntityType } from "@pluralscape/import-sp";
-import { emptyCheckpointState } from "@pluralscape/import-sp/checkpoint";
 import { DEPENDENCY_ORDER } from "@pluralscape/import-sp/dependency-order";
-import { runImport } from "@pluralscape/import-sp/engine";
+import {
+  collectionToEntityType,
+  emptyCheckpointState,
+  runImport,
+} from "@pluralscape/import-sp/engine";
 
 import type { MobilePersister } from "./mobile-persister.js";
 import type { ImportRunResult } from "@pluralscape/import-sp/engine";
