@@ -367,12 +367,22 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
               );
               ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
               if (collection === "privacyBuckets") privacyBucketsMapped += 1;
-              const upsertDelta =
-                upsert.action === "created"
-                  ? delta("imported")
-                  : upsert.action === "updated"
-                    ? delta("updated")
-                    : delta("skipped");
+              let upsertDelta: AdvanceDelta;
+              switch (upsert.action) {
+                case "created":
+                  upsertDelta = delta("imported");
+                  break;
+                case "updated":
+                  upsertDelta = delta("updated");
+                  break;
+                case "skipped":
+                  upsertDelta = delta("skipped");
+                  break;
+                default: {
+                  const _exhaustive: never = upsert.action;
+                  throw new Error(`Unhandled upsert action: ${String(_exhaustive)}`);
+                }
+              }
               state = advanceWithinCollection(state, {
                 entityType,
                 lastSourceId: doc.sourceId,
