@@ -129,12 +129,22 @@ async function fanOutFieldValues(
       });
       continue;
     }
-    const encrypted = encryptForCreate({ value: fv.value }, ctx.masterKey);
-    await ctx.api.field.setValue(ctx.systemId, {
-      memberId: memberPluralscapeId,
-      fieldDefinitionId,
-      encryptedData: encrypted.encryptedData,
-    });
+    try {
+      const encrypted = encryptForCreate({ value: fv.value }, ctx.masterKey);
+      await ctx.api.field.setValue(ctx.systemId, {
+        memberId: memberPluralscapeId,
+        fieldDefinitionId,
+        encryptedData: encrypted.encryptedData,
+      });
+    } catch (err) {
+      ctx.recordError({
+        entityType: "field-value",
+        entityId: `${fv.memberSourceId}/${fv.fieldSourceId}`,
+        message: `field.setValue failed: ${err instanceof Error ? err.message : String(err)}`,
+        fatal: false,
+        recoverable: false,
+      });
+    }
   }
 }
 

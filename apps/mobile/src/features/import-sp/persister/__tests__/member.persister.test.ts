@@ -165,6 +165,35 @@ describe("memberPersister — field-value fan-out", () => {
     );
   });
 
+  it("records an error and continues when field.setValue rejects", async () => {
+    const idTable = makeTestIdTranslation();
+    idTable.set("field-definition", "sp_field_a", "fld_a");
+    idTable.set("field-definition", "sp_field_b", "fld_b");
+    const ctx = makeTestPersisterContext({ idTranslation: idTable });
+    const setValue = vi.mocked(ctx.api.field.setValue);
+    const recordError = vi.mocked(ctx.recordError);
+    const createFn = vi.mocked(ctx.api.member.create);
+
+    setValue.mockRejectedValueOnce(new Error("network error"));
+
+    await memberPersister.create(ctx, {
+      ...MEMBER_NO_AVATAR,
+      fieldValues: [
+        { memberSourceId: "sp_mem_1", fieldSourceId: "sp_field_a", value: "hi" },
+        { memberSourceId: "sp_mem_1", fieldSourceId: "sp_field_b", value: "there" },
+      ],
+    });
+
+    expect(createFn).toHaveBeenCalledTimes(1);
+    expect(recordError).toHaveBeenCalledTimes(1);
+    const errorArg = recordError.mock.calls[0]?.[0];
+    expect(errorArg?.entityType).toBe("field-value");
+    expect(errorArg?.entityId).toBe("sp_mem_1/sp_field_a");
+    expect(errorArg?.message).toMatch(/field\.setValue failed/);
+    expect(errorArg?.fatal).toBe(false);
+    expect(setValue).toHaveBeenCalledTimes(2);
+  });
+
   it("records an error and skips the field value when the field definition is unresolved", async () => {
     const ctx = makeTestPersisterContext();
     const setValue = vi.mocked(ctx.api.field.setValue);
