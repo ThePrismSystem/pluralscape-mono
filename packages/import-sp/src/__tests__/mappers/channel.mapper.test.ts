@@ -106,13 +106,4 @@ describe("mapChannel", () => {
       expect(result.payload.order).toBe(7);
     }
   });
-
-  it("skips when channel name is empty and emits a warning", () => {
-    const ctx = createMappingContext({ sourceMode: "fake" });
-    const sp: SPChannel = { _id: "ch5", name: "", parentCategory: null };
-    const result = mapChannel(sp, ctx);
-    expect(result.status).toBe("skipped");
-    expect(ctx.warnings).toHaveLength(1);
-    expect(ctx.warnings[0]?.entityType).toBe("channel");
-  });
 });

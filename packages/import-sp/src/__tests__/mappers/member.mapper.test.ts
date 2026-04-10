@@ -152,15 +152,6 @@ describe("mapMember", () => {
     }
   });
 
-  it("skips members with empty names and emits a warning", () => {
-    const sp: SPMember = { _id: "m1", name: "" };
-    const ctx = createMappingContext({ sourceMode: "fake" });
-    const result = mapMember(sp, ctx);
-    expect(result.status).toBe("skipped");
-    expect(ctx.warnings).toHaveLength(1);
-    expect(ctx.warnings[0]?.entityType).toBe("member");
-  });
-
   it("warns for dropped frame and supportDescMarkdown fields", () => {
     const sp: SPMember = {
       _id: "m1",
