@@ -51,16 +51,16 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
   }
 
   if (sp.color !== undefined && sp.color !== null) {
-    ctx.addWarning({
+    ctx.addWarningOnce("journal-entry.color-dropped", {
       entityType: "journal-entry",
-      entityId: sp._id,
+      entityId: null,
       message: "SP `color` field dropped (no Pluralscape equivalent)",
     });
   }
   if (sp.supportMarkdown !== undefined) {
-    ctx.addWarning({
+    ctx.addWarningOnce("journal-entry.supportMarkdown-dropped", {
       entityType: "journal-entry",
-      entityId: sp._id,
+      entityId: null,
       message: "SP `supportMarkdown` dropped (imported as plain text)",
     });
   }
