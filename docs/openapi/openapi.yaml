@@ -1174,3 +1174,7 @@ paths:
     $ref: "./paths/import-entity-refs.yaml#/~1systems~1%7BsystemId%7D~1import-entity-refs"
   /systems/{systemId}/import-entity-refs/lookup:
     $ref: "./paths/import-entity-refs.yaml#/~1systems~1%7BsystemId%7D~1import-entity-refs~1lookup"
+  /systems/{systemId}/import-entity-refs/lookup-batch:
+    $ref: "./paths/import-entity-refs.yaml#/~1systems~1%7BsystemId%7D~1import-entity-refs~1lookup-batch"
+  /systems/{systemId}/import-entity-refs/upsert-batch:
+    $ref: "./paths/import-entity-refs.yaml#/~1systems~1%7BsystemId%7D~1import-entity-refs~1upsert-batch"
