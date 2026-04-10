@@ -55,8 +55,6 @@ export interface MappedPollOutput {
  */
 export type MappedPoll = MappedPollOutput;
 
-const VETO_SENTINEL = "veto";
-
 export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPollOutput> {
   const options: readonly MappedPollOption[] = sp.options.map((o) => ({
     id: o.id,
@@ -67,7 +65,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
   const votes: MappedPollVote[] = [];
   const missingVoterRefs: string[] = [];
   for (const v of sp.votes ?? []) {
-    if (v.vote === VETO_SENTINEL) {
+    if (v.vote === "veto") {
       votes.push({
         optionId: "",
         memberId: null,

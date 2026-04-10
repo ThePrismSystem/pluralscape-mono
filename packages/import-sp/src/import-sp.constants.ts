@@ -22,8 +22,5 @@ export const SP_API_REQUEST_TIMEOUT_MS = 30_000;
 /** Default page size when paginating SP collection endpoints. */
 export const SP_API_PAGE_SIZE = 100;
 
-/** Maximum entities buffered in memory by the file source between yields. */
-export const FILE_SOURCE_BUFFER_SIZE = 256;
-
 /** Maximum number of warnings retained per import (prevents unbounded growth). */
 export const MAX_WARNING_BUFFER_SIZE = 1_000;
