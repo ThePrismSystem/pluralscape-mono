@@ -8,6 +8,7 @@ import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
 import type { Persister, PersistableEntity } from "../../persistence/persister.types.js";
+import type { ImportSource } from "../../sources/source.types.js";
 import type { ImportCheckpointState, ImportCollectionType, ImportError } from "@pluralscape/types";
 
 interface RecordingPersister extends Persister {
@@ -717,5 +718,53 @@ describe("runImport — surprise policy end-to-end", () => {
     );
     expect(unkWarning).toBeDefined();
     expect(unkWarning?.entityType).toBe("member");
+  });
+});
+
+describe("runImport — source.close() lifecycle", () => {
+  it("calls source.close() on successful completion", async () => {
+    let closed = false;
+    const source = createFakeImportSource({});
+    const wrappedSource: ImportSource = {
+      ...source,
+      async close() {
+        await source.close();
+        closed = true;
+      },
+    };
+    const persister = createFakePersister();
+    await runImport({
+      source: wrappedSource,
+      persister,
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+    expect(closed).toBe(true);
+  });
+
+  it("calls source.close() even when iteration throws", async () => {
+    let closed = false;
+    const source: ImportSource = {
+      mode: "fake",
+      listCollections() {
+        return Promise.resolve(["members"]);
+      },
+      async *iterate() {
+        await Promise.resolve();
+        throw new Error("boom");
+      },
+      close() {
+        closed = true;
+        return Promise.resolve();
+      },
+    };
+    const persister = createFakePersister();
+    await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+    expect(closed).toBe(true);
   });
 });

@@ -203,87 +203,224 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
   const ctx = createMappingContext({ sourceMode: source.mode });
   const errors: ImportError[] = [];
 
-  // Inspect the source's top-level collections before iterating. Any name
-  // the engine does not know about (e.g. SP's `friends` or
-  // `pendingFriendRequests`) is surfaced as a `dropped-collection` warning
-  // so the final report tells the operator we did not import that data.
-  // We deliberately do this before the main loop — even when resuming from a
-  // checkpoint — so the warning is visible on every run.
-  const sourceCollections = await source.listCollections();
-  for (const name of sourceCollections) {
-    if (!KNOWN_DEPENDENCY_ORDER_SET.has(name)) {
-      ctx.addWarningOnce(`dropped-collection:${name}`, {
-        entityType: "unknown",
-        entityId: null,
-        kind: "dropped-collection",
-        key: `dropped-collection:${name}`,
-        message: `Collection "${name}" is not supported by the importer and was dropped`,
+  try {
+    // Inspect the source's top-level collections before iterating. Any name
+    // the engine does not know about (e.g. SP's `friends` or
+    // `pendingFriendRequests`) is surfaced as a `dropped-collection` warning
+    // so the final report tells the operator we did not import that data.
+    // We deliberately do this before the main loop — even when resuming from a
+    // checkpoint — so the warning is visible on every run.
+    const sourceCollections = await source.listCollections();
+    for (const name of sourceCollections) {
+      if (!KNOWN_DEPENDENCY_ORDER_SET.has(name)) {
+        ctx.addWarningOnce(`dropped-collection:${name}`, {
+          entityType: "unknown",
+          entityId: null,
+          kind: "dropped-collection",
+          key: `dropped-collection:${name}`,
+          message: `Collection "${name}" is not supported by the importer and was dropped`,
+        });
+      }
+    }
+
+    let state: ImportCheckpointState =
+      args.initialCheckpoint ??
+      emptyCheckpointState({
+        firstEntityType: collectionToEntityType(DEPENDENCY_ORDER[0] ?? "users"),
+        selectedCategories: options.selectedCategories,
+        avatarMode: options.avatarMode,
       });
-    }
-  }
 
-  let state: ImportCheckpointState =
-    args.initialCheckpoint ??
-    emptyCheckpointState({
-      firstEntityType: collectionToEntityType(DEPENDENCY_ORDER[0] ?? "users"),
-      selectedCategories: options.selectedCategories,
-      avatarMode: options.avatarMode,
-    });
+    const startIndex = indexOfResumeCollection(state);
+    const safeStartIndex = startIndex < 0 ? 0 : startIndex;
 
-  const startIndex = indexOfResumeCollection(state);
-  const safeStartIndex = startIndex < 0 ? 0 : startIndex;
+    // Track how many privacyBuckets documents were successfully mapped and
+    // registered during the privacyBuckets pass. Used at member-collection entry
+    // to decide whether to synthesize the three legacy buckets. Counting only
+    // mapped (not yielded) docs avoids the bug where every bucket fails Zod
+    // validation yet the count stays > 0, silently leaving members with
+    // unresolved synthetic bucket references.
+    //
+    // When resuming past members, assume legacy synthesis (if any) already ran.
+    // When resuming into members directly we cannot know whether the previous
+    // run already synthesized the legacy buckets. The persister's idempotency
+    // guarantees re-synthesis is safe, so we conservatively re-run.
+    let privacyBucketsMapped = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
 
-  // Track how many privacyBuckets documents were successfully mapped and
-  // registered during the privacyBuckets pass. Used at member-collection entry
-  // to decide whether to synthesize the three legacy buckets. Counting only
-  // mapped (not yielded) docs avoids the bug where every bucket fails Zod
-  // validation yet the count stays > 0, silently leaving members with
-  // unresolved synthetic bucket references.
-  //
-  // When resuming past members, assume legacy synthesis (if any) already ran.
-  // When resuming into members directly we cannot know whether the previous
-  // run already synthesized the legacy buckets. The persister's idempotency
-  // guarantees re-synthesis is safe, so we conservatively re-run.
-  let privacyBucketsMapped = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
+    for (
+      let collectionIndex = safeStartIndex;
+      collectionIndex < DEPENDENCY_ORDER.length;
+      collectionIndex += 1
+    ) {
+      const collection: SpCollectionName | undefined = DEPENDENCY_ORDER[collectionIndex];
+      if (collection === undefined) continue;
+      const entityType = collectionToEntityType(collection);
 
-  for (
-    let collectionIndex = safeStartIndex;
-    collectionIndex < DEPENDENCY_ORDER.length;
-    collectionIndex += 1
-  ) {
-    const collection: SpCollectionName | undefined = DEPENDENCY_ORDER[collectionIndex];
-    if (collection === undefined) continue;
-    const entityType = collectionToEntityType(collection);
+      if (options.selectedCategories[entityType] === false) {
+        // User opted out: advance the checkpoint past this collection without
+        // touching the source.
+        const nextCollection = DEPENDENCY_ORDER[collectionIndex + 1];
+        const nextEntityType = nextCollection ? collectionToEntityType(nextCollection) : entityType;
+        state = completeCollection(state, { nextEntityType });
+        await persister.flush();
+        await onProgress(state);
+        continue;
+      }
 
-    if (options.selectedCategories[entityType] === false) {
-      // User opted out: advance the checkpoint past this collection without
-      // touching the source.
-      const nextCollection = DEPENDENCY_ORDER[collectionIndex + 1];
-      const nextEntityType = nextCollection ? collectionToEntityType(nextCollection) : entityType;
-      state = completeCollection(state, { nextEntityType });
-      await persister.flush();
-      await onProgress(state);
-      continue;
-    }
+      // Capture the resume cutoff at collection entry BEFORE any bookkeeping
+      // (including legacy bucket synthesis below) can mutate
+      // `currentCollectionLastSourceId`. We only honour the cutoff against the
+      // original checkpoint and stop honouring it once we walk past the
+      // resumed source ID. This correctly handles sources whose IDs are not
+      // lexicographically sortable: we walk the (stable) iteration order and
+      // skip every doc up to and including the cutoff.
+      const resumeCutoffSourceId =
+        state.checkpoint.currentCollection === entityType
+          ? state.checkpoint.currentCollectionLastSourceId
+          : null;
 
-    // Capture the resume cutoff at collection entry BEFORE any bookkeeping
-    // (including legacy bucket synthesis below) can mutate
-    // `currentCollectionLastSourceId`. We only honour the cutoff against the
-    // original checkpoint and stop honouring it once we walk past the
-    // resumed source ID. This correctly handles sources whose IDs are not
-    // lexicographically sortable: we walk the (stable) iteration order and
-    // skip every doc up to and including the cutoff.
-    const resumeCutoffSourceId =
-      state.checkpoint.currentCollection === entityType
-        ? state.checkpoint.currentCollectionLastSourceId
-        : null;
+      // Legacy bucket synthesis: when we enter members and the privacyBuckets
+      // pass produced zero successfully-mapped documents, synthesize the three
+      // legacy buckets so members can resolve their `synthetic:*` references.
+      if (collection === "members" && privacyBucketsMapped === 0) {
+        const synth = await persistSynthesizedBuckets(persister, ctx, errors);
+        if (synth.aborted) {
+          return {
+            finalState: state,
+            warnings: ctx.warnings,
+            errors,
+            outcome: "aborted",
+          };
+        }
+        // Advance checkpoint totals for the synthesized buckets, mark the
+        // privacy-bucket collection complete, then flush and report progress
+        // before entering the member loop so a crash here is recoverable.
+        if (synth.lastSourceId !== null) {
+          state = advanceWithinCollection(state, {
+            entityType: "privacy-bucket",
+            lastSourceId: synth.lastSourceId,
+            delta: synth.delta,
+          });
+        }
+        state = completeCollection(state, { nextEntityType: entityType });
+        // If we entered the member collection mid-resume, preserve the
+        // original cutoff so the iteration loop below (and the
+        // resume-cutoff-not-found abort path) still sees the pre-synthesis
+        // checkpoint position.
+        if (resumeCutoffSourceId !== null) {
+          state = {
+            ...state,
+            checkpoint: {
+              ...state.checkpoint,
+              currentCollectionLastSourceId: resumeCutoffSourceId,
+            },
+          };
+        }
+        await persister.flush();
+        await onProgress(state);
+        // Mark as handled so a downstream resume doesn't re-trigger.
+        privacyBucketsMapped = synth.delta.imported + synth.delta.updated + synth.delta.skipped;
+      }
 
-    // Legacy bucket synthesis: when we enter members and the privacyBuckets
-    // pass produced zero successfully-mapped documents, synthesize the three
-    // legacy buckets so members can resolve their `synthetic:*` references.
-    if (collection === "members" && privacyBucketsMapped === 0) {
-      const synth = await persistSynthesizedBuckets(persister, ctx, errors);
-      if (synth.aborted) {
+      let docsSinceCheckpoint = 0;
+      let collectionAborted = false;
+      let pastResumeCutoff = resumeCutoffSourceId === null;
+
+      try {
+        for await (const doc of source.iterate(collection)) {
+          if (!pastResumeCutoff) {
+            if (doc.sourceId === resumeCutoffSourceId) {
+              pastResumeCutoff = true;
+            }
+            continue;
+          }
+
+          const entry = MAPPER_DISPATCH[collection];
+          const result = entry.map(doc.document, ctx);
+
+          if (result.status === "skipped") {
+            state = advanceWithinCollection(state, {
+              entityType,
+              lastSourceId: doc.sourceId,
+              delta: delta("skipped"),
+            });
+          } else if (result.status === "failed") {
+            const error: ImportError = {
+              entityType,
+              entityId: doc.sourceId,
+              message: result.message,
+              kind: result.kind,
+              fatal: false,
+            };
+            errors.push(error);
+            await persister.recordError(error);
+            state = advanceWithinCollection(state, {
+              entityType,
+              lastSourceId: doc.sourceId,
+              delta: delta("failed"),
+            });
+          } else {
+            // status === "mapped"
+            try {
+              const upsert = await persister.upsertEntity(
+                buildPersistableEntity(entityType, doc.sourceId, result.payload),
+              );
+              ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
+              if (collection === "privacyBuckets") privacyBucketsMapped += 1;
+              const upsertDelta =
+                upsert.action === "created"
+                  ? delta("imported")
+                  : upsert.action === "updated"
+                    ? delta("updated")
+                    : delta("skipped");
+              state = advanceWithinCollection(state, {
+                entityType,
+                lastSourceId: doc.sourceId,
+                delta: upsertDelta,
+              });
+            } catch (thrown) {
+              const error = classifyError(thrown, { entityType, entityId: doc.sourceId });
+              errors.push(error);
+              await persister.recordError(error);
+              if (isFatalError(error)) {
+                collectionAborted = true;
+                break;
+              }
+              // Non-fatal persister failure: record and continue with this doc
+              // marked as failed in the checkpoint.
+              state = advanceWithinCollection(state, {
+                entityType,
+                lastSourceId: doc.sourceId,
+                delta: delta("failed"),
+              });
+            }
+          }
+
+          docsSinceCheckpoint += 1;
+          if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
+            await persister.flush();
+            await onProgress(state);
+            docsSinceCheckpoint = 0;
+          }
+        }
+      } catch (thrown) {
+        // Source iteration itself threw — this is always fatal regardless of
+        // the underlying error type. Generic `Error` instances would otherwise
+        // be classified as non-fatal by `classifyError`, but there is no way
+        // to continue iterating a source whose generator has thrown, so we
+        // override `fatal` to make the abort explicit in recorded errors.
+        const classified = classifyError(thrown, { entityType, entityId: null });
+        const error: ImportError = classified.fatal
+          ? classified
+          : {
+              entityType: classified.entityType,
+              entityId: classified.entityId,
+              message: classified.message,
+              fatal: true,
+              recoverable: true,
+            };
+        errors.push(error);
+        await persister.recordError(error);
         return {
           finalState: state,
           warnings: ctx.warnings,
@@ -291,186 +428,60 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
           outcome: "aborted",
         };
       }
-      // Advance checkpoint totals for the synthesized buckets, mark the
-      // privacy-bucket collection complete, then flush and report progress
-      // before entering the member loop so a crash here is recoverable.
-      if (synth.lastSourceId !== null) {
-        state = advanceWithinCollection(state, {
-          entityType: "privacy-bucket",
-          lastSourceId: synth.lastSourceId,
-          delta: synth.delta,
-        });
-      }
-      state = completeCollection(state, { nextEntityType: entityType });
-      // If we entered the member collection mid-resume, preserve the
-      // original cutoff so the iteration loop below (and the
-      // resume-cutoff-not-found abort path) still sees the pre-synthesis
-      // checkpoint position.
-      if (resumeCutoffSourceId !== null) {
-        state = {
-          ...state,
-          checkpoint: {
-            ...state.checkpoint,
-            currentCollectionLastSourceId: resumeCutoffSourceId,
-          },
+
+      // Resume cutoff sanity check: if we were resuming mid-collection and
+      // never saw the checkpointed `lastSourceId` during iteration, the source
+      // likely dropped that document between runs. Aborting (rather than
+      // silently skipping the rest of the collection) forces the operator to
+      // restart the import deliberately.
+      if (resumeCutoffSourceId !== null && !pastResumeCutoff) {
+        const cutoffError = classifyError(
+          new ResumeCutoffNotFoundError(collection, resumeCutoffSourceId),
+          { entityType, entityId: resumeCutoffSourceId },
+        );
+        errors.push(cutoffError);
+        await persister.recordError(cutoffError);
+        return {
+          finalState: state,
+          warnings: ctx.warnings,
+          errors,
+          outcome: "aborted",
         };
       }
+
+      if (collectionAborted) {
+        return {
+          finalState: state,
+          warnings: ctx.warnings,
+          errors,
+          outcome: "aborted",
+        };
+      }
+
+      // Collection finished cleanly — advance state and flush+report.
+      const nextCollection = DEPENDENCY_ORDER[collectionIndex + 1];
+      const nextEntityType = nextCollection ? collectionToEntityType(nextCollection) : entityType;
+      state = completeCollection(state, { nextEntityType });
       await persister.flush();
       await onProgress(state);
-      // Mark as handled so a downstream resume doesn't re-trigger.
-      privacyBucketsMapped = synth.delta.imported + synth.delta.updated + synth.delta.skipped;
     }
 
-    let docsSinceCheckpoint = 0;
-    let collectionAborted = false;
-    let pastResumeCutoff = resumeCutoffSourceId === null;
-
+    return {
+      finalState: state,
+      warnings: ctx.warnings,
+      errors,
+      outcome: "completed",
+    };
+  } finally {
     try {
-      for await (const doc of source.iterate(collection)) {
-        if (!pastResumeCutoff) {
-          if (doc.sourceId === resumeCutoffSourceId) {
-            pastResumeCutoff = true;
-          }
-          continue;
-        }
-
-        const entry = MAPPER_DISPATCH[collection];
-        const result = entry.map(doc.document, ctx);
-
-        if (result.status === "skipped") {
-          state = advanceWithinCollection(state, {
-            entityType,
-            lastSourceId: doc.sourceId,
-            delta: delta("skipped"),
-          });
-        } else if (result.status === "failed") {
-          const error: ImportError = {
-            entityType,
-            entityId: doc.sourceId,
-            message: result.message,
-            kind: result.kind,
-            fatal: false,
-          };
-          errors.push(error);
-          await persister.recordError(error);
-          state = advanceWithinCollection(state, {
-            entityType,
-            lastSourceId: doc.sourceId,
-            delta: delta("failed"),
-          });
-        } else {
-          // status === "mapped"
-          try {
-            const upsert = await persister.upsertEntity(
-              buildPersistableEntity(entityType, doc.sourceId, result.payload),
-            );
-            ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
-            if (collection === "privacyBuckets") privacyBucketsMapped += 1;
-            const upsertDelta =
-              upsert.action === "created"
-                ? delta("imported")
-                : upsert.action === "updated"
-                  ? delta("updated")
-                  : delta("skipped");
-            state = advanceWithinCollection(state, {
-              entityType,
-              lastSourceId: doc.sourceId,
-              delta: upsertDelta,
-            });
-          } catch (thrown) {
-            const error = classifyError(thrown, { entityType, entityId: doc.sourceId });
-            errors.push(error);
-            await persister.recordError(error);
-            if (isFatalError(error)) {
-              collectionAborted = true;
-              break;
-            }
-            // Non-fatal persister failure: record and continue with this doc
-            // marked as failed in the checkpoint.
-            state = advanceWithinCollection(state, {
-              entityType,
-              lastSourceId: doc.sourceId,
-              delta: delta("failed"),
-            });
-          }
-        }
-
-        docsSinceCheckpoint += 1;
-        if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
-          await persister.flush();
-          await onProgress(state);
-          docsSinceCheckpoint = 0;
-        }
-      }
-    } catch (thrown) {
-      // Source iteration itself threw — this is always fatal regardless of
-      // the underlying error type. Generic `Error` instances would otherwise
-      // be classified as non-fatal by `classifyError`, but there is no way
-      // to continue iterating a source whose generator has thrown, so we
-      // override `fatal` to make the abort explicit in recorded errors.
-      const classified = classifyError(thrown, { entityType, entityId: null });
-      const error: ImportError = classified.fatal
-        ? classified
-        : {
-            entityType: classified.entityType,
-            entityId: classified.entityId,
-            message: classified.message,
-            fatal: true,
-            recoverable: true,
-          };
-      errors.push(error);
-      await persister.recordError(error);
-      return {
-        finalState: state,
-        warnings: ctx.warnings,
-        errors,
-        outcome: "aborted",
-      };
+      await source.close();
+    } catch (closeError: unknown) {
+      // Cannot rethrow — would mask the original error or success result.
+      // source.close() is best-effort cleanup; the engine has no logger so
+      // we consume the variable to satisfy lint and move on.
+      void closeError;
     }
-
-    // Resume cutoff sanity check: if we were resuming mid-collection and
-    // never saw the checkpointed `lastSourceId` during iteration, the source
-    // likely dropped that document between runs. Aborting (rather than
-    // silently skipping the rest of the collection) forces the operator to
-    // restart the import deliberately.
-    if (resumeCutoffSourceId !== null && !pastResumeCutoff) {
-      const cutoffError = classifyError(
-        new ResumeCutoffNotFoundError(collection, resumeCutoffSourceId),
-        { entityType, entityId: resumeCutoffSourceId },
-      );
-      errors.push(cutoffError);
-      await persister.recordError(cutoffError);
-      return {
-        finalState: state,
-        warnings: ctx.warnings,
-        errors,
-        outcome: "aborted",
-      };
-    }
-
-    if (collectionAborted) {
-      return {
-        finalState: state,
-        warnings: ctx.warnings,
-        errors,
-        outcome: "aborted",
-      };
-    }
-
-    // Collection finished cleanly — advance state and flush+report.
-    const nextCollection = DEPENDENCY_ORDER[collectionIndex + 1];
-    const nextEntityType = nextCollection ? collectionToEntityType(nextCollection) : entityType;
-    state = completeCollection(state, { nextEntityType });
-    await persister.flush();
-    await onProgress(state);
   }
-
-  return {
-    finalState: state,
-    warnings: ctx.warnings,
-    errors,
-    outcome: "completed",
-  };
 }
 
 // Re-export the entity type map helpers for callers that compose this engine.
