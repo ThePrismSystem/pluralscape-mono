@@ -177,9 +177,6 @@ export function createApiImportSource(input: ApiSourceInput): ImportSource {
           `SP API returned non-array body for ${url} (got ${typeof body})`,
         );
       }
-      // Array.isArray narrows to any[] which violates no-unsafe-return; an
-      // unknown[] is the correct shape since individual elements are still
-      // validated downstream by Zod.
       const typedBody: unknown[] = body;
       return typedBody;
     }

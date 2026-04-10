@@ -24,8 +24,6 @@ export function mapSystemSettings(
   sp: SPPrivate,
   ctx: MappingContext,
 ): MapperResult<MappedSystemSettings> {
-  // Uniform signature with the rest of the engine's mappers; this mapper
-  // currently uses neither the translation table nor the warning buffer.
   void ctx;
   const payload: MappedSystemSettings = {
     locale: sp.locale ?? null,

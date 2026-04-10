@@ -54,12 +54,7 @@ import type {
   ImportError,
 } from "@pluralscape/types";
 
-/**
- * Build a single-document `AdvanceDelta` for one of the four terminal outcomes.
- * Collapses the four previous ONE_* constants into one helper — the distinction
- * between "mapper skipped" and "persister skipped" was never load-bearing at
- * the call sites, so both just map to `delta("skipped")`.
- */
+/** Build a single-document `AdvanceDelta` for one of the four terminal outcomes. */
 function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelta {
   return {
     imported: kind === "imported" ? 1 : 0,
@@ -138,9 +133,6 @@ export interface ImportRunResult {
  */
 function indexOfResumeCollection(state: ImportCheckpointState): number {
   const entityType = resumeStartCollection(state);
-  // `entityTypeToCollection` throws when the entity type has no SP collection;
-  // a freshly-built checkpoint always points at a valid SP collection so this
-  // is safe in practice. Tests around malformed checkpoints would surface here.
   const collection = entityTypeToCollection(entityType);
   return DEPENDENCY_ORDER.indexOf(collection);
 }
@@ -485,5 +477,4 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
   }
 }
 
-// Re-export the entity type map helpers for callers that compose this engine.
 export { collectionToEntityType, entityTypeToCollection };
