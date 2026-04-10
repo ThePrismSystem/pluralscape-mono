@@ -95,6 +95,22 @@ function buildPersistableEntity(
   } as PersistableEntity;
 }
 
+function aborted(
+  state: ImportCheckpointState,
+  ctx: MappingContext,
+  errors: readonly ImportError[],
+): ImportRunResult {
+  return { finalState: state, warnings: ctx.warnings, errors, outcome: "aborted" };
+}
+
+function completed(
+  state: ImportCheckpointState,
+  ctx: MappingContext,
+  errors: readonly ImportError[],
+): ImportRunResult {
+  return { finalState: state, warnings: ctx.warnings, errors, outcome: "completed" };
+}
+
 export interface RunImportArgs {
   readonly source: ImportSource;
   readonly persister: Persister;
@@ -285,12 +301,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       if (collection === "members" && privacyBucketsMapped === 0) {
         const synth = await persistSynthesizedBuckets(persister, ctx, errors);
         if (synth.aborted) {
-          return {
-            finalState: state,
-            warnings: ctx.warnings,
-            errors,
-            outcome: "aborted",
-          };
+          return aborted(state, ctx, errors);
         }
         // Advance checkpoint totals for the synthesized buckets, mark the
         // privacy-bucket collection complete, then flush and report progress
@@ -431,12 +442,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
             };
         errors.push(error);
         await persister.recordError(error);
-        return {
-          finalState: state,
-          warnings: ctx.warnings,
-          errors,
-          outcome: "aborted",
-        };
+        return aborted(state, ctx, errors);
       }
 
       // Resume cutoff sanity check: if we were resuming mid-collection and
@@ -451,21 +457,11 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
         );
         errors.push(cutoffError);
         await persister.recordError(cutoffError);
-        return {
-          finalState: state,
-          warnings: ctx.warnings,
-          errors,
-          outcome: "aborted",
-        };
+        return aborted(state, ctx, errors);
       }
 
       if (collectionAborted) {
-        return {
-          finalState: state,
-          warnings: ctx.warnings,
-          errors,
-          outcome: "aborted",
-        };
+        return aborted(state, ctx, errors);
       }
 
       // Collection finished cleanly — advance state and flush+report.
@@ -476,12 +472,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       await onProgress(state);
     }
 
-    return {
-      finalState: state,
-      warnings: ctx.warnings,
-      errors,
-      outcome: "completed",
-    };
+    return completed(state, ctx, errors);
   } finally {
     try {
       await source.close();
