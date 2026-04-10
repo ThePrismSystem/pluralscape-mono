@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
-    "i18next": "^26.0.0",
+    "i18next": "^26.0.4",
     "react-i18next": "^17.0.0"
   },
   "devDependencies": {
@@ -19,8 +19,8 @@
     "@types/react": "^19.2.14",
     "eslint": "^10.2.0",
     "happy-dom": "^20.8.9",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "typescript": "^6.0.0"
   },
   "scripts": {

@@ -54,8 +54,9 @@ export function rowToTimer(row: Record<string, unknown>): TimerConfig | Archived
  * shape at write time, so the assembled object is a valid discriminated union
  * member. TS cannot verify this statically across a generic payload spread.
  */
-function assertLifecycleEvent(_v: unknown): asserts _v is LifecycleEvent {
-  // Validated by CRDT materializer at write time
+function assertLifecycleEvent(v: unknown): asserts v is LifecycleEvent {
+  // Validated by CRDT materializer at write time — runtime check elided
+  void v;
 }
 
 export function rowToLifecycleEvent(row: Record<string, unknown>): LifecycleEventWithArchive {

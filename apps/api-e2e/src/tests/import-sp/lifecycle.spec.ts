@@ -39,7 +39,7 @@ test.describe("Import job lifecycle", () => {
         headers: authHeaders,
         data: {
           source: "simply-plural",
-          selectedCategories: {},
+          selectedCategories: { member: true },
           avatarMode: "skip",
         },
       });

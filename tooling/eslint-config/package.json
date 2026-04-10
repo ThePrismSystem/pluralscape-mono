@@ -8,13 +8,13 @@
     "./react-native": "./react-native.js"
   },
   "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.57.0",
-    "@typescript-eslint/parser": "^8.57.0",
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.7.1",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
+    "@typescript-eslint/parser": "^8.58.1",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-import-x": "^4.16.2",
     "eslint-plugin-unicorn": "^64.0.0",
-    "typescript-eslint": "^8.24.1",
-    "@eslint-community/eslint-plugin-eslint-comments": "^4.7.1"
+    "typescript-eslint": "^8.58.1"
   },
   "peerDependencies": {
     "eslint": "^9.0.0 || ^10.0.0",
