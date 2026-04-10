@@ -38,7 +38,8 @@ export {
 } from "./sources/api-source.js";
 export { createFakeImportSource } from "./sources/fake-source.js";
 export type { FakeSourceData } from "./sources/fake-source.js";
-export { createFileImportSource } from "./sources/file-source.js";
+export { createFileImportSource, FileSourceParseError } from "./sources/file-source.js";
+export type { FileImportSourceArgs } from "./sources/file-source.js";
 export type { ImportSource, SourceDocument, SourceMode } from "./sources/source.types.js";
 export { SP_COLLECTION_NAMES, isSpCollectionName } from "./sources/sp-collections.js";
 export type { SpCollectionName } from "./sources/sp-collections.js";

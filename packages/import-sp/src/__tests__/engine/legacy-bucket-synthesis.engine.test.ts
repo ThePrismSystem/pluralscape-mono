@@ -43,7 +43,13 @@ const FIXTURE_PATH = join(
 describe("import engine — legacy bucket synthesis", () => {
   it("synthesizes public/trusted/private buckets and derives per-member bucket ids", async () => {
     const bytes = new Uint8Array(readFileSync(FIXTURE_PATH));
-    const source = await createFileImportSource({ jsonBytes: bytes });
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
+    const source = createFileImportSource({ stream });
     const { persister, snapshot } = createInMemoryPersister();
 
     const result = await runImport({

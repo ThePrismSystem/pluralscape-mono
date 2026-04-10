@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { createFileImportSource } from "../../sources/file-source.js";
+import { createFileImportSource, FileSourceParseError } from "../../sources/file-source.js";
 
-import { buildExportJson, bytes } from "./file-source.fixtures.js";
+import { buildExportJson } from "./file-source.fixtures.js";
+
+/** Wrap a UTF-8 string in a single-chunk ReadableStream. */
+function stringToStream(text: string): ReadableStream<Uint8Array> {
+  const bytes = new TextEncoder().encode(text);
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
 
 describe("createFileImportSource", () => {
   it("yields members from a small inline JSON export", async () => {
@@ -12,7 +23,7 @@ describe("createFileImportSource", () => {
         { _id: "m2", name: "Bryn" },
       ],
     });
-    const source = await createFileImportSource({ jsonBytes: bytes(json) });
+    const source = createFileImportSource({ stream: stringToStream(json) });
     const out: string[] = [];
     for await (const doc of source.iterate("members")) {
       out.push(doc.sourceId);
@@ -23,7 +34,7 @@ describe("createFileImportSource", () => {
 
   it("yields nothing for a collection not present in the JSON", async () => {
     const json = buildExportJson({ members: [{ _id: "m1", name: "A" }] });
-    const source = await createFileImportSource({ jsonBytes: bytes(json) });
+    const source = createFileImportSource({ stream: stringToStream(json) });
     const out: unknown[] = [];
     for await (const doc of source.iterate("groups")) {
       out.push(doc);
@@ -36,7 +47,7 @@ describe("createFileImportSource", () => {
     const json = buildExportJson({
       members: [{ _id: "m1", name: "A", info: { fld_1: "v1", fld_2: "v2" } }],
     });
-    const source = await createFileImportSource({ jsonBytes: bytes(json) });
+    const source = createFileImportSource({ stream: stringToStream(json) });
     let captured: unknown;
     for await (const doc of source.iterate("members")) {
       captured = doc.document;
@@ -53,7 +64,7 @@ describe("createFileImportSource", () => {
     const json = buildExportJson({
       groups: [{ _id: "g1", name: "Pod", members: ["m1", "m2", "m3"] }],
     });
-    const source = await createFileImportSource({ jsonBytes: bytes(json) });
+    const source = createFileImportSource({ stream: stringToStream(json) });
     let captured: unknown;
     for await (const doc of source.iterate("groups")) {
       captured = doc.document;
@@ -68,7 +79,7 @@ describe("createFileImportSource", () => {
 
   it("supports re-iterating the same collection", async () => {
     const json = buildExportJson({ members: [{ _id: "m1", name: "A" }] });
-    const source = await createFileImportSource({ jsonBytes: bytes(json) });
+    const source = createFileImportSource({ stream: stringToStream(json) });
     const first: string[] = [];
     for await (const d of source.iterate("members")) {
       first.push(d.sourceId);
@@ -81,53 +92,46 @@ describe("createFileImportSource", () => {
     expect(first).toEqual(second);
   });
 
-  it("rejects malformed JSON with a fatal-class error", async () => {
-    let caught: unknown;
-    try {
-      await createFileImportSource({ jsonBytes: bytes("{not valid") });
-    } catch (err) {
-      caught = err;
-    }
-    expect(caught).toBeInstanceOf(Error);
+  it("rejects malformed JSON with a FileSourceParseError", async () => {
+    const source = createFileImportSource({ stream: stringToStream("{not valid") });
+    await expect(async () => {
+      for await (const doc of source.iterate("members")) {
+        void doc;
+      }
+    }).rejects.toBeInstanceOf(FileSourceParseError);
   });
 
-  it("rejects a document missing _id", async () => {
-    const json = buildExportJson({ members: [{ name: "no id" }] });
-    let caught: unknown;
-    try {
-      await createFileImportSource({ jsonBytes: bytes(json) });
-    } catch (err) {
-      caught = err;
+  it("skips documents missing _id during iteration", async () => {
+    const json = buildExportJson({ members: [{ name: "no id" }, { _id: "m2", name: "Has id" }] });
+    const source = createFileImportSource({ stream: stringToStream(json) });
+    const out: string[] = [];
+    for await (const doc of source.iterate("members")) {
+      out.push(doc.sourceId);
     }
-    expect(caught).toBeInstanceOf(Error);
-    if (caught instanceof Error) {
-      expect(caught.message).toContain("_id");
-    }
+    await source.close();
+    expect(out).toEqual(["m2"]);
   });
 
   it("exposes mode 'file'", async () => {
-    const source = await createFileImportSource({ jsonBytes: bytes("{}") });
+    const source = createFileImportSource({ stream: stringToStream("{}") });
     expect(source.mode).toBe("file");
     await source.close();
   });
 
   it("listCollections reports every top-level JSON key including unknown ones", async () => {
-    // Build a JSON with one supported SP collection plus an unknown top-level
-    // key ("friends"). The engine uses the unknown key to emit a
-    // `dropped-collection` warning, so the source must surface it here.
     const raw = JSON.stringify({
       members: [{ _id: "m1", name: "A" }],
       friends: [{ _id: "f1" }],
       schemaVersion: 2,
     });
-    const source = await createFileImportSource({ jsonBytes: bytes(raw) });
+    const source = createFileImportSource({ stream: stringToStream(raw) });
     const names = await source.listCollections();
     await source.close();
     expect([...names].sort()).toEqual(["friends", "members", "schemaVersion"]);
   });
 
   it("listCollections returns empty array for an empty object root", async () => {
-    const source = await createFileImportSource({ jsonBytes: bytes("{}") });
+    const source = createFileImportSource({ stream: stringToStream("{}") });
     const names = await source.listCollections();
     await source.close();
     expect(names).toEqual([]);

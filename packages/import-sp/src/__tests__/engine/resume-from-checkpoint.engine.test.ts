@@ -99,7 +99,14 @@ function buildMidMemberCheckpoint(): ImportCheckpointState {
 
 describe("import engine — resume from mid-collection checkpoint", () => {
   it("skips pre-member collections entirely and resumes member iteration past the cutoff", async () => {
-    const source = await createFileImportSource({ jsonBytes: buildResumeFixture() });
+    const fixtureBytes = buildResumeFixture();
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(fixtureBytes);
+        controller.close();
+      },
+    });
+    const source = createFileImportSource({ stream });
     const { persister, snapshot } = createInMemoryPersister();
 
     const result = await runImport({

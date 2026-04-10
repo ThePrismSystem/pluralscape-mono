@@ -23,6 +23,8 @@ declare module "clarinet" {
     onvalue?: (value: string | number | boolean | null) => void;
     onerror?: (err: Error) => void;
     onend?: () => void;
+    /** Current byte position in the input stream (cumulative across write calls). */
+    readonly position: number;
     /** Feed a chunk of UTF-8 text into the parser. Throws if a prior error was set. */
     write(chunk: string): ClarinetParser;
     /** Finalize parsing. Throws if the document is incomplete. */

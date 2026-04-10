@@ -33,7 +33,13 @@ const FIXTURE_PATH = join(
 describe("import engine — minimal end-to-end import", () => {
   it("persists every entity in the minimal fixture and marks every collection complete", async () => {
     const bytes = new Uint8Array(readFileSync(FIXTURE_PATH));
-    const source = await createFileImportSource({ jsonBytes: bytes });
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes);
+        controller.close();
+      },
+    });
+    const source = createFileImportSource({ stream });
     const { persister, snapshot } = createInMemoryPersister();
 
     const result = await runImport({

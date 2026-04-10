@@ -1,243 +1,266 @@
+/**
+ * Streaming file-based SP import source.
+ *
+ * Drives clarinet's SAX-style parser via chunks from a web ReadableStream.
+ * The accumulator stack reconstructs nested SP documents and yields each
+ * top-level collection element as a SourceDocument once it closes.
+ *
+ * Chunk-boundary safety:
+ * - TextDecoder("utf-8", { fatal: true }) with { stream: true } buffers
+ *   multibyte UTF-8 sequences split across chunks.
+ * - clarinet internally buffers partial tokens across write() calls.
+ *
+ * Error policy: no recovery. On any parse error FileSourceParseError is thrown
+ * with the byte position from the parser.
+ */
 import clarinet from "clarinet";
 
 import { isSpCollectionName, type SpCollectionName } from "./sp-collections.js";
 
 import type { ImportSource, SourceDocument } from "./source.types.js";
 
-/** Input shape for `createFileImportSource`. */
-export interface FileSourceInput {
-  /** Raw bytes of the SP JSON export. Mobile callers convert a Blob to bytes first. */
-  readonly jsonBytes: Uint8Array;
+export class FileSourceParseError extends Error {
+  public readonly position: number | null;
+  constructor(message: string, position: number | null, options?: ErrorOptions) {
+    const suffix = position === null ? "" : ` (at byte ${String(position)})`;
+    super(`${message}${suffix}`, options);
+    this.name = "FileSourceParseError";
+    this.position = position;
+  }
 }
 
-/**
- * A container tracked while streaming the JSON. Each frame on the stack is the
- * container we are currently building up, plus the key pending assignment when
- * that container is an object.
- */
-interface Frame {
-  container: Record<string, unknown> | unknown[];
-  pendingKey: string | null;
+type StackFrame =
+  | { kind: "object"; value: Record<string, unknown>; currentKey: string | undefined }
+  | { kind: "array"; value: unknown[] };
+
+export interface FileImportSourceArgs {
+  readonly stream: ReadableStream<Uint8Array>;
 }
 
-/**
- * Assign `value` into the container at the top of the stack. For arrays, push;
- * for objects, set under `pendingKey` and clear it. No-op if the stack is empty
- * (which only happens when the value is the root of the document).
- */
-function assignToTop(stack: Frame[], value: unknown): void {
-  if (stack.length === 0) {
-    return;
-  }
-  const top = stack[stack.length - 1];
-  if (top === undefined) {
-    return;
-  }
-  if (Array.isArray(top.container)) {
-    top.container.push(value);
-    return;
-  }
-  if (top.pendingKey === null) {
-    // Programming error — onvalue fired on an object without a pending key.
-    throw new Error("FileImportSource: onvalue fired on object with no pending key");
-  }
-  top.container[top.pendingKey] = value;
-  top.pendingKey = null;
-}
-
-/**
- * Result of parsing the SP export bytes.
- *
- * `collections` is the filtered index of supported SP collections (keys that
- * pass `isSpCollectionName`); `topLevelKeys` is every top-level key present
- * in the root object, including keys the engine does not iterate (e.g.,
- * `friends`). The engine uses `topLevelKeys` to emit dropped-collection
- * warnings for unknown entries without losing that signal to filtering.
- */
-interface ParsedExport {
-  readonly collections: Map<SpCollectionName, unknown[]>;
+interface PrescanState {
   readonly topLevelKeys: readonly string[];
+  readonly documentsByCollection: ReadonlyMap<string, readonly unknown[]>;
 }
 
 /**
- * Build a `ParsedExport` from raw export bytes by streaming the JSON via
- * clarinet. Only top-level keys matching `SP_COLLECTION_NAMES` are retained
- * in `collections`; every top-level key (including unknown ones) is recorded
- * in `topLevelKeys` so the engine can warn about unsupported collections.
- *
- * Throws synchronously on JSON parse failure or on a document missing `_id`.
+ * Wrap an unknown thrown value as a FileSourceParseError, preserving it as cause.
+ * Used at the clarinet/TextDecoder boundary where we cannot predict the error shape.
  */
-function parseExportBytes(jsonBytes: Uint8Array): ParsedExport {
-  const parser = clarinet.parser();
-  const collections = new Map<SpCollectionName, unknown[]>();
-
-  // The stack tracks the path from the root into the current container. It
-  // starts empty; the first open-object or open-array event installs the root.
-  // Mutable state lives inside `state` so TypeScript's control-flow analysis
-  // doesn't narrow fields to their initial values across callback boundaries.
-  const state: {
-    root: Record<string, unknown> | unknown[] | null;
-    parseError: Error | null;
-  } = { root: null, parseError: null };
-  const stack: Frame[] = [];
-
-  parser.onopenobject = (firstKey?: string): void => {
-    const obj: Record<string, unknown> = {};
-    if (stack.length === 0) {
-      state.root = obj;
-    } else {
-      assignToTop(stack, obj);
-    }
-    stack.push({ container: obj, pendingKey: firstKey ?? null });
-  };
-
-  parser.oncloseobject = (): void => {
-    stack.pop();
-  };
-
-  parser.onopenarray = (): void => {
-    const arr: unknown[] = [];
-    if (stack.length === 0) {
-      state.root = arr;
-    } else {
-      assignToTop(stack, arr);
-    }
-    stack.push({ container: arr, pendingKey: null });
-  };
-
-  parser.onclosearray = (): void => {
-    stack.pop();
-  };
-
-  parser.onkey = (key: string): void => {
-    const top = stack[stack.length - 1];
-    if (top !== undefined && !Array.isArray(top.container)) {
-      top.pendingKey = key;
-    }
-  };
-
-  parser.onvalue = (value: string | number | boolean | null): void => {
-    assignToTop(stack, value);
-  };
-
-  parser.onerror = (err: Error): void => {
-    state.parseError = err;
-  };
-
-  // clarinet accepts a UTF-8 string. Decode the bytes once up front; for the
-  // 50MB import budget this is ~50MB of peak transient string memory, which is
-  // acceptable on mobile and avoids chunk-boundary UTF-8 issues. The default
-  // encoding for TextDecoder is utf-8, matching the SP export format.
-  const text = new TextDecoder().decode(jsonBytes);
-  const writeHolder: { thrown: Error | null } = { thrown: null };
-  try {
-    parser.write(text);
-    parser.close();
-  } catch (err) {
-    writeHolder.thrown = err instanceof Error ? err : new Error(String(err));
-  }
-
-  // Prefer the error captured via `onerror` (clarinet sets it before throwing),
-  // falling back to anything thrown synchronously by write/close.
-  const effectiveError = state.parseError ?? writeHolder.thrown;
-  if (effectiveError !== null) {
-    throw effectiveError;
-  }
-
-  // A valid SP export is always a JSON object at the root. An empty document
-  // (`{}` or no root at all) produces an empty result.
-  const rootValue = state.root;
-  if (rootValue === null) {
-    return { collections, topLevelKeys: [] };
-  }
-  if (Array.isArray(rootValue)) {
-    throw new Error("FileImportSource: expected JSON object at root, got array");
-  }
-
-  const topLevelKeys: string[] = Object.keys(rootValue);
-
-  // Extract only SP collections from the root. Other top-level keys (e.g. an
-  // unexpected "schemaVersion" or a dropped collection like "friends") are
-  // still captured in `topLevelKeys` above so the engine can warn about them.
-  for (const [key, value] of Object.entries(rootValue)) {
-    if (!isSpCollectionName(key)) {
-      continue;
-    }
-    if (!Array.isArray(value)) {
-      continue;
-    }
-    for (const doc of value) {
-      if (doc === null || typeof doc !== "object") {
-        throw new Error(
-          `FileImportSource: ${key} contained a non-object document (got ${typeof doc})`,
-        );
-      }
-      const id = (doc as { _id?: unknown })._id;
-      if (typeof id !== "string" || id.length === 0) {
-        throw new Error(
-          `FileImportSource: ${key} document is missing _id (got ${JSON.stringify(doc)})`,
-        );
-      }
-    }
-    collections.set(key, value);
-  }
-
-  return { collections, topLevelKeys };
+function wrapParseError(err: unknown, position: number): FileSourceParseError {
+  const message = err instanceof Error ? err.message : String(err);
+  return new FileSourceParseError(message, position, { cause: err });
 }
 
-/**
- * Build a file-backed `ImportSource` from raw SP JSON export bytes.
- *
- * The constructor eagerly parses the input via clarinet into an in-memory
- * index keyed by collection name. This is "parse once, iterate many": subsequent
- * calls to `iterate()` walk the cached array so re-iteration is deterministic
- * and cheap. The async signature reserves the option to switch to a true
- * streaming pull-parser later without changing the engine API.
- *
- * Throws synchronously (via the rejected promise) on malformed JSON or on a
- * document missing `_id`.
- */
-export function createFileImportSource(input: FileSourceInput): Promise<ImportSource> {
-  // Wrap in a resolved/rejected promise — the parse itself is synchronous, but
-  // the API is async so callers can swap in a streaming implementation later.
-  return new Promise<ImportSource>((resolve, reject) => {
-    let parsed: ParsedExport;
-    try {
-      parsed = parseExportBytes(input.jsonBytes);
-    } catch (err) {
-      reject(err instanceof Error ? err : new Error(String(err)));
-      return;
-    }
-    const { collections: indexed, topLevelKeys } = parsed;
+export function createFileImportSource(args: FileImportSourceArgs): ImportSource {
+  let prescan: PrescanState | null = null;
 
-    const source: ImportSource = {
-      mode: "file",
-      async *iterate(collection: SpCollectionName): AsyncGenerator<SourceDocument> {
-        // Yield to the microtask queue so the iterator is reliably async.
-        await Promise.resolve();
-        const docs = indexed.get(collection) ?? [];
-        for (const document of docs) {
-          const sourceId = (document as { _id?: unknown })._id;
-          if (typeof sourceId !== "string" || sourceId.length === 0) {
-            // parseExportBytes already validated _id, but we re-check at
-            // iterate-time so the async path cannot accidentally leak an
-            // invalid document.
-            throw new Error(`FileImportSource: ${collection} document missing _id at iterate-time`);
-          }
-          yield { collection, sourceId, document };
+  async function parseStream(): Promise<PrescanState> {
+    if (prescan !== null) return prescan;
+
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    const parser = clarinet.parser();
+
+    const stack: StackFrame[] = [];
+    // Pending parse error set inside SAX callbacks; checked after each write().
+    // Stored as a container so TypeScript's control-flow can narrow it after
+    // the null check (direct `let parseError: Error | null` is not narrowed
+    // across closure boundaries).
+    const pending: { error: FileSourceParseError | null } = { error: null };
+    let currentTopKey: string | null = null;
+    const documentsByCollection = new Map<string, unknown[]>();
+    const topLevelKeys: string[] = [];
+    /** Keys whose values were arrays (may be empty). Distinguishes empty arrays from non-array values. */
+    const arrayValuedKeys = new Set<string>();
+
+    /**
+     * Assign `value` into the container at the top of the stack.
+     * Called for all values except top-level collection documents (handled in
+     * oncloseobject).
+     */
+    function assignToParent(value: unknown): void {
+      const parent = stack[stack.length - 1];
+      if (parent === undefined) {
+        pending.error = new FileSourceParseError("Expected JSON object at root", parser.position);
+        return;
+      }
+      if (parent.kind === "object") {
+        if (parent.currentKey === undefined) {
+          pending.error = new FileSourceParseError(
+            "Value without key inside object",
+            parser.position,
+          );
+          return;
         }
-      },
-      listCollections() {
-        // Snapshot the top-level key list captured during parse. Includes
-        // both supported SP collection names and any unknown keys the export
-        // contained (e.g., `friends`), which the engine uses to emit
-        // dropped-collection warnings.
-        return Promise.resolve(topLevelKeys);
-      },
-      async close(): Promise<void> {
-        // No held resources — parsing happened eagerly in the constructor.
-      },
+        parent.value[parent.currentKey] = value;
+      } else {
+        parent.value.push(value);
+      }
+    }
+
+    parser.onerror = (err) => {
+      pending.error = new FileSourceParseError(err.message, parser.position, { cause: err });
     };
-    resolve(source);
-  });
+
+    parser.onvalue = (v) => {
+      if (pending.error !== null) return;
+      // Record root-level scalar keys (e.g. "schemaVersion": 2) in topLevelKeys.
+      if (stack.length === 1) {
+        const parent = stack[0];
+        if (parent?.kind === "object" && parent.currentKey !== undefined) {
+          topLevelKeys.push(parent.currentKey);
+        }
+      }
+      assignToParent(v);
+    };
+
+    parser.onopenobject = (firstKey) => {
+      if (pending.error !== null) return;
+      // Record every root-level key so listCollections can surface non-array values too.
+      if (stack.length === 1) {
+        const parent = stack[0];
+        if (parent?.kind === "object" && parent.currentKey !== undefined) {
+          topLevelKeys.push(parent.currentKey);
+        }
+      }
+      stack.push({ kind: "object", value: {}, currentKey: firstKey });
+    };
+
+    parser.onkey = (key) => {
+      if (pending.error !== null) return;
+      const top = stack[stack.length - 1];
+      if (top?.kind !== "object") {
+        pending.error = new FileSourceParseError("Unexpected key outside object", parser.position);
+        return;
+      }
+      top.currentKey = key;
+    };
+
+    parser.oncloseobject = () => {
+      if (pending.error !== null) return;
+      const popped = stack.pop();
+      if (popped?.kind !== "object") {
+        pending.error = new FileSourceParseError("Mismatched oncloseobject", parser.position);
+        return;
+      }
+      // Root object closing — nothing to assign to.
+      if (stack.length === 0) return;
+      // At depth 2 (stack now has root-object + collection-array) this is a
+      // top-level collection document. Store it and return — do NOT call
+      // assignToParent because the array is tracked via documentsByCollection.
+      if (stack.length === 2 && currentTopKey !== null) {
+        let bucket = documentsByCollection.get(currentTopKey);
+        if (bucket === undefined) {
+          bucket = [];
+          documentsByCollection.set(currentTopKey, bucket);
+        }
+        bucket.push(popped.value);
+        return;
+      }
+      assignToParent(popped.value);
+    };
+
+    parser.onopenarray = () => {
+      if (pending.error !== null) return;
+      // Entering a top-level collection array: record the key in topLevelKeys.
+      if (stack.length === 1) {
+        const parent = stack[0];
+        if (parent?.kind === "object" && parent.currentKey !== undefined) {
+          currentTopKey = parent.currentKey;
+          topLevelKeys.push(parent.currentKey);
+          arrayValuedKeys.add(parent.currentKey);
+        }
+      }
+      stack.push({ kind: "array", value: [] });
+    };
+
+    parser.onclosearray = () => {
+      if (pending.error !== null) return;
+      const popped = stack.pop();
+      if (popped?.kind !== "array") {
+        pending.error = new FileSourceParseError("Mismatched onclosearray", parser.position);
+        return;
+      }
+      // Root was an array — SP exports require an object root.
+      if (stack.length === 0) {
+        pending.error = new FileSourceParseError(
+          "Expected JSON object at root, got array",
+          parser.position,
+        );
+        return;
+      }
+      // Closing a top-level collection array — reset currentTopKey.
+      if (stack.length === 1 && currentTopKey !== null) {
+        currentTopKey = null;
+        return;
+      }
+      assignToParent(popped.value);
+    };
+
+    // Consume the stream chunk by chunk.
+    const reader = args.stream.getReader();
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value, { stream: true });
+        parser.write(text);
+        if (pending.error !== null) throw pending.error;
+      }
+      // Flush any incomplete multibyte sequence buffered by the decoder.
+      const tail = decoder.decode();
+      parser.write(tail);
+      parser.close();
+      if (pending.error !== null) throw pending.error;
+    } catch (err) {
+      if (err instanceof FileSourceParseError) throw err;
+      // Re-wrap clarinet or TextDecoder errors so callers get a uniform type.
+      throw wrapParseError(err, parser.position);
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (stack.length !== 0) {
+      throw new FileSourceParseError("Unexpected end of input", parser.position);
+    }
+
+    // Validate known SP collection keys had array values. A non-array value does
+    // not trigger onopenarray, so the key appears in topLevelKeys (added via
+    // onopenobject/onvalue) but not in arrayValuedKeys.
+    for (const key of topLevelKeys) {
+      if (isSpCollectionName(key) && !arrayValuedKeys.has(key)) {
+        throw new FileSourceParseError(
+          `Collection "${key}" had a non-array value`,
+          parser.position,
+        );
+      }
+    }
+
+    prescan = { topLevelKeys, documentsByCollection };
+    return prescan;
+  }
+
+  return {
+    mode: "file",
+
+    async listCollections() {
+      const state = await parseStream();
+      return state.topLevelKeys;
+    },
+
+    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceDocument> {
+      const state = await parseStream();
+      const docs = state.documentsByCollection.get(collection) ?? [];
+      for (const doc of docs) {
+        if (typeof doc !== "object" || doc === null) continue;
+        const rec = doc as Record<string, unknown>;
+        const sourceId = typeof rec._id === "string" ? rec._id : null;
+        if (sourceId === null) continue;
+        yield { collection, sourceId, document: rec };
+      }
+    },
+
+    async close(): Promise<void> {
+      // Stream reader is released inside parseStream's finally block.
+    },
+  };
 }

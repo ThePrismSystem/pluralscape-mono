@@ -62,7 +62,13 @@ async function main(): Promise<number> {
   }
 
   const bytes = new Uint8Array(readFileSync(exportPath));
-  const source = await createFileImportSource({ jsonBytes: bytes });
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+  const source = createFileImportSource({ stream });
   const persister = createPrintingPersister();
 
   const result = await runImport({

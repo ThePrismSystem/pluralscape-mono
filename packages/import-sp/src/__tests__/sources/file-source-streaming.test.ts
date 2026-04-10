@@ -21,7 +21,7 @@ function textToChunks(text: string, chunkSize: number): Uint8Array[] {
 }
 
 describe("file-source true streaming", () => {
-  it.fails("handles a chunk boundary in the middle of a string", async () => {
+  it("handles a chunk boundary in the middle of a string", async () => {
     const payload = JSON.stringify({
       members: [{ _id: "sp_m_1", name: "Alexander the Great" }],
     });
@@ -39,7 +39,7 @@ describe("file-source true streaming", () => {
     });
   });
 
-  it.fails("handles a chunk boundary splitting a multibyte UTF-8 sequence", async () => {
+  it("handles a chunk boundary splitting a multibyte UTF-8 sequence", async () => {
     const payload = JSON.stringify({
       members: [{ _id: "sp_m_1", name: "Alex 🌟 Star" }],
     });
@@ -47,7 +47,12 @@ describe("file-source true streaming", () => {
     // Find the byte offset of the first byte of the 4-byte emoji sequence
     let emojiStart = -1;
     for (let i = 0; i < bytes.length - 3; i += 1) {
-      if (bytes[i] === 0xf0 && bytes[i + 1] === 0x9f && bytes[i + 2] === 0x8c && bytes[i + 3] === 0x9f) {
+      if (
+        bytes[i] === 0xf0 &&
+        bytes[i + 1] === 0x9f &&
+        bytes[i + 2] === 0x8c &&
+        bytes[i + 3] === 0x9f
+      ) {
         emojiStart = i;
         break;
       }
@@ -64,7 +69,7 @@ describe("file-source true streaming", () => {
     expect(docs[0]?.document.name).toBe("Alex 🌟 Star");
   });
 
-  it.fails("rejects a non-object root", async () => {
+  it("rejects a non-object root", async () => {
     const payload = '"not an object"';
     const source = createFileImportSource({
       stream: streamFromChunks(textToChunks(payload, 4)),
@@ -76,7 +81,7 @@ describe("file-source true streaming", () => {
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });
 
-  it.fails("rejects a non-array value under a known collection key", async () => {
+  it("rejects a non-array value under a known collection key", async () => {
     const payload = '{"members": {"notAnArray": true}}';
     const source = createFileImportSource({
       stream: streamFromChunks(textToChunks(payload, 8)),
@@ -88,7 +93,7 @@ describe("file-source true streaming", () => {
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });
 
-  it.fails("rejects truncated JSON", async () => {
+  it("rejects truncated JSON", async () => {
     const payload = '{"members": [{"_id": "sp_m_1", "name": "Al';
     const source = createFileImportSource({
       stream: streamFromChunks(textToChunks(payload, 10)),
@@ -100,7 +105,7 @@ describe("file-source true streaming", () => {
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });
 
-  it.fails("handles deeply nested objects within a document", async () => {
+  it("handles deeply nested objects within a document", async () => {
     const payload = JSON.stringify({
       members: [
         {
@@ -126,7 +131,7 @@ describe("file-source true streaming", () => {
     expect(doc.document.info.level1.level2.level3.value).toBe(42);
   });
 
-  it.fails("lists known and unknown collections via listCollections()", async () => {
+  it("lists known and unknown collections via listCollections()", async () => {
     const payload = JSON.stringify({
       members: [],
       unknownCollection: [],
@@ -139,7 +144,7 @@ describe("file-source true streaming", () => {
     expect(cols).toContain("unknownCollection");
   });
 
-  it.fails("yields documents from multiple collections", async () => {
+  it("yields documents from multiple collections", async () => {
     const payload = JSON.stringify({
       members: [{ _id: "sp_m_1", name: "Alex" }],
       groups: [{ _id: "sp_g_1", name: "close friends" }],
