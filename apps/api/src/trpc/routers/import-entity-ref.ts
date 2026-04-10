@@ -5,15 +5,24 @@ import { MAX_PAGE_LIMIT } from "../../service.constants.js";
 import {
   listImportEntityRefs,
   lookupImportEntityRef,
+  lookupImportEntityRefBatch,
+  upsertImportEntityRefBatch,
 } from "../../services/import-entity-ref.service.js";
 import { createTRPCCategoryRateLimiter } from "../middlewares/rate-limit.js";
 import { systemProcedure } from "../middlewares/system.js";
 import { router } from "../trpc.js";
 
 const readLimiter = createTRPCCategoryRateLimiter("readDefault");
+const writeLimiter = createTRPCCategoryRateLimiter("write");
 
 /** Maximum length of a source-side identifier. Matches the PG varchar(128). */
 const MAX_SOURCE_ENTITY_ID_LENGTH = 128;
+
+/** Maximum length of a Pluralscape entity ID. Matches DB ID_MAX_LENGTH (50). */
+const MAX_PLURALSCAPE_ENTITY_ID_LENGTH = 50;
+
+/** Maximum entries per batch request. */
+const BATCH_MAX = 200;
 
 export const importEntityRefRouter = router({
   list: systemProcedure
@@ -48,5 +57,43 @@ export const importEntityRefRouter = router({
     )
     .query(async ({ ctx, input }) => {
       return lookupImportEntityRef(ctx.db, ctx.systemId, input, ctx.auth);
+    }),
+
+  lookupBatch: systemProcedure
+    .use(readLimiter)
+    .input(
+      z.object({
+        source: z.enum(IMPORT_SOURCES),
+        sourceEntityType: z.enum(IMPORT_ENTITY_TYPES),
+        sourceEntityIds: z
+          .array(z.string().min(1).max(MAX_SOURCE_ENTITY_ID_LENGTH))
+          .min(1)
+          .max(BATCH_MAX),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const map = await lookupImportEntityRefBatch(ctx.db, ctx.systemId, input, ctx.auth);
+      return Object.fromEntries(map);
+    }),
+
+  upsertBatch: systemProcedure
+    .use(writeLimiter)
+    .input(
+      z.object({
+        source: z.enum(IMPORT_SOURCES),
+        entries: z
+          .array(
+            z.object({
+              sourceEntityType: z.enum(IMPORT_ENTITY_TYPES),
+              sourceEntityId: z.string().min(1).max(MAX_SOURCE_ENTITY_ID_LENGTH),
+              pluralscapeEntityId: z.string().min(1).max(MAX_PLURALSCAPE_ENTITY_ID_LENGTH),
+            }),
+          )
+          .min(1)
+          .max(BATCH_MAX),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return upsertImportEntityRefBatch(ctx.db, ctx.systemId, input, ctx.auth);
     }),
 });
