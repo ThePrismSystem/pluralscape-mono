@@ -79,5 +79,9 @@ ui-design-local/
 *.patch
 .pnpm-debug.log
 
+# SP import test artifacts (seeded account credentials + manifests)
+.env.sp-test-*
+scripts/.sp-test-*-manifest.json
+
 # OS
 .tmp
