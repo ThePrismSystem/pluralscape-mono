@@ -45,7 +45,7 @@
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "@tanstack/react-query": "^5.66.9"
+    "@tanstack/react-query": "^5.97.0"
   },
   "peerDependencies": {
     "react": ">=19.0.0"

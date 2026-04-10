@@ -11387,6 +11387,147 @@ paths:
           $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/import-entity-refs/lookup-batch:
+    post:
+      operationId: lookupImportEntityRefBatch
+      tags:
+        - Import
+      summary: Batch look up entity refs by source IDs
+      description: |
+        Looks up many import entity refs in a single round-trip. Returns a map of
+        `sourceEntityId -> pluralscapeEntityId` for matching rows. Missing source IDs
+        are absent from the map.
+
+        POST is used (not GET) because the payload array may exceed query-string limits.
+
+        Rate limit: 60 req/min (readDefault)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source
+                - sourceEntityType
+                - sourceEntityIds
+              properties:
+                source:
+                  $ref: "#/components/schemas/ImportSource"
+                sourceEntityType:
+                  $ref: "#/components/schemas/ImportEntityType"
+                sourceEntityIds:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    maxLength: 128
+                  minItems: 1
+                  maxItems: 200
+      responses:
+        "200":
+          description: Map of sourceEntityId to pluralscapeEntityId
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: string
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /systems/{systemId}/import-entity-refs/upsert-batch:
+    post:
+      operationId: upsertImportEntityRefBatch
+      tags:
+        - Import
+      summary: Batch upsert entity refs
+      description: |
+        Insert or update many import entity refs in a single round-trip. Idempotent:
+        re-running with the same payload updates `pluralscapeEntityId` on conflict.
+
+        Returns counts of upserted vs unchanged rows.
+
+        Rate limit: 30 req/min (write)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/SystemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - source
+                - entries
+              properties:
+                source:
+                  $ref: "#/components/schemas/ImportSource"
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - sourceEntityType
+                      - sourceEntityId
+                      - pluralscapeEntityId
+                    properties:
+                      sourceEntityType:
+                        $ref: "#/components/schemas/ImportEntityType"
+                      sourceEntityId:
+                        type: string
+                        minLength: 1
+                        maxLength: 128
+                      pluralscapeEntityId:
+                        type: string
+                        minLength: 1
+                        maxLength: 50
+                  minItems: 1
+                  maxItems: 200
+      responses:
+        "200":
+          description: Upsert result counts
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - upserted
+                      - unchanged
+                    properties:
+                      upserted:
+                        type: integer
+                      unchanged:
+                        type: integer
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: Insufficient permissions
+        "429":
+          $ref: "#/components/responses/RateLimited"
 components:
   securitySchemes:
     bearerAuth:
@@ -16729,16 +16870,25 @@ components:
       enum:
         - member
         - group
+        - custom-front
         - fronting-session
+        - fronting-comment
         - switch
         - custom-field
+        - field-definition
+        - field-value
         - note
+        - journal-entry
         - chat-message
         - board-message
+        - channel-category
+        - channel
         - poll
         - timer
         - privacy-bucket
         - friend
+        - system-profile
+        - system-settings
         - unknown
     ImportErrorNonFatal:
       type: object
