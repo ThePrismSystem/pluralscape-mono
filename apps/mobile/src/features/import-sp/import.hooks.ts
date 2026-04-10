@@ -27,7 +27,7 @@
  */
 
 import { trpc } from "@pluralscape/api-client/trpc";
-import { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 
 import { useMasterKey } from "../../providers/crypto-provider.js";
 import { useActiveSystemId } from "../../providers/system-provider.js";
@@ -89,6 +89,8 @@ export interface UseStartImportReturn {
   readonly startWithToken: (args: StartWithTokenArgs) => Promise<ImportJobId>;
   readonly startWithFile: (args: StartWithFileArgs) => Promise<ImportJobId>;
   readonly isStarting: boolean;
+  readonly error: Error | null;
+  readonly abortControllerRef: React.RefObject<AbortController | null>;
 }
 
 // ── Placeholder PersisterApi adapter ─────────────────────────────────
@@ -177,6 +179,44 @@ function createPlaceholderSource(mode: "api" | "file"): ImportDataSource {
   };
 }
 
+// ── Shared updateJobFn factory ───────────────────────────────────────
+
+/**
+ * Build the `UpdateJobFn` used by both `useStartImport` and
+ * `useResumeActiveImport`. The runner emits readonly arrays inside
+ * `checkpointState` and `errorLog`; Zod-inferred mutation inputs are
+ * structurally mutable so we shallow-clone the collections that carry
+ * readonly arrays before handing them to the mutation.
+ */
+function buildUpdateJobFn(
+  activeSystemId: SystemId,
+  // Typed loosely to accommodate the tRPC mutation's branded input type.
+  updateJobAsync: (
+    input: Record<string, unknown> & { systemId: unknown; importJobId: unknown },
+  ) => Promise<unknown>,
+): UpdateJobFn {
+  return async (importJobId, patch) => {
+    const { errorLog, checkpointState, ...rest } = patch;
+    const checkpointClone =
+      checkpointState !== undefined
+        ? {
+            ...checkpointState,
+            checkpoint: {
+              ...checkpointState.checkpoint,
+              completedCollections: [...checkpointState.checkpoint.completedCollections],
+            },
+          }
+        : undefined;
+    await updateJobAsync({
+      systemId: activeSystemId,
+      importJobId,
+      ...rest,
+      ...(errorLog !== undefined ? { errorLog: [...errorLog] } : {}),
+      ...(checkpointClone !== undefined ? { checkpointState: checkpointClone } : {}),
+    });
+  };
+}
+
 // ── Orchestration helper ─────────────────────────────────────────────
 
 interface StartOrchestrationArgs {
@@ -189,6 +229,7 @@ interface StartOrchestrationArgs {
   readonly initialCheckpoint?: ImportCheckpointState;
   readonly onProgress?: (snapshot: ImportRunnerProgressSnapshot) => void;
   readonly updateJobFn: UpdateJobFn;
+  readonly abortSignal?: AbortSignal;
 }
 
 async function startImportRun(args: StartOrchestrationArgs): Promise<void> {
@@ -208,6 +249,7 @@ async function startImportRun(args: StartOrchestrationArgs): Promise<void> {
     options: args.options,
     ...(args.initialCheckpoint !== undefined ? { initialCheckpoint: args.initialCheckpoint } : {}),
     ...(args.onProgress !== undefined ? { onProgress: args.onProgress } : {}),
+    ...(args.abortSignal !== undefined ? { abortSignal: args.abortSignal } : {}),
     updateJobFn: args.updateJobFn,
   });
 }
@@ -231,35 +273,14 @@ export function useStartImport(): UseStartImportReturn {
   const updateJobMutation = trpc.importJob.update.useMutation();
   const updateJobAsync = updateJobMutation.mutateAsync;
 
-  const updateJobFn: UpdateJobFn = useCallback(
-    async (importJobId, patch) => {
-      // The runner emits readonly arrays inside `checkpointState` and
-      // `errorLog`; Zod-inferred mutation inputs are structurally mutable
-      // so we shallow-clone the collections that carry readonly arrays
-      // before handing them to the mutation.
-      const { errorLog, checkpointState, ...rest } = patch;
-      const checkpointClone =
-        checkpointState !== undefined
-          ? {
-              ...checkpointState,
-              checkpoint: {
-                ...checkpointState.checkpoint,
-                completedCollections: [...checkpointState.checkpoint.completedCollections],
-              },
-            }
-          : undefined;
-      await updateJobAsync({
-        systemId: activeSystemId,
-        importJobId,
-        ...rest,
-        ...(errorLog !== undefined ? { errorLog: [...errorLog] } : {}),
-        ...(checkpointClone !== undefined ? { checkpointState: checkpointClone } : {}),
-      });
-    },
+  const updateJobFn = useMemo(
+    () => buildUpdateJobFn(activeSystemId, updateJobAsync),
     [activeSystemId, updateJobAsync],
   );
 
   const [isStarting, setIsStarting] = useState(false);
+  const [runError, setRunError] = useState<Error | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const createJobAsync = createJobMutation.mutateAsync;
 
@@ -280,7 +301,10 @@ export function useStartImport(): UseStartImportReturn {
           const storage = createSpTokenStorage();
           await storage.set(job.systemId, args.token);
         }
-        void startImportRun({
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        setRunError(null);
+        startImportRun({
           importJobId: job.id,
           systemId: job.systemId,
           masterKey,
@@ -290,6 +314,9 @@ export function useStartImport(): UseStartImportReturn {
           }),
           options: args.options,
           updateJobFn,
+          abortSignal: controller.signal,
+        }).catch((err: unknown) => {
+          setRunError(err instanceof Error ? err : new Error(String(err)));
         });
         return job.id;
       } finally {
@@ -312,14 +339,22 @@ export function useStartImport(): UseStartImportReturn {
           selectedCategories: args.options.selectedCategories,
           avatarMode: args.options.avatarMode,
         });
-        void startImportRun({
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        setRunError(null);
+        startImportRun({
           importJobId: job.id,
           systemId: job.systemId,
           masterKey,
           source: createPlaceholderSource("file"),
-          avatarFetcher: createMobileAvatarFetcher({ mode: "skip" }),
+          avatarFetcher: createMobileAvatarFetcher({
+            mode: args.options.avatarMode === "api" ? "api" : "skip",
+          }),
           options: args.options,
           updateJobFn,
+          abortSignal: controller.signal,
+        }).catch((err: unknown) => {
+          setRunError(err instanceof Error ? err : new Error(String(err)));
         });
         return job.id;
       } finally {
@@ -333,6 +368,8 @@ export function useStartImport(): UseStartImportReturn {
     startWithToken,
     startWithFile,
     isStarting,
+    error: runError,
+    abortControllerRef,
   };
 }
 
@@ -493,6 +530,8 @@ export interface UseResumeActiveImportReturn {
    */
   readonly resume: () => Promise<void>;
   readonly isResuming: boolean;
+  readonly error: Error | null;
+  readonly abortControllerRef: React.RefObject<AbortController | null>;
 }
 
 /**
@@ -510,30 +549,13 @@ export function useResumeActiveImport(): UseResumeActiveImportReturn {
   const updateJobMutation = trpc.importJob.update.useMutation();
   const updateJobAsync = updateJobMutation.mutateAsync;
   const [isResuming, setIsResuming] = useState(false);
+  const [runError, setRunError] = useState<Error | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const firstJob = listQuery.data?.data[0] ?? null;
 
-  const updateJobFn: UpdateJobFn = useCallback(
-    async (importJobId, patch) => {
-      const { errorLog, checkpointState, ...rest } = patch;
-      const checkpointClone =
-        checkpointState !== undefined
-          ? {
-              ...checkpointState,
-              checkpoint: {
-                ...checkpointState.checkpoint,
-                completedCollections: [...checkpointState.checkpoint.completedCollections],
-              },
-            }
-          : undefined;
-      await updateJobAsync({
-        systemId: activeSystemId,
-        importJobId,
-        ...rest,
-        ...(errorLog !== undefined ? { errorLog: [...errorLog] } : {}),
-        ...(checkpointClone !== undefined ? { checkpointState: checkpointClone } : {}),
-      });
-    },
+  const updateJobFn = useMemo(
+    () => buildUpdateJobFn(activeSystemId, updateJobAsync),
     [activeSystemId, updateJobAsync],
   );
 
@@ -542,6 +564,9 @@ export function useResumeActiveImport(): UseResumeActiveImportReturn {
     if (masterKey === null) {
       throw new Error("useResumeActiveImport requires an unlocked crypto provider");
     }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setRunError(null);
     setIsResuming(true);
     try {
       await startImportRun({
@@ -558,7 +583,10 @@ export function useResumeActiveImport(): UseResumeActiveImportReturn {
           ? { initialCheckpoint: firstJob.checkpointState }
           : {}),
         updateJobFn,
+        abortSignal: controller.signal,
       });
+    } catch (err: unknown) {
+      setRunError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsResuming(false);
     }
@@ -568,6 +596,8 @@ export function useResumeActiveImport(): UseResumeActiveImportReturn {
     activeJob: firstJob,
     resume,
     isResuming,
+    error: runError,
+    abortControllerRef,
   };
 }
 
@@ -584,8 +614,14 @@ export interface UseCancelImportReturn {
  * and marking the checkpoint as cancelled. The checkpoint is preserved
  * so a subsequent resume would still be theoretically possible, though
  * the wizard typically hides the resume path once the user cancels.
+ *
+ * Pass `abortController` to also signal the in-flight runner to stop
+ * before updating the job status.
  */
-export function useCancelImport(jobId: ImportJobId): UseCancelImportReturn {
+export function useCancelImport(
+  jobId: ImportJobId,
+  abortController?: AbortController | null,
+): UseCancelImportReturn {
   const activeSystemId = useActiveSystemId();
   const updateMutation = trpc.importJob.update.useMutation();
   const getQuery = trpc.importJob.get.useQuery({ systemId: activeSystemId, importJobId: jobId });
@@ -597,6 +633,7 @@ export function useCancelImport(jobId: ImportJobId): UseCancelImportReturn {
   const cancel = useCallback(async (): Promise<void> => {
     setIsCancelling(true);
     try {
+      abortController?.abort();
       const existingCheckpoint = currentJob?.checkpointState ?? null;
       const clone =
         existingCheckpoint !== null
@@ -617,7 +654,7 @@ export function useCancelImport(jobId: ImportJobId): UseCancelImportReturn {
     } finally {
       setIsCancelling(false);
     }
-  }, [activeSystemId, currentJob, jobId, updateAsync]);
+  }, [abortController, activeSystemId, currentJob, jobId, updateAsync]);
 
   return { cancel, isCancelling };
 }

@@ -206,7 +206,7 @@ describe("useStartImport", () => {
     const firstCall = runSpImportMock.mock.calls[0];
     expect(firstCall).toBeDefined();
     const passedArgs = firstCall?.[0] as { importJobId: ImportJobId };
-    expect(passedArgs.importJobId).toBe("ij_test");
+    expect(passedArgs).toEqual(expect.objectContaining({ importJobId: "ij_test" }));
   });
 
   it("startWithFile kicks runSpImport off after creating the job", async () => {
@@ -221,13 +221,55 @@ describe("useStartImport", () => {
     });
 
     await waitFor(() => {
-      expect(runSpImportMock).toHaveBeenCalled();
+      expect(runSpImportMock).toHaveBeenCalledWith(
+        expect.objectContaining({ importJobId: "ij_test" }),
+      );
     });
   });
 
   it("isStarting is false before start is invoked", () => {
     const { result } = renderHookWithProviders(() => useStartImport());
     expect(result.current.isStarting).toBe(false);
+  });
+
+  it("exposes error as null initially", () => {
+    const { result } = renderHookWithProviders(() => useStartImport());
+    expect(result.current.error).toBeNull();
+  });
+
+  it("exposes abortControllerRef", () => {
+    const { result } = renderHookWithProviders(() => useStartImport());
+    expect(result.current.abortControllerRef).toBeDefined();
+  });
+
+  it("sets error state when runSpImport rejects", async () => {
+    runSpImportMock.mockRejectedValueOnce(new Error("network failure"));
+    const { result } = renderHookWithProviders(() => useStartImport());
+
+    await act(async () => {
+      await result.current.startWithToken({
+        token: "test-token",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(Error);
+    });
+    expect(result.current.error?.message).toBe("network failure");
+  });
+
+  it("populates abortControllerRef after start", async () => {
+    const { result } = renderHookWithProviders(() => useStartImport());
+
+    await act(async () => {
+      await result.current.startWithToken({
+        token: "test-token",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+      });
+    });
+
+    expect(result.current.abortControllerRef.current).toBeInstanceOf(AbortController);
   });
 });
 
@@ -425,13 +467,14 @@ describe("useResumeActiveImport", () => {
       await result.current.resume();
     });
 
-    expect(runSpImportMock).toHaveBeenCalled();
-    const call = runSpImportMock.mock.calls[runSpImportMock.mock.calls.length - 1];
-    const passed = call?.[0] as {
-      initialCheckpoint?: { checkpoint: { currentCollection: string } };
-    };
-    expect(passed.initialCheckpoint).toBeDefined();
-    expect(passed.initialCheckpoint?.checkpoint.currentCollection).toBe("member");
+    expect(runSpImportMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        importJobId: "ij_active",
+        initialCheckpoint: expect.objectContaining({
+          checkpoint: expect.objectContaining({ currentCollection: "member" }),
+        }),
+      }),
+    );
   });
 
   it("resume() is a no-op when there is no active job", async () => {
@@ -447,6 +490,37 @@ describe("useResumeActiveImport", () => {
     });
     // No runSpImport call should have been recorded since the last reset.
     expect(runSpImportMock).not.toHaveBeenCalled();
+  });
+
+  it("exposes error as null initially", () => {
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+    expect(result.current.error).toBeNull();
+  });
+
+  it("exposes abortControllerRef", () => {
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+    expect(result.current.abortControllerRef).toBeDefined();
+  });
+
+  it("sets error state when runSpImport rejects during resume", async () => {
+    runSpImportMock.mockRejectedValueOnce(new Error("resume failure"));
+    const job = {
+      ...makeJob("ij_active", "importing"),
+      checkpointState: null,
+    };
+    fixtures.set("importJob.list", { data: [job], nextCursor: null });
+
+    const { result } = renderHookWithProviders(() => useResumeActiveImport());
+    await waitFor(() => {
+      expect(result.current.activeJob).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.resume();
+    });
+
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toBe("resume failure");
   });
 });
 
