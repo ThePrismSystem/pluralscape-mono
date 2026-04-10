@@ -4,7 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./avatar-fetcher-types": "./src/persistence/avatar-fetcher.types.ts",
+    "./persister-types": "./src/persistence/persister.types.ts",
+    "./engine": "./src/engine/import-engine.ts",
+    "./dependency-order": "./src/engine/dependency-order.ts",
+    "./source-types": "./src/sources/source.types.ts",
+    "./fake-source": "./src/sources/fake-source.ts",
+    "./api-source": "./src/sources/api-source.ts",
+    "./file-source": "./src/sources/file-source.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",

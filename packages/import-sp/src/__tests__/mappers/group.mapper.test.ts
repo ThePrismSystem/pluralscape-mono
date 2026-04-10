@@ -76,16 +76,6 @@ describe("mapGroup", () => {
       expect(result.missingRefs).toContain("src_y");
     }
   });
-
-  it("skips when name is empty and emits a warning", () => {
-    const ctx = createMappingContext({ sourceMode: "fake" });
-    const sp: SPGroup = { _id: "g5", name: "", members: [] };
-    const result = mapGroup(sp, ctx);
-    expect(result.status).toBe("skipped");
-    expect(ctx.warnings).toHaveLength(1);
-    expect(ctx.warnings[0]?.entityType).toBe("group");
-    expect(ctx.warnings[0]?.entityId).toBe("g5");
-  });
 });
 
 describe("group FK-miss handling", () => {

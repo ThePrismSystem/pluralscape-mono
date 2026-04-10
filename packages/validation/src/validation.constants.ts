@@ -19,6 +19,13 @@ export const MAX_ENCRYPTED_DATA_SIZE = 87_382;
 export const MAX_REORDER_OPERATIONS = 100;
 
 /**
+ * Maximum entries per import-entity-ref batch lookup or upsert request.
+ * Caps payload size to keep round-trips small and prevent unbounded
+ * server-side work during mobile imports.
+ */
+export const IMPORT_ENTITY_REF_BATCH_MAX = 200;
+
+/**
  * Maximum byte length for encrypted system data fields.
  * Set to 128 KiB (half the 256 KiB global body limit) to leave room for
  * other fields and JSON overhead.
@@ -131,6 +138,9 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "friend.bucket-assigned",
   "friend.bucket-unassigned",
 ] as const;
+
+/** Maximum length for Pluralscape entity IDs in import entity refs. Matches DB ID_MAX_LENGTH (50). */
+export const MAX_PLURALSCAPE_ENTITY_ID_LENGTH = 50;
 
 /** Maximum character length for device push tokens (APNs/FCM/web-push). */
 export const MAX_DEVICE_TOKEN_LENGTH = 512;

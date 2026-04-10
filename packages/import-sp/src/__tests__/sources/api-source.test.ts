@@ -6,7 +6,7 @@ import {
   createApiImportSource,
 } from "../../sources/api-source.js";
 
-import type { ImportSource } from "../../sources/source.types.js";
+import type { ImportDataSource } from "../../sources/source.types.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -17,7 +17,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 /** Drain the `members` iterator of an import source into an array of source IDs. */
-async function drainMembers(source: ImportSource): Promise<string[]> {
+async function drainMembers(source: ImportDataSource): Promise<string[]> {
   const out: string[] = [];
   for await (const doc of source.iterate("members")) {
     out.push(doc.sourceId);

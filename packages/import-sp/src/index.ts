@@ -6,7 +6,7 @@
  * - `runImport` — the orchestrator that walks the dependency order and
  *   delegates persistence to a caller-supplied {@link Persister}.
  * - Source factories (`createApiImportSource`, `createFileImportSource`,
- *   `createFakeImportSource`) and the `ImportSource` boundary type.
+ *   `createFakeImportSource`) and the `ImportDataSource` boundary type.
  * - Persistence boundary types (`Persister`, `PersistableEntity`,
  *   `PersisterUpsertResult`, `AvatarFetcher`, `AvatarFetchResult`).
  * - Engine helpers (`createMappingContext`, `DEPENDENCY_ORDER`,
@@ -45,7 +45,7 @@ export {
 export type {
   FakeSourceData,
   FileImportSourceArgs,
-  ImportSource,
+  ImportDataSource,
   SourceDocument,
   SourceMode,
   SpCollectionName,

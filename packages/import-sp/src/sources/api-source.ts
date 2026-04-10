@@ -6,7 +6,7 @@ import {
   SP_API_REQUEST_TIMEOUT_MS,
 } from "../import-sp.constants.js";
 
-import type { ImportSource, SourceDocument } from "./source.types.js";
+import type { ImportDataSource, SourceDocument } from "./source.types.js";
 import type { SpCollectionName } from "./sp-collections.js";
 
 /**
@@ -91,7 +91,7 @@ function backoffFor(attempt: number): number {
 }
 
 /**
- * Create an `ImportSource` that streams a Simply Plural account by paginating
+ * Create an `ImportDataSource` that streams a Simply Plural account by paginating
  * its REST API. The constructor is synchronous; network I/O happens lazily
  * during `iterate()`.
  *
@@ -113,7 +113,7 @@ function backoffFor(attempt: number): number {
  * **not** stop on a short page because SP's exact page-size semantics have not
  * been verified end-to-end yet.
  */
-export function createApiImportSource(input: ApiSourceInput): ImportSource {
+export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
   const pageSize = input.pageSize ?? SP_API_PAGE_SIZE;
 
   async function fetchWithRetry(url: string): Promise<unknown[]> {

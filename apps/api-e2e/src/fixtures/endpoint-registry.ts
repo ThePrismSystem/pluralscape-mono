@@ -439,6 +439,51 @@ export const PROTECTED_ENDPOINTS: EndpointDescriptor[] = [
       return { url: `/v1/systems/${systemId}/structure/entities/${entity.id}` };
     },
   },
+
+  // ── Import entity ref batch endpoints ──────────────────────────────
+  {
+    method: "POST",
+    label: "POST /v1/systems/:id/import-entity-refs/lookup-batch",
+    systemScoped: true,
+    resolve: async (
+      request: APIRequestContext,
+      headers: AuthHeaders,
+    ): Promise<{ url: string; body?: unknown }> => {
+      const systemId = await getSystemId(request, headers);
+      return {
+        url: `/v1/systems/${systemId}/import-entity-refs/lookup-batch`,
+        body: {
+          source: "simply-plural",
+          sourceEntityType: "member",
+          sourceEntityIds: ["sp-member-idor-probe"],
+        },
+      };
+    },
+  },
+  {
+    method: "POST",
+    label: "POST /v1/systems/:id/import-entity-refs/upsert-batch",
+    systemScoped: true,
+    resolve: async (
+      request: APIRequestContext,
+      headers: AuthHeaders,
+    ): Promise<{ url: string; body?: unknown }> => {
+      const systemId = await getSystemId(request, headers);
+      return {
+        url: `/v1/systems/${systemId}/import-entity-refs/upsert-batch`,
+        body: {
+          source: "simply-plural",
+          entries: [
+            {
+              sourceEntityType: "member",
+              sourceEntityId: "sp-member-idor-probe",
+              pluralscapeEntityId: "mbr_00000000-0000-0000-0000-000000000000",
+            },
+          ],
+        },
+      };
+    },
+  },
 ];
 
 /** Subset: only system-scoped endpoints (for IDOR tests). */

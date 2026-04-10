@@ -211,6 +211,9 @@ importers:
       '@pluralscape/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@pluralscape/import-sp':
+        specifier: workspace:*
+        version: link:../../packages/import-sp
       '@pluralscape/sync':
         specifier: workspace:*
         version: link:../../packages/sync
@@ -232,6 +235,9 @@ importers:
       expo-constants:
         specifier: ^55.0.9
         version: 55.0.11(expo@55.0.11)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(typescript@6.0.2)
+      expo-document-picker:
+        specifier: ~14.0.0
+        version: 14.0.8(expo@55.0.11)
       expo-linking:
         specifier: ~55.0.7
         version: 55.0.11(expo@55.0.11)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@6.0.2)
@@ -253,6 +259,9 @@ importers:
       expo-status-bar:
         specifier: ~55.0.4
         version: 55.0.5(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)
+      jszip:
+        specifier: ^3.10.1
+        version: 3.10.1
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -4530,6 +4539,11 @@ packages:
     peerDependencies:
       expo: '*'
       react-native: '*'
+
+  expo-document-picker@14.0.8:
+    resolution: {integrity: sha512-3tyQKpPqWWFlI8p9RiMX1+T1Zge5mEKeBuXWp1h8PEItFMUDSiOJbQ112sfdC6Hxt8wSxreV9bCRl/NgBdt+fA==}
+    peerDependencies:
+      expo: '*'
 
   expo-file-system@55.0.14:
     resolution: {integrity: sha512-73ukP72uJX+xr5k6zD0Z+rYZXU3a5gZabo0oUcNHMZvqdAxWDfYbwz/0aWy+D0t9R6EYRK2uA9UZhS0NA9iq+Q==}
@@ -11603,6 +11617,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
       - typescript
+
+  expo-document-picker@14.0.8(expo@55.0.11):
+    dependencies:
+      expo: 55.0.11(@babel/core@7.29.0)(@expo/dom-webview@55.0.3)(@expo/metro-runtime@55.0.9)(expo-router@55.0.10)(react-dom@19.2.4(react@19.2.4))(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4))(react@19.2.4)(typescript@6.0.2)
 
   expo-file-system@55.0.14(expo@55.0.11)(react-native@0.84.1(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.4)):
     dependencies:
