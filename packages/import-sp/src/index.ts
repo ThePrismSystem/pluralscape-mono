@@ -18,28 +18,35 @@
  * implementation detail of the engine; the engine's caller only sees the
  * results via the persister boundary.
  */
-export { DEPENDENCY_ORDER } from "./engine/dependency-order.js";
-export { classifyError, isFatalError, ResumeCutoffNotFoundError } from "./engine/engine-errors.js";
-export { collectionToEntityType, entityTypeToCollection } from "./engine/entity-type-map.js";
-export { runImport } from "./engine/import-engine.js";
-export type { ImportRunOutcome, ImportRunResult, RunImportArgs } from "./engine/import-engine.js";
+export {
+  classifyError,
+  collectionToEntityType,
+  DEPENDENCY_ORDER,
+  entityTypeToCollection,
+  isFatalError,
+  ResumeCutoffNotFoundError,
+  runImport,
+} from "./engine/index.js";
+export type { ImportRunOutcome, ImportRunResult, RunImportArgs } from "./engine/index.js";
 export { createMappingContext } from "./mappers/context.js";
 export type { IdTranslationEntry, MappingContext, MappingWarning } from "./mappers/context.js";
-export type { AvatarFetcher, AvatarFetchResult } from "./persistence/avatar-fetcher.types.js";
-export type {
-  PersistableEntity,
-  Persister,
-  PersisterUpsertResult,
-} from "./persistence/persister.types.js";
+export type { AvatarFetcher, AvatarFetchResult } from "./persistence/index.js";
+export type { PersistableEntity, Persister, PersisterUpsertResult } from "./persistence/index.js";
 export {
   ApiSourceTokenRejectedError,
   ApiSourceTransientError,
   createApiImportSource,
-} from "./sources/api-source.js";
-export { createFakeImportSource } from "./sources/fake-source.js";
-export type { FakeSourceData } from "./sources/fake-source.js";
-export { createFileImportSource, FileSourceParseError } from "./sources/file-source.js";
-export type { FileImportSourceArgs } from "./sources/file-source.js";
-export type { ImportSource, SourceDocument, SourceMode } from "./sources/source.types.js";
-export { SP_COLLECTION_NAMES, isSpCollectionName } from "./sources/sp-collections.js";
-export type { SpCollectionName } from "./sources/sp-collections.js";
+  createFakeImportSource,
+  createFileImportSource,
+  FileSourceParseError,
+  isSpCollectionName,
+  SP_COLLECTION_NAMES,
+} from "./sources/index.js";
+export type {
+  FakeSourceData,
+  FileImportSourceArgs,
+  ImportSource,
+  SourceDocument,
+  SourceMode,
+  SpCollectionName,
+} from "./sources/index.js";
