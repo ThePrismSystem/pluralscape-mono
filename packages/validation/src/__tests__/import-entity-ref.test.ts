@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { IMPORT_ENTITY_REF_BATCH_MAX } from "../validation.constants.js";
-
 import {
   ImportEntityRefLookupBatchBodySchema,
   ImportEntityRefQuerySchema,
   ImportEntityRefUpsertBatchBodySchema,
 } from "../import-entity-ref.js";
+import { IMPORT_ENTITY_REF_BATCH_MAX } from "../validation.constants.js";
 
 describe("ImportEntityRefQuerySchema", () => {
   it("accepts empty query", () => {

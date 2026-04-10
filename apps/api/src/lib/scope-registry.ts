@@ -683,8 +683,6 @@ const TRPC_ENTRIES: readonly [string, RequiredScope][] = [
   // importEntityRef
   ["importEntityRef.list", "read:system"],
   ["importEntityRef.lookup", "read:system"],
-  ["importEntityRef.lookupBatch", "read:system"],
-  ["importEntityRef.upsertBatch", "write:system"],
 
   // deviceToken
   ["deviceToken.register", "write:notifications"],

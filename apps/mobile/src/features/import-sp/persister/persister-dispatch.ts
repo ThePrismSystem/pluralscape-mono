@@ -20,7 +20,6 @@ import { chatMessagePersister } from "./chat-message.persister.js";
 import { customFrontPersister } from "./custom-front.persister.js";
 import { fieldDefinitionPersister } from "./field-definition.persister.js";
 import { fieldValuePersister } from "./field-value.persister.js";
-import { friendPersister } from "./friend.persister.js";
 import { frontingCommentPersister } from "./fronting-comment.persister.js";
 import { frontingSessionPersister } from "./fronting-session.persister.js";
 import { groupPersister } from "./group.persister.js";
@@ -79,7 +78,6 @@ export const PERSISTER_DISPATCH: Readonly<Record<ImportEntityType, EntityPersist
   poll: pollPersister,
   timer: createRejectingPersister("timer"),
   "privacy-bucket": privacyBucketPersister,
-  friend: friendPersister,
   "system-profile": systemProfilePersister,
   "system-settings": systemSettingsPersister,
   unknown: createRejectingPersister("unknown"),

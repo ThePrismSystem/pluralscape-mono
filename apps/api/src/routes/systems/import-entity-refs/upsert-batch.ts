@@ -23,7 +23,7 @@ upsertBatchRoute.use("*", createCategoryRateLimiter("write"));
  * on conflict via the unique index on
  * (account_id, system_id, source, source_entity_type, source_entity_id).
  */
-upsertBatchRoute.post("/upsert-batch", async (c) => {
+upsertBatchRoute.post("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const rawBody = await parseJsonBody(c);

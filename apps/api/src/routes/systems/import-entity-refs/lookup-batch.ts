@@ -22,7 +22,7 @@ lookupBatchRoute.use("*", createCategoryRateLimiter("readDefault"));
  * POST is used (not GET) because the payload is an array that may exceed
  * practical query-string limits during mobile imports.
  */
-lookupBatchRoute.post("/lookup-batch", async (c) => {
+lookupBatchRoute.post("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const rawBody = await parseJsonBody(c);

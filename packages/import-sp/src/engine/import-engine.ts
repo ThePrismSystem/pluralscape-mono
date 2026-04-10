@@ -45,7 +45,7 @@ import { collectionToEntityType, entityTypeToCollection } from "./entity-type-ma
 import { MAPPER_DISPATCH } from "./mapper-dispatch.js";
 
 import type { PersistableEntity, Persister } from "../persistence/persister.types.js";
-import type { ImportSource } from "../sources/source.types.js";
+import type { ImportDataSource } from "../sources/source.types.js";
 import type { SpCollectionName } from "../sources/sp-collections.js";
 import type {
   ImportAvatarMode,
@@ -53,6 +53,15 @@ import type {
   ImportCollectionType,
   ImportError,
 } from "@pluralscape/types";
+
+/**
+ * Check whether the signal has been aborted. Isolated into a function so
+ * TypeScript's control-flow narrowing cannot eliminate the second check
+ * inside the document loop -- `AbortSignal.aborted` is mutable.
+ */
+function isAborted(signal: AbortSignal | undefined): boolean {
+  return signal?.aborted === true;
+}
 
 /** Build a single-document `AdvanceDelta` for one of the four terminal outcomes. */
 function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelta {
@@ -107,7 +116,7 @@ function completed(
 }
 
 export interface RunImportArgs {
-  readonly source: ImportSource;
+  readonly source: ImportDataSource;
   readonly persister: Persister;
   readonly initialCheckpoint?: ImportCheckpointState;
   readonly options: {
@@ -115,6 +124,7 @@ export interface RunImportArgs {
     readonly avatarMode: ImportAvatarMode;
   };
   readonly onProgress: (state: ImportCheckpointState) => Promise<void>;
+  readonly abortSignal?: AbortSignal;
 }
 
 export type ImportRunOutcome = "completed" | "aborted";
@@ -253,9 +263,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     // When resuming into members directly we cannot know whether the previous
     // run already synthesized the legacy buckets. The persister's idempotency
     // guarantees re-synthesis is safe, so we conservatively re-run.
-    let privacyBucketsMapped = state.checkpoint.completedCollections.includes("privacy-bucket")
-      ? 1
-      : 0;
+    let privacyBucketsMapped = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
 
     for (
       let collectionIndex = safeStartIndex;
@@ -264,6 +272,14 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     ) {
       const collection: SpCollectionName | undefined = DEPENDENCY_ORDER[collectionIndex];
       if (collection === undefined) continue;
+      if (isAborted(args.abortSignal)) {
+        return {
+          finalState: state,
+          warnings: ctx.warnings,
+          errors,
+          outcome: "aborted" as const,
+        };
+      }
       const entityType = collectionToEntityType(collection);
 
       if (options.selectedCategories[entityType] === false) {
@@ -416,6 +432,15 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
             await persister.flush();
             await onProgress(state);
             docsSinceCheckpoint = 0;
+          }
+
+          if (isAborted(args.abortSignal)) {
+            return {
+              finalState: state,
+              warnings: ctx.warnings,
+              errors,
+              outcome: "aborted" as const,
+            };
           }
         }
       } catch (thrown) {

@@ -52,7 +52,7 @@ export interface LookupImportEntityRefInput {
 }
 
 export interface LookupImportEntityRefBatchInput {
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly sourceEntityType: ImportEntityType;
   readonly sourceEntityIds: readonly string[];
 }
@@ -64,7 +64,7 @@ export interface UpsertImportEntityRefBatchEntry {
 }
 
 export interface UpsertImportEntityRefBatchInput {
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly entries: readonly UpsertImportEntityRefBatchEntry[];
 }
 

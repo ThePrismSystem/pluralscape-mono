@@ -27,7 +27,6 @@ const SP_ENGINE_EMITS: readonly ImportEntityType[] = [
   "channel",
   "chat-message",
   "board-message",
-  "friend",
   "field-value",
 ];
 

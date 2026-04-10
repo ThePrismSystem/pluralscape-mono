@@ -39,6 +39,7 @@ import type { ImportDataSource } from "@pluralscape/import-sp/source-types";
 import type {
   ImportAvatarMode,
   ImportCheckpointState,
+  ImportCollectionType,
   ImportError,
   ImportJobId,
 } from "@pluralscape/types";
@@ -50,7 +51,7 @@ const MAX_PROGRESS_PERCENT = 100;
 
 /** Common options a caller supplies to any start-import path. */
 export interface ImportStartCommonOptions {
-  readonly selectedCategories: Partial<Record<string, boolean>>;
+  readonly selectedCategories: Partial<Record<ImportCollectionType, boolean>>;
   readonly avatarMode: ImportAvatarMode;
   /** Whether to persist the SP API token to SecureStore after a successful start. */
   readonly persistToken?: boolean;

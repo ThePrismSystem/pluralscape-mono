@@ -88,7 +88,6 @@ async function tryUploadAvatar(
       entityId: memberSourceId,
       message: `avatar fetch failed: ${result.message}`,
       fatal: false,
-      recoverable: false,
     });
     return null;
   }
@@ -104,7 +103,6 @@ async function tryUploadAvatar(
       entityId: memberSourceId,
       message: `avatar upload failed: ${err instanceof Error ? err.message : String(err)}`,
       fatal: false,
-      recoverable: false,
     });
     return null;
   }
@@ -125,7 +123,6 @@ async function fanOutFieldValues(
         entityId: `${fv.memberSourceId}/${fv.fieldSourceId}`,
         message: `field-value references unresolved field ${fv.fieldSourceId}`,
         fatal: false,
-        recoverable: false,
       });
       continue;
     }
@@ -142,7 +139,6 @@ async function fanOutFieldValues(
         entityId: `${fv.memberSourceId}/${fv.fieldSourceId}`,
         message: `field.setValue failed: ${err instanceof Error ? err.message : String(err)}`,
         fatal: false,
-        recoverable: false,
       });
     }
   }

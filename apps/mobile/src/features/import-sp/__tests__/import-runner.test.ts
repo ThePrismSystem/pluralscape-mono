@@ -206,6 +206,7 @@ describe("runSpImport", () => {
         await Promise.resolve();
         throw fatalError;
       },
+      listCollections: () => Promise.resolve([]),
       close: () => Promise.resolve(),
     };
 

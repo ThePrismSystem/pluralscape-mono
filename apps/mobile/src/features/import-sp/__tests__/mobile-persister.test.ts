@@ -78,7 +78,6 @@ describe("createMobilePersister — construction", () => {
       entityId: "sp_1",
       message: "test failure",
       fatal: false,
-      recoverable: false,
     };
 
     for (let i = 0; i < 10; i += 1) {

@@ -17,7 +17,7 @@ import clarinet from "clarinet";
 
 import { isSpCollectionName, type SpCollectionName } from "./sp-collections.js";
 
-import type { ImportSource, SourceDocument } from "./source.types.js";
+import type { ImportDataSource, SourceDocument } from "./source.types.js";
 
 export class FileSourceParseError extends Error {
   public readonly position: number | null;
@@ -51,7 +51,7 @@ function wrapParseError(err: unknown, position: number): FileSourceParseError {
   return new FileSourceParseError(message, position, { cause: err });
 }
 
-export function createFileImportSource(args: FileImportSourceArgs): ImportSource {
+export function createFileImportSource(args: FileImportSourceArgs): ImportDataSource {
   let prescan: PrescanState | null = null;
 
   async function parseStream(): Promise<PrescanState> {

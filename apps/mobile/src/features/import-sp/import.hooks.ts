@@ -52,6 +52,7 @@ import type { ImportDataSource } from "@pluralscape/import-sp/source-types";
 import type {
   ImportCheckpointState,
   ImportEntityType,
+  ImportError,
   ImportJob,
   ImportJobId,
   ImportJobStatus,
@@ -175,6 +176,7 @@ function createPlaceholderSource(mode: "api" | "file"): ImportDataSource {
     async *iterate() {
       await Promise.resolve();
     },
+    listCollections: () => Promise.resolve([]),
     close: () => Promise.resolve(),
   };
 }
@@ -484,13 +486,7 @@ function deriveProgressSnapshot(job: ImportJobRow): ImportProgressSnapshot {
  */
 export interface ImportSummary {
   readonly perCollection: ImportCheckpointState["totals"]["perCollection"];
-  readonly errors: readonly {
-    readonly entityType: ImportEntityType;
-    readonly entityId: string | null;
-    readonly message: string;
-    readonly fatal: boolean;
-    readonly recoverable: boolean;
-  }[];
+  readonly errors: readonly ImportError[];
   readonly status: ImportJobStatus;
   readonly completedAt: number | null;
 }
@@ -630,31 +626,24 @@ export function useCancelImport(
   const updateAsync = updateMutation.mutateAsync;
   const currentJob = getQuery.data;
 
+  const updateJobFn = useMemo(
+    () => buildUpdateJobFn(activeSystemId, updateAsync),
+    [activeSystemId, updateAsync],
+  );
+
   const cancel = useCallback(async (): Promise<void> => {
     setIsCancelling(true);
     try {
       abortController?.abort();
-      const existingCheckpoint = currentJob?.checkpointState ?? null;
-      const clone =
-        existingCheckpoint !== null
-          ? {
-              ...existingCheckpoint,
-              checkpoint: {
-                ...existingCheckpoint.checkpoint,
-                completedCollections: [...existingCheckpoint.checkpoint.completedCollections],
-              },
-            }
-          : null;
-      await updateAsync({
-        systemId: activeSystemId,
-        importJobId: jobId,
+      const checkpoint = currentJob?.checkpointState ?? undefined;
+      await updateJobFn(jobId, {
         status: "failed",
-        ...(clone !== null ? { checkpointState: clone } : {}),
+        ...(checkpoint !== undefined ? { checkpointState: checkpoint } : {}),
       });
     } finally {
       setIsCancelling(false);
     }
-  }, [abortController, activeSystemId, currentJob, jobId, updateAsync]);
+  }, [abortController, currentJob, jobId, updateJobFn]);
 
   return { cancel, isCancelling };
 }

@@ -8,7 +8,7 @@ import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
 import type { Persister, PersistableEntity } from "../../persistence/persister.types.js";
-import type { ImportSource } from "../../sources/source.types.js";
+import type { ImportDataSource } from "../../sources/source.types.js";
 import type { ImportCheckpointState, ImportCollectionType, ImportError } from "@pluralscape/types";
 
 interface RecordingPersister extends Persister {
@@ -744,7 +744,7 @@ describe("runImport — source.close() lifecycle", () => {
   it("calls source.close() on successful completion", async () => {
     let closed = false;
     const source = createFakeImportSource({});
-    const wrappedSource: ImportSource = {
+    const wrappedSource: ImportDataSource = {
       ...source,
       async close() {
         await source.close();
@@ -763,7 +763,7 @@ describe("runImport — source.close() lifecycle", () => {
 
   it("calls source.close() even when iteration throws", async () => {
     let closed = false;
-    const source: ImportSource = {
+    const source: ImportDataSource = {
       mode: "fake",
       listCollections() {
         return Promise.resolve(["members"]);

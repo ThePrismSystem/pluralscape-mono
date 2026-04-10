@@ -20,7 +20,7 @@
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
-import type { ImportError, ImportSource, SystemId } from "@pluralscape/types";
+import type { ImportError, ImportSourceFormat, SystemId } from "@pluralscape/types";
 
 // ── Versioned operations ─────────────────────────────────────────────
 
@@ -121,7 +121,7 @@ export type PersisterProcBlobUpload = (
 export type PersisterProcRefLookupBatch = (
   systemId: SystemId,
   input: {
-    readonly source: ImportSource;
+    readonly source: ImportSourceFormat;
     readonly refs: readonly {
       readonly sourceEntityType: string;
       readonly sourceEntityId: string;
@@ -131,7 +131,7 @@ export type PersisterProcRefLookupBatch = (
 export type PersisterProcRefUpsertBatch = (
   systemId: SystemId,
   input: {
-    readonly source: ImportSource;
+    readonly source: ImportSourceFormat;
     readonly refs: readonly {
       readonly sourceEntityType: string;
       readonly sourceEntityId: string;
@@ -244,7 +244,7 @@ export interface IdTranslationTable {
 /** Shared state and collaborators passed to every entity persister call. */
 export interface PersisterContext {
   readonly systemId: SystemId;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly masterKey: KdfMasterKey;
   readonly api: PersisterApi;
   readonly idTranslation: IdTranslationTable;

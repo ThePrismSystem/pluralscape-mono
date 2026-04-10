@@ -15,7 +15,7 @@ import type {
 } from "../persister/persister.types.js";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
-import type { ImportSource, SystemId } from "@pluralscape/types";
+import type { ImportSourceFormat, SystemId } from "@pluralscape/types";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ const MASTER_KEY_LENGTH = 32;
 const MASTER_KEY_FILL_BYTE = 0xab;
 
 export const TEST_SYSTEM_ID = "sys_persister_test" as SystemId;
-export const TEST_SOURCE: ImportSource = "simply-plural";
+export const TEST_SOURCE: ImportSourceFormat = "simply-plural";
 
 // ── Master key helper ────────────────────────────────────────────────
 
@@ -211,7 +211,7 @@ export function makeTestPersisterApi(): PersisterApi {
 
 export interface MakeTestContextOverrides {
   readonly systemId?: SystemId;
-  readonly source?: ImportSource;
+  readonly source?: ImportSourceFormat;
   readonly masterKey?: KdfMasterKey;
   readonly api?: PersisterApi;
   readonly idTranslation?: IdTranslationTable;

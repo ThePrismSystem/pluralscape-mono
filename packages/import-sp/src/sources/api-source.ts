@@ -91,7 +91,7 @@ function backoffFor(attempt: number): number {
 }
 
 /**
- * Create an `ImportSource` that streams a Simply Plural account by paginating
+ * Create an `ImportDataSource` that streams a Simply Plural account by paginating
  * its REST API. The constructor is synchronous; network I/O happens lazily
  * during `iterate()`.
  *

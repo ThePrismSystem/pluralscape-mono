@@ -182,30 +182,6 @@ describe("ImportError", () => {
     expectTypeOf<ImportError["entityId"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ImportError["message"]>().toBeString();
     expectTypeOf<ImportError["fatal"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ImportError["recoverable"]>().toEqualTypeOf<boolean>();
-  });
-
-  it("has a recoverable flag defaulting false in construction", () => {
-    const err: ImportError = {
-      entityType: "member",
-      entityId: "abc",
-      message: "validation failed",
-      fatal: false,
-      recoverable: false,
-    };
-    expectTypeOf(err.recoverable).toEqualTypeOf<boolean>();
-  });
-
-  it("allows fatal recoverable errors (token rejected, network unreachable)", () => {
-    const err: ImportError = {
-      entityType: "unknown",
-      entityId: null,
-      message: "SP token rejected",
-      fatal: true,
-      recoverable: true,
-    };
-    expectTypeOf(err.fatal).toEqualTypeOf<boolean>();
-    expectTypeOf(err.recoverable).toEqualTypeOf<boolean>();
   });
 
   it("non-fatal errors do not carry recoverable", () => {
@@ -218,7 +194,7 @@ describe("ImportError", () => {
     expectTypeOf(err.fatal).toExtend<boolean>();
   });
 
-  it("allows fatal recoverable errors (token rejected, network unreachable)", () => {
+  it("fatal errors carry recoverable boolean", () => {
     const err: ImportError = {
       entityType: "unknown",
       entityId: null,
@@ -226,7 +202,8 @@ describe("ImportError", () => {
       fatal: true,
       recoverable: true,
     };
-    expectTypeOf(err.fatal).toExtend<boolean>();
+    expectTypeOf(err.fatal).toEqualTypeOf<true>();
+    expectTypeOf(err.recoverable).toEqualTypeOf<boolean>();
   });
 });
 

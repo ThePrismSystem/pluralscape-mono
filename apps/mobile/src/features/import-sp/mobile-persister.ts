@@ -31,7 +31,7 @@ import type {
   Persister,
   PersisterUpsertResult,
 } from "@pluralscape/import-sp/persister-types";
-import type { ImportError, ImportSource, SystemId } from "@pluralscape/types";
+import type { ImportError, ImportSourceFormat, SystemId } from "@pluralscape/types";
 
 // ── Preload hint shape ───────────────────────────────────────────────
 
@@ -59,7 +59,7 @@ interface QueuedRefUpsert {
 /** Arguments for `createMobilePersister`. */
 export interface CreateMobilePersisterArgs {
   readonly systemId: SystemId;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly masterKey: KdfMasterKey;
   readonly api: PersisterApi;
   readonly avatarFetcher: AvatarFetcher;
