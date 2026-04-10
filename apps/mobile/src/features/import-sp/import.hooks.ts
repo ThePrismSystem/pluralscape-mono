@@ -48,7 +48,7 @@ import type { DataQuery } from "../../hooks/types.js";
 import type { RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
-import type { ImportSource } from "@pluralscape/import-sp/source-types";
+import type { ImportDataSource } from "@pluralscape/import-sp/source-types";
 import type {
   ImportCheckpointState,
   ImportEntityType,
@@ -167,7 +167,7 @@ function createPlaceholderPersisterApi(): PersisterApi {
  * hook tests mock `runSpImport` entirely — exercising the real source
  * factories from the hook happens in Phase E.
  */
-function createPlaceholderSource(mode: "api" | "file"): ImportSource {
+function createPlaceholderSource(mode: "api" | "file"): ImportDataSource {
   return {
     mode,
     async *iterate() {
@@ -183,7 +183,7 @@ interface StartOrchestrationArgs {
   readonly importJobId: ImportJobId;
   readonly systemId: SystemId;
   readonly masterKey: KdfMasterKey;
-  readonly source: ImportSource;
+  readonly source: ImportDataSource;
   readonly avatarFetcher: AvatarFetcher;
   readonly options: ImportStartCommonOptions;
   readonly initialCheckpoint?: ImportCheckpointState;

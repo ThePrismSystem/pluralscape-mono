@@ -31,7 +31,7 @@ import { runImport } from "@pluralscape/import-sp/engine";
 
 import type { MobilePersister } from "./mobile-persister.js";
 import type { ImportRunResult } from "@pluralscape/import-sp/engine";
-import type { ImportSource } from "@pluralscape/import-sp/source-types";
+import type { ImportDataSource } from "@pluralscape/import-sp/source-types";
 import type {
   ImportAvatarMode,
   ImportCheckpointState,
@@ -73,7 +73,7 @@ export type UpdateJobFn = (importJobId: ImportJobId, patch: ImportJobUpdatePatch
 
 /** Arguments for `runSpImport`. */
 export interface RunSpImportArgs {
-  readonly source: ImportSource;
+  readonly source: ImportDataSource;
   readonly persister: MobilePersister;
   readonly importJobId: ImportJobId;
   readonly options: ImportStartCommonOptions;
