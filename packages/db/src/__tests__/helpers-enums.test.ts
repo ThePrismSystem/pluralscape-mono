@@ -1,3 +1,8 @@
+import {
+  IMPORT_ENTITY_TYPES as TYPES_SSOT,
+  IMPORT_JOB_STATUSES as STATUSES_SSOT,
+  IMPORT_SOURCES as SOURCES_SSOT,
+} from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import { enumCheck } from "../helpers/check.js";
@@ -183,7 +188,7 @@ describe("enum arrays", () => {
     expect(BLOB_PURPOSES).toContain("littles-safe-mode");
   });
 
-  it("IMPORT_SOURCES matches ImportSource union", () => {
+  it("IMPORT_SOURCES matches ImportSourceFormat union", () => {
     expect(IMPORT_SOURCES).toEqual(["simply-plural", "pluralkit", "pluralscape"]);
   });
 
@@ -380,18 +385,40 @@ describe("IMPORT_ENTITY_TYPES", () => {
     const expected: readonly ImportEntityType[] = [
       "member",
       "group",
+      "custom-front",
       "fronting-session",
+      "fronting-comment",
       "switch",
       "custom-field",
+      "field-definition",
+      "field-value",
       "note",
+      "journal-entry",
       "chat-message",
       "board-message",
+      "channel-category",
+      "channel",
       "poll",
       "timer",
       "privacy-bucket",
-      "friend",
+      "system-profile",
+      "system-settings",
       "unknown",
     ];
     expect([...IMPORT_ENTITY_TYPES].sort()).toEqual([...expected].sort());
+  });
+});
+
+describe("import enum re-exports (drift guard)", () => {
+  it("IMPORT_ENTITY_TYPES is the identity re-export from @pluralscape/types", () => {
+    expect(IMPORT_ENTITY_TYPES).toBe(TYPES_SSOT);
+  });
+
+  it("IMPORT_JOB_STATUSES is the identity re-export from @pluralscape/types", () => {
+    expect(IMPORT_JOB_STATUSES).toBe(STATUSES_SSOT);
+  });
+
+  it("IMPORT_SOURCES is the identity re-export from @pluralscape/types", () => {
+    expect(IMPORT_SOURCES).toBe(SOURCES_SSOT);
   });
 });

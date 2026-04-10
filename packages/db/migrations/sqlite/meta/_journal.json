@@ -29,6 +29,13 @@
       "when": 1775730640345,
       "tag": "0003_panoramic_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1775768160314,
+      "tag": "0004_special_sally_floyd",
+      "breakpoints": true
     }
   ]
 }

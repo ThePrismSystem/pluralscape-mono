@@ -4,13 +4,17 @@ import type {
   BlobId,
   BoardMessageId,
   BucketId,
+  ChannelId,
+  CustomFrontId,
   ExportRequestId,
   FieldDefinitionId,
-  FriendConnectionId,
+  FieldValueId,
+  FrontingCommentId,
   FrontingSessionId,
   GroupId,
   ImportEntityRefId,
   ImportJobId,
+  JournalEntryId,
   MemberId,
   MessageId,
   NoteId,
@@ -24,123 +28,6 @@ import type { UnixMillis } from "./timestamps.js";
 // Types for data import, export, and account management.
 // Import payloads use plain string IDs and number timestamps
 // (external format shapes, not internal branded types).
-
-// ── Simply Plural import payloads ───────────────────────────────────
-
-/** A member as represented in a Simply Plural export file. */
-export interface SPImportMember {
-  readonly id: string;
-  readonly name: string;
-  readonly pronouns: string | null;
-  readonly description: string | null;
-  readonly colors: readonly string[];
-  readonly avatarUrl: string | null;
-  readonly createdAt: number;
-}
-
-/** A group as represented in a Simply Plural export file. */
-export interface SPImportGroup {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string | null;
-  readonly memberIds: readonly string[];
-}
-
-/** A fronting session as represented in a Simply Plural export file. */
-export interface SPImportFrontingSession {
-  readonly memberId: string;
-  readonly startedAt: number;
-  readonly endedAt: number | null;
-}
-
-/** A custom field definition from a Simply Plural export. */
-export interface SPImportCustomField {
-  readonly id: string;
-  readonly name: string;
-  readonly order: number;
-  readonly type: string;
-}
-
-/** A custom field value from a Simply Plural export. */
-export interface SPImportCustomFieldValue {
-  readonly fieldId: string;
-  readonly memberId: string;
-  readonly value: string;
-}
-
-/** A note from a Simply Plural export. */
-export interface SPImportNote {
-  readonly id: string;
-  readonly title: string;
-  readonly content: string;
-  readonly memberId: string | null;
-  readonly createdAt: number;
-  readonly updatedAt: number;
-}
-
-/** A chat message from a Simply Plural export. */
-export interface SPImportChatMessage {
-  readonly id: string;
-  readonly senderId: string;
-  readonly content: string;
-  readonly createdAt: number;
-}
-
-/** A board message from a Simply Plural export. */
-export interface SPImportBoardMessage {
-  readonly id: string;
-  readonly authorId: string;
-  readonly content: string;
-  readonly createdAt: number;
-}
-
-/** A poll from a Simply Plural export. */
-export interface SPImportPoll {
-  readonly id: string;
-  readonly title: string;
-  readonly options: readonly string[];
-  readonly createdAt: number;
-}
-
-/** A timer from a Simply Plural export. */
-export interface SPImportTimer {
-  readonly id: string;
-  readonly name: string;
-  readonly duration: number;
-  readonly createdAt: number;
-}
-
-/** A privacy bucket from a Simply Plural export. */
-export interface SPImportPrivacyBucket {
-  readonly id: string;
-  readonly name: string;
-  readonly memberIds: readonly string[];
-}
-
-/** A friend connection from a Simply Plural export. */
-export interface SPImportFriend {
-  readonly id: string;
-  /** The system ID on the Simply Plural side, not a Pluralscape account ID. */
-  readonly externalFriendId: string;
-  readonly addedAt: number;
-}
-
-/** Full Simply Plural import payload (raw MongoDB dump format). */
-export interface SPImportPayload {
-  readonly exportedAt: number;
-  readonly members: readonly SPImportMember[];
-  readonly groups: readonly SPImportGroup[];
-  readonly frontingHistory: readonly SPImportFrontingSession[];
-  readonly customFields: readonly SPImportCustomField[];
-  readonly customFieldValues: readonly SPImportCustomFieldValue[];
-  readonly notes: readonly SPImportNote[];
-  readonly chatMessages: readonly SPImportChatMessage[];
-  readonly boardMessages: readonly SPImportBoardMessage[];
-  readonly polls: readonly SPImportPoll[];
-  readonly timers: readonly SPImportTimer[];
-  readonly privacyBuckets: readonly SPImportPrivacyBucket[];
-  readonly friends: readonly SPImportFriend[];
-}
 
 // ── PluralKit import payloads ───────────────────────────────────────
 
@@ -190,7 +77,7 @@ export interface PKImportPayload {
 // ── Import job tracking ─────────────────────────────────────────────
 
 /** Source format for an import job. */
-export type ImportSource = "simply-plural" | "pluralkit" | "pluralscape";
+export type ImportSourceFormat = "simply-plural" | "pluralkit" | "pluralscape";
 
 /** Status of an import job. */
 export type ImportJobStatus = "pending" | "validating" | "importing" | "completed" | "failed";
@@ -199,16 +86,24 @@ export type ImportJobStatus = "pending" | "validating" | "importing" | "complete
 export type ImportEntityType =
   | "member"
   | "group"
+  | "custom-front"
   | "fronting-session"
+  | "fronting-comment"
   | "switch"
   | "custom-field"
+  | "field-definition"
+  | "field-value"
   | "note"
+  | "journal-entry"
   | "chat-message"
   | "board-message"
+  | "channel-category"
+  | "channel"
   | "poll"
   | "timer"
   | "privacy-bucket"
-  | "friend"
+  | "system-profile"
+  | "system-settings"
   | "unknown";
 
 /**
@@ -226,10 +121,26 @@ export interface ImportProgress {
   readonly errors: readonly ImportError[];
 }
 
+/**
+ * Structured classification for import failures and warnings.
+ *
+ * Consumers (the engine, the final report, the mobile wizard UI) use this to
+ * group issues by kind instead of parsing free-form message strings.
+ */
+export type ImportFailureKind =
+  | "fk-miss"
+  | "unknown-field"
+  | "empty-name"
+  | "dropped-collection"
+  | "warnings-truncated"
+  | "schema-mismatch"
+  | "validation-failed";
+
 interface ImportErrorBase {
   readonly entityType: ImportEntityType;
   readonly entityId: string | null;
   readonly message: string;
+  readonly kind?: ImportFailureKind;
 }
 
 /**
@@ -249,7 +160,7 @@ export interface ImportJob {
   readonly id: ImportJobId;
   readonly accountId: AccountId;
   readonly systemId: SystemId;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly status: ImportJobStatus;
   readonly progressPercent: number;
   readonly errorLog: readonly ImportError[] | null;
@@ -304,7 +215,7 @@ interface ImportEntityRefBase {
   readonly id: ImportEntityRefId;
   readonly accountId: AccountId;
   readonly systemId: SystemId;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   /** Opaque identifier from the source system (e.g., Mongo ObjectId for SP). */
   readonly sourceEntityId: string;
   readonly importedAt: UnixMillis;
@@ -319,16 +230,24 @@ interface ImportEntityRefBase {
 export interface ImportEntityTargetIdMap {
   readonly member: MemberId;
   readonly group: GroupId;
+  readonly "custom-front": CustomFrontId;
   readonly "fronting-session": FrontingSessionId;
+  readonly "fronting-comment": FrontingCommentId;
   readonly switch: string;
   readonly "custom-field": FieldDefinitionId;
+  readonly "field-definition": FieldDefinitionId;
+  readonly "field-value": FieldValueId;
   readonly note: NoteId;
+  readonly "journal-entry": JournalEntryId;
   readonly "chat-message": MessageId;
   readonly "board-message": BoardMessageId;
+  readonly "channel-category": ChannelId;
+  readonly channel: ChannelId;
   readonly poll: PollId;
   readonly timer: TimerId;
   readonly "privacy-bucket": BucketId;
-  readonly friend: FriendConnectionId;
+  readonly "system-profile": SystemId;
+  readonly "system-settings": SystemId;
   readonly unknown: string;
 }
 
@@ -442,7 +361,7 @@ export const IMPORT_SOURCES = [
   "simply-plural",
   "pluralkit",
   "pluralscape",
-] as const satisfies readonly ImportSource[];
+] as const satisfies readonly ImportSourceFormat[];
 
 export const IMPORT_JOB_STATUSES = [
   "pending",
@@ -455,32 +374,48 @@ export const IMPORT_JOB_STATUSES = [
 export const IMPORT_ENTITY_TYPES = [
   "member",
   "group",
+  "custom-front",
   "fronting-session",
+  "fronting-comment",
   "switch",
   "custom-field",
+  "field-definition",
+  "field-value",
   "note",
+  "journal-entry",
   "chat-message",
   "board-message",
+  "channel-category",
+  "channel",
   "poll",
   "timer",
   "privacy-bucket",
-  "friend",
+  "system-profile",
+  "system-settings",
   "unknown",
 ] as const satisfies readonly ImportEntityType[];
 
 export const IMPORT_COLLECTION_TYPES = [
   "member",
   "group",
+  "custom-front",
   "fronting-session",
+  "fronting-comment",
   "switch",
   "custom-field",
+  "field-definition",
+  "field-value",
   "note",
+  "journal-entry",
   "chat-message",
   "board-message",
+  "channel-category",
+  "channel",
   "poll",
   "timer",
   "privacy-bucket",
-  "friend",
+  "system-profile",
+  "system-settings",
 ] as const satisfies readonly ImportCollectionType[];
 
 export const IMPORT_AVATAR_MODES = [

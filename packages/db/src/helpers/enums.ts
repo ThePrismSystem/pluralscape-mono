@@ -7,6 +7,9 @@
 import {
   ALL_API_KEY_SCOPES,
   BUCKET_CONTENT_ENTITY_TYPES,
+  IMPORT_ENTITY_TYPES,
+  IMPORT_JOB_STATUSES,
+  IMPORT_SOURCES,
   type AccountPurgeStatus,
   type AccountType,
   type ApiKey,
@@ -42,7 +45,7 @@ import {
   type WebhookEventType,
 } from "@pluralscape/types";
 
-export { BUCKET_CONTENT_ENTITY_TYPES };
+export { BUCKET_CONTENT_ENTITY_TYPES, IMPORT_ENTITY_TYPES, IMPORT_JOB_STATUSES, IMPORT_SOURCES };
 
 export const ACCOUNT_TYPES = ["system", "viewer"] as const satisfies readonly AccountType[];
 export const KNOWN_SATURATION_LEVELS = [
@@ -455,13 +458,6 @@ export const BLOB_PURPOSES = [
   "export",
   "littles-safe-mode",
 ] as const satisfies readonly BlobPurpose[];
-export {
-  IMPORT_AVATAR_MODES,
-  IMPORT_COLLECTION_TYPES,
-  IMPORT_ENTITY_TYPES,
-  IMPORT_JOB_STATUSES,
-  IMPORT_SOURCES,
-} from "@pluralscape/types";
 export const EXPORT_FORMATS = ["json", "csv"] as const satisfies readonly ExportFormat[];
 export const EXPORT_REQUEST_STATUSES = [
   "pending",

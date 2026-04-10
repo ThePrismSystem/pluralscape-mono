@@ -26,7 +26,7 @@ import type {
   ImportJob,
   ImportJobStatus,
   ImportProgress,
-  ImportSource,
+  ImportSourceFormat,
   MemberReport,
   SystemOverviewReport,
   PKImportGroup,
@@ -35,122 +35,8 @@ import type {
   PKImportSwitch,
   PKProxyTag,
   ReportFormat,
-  SPImportBoardMessage,
-  SPImportChatMessage,
-  SPImportCustomField,
-  SPImportCustomFieldValue,
-  SPImportFriend,
-  SPImportFrontingSession,
-  SPImportGroup,
-  SPImportMember,
-  SPImportNote,
-  SPImportPayload,
-  SPImportPoll,
-  SPImportPrivacyBucket,
-  SPImportTimer,
 } from "../import-export.js";
 import type { UnixMillis } from "../timestamps.js";
-
-describe("SPImportPayload", () => {
-  it("uses plain string IDs and number timestamps", () => {
-    expectTypeOf<SPImportMember["id"]>().toBeString();
-    expectTypeOf<SPImportMember["createdAt"]>().toBeNumber();
-    expectTypeOf<SPImportMember["avatarUrl"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<SPImportGroup["id"]>().toBeString();
-    expectTypeOf<SPImportGroup["memberIds"]>().toEqualTypeOf<readonly string[]>();
-    expectTypeOf<SPImportFrontingSession["memberId"]>().toBeString();
-    expectTypeOf<SPImportFrontingSession["startedAt"]>().toBeNumber();
-    expectTypeOf<SPImportFrontingSession["endedAt"]>().toEqualTypeOf<number | null>();
-  });
-
-  it("has correct top-level structure", () => {
-    expectTypeOf<SPImportPayload["exportedAt"]>().toBeNumber();
-    expectTypeOf<SPImportPayload["members"]>().toEqualTypeOf<readonly SPImportMember[]>();
-    expectTypeOf<SPImportPayload["groups"]>().toEqualTypeOf<readonly SPImportGroup[]>();
-    expectTypeOf<SPImportPayload["frontingHistory"]>().toEqualTypeOf<
-      readonly SPImportFrontingSession[]
-    >();
-    expectTypeOf<SPImportPayload["customFields"]>().toEqualTypeOf<readonly SPImportCustomField[]>();
-    expectTypeOf<SPImportPayload["customFieldValues"]>().toEqualTypeOf<
-      readonly SPImportCustomFieldValue[]
-    >();
-    expectTypeOf<SPImportPayload["notes"]>().toEqualTypeOf<readonly SPImportNote[]>();
-    expectTypeOf<SPImportPayload["chatMessages"]>().toEqualTypeOf<readonly SPImportChatMessage[]>();
-    expectTypeOf<SPImportPayload["boardMessages"]>().toEqualTypeOf<
-      readonly SPImportBoardMessage[]
-    >();
-    expectTypeOf<SPImportPayload["polls"]>().toEqualTypeOf<readonly SPImportPoll[]>();
-    expectTypeOf<SPImportPayload["timers"]>().toEqualTypeOf<readonly SPImportTimer[]>();
-    expectTypeOf<SPImportPayload["privacyBuckets"]>().toEqualTypeOf<
-      readonly SPImportPrivacyBucket[]
-    >();
-    expectTypeOf<SPImportPayload["friends"]>().toEqualTypeOf<readonly SPImportFriend[]>();
-  });
-});
-
-describe("SP import sub-types", () => {
-  it("SPImportCustomField has correct fields", () => {
-    expectTypeOf<SPImportCustomField["id"]>().toBeString();
-    expectTypeOf<SPImportCustomField["name"]>().toBeString();
-    expectTypeOf<SPImportCustomField["order"]>().toBeNumber();
-    expectTypeOf<SPImportCustomField["type"]>().toBeString();
-  });
-
-  it("SPImportCustomFieldValue has correct fields", () => {
-    expectTypeOf<SPImportCustomFieldValue["fieldId"]>().toBeString();
-    expectTypeOf<SPImportCustomFieldValue["memberId"]>().toBeString();
-    expectTypeOf<SPImportCustomFieldValue["value"]>().toBeString();
-  });
-
-  it("SPImportNote has correct fields", () => {
-    expectTypeOf<SPImportNote["id"]>().toBeString();
-    expectTypeOf<SPImportNote["title"]>().toBeString();
-    expectTypeOf<SPImportNote["content"]>().toBeString();
-    expectTypeOf<SPImportNote["memberId"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<SPImportNote["createdAt"]>().toBeNumber();
-    expectTypeOf<SPImportNote["updatedAt"]>().toBeNumber();
-  });
-
-  it("SPImportChatMessage has correct fields", () => {
-    expectTypeOf<SPImportChatMessage["id"]>().toBeString();
-    expectTypeOf<SPImportChatMessage["senderId"]>().toBeString();
-    expectTypeOf<SPImportChatMessage["content"]>().toBeString();
-    expectTypeOf<SPImportChatMessage["createdAt"]>().toBeNumber();
-  });
-
-  it("SPImportBoardMessage has correct fields", () => {
-    expectTypeOf<SPImportBoardMessage["id"]>().toBeString();
-    expectTypeOf<SPImportBoardMessage["authorId"]>().toBeString();
-    expectTypeOf<SPImportBoardMessage["content"]>().toBeString();
-    expectTypeOf<SPImportBoardMessage["createdAt"]>().toBeNumber();
-  });
-
-  it("SPImportPoll has correct fields", () => {
-    expectTypeOf<SPImportPoll["id"]>().toBeString();
-    expectTypeOf<SPImportPoll["title"]>().toBeString();
-    expectTypeOf<SPImportPoll["options"]>().toEqualTypeOf<readonly string[]>();
-    expectTypeOf<SPImportPoll["createdAt"]>().toBeNumber();
-  });
-
-  it("SPImportTimer has correct fields", () => {
-    expectTypeOf<SPImportTimer["id"]>().toBeString();
-    expectTypeOf<SPImportTimer["name"]>().toBeString();
-    expectTypeOf<SPImportTimer["duration"]>().toBeNumber();
-    expectTypeOf<SPImportTimer["createdAt"]>().toBeNumber();
-  });
-
-  it("SPImportPrivacyBucket has correct fields", () => {
-    expectTypeOf<SPImportPrivacyBucket["id"]>().toBeString();
-    expectTypeOf<SPImportPrivacyBucket["name"]>().toBeString();
-    expectTypeOf<SPImportPrivacyBucket["memberIds"]>().toEqualTypeOf<readonly string[]>();
-  });
-
-  it("SPImportFriend has correct fields", () => {
-    expectTypeOf<SPImportFriend["id"]>().toBeString();
-    expectTypeOf<SPImportFriend["externalFriendId"]>().toBeString();
-    expectTypeOf<SPImportFriend["addedAt"]>().toBeNumber();
-  });
-});
 
 describe("PKImportPayload", () => {
   it("uses plain string IDs and string timestamps", () => {
@@ -183,20 +69,20 @@ describe("PKProxyTag", () => {
   });
 });
 
-describe("ImportSource", () => {
+describe("ImportSourceFormat", () => {
   it("accepts valid sources", () => {
-    assertType<ImportSource>("simply-plural");
-    assertType<ImportSource>("pluralkit");
-    assertType<ImportSource>("pluralscape");
+    assertType<ImportSourceFormat>("simply-plural");
+    assertType<ImportSourceFormat>("pluralkit");
+    assertType<ImportSourceFormat>("pluralscape");
   });
 
   it("rejects invalid sources", () => {
     // @ts-expect-error invalid import source
-    assertType<ImportSource>("tupperbox");
+    assertType<ImportSourceFormat>("tupperbox");
   });
 
   it("is exhaustive in a switch", () => {
-    function handleSource(source: ImportSource): string {
+    function handleSource(source: ImportSourceFormat): string {
       switch (source) {
         case "simply-plural":
         case "pluralkit":
@@ -218,16 +104,24 @@ describe("ImportEntityType", () => {
       switch (type) {
         case "member":
         case "group":
+        case "custom-front":
         case "fronting-session":
+        case "fronting-comment":
         case "switch":
         case "custom-field":
+        case "field-definition":
+        case "field-value":
         case "note":
+        case "journal-entry":
         case "chat-message":
         case "board-message":
+        case "channel-category":
+        case "channel":
         case "poll":
         case "timer":
         case "privacy-bucket":
-        case "friend":
+        case "system-profile":
+        case "system-settings":
         case "unknown":
           return type;
         default: {
@@ -317,7 +211,7 @@ describe("ImportJob", () => {
     expectTypeOf<ImportJob["id"]>().toEqualTypeOf<ImportJobId>();
     expectTypeOf<ImportJob["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<ImportJob["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ImportJob["source"]>().toEqualTypeOf<ImportSource>();
+    expectTypeOf<ImportJob["source"]>().toEqualTypeOf<ImportSourceFormat>();
     expectTypeOf<ImportJob["status"]>().toEqualTypeOf<ImportJobStatus>();
     expectTypeOf<ImportJob["progressPercent"]>().toEqualTypeOf<number>();
     expectTypeOf<ImportJob["errorLog"]>().toEqualTypeOf<readonly ImportError[] | null>();
@@ -512,7 +406,7 @@ describe("ImportEntityRef", () => {
       pluralscapeEntityId: "mem_01HX000000000000000000000D" as MemberId,
       importedAt: 1234567890 as UnixMillis,
     };
-    expectTypeOf(ref.source).toExtend<ImportSource>();
+    expectTypeOf(ref.source).toExtend<ImportSourceFormat>();
     expectTypeOf(ref.sourceEntityType).toExtend<ImportEntityType>();
     expectTypeOf(ref.id).toEqualTypeOf<ImportEntityRefId>();
   });

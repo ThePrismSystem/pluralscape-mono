@@ -1,0 +1,41 @@
+{
+  "customFields": [
+    {
+      "_id": "cf_00000001",
+      "name": "Likes",
+      "type": "text",
+      "order": 0
+    }
+  ],
+  "members": [
+    {
+      "_id": "m_00000001",
+      "name": "Private Member",
+      "private": true
+    },
+    {
+      "_id": "m_00000002",
+      "name": "Prevented Member",
+      "preventTrusted": true
+    },
+    {
+      "_id": "m_00000003",
+      "name": "Public Member",
+      "private": false
+    },
+    {
+      "_id": "m_00000004",
+      "name": "Default Member"
+    }
+  ],
+  "frontHistory": [
+    {
+      "_id": "fh_00000001",
+      "member": "m_00000001",
+      "custom": false,
+      "live": true,
+      "startTime": 1700000000000,
+      "endTime": null
+    }
+  ]
+}

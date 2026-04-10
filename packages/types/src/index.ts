@@ -352,25 +352,13 @@ export type {
 
 // ── Import/Export ────────────────────────────────────────────────
 export type {
-  SPImportMember,
-  SPImportGroup,
-  SPImportFrontingSession,
-  SPImportCustomField,
-  SPImportCustomFieldValue,
-  SPImportNote,
-  SPImportChatMessage,
-  SPImportBoardMessage,
-  SPImportPoll,
-  SPImportTimer,
-  SPImportPrivacyBucket,
-  SPImportFriend,
-  SPImportPayload,
   PKProxyTag,
   PKImportMember,
   PKImportGroup,
   PKImportSwitch,
   PKImportPayload,
-  ImportSource,
+  ImportFailureKind,
+  ImportSourceFormat,
   ImportEntityType,
   ImportCollectionType,
   ImportJobStatus,
@@ -404,6 +392,7 @@ export {
   IMPORT_AVATAR_MODES,
   IMPORT_CHECKPOINT_SCHEMA_VERSION,
 } from "./import-export.js";
+export { assertBrandedTargetId, InvalidBrandedIdError } from "./assert-branded.js";
 
 // ── Scope domains ────────────────────────────────────────────
 export type { ScopeDomain, ScopeTier, RequiredScope } from "./scope-domains.js";

@@ -24,7 +24,7 @@ import type {
   ImportCheckpointState,
   ImportEntityType,
   ImportJobStatus,
-  ImportSource,
+  ImportSourceFormat,
 } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -38,7 +38,7 @@ export const importJobs = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    source: text("source").notNull().$type<ImportSource>(),
+    source: text("source").notNull().$type<ImportSourceFormat>(),
     status: text("status").notNull().default("pending").$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
     /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
@@ -86,7 +86,7 @@ export const importEntityRefs = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    source: text("source").notNull().$type<ImportSource>(),
+    source: text("source").notNull().$type<ImportSourceFormat>(),
     sourceEntityType: text("source_entity_type").notNull().$type<ImportEntityType>(),
     sourceEntityId: text("source_entity_id").notNull(),
     pluralscapeEntityId: text("pluralscape_entity_id").notNull(),

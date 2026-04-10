@@ -1,0 +1,36 @@
+{
+  "privacyBuckets": [
+    {
+      "_id": "bk_00000001",
+      "name": "Public"
+    }
+  ],
+  "customFields": [
+    {
+      "_id": "cf_00000001",
+      "name": "Likes",
+      "type": "text",
+      "order": 0
+    }
+  ],
+  "members": [
+    {
+      "_id": "m_00000001",
+      "name": "Aria",
+      "info": {
+        "cf_00000001": "books"
+      },
+      "buckets": ["bk_00000001"]
+    }
+  ],
+  "frontHistory": [
+    {
+      "_id": "fh_00000001",
+      "member": "m_00000001",
+      "custom": false,
+      "live": true,
+      "startTime": 1700000000000,
+      "endTime": null
+    }
+  ]
+}

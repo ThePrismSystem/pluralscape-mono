@@ -39,7 +39,7 @@ import type {
   ImportError,
   ImportJobId,
   ImportJobStatus,
-  ImportSource,
+  ImportSourceFormat,
   PaginatedResult,
   SystemId,
   UnixMillis,
@@ -52,7 +52,7 @@ export interface ImportJobResult {
   readonly id: ImportJobId;
   readonly accountId: AccountId;
   readonly systemId: SystemId;
-  readonly source: ImportSource;
+  readonly source: ImportSourceFormat;
   readonly status: ImportJobStatus;
   readonly progressPercent: number;
   readonly errorLog: readonly ImportError[] | null;
@@ -69,7 +69,7 @@ interface ListImportJobOpts {
   readonly cursor?: string;
   readonly limit?: number;
   readonly status?: ImportJobStatus;
-  readonly source?: ImportSource;
+  readonly source?: ImportSourceFormat;
 }
 
 // ── JSONB read validators ────────────────────────────────────────────
@@ -165,7 +165,6 @@ const CANONICAL_COLLECTION_ORDER = [
   "poll",
   "timer",
   "privacy-bucket",
-  "friend",
 ] as const satisfies readonly ImportCollectionType[];
 
 function firstSelectedCollection(
