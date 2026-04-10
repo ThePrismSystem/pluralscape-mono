@@ -431,6 +431,7 @@ export async function upsertImportEntityRefBatch(
     // upsert. Drizzle's onConflictDoUpdate doesn't expose a returning of
     // pre-conflict state directly.
     const sourceEntityIds = input.entries.map((e) => e.sourceEntityId);
+    const distinctEntityTypes = [...new Set(input.entries.map((e) => e.sourceEntityType))];
     const existing = await tx
       .select({
         sourceEntityType: importEntityRefs.sourceEntityType,
@@ -443,6 +444,7 @@ export async function upsertImportEntityRefBatch(
           eq(importEntityRefs.systemId, systemId),
           eq(importEntityRefs.source, input.source),
           inArray(importEntityRefs.sourceEntityId, sourceEntityIds),
+          inArray(importEntityRefs.sourceEntityType, distinctEntityTypes),
         ),
       );
 

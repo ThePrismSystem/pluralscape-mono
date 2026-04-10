@@ -139,6 +139,9 @@ export const WEBHOOK_EVENT_TYPE_VALUES = [
   "friend.bucket-unassigned",
 ] as const;
 
+/** Maximum length for Pluralscape entity IDs in import entity refs. Matches DB ID_MAX_LENGTH (50). */
+export const MAX_PLURALSCAPE_ENTITY_ID_LENGTH = 50;
+
 /** Maximum character length for device push tokens (APNs/FCM/web-push). */
 export const MAX_DEVICE_TOKEN_LENGTH = 512;
 
