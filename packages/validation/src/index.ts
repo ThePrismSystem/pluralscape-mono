@@ -197,6 +197,7 @@ export {
   MAX_DEVICE_TOKEN_LENGTH,
   DEVICE_TOKEN_PLATFORM_VALUES,
   FRIEND_NOTIFICATION_EVENT_TYPE_VALUES,
+  IMPORT_ENTITY_REF_BATCH_MAX,
 } from "./validation.constants.js";
 export { CreateApiKeyBodySchema } from "./api-key.js";
 export { PurgeSystemBodySchema } from "./system-purge.js";
@@ -208,4 +209,12 @@ export {
   ImportErrorSchema,
   ImportCheckpointStateSchema,
 } from "./import-job.js";
-export { ImportEntityRefQuerySchema } from "./import-entity-ref.js";
+export {
+  ImportEntityRefQuerySchema,
+  ImportEntityRefLookupBatchBodySchema,
+  ImportEntityRefUpsertBatchBodySchema,
+} from "./import-entity-ref.js";
+export type {
+  ImportEntityRefLookupBatchBody,
+  ImportEntityRefUpsertBatchBody,
+} from "./import-entity-ref.js";

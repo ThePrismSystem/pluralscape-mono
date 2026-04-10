@@ -1,16 +1,16 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { ImportSource, SourceDocument, SourceMode } from "../../sources/source.types.js";
+import type { ImportDataSource, SourceDocument, SourceMode } from "../../sources/source.types.js";
 import type { SpCollectionName } from "../../sources/sp-collections.js";
 
-describe("ImportSource", () => {
+describe("ImportDataSource", () => {
   it("iterate yields typed documents for a collection", () => {
-    expectTypeOf<ImportSource["iterate"]>().toBeFunction();
-    expectTypeOf<ImportSource["iterate"]>().parameter(0).toEqualTypeOf<SpCollectionName>();
+    expectTypeOf<ImportDataSource["iterate"]>().toBeFunction();
+    expectTypeOf<ImportDataSource["iterate"]>().parameter(0).toEqualTypeOf<SpCollectionName>();
   });
 
   it("iterate returns an AsyncIterable of SourceDocument", () => {
-    type RT = ReturnType<ImportSource["iterate"]>;
+    type RT = ReturnType<ImportDataSource["iterate"]>;
     expectTypeOf<RT>().toExtend<AsyncIterable<SourceDocument>>();
   });
 
@@ -18,12 +18,12 @@ describe("ImportSource", () => {
     expectTypeOf<SourceMode>().toEqualTypeOf<"api" | "file" | "fake">();
   });
 
-  it("ImportSource exposes a mode getter", () => {
-    expectTypeOf<ImportSource["mode"]>().toEqualTypeOf<SourceMode>();
+  it("ImportDataSource exposes a mode getter", () => {
+    expectTypeOf<ImportDataSource["mode"]>().toEqualTypeOf<SourceMode>();
   });
 
-  it("ImportSource exposes a close method", () => {
-    expectTypeOf<ImportSource["close"]>().returns.toEqualTypeOf<Promise<void>>();
+  it("ImportDataSource exposes a close method", () => {
+    expectTypeOf<ImportDataSource["close"]>().returns.toEqualTypeOf<Promise<void>>();
   });
 
   it("SourceDocument carries the raw document plus its source ID and collection", () => {

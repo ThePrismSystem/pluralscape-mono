@@ -4,7 +4,7 @@ import type { SpCollectionName } from "./sp-collections.js";
 export type SourceMode = "api" | "file" | "fake";
 
 /**
- * A single document yielded by an `ImportSource`.
+ * A single document yielded by an `ImportDataSource`.
  *
  * `document` is intentionally `unknown` — the engine validates it against the
  * corresponding Zod schema before passing it to a mapper. Sources never validate.
@@ -36,7 +36,7 @@ export interface SourceDocument {
  *   and classifies them per its error policy.
  * - `close()` releases any held resources (file handles, sockets). Idempotent.
  */
-export interface ImportSource {
+export interface ImportDataSource {
   readonly mode: SourceMode;
   iterate(collection: SpCollectionName): AsyncIterable<SourceDocument>;
   listCollections(): Promise<readonly string[]>;

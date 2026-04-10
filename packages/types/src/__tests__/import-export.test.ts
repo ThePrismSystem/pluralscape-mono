@@ -194,7 +194,7 @@ describe("ImportError", () => {
     expectTypeOf(err.fatal).toExtend<boolean>();
   });
 
-  it("allows fatal recoverable errors (token rejected, network unreachable)", () => {
+  it("fatal errors carry recoverable boolean", () => {
     const err: ImportError = {
       entityType: "unknown",
       entityId: null,
@@ -202,7 +202,8 @@ describe("ImportError", () => {
       fatal: true,
       recoverable: true,
     };
-    expectTypeOf(err.fatal).toExtend<boolean>();
+    expectTypeOf(err.fatal).toEqualTypeOf<true>();
+    expectTypeOf(err.recoverable).toEqualTypeOf<boolean>();
   });
 });
 

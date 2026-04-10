@@ -1,8 +1,8 @@
-import type { ImportSource, SourceDocument } from "./source.types.js";
+import type { ImportDataSource, SourceDocument } from "./source.types.js";
 import type { SpCollectionName } from "./sp-collections.js";
 
 /**
- * In-memory `ImportSource` backed by a plain JS object. Used in tests and the
+ * In-memory `ImportDataSource` backed by a plain JS object. Used in tests and the
  * fixture-driven integration tests. Not exported from the package root because
  * production code never imports it directly.
  *
@@ -29,7 +29,7 @@ export interface FakeSourceOptions {
 export function createFakeImportSource(
   data: FakeSourceData,
   options: FakeSourceOptions = {},
-): ImportSource {
+): ImportDataSource {
   const extraCollections = options.extraCollections ?? [];
   return {
     mode: "fake",
@@ -42,7 +42,7 @@ export function createFakeImportSource(
         const rawId = document._id;
         if (typeof rawId !== "string" || rawId.length === 0) {
           throw new Error(
-            `FakeImportSource: ${collection} document is missing _id (got ${JSON.stringify(document)})`,
+            `FakeImportDataSource: ${collection} document is missing _id (got ${JSON.stringify(document)})`,
           );
         }
         yield {
