@@ -253,7 +253,9 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     // When resuming into members directly we cannot know whether the previous
     // run already synthesized the legacy buckets. The persister's idempotency
     // guarantees re-synthesis is safe, so we conservatively re-run.
-    let privacyBucketsMapped = state.checkpoint.completedCollections.includes("member") ? 1 : 0;
+    let privacyBucketsMapped = state.checkpoint.completedCollections.includes("privacy-bucket")
+      ? 1
+      : 0;
 
     for (
       let collectionIndex = safeStartIndex;
