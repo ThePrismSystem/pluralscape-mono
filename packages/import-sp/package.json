@@ -12,7 +12,8 @@
     "./source-types": "./src/sources/source.types.ts",
     "./fake-source": "./src/sources/fake-source.ts",
     "./api-source": "./src/sources/api-source.ts",
-    "./file-source": "./src/sources/file-source.ts"
+    "./file-source": "./src/sources/file-source.ts",
+    "./checkpoint": "./src/engine/checkpoint.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",

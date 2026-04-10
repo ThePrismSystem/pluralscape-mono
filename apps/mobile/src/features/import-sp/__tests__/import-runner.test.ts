@@ -289,4 +289,113 @@ describe("runSpImport", () => {
     // final state's completedCollections should include "privacy-bucket".
     expect(result.finalState.checkpoint.completedCollections).toContain("privacy-bucket");
   });
+
+  it("seeds initial checkpoint before running the engine", async () => {
+    const api = makeQuietApi();
+    const persister = createMobilePersister({
+      systemId: TEST_SYSTEM_ID,
+      source: TEST_SOURCE,
+      masterKey: makeTestMasterKey(),
+      api,
+      avatarFetcher: NOOP_AVATAR_FETCHER,
+      preloadHints: [],
+    });
+
+    const updateJobFn = vi.fn().mockResolvedValue(undefined);
+    const avatarMode: ImportAvatarMode = "api";
+
+    await runSpImport({
+      source: createFakeImportSource(makeMinimalSourceData()),
+      persister,
+      importJobId: TEST_JOB_ID,
+      options: {
+        selectedCategories: ALL_CATEGORIES_SELECTED,
+        avatarMode,
+      },
+      updateJobFn,
+    });
+
+    // The very first updateJobFn call must be the seed: status "importing"
+    // with a checkpointState that preserves avatarMode.
+    const firstCall = updateJobFn.mock.calls[0];
+    expect(firstCall?.[0]).toBe(TEST_JOB_ID);
+    const patch = firstCall?.[1] as { status?: string; checkpointState?: ImportCheckpointState };
+    expect(patch.status).toBe("importing");
+    expect(patch.checkpointState).toBeDefined();
+    expect(patch.checkpointState?.options.avatarMode).toBe(avatarMode);
+  });
+
+  it("does not call terminal updateJobFn when abortSignal is already aborted", async () => {
+    const api = makeQuietApi();
+    const persister = createMobilePersister({
+      systemId: TEST_SYSTEM_ID,
+      source: TEST_SOURCE,
+      masterKey: makeTestMasterKey(),
+      api,
+      avatarFetcher: NOOP_AVATAR_FETCHER,
+      preloadHints: [],
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    const updateJobFn = vi.fn().mockResolvedValue(undefined);
+
+    const result = await runSpImport({
+      source: createFakeImportSource(makeMinimalSourceData()),
+      persister,
+      importJobId: TEST_JOB_ID,
+      options: {
+        selectedCategories: ALL_CATEGORIES_SELECTED,
+        avatarMode: AVATAR_MODE,
+      },
+      updateJobFn,
+      abortSignal: controller.signal,
+    });
+
+    // Result must be returned without throwing.
+    expect(result).toBeDefined();
+
+    // No terminal call with "completed" or "failed" status.
+    const terminalCall = updateJobFn.mock.calls.find((call) => {
+      const status = (call[1] as { status?: string } | undefined)?.status;
+      return status === "completed" || status === "failed";
+    });
+    expect(terminalCall).toBeUndefined();
+  });
+
+  it("does not throw when terminal updateJobFn call fails", async () => {
+    const api = makeQuietApi();
+    const persister = createMobilePersister({
+      systemId: TEST_SYSTEM_ID,
+      source: TEST_SOURCE,
+      masterKey: makeTestMasterKey(),
+      api,
+      avatarFetcher: NOOP_AVATAR_FETCHER,
+      preloadHints: [],
+    });
+
+    const updateJobFn = vi.fn().mockImplementation((_id: unknown, patch: { status?: string }) => {
+      // Throw only on the terminal call — when status is "completed" or "failed".
+      if (patch.status === "completed" || patch.status === "failed") {
+        return Promise.reject(new Error("network error"));
+      }
+      return Promise.resolve();
+    });
+
+    // Should not throw even though the terminal updateJobFn throws.
+    const result = await runSpImport({
+      source: createFakeImportSource(makeMinimalSourceData()),
+      persister,
+      importJobId: TEST_JOB_ID,
+      options: {
+        selectedCategories: ALL_CATEGORIES_SELECTED,
+        avatarMode: AVATAR_MODE,
+      },
+      updateJobFn,
+    });
+
+    expect(result).toBeDefined();
+    expect(result.outcome).toBe("completed");
+  });
 });

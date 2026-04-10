@@ -26,6 +26,8 @@
  *   Phase C carries through unchanged; the runner does not attempt to patch it.
  */
 
+import { collectionToEntityType } from "@pluralscape/import-sp";
+import { emptyCheckpointState } from "@pluralscape/import-sp/checkpoint";
 import { DEPENDENCY_ORDER } from "@pluralscape/import-sp/dependency-order";
 import { runImport } from "@pluralscape/import-sp/engine";
 
@@ -80,6 +82,7 @@ export interface RunSpImportArgs {
   readonly initialCheckpoint?: ImportCheckpointState;
   readonly onProgress?: (snapshot: ImportRunnerProgressSnapshot) => void;
   readonly updateJobFn: UpdateJobFn;
+  readonly abortSignal?: AbortSignal;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -108,8 +111,31 @@ function deriveProgressPercent(state: ImportCheckpointState): number {
  * check `result.outcome` themselves.
  */
 export async function runSpImport(args: RunSpImportArgs): Promise<ImportRunResult> {
-  const { source, persister, importJobId, options, initialCheckpoint, onProgress, updateJobFn } =
-    args;
+  const {
+    source,
+    persister,
+    importJobId,
+    options,
+    initialCheckpoint,
+    onProgress,
+    updateJobFn,
+    abortSignal,
+  } = args;
+
+  // Seed the checkpoint so the job row always has options (selectedCategories,
+  // avatarMode) even if the engine never processes a single document.
+  const seedState =
+    initialCheckpoint ??
+    emptyCheckpointState({
+      firstEntityType: collectionToEntityType(DEPENDENCY_ORDER[0] ?? "users"),
+      selectedCategories: options.selectedCategories,
+      avatarMode: options.avatarMode,
+    });
+
+  await updateJobFn(importJobId, {
+    status: "importing",
+    checkpointState: seedState,
+  });
 
   let chunksCompleted = 0;
 
@@ -142,25 +168,39 @@ export async function runSpImport(args: RunSpImportArgs): Promise<ImportRunResul
     },
     onProgress: handleChunkBoundary,
     ...(initialCheckpoint !== undefined ? { initialCheckpoint } : {}),
+    ...(abortSignal !== undefined ? { abortSignal } : {}),
   };
 
   const result = await runImport(engineArgs);
 
+  // If aborted externally, skip the terminal update entirely.
+  if (abortSignal?.aborted === true) {
+    return result;
+  }
+
   // Engine returned. Translate the final outcome into a terminal patch.
   if (result.outcome === "completed") {
-    await updateJobFn(importJobId, {
-      status: "completed",
-      progressPercent: MAX_PROGRESS_PERCENT,
-      checkpointState: result.finalState,
-      errorLog: result.errors,
-    });
+    try {
+      await updateJobFn(importJobId, {
+        status: "completed",
+        progressPercent: MAX_PROGRESS_PERCENT,
+        checkpointState: result.finalState,
+        errorLog: result.errors,
+      });
+    } catch {
+      persister.drainErrors();
+    }
   } else {
     // aborted → failed, preserve checkpoint so the user can resume.
-    await updateJobFn(importJobId, {
-      status: "failed",
-      checkpointState: result.finalState,
-      errorLog: result.errors,
-    });
+    try {
+      await updateJobFn(importJobId, {
+        status: "failed",
+        checkpointState: result.finalState,
+        errorLog: result.errors,
+      });
+    } catch {
+      persister.drainErrors();
+    }
   }
 
   return result;
