@@ -261,8 +261,10 @@ export function createMobileAvatarFetcher(args: MobileAvatarFetcherArgs): Avatar
         }
         case "skip":
           return { status: "not-found" };
-        default:
-          return args satisfies never;
+        default: {
+          const _exhaustive: never = args;
+          return _exhaustive;
+        }
       }
     },
   };
