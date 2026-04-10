@@ -499,6 +499,25 @@ describe("runImport — checkpoint frequency", () => {
   });
 });
 
+describe("runImport — abort signal", () => {
+  it("returns aborted immediately when signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const source = createFakeImportSource({
+      privacyBuckets: [{ _id: "bk1", name: "Public", description: null }],
+    });
+    const result = await runImport({
+      source,
+      persister: createFakePersister(),
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: noopProgress,
+      abortSignal: controller.signal,
+    });
+    expect(result.outcome).toBe("aborted");
+    await source.close();
+  });
+});
+
 describe("runImport — category opt-out", () => {
   it("skips collections whose category is set to false", async () => {
     const data: FakeSourceData = {
