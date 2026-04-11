@@ -61,3 +61,34 @@ export function extractObjectIdFromText(text: string): string {
   }
   return text;
 }
+
+/**
+ * Extract the user id from a JWT payload.
+ * Reads the second segment as base64url-encoded JSON and returns `sub` or `uid`.
+ */
+export function uidFromJwt(jwt: string): string {
+  const segments = jwt.split(".");
+  if (segments.length < 2) {
+    throw new MalformedJwtError("JWT is missing payload segment");
+  }
+  const payloadSegment = segments[1];
+  if (!payloadSegment) {
+    throw new MalformedJwtError("JWT payload segment is empty");
+  }
+  let json: unknown;
+  try {
+    const decoded = Buffer.from(payloadSegment, "base64url").toString("utf-8");
+    json = JSON.parse(decoded);
+  } catch {
+    throw new MalformedJwtError("JWT payload is not valid base64url JSON");
+  }
+  if (typeof json !== "object" || json === null) {
+    throw new MalformedJwtError("JWT payload is not a JSON object");
+  }
+  const payload = json as Record<string, unknown>;
+  const sub = payload["sub"];
+  if (typeof sub === "string" && sub.length > 0) return sub;
+  const uid = payload["uid"];
+  if (typeof uid === "string" && uid.length > 0) return uid;
+  throw new MalformedJwtError("JWT payload missing sub/uid claim");
+}
