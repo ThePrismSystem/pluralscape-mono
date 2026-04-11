@@ -17,6 +17,7 @@ import { createRecordingPersister } from "./recording-persister.js";
 
 import type { Manifest, ManifestCollectionKey } from "./manifest.types.js";
 import type { RecordingSnapshot } from "./recording-persister.js";
+import type { ImportDataSource } from "../../sources/source.types.js";
 import type { ImportCheckpointState } from "@pluralscape/types";
 
 const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../../..");
@@ -66,12 +67,111 @@ function assertAllEntitiesPresent(snap: RecordingSnapshot, manifest: Manifest): 
   }
 }
 
+/**
+ * Spot-check a few entity payloads to verify field mapping correctness.
+ * Checks that key fields from the manifest survived import into the payload.
+ */
+function assertPayloadSpotChecks(snap: RecordingSnapshot, manifest: Manifest): void {
+  // Check first member has a payload with a name field
+  const firstMember = manifest.members[0];
+  if (firstMember) {
+    const entity = snap.find("member", firstMember.sourceId);
+    if (!entity) {
+      throw new Error(`first member entity should exist (sourceId=${firstMember.sourceId})`);
+    }
+    expect(entity.payload).toBeDefined();
+    const payload = entity.payload as Record<string, unknown>;
+    expect(payload["name"]).toBe(firstMember.fields["name"]);
+  }
+
+  // Check first custom front has a payload
+  const firstCustomFront = manifest.customFronts[0];
+  if (firstCustomFront) {
+    const entity = snap.find("custom-front", firstCustomFront.sourceId);
+    if (!entity) {
+      throw new Error(
+        `first custom front entity should exist (sourceId=${firstCustomFront.sourceId})`,
+      );
+    }
+    expect(entity.payload).toBeDefined();
+  }
+
+  // Check first note has a payload with a title field
+  const firstNote = manifest.notes[0];
+  if (firstNote) {
+    const entity = snap.find("journal-entry", firstNote.sourceId);
+    if (!entity) {
+      throw new Error(`first note entity should exist (sourceId=${firstNote.sourceId})`);
+    }
+    expect(entity.payload).toBeDefined();
+    const payload = entity.payload as Record<string, unknown>;
+    expect(payload["title"]).toBe(firstNote.fields["title"]);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Shared no-op progress callback
 // ---------------------------------------------------------------------------
 
 function noopProgress(): Promise<void> {
   return Promise.resolve();
+}
+
+// ---------------------------------------------------------------------------
+// Parameterized import suite
+// ---------------------------------------------------------------------------
+
+type SourceFactory = (
+  mode: "minimal" | "adversarial",
+) => ImportDataSource | Promise<ImportDataSource>;
+
+function defineImportSuite(
+  label: string,
+  mode: "minimal" | "adversarial",
+  sourceFactory: SourceFactory,
+): void {
+  describe(label, () => {
+    let manifest: Manifest;
+    let snap: RecordingSnapshot;
+    let outcome: string;
+    let fatalErrors: number;
+
+    beforeAll(async () => {
+      manifest = await loadManifest(mode);
+      const source = await sourceFactory(mode);
+      const recorder = createRecordingPersister();
+      const result = await runImport({
+        source,
+        persister: recorder.persister,
+        initialCheckpoint: makeInitialCheckpoint(),
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+      outcome = result.outcome;
+      fatalErrors = result.errors.filter((e) => e.fatal).length;
+      snap = recorder.snapshot();
+    });
+
+    it("completes without aborting", () => {
+      expect(outcome).toBe("completed");
+    });
+
+    it("produces zero fatal errors", () => {
+      expect(fatalErrors).toBe(0);
+    });
+
+    it("entity counts match manifest", () => {
+      assertEntityCounts(snap, manifest);
+    });
+
+    it("every manifest source ID has a recorded entity", () => {
+      assertAllEntitiesPresent(snap, manifest);
+    });
+
+    it("entity payloads contain expected fields", () => {
+      assertPayloadSpotChecks(snap, manifest);
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -93,83 +193,8 @@ describe.skipIf(!hasApiTokens())("SP Import E2E — API Source", () => {
     });
   });
 
-  describe("minimal account — full import", () => {
-    let manifest: Manifest;
-    let snap: RecordingSnapshot;
-    let outcome: string;
-    let fatalErrors: number;
-
-    beforeAll(async () => {
-      manifest = await loadManifest("minimal");
-      const source = createApiSource("minimal");
-      const recorder = createRecordingPersister();
-      const result = await runImport({
-        source,
-        persister: recorder.persister,
-        initialCheckpoint: makeInitialCheckpoint(),
-        options: { selectedCategories: {}, avatarMode: "skip" },
-        onProgress: noopProgress,
-      });
-      outcome = result.outcome;
-      fatalErrors = result.errors.filter((e) => e.fatal).length;
-      snap = recorder.snapshot();
-    });
-
-    it("completes without aborting", () => {
-      expect(outcome).toBe("completed");
-    });
-
-    it("produces zero fatal errors", () => {
-      expect(fatalErrors).toBe(0);
-    });
-
-    it("entity counts match manifest", () => {
-      assertEntityCounts(snap, manifest);
-    });
-
-    it("every manifest source ID has a recorded entity", () => {
-      assertAllEntitiesPresent(snap, manifest);
-    });
-  });
-
-  describe("adversarial account — full import", () => {
-    let manifest: Manifest;
-    let snap: RecordingSnapshot;
-    let outcome: string;
-    let fatalErrors: number;
-
-    beforeAll(async () => {
-      manifest = await loadManifest("adversarial");
-      const source = createApiSource("adversarial");
-      const recorder = createRecordingPersister();
-      const result = await runImport({
-        source,
-        persister: recorder.persister,
-        initialCheckpoint: makeInitialCheckpoint(),
-        options: { selectedCategories: {}, avatarMode: "skip" },
-        onProgress: noopProgress,
-      });
-      outcome = result.outcome;
-      fatalErrors = result.errors.filter((e) => e.fatal).length;
-      snap = recorder.snapshot();
-    });
-
-    it("completes without aborting", () => {
-      expect(outcome).toBe("completed");
-    });
-
-    it("produces zero fatal errors", () => {
-      expect(fatalErrors).toBe(0);
-    });
-
-    it("entity counts match manifest", () => {
-      assertEntityCounts(snap, manifest);
-    });
-
-    it("every manifest source ID has a recorded entity", () => {
-      assertAllEntitiesPresent(snap, manifest);
-    });
-  });
+  defineImportSuite("minimal account — full import", "minimal", createApiSource);
+  defineImportSuite("adversarial account — full import", "adversarial", createApiSource);
 });
 
 // ---------------------------------------------------------------------------
@@ -177,83 +202,8 @@ describe.skipIf(!hasApiTokens())("SP Import E2E — API Source", () => {
 // ---------------------------------------------------------------------------
 
 describe.skipIf(!hasExportFixtures())("SP Import E2E — File Source", () => {
-  describe("minimal export — full import", () => {
-    let manifest: Manifest;
-    let snap: RecordingSnapshot;
-    let outcome: string;
-    let fatalErrors: number;
-
-    beforeAll(async () => {
-      manifest = await loadManifest("minimal");
-      const source = await createFileSource("minimal");
-      const recorder = createRecordingPersister();
-      const result = await runImport({
-        source,
-        persister: recorder.persister,
-        initialCheckpoint: makeInitialCheckpoint(),
-        options: { selectedCategories: {}, avatarMode: "skip" },
-        onProgress: noopProgress,
-      });
-      outcome = result.outcome;
-      fatalErrors = result.errors.filter((e) => e.fatal).length;
-      snap = recorder.snapshot();
-    });
-
-    it("completes without aborting", () => {
-      expect(outcome).toBe("completed");
-    });
-
-    it("produces zero fatal errors", () => {
-      expect(fatalErrors).toBe(0);
-    });
-
-    it("entity counts match manifest", () => {
-      assertEntityCounts(snap, manifest);
-    });
-
-    it("every manifest source ID has a recorded entity", () => {
-      assertAllEntitiesPresent(snap, manifest);
-    });
-  });
-
-  describe("adversarial export — full import", () => {
-    let manifest: Manifest;
-    let snap: RecordingSnapshot;
-    let outcome: string;
-    let fatalErrors: number;
-
-    beforeAll(async () => {
-      manifest = await loadManifest("adversarial");
-      const source = await createFileSource("adversarial");
-      const recorder = createRecordingPersister();
-      const result = await runImport({
-        source,
-        persister: recorder.persister,
-        initialCheckpoint: makeInitialCheckpoint(),
-        options: { selectedCategories: {}, avatarMode: "skip" },
-        onProgress: noopProgress,
-      });
-      outcome = result.outcome;
-      fatalErrors = result.errors.filter((e) => e.fatal).length;
-      snap = recorder.snapshot();
-    });
-
-    it("completes without aborting", () => {
-      expect(outcome).toBe("completed");
-    });
-
-    it("produces zero fatal errors", () => {
-      expect(fatalErrors).toBe(0);
-    });
-
-    it("entity counts match manifest", () => {
-      assertEntityCounts(snap, manifest);
-    });
-
-    it("every manifest source ID has a recorded entity", () => {
-      assertAllEntitiesPresent(snap, manifest);
-    });
-  });
+  defineImportSuite("minimal export — full import", "minimal", createFileSource);
+  defineImportSuite("adversarial export — full import", "adversarial", createFileSource);
 });
 
 // ---------------------------------------------------------------------------
@@ -299,6 +249,9 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
     });
     expect(abortResult.outcome).toBe("aborted");
     expect(abortedCheckpoint).toBeDefined();
+    if (!abortedCheckpoint) {
+      throw new Error("abort checkpoint was not captured");
+    }
 
     // Third: resume from the aborted checkpoint.
     const resumeRecorder = createRecordingPersister();
