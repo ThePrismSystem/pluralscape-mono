@@ -93,7 +93,7 @@ describe("mapBoardMessage", () => {
     };
     const result = mapBoardMessage(sp, ctx);
     expect(result.status).toBe("mapped");
-    const readWarning = ctx.warnings.find((w) => w.message.includes("`read`"));
+    const readWarning = ctx.warnings.find((w) => w.message.includes("read"));
     expect(readWarning).toBeDefined();
   });
 

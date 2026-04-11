@@ -97,6 +97,17 @@ export interface SPGroup extends SPDocument {
 // ── customFields ─────────────────────────────────────────────────────
 
 /**
+ * SP's numeric `CustomFieldType` enum sourced from the upstream
+ * `typeConverters` array in `src/api/base/user/generateReports.ts`.
+ *
+ *  0 = text · 1 = color · 2 = date · 3 = month · 4 = year · 5 = monthYear
+ *  6 = timestamp · 7 = monthDay
+ *
+ * Types 2-7 collapse to `"date"` on the Pluralscape side.
+ */
+export type SPCustomFieldType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/**
  * SP `customFields` collection.
  *
  * - `type` is a numeric enum (0-7) sourced from SP's `typeConverters` table
@@ -110,7 +121,7 @@ export interface SPGroup extends SPDocument {
  */
 export interface SPCustomField extends SPDocument {
   readonly name: string;
-  readonly type: number;
+  readonly type: SPCustomFieldType;
   readonly order: string;
   readonly preventTrusted?: boolean;
   readonly private?: boolean;

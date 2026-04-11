@@ -23,7 +23,7 @@
  * warning so users can audit what was lost during import.
  */
 import { extractFieldValues, type ExtractedFieldValue } from "./field-value.mapper.js";
-import { requireName } from "./helpers.js";
+import { requireName, warnDropped } from "./helpers.js";
 import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -97,25 +97,19 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
   }
 
   if (sp.frame !== undefined && sp.frame !== null) {
-    ctx.addWarning({
-      entityType: "member",
-      entityId: sp._id,
-      message: "SP `frame` field dropped (no Pluralscape equivalent)",
-    });
+    warnDropped(ctx, "member", sp._id, "frame", "no Pluralscape equivalent");
   }
   if (sp.supportDescMarkdown !== undefined) {
-    ctx.addWarning({
-      entityType: "member",
-      entityId: sp._id,
-      message: "SP `supportDescMarkdown` dropped (no Pluralscape equivalent)",
-    });
+    warnDropped(ctx, "member", sp._id, "supportDescMarkdown", "no Pluralscape equivalent");
   }
   if (sp.preventsFrontNotifs !== undefined || sp.receiveMessageBoardNotifs !== undefined) {
-    ctx.addWarning({
-      entityType: "member",
-      entityId: sp._id,
-      message: "SP per-member notification toggles dropped (no Pluralscape equivalent)",
-    });
+    warnDropped(
+      ctx,
+      "member",
+      sp._id,
+      "notifs",
+      "per-member notification toggles have no Pluralscape equivalent",
+    );
   }
 
   // Resolve every bucket source ID through the translation table BEFORE

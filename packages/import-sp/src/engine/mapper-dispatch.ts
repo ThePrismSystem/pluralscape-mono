@@ -120,9 +120,7 @@ function entry<TSchema extends z.ZodType>(
         const message = firstIssue?.message ?? "invalid document";
         return failed({ kind: "validation-failed", message: `validation: ${message}` });
       }
-      if (typeof parsed.data === "object" && parsed.data !== null) {
-        warnUnknownKeys(ctx, entityType, knownKeys, toRecord(parsed.data));
-      }
+      warnUnknownKeys(ctx, entityType, knownKeys, toRecord(parsed.data));
       return mapper(parsed.data, ctx);
     },
   };

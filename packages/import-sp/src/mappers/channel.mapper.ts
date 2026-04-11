@@ -77,7 +77,7 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
   // Real SP channels without a parent category omit `parentCategory`
   // entirely (undefined) rather than setting it to null. Treat both as
   // "no parent".
-  if (sp.parentCategory !== null && sp.parentCategory !== undefined) {
+  if (sp.parentCategory) {
     const resolved = ctx.translate("channel-category", sp.parentCategory);
     if (resolved === null) {
       return failed({

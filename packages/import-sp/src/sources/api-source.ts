@@ -66,9 +66,9 @@ type ApiFetchStrategy =
 
 /**
  * Mapping from internal SP collection name to its live SP API fetch
- * strategy. Verified against `src/api/v1/routes.ts` in the upstream SP repo
- * (`ApparyllisOrg/SimplyPluralApi`). Notable mismatches fixed from the
- * previous best-guess table:
+ * strategy. Verified against `src/api/v1/routes.ts` in the upstream SP
+ * repo (`ApparyllisOrg/SimplyPluralApi`). Routing quirks in the upstream
+ * SP API that are easy to get wrong:
  *
  *  - `members`, `groups`, `customFields`, `customFronts`, `polls`,
  *    `frontHistory` all require `:system` in the path.
@@ -152,7 +152,7 @@ function backoffFor(attempt: number): number {
 
 /** Substitute `:system` in a path template with the caller-supplied system id. */
 function substituteSystem(path: string, systemId: string): string {
-  return path.replace(":system", encodeURIComponent(systemId));
+  return path.replaceAll(":system", encodeURIComponent(systemId));
 }
 
 /**
@@ -162,10 +162,8 @@ function substituteSystem(path: string, systemId: string): string {
  * dropped-collection check.
  */
 const LISTABLE_COLLECTIONS: readonly SpCollectionName[] = (
-  Object.entries(ENDPOINT_STRATEGIES) as readonly [SpCollectionName, ApiFetchStrategy][]
-)
-  .filter(([, strategy]) => strategy.kind !== "unsupported")
-  .map(([name]) => name);
+  Object.keys(ENDPOINT_STRATEGIES) as SpCollectionName[]
+).filter((name) => ENDPOINT_STRATEGIES[name].kind !== "unsupported");
 
 /**
  * Create an `ImportDataSource` that streams a Simply Plural account from
@@ -253,14 +251,22 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
     throw new ApiSourceTransientError("retry loop exhausted");
   }
 
-  function buildUrl(strategy: ApiFetchStrategy & { kind: "list" | "single" | "range" }): string {
+  function buildUrl(strategy: Exclude<ApiFetchStrategy, { kind: "unsupported" }>): string {
     const path = substituteSystem(strategy.path, input.systemId);
     const base = `${input.baseUrl}${path}`;
-    if (strategy.kind === "range") {
-      const now = Date.now();
-      return `${base}?startTime=${String(FRONT_HISTORY_RANGE_START_MS)}&endTime=${String(now)}`;
+    switch (strategy.kind) {
+      case "list":
+      case "single":
+        return base;
+      case "range": {
+        const now = Date.now();
+        return `${base}?startTime=${String(FRONT_HISTORY_RANGE_START_MS)}&endTime=${String(now)}`;
+      }
+      default: {
+        const _exhaustive: never = strategy;
+        throw new Error(`unreachable ApiFetchStrategy kind: ${String(_exhaustive)}`);
+      }
     }
-    return base;
   }
 
   type AssertResult =
@@ -295,63 +301,69 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
     mode: "api",
     async *iterate(collection: SpCollectionName): AsyncGenerator<SourceEvent> {
       const strategy = ENDPOINT_STRATEGIES[collection];
-      if (strategy.kind === "unsupported") {
-        // The SP API does not expose a simple bulk endpoint for this
-        // collection. Yield nothing so the engine keeps processing the
-        // rest of DEPENDENCY_ORDER — operators who need these collections
-        // should import from a file export instead.
-        return;
-      }
-
-      const url = buildUrl(strategy);
-      const body = await fetchJson(url);
-
-      if (strategy.kind === "single") {
-        if (body === null) return;
-        if (Array.isArray(body)) {
-          yield {
-            kind: "drop",
-            collection,
-            sourceId: null,
-            reason: `SP API ${collection} endpoint returned an array (expected single document)`,
-          };
+      switch (strategy.kind) {
+        case "unsupported":
+          // The SP API does not expose a simple bulk endpoint for this
+          // collection. Yield nothing so the engine keeps processing the
+          // rest of DEPENDENCY_ORDER — operators who need these collections
+          // should import from a file export instead.
           return;
-        }
-        // `{}` means the target document does not exist (e.g. a `private` doc
-        // for an account that never touched notification settings) — legitimate
-        // skip, not a drop.
-        if (typeof body === "object" && Object.keys(body).length === 0) return;
-        const result = assertDocument(body, collection, 0);
-        if (result.kind === "drop") {
-          yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
-          return;
-        }
-        yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
-        return;
-      }
-
-      // list or range strategies — both return an array.
-      if (!Array.isArray(body)) {
-        throw new ApiSourcePermanentError(
-          `SP API returned non-array body for ${url} (got ${typeof body})`,
-        );
-      }
-      let index = 0;
-      for (const element of body) {
-        const result = assertDocument(element, collection, index);
-        if (result.kind === "drop") {
-          yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
-        } else {
+        case "single": {
+          const url = buildUrl(strategy);
+          const body = await fetchJson(url);
+          if (body === null) return;
+          if (Array.isArray(body)) {
+            yield {
+              kind: "drop",
+              collection,
+              sourceId: null,
+              reason: `SP API ${collection} endpoint returned an array (expected single document)`,
+            };
+            return;
+          }
+          // `{}` means the target document does not exist (e.g. a `private` doc
+          // for an account that never touched notification settings) — legitimate
+          // skip, not a drop.
+          if (typeof body === "object" && Object.keys(body).length === 0) return;
+          const result = assertDocument(body, collection, 0);
+          if (result.kind === "drop") {
+            yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
+            return;
+          }
           yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
+          return;
         }
-        index += 1;
+        case "list":
+        case "range": {
+          // list or range strategies — both return an array.
+          const url = buildUrl(strategy);
+          const body = await fetchJson(url);
+          if (!Array.isArray(body)) {
+            throw new ApiSourcePermanentError(
+              `SP API returned non-array body for ${url} (got ${typeof body})`,
+            );
+          }
+          let index = 0;
+          for (const element of body) {
+            const result = assertDocument(element, collection, index);
+            if (result.kind === "drop") {
+              yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
+            } else {
+              yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
+            }
+            index += 1;
+          }
+          return;
+        }
+        default: {
+          const _exhaustive: never = strategy;
+          throw new Error(`unreachable ApiFetchStrategy kind: ${String(_exhaustive)}`);
+        }
       }
     },
     listCollections() {
       // Only collections with a usable bulk/single endpoint are reported.
-      // This deliberately returns a narrower set than the full
-      // `SpCollectionName` union — see the strategy map above.
-      return Promise.resolve(LISTABLE_COLLECTIONS as readonly string[] as string[]);
+      return Promise.resolve([...LISTABLE_COLLECTIONS]);
     },
     async close(): Promise<void> {
       // No held resources — fetch is request-scoped.

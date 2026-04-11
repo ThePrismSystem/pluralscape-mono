@@ -12,6 +12,7 @@
  *   surfaced as a one-time dropped-field warning.
  * - `read` — the single-boolean read flag has no Pluralscape equivalent yet.
  */
+import { warnDropped } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -39,19 +40,23 @@ export function mapBoardMessage(
   }
 
   if (sp.writtenFor !== undefined) {
-    ctx.addWarningOnce("board-message.writtenFor-dropped", {
-      entityType: "board-message",
-      entityId: sp._id,
-      message: "SP `writtenFor` dropped (Pluralscape board is system-wide)",
-    });
+    warnDropped(
+      ctx,
+      "board-message",
+      sp._id,
+      "writtenFor",
+      "Pluralscape board is system-wide; per-recipient addressing not modeled",
+    );
   }
 
   if (sp.read !== undefined) {
-    ctx.addWarningOnce("board-message.read-dropped", {
-      entityType: "board-message",
-      entityId: sp._id,
-      message: "SP `read` flag dropped (no Pluralscape equivalent)",
-    });
+    warnDropped(
+      ctx,
+      "board-message",
+      sp._id,
+      "read",
+      "no Pluralscape equivalent for the read flag",
+    );
   }
 
   const payload: MappedBoardMessage = {

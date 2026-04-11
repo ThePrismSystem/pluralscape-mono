@@ -12,8 +12,8 @@ const MISSING_REFS_PREVIEW_LIMIT = 5;
 /**
  * Emit one warning per (entityType, unknownKey) pair across the whole import.
  * The dedup key is scoped by entityType so two collections with the same
- * unknown field name each emit their own warning (pre-fix the key was
- * globally scoped, which silently merged unrelated schema drift).
+ * unknown field name each emit their own warning — a single global key
+ * would silently merge schema drift from unrelated entity types.
  */
 export function warnUnknownKeys(
   ctx: MappingContext,

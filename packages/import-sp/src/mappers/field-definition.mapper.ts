@@ -12,10 +12,21 @@
  * prefix decode — sufficient for small field sets and lets users fine-tune
  * ordering after import.
  */
+import {
+  SP_FIELD_TYPE_COLOR,
+  SP_FIELD_TYPE_DATE,
+  SP_FIELD_TYPE_MONTH,
+  SP_FIELD_TYPE_MONTH_DAY,
+  SP_FIELD_TYPE_MONTH_YEAR,
+  SP_FIELD_TYPE_TEXT,
+  SP_FIELD_TYPE_TIMESTAMP,
+  SP_FIELD_TYPE_YEAR,
+} from "../import-sp.constants.js";
+
 import { mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
-import type { SPCustomField } from "../sources/sp-types.js";
+import type { SPCustomField, SPCustomFieldType } from "../sources/sp-types.js";
 import type { FieldType } from "@pluralscape/types";
 
 export interface MappedFieldDefinition {
@@ -26,22 +37,29 @@ export interface MappedFieldDefinition {
 }
 
 /**
- * SP numeric `CustomFieldType` enum → Pluralscape {@link FieldType}.
- * Values sourced from SP's `typeConverters` array in
- * `src/api/base/user/generateReports.ts`. Types 2-7 are all date-like
- * representations in SP (full date, month, year, monthYear, timestamp,
- * monthDay) and collapse to `"date"` on our side.
+ * Map SP's numeric `CustomFieldType` enum to a Pluralscape {@link FieldType}.
+ * Types 2-7 are all date-like representations in SP (full date, month, year,
+ * monthYear, timestamp, monthDay) and collapse to `"date"` on our side.
  */
-const SP_TYPE_NUMERIC_MAP: Readonly<Record<number, FieldType>> = {
-  0: "text",
-  1: "color",
-  2: "date",
-  3: "date",
-  4: "date",
-  5: "date",
-  6: "date",
-  7: "date",
-};
+function spTypeToFieldType(spType: SPCustomFieldType): FieldType {
+  switch (spType) {
+    case SP_FIELD_TYPE_TEXT:
+      return "text";
+    case SP_FIELD_TYPE_COLOR:
+      return "color";
+    case SP_FIELD_TYPE_DATE:
+    case SP_FIELD_TYPE_MONTH:
+    case SP_FIELD_TYPE_YEAR:
+    case SP_FIELD_TYPE_MONTH_YEAR:
+    case SP_FIELD_TYPE_TIMESTAMP:
+    case SP_FIELD_TYPE_MONTH_DAY:
+      return "date";
+    default: {
+      const _exhaustive: never = spType;
+      throw new Error(`unreachable SP custom-field type: ${String(_exhaustive)}`);
+    }
+  }
+}
 
 /**
  * Number of leading characters of an SP fractional index to interpret as a
@@ -78,14 +96,7 @@ export function mapFieldDefinition(
   sp: SPCustomField,
   ctx: MappingContext,
 ): MapperResult<MappedFieldDefinition> {
-  const fieldType = SP_TYPE_NUMERIC_MAP[sp.type];
-  if (fieldType === undefined) {
-    ctx.addWarning({
-      entityType: "field-definition",
-      entityId: sp._id,
-      message: `unknown SP field type ${String(sp.type)}; falling back to text`,
-    });
-  }
+  const fieldType = spTypeToFieldType(sp.type);
   const orderResult = fractionalIndexToOrder(sp.order);
   if (!orderResult.ok) {
     ctx.addWarning({
@@ -96,7 +107,7 @@ export function mapFieldDefinition(
   }
   const payload: MappedFieldDefinition = {
     name: sp.name,
-    fieldType: fieldType ?? "text",
+    fieldType,
     order: orderResult.order,
     supportMarkdown: sp.supportMarkdown ?? false,
   };

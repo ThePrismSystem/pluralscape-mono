@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-11T22:01:57Z
-updated_at: 2026-04-11T23:13:52Z
+updated_at: 2026-04-11T23:37:27Z
 ---
 
 Resolve all PR #409 review findings (critical, important, and suggestions) from the 6-agent review pass. Tracked in docs/planning/2026-04-11-sp-import-pr-409-review-fixes.md.
@@ -33,14 +33,14 @@ Plan: docs/superpowers/plans/2026-04-11-sp-import-pr-409-review-fixes.md
 - [ ] Task 12: Poll synthetic option ids prefixed with \_id
 - [x] Task 13: fractionalIndexToOrder numeric correctness fix
 - [x] Task 14: buildPersistableEntity runtime guard unit test
-- [ ] Task 15: Full verification + commit 2
+- [x] Task 15: Full verification + commit 2 (squashed as d75f6a04)
 
 ### Commit 3 — Type/simplification/comments
 
-- [ ] Task 16: SPCustomFieldType literal union + exhaustive switch
-- [ ] Task 17: Exhaustive switches in api-source iterate/buildUrl
-- [ ] Task 18: api-source cleanup (listCollections, LISTABLE_COLLECTIONS, substituteSystem, comment)
-- [ ] Task 19: channel truthy check + mapper-dispatch guard + helpers comment
-- [ ] Task 20: Wire warnDropped into board-message and member mappers
-- [ ] Task 21: persister-dispatch comment + Timestamp int finite + memberName helper typed
+- [x] Task 16: SPCustomFieldType literal union + exhaustive switch
+- [x] Task 17: Exhaustive switches in api-source iterate/buildUrl
+- [x] Task 18: api-source cleanup (listCollections, LISTABLE_COLLECTIONS, substituteSystem, comment)
+- [x] Task 19: channel truthy check + mapper-dispatch guard + helpers comment
+- [x] Task 20: Wire warnDropped into board-message and member mappers
+- [x] Task 21: persister-dispatch comment + Timestamp int finite + memberName helper typed
 - [ ] Task 22: Full verification + commit 3 + push

@@ -1,13 +1,17 @@
 /**
- * Narrow a value already verified as a non-null object into
- * `Record<string, unknown>` for key iteration.
+ * Narrow an unknown value into `Record<string, unknown>` for key iteration.
  *
- * Callers must have verified `typeof v === "object" && v !== null` before
- * calling — this helper centralises the unavoidable widening cast so it
- * does not appear inline in business logic. Used at validation boundaries
+ * Throws if the input is not a non-null object. Used at validation boundaries
  * (Zod parse results, streaming JSON parse results) where the payload is
- * known-object but the structural type is `object`.
+ * runtime-known to be an object but the static type is `unknown`.
+ *
+ * Centralising the widening here means business logic never needs an inline
+ * cast — and the runtime guard turns future contract mismatches into visible
+ * errors rather than silent type-assertion violations.
  */
-export function toRecord(v: object): Record<string, unknown> {
+export function toRecord(v: unknown): Record<string, unknown> {
+  if (v === null || typeof v !== "object") {
+    throw new Error(`toRecord expected a non-null object, got ${v === null ? "null" : typeof v}`);
+  }
   return v as Record<string, unknown>;
 }

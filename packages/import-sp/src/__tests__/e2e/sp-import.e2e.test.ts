@@ -17,6 +17,7 @@ import { createRecordingPersister } from "./recording-persister.js";
 
 import type { Manifest, ManifestCollectionKey } from "./manifest.types.js";
 import type { RecordingSnapshot } from "./recording-persister.js";
+import type { MappedMemberOutput } from "../../mappers/member.mapper.js";
 import type { ImportDataSource } from "../../sources/source.types.js";
 import type { ImportCheckpointState } from "@pluralscape/types";
 
@@ -86,17 +87,16 @@ function assertAllEntitiesPresent(snap: RecordingSnapshot, manifest: Manifest): 
  * Spot-check a few entity payloads to verify field mapping correctness.
  * Checks that key fields from the manifest survived import into the payload.
  */
+
 /**
  * The member mapper wraps the core member fields inside a `member` sub-object
  * (alongside `fieldValues` and `bucketIds`). This helper navigates that
  * structure for payload spot-checks.
  */
-function memberName(payload: unknown): unknown {
+function memberName(payload: unknown): string | undefined {
   if (payload === null || typeof payload !== "object") return undefined;
-  const outer = payload as Record<string, unknown>;
-  const inner = outer["member"];
-  if (inner === null || typeof inner !== "object") return undefined;
-  return (inner as Record<string, unknown>)["name"];
+  const outer = payload as MappedMemberOutput;
+  return outer.member.name;
 }
 
 function assertPayloadSpotChecks(

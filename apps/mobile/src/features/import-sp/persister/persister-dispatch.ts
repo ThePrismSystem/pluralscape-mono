@@ -17,8 +17,6 @@
  * persister owns a distinct SQL upsert / conflict policy and is exercised
  * independently in tests, so merging them into a single dispatch file
  * would bundle unrelated responsibilities and make per-entity edits noisy.
- * Audit review (2026-04-10) explicitly confirmed no consolidation is
- * warranted.
  */
 
 import { boardMessagePersister } from "./board-message.persister.js";

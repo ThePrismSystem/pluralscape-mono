@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createMappingContext } from "../../mappers/context.js";
 import { mapFieldDefinition } from "../../mappers/field-definition.mapper.js";
 
-import type { SPCustomField } from "../../sources/sp-types.js";
+import type { SPCustomField, SPCustomFieldType } from "../../sources/sp-types.js";
 
 describe("mapFieldDefinition", () => {
   it("maps a text field (SP type=0) with a zero-order index", () => {
@@ -36,7 +36,7 @@ describe("mapFieldDefinition", () => {
   it("maps SP numeric type 1 (color) and 2-7 (date variants)", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
 
-    const cases: readonly { readonly spType: number; readonly expected: string }[] = [
+    const cases: readonly { readonly spType: SPCustomFieldType; readonly expected: string }[] = [
       { spType: 1, expected: "color" },
       { spType: 2, expected: "date" },
       { spType: 3, expected: "date" },

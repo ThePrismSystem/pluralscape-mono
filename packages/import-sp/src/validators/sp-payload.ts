@@ -1,8 +1,15 @@
 import { z } from "zod/v4";
 
-function knownKeysOf(schema: z.ZodObject): ReadonlySet<string> {
-  return new Set(Object.keys(schema.shape));
-}
+import {
+  SP_FIELD_TYPE_COLOR,
+  SP_FIELD_TYPE_DATE,
+  SP_FIELD_TYPE_MONTH,
+  SP_FIELD_TYPE_MONTH_DAY,
+  SP_FIELD_TYPE_MONTH_YEAR,
+  SP_FIELD_TYPE_TEXT,
+  SP_FIELD_TYPE_TIMESTAMP,
+  SP_FIELD_TYPE_YEAR,
+} from "../import-sp.constants.js";
 
 import type {
   SPBoardMessage,
@@ -24,19 +31,16 @@ import type {
   SPUser,
 } from "../sources/sp-types.js";
 
+function knownKeysOf(schema: z.ZodObject): ReadonlySet<string> {
+  return new Set(Object.keys(schema.shape));
+}
+
 const SPDocumentIdSchema = z.string().min(1);
 
 const NullableString = z.string().nullable().optional();
 const OptionalBool = z.boolean().optional();
 const OptionalNumber = z.number().nonnegative().optional();
-const Timestamp = z.number().nonnegative();
-
-/**
- * Highest numeric value accepted by SP's `CustomFieldType` enum — sourced
- * from `typeConverters.length` in
- * `src/api/base/user/generateReports.ts` of the upstream SP repo.
- */
-const SP_CUSTOM_FIELD_TYPE_MAX = 7;
+const Timestamp = z.number().int().nonnegative();
 
 export const SPUserSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -111,7 +115,16 @@ export const SPGroupKnownKeys: ReadonlySet<string> = knownKeysOf(SPGroupSchema);
  * fractional-index string on migrated accounts; we coerce numeric `order`
  * values from pre-migration exports so both shapes validate.
  */
-const SPCustomFieldTypeSchema = z.number().int().min(0).max(SP_CUSTOM_FIELD_TYPE_MAX);
+const SPCustomFieldTypeSchema = z.union([
+  z.literal(SP_FIELD_TYPE_TEXT),
+  z.literal(SP_FIELD_TYPE_COLOR),
+  z.literal(SP_FIELD_TYPE_DATE),
+  z.literal(SP_FIELD_TYPE_MONTH),
+  z.literal(SP_FIELD_TYPE_YEAR),
+  z.literal(SP_FIELD_TYPE_MONTH_YEAR),
+  z.literal(SP_FIELD_TYPE_TIMESTAMP),
+  z.literal(SP_FIELD_TYPE_MONTH_DAY),
+]);
 const SPCustomFieldOrderSchema = z
   .union([z.string().min(1), z.number()])
   .transform((v) => (typeof v === "number" ? String(v) : v));
