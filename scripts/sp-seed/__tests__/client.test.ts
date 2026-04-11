@@ -1,9 +1,12 @@
 // scripts/sp-seed/__tests__/client.test.ts
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   extractObjectIdFromText,
   InvalidObjectIdError,
   MalformedJwtError,
+  NonJsonResponseError,
+  SpApiError,
+  SpClient,
   uidFromJwt,
 } from "../client.js";
 
@@ -71,5 +74,87 @@ describe("uidFromJwt", () => {
 
   test("throws MalformedJwtError when payload is not valid base64url JSON", () => {
     expect(() => uidFromJwt("header.not-valid-json-base64.sig")).toThrow(MalformedJwtError);
+  });
+});
+
+describe("SpClient.requestRaw", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let originalFetch: typeof global.fetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    mockFetch = vi.fn();
+    global.fetch = mockFetch as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test("sends Authorization header raw (no Bearer prefix)", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "raw-api-key-xyz");
+    await client.requestRaw("/v1/me", {});
+    const [, init] = mockFetch.mock.calls[0];
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe("raw-api-key-xyz");
+    expect(headers["Authorization"]).not.toMatch(/^Bearer /);
+  });
+
+  test("throws SpApiError on 4xx with body content", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("bad stuff", { status: 400 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.requestRaw("/v1/x", {})).rejects.toMatchObject({
+      name: "SpApiError",
+      status: 400,
+      path: "/v1/x",
+      body: "bad stuff",
+    });
+  });
+
+  test("throws SpApiError on 5xx after one retry", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response("fail", { status: 500 }))
+      .mockResolvedValueOnce(new Response("fail again", { status: 500 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.requestRaw("/v1/x", {})).rejects.toMatchObject({
+      name: "SpApiError",
+      status: 500,
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("recovers from transient 5xx on second attempt", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response("fail", { status: 500 }))
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.requestRaw("/v1/x", {})).resolves.toBe("ok");
+  });
+});
+
+describe("SpClient.request", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let originalFetch: typeof global.fetch;
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    mockFetch = vi.fn();
+    global.fetch = mockFetch as unknown as typeof fetch;
+  });
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test("parses JSON response into typed object", async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{"id":"abc","name":"x"}', { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    const result = await client.request<{ id: string; name: string }>("/v1/me", {});
+    expect(result).toEqual({ id: "abc", name: "x" });
+  });
+
+  test("throws NonJsonResponseError on unparseable body", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("not json at all", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.request("/v1/me", {})).rejects.toBeInstanceOf(NonJsonResponseError);
   });
 });

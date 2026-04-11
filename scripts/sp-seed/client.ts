@@ -1,4 +1,5 @@
 // scripts/sp-seed/client.ts
+import { FETCH_TIMEOUT_MS, REQUEST_DELAY_MS } from "./constants.js";
 
 export class SpApiError extends Error {
   constructor(
@@ -91,4 +92,84 @@ export function uidFromJwt(jwt: string): string {
   const uid = payload["uid"];
   if (typeof uid === "string" && uid.length > 0) return uid;
   throw new MalformedJwtError("JWT payload missing sub/uid claim");
+}
+
+export type SpMode = "minimal" | "adversarial";
+
+export interface RequestOptions {
+  method?: string;
+  body?: unknown;
+  /** Override the Authorization header value (e.g. to use the JWT during bootstrap). */
+  authOverride?: string;
+}
+
+const RETRY_BACKOFF_MS = 500;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export class SpClient {
+  private inflight: Promise<void> = Promise.resolve();
+
+  constructor(
+    readonly baseUrl: string,
+    private readonly apiKey: string,
+  ) {}
+
+  async requestRaw(path: string, opts: RequestOptions): Promise<string> {
+    // Serialize calls via a chained promise — ensures REQUEST_DELAY_MS between requests.
+    const previous = this.inflight;
+    let release!: () => void;
+    this.inflight = new Promise<void>((r) => {
+      release = r;
+    });
+    try {
+      await previous;
+      await delay(REQUEST_DELAY_MS);
+      return await this.executeOnce(path, opts, /* retryOn5xx */ true);
+    } finally {
+      release();
+    }
+  }
+
+  async request<T>(path: string, opts: RequestOptions): Promise<T> {
+    const text = await this.requestRaw(path, opts);
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new NonJsonResponseError(opts.method ?? "GET", path, text);
+    }
+  }
+
+  private async executeOnce(
+    path: string,
+    opts: RequestOptions,
+    retryOn5xx: boolean,
+  ): Promise<string> {
+    const method = opts.method ?? "GET";
+    const url = `${this.baseUrl}${path}`;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: opts.authOverride ?? this.apiKey,
+    };
+    const init: RequestInit = {
+      method,
+      headers,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    };
+    if (opts.body !== undefined) {
+      init.body = JSON.stringify(opts.body);
+    }
+    const response = await fetch(url, init);
+    if (response.status >= 500 && retryOn5xx) {
+      await delay(RETRY_BACKOFF_MS);
+      return this.executeOnce(path, opts, /* retryOn5xx */ false);
+    }
+    const text = await response.text();
+    if (!response.ok) {
+      throw new SpApiError(response.status, method, path, text);
+    }
+    return text;
+  }
 }
