@@ -8,8 +8,134 @@ import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
 import type { Persister, PersistableEntity } from "../../persistence/persister.types.js";
-import type { ImportDataSource } from "../../sources/source.types.js";
+import type { ImportDataSource, SourceEvent } from "../../sources/source.types.js";
 import type { ImportCheckpointState, ImportCollectionType, ImportError } from "@pluralscape/types";
+
+function stubSource(
+  events: readonly SourceEvent[],
+  collections: readonly string[] = ["members"],
+): ImportDataSource {
+  return {
+    mode: "fake",
+    async *iterate(collection) {
+      for (const e of events) {
+        if (e.collection !== collection) continue;
+        await Promise.resolve();
+        yield e;
+      }
+    },
+    listCollections() {
+      return Promise.resolve(collections);
+    },
+    close() {
+      return Promise.resolve();
+    },
+  };
+}
+
+describe("runImport — drop events", () => {
+  it("records drop events as non-fatal failures and continues iteration", async () => {
+    const source = stubSource([
+      {
+        kind: "doc",
+        collection: "members",
+        sourceId: "m1",
+        document: { _id: "m1", name: "Aria", buckets: [] },
+      },
+      { kind: "drop", collection: "members", sourceId: "m2", reason: "non-object body" },
+      {
+        kind: "doc",
+        collection: "members",
+        sourceId: "m3",
+        document: { _id: "m3", name: "Cass", buckets: [] },
+      },
+    ]);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+
+    expect(result.outcome).toBe("completed");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.kind).toBe("invalid-source-document");
+    expect(result.errors[0]?.entityId).toBe("m2");
+    expect(result.errors[0]?.fatal).toBe(false);
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m1", "m3"]);
+  });
+
+  it("drop with null sourceId does not advance the checkpoint cursor", async () => {
+    // A drop event with sourceId=null must not call advanceWithinCollection
+    // (which would overwrite the last-known cursor). We verify indirectly:
+    // bumpCollectionTotals is used instead, so m1's cursor position survives
+    // and m1 is still persisted successfully.
+    const source = stubSource([
+      {
+        kind: "doc",
+        collection: "members",
+        sourceId: "m1",
+        document: { _id: "m1", name: "Aria", buckets: [] },
+      },
+      { kind: "drop", collection: "members", sourceId: null, reason: "non-object body" },
+    ]);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+
+    // The null-sourceId drop must be recorded as a non-fatal failure.
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.entityId).toBeNull();
+    expect(result.errors[0]?.fatal).toBe(false);
+    // The null drop counts toward the failed total.
+    expect(result.finalState.totals.perCollection.member?.failed).toBe(1);
+    // m1 was successfully imported — the null drop did not corrupt iteration.
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m1"]);
+  });
+
+  it("warns on DEPENDENCY_ORDER collections missing from source.listCollections()", async () => {
+    // stubSource lists only ["members"] — all other DEPENDENCY_ORDER collections
+    // are absent and should each produce a source-missing-collection warning.
+    const source = stubSource(
+      [
+        {
+          kind: "doc",
+          collection: "members",
+          sourceId: "m1",
+          document: { _id: "m1", name: "Aria", buckets: [] },
+        },
+      ],
+      ["members"],
+    );
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+
+    expect(result.outcome).toBe("completed");
+    const missingKeys = result.warnings
+      .filter(
+        (w): w is typeof w & { key: string } =>
+          typeof w.key === "string" && w.key.startsWith("source-missing-collection:"),
+      )
+      .map((w) => w.key);
+    expect(missingKeys.length).toBeGreaterThan(0);
+    expect(missingKeys).toContain("source-missing-collection:privacyBuckets");
+    expect(missingKeys).toContain("source-missing-collection:frontHistory");
+  });
+});
 
 interface RecordingPersister extends Persister {
   readonly upserted: readonly PersistableEntity[];
@@ -584,7 +710,12 @@ describe("runImport — dropped collections", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
-    const dropped = result.warnings.filter((w) => w.kind === "dropped-collection");
+    const dropped = result.warnings.filter(
+      (w): w is typeof w & { key: string } =>
+        w.kind === "dropped-collection" &&
+        typeof w.key === "string" &&
+        w.key.startsWith("dropped-collection:"),
+    );
     expect(dropped.map((w) => w.key).sort()).toEqual([
       "dropped-collection:friends",
       "dropped-collection:pendingFriendRequests",
@@ -612,7 +743,17 @@ describe("runImport — dropped collections", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
-    expect(result.warnings.some((w) => w.kind === "dropped-collection")).toBe(false);
+    // Only genuine "unknown" dropped-collection warnings (key prefix
+    // "dropped-collection:") should be absent; source-missing-collection
+    // warnings also use kind "dropped-collection" but have a different key.
+    expect(
+      result.warnings.some(
+        (w) =>
+          w.kind === "dropped-collection" &&
+          typeof w.key === "string" &&
+          w.key.startsWith("dropped-collection:"),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -702,7 +843,12 @@ describe("runImport — surprise policy end-to-end", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
-    const dropped = result.warnings.filter((w) => w.kind === "dropped-collection");
+    const dropped = result.warnings.filter(
+      (w): w is typeof w & { key: string } =>
+        w.kind === "dropped-collection" &&
+        typeof w.key === "string" &&
+        w.key.startsWith("dropped-collection:"),
+    );
     expect(dropped).toHaveLength(1);
     expect(dropped[0]?.message).toContain("friends");
   });

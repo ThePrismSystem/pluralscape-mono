@@ -1,4 +1,4 @@
-import type { ImportDataSource, SourceDocument } from "./source.types.js";
+import type { ImportDataSource, SourceEvent } from "./source.types.js";
 import type { SpCollectionName } from "./sp-collections.js";
 
 /**
@@ -33,7 +33,7 @@ export function createFakeImportSource(
   const extraCollections = options.extraCollections ?? [];
   return {
     mode: "fake",
-    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceDocument> {
+    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceEvent> {
       // Yield to the microtask queue so this conforms to async-iterator semantics
       // even though the in-memory backing store is synchronous.
       await Promise.resolve();
@@ -46,6 +46,7 @@ export function createFakeImportSource(
           );
         }
         yield {
+          kind: "doc",
           collection,
           sourceId: rawId,
           document,

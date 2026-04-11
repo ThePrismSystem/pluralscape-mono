@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   advanceWithinCollection,
+  bumpCollectionTotals,
   completeCollection,
   emptyCheckpointState,
   resumeStartCollection,
+  type AdvanceDelta,
 } from "../../engine/checkpoint.js";
 
 describe("checkpoint helpers", () => {
@@ -60,5 +62,41 @@ describe("checkpoint helpers", () => {
       avatarMode: "api",
     });
     expect(resumeStartCollection(state)).toBe("member");
+  });
+});
+
+describe("bumpCollectionTotals", () => {
+  const delta: AdvanceDelta = { total: 1, imported: 0, updated: 0, skipped: 0, failed: 1 };
+
+  it("bumps perCollection totals without advancing currentCollectionLastSourceId", () => {
+    const base = emptyCheckpointState({
+      firstEntityType: "member",
+      selectedCategories: {},
+      avatarMode: "skip",
+    });
+    const prevCursor = base.checkpoint.currentCollectionLastSourceId;
+    const after = bumpCollectionTotals(base, "member", delta);
+
+    expect(after.totals.perCollection.member).toEqual({
+      total: 1,
+      imported: 0,
+      updated: 0,
+      skipped: 0,
+      failed: 1,
+    });
+    expect(after.checkpoint.currentCollectionLastSourceId).toBe(prevCursor);
+    expect(after.checkpoint.currentCollection).toBe("member");
+  });
+
+  it("accumulates totals across multiple bumps", () => {
+    const base = emptyCheckpointState({
+      firstEntityType: "member",
+      selectedCategories: {},
+      avatarMode: "skip",
+    });
+    const once = bumpCollectionTotals(base, "member", delta);
+    const twice = bumpCollectionTotals(once, "member", delta);
+    expect(twice.totals.perCollection.member?.failed).toBe(2);
+    expect(twice.totals.perCollection.member?.total).toBe(2);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { ImportDataSource, SourceDocument, SourceMode } from "../../sources/source.types.js";
+import type { ImportDataSource, SourceEvent, SourceMode } from "../../sources/source.types.js";
 import type { SpCollectionName } from "../../sources/sp-collections.js";
 
 describe("ImportDataSource", () => {
@@ -9,9 +9,9 @@ describe("ImportDataSource", () => {
     expectTypeOf<ImportDataSource["iterate"]>().parameter(0).toEqualTypeOf<SpCollectionName>();
   });
 
-  it("iterate returns an AsyncIterable of SourceDocument", () => {
+  it("iterate returns an AsyncIterable of SourceEvent", () => {
     type RT = ReturnType<ImportDataSource["iterate"]>;
-    expectTypeOf<RT>().toExtend<AsyncIterable<SourceDocument>>();
+    expectTypeOf<RT>().toExtend<AsyncIterable<SourceEvent>>();
   });
 
   it("SourceMode is the discriminator for api vs file", () => {
@@ -26,11 +26,22 @@ describe("ImportDataSource", () => {
     expectTypeOf<ImportDataSource["close"]>().returns.toEqualTypeOf<Promise<void>>();
   });
 
-  it("SourceDocument carries the raw document plus its source ID and collection", () => {
-    expectTypeOf<SourceDocument>().toExtend<{
+  it("SourceEvent is a discriminated union of doc and drop variants", () => {
+    type DocVariant = Extract<SourceEvent, { kind: "doc" }>;
+    type DropVariant = Extract<SourceEvent, { kind: "drop" }>;
+
+    expectTypeOf<DocVariant>().toExtend<{
+      kind: "doc";
       collection: SpCollectionName;
       sourceId: string;
       document: unknown;
+    }>();
+
+    expectTypeOf<DropVariant>().toExtend<{
+      kind: "drop";
+      collection: SpCollectionName;
+      sourceId: string | null;
+      reason: string;
     }>();
   });
 });

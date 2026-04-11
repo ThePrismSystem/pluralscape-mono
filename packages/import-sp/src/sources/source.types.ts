@@ -4,16 +4,33 @@ import type { SpCollectionName } from "./sp-collections.js";
 export type SourceMode = "api" | "file" | "fake";
 
 /**
- * A single document yielded by an `ImportDataSource`.
+ * A single event yielded by an `ImportDataSource`.
  *
- * `document` is intentionally `unknown` — the engine validates it against the
- * corresponding Zod schema before passing it to a mapper. Sources never validate.
+ * `doc` events carry a parsed document whose `document` field is
+ * intentionally `unknown` — the engine validates it against the
+ * corresponding Zod schema before passing it to a mapper. Sources never
+ * validate.
+ *
+ * `drop` events tell the engine the source knowingly rejected a document
+ * before producing it (non-object body, missing `_id`, wrong-shaped single
+ * response). The engine records them as non-fatal `ImportError`s with
+ * `kind: "invalid-source-document"` and keeps iterating. Transport and
+ * parse errors (network, SAX failure, HTTP 5xx) still throw and remain
+ * fatal.
  */
-export interface SourceDocument {
-  readonly collection: SpCollectionName;
-  readonly sourceId: string;
-  readonly document: unknown;
-}
+export type SourceEvent =
+  | {
+      readonly kind: "doc";
+      readonly collection: SpCollectionName;
+      readonly sourceId: string;
+      readonly document: unknown;
+    }
+  | {
+      readonly kind: "drop";
+      readonly collection: SpCollectionName;
+      readonly sourceId: string | null;
+      readonly reason: string;
+    };
 
 /**
  * Streams Simply Plural documents grouped by collection.
@@ -38,7 +55,7 @@ export interface SourceDocument {
  */
 export interface ImportDataSource {
   readonly mode: SourceMode;
-  iterate(collection: SpCollectionName): AsyncIterable<SourceDocument>;
+  iterate(collection: SpCollectionName): AsyncIterable<SourceEvent>;
   listCollections(): Promise<readonly string[]>;
   close(): Promise<void>;
 }

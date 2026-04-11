@@ -4,6 +4,8 @@ import { createFileImportSource, FileSourceParseError } from "../../sources/file
 
 import { buildExportJson } from "./file-source.fixtures.js";
 
+import type { SourceEvent } from "../../sources/source.types.js";
+
 /** Wrap a UTF-8 string in a single-chunk ReadableStream. */
 function stringToStream(text: string): ReadableStream<Uint8Array> {
   const bytes = new TextEncoder().encode(text);
@@ -25,8 +27,8 @@ describe("createFileImportSource", () => {
     });
     const source = createFileImportSource({ stream: stringToStream(json) });
     const out: string[] = [];
-    for await (const doc of source.iterate("members")) {
-      out.push(doc.sourceId);
+    for await (const e of source.iterate("members")) {
+      if (e.kind === "doc") out.push(e.sourceId);
     }
     await source.close();
     expect(out).toEqual(["m1", "m2"]);
@@ -35,9 +37,9 @@ describe("createFileImportSource", () => {
   it("yields nothing for a collection not present in the JSON", async () => {
     const json = buildExportJson({ members: [{ _id: "m1", name: "A" }] });
     const source = createFileImportSource({ stream: stringToStream(json) });
-    const out: unknown[] = [];
-    for await (const doc of source.iterate("groups")) {
-      out.push(doc);
+    const out: SourceEvent[] = [];
+    for await (const e of source.iterate("groups")) {
+      out.push(e);
     }
     await source.close();
     expect(out).toHaveLength(0);
@@ -49,8 +51,8 @@ describe("createFileImportSource", () => {
     });
     const source = createFileImportSource({ stream: stringToStream(json) });
     let captured: unknown;
-    for await (const doc of source.iterate("members")) {
-      captured = doc.document;
+    for await (const e of source.iterate("members")) {
+      if (e.kind === "doc") captured = e.document;
     }
     await source.close();
     expect(captured).toEqual({
@@ -66,8 +68,8 @@ describe("createFileImportSource", () => {
     });
     const source = createFileImportSource({ stream: stringToStream(json) });
     let captured: unknown;
-    for await (const doc of source.iterate("groups")) {
-      captured = doc.document;
+    for await (const e of source.iterate("groups")) {
+      if (e.kind === "doc") captured = e.document;
     }
     await source.close();
     expect(captured).toEqual({
@@ -81,12 +83,12 @@ describe("createFileImportSource", () => {
     const json = buildExportJson({ members: [{ _id: "m1", name: "A" }] });
     const source = createFileImportSource({ stream: stringToStream(json) });
     const first: string[] = [];
-    for await (const d of source.iterate("members")) {
-      first.push(d.sourceId);
+    for await (const e of source.iterate("members")) {
+      if (e.kind === "doc") first.push(e.sourceId);
     }
     const second: string[] = [];
-    for await (const d of source.iterate("members")) {
-      second.push(d.sourceId);
+    for await (const e of source.iterate("members")) {
+      if (e.kind === "doc") second.push(e.sourceId);
     }
     await source.close();
     expect(first).toEqual(second);
@@ -95,21 +97,26 @@ describe("createFileImportSource", () => {
   it("rejects malformed JSON with a FileSourceParseError", async () => {
     const source = createFileImportSource({ stream: stringToStream("{not valid") });
     await expect(async () => {
-      for await (const doc of source.iterate("members")) {
-        void doc;
+      for await (const e of source.iterate("members")) {
+        void e;
       }
     }).rejects.toBeInstanceOf(FileSourceParseError);
   });
 
-  it("skips documents missing _id during iteration", async () => {
+  it("emits drop for documents missing _id and still yields well-formed docs", async () => {
     const json = buildExportJson({ members: [{ name: "no id" }, { _id: "m2", name: "Has id" }] });
     const source = createFileImportSource({ stream: stringToStream(json) });
-    const out: string[] = [];
-    for await (const doc of source.iterate("members")) {
-      out.push(doc.sourceId);
+    const events: SourceEvent[] = [];
+    for await (const e of source.iterate("members")) {
+      events.push(e);
     }
     await source.close();
-    expect(out).toEqual(["m2"]);
+    expect(events).toHaveLength(2);
+    expect(events[0]?.kind).toBe("drop");
+    expect(events[1]?.kind).toBe("doc");
+    if (events[1]?.kind === "doc") {
+      expect(events[1].sourceId).toBe("m2");
+    }
   });
 
   it("exposes mode 'file'", async () => {
@@ -135,5 +142,45 @@ describe("createFileImportSource", () => {
     const names = await source.listCollections();
     await source.close();
     expect(names).toEqual([]);
+  });
+
+  it("yields drop when a document is not an object", async () => {
+    const stream = stringToStream(JSON.stringify({ members: ["not-an-object"] }));
+    const source = createFileImportSource({ stream });
+    const events: SourceEvent[] = [];
+    for await (const e of source.iterate("members")) events.push(e);
+    await source.close();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("drop");
+    if (events[0]?.kind === "drop") {
+      expect(events[0].sourceId).toBeNull();
+      expect(events[0].reason).toMatch(/not an object/i);
+    }
+  });
+
+  it("yields drop when a document is missing _id", async () => {
+    const stream = stringToStream(JSON.stringify({ members: [{ name: "Alice" }] }));
+    const source = createFileImportSource({ stream });
+    const events: SourceEvent[] = [];
+    for await (const e of source.iterate("members")) events.push(e);
+    await source.close();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("drop");
+    if (events[0]?.kind === "drop") {
+      expect(events[0].reason).toMatch(/_id/i);
+    }
+  });
+
+  it("yields doc events for well-formed documents alongside drops", async () => {
+    const stream = stringToStream(
+      JSON.stringify({ members: [{ _id: "m1", name: "Alice" }, { name: "Bob" }] }),
+    );
+    const source = createFileImportSource({ stream });
+    const events: SourceEvent[] = [];
+    for await (const e of source.iterate("members")) events.push(e);
+    await source.close();
+    expect(events).toHaveLength(2);
+    expect(events[0]?.kind).toBe("doc");
+    expect(events[1]?.kind).toBe("drop");
   });
 });

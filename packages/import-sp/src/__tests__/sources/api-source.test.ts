@@ -7,7 +7,7 @@ import {
   createApiImportSource,
 } from "../../sources/api-source.js";
 
-import type { ImportDataSource } from "../../sources/source.types.js";
+import type { ImportDataSource, SourceEvent } from "../../sources/source.types.js";
 import type { SpCollectionName } from "../../sources/sp-collections.js";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
@@ -18,11 +18,25 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   });
 }
 
-/** Drain an iterator of an import source into an array of source IDs. */
+/** Drain an iterator of an import source into an array of source IDs (doc events only). */
 async function drain(source: ImportDataSource, collection: SpCollectionName): Promise<string[]> {
   const out: string[] = [];
-  for await (const doc of source.iterate(collection)) {
-    out.push(doc.sourceId);
+  for await (const event of source.iterate(collection)) {
+    if (event.kind === "doc") {
+      out.push(event.sourceId);
+    }
+  }
+  return out;
+}
+
+/** Collect all events from an iterator into an array. */
+async function drainEvents(
+  source: ImportDataSource,
+  collection: SpCollectionName,
+): Promise<SourceEvent[]> {
+  const out: SourceEvent[] = [];
+  for await (const event of source.iterate(collection)) {
+    out.push(event);
   }
   return out;
 }
@@ -243,18 +257,73 @@ describe("createApiImportSource", () => {
     expect(caught).toBeInstanceOf(ApiSourcePermanentError);
   });
 
-  it("throws ApiSourcePermanentError when a document is missing _id", async () => {
+  it("yields a drop event when a list element is missing _id (does not throw)", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse([{ name: "no id here" }]));
     const source = createApiImportSource(DEFAULT_INPUT);
-
-    let caught: unknown;
-    try {
-      await drain(source, "members");
-    } catch (err) {
-      caught = err;
-    }
+    const events = await drainEvents(source, "members");
     await source.close();
 
-    expect(caught).toBeInstanceOf(ApiSourcePermanentError);
+    expect(events).toHaveLength(1);
+    const [e] = events;
+    expect(e?.kind).toBe("drop");
+    if (e?.kind === "drop") {
+      expect(e.reason).toMatch(/_id/i);
+    }
+  });
+
+  it("yields a drop event when a list element is a non-object (does not throw)", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([42]));
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const events = await drainEvents(source, "members");
+    await source.close();
+
+    expect(events).toHaveLength(1);
+    const [e] = events;
+    expect(e?.kind).toBe("drop");
+    if (e?.kind === "drop") {
+      expect(e.reason).toMatch(/non-object/i);
+    }
+  });
+
+  it("yields a drop when a single-strategy endpoint returns an array", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([]));
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const events = await drainEvents(source, "users");
+    await source.close();
+
+    expect(events).toHaveLength(1);
+    const [e] = events;
+    expect(e?.kind).toBe("drop");
+    if (e?.kind === "drop") {
+      expect(e.reason).toMatch(/array/i);
+    }
+  });
+
+  it("does not drop on legitimate empty-object single response", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({}));
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const events = await drainEvents(source, "private");
+    await source.close();
+
+    expect(events).toHaveLength(0);
+  });
+
+  it("still throws ApiSourceTransientError on HTTP 500", async () => {
+    fetchMock.mockResolvedValue(new Response("oops", { status: 500 }));
+    vi.useFakeTimers();
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const iterPromise = (async (): Promise<unknown> => {
+      try {
+        await drainEvents(source, "members");
+        return null;
+      } catch (err) {
+        return err;
+      }
+    })();
+    await vi.runAllTimersAsync();
+    const result = await iterPromise;
+    await source.close();
+
+    expect(result).toBeInstanceOf(ApiSourceTransientError);
   });
 });

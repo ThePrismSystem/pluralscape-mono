@@ -119,6 +119,41 @@ export function completeCollection(
   };
 }
 
+/**
+ * Bump per-collection totals without advancing `currentCollectionLastSourceId`.
+ * Used by the engine for drop events carrying no `sourceId` — the resume
+ * cursor must not move past a failure the source could not uniquely identify,
+ * but the failure still has to count toward the collection totals shown to
+ * the operator.
+ */
+export function bumpCollectionTotals(
+  state: ImportCheckpointState,
+  entityType: ImportCollectionType,
+  delta: AdvanceDelta,
+): ImportCheckpointState {
+  const prev: ImportCollectionTotals = state.totals.perCollection[entityType] ?? ZERO_TOTALS;
+  const updated: ImportCollectionTotals = {
+    total: prev.total + delta.total,
+    imported: prev.imported + delta.imported,
+    updated: prev.updated + delta.updated,
+    skipped: prev.skipped + delta.skipped,
+    failed: prev.failed + delta.failed,
+  };
+  return {
+    ...state,
+    checkpoint: {
+      ...state.checkpoint,
+      currentCollection: entityType,
+    },
+    totals: {
+      perCollection: {
+        ...state.totals.perCollection,
+        [entityType]: updated,
+      },
+    },
+  };
+}
+
 export function resumeStartCollection(state: ImportCheckpointState): ImportCollectionType {
   return state.checkpoint.currentCollection;
 }

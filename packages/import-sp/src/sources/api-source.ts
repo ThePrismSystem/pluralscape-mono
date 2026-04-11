@@ -4,8 +4,9 @@ import {
   SP_API_MAX_RETRIES,
   SP_API_REQUEST_TIMEOUT_MS,
 } from "../import-sp.constants.js";
+import { toRecord } from "../shared/to-record.js";
 
-import type { ImportDataSource, SourceDocument } from "./source.types.js";
+import type { ImportDataSource, SourceEvent } from "./source.types.js";
 import type { SpCollectionName } from "./sp-collections.js";
 
 /**
@@ -180,10 +181,10 @@ const LISTABLE_COLLECTIONS: readonly SpCollectionName[] = (
  *   `ApiSourceTransientError`.
  * - Any other non-2xx → `ApiSourceTransientError` without retrying (4xx other
  *   than 401 is unlikely to resolve on a retry).
- * - Shape failures (unexpected response body, document missing `_id`,
- *   non-object document) → `ApiSourcePermanentError`. Retrying will not
- *   resolve a schema mismatch; the classifier maps this to fatal +
- *   non-recoverable so the operator must fix the source.
+ * - Shape failures on list/range responses (non-array body) →
+ *   `ApiSourcePermanentError`. Per-document shape failures (non-object
+ *   element, missing `_id`) are emitted as `drop` events so the engine
+ *   can keep iterating the rest of the collection.
  *
  * SP streams full collections in a single response, so no pagination loop
  * is required. Collections without a bulk list endpoint yield nothing —
@@ -262,26 +263,37 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
     return base;
   }
 
+  type AssertResult =
+    | { readonly kind: "ok"; readonly sourceId: string; readonly record: Record<string, unknown> }
+    | { readonly kind: "drop"; readonly sourceId: string | null; readonly reason: string };
+
   function assertDocument(
     value: unknown,
     collection: SpCollectionName,
-  ): { readonly sourceId: string; readonly document: Record<string, unknown> } {
+    index: number,
+  ): AssertResult {
     if (value === null || typeof value !== "object") {
-      throw new ApiSourcePermanentError(
-        `ApiImportSource: ${collection} contained a non-object document (got ${typeof value})`,
-      );
+      return {
+        kind: "drop",
+        sourceId: null,
+        reason: `ApiImportSource: ${collection}[${String(index)}] is a non-object document (got ${typeof value})`,
+      };
     }
-    const record = value as Record<string, unknown>;
+    const record = toRecord(value);
     const id = record._id;
     if (typeof id !== "string" || id.length === 0) {
-      throw new ApiSourcePermanentError(`ApiImportSource: ${collection} document missing _id`);
+      return {
+        kind: "drop",
+        sourceId: null,
+        reason: `ApiImportSource: ${collection}[${String(index)}] missing required "_id" field`,
+      };
     }
-    return { sourceId: id, document: record };
+    return { kind: "ok", sourceId: id, record };
   }
 
   return {
     mode: "api",
-    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceDocument> {
+    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceEvent> {
       const strategy = ENDPOINT_STRATEGIES[collection];
       if (strategy.kind === "unsupported") {
         // The SP API does not expose a simple bulk endpoint for this
@@ -295,26 +307,44 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
       const body = await fetchJson(url);
 
       if (strategy.kind === "single") {
-        // Skip empty single-doc responses rather than throwing — SP
-        // returns `{}` or `null` when the target document does not
-        // exist (e.g. a `private` doc for an account that never touched
-        // its notification settings).
-        if (body === null || (typeof body === "object" && Object.keys(body).length === 0)) {
+        if (body === null) return;
+        if (Array.isArray(body)) {
+          yield {
+            kind: "drop",
+            collection,
+            sourceId: null,
+            reason: `SP API ${collection} endpoint returned an array (expected single document)`,
+          };
           return;
         }
-        const { sourceId, document } = assertDocument(body, collection);
-        yield { collection, sourceId, document };
+        // `{}` means the target document does not exist (e.g. a `private` doc
+        // for an account that never touched notification settings) — legitimate
+        // skip, not a drop.
+        if (typeof body === "object" && Object.keys(body).length === 0) return;
+        const result = assertDocument(body, collection, 0);
+        if (result.kind === "drop") {
+          yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
+          return;
+        }
+        yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
         return;
       }
 
+      // list or range strategies — both return an array.
       if (!Array.isArray(body)) {
         throw new ApiSourcePermanentError(
           `SP API returned non-array body for ${url} (got ${typeof body})`,
         );
       }
+      let index = 0;
       for (const element of body) {
-        const { sourceId, document } = assertDocument(element, collection);
-        yield { collection, sourceId, document };
+        const result = assertDocument(element, collection, index);
+        if (result.kind === "drop") {
+          yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
+        } else {
+          yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
+        }
+        index += 1;
       }
     },
     listCollections() {
