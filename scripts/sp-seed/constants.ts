@@ -1,3 +1,10 @@
+/**
+ * Constants for the SP seed script. No runtime logic — values only.
+ *
+ * Time constants are expressed in milliseconds. Bitmask values document
+ * their source in the SP API repo (ApparyllisOrg/SimplyPluralApi) inline.
+ */
+
 /** SP API base URL. Overridable via SP_API_BASE_URL env var. */
 export const SP_API_BASE_URL_DEFAULT = "https://api.apparyllis.com";
 
@@ -10,10 +17,10 @@ export const ENTITY_CREATION_DELAY_MS = 200;
 /** Fetch timeout for every SP API call (ms). */
 export const FETCH_TIMEOUT_MS = 30_000;
 
-/** Hardcoded fallback password when neither env file nor SP_TEST_PASSWORD is set. */
-export const DEFAULT_PASSWORD = "TestImport1!sp";
+/** Hardcoded fallback password when neither .env.sp-test nor SP_TEST_PASSWORD is set. */
+export const SP_TEST_PASSWORD_FALLBACK = "TestImport1!sp";
 
-/** Default password used by seed fixtures. Real operators should override via env. */
+/** Environment variable name read for the test account password when the env file omits it. */
 export const SP_TEST_PASSWORD_ENV_KEY = "SP_TEST_PASSWORD";
 
 /** Full read+write+delete bitmask per src/modules/api/keys.ts:5-11. */
@@ -24,6 +31,7 @@ export const DUMMY_OBJECT_ID = "000000000000000000000000";
 
 /** Paths (relative to repo root) that the script reads/writes. */
 export const PATHS = {
+  // envFile is shared across both modes (single combined file).
   envFile: ".env.sp-test",
   manifest: (mode: "minimal" | "adversarial") => `scripts/.sp-test-${mode}-manifest.json`,
   exportJson: (mode: "minimal" | "adversarial") => `scripts/.sp-test-${mode}-export.json`,
