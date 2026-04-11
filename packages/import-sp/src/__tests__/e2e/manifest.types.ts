@@ -1,4 +1,5 @@
 export interface ManifestEntry {
+  readonly ref: string;
   readonly sourceId: string;
   readonly fields: Record<string, unknown>;
 }
