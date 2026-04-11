@@ -1,11 +1,12 @@
-import { UnresolvedRefError, SpApiError, extractObjectIdFromText } from "./client.js";
-import type { SpClient } from "./client.js";
+import { UnresolvedRefError, SpApiError, extractObjectIdFromText, SpClient } from "./client.js";
 import type { Manifest, ManifestEntry, SeedPlan } from "./manifest.js";
-import { writeManifestAtomic } from "./manifest.js";
+import { writeManifestAtomic, loadManifest, emptyManifest, planSeed } from "./manifest.js";
 import type { EntityFixtures, EntityTypeKey, FixtureDef } from "./fixtures/types.js";
 import { ENTITY_TYPES_IN_ORDER } from "./fixtures/types.js";
-import { ENTITY_CREATION_DELAY_MS, ENTITY_POST_PATHS } from "./constants.js";
+import { ENTITY_CREATION_DELAY_MS, ENTITY_POST_PATHS, PATHS } from "./constants.js";
 import type { SpMode } from "./constants.js";
+import { writeEnvFile } from "./env.js";
+import type { SpTestEnv, SpModeEnv } from "./env.js";
 
 /**
  * Walk a POST body object and replace any `FixtureRef`-shaped string values
@@ -189,4 +190,63 @@ function findFixtureEntry(
     throw new Error(`fixture not found: entityType=${entityType} ref=${ref}`);
   }
   return found;
+}
+
+export interface ModeCreds {
+  readonly email: string;
+  readonly password: string;
+}
+
+export async function seedMode(
+  mode: SpMode,
+  creds: ModeCreds,
+  fixtures: EntityFixtures,
+  env: SpTestEnv,
+  baseUrl: string,
+): Promise<void> {
+  console.log(`\n=== Seeding ${mode} mode ===`);
+
+  const { client, systemId, apiKey, fresh } = await SpClient.bootstrap(
+    creds.email,
+    creds.password,
+    env[mode].apiKey,
+    baseUrl,
+  );
+  console.log(fresh ? "  Fresh bootstrap — created new API key" : "  Reusing stored API key");
+  console.log(`  System ID: ${systemId}`);
+
+  const existing = loadManifest(mode);
+  // Write skeleton first so even a planSeed crash leaves parseable state.
+  writeManifestAtomic(mode, existing ?? emptyManifest(systemId, mode));
+
+  const plan = await planSeed(client, systemId, fixtures, existing);
+  console.log(`  Plan: ${plan.reuse.length} reused, ${plan.create.length} to create`);
+
+  const refMap = new Map<string, string>();
+  for (const r of plan.reuse) refMap.set(r.ref, r.sourceId);
+
+  await executePlan(client, systemId, mode, fixtures, plan, refMap);
+
+  // Apply final profile patch
+  await client.request<unknown>(`/v1/user/${systemId}`, {
+    method: "PATCH",
+    body: fixtures.profilePatch,
+  });
+
+  // Trigger export (handles 429 gracefully)
+  await triggerExportWith429Handling(client, systemId);
+
+  // Persist env
+  const modeEnv: SpModeEnv = {
+    email: creds.email,
+    password: creds.password,
+    apiKey,
+    systemId,
+    manifestPath: PATHS.manifest(mode),
+    exportJsonPath: PATHS.exportJson(mode),
+  };
+  env[mode] = modeEnv;
+  writeEnvFile(env);
+
+  console.log(`  ${mode} mode complete.`);
 }
