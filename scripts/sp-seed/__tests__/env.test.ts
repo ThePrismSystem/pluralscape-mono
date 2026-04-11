@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { emptyEnv, readEnvFile } from "../env.js";
+import { emptyEnv, readEnvFile, writeEnvFile } from "../env.js";
 
 describe("readEnvFile", () => {
   let tmpDir: string;
@@ -71,5 +71,66 @@ describe("readEnvFile", () => {
   test("unknown keys do not affect parsing", () => {
     writeFileSync(envPath, "SP_TEST_MINIMAL_EMAIL=x@example.com\nSOMETHING_ELSE=ignore\n", "utf-8");
     expect(readEnvFile().minimal.email).toBe("x@example.com");
+  });
+});
+
+describe("writeEnvFile", () => {
+  let tmpDir: string;
+  let envPath: string;
+  const originalCwd = process.cwd();
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), "sp-seed-env-write-"));
+    process.chdir(tmpDir);
+    // Create a .gitignore that ignores the target file so the safety check passes.
+    writeFileSync(join(tmpDir, ".gitignore"), ".env.sp-test\n", "utf-8");
+    // Initialize a git repo so git check-ignore works.
+    require("node:child_process").execSync("git init -q", { cwd: tmpDir });
+    envPath = join(tmpDir, ".env.sp-test");
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test("round-trips a full env through write → read", () => {
+    const env = {
+      spApiBaseUrl: "https://sp.example.com",
+      minimal: {
+        email: "min@example.com",
+        password: "pw1",
+        apiKey: "keymin",
+        systemId: "uidmin",
+        manifestPath: "scripts/.sp-test-minimal-manifest.json",
+        exportJsonPath: "scripts/.sp-test-minimal-export.json",
+      },
+      adversarial: {
+        email: "adv@example.com",
+        password: "pw2",
+        apiKey: "keyadv",
+        systemId: "uidadv",
+        manifestPath: "scripts/.sp-test-adversarial-manifest.json",
+        exportJsonPath: "scripts/.sp-test-adversarial-export.json",
+      },
+    };
+    writeEnvFile(env);
+    expect(readEnvFile()).toEqual(env);
+  });
+
+  test("refuses to write when .env.sp-test is not gitignored", () => {
+    writeFileSync(join(tmpDir, ".gitignore"), "# nothing ignored\n", "utf-8");
+    expect(() => writeEnvFile(emptyEnv())).toThrow(/refusing to write.*not gitignored/);
+  });
+
+  test("omits undefined fields from the written output", () => {
+    writeEnvFile({
+      minimal: { email: "only@example.com" },
+      adversarial: {},
+    });
+    const content = readFileSync(envPath, "utf-8");
+    expect(content).toMatch(/SP_TEST_MINIMAL_EMAIL=only@example\.com/);
+    expect(content).not.toMatch(/SP_TEST_MINIMAL_PASSWORD/);
+    expect(content).not.toMatch(/SP_TEST_ADVERSARIAL_EMAIL/);
   });
 });

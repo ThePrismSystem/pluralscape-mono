@@ -1,4 +1,5 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, renameSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { PATHS } from "./constants.js";
 
 export type SpMode = "minimal" | "adversarial";
@@ -89,4 +90,51 @@ export function readEnvFile(): SpTestEnv {
     assignKey(env, key, value);
   }
   return env;
+}
+
+function isGitignored(path: string): boolean {
+  try {
+    execSync(`git check-ignore -q ${JSON.stringify(path)}`, { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function serialize(env: SpTestEnv): string {
+  const lines: string[] = [];
+  if (env.spApiBaseUrl !== undefined) {
+    lines.push(`SP_API_BASE_URL=${env.spApiBaseUrl}`);
+    lines.push("");
+  }
+  for (const mode of ["minimal", "adversarial"] as const) {
+    const m = env[mode];
+    const prefix = `SP_TEST_${mode.toUpperCase()}`;
+    const modeLines: string[] = [];
+    if (m.email !== undefined) modeLines.push(`${prefix}_EMAIL=${m.email}`);
+    if (m.password !== undefined) modeLines.push(`${prefix}_PASSWORD=${m.password}`);
+    if (m.apiKey !== undefined) modeLines.push(`${prefix}_API_KEY=${m.apiKey}`);
+    if (m.systemId !== undefined) modeLines.push(`${prefix}_SYSTEM_ID=${m.systemId}`);
+    if (m.manifestPath !== undefined) modeLines.push(`${prefix}_MANIFEST=${m.manifestPath}`);
+    if (m.exportJsonPath !== undefined) modeLines.push(`${prefix}_EXPORT_JSON=${m.exportJsonPath}`);
+    if (modeLines.length > 0) {
+      lines.push(`# --- ${mode} mode ---`);
+      lines.push(...modeLines);
+      lines.push("");
+    }
+  }
+  return lines.join("\n");
+}
+
+export function writeEnvFile(env: SpTestEnv): void {
+  if (!isGitignored(PATHS.envFile)) {
+    throw new Error(
+      `refusing to write ${PATHS.envFile} — file is not gitignored. ` +
+        `Add ".env.sp-test" to .gitignore before re-running.`,
+    );
+  }
+  const content = serialize(env);
+  const tmpPath = `${PATHS.envFile}.tmp`;
+  writeFileSync(tmpPath, content, "utf-8");
+  renameSync(tmpPath, PATHS.envFile);
 }
