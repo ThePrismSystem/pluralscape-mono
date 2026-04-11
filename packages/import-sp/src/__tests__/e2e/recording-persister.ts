@@ -34,9 +34,10 @@ export interface RecordingPersister {
 /**
  * Build a recording persister for E2E tests.
  *
- * Unlike `InMemoryPersister`, this variant has no error injection, no content
- * hashing, and always returns `"created"`. It exposes a `snapshot()` for
- * assertions.
+ * Unlike `InMemoryPersister`, this variant has no error injection and no
+ * content hashing. Returns `"created"` for new entities and `"updated"` for
+ * existing ones (matched by entityType + sourceEntityId). Exposes a
+ * `snapshot()` for assertions.
  */
 export function createRecordingPersister(): RecordingPersister {
   let idCounter = 0;
@@ -52,8 +53,9 @@ export function createRecordingPersister(): RecordingPersister {
       const key = storageKey(entity.entityType, entity.sourceEntityId);
       const existing = store.get(key);
       if (existing !== undefined) {
+        store.set(key, { ...existing, payload: entity.payload });
         return Promise.resolve({
-          action: "created",
+          action: "updated",
           pluralscapeEntityId: existing.pluralscapeEntityId,
         });
       }
