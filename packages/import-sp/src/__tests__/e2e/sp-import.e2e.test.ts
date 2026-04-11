@@ -72,7 +72,11 @@ function assertAllEntitiesPresent(snap: RecordingSnapshot, manifest: Manifest): 
  * Spot-check a few entity payloads to verify field mapping correctness.
  * Checks that key fields from the manifest survived import into the payload.
  */
-function assertPayloadSpotChecks(snap: RecordingSnapshot, manifest: Manifest): void {
+function assertPayloadSpotChecks(
+  snap: RecordingSnapshot,
+  manifest: Manifest,
+  mode: "minimal" | "adversarial",
+): void {
   // Check first member has a payload with a name field
   const firstMember = manifest.members[0];
   if (firstMember) {
@@ -110,9 +114,13 @@ function assertPayloadSpotChecks(snap: RecordingSnapshot, manifest: Manifest): v
   }
 
   // Ref-based lookup: verify the well-known `member.alice` ref resolves to
-  // a member entity whose payload has name "Alice". This exercises the
-  // new ref-based manifest format end-to-end.
+  // a member entity whose payload matches the fixture. Minimal mode must
+  // contain this ref — a missing entry indicates seeder/test drift, not an
+  // expected skip. Adversarial mode may omit it.
   const aliceEntry = findByRef(manifest, "member.alice");
+  if (mode === "minimal") {
+    expect(aliceEntry, "minimal fixture must include member.alice ref").toBeDefined();
+  }
   if (aliceEntry) {
     const entity = snap.find("member", aliceEntry.sourceId);
     if (!entity) {
@@ -120,7 +128,7 @@ function assertPayloadSpotChecks(snap: RecordingSnapshot, manifest: Manifest): v
     }
     expect(entity.payload).toBeDefined();
     const payload = entity.payload as Record<string, unknown>;
-    expect(payload["name"]).toBe("Alice");
+    expect(payload["name"]).toBe(aliceEntry.fields["name"]);
   }
 }
 
@@ -184,7 +192,7 @@ function defineImportSuite(
     });
 
     it("entity payloads contain expected fields", () => {
-      assertPayloadSpotChecks(snap, manifest);
+      assertPayloadSpotChecks(snap, manifest, mode);
     });
   });
 }
