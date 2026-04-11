@@ -50,3 +50,11 @@ export class LegacyManifestError extends Error {
     this.name = "LegacyManifestError";
   }
 }
+
+/** Strict ObjectId validator for raw text responses from SP entity POSTs. */
+export function extractObjectIdFromText(text: string): string {
+  if (!/^[0-9a-fA-F]{24}$/.test(text)) {
+    throw new InvalidObjectIdError(text);
+  }
+  return text;
+}
