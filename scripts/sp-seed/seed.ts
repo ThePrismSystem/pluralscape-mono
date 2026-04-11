@@ -227,8 +227,9 @@ export async function seedMode(
 
   await executePlan(client, systemId, mode, fixtures, plan, refMap);
 
-  // Apply final profile patch
-  await client.request<unknown>(`/v1/user/${systemId}`, {
+  // Apply final profile patch. SP's updateSimpleDocument returns an empty
+  // body on success, so use requestRaw to avoid JSON-parsing an empty string.
+  await client.requestRaw(`/v1/user/${systemId}`, {
     method: "PATCH",
     body: fixtures.profilePatch,
   });
