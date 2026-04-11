@@ -51,7 +51,10 @@ export class LegacyManifestError extends Error {
   }
 }
 
-/** Strict ObjectId validator for raw text responses from SP entity POSTs. */
+/**
+ * Strict ObjectId validator for raw text responses from SP entity POSTs.
+ * Returns the input text unchanged on match; throws InvalidObjectIdError on mismatch.
+ */
 export function extractObjectIdFromText(text: string): string {
   if (!/^[0-9a-fA-F]{24}$/.test(text)) {
     throw new InvalidObjectIdError(text);
