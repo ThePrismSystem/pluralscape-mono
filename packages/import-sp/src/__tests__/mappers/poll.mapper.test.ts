@@ -204,3 +204,80 @@ describe("poll FK-miss handling", () => {
     expect(result.status).toBe("mapped");
   });
 });
+
+describe("poll option id collision prevention", () => {
+  it("poll with omitted options produces empty options array", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPPoll = {
+      _id: "p1",
+      name: "Yes/no",
+      custom: false,
+    };
+    const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.poll.options).toEqual([]);
+    }
+  });
+
+  it("poll option without id gets a per-poll positional synthetic id", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPPoll = {
+      _id: "p2",
+      name: "Movie night",
+      custom: false,
+      options: [
+        { name: "Matrix", color: "#ff0000" },
+        { name: "Inception", color: "#00ff00" },
+      ],
+    };
+    const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.poll.options[0]?.id).toBe("p2_opt_0");
+      expect(result.payload.poll.options[1]?.id).toBe("p2_opt_1");
+    }
+  });
+
+  it("poll option with explicit id keeps it unchanged", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPPoll = {
+      _id: "p3",
+      name: "Colors",
+      custom: false,
+      options: [{ id: "server-id-1", name: "Red" }],
+    };
+    const result = mapPoll(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.poll.options[0]?.id).toBe("server-id-1");
+    }
+  });
+
+  it("two polls with missing option ids do not collide", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const a = mapPoll(
+      {
+        _id: "pA",
+        name: "A",
+        custom: false,
+        options: [{ name: "x" }],
+      } as SPPoll,
+      ctx,
+    );
+    const b = mapPoll(
+      {
+        _id: "pB",
+        name: "B",
+        custom: false,
+        options: [{ name: "y" }],
+      } as SPPoll,
+      ctx,
+    );
+    const idA = a.status === "mapped" ? a.payload.poll.options[0]?.id : null;
+    const idB = b.status === "mapped" ? b.payload.poll.options[0]?.id : null;
+    expect(idA).toBe("pA_opt_0");
+    expect(idB).toBe("pB_opt_0");
+    expect(idA).not.toBe(idB);
+  });
+});

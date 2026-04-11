@@ -73,4 +73,46 @@ describe("mapFieldDefinition", () => {
       expect(low.payload.order).toBeLessThan(high.payload.order);
     }
   });
+
+  it("numeric-string order is decoded base-10, not base-36", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f1", name: "Age", type: 0, order: "42" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.order).toBe(42);
+    }
+  });
+
+  it("fractional-index string is decoded base-36", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f2", name: "Birthday", type: 2, order: "a00000" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.order).toBe(parseInt("a00000", 36));
+    }
+  });
+
+  it("order '0' literal returns 0", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f3", name: "Zero", type: 0, order: "0" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.order).toBe(0);
+    }
+  });
+
+  it("unparseable order emits a warning and returns 0", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f4", name: "Bad", type: 0, order: "!!!" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.order).toBe(0);
+    }
+    const orderWarning = ctx.warnings.find((w) => /order/i.test(w.message) && w.entityId === "f4");
+    expect(orderWarning).toBeDefined();
+  });
 });

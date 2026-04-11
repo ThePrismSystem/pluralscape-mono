@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-04-11T22:01:57Z
-updated_at: 2026-04-11T22:54:41Z
+updated_at: 2026-04-11T23:13:52Z
 ---
 
 Resolve all PR #409 review findings (critical, important, and suggestions) from the 6-agent review pass. Tracked in docs/planning/2026-04-11-sp-import-pr-409-review-fixes.md.
@@ -24,15 +24,15 @@ Plan: docs/superpowers/plans/2026-04-11-sp-import-pr-409-review-fixes.md
 - [x] Task 6: Migrate api-source to emit SourceEvent
 - [x] Task 7: Migrate fake-source to emit SourceEvent
 - [x] Task 8: Fix remaining SourceDocument consumers (folded into Task 7; stale comment in file-source.ts fixed inline)
-- [ ] Task 9: Full verification + commit 1
+- [x] Task 9: Full verification + commit 1 (squashed as 46a3d4bd)
 
 ### Commit 2 — Correctness + tests
 
-- [ ] Task 10: Characterization tests for buckets [] fail-closed
-- [ ] Task 11: Non-live fronting session endTime omitted test
+- [x] Task 10: Characterization tests for buckets [] fail-closed
+- [x] Task 11: Non-live fronting session endTime omitted test
 - [ ] Task 12: Poll synthetic option ids prefixed with \_id
-- [ ] Task 13: fractionalIndexToOrder numeric correctness fix
-- [ ] Task 14: buildPersistableEntity runtime guard unit test
+- [x] Task 13: fractionalIndexToOrder numeric correctness fix
+- [x] Task 14: buildPersistableEntity runtime guard unit test
 - [ ] Task 15: Full verification + commit 2
 
 ### Commit 3 — Type/simplification/comments

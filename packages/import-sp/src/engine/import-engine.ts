@@ -89,7 +89,7 @@ function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelt
  * primitives and null payloads so misrouted dispatch entries surface as a
  * visible error rather than a silent cast.
  */
-function buildPersistableEntity(
+export function buildPersistableEntity(
   entityType: ImportCollectionType,
   sourceEntityId: string,
   payload: unknown,

@@ -61,7 +61,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
   // downstream votes can still reference them by position even without a
   // server-assigned id.
   const options: readonly MappedPollOption[] = (sp.options ?? []).map((o, idx) => ({
-    id: o.id ?? `opt_${String(idx)}`,
+    id: o.id ?? `${sp._id}_opt_${String(idx)}`,
     label: o.name,
     color: o.color ?? null,
   }));

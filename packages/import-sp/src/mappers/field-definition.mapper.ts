@@ -52,19 +52,26 @@ const FRACTIONAL_INDEX_PREFIX_LEN = 6;
 const FRACTIONAL_INDEX_RADIX = 36;
 
 /**
- * Convert an SP fractional-index string to a sortable integer. Uses the
- * first {@link FRACTIONAL_INDEX_PREFIX_LEN} characters, base-36 decoded.
- * Non-index strings (legacy numeric orders coerced to string) fall back to
- * `parseInt` in base 10. Returns 0 on anything unparseable — downstream
- * users can re-order manually.
+ * Convert an SP fractional-index string to a sortable integer.
+ *
+ * Two input shapes:
+ *  - Pre-migration numeric orders (e.g. `"42"`) coerced to string by the
+ *    Zod validator — decoded in base 10 via the `/^\d+$/` regex check.
+ *  - Modern fractional indices (e.g. `"a00000"`) — first
+ *    {@link FRACTIONAL_INDEX_PREFIX_LEN} characters decoded in base 36.
+ *
+ * Returns `{ ok: false, order: 0 }` on unparseable input so the caller can
+ * emit a warning — users can re-order manually post-import.
  */
-function fractionalIndexToOrder(index: string): number {
-  if (index === "0") return 0;
+function fractionalIndexToOrder(index: string): { readonly order: number; readonly ok: boolean } {
+  if (/^\d+$/.test(index)) {
+    const base10 = parseInt(index, 10);
+    return Number.isFinite(base10) ? { order: base10, ok: true } : { order: 0, ok: false };
+  }
   const prefix = index.slice(0, FRACTIONAL_INDEX_PREFIX_LEN);
   const base36 = parseInt(prefix, FRACTIONAL_INDEX_RADIX);
-  if (Number.isFinite(base36)) return base36;
-  const base10 = parseInt(index, 10);
-  return Number.isFinite(base10) ? base10 : 0;
+  if (Number.isFinite(base36)) return { order: base36, ok: true };
+  return { order: 0, ok: false };
 }
 
 export function mapFieldDefinition(
@@ -79,10 +86,18 @@ export function mapFieldDefinition(
       message: `unknown SP field type ${String(sp.type)}; falling back to text`,
     });
   }
+  const orderResult = fractionalIndexToOrder(sp.order);
+  if (!orderResult.ok) {
+    ctx.addWarning({
+      entityType: "field-definition",
+      entityId: sp._id,
+      message: `unparseable SP custom-field order "${sp.order}"; defaulting to 0 — reorder manually after import`,
+    });
+  }
   const payload: MappedFieldDefinition = {
     name: sp.name,
     fieldType: fieldType ?? "text",
-    order: fractionalIndexToOrder(sp.order),
+    order: orderResult.order,
     supportMarkdown: sp.supportMarkdown ?? false,
   };
   return mapped(payload);

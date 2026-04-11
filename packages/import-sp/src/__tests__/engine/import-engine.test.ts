@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
-import { runImport } from "../../engine/import-engine.js";
+import { buildPersistableEntity, runImport } from "../../engine/import-engine.js";
 import { CHECKPOINT_CHUNK_SIZE } from "../../import-sp.constants.js";
 import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
@@ -931,5 +931,30 @@ describe("runImport — source.close() lifecycle", () => {
       onProgress: noopProgress,
     });
     expect(closed).toBe(true);
+  });
+});
+
+describe("buildPersistableEntity runtime guard", () => {
+  it("accepts an object payload", () => {
+    const entity = buildPersistableEntity("member", "src1", { name: "Alice" });
+    expect(entity.entityType).toBe("member");
+    expect(entity.sourceEntityId).toBe("src1");
+    expect(entity.source).toBe("simply-plural");
+  });
+
+  it("throws on null payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", null)).toThrow(/non-object payload/);
+  });
+
+  it("throws on string payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", "alice")).toThrow(/non-object payload/);
+  });
+
+  it("throws on number payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", 42)).toThrow(/non-object payload/);
+  });
+
+  it("throws on undefined payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", undefined)).toThrow(/non-object payload/);
   });
 });

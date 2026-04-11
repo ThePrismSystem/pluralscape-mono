@@ -152,6 +152,56 @@ describe("mapMember", () => {
     }
   });
 
+  it("empty buckets array produces empty bucketIds and suppresses legacy flag synthesis", () => {
+    // Locks in the modern-shape precedence at member.mapper.ts:deriveBucketSourceIds.
+    // A member with buckets: [] must NOT fall through to legacy `private: true`
+    // synthesis — that would silently override the user's "assigned to no
+    // buckets" choice and double-count privacy. Downstream bucket-access
+    // treats empty bucketIds as fail-closed (invisible to every friend).
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPMember = {
+      _id: "m1",
+      name: "Alice",
+      buckets: [],
+      private: true,
+    };
+    const result = mapMember(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.bucketIds).toEqual([]);
+    }
+  });
+
+  it("empty buckets array with preventTrusted: true still produces empty bucketIds", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPMember = {
+      _id: "m2",
+      name: "Bob",
+      buckets: [],
+      preventTrusted: true,
+    };
+    const result = mapMember(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.bucketIds).toEqual([]);
+    }
+  });
+
+  it("empty buckets array bypasses translation table entirely", () => {
+    // No privacy buckets are registered in ctx — any attempt at FK resolution
+    // would produce fk-miss and fail the test. Asserting "mapped" status
+    // proves deriveBucketSourceIds produced an empty array and the resolver
+    // loop never ran.
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPMember = {
+      _id: "m3",
+      name: "Carol",
+      buckets: [],
+    };
+    const result = mapMember(sp, ctx);
+    expect(result.status).toBe("mapped");
+  });
+
   it("warns for dropped frame and supportDescMarkdown fields", () => {
     const sp: SPMember = {
       _id: "m1",
