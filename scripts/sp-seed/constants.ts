@@ -1,3 +1,5 @@
+import type { EntityTypeKey } from "./fixtures/types.js";
+
 /**
  * Constants for the SP seed script. No runtime logic — values only.
  *
@@ -53,3 +55,43 @@ export const TWO_DAYS_MS = 172_800_000;
 export const THREE_DAYS_MS = 259_200_000;
 export const FOUR_DAYS_MS = 345_600_000;
 export const THIRTY_DAYS_MS = 2_592_000_000;
+
+/** POST endpoint path for each entity type. */
+export const ENTITY_POST_PATHS: Record<EntityTypeKey, string> = {
+  privacyBuckets: "/v1/privacyBucket",
+  customFields: "/v1/customField",
+  customFronts: "/v1/customFront",
+  members: "/v1/member",
+  groups: "/v1/group",
+  frontHistory: "/v1/frontHistory",
+  comments: "/v1/comment",
+  notes: "/v1/note",
+  polls: "/v1/poll",
+  channelCategories: "/v1/chat/category",
+  channels: "/v1/chat/channel",
+  chatMessages: "/v1/chat/message",
+  boardMessages: "/v1/board",
+};
+
+/**
+ * Single-entity GET probe path. Takes (systemId, sourceId) and returns the URL.
+ * All 13 entity types have a probe endpoint based on SP API source (verified against
+ * github.com/ApparyllisOrg/SimplyPluralApi src/api/v1/routes.ts).
+ */
+export type ProbePathFn = (systemId: string, sourceId: string) => string;
+export const ENTITY_PROBE_PATHS: Record<EntityTypeKey, ProbePathFn> = {
+  members: (sys, id) => `/v1/member/${sys}/${id}`,
+  customFields: (sys, id) => `/v1/customField/${sys}/${id}`,
+  customFronts: (sys, id) => `/v1/customFront/${sys}/${id}`,
+  groups: (sys, id) => `/v1/group/${sys}/${id}`,
+  notes: (sys, id) => `/v1/note/${sys}/${id}`,
+  frontHistory: (sys, id) => `/v1/frontHistory/${sys}/${id}`,
+  comments: (sys, id) => `/v1/comment/${sys}/${id}`,
+  polls: (sys, id) => `/v1/poll/${sys}/${id}`,
+  // These 5 routes take only :id (no :system):
+  privacyBuckets: (_sys, id) => `/v1/privacyBucket/${id}`,
+  channelCategories: (_sys, id) => `/v1/chat/category/${id}`,
+  channels: (_sys, id) => `/v1/chat/channel/${id}`,
+  chatMessages: (_sys, id) => `/v1/chat/message/${id}`,
+  boardMessages: (_sys, id) => `/v1/board/${id}`,
+};
