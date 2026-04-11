@@ -47,4 +47,18 @@ describe("resolveRefs", () => {
       options: [{ name: "Chips", color: "#ff0000" }],
     });
   });
+
+  test("recognizes refs with hyphens in the entity-type prefix", () => {
+    const map = new Map<string, string>([
+      ["front-history.alice-ended", "507f1f77bcf86cd799439011"],
+    ]);
+    const resolved = resolveRefs(
+      { documentId: "front-history.alice-ended", collection: "frontHistory" },
+      map,
+    );
+    expect(resolved).toEqual({
+      documentId: "507f1f77bcf86cd799439011",
+      collection: "frontHistory",
+    });
+  });
 });
