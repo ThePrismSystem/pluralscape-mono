@@ -80,8 +80,9 @@ ui-design-local/
 .pnpm-debug.log
 
 # SP import test artifacts (seeded account credentials + manifests)
+.env.sp-test
 .env.sp-test-*
-scripts/.sp-test-*-manifest.json
+scripts/.sp-test-*.json
 
 # OS
 .tmp
