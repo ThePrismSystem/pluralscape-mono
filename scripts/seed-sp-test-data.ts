@@ -16,35 +16,57 @@ import process from "node:process";
 // ---------------------------------------------------------------------------
 
 const SP_BASE_URL = "https://api.apparyllis.com";
-const SP_PASSWORD = "TestImport1!sp";
+
+/** Ephemeral test accounts on the SP API. Override via SP_TEST_PASSWORD env var. */
+const SP_PASSWORD = process.env["SP_TEST_PASSWORD"] ?? "TestImport1!sp";
+
 const REQUEST_DELAY_MS = 350;
 const ENTITY_CREATION_DELAY_MS = 500;
+const FETCH_TIMEOUT_MS = 30_000;
+
+// Time constants for front history / comment / note timestamps
+const TWO_MINUTES_MS = 120_000;
+const FIVE_MINUTES_MS = 300_000;
+const TEN_MINUTES_MS = 600_000;
+const ONE_HOUR_MS = 3_600_000;
+const NINETY_MINUTES_MS = 5_400_000;
+const EIGHTY_MINUTES_MS = 4_800_000;
+const TWO_HOURS_MS = 7_200_000;
+const ONE_DAY_MS = 86_400_000;
+const TWO_DAYS_MS = 172_800_000;
+const THREE_DAYS_MS = 259_200_000;
+const FOUR_DAYS_MS = 345_600_000;
+const THIRTY_DAYS_MS = 2_592_000_000;
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Keep in sync with canonical types in
+ * packages/import-sp/src/__tests__/e2e/manifest.types.ts
+ */
 interface ManifestEntry {
-  sourceId: string;
-  fields: Record<string, unknown>;
+  readonly sourceId: string;
+  readonly fields: Record<string, unknown>;
 }
 
 interface Manifest {
-  systemId: string;
-  mode: string;
-  privacyBuckets: ManifestEntry[];
-  customFields: ManifestEntry[];
-  customFronts: ManifestEntry[];
-  members: ManifestEntry[];
-  groups: ManifestEntry[];
-  frontHistory: ManifestEntry[];
-  comments: ManifestEntry[];
-  notes: ManifestEntry[];
-  polls: ManifestEntry[];
-  channelCategories: ManifestEntry[];
-  channels: ManifestEntry[];
-  chatMessages: ManifestEntry[];
-  boardMessages: ManifestEntry[];
+  readonly systemId: string;
+  readonly mode: "minimal" | "adversarial";
+  readonly privacyBuckets: ManifestEntry[];
+  readonly customFields: ManifestEntry[];
+  readonly customFronts: ManifestEntry[];
+  readonly members: ManifestEntry[];
+  readonly groups: ManifestEntry[];
+  readonly frontHistory: ManifestEntry[];
+  readonly comments: ManifestEntry[];
+  readonly notes: ManifestEntry[];
+  readonly polls: ManifestEntry[];
+  readonly channelCategories: ManifestEntry[];
+  readonly channels: ManifestEntry[];
+  readonly chatMessages: ManifestEntry[];
+  readonly boardMessages: ManifestEntry[];
 }
 
 type SpMode = "minimal" | "adversarial";
@@ -78,6 +100,7 @@ async function spFetch(
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!response.ok) {
@@ -90,7 +113,8 @@ async function spFetch(
 
   try {
     return JSON.parse(text) as unknown;
-  } catch {
+  } catch (err: unknown) {
+    console.warn(`Non-JSON response body from ${method} ${path}:`, String(err));
     return { rawBody: text };
   }
 }
@@ -139,7 +163,9 @@ async function createEntity(
     const match = collection.find((item: unknown) => {
       if (typeof item !== "object" || item === null) return false;
       const rec = item as Record<string, unknown>;
-      return Object.entries(body).every(([key, value]) => rec[key] === value);
+      return Object.entries(body).every(
+        ([key, value]) => JSON.stringify(rec[key]) === JSON.stringify(value),
+      );
     });
     if (match && typeof match === "object") {
       const matchRec = match as Record<string, unknown>;
@@ -306,19 +332,19 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
     {
       custom: false,
       live: false,
-      startTime: now - 7200000,
-      endTime: now - 3600000,
+      startTime: now - TWO_HOURS_MS,
+      endTime: now - ONE_HOUR_MS,
       member: aliceId,
     },
-    { custom: false, live: true, startTime: now - 600000, member: bobId },
+    { custom: false, live: true, startTime: now - TEN_MINUTES_MS, member: bobId },
     {
       custom: true,
       live: false,
-      startTime: now - 5400000,
-      endTime: now - 4800000,
+      startTime: now - NINETY_MINUTES_MS,
+      endTime: now - EIGHTY_MINUTES_MS,
       member: customFrontId0,
     },
-    { custom: true, live: true, startTime: now - 300000, member: customFrontId1 },
+    { custom: true, live: true, startTime: now - FIVE_MINUTES_MS, member: customFrontId1 },
   ];
 
   for (const entry of frontEntries) {
@@ -342,13 +368,13 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
 
   for (const comment of [
     {
-      time: now - 3500000,
+      time: now - 3_500_000,
       text: "Felt grounded during this front",
       documentId: frontHistId0,
       collection: "frontHistory",
     },
     {
-      time: now - 3400000,
+      time: now - 3_400_000,
       text: "Energy was moderate",
       documentId: frontHistId0,
       collection: "frontHistory",
@@ -371,14 +397,14 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
       note: "Today was productive",
       color: "#ffcc00",
       member: aliceId,
-      date: now - 86400000,
+      date: now - ONE_DAY_MS,
     },
     {
       title: "Observation",
       note: "Communication improving",
       color: "#66ccff",
       member: bobId,
-      date: now - 172800000,
+      date: now - TWO_DAYS_MS,
     },
   ]) {
     const id = await createEntity("/v1/note", note, token, `note:${note.title}`);
@@ -391,7 +417,7 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
     name: "Favorite snack",
     desc: "What should we eat?",
     custom: true,
-    endTime: now + 86400000,
+    endTime: now + ONE_DAY_MS,
     options: [
       { name: "Chips", color: "#ffaa00" },
       { name: "Fruit", color: "#00cc66" },
@@ -409,7 +435,7 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
     name: "Go outside today?",
     desc: "Simple yes/no",
     custom: false,
-    endTime: now + 86400000,
+    endTime: now + ONE_DAY_MS,
   };
   const standardPollId = await createEntity(
     "/v1/poll",
@@ -449,14 +475,14 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
       message: "Good morning everyone",
       channel: channelId0,
       writer: aliceId,
-      writtenAt: now - 7000000,
+      writtenAt: now - 7_000_000,
     },
-    { message: "Hi Alice!", channel: channelId0, writer: bobId, writtenAt: now - 6900000 },
+    { message: "Hi Alice!", channel: channelId0, writer: bobId, writtenAt: now - 6_900_000 },
     {
       message: "How is everyone feeling?",
       channel: channelId0,
       writer: aliceId,
-      writtenAt: now - 6800000,
+      writtenAt: now - 6_800_000,
     },
   ]) {
     const id = await createEntity(
@@ -477,7 +503,7 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
       writtenBy: aliceId,
       writtenFor: bobId,
       read: false,
-      writtenAt: now - 5000000,
+      writtenAt: now - 5_000_000,
       supportMarkdown: false,
     },
     {
@@ -486,7 +512,7 @@ async function seedMinimal(token: string, systemId: string): Promise<Manifest> {
       writtenBy: bobId,
       writtenFor: aliceId,
       read: false,
-      writtenAt: now - 4000000,
+      writtenAt: now - 4_000_000,
       supportMarkdown: true,
     },
   ]) {
@@ -658,32 +684,38 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
     {
       custom: false,
       live: false,
-      startTime: now - 7200000,
-      endTime: now - 3600000,
+      startTime: now - TWO_HOURS_MS,
+      endTime: now - ONE_HOUR_MS,
       member: aliceId,
     },
     // zero-duration ended front
-    { custom: false, live: false, startTime: now - 5000000, endTime: now - 5000000, member: bobId },
+    {
+      custom: false,
+      live: false,
+      startTime: now - 5_000_000,
+      endTime: now - 5_000_000,
+      member: bobId,
+    },
     // old timestamp (30 days ago)
     {
       custom: false,
       live: false,
-      startTime: now - 2592000000,
-      endTime: now - 2591000000,
+      startTime: now - THIRTY_DAYS_MS,
+      endTime: now - 2_591_000_000,
       member: eliseId,
     },
     // live member front
-    { custom: false, live: true, startTime: now - 300000, member: xiaoMingId },
+    { custom: false, live: true, startTime: now - FIVE_MINUTES_MS, member: xiaoMingId },
     // ended custom front
     {
       custom: true,
       live: false,
-      startTime: now - 4000000,
-      endTime: now - 3500000,
+      startTime: now - 4_000_000,
+      endTime: now - 3_500_000,
       member: customFrontId0,
     },
     // live custom front
-    { custom: true, live: true, startTime: now - 120000, member: customFrontId1 },
+    { custom: true, live: true, startTime: now - TWO_MINUTES_MS, member: customFrontId1 },
   ];
 
   for (const entry of frontEntries) {
@@ -708,20 +740,20 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
 
   for (const comment of [
     {
-      time: now - 3500000,
+      time: now - 3_500_000,
       text: "Normal comment",
       documentId: frontHistId0,
       collection: "frontHistory",
     },
-    { time: now - 3400000, text: "", documentId: frontHistId0, collection: "frontHistory" },
+    { time: now - 3_400_000, text: "", documentId: frontHistId0, collection: "frontHistory" },
     {
-      time: now - 2590000000,
+      time: now - 2_590_000_000,
       text: "A".repeat(500),
       documentId: frontHistId2,
       collection: "frontHistory",
     },
     {
-      time: now - 2589000000,
+      time: now - 2_589_000_000,
       text: "\u{1F4DD} \u65E5\u672C\u8A9E\u30C6\u30B9\u30C8 \u{1F30F}",
       documentId: frontHistId2,
       collection: "frontHistory",
@@ -744,28 +776,28 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
       note: "Today was productive",
       color: "#ffcc00",
       member: aliceId,
-      date: now - 86400000,
+      date: now - ONE_DAY_MS,
     },
     {
       title: "",
       note: "Note with empty title",
       color: "#ff0000",
       member: bobId,
-      date: now - 172800000,
+      date: now - TWO_DAYS_MS,
     },
     {
       title: "Markdown note",
       note: "# Heading\n\n- item 1\n- item 2\n\n**bold** and *italic*",
       color: "#66ccff",
       member: eliseId,
-      date: now - 259200000,
+      date: now - THREE_DAYS_MS,
     },
     {
       title: "Long note",
       note: "Lorem ipsum ".repeat(200).trim(),
       color: "#cccccc",
       member: xiaoMingId,
-      date: now - 345600000,
+      date: now - FOUR_DAYS_MS,
     },
   ]) {
     const id = await createEntity("/v1/note", note, token, `note:${note.title || "empty"}`);
@@ -778,7 +810,7 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
     name: "Favorite snack",
     desc: "What should we eat?",
     custom: true,
-    endTime: now + 86400000,
+    endTime: now + ONE_DAY_MS,
     options: [
       { name: "Chips", color: "#ffaa00" },
       { name: "Fruit", color: "#00cc66" },
@@ -797,7 +829,7 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
     name: "\u{1F4CA} \u6295\u7968",
     desc: "Unicode poll name",
     custom: true,
-    endTime: now + 172800000,
+    endTime: now + TWO_DAYS_MS,
     options: [
       { name: "\u306F\u3044", color: "#00ff00" },
       { name: "\u3044\u3044\u3048", color: "#ff0000" },
@@ -810,7 +842,7 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
     name: "Go outside today?",
     desc: "Simple yes/no vote",
     custom: false,
-    endTime: now + 86400000,
+    endTime: now + ONE_DAY_MS,
   };
   const standardPollId = await createEntity(
     "/v1/poll",
@@ -854,26 +886,26 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
       message: "Good morning everyone",
       channel: channelId0,
       writer: aliceId,
-      writtenAt: now - 7000000,
+      writtenAt: now - 7_000_000,
     },
-    { message: "Hi Alice!", channel: channelId0, writer: bobId, writtenAt: now - 6900000 },
+    { message: "Hi Alice!", channel: channelId0, writer: bobId, writtenAt: now - 6_900_000 },
     {
       message: "How is everyone feeling?",
       channel: channelId0,
       writer: aliceId,
-      writtenAt: now - 6800000,
+      writtenAt: now - 6_800_000,
     },
     {
       message: "\u304A\u306F\u3088\u3046\u3054\u3056\u3044\u307E\u3059",
       channel: channelId1,
       writer: eliseId,
-      writtenAt: now - 5000000,
+      writtenAt: now - 5_000_000,
     },
     {
       message: "\u{1F44B} \u4F60\u597D!",
       channel: channelId1,
       writer: xiaoMingId,
-      writtenAt: now - 4900000,
+      writtenAt: now - 4_900_000,
     },
   ]) {
     const id = await createEntity(
@@ -894,7 +926,7 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
       writtenBy: aliceId,
       writtenFor: bobId,
       read: false,
-      writtenAt: now - 5000000,
+      writtenAt: now - 5_000_000,
       supportMarkdown: false,
     },
     {
@@ -903,7 +935,7 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
       writtenBy: bobId,
       writtenFor: aliceId,
       read: true,
-      writtenAt: now - 4000000,
+      writtenAt: now - 4_000_000,
       supportMarkdown: false,
     },
     {
@@ -912,7 +944,7 @@ async function seedAdversarial(token: string, systemId: string): Promise<Manifes
       writtenBy: eliseId,
       writtenFor: xiaoMingId,
       read: false,
-      writtenAt: now - 3000000,
+      writtenAt: now - 3_000_000,
       supportMarkdown: true,
     },
   ]) {
