@@ -17,8 +17,14 @@ const SP_API_BASE_URL = "https://api.apparyllis.com";
 /**
  * Maps manifest collection keys (camelCase plural) to
  * `ImportCollectionType` values used by the engine.
+ *
+ * Intentionally omitted ImportCollectionType values:
+ * - `system-profile` / `system-settings`: system-level data seeded via
+ *   `users` / `private` SP collections, not per-entity in the manifest.
+ * - `timer`, `switch`, `custom-field`, `field-value`: not discrete SP
+ *   collections — handled differently or not imported.
  */
-export const COLLECTION_TO_ENTITY_TYPE: Record<ManifestCollectionKey, ImportCollectionType> = {
+export const COLLECTION_TO_ENTITY_TYPE = {
   privacyBuckets: "privacy-bucket",
   customFields: "field-definition",
   customFronts: "custom-front",
@@ -32,7 +38,7 @@ export const COLLECTION_TO_ENTITY_TYPE: Record<ManifestCollectionKey, ImportColl
   channels: "channel",
   chatMessages: "chat-message",
   boardMessages: "board-message",
-};
+} as const satisfies Record<ManifestCollectionKey, ImportCollectionType>;
 
 /** Read and parse a manifest JSON written by the seeding script. */
 export async function loadManifest(mode: "minimal" | "adversarial"): Promise<Manifest> {
@@ -79,14 +85,4 @@ export function makeInitialCheckpoint(): ImportCheckpointState {
     selectedCategories: {},
     avatarMode: "skip",
   });
-}
-
-/** Sum all entity counts across every manifest collection. */
-export function manifestTotalEntities(manifest: Manifest): number {
-  const keys = Object.keys(COLLECTION_TO_ENTITY_TYPE) as ManifestCollectionKey[];
-  let total = 0;
-  for (const key of keys) {
-    total += manifest[key].length;
-  }
-  return total;
 }
