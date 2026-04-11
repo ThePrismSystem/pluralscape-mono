@@ -60,6 +60,10 @@ describe("uidFromJwt", () => {
     expect(() => uidFromJwt("onlyonesegment")).toThrow(MalformedJwtError);
   });
 
+  test("throws MalformedJwtError when payload segment is empty", () => {
+    expect(() => uidFromJwt("header..signature")).toThrow(MalformedJwtError);
+  });
+
   test("throws MalformedJwtError when payload has neither sub nor uid", () => {
     const jwt = makeJwt({ other: "value" });
     expect(() => uidFromJwt(jwt)).toThrow(MalformedJwtError);
