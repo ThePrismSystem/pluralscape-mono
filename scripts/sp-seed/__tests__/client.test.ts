@@ -33,6 +33,22 @@ describe("extractObjectIdFromText", () => {
   test("throws on empty string", () => {
     expect(() => extractObjectIdFromText("")).toThrow(InvalidObjectIdError);
   });
+
+  // SP's `addSimpleDocument` calls `res.send(insertedId)`. Express serializes
+  // ObjectId via JSON.stringify, so the wire body is a quoted string like
+  // `"69daabba249bb3c690ad06b8"` — strip the surrounding quotes before validating.
+  test("strips surrounding JSON double-quotes before validating", () => {
+    expect(extractObjectIdFromText('"69daabba249bb3c690ad06b8"')).toBe("69daabba249bb3c690ad06b8");
+  });
+
+  test("still rejects mismatched surrounding quotes", () => {
+    expect(() => extractObjectIdFromText('"69daabba249bb3c690ad06b8')).toThrow(
+      InvalidObjectIdError,
+    );
+    expect(() => extractObjectIdFromText('69daabba249bb3c690ad06b8"')).toThrow(
+      InvalidObjectIdError,
+    );
+  });
 });
 
 describe("uidFromJwt", () => {

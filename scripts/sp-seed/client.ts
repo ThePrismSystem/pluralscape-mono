@@ -59,13 +59,22 @@ export class LegacyManifestError extends Error {
 
 /**
  * Strict ObjectId validator for raw text responses from SP entity POSTs.
- * Returns the input text unchanged on match; throws InvalidObjectIdError on mismatch.
+ * Returns the bare hex on match; throws InvalidObjectIdError on mismatch.
+ *
+ * SP's `addSimpleDocument` calls `res.send(insertedId)` which Express
+ * serializes via JSON.stringify, producing a quoted string on the wire
+ * (e.g. `"69daabba249bb3c690ad06b8"`). Strip optional symmetric
+ * double-quotes before validating.
  */
 export function extractObjectIdFromText(text: string): string {
-  if (!/^[0-9a-fA-F]{24}$/.test(text)) {
+  let candidate = text;
+  if (candidate.length >= 2 && candidate.startsWith('"') && candidate.endsWith('"')) {
+    candidate = candidate.slice(1, -1);
+  }
+  if (!/^[0-9a-fA-F]{24}$/.test(candidate)) {
     throw new InvalidObjectIdError(text);
   }
-  return text;
+  return candidate;
 }
 
 /**
