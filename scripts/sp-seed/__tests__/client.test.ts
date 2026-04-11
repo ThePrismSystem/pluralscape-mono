@@ -5,7 +5,6 @@ import {
   InvalidObjectIdError,
   MalformedJwtError,
   NonJsonResponseError,
-  SpApiError,
   SpClient,
   uidFromJwt,
 } from "../client.js";
@@ -95,7 +94,9 @@ describe("SpClient.requestRaw", () => {
     mockFetch.mockResolvedValueOnce(new Response("ok", { status: 200 }));
     const client = new SpClient("https://sp.example.com", "raw-api-key-xyz");
     await client.requestRaw("/v1/me", {});
-    const [, init] = mockFetch.mock.calls[0];
+    const firstCall = mockFetch.mock.calls[0];
+    if (!firstCall) throw new Error("fetch was not called");
+    const [, init] = firstCall;
     const headers = init.headers as Record<string, string>;
     expect(headers["Authorization"]).toBe("raw-api-key-xyz");
     expect(headers["Authorization"]).not.toMatch(/^Bearer /);
