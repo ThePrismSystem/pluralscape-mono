@@ -10,6 +10,7 @@ import {
   COLLECTION_TO_ENTITY_TYPE,
   createApiSource,
   createFileSource,
+  findByRef,
   loadManifest,
   makeInitialCheckpoint,
 } from "./helpers.js";
@@ -28,17 +29,17 @@ const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../../..");
 
 function hasApiTokens(): boolean {
   return (
-    typeof process.env["SP_TEST_MINIMAL_TOKEN"] === "string" &&
-    process.env["SP_TEST_MINIMAL_TOKEN"].length > 0 &&
-    typeof process.env["SP_TEST_ADVERSARIAL_TOKEN"] === "string" &&
-    process.env["SP_TEST_ADVERSARIAL_TOKEN"].length > 0
+    typeof process.env["SP_TEST_MINIMAL_API_KEY"] === "string" &&
+    process.env["SP_TEST_MINIMAL_API_KEY"].length > 0 &&
+    typeof process.env["SP_TEST_ADVERSARIAL_API_KEY"] === "string" &&
+    process.env["SP_TEST_ADVERSARIAL_API_KEY"].length > 0
   );
 }
 
 function hasExportFixtures(): boolean {
   return (
-    existsSync(path.join(MONOREPO_ROOT, "scripts/fixtures/sp-test-minimal-export.json")) &&
-    existsSync(path.join(MONOREPO_ROOT, "scripts/fixtures/sp-test-adversarial-export.json"))
+    existsSync(path.join(MONOREPO_ROOT, "scripts/.sp-test-minimal-export.json")) &&
+    existsSync(path.join(MONOREPO_ROOT, "scripts/.sp-test-adversarial-export.json"))
   );
 }
 
@@ -106,6 +107,20 @@ function assertPayloadSpotChecks(snap: RecordingSnapshot, manifest: Manifest): v
     expect(entity.payload).toBeDefined();
     const payload = entity.payload as Record<string, unknown>;
     expect(payload["title"]).toBe(firstNote.fields["title"]);
+  }
+
+  // Ref-based lookup: verify the well-known `member.alice` ref resolves to
+  // a member entity whose payload has name "Alice". This exercises the
+  // new ref-based manifest format end-to-end.
+  const aliceEntry = findByRef(manifest, "member.alice");
+  if (aliceEntry) {
+    const entity = snap.find("member", aliceEntry.sourceId);
+    if (!entity) {
+      throw new Error(`member.alice entity should exist (sourceId=${aliceEntry.sourceId})`);
+    }
+    expect(entity.payload).toBeDefined();
+    const payload = entity.payload as Record<string, unknown>;
+    expect(payload["name"]).toBe("Alice");
   }
 }
 
