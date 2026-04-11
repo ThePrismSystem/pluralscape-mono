@@ -6,7 +6,7 @@ import { collectionToEntityType } from "../../engine/entity-type-map.js";
 import { createApiImportSource } from "../../sources/api-source.js";
 import { createFileImportSource } from "../../sources/file-source.js";
 
-import type { Manifest, ManifestCollectionKey } from "./manifest.types.js";
+import type { Manifest, ManifestCollectionKey, ManifestEntry } from "./manifest.types.js";
 import type { ImportDataSource } from "../../sources/source.types.js";
 import type { ImportCheckpointState, ImportCollectionType } from "@pluralscape/types";
 
@@ -44,12 +44,42 @@ export const COLLECTION_TO_ENTITY_TYPE = {
 export async function loadManifest(mode: "minimal" | "adversarial"): Promise<Manifest> {
   const filePath = path.join(MONOREPO_ROOT, `scripts/.sp-test-${mode}-manifest.json`);
   const raw = await readFile(filePath, "utf-8");
-  return JSON.parse(raw) as Manifest;
+  const parsed = JSON.parse(raw) as Manifest;
+  // Validate every entry in every entity-type array has a `ref` field —
+  // guards against loading a manifest written by the broken pre-rewrite
+  // seed script.
+  for (const key of Object.keys(parsed) as (keyof Manifest)[]) {
+    const value = parsed[key];
+    if (!Array.isArray(value)) continue;
+    for (const entry of value as ManifestEntry[]) {
+      if (typeof entry.ref !== "string") {
+        throw new Error(
+          `manifest format out of date (missing 'ref' field in ${key}) — ` +
+            `delete scripts/.sp-test-${mode}-manifest.json and re-run ` +
+            `pnpm seed:sp-test to regenerate`,
+        );
+      }
+    }
+  }
+  return parsed;
 }
 
-/** Read the SP bearer token for a test account from the environment. */
-export function loadEnvToken(mode: "minimal" | "adversarial"): string {
-  const key = `SP_TEST_${mode.toUpperCase()}_TOKEN`;
+/**
+ * Resolve a fixture ref to its manifest entry.
+ * Walks all entity-type arrays once. Returns undefined if the ref is not found.
+ */
+export function findByRef(manifest: Manifest, ref: string): ManifestEntry | undefined {
+  for (const [, value] of Object.entries(manifest)) {
+    if (!Array.isArray(value)) continue;
+    const found = (value as ManifestEntry[]).find((e) => e.ref === ref);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** Read the SP API key for a test account from the environment. */
+export function loadEnvApiKey(mode: "minimal" | "adversarial"): string {
+  const key = `SP_TEST_${mode.toUpperCase()}_API_KEY`;
   const value = process.env[key];
   if (!value) {
     throw new Error(`Missing environment variable ${key}`);
@@ -60,14 +90,14 @@ export function loadEnvToken(mode: "minimal" | "adversarial"): string {
 /** Create an API-backed import source for a test account. */
 export function createApiSource(mode: "minimal" | "adversarial"): ImportDataSource {
   return createApiImportSource({
-    token: loadEnvToken(mode),
+    token: loadEnvApiKey(mode),
     baseUrl: SP_API_BASE_URL,
   });
 }
 
 /** Create a file-backed import source from a seeded export fixture. */
 export async function createFileSource(mode: "minimal" | "adversarial"): Promise<ImportDataSource> {
-  const filePath = path.join(MONOREPO_ROOT, `scripts/fixtures/sp-test-${mode}-export.json`);
+  const filePath = path.join(MONOREPO_ROOT, `scripts/.sp-test-${mode}-export.json`);
   const contents = await readFile(filePath);
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
