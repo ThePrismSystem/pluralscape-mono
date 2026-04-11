@@ -5,7 +5,6 @@ import {
   FULL_API_ACCESS_PERMISSION,
   REQUEST_DELAY_MS,
 } from "./constants.js";
-import type { SpMode } from "./constants.js";
 
 export class SpApiError extends Error {
   constructor(
@@ -160,7 +159,6 @@ export class SpClient {
   }
 
   static async bootstrap(
-    _mode: SpMode,
     email: string,
     password: string,
     storedApiKey: string | undefined,

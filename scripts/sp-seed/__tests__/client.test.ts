@@ -200,7 +200,6 @@ describe("SpClient.bootstrap", () => {
       }),
     );
     const result = await SpClient.bootstrap(
-      "minimal",
       "e@example.com",
       "pw",
       "stored-key",
@@ -209,6 +208,7 @@ describe("SpClient.bootstrap", () => {
     expect(result.fresh).toBe(false);
     expect(result.apiKey).toBe("stored-key");
     expect(result.systemId).toBe("stored-uid");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   test("falls through to fresh bootstrap when stored key returns 401", async () => {
@@ -225,7 +225,6 @@ describe("SpClient.bootstrap", () => {
       // 5. POST /v1/token/000... → 200 raw API key
       .mockResolvedValueOnce(new Response("new-api-key-base64", { status: 200 }));
     const result = await SpClient.bootstrap(
-      "minimal",
       "e@example.com",
       "pw",
       "stale-key",
@@ -234,12 +233,12 @@ describe("SpClient.bootstrap", () => {
     expect(result.fresh).toBe(true);
     expect(result.apiKey).toBe("new-api-key-base64");
     expect(result.systemId).toBe("new-uid");
+    expect(mockFetch).toHaveBeenCalledTimes(5);
   });
 
   test("falls through to login when register returns 409", async () => {
     const jwt = makeJwt("existing-uid");
     mockFetch
-      // 1. (no stored key, skip probe)
       // 1. POST /v1/auth/register → 409
       .mockResolvedValueOnce(new Response("User already exists", { status: 409 }))
       // 2. POST /v1/auth/login → 200 JWT
@@ -251,7 +250,6 @@ describe("SpClient.bootstrap", () => {
       // 5. POST /v1/token/000... → 200
       .mockResolvedValueOnce(new Response("api-key", { status: 200 }));
     const result = await SpClient.bootstrap(
-      "minimal",
       "e@example.com",
       "pw",
       undefined,
@@ -260,5 +258,6 @@ describe("SpClient.bootstrap", () => {
     expect(result.fresh).toBe(true);
     expect(result.apiKey).toBe("api-key");
     expect(result.systemId).toBe("existing-uid");
+    expect(mockFetch).toHaveBeenCalledTimes(5);
   });
 });
