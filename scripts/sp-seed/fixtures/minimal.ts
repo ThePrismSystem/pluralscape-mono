@@ -200,22 +200,25 @@ export const MINIMAL_FIXTURES: EntityFixtures = {
     },
   ],
 
-  channelCategories: [
-    { ref: "category.general", body: { name: "General", desc: "General discussion" } },
-  ],
-
   channels: [
     {
       ref: "channel.dailycheckin",
-      body: {
-        name: "daily-check-in",
-        desc: "Daily check-ins",
-        category: "category.general",
-      },
+      body: { name: "daily-check-in", desc: "Daily check-ins" },
     },
     {
       ref: "channel.random",
       body: { name: "random", desc: "Off-topic chat" },
+    },
+  ],
+
+  channelCategories: [
+    {
+      ref: "category.general",
+      body: {
+        name: "General",
+        desc: "General discussion",
+        channels: ["channel.dailycheckin", "channel.random"],
+      },
     },
   ],
 

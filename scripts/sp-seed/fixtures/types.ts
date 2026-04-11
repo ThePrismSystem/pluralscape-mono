@@ -85,15 +85,21 @@ export interface PollBody {
   readonly options?: readonly PollOption[];
 }
 
-export interface ChannelCategoryBody {
+export interface ChannelBody {
   readonly name: string;
   readonly desc: string;
 }
 
-export interface ChannelBody {
+export interface ChannelCategoryBody {
   readonly name: string;
   readonly desc: string;
-  readonly category?: RefOr<string>;
+  /**
+   * Channel membership is stored on the category, not the channel. SP's
+   * `verifyValidChannelsPayload` silently drops IDs that don't resolve to
+   * existing channels, so channels MUST be created before their category.
+   * Values match `^[A-Za-z0-9]{20,50}$` (24-char ObjectIds satisfy this).
+   */
+  readonly channels?: readonly RefOr<string>[];
 }
 
 export interface ChatMessageBody {
@@ -129,8 +135,8 @@ export interface EntityFixtures {
   readonly comments: readonly FixtureDef<CommentBody>[];
   readonly notes: readonly FixtureDef<NoteBody>[];
   readonly polls: readonly FixtureDef<PollBody>[];
-  readonly channelCategories: readonly FixtureDef<ChannelCategoryBody>[];
   readonly channels: readonly FixtureDef<ChannelBody>[];
+  readonly channelCategories: readonly FixtureDef<ChannelCategoryBody>[];
   readonly chatMessages: readonly FixtureDef<ChatMessageBody>[];
   readonly boardMessages: readonly FixtureDef<BoardMessageBody>[];
   readonly profilePatch: UserProfilePatch;
@@ -150,8 +156,8 @@ export const ENTITY_TYPES_IN_ORDER: readonly EntityTypeKey[] = [
   "comments",
   "notes",
   "polls",
-  "channelCategories",
   "channels",
+  "channelCategories",
   "chatMessages",
   "boardMessages",
 ] as const;

@@ -33,8 +33,8 @@ export function emptyManifest(systemId: string, mode: SpMode): Manifest {
     comments: [],
     notes: [],
     polls: [],
-    channelCategories: [],
     channels: [],
+    channelCategories: [],
     chatMessages: [],
     boardMessages: [],
   };

@@ -309,34 +309,37 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
     },
   ],
 
-  channelCategories: [
-    { ref: "category.general", body: { name: "General", desc: "General discussion" } },
-    {
-      ref: "category.gaming",
-      body: { name: "\u{1F3AE} Gaming", desc: "Gaming channels" },
-    },
-  ],
-
   channels: [
     {
       ref: "channel.dailycheckin",
-      body: {
-        name: "daily-check-in",
-        desc: "Daily check-ins",
-        category: "category.general",
-      },
+      body: { name: "daily-check-in", desc: "Daily check-ins" },
     },
     {
       ref: "channel.gametalk",
-      body: {
-        name: "game-talk",
-        desc: "Talk about games",
-        category: "category.gaming",
-      },
+      body: { name: "game-talk", desc: "Talk about games" },
     },
     {
       ref: "channel.orphan",
       body: { name: "orphan-channel", desc: "No category assigned" },
+    },
+  ],
+
+  channelCategories: [
+    {
+      ref: "category.general",
+      body: {
+        name: "General",
+        desc: "General discussion",
+        channels: ["channel.dailycheckin"],
+      },
+    },
+    {
+      ref: "category.gaming",
+      body: {
+        name: "\u{1F3AE} Gaming",
+        desc: "Gaming channels",
+        channels: ["channel.gametalk"],
+      },
     },
   ],
 

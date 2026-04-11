@@ -156,8 +156,8 @@ function buildWorkingManifest(
     comments: [],
     notes: [],
     polls: [],
-    channelCategories: [],
     channels: [],
+    channelCategories: [],
     chatMessages: [],
     boardMessages: [],
   };
