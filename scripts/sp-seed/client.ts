@@ -94,8 +94,6 @@ export function uidFromJwt(jwt: string): string {
   throw new MalformedJwtError("JWT payload missing sub/uid claim");
 }
 
-export type SpMode = "minimal" | "adversarial";
-
 export interface RequestOptions {
   method?: string;
   body?: unknown;
@@ -149,10 +147,13 @@ export class SpClient {
   ): Promise<string> {
     const method = opts.method ?? "GET";
     const url = `${this.baseUrl}${path}`;
+    const authValue = opts.authOverride !== undefined ? opts.authOverride : this.apiKey;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      Authorization: opts.authOverride ?? this.apiKey,
     };
+    if (authValue !== "") {
+      headers["Authorization"] = authValue;
+    }
     const init: RequestInit = {
       method,
       headers,

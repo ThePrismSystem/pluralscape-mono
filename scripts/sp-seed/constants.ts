@@ -29,6 +29,9 @@ export const FULL_API_ACCESS_PERMISSION = 0x01 | 0x02 | 0x04; // = 7
 /** Dummy ObjectId satisfying validateId on POST /v1/token/:id. */
 export const DUMMY_OBJECT_ID = "000000000000000000000000";
 
+/** The two seed modes. */
+export type SpMode = "minimal" | "adversarial";
+
 /** Paths (relative to repo root) that the script reads/writes. */
 export const PATHS = {
   // envFile is shared across both modes (single combined file).

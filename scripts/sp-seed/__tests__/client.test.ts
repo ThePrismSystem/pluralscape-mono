@@ -132,6 +132,20 @@ describe("SpClient.requestRaw", () => {
     const client = new SpClient("https://sp.example.com", "k");
     await expect(client.requestRaw("/v1/x", {})).resolves.toBe("ok");
   });
+
+  test("omits Authorization header when authOverride is empty string", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "stored-key");
+    await client.requestRaw("/v1/auth/register", {
+      method: "POST",
+      authOverride: "",
+    });
+    const firstCall = mockFetch.mock.calls[0];
+    if (!firstCall) throw new Error("fetch was not called");
+    const [, init] = firstCall;
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBeUndefined();
+  });
 });
 
 describe("SpClient.request", () => {

@@ -2,7 +2,7 @@ import { readFileSync, existsSync, writeFileSync, renameSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { PATHS } from "./constants.js";
 
-export type SpMode = "minimal" | "adversarial";
+export type { SpMode } from "./constants.js";
 
 export interface SpModeEnv {
   email?: string;

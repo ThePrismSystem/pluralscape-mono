@@ -3,8 +3,9 @@
 title: Rewrite scripts/seed-sp-test-data.ts
 status: in-progress
 type: task
+priority: normal
 created_at: 2026-04-11T18:02:39Z
-updated_at: 2026-04-11T18:02:39Z
+updated_at: 2026-04-11T18:21:55Z
 parent: ps-nrg4
 ---
 
@@ -25,7 +26,7 @@ Pending: implementation plan (next step via writing-plans skill).
 
 ## Todo
 
-- [ ] Write implementation plan via superpowers:writing-plans
+- [x] Write implementation plan via superpowers:writing-plans
 - [ ] Scaffold scripts/sp-seed/ module + vitest project wiring
 - [ ] TDD: extractObjectIdFromText, uidFromJwt, resolveRefs (pure helpers)
 - [ ] TDD: SpClient (bootstrap, request, requestRaw, typed errors)
