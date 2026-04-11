@@ -2,10 +2,11 @@
 import { describe, expect, test } from "vitest";
 import { ENTITY_TYPES_IN_ORDER, type EntityFixtures } from "../fixtures/types.js";
 import { MINIMAL_FIXTURES } from "../fixtures/minimal.js";
+import { ADVERSARIAL_FIXTURES } from "../fixtures/adversarial.js";
 
 const FIXTURE_SETS: [string, EntityFixtures][] = [
   ["minimal", MINIMAL_FIXTURES],
-  // adversarial added in Task 16
+  ["adversarial", ADVERSARIAL_FIXTURES],
 ];
 
 const REF_PATTERN = /^[a-z][a-z0-9-]*\.[a-z0-9][a-z0-9-]*$/;
