@@ -411,7 +411,10 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
         message: "Testing max title length boundary",
         writtenBy: "member.bob",
         writtenFor: "member.alice",
-        read: true,
+        // SP's board schema enforces `read: {enum: [false]}` on POST —
+        // messages can only be created unread. Mutate to read=true via
+        // PATCH /v1/board/:id if a test needs the read state.
+        read: false,
         writtenAt: now - 4_000_000,
         supportMarkdown: false,
       },
