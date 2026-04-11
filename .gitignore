@@ -29,6 +29,7 @@ bun.lockb
 .env
 .env.*
 !.env.example
+!.env.sp-test.example
 *.pem
 *.key
 
@@ -78,6 +79,11 @@ ui-design-local/
 *.log
 *.patch
 .pnpm-debug.log
+
+# SP import test artifacts (seeded account credentials + manifests)
+.env.sp-test
+.env.sp-test-*
+scripts/.sp-test-*.json
 
 # OS
 .tmp

@@ -28,6 +28,8 @@
     "commitlint": "commitlint --from=origin/main --to=HEAD",
     "knip": "knip --exclude exports --exclude types",
     "scope:check": "tsx scripts/check-scope-coverage.ts",
+    "seed:sp-test": "tsx scripts/sp-seed/index.ts",
+    "test:e2e:sp-import": "vitest run --config vitest.sp-e2e.config.ts",
     "trpc:parity": "pnpm --filter @pluralscape/api trpc:parity",
     "prepare": "husky"
   },

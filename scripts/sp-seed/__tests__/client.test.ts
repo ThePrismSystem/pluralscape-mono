@@ -1,0 +1,279 @@
+// scripts/sp-seed/__tests__/client.test.ts
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+  extractObjectIdFromText,
+  InvalidObjectIdError,
+  MalformedJwtError,
+  NonJsonResponseError,
+  SpClient,
+  uidFromJwt,
+} from "../client.js";
+
+describe("extractObjectIdFromText", () => {
+  test("returns the string when it is a valid 24-char hex", () => {
+    expect(extractObjectIdFromText("507f1f77bcf86cd799439011")).toBe("507f1f77bcf86cd799439011");
+  });
+
+  test("accepts both lower- and upper-case hex", () => {
+    expect(extractObjectIdFromText("507F1F77BCF86CD799439011")).toBe("507F1F77BCF86CD799439011");
+  });
+
+  test("throws InvalidObjectIdError on wrong length", () => {
+    expect(() => extractObjectIdFromText("507f1f77bcf86cd79943901")).toThrow(InvalidObjectIdError);
+  });
+
+  test("throws InvalidObjectIdError on non-hex content", () => {
+    expect(() => extractObjectIdFromText("not-an-object-id-xxxxxxx")).toThrow(InvalidObjectIdError);
+  });
+
+  test("throws InvalidObjectIdError on JSON-looking content", () => {
+    expect(() => extractObjectIdFromText('{"id":"507f"}')).toThrow(InvalidObjectIdError);
+  });
+
+  test("throws on empty string", () => {
+    expect(() => extractObjectIdFromText("")).toThrow(InvalidObjectIdError);
+  });
+
+  // SP's `addSimpleDocument` calls `res.send(insertedId)`. Express serializes
+  // ObjectId via JSON.stringify, so the wire body is a quoted string like
+  // `"69daabba249bb3c690ad06b8"` — strip the surrounding quotes before validating.
+  test("strips surrounding JSON double-quotes before validating", () => {
+    expect(extractObjectIdFromText('"69daabba249bb3c690ad06b8"')).toBe("69daabba249bb3c690ad06b8");
+  });
+
+  test("still rejects mismatched surrounding quotes", () => {
+    expect(() => extractObjectIdFromText('"69daabba249bb3c690ad06b8')).toThrow(
+      InvalidObjectIdError,
+    );
+    expect(() => extractObjectIdFromText('69daabba249bb3c690ad06b8"')).toThrow(
+      InvalidObjectIdError,
+    );
+  });
+});
+
+describe("uidFromJwt", () => {
+  // Helper to build a JWT-shaped string with a given payload JSON object.
+  function makeJwt(payload: Record<string, unknown>): string {
+    const header = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
+    const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+    return `${header}.${body}.fake-signature`;
+  }
+
+  test("extracts uid from `sub` claim", () => {
+    const jwt = makeJwt({ sub: "abc123" });
+    expect(uidFromJwt(jwt)).toBe("abc123");
+  });
+
+  test("extracts uid from `uid` claim when `sub` missing", () => {
+    const jwt = makeJwt({ uid: "xyz789" });
+    expect(uidFromJwt(jwt)).toBe("xyz789");
+  });
+
+  test("prefers `sub` over `uid` when both present", () => {
+    const jwt = makeJwt({ sub: "from-sub", uid: "from-uid" });
+    expect(uidFromJwt(jwt)).toBe("from-sub");
+  });
+
+  test("throws MalformedJwtError when payload segment is missing", () => {
+    expect(() => uidFromJwt("onlyonesegment")).toThrow(MalformedJwtError);
+  });
+
+  test("throws MalformedJwtError when payload segment is empty", () => {
+    expect(() => uidFromJwt("header..signature")).toThrow(MalformedJwtError);
+  });
+
+  test("throws MalformedJwtError when payload has neither sub nor uid", () => {
+    const jwt = makeJwt({ other: "value" });
+    expect(() => uidFromJwt(jwt)).toThrow(MalformedJwtError);
+  });
+
+  test("throws MalformedJwtError when payload is not valid base64url JSON", () => {
+    expect(() => uidFromJwt("header.not-valid-json-base64.sig")).toThrow(MalformedJwtError);
+  });
+});
+
+describe("SpClient.requestRaw", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let originalFetch: typeof global.fetch;
+
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    mockFetch = vi.fn();
+    global.fetch = mockFetch as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test("sends Authorization header raw (no Bearer prefix)", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "raw-api-key-xyz");
+    await client.requestRaw("/v1/me", {});
+    const firstCall = mockFetch.mock.calls[0];
+    if (!firstCall) throw new Error("fetch was not called");
+    const [, init] = firstCall;
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBe("raw-api-key-xyz");
+    expect(headers["Authorization"]).not.toMatch(/^Bearer /);
+  });
+
+  test("throws SpApiError on 4xx with body content", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("bad stuff", { status: 400 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.requestRaw("/v1/x", {})).rejects.toMatchObject({
+      name: "SpApiError",
+      status: 400,
+      path: "/v1/x",
+      body: "bad stuff",
+    });
+  });
+
+  test("throws SpApiError on 5xx after one retry", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response("fail", { status: 500 }))
+      .mockResolvedValueOnce(new Response("fail again", { status: 500 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.requestRaw("/v1/x", {})).rejects.toMatchObject({
+      name: "SpApiError",
+      status: 500,
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("recovers from transient 5xx on second attempt", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response("fail", { status: 500 }))
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.requestRaw("/v1/x", {})).resolves.toBe("ok");
+  });
+
+  test("omits Authorization header when authOverride is empty string", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "stored-key");
+    await client.requestRaw("/v1/auth/register", {
+      method: "POST",
+      authOverride: "",
+    });
+    const firstCall = mockFetch.mock.calls[0];
+    if (!firstCall) throw new Error("fetch was not called");
+    const [, init] = firstCall;
+    const headers = init.headers as Record<string, string>;
+    expect(headers["Authorization"]).toBeUndefined();
+  });
+});
+
+describe("SpClient.request", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let originalFetch: typeof global.fetch;
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    mockFetch = vi.fn();
+    global.fetch = mockFetch as unknown as typeof fetch;
+  });
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test("parses JSON response into typed object", async () => {
+    mockFetch.mockResolvedValueOnce(new Response('{"id":"abc","name":"x"}', { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    const result = await client.request<{ id: string; name: string }>("/v1/me", {});
+    expect(result).toEqual({ id: "abc", name: "x" });
+  });
+
+  test("throws NonJsonResponseError on unparseable body", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("not json at all", { status: 200 }));
+    const client = new SpClient("https://sp.example.com", "k");
+    await expect(client.request("/v1/me", {})).rejects.toBeInstanceOf(NonJsonResponseError);
+  });
+});
+
+describe("SpClient.bootstrap", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let originalFetch: typeof global.fetch;
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    mockFetch = vi.fn();
+    global.fetch = mockFetch as unknown as typeof fetch;
+  });
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  // Helper — makes a JWT whose `sub` claim is `uid`.
+  function makeJwt(uid: string): string {
+    const header = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
+    const body = Buffer.from(JSON.stringify({ sub: uid })).toString("base64url");
+    return `${header}.${body}.sig`;
+  }
+
+  test("reuses stored API key when /v1/me probe returns 200", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ exists: true, id: "stored-uid", content: {} }), {
+        status: 200,
+      }),
+    );
+    const result = await SpClient.bootstrap(
+      "e@example.com",
+      "pw",
+      "stored-key",
+      "https://sp.example.com",
+    );
+    expect(result.fresh).toBe(false);
+    expect(result.apiKey).toBe("stored-key");
+    expect(result.systemId).toBe("stored-uid");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("falls through to fresh bootstrap when stored key returns 401", async () => {
+    const jwt = makeJwt("new-uid");
+    mockFetch
+      // 1. probe /v1/me → 401
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      // 2. POST /v1/auth/register → 200 JWT
+      .mockResolvedValueOnce(new Response(jwt, { status: 200 }))
+      // 3. GET /v1/private/new-uid → 200 (trigger auto-create)
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }))
+      // 4. PATCH /v1/private/new-uid (ToS accept) → 200
+      .mockResolvedValueOnce(new Response("", { status: 200 }))
+      // 5. POST /v1/token/000... → 200 raw API key
+      .mockResolvedValueOnce(new Response("new-api-key-base64", { status: 200 }));
+    const result = await SpClient.bootstrap(
+      "e@example.com",
+      "pw",
+      "stale-key",
+      "https://sp.example.com",
+    );
+    expect(result.fresh).toBe(true);
+    expect(result.apiKey).toBe("new-api-key-base64");
+    expect(result.systemId).toBe("new-uid");
+    expect(mockFetch).toHaveBeenCalledTimes(5);
+  });
+
+  test("falls through to login when register returns 409", async () => {
+    const jwt = makeJwt("existing-uid");
+    mockFetch
+      // 1. POST /v1/auth/register → 409
+      .mockResolvedValueOnce(new Response("User already exists", { status: 409 }))
+      // 2. POST /v1/auth/login → 200 JWT
+      .mockResolvedValueOnce(new Response(jwt, { status: 200 }))
+      // 3. GET /v1/private/existing-uid → 200
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }))
+      // 4. PATCH /v1/private/existing-uid → 200
+      .mockResolvedValueOnce(new Response("", { status: 200 }))
+      // 5. POST /v1/token/000... → 200
+      .mockResolvedValueOnce(new Response("api-key", { status: 200 }));
+    const result = await SpClient.bootstrap(
+      "e@example.com",
+      "pw",
+      undefined,
+      "https://sp.example.com",
+    );
+    expect(result.fresh).toBe(true);
+    expect(result.apiKey).toBe("api-key");
+    expect(result.systemId).toBe("existing-uid");
+    expect(mockFetch).toHaveBeenCalledTimes(5);
+  });
+});

@@ -59,7 +59,7 @@ export default defineConfig({
           name: "scripts",
           root: "scripts",
           environment: "node",
-          include: ["__tests__/**/*.{test,spec}.ts"],
+          include: ["**/__tests__/**/*.{test,spec}.ts"],
           globals: false,
           restoreMocks: true,
           testTimeout: 5000,

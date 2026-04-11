@@ -13,6 +13,7 @@ export default tseslint.config(
       "**/.turbo/**",
       "**/.expo/**",
       "**/vitest.config.ts",
+      "**/vitest.*.config.ts",
       "**/generated/**",
       "**/scripts/**",
     ],
