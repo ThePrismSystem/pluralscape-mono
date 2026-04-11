@@ -7,7 +7,7 @@ export class SpApiError extends Error {
     readonly path: string,
     readonly body: string,
   ) {
-    super(`SP API ${method} ${path} failed (${status}): ${body}`);
+    super(`SP API ${method} ${path} failed (${status}): ${body.slice(0, 200)}`);
     this.name = "SpApiError";
   }
 }
@@ -31,7 +31,7 @@ export class InvalidObjectIdError extends Error {
 }
 
 export class MalformedJwtError extends Error {
-  constructor(reason = "malformed JWT") {
+  constructor(readonly reason = "malformed JWT") {
     super(reason);
     this.name = "MalformedJwtError";
   }
