@@ -59,6 +59,21 @@ export interface MappingContext {
  */
 const WARNING_BUFFER_RESERVED_SLOT = MAX_WARNING_BUFFER_SIZE - 1;
 
+/**
+ * Create a {@link MappingContext}.
+ *
+ * Memory characteristics: the IdTranslationTable grows one entry per
+ * successfully-mapped entity across the whole run (keyed by entityType and
+ * source ID). There is intentionally no eviction — later mappers resolve
+ * foreign keys against earlier passes, so the table must survive until the
+ * entire DEPENDENCY_ORDER walk is complete. In practice this is bounded by
+ * the number of SP documents in the export; personal systems are a few
+ * thousand rows at most (~100 bytes/entry), so the table stays comfortably
+ * under 1 MB. Pathological multi-MB imports should be surfaced via import
+ * job telemetry rather than evicting mid-run (which would break FK
+ * resolution). Warnings, by contrast, are bounded by
+ * {@link MAX_WARNING_BUFFER_SIZE} with a truncation marker.
+ */
 export function createMappingContext(opts: { sourceMode: SourceMode }): MappingContext {
   const tables = new Map<ImportEntityType, Map<string, string>>();
   const warnings: MappingWarning[] = [];

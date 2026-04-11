@@ -80,17 +80,24 @@ function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelt
  *
  * Invariant: `MAPPER_DISPATCH` guarantees that for each collection, the
  * mapper returns a payload whose shape matches the `Mapped<Entity>` type
- * bound to the corresponding `entityType` variant of `PersistableEntity`. We
- * therefore construct the variant with a single controlled cast — avoiding
- * widening the persister's input type or threading a generic through the
- * dispatch table — and the TypeScript compiler enforces the shape of every
- * consumer of the narrowed result.
+ * bound to the corresponding `entityType` variant of `PersistableEntity`.
+ * We therefore construct the variant with a single controlled cast —
+ * avoiding widening the persister's input type or threading a generic
+ * through the dispatch table — and the TypeScript compiler enforces the
+ * shape of every consumer of the narrowed result. A runtime guard rejects
+ * primitives and null payloads so misrouted dispatch entries surface as a
+ * visible error rather than a silent cast.
  */
 function buildPersistableEntity(
   entityType: ImportCollectionType,
   sourceEntityId: string,
   payload: unknown,
 ): PersistableEntity {
+  if (payload === null || typeof payload !== "object") {
+    throw new Error(
+      `mapper for ${entityType} returned non-object payload (${typeof payload}); dispatch table may be misrouted`,
+    );
+  }
   return {
     entityType,
     sourceEntityId,

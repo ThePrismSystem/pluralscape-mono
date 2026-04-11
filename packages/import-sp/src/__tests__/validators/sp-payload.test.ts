@@ -85,16 +85,49 @@ describe("SPGroupSchema", () => {
 });
 
 describe("SPCustomFieldSchema", () => {
-  it("requires name, type, order", () => {
+  it("accepts numeric type (0-7) and string order (fractional index)", () => {
+    expect(
+      SPCustomFieldSchema.safeParse({
+        _id: validId,
+        name: "Likes",
+        type: 0,
+        order: "a00000",
+      }).success,
+    ).toBe(true);
+    expect(SPCustomFieldSchema.safeParse({ _id: validId, name: "Likes" }).success).toBe(false);
+  });
+
+  it("rejects SP type outside 0-7", () => {
+    expect(
+      SPCustomFieldSchema.safeParse({ _id: validId, name: "x", type: 8, order: "0" }).success,
+    ).toBe(false);
+    expect(
+      SPCustomFieldSchema.safeParse({ _id: validId, name: "x", type: -1, order: "0" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects legacy string type (SP pre-refactor shape)", () => {
     expect(
       SPCustomFieldSchema.safeParse({
         _id: validId,
         name: "Likes",
         type: "text",
-        order: 0,
+        order: "0",
       }).success,
-    ).toBe(true);
-    expect(SPCustomFieldSchema.safeParse({ _id: validId, name: "Likes" }).success).toBe(false);
+    ).toBe(false);
+  });
+
+  it("coerces numeric order from pre-migration SP exports into string form", () => {
+    const result = SPCustomFieldSchema.safeParse({
+      _id: validId,
+      name: "Likes",
+      type: 0,
+      order: 3,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.order).toBe("3");
+    }
   });
 });
 
@@ -228,7 +261,19 @@ describe("SPChatMessageSchema", () => {
 });
 
 describe("SPBoardMessageSchema", () => {
-  it("accepts a board message", () => {
+  it("accepts a board message with writtenBy", () => {
+    expect(
+      SPBoardMessageSchema.safeParse({
+        _id: validId,
+        title: "T",
+        message: "body",
+        writtenBy: "mem_id",
+        writtenAt: 1_000_000,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects the legacy `writer` field (SP schema uses writtenBy)", () => {
     expect(
       SPBoardMessageSchema.safeParse({
         _id: validId,
@@ -237,7 +282,21 @@ describe("SPBoardMessageSchema", () => {
         writer: "mem_id",
         writtenAt: 1_000_000,
       }).success,
-    ).toBe(true);
+    ).toBe(false);
+  });
+
+  it("accepts optional writtenFor/read/supportMarkdown fields", () => {
+    const result = SPBoardMessageSchema.safeParse({
+      _id: validId,
+      title: "T",
+      message: "body",
+      writtenBy: "mem_id",
+      writtenFor: "other_mem_id",
+      writtenAt: 1_000_000,
+      read: true,
+      supportMarkdown: true,
+    });
+    expect(result.success).toBe(true);
   });
 });
 

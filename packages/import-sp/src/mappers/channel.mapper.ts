@@ -54,7 +54,7 @@ export function mapChannelCategory(
   }
   const payload: MappedChannelCategory = {
     name: sp.name,
-    description: sp.description ?? null,
+    description: sp.desc ?? null,
     type: "category",
     parentChannelId: null,
     order: sp.order ?? null,
@@ -74,12 +74,15 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
   }
 
   let parentChannelId: string | null = null;
-  if (sp.parentCategory !== null) {
+  // Real SP channels without a parent category omit `parentCategory`
+  // entirely (undefined) rather than setting it to null. Treat both as
+  // "no parent".
+  if (sp.parentCategory !== null && sp.parentCategory !== undefined) {
     const resolved = ctx.translate("channel-category", sp.parentCategory);
     if (resolved === null) {
       return failed({
         kind: "fk-miss",
-        message: `Channel "${sp.name}" has unresolved parentCategory "${sp.parentCategory}"`,
+        message: `channel ${sp._id} has unresolved parentCategory ${sp.parentCategory}`,
         missingRefs: [sp.parentCategory],
         targetField: "parentChannelId",
       });
@@ -89,7 +92,7 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
 
   const payload: MappedChannel = {
     name: sp.name,
-    description: sp.description ?? null,
+    description: sp.desc ?? null,
     type: "channel",
     parentChannelId,
     order: sp.order ?? null,

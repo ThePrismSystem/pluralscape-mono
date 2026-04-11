@@ -30,6 +30,7 @@ import { mapMember } from "../mappers/member.mapper.js";
 import { mapPoll } from "../mappers/poll.mapper.js";
 import { mapSystemProfile } from "../mappers/system-profile.mapper.js";
 import { mapSystemSettings } from "../mappers/system-settings.mapper.js";
+import { toRecord } from "../shared/to-record.js";
 import {
   SPBoardMessageKnownKeys,
   SPBoardMessageSchema,
@@ -68,16 +69,6 @@ import { collectionToEntityType } from "./entity-type-map.js";
 import type { MappingContext } from "../mappers/context.js";
 import type { SpCollectionName } from "../sources/sp-collections.js";
 import type { ImportEntityType } from "@pluralscape/types";
-
-/**
- * Converts a narrowed `object` value to `Record<string, unknown>` for key
- * iteration. The caller must have already verified `typeof v === "object" &&
- * v !== null` — this helper centralises the unavoidable widening cast so it
- * does not appear inline in business logic.
- */
-function toRecord(v: object): Record<string, unknown> {
-  return v as Record<string, unknown>;
-}
 
 /**
  * Known-key sets for every SP collection, used by the dispatch loop to

@@ -76,6 +76,38 @@ describe("mapGroup", () => {
       expect(result.missingRefs).toContain("src_y");
     }
   });
+
+  it("keeps group names out of error messages (plaintext leak guard)", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPGroup = {
+      _id: "g5",
+      name: "Extremely Private Group Name",
+      members: ["src_missing"],
+    };
+    const result = mapGroup(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.message).not.toContain("Extremely Private Group Name");
+      expect(result.message).toContain("g5");
+    }
+  });
+
+  it("truncates long missing-ref lists in the error message", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const manyRefs = Array.from({ length: 20 }, (_, i) => `src_missing_${String(i)}`);
+    const sp: SPGroup = {
+      _id: "g6",
+      name: "Huge",
+      members: manyRefs,
+    };
+    const result = mapGroup(sp, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.message).toContain("and 15 more");
+      // Structured field still carries every missing ref.
+      expect(result.missingRefs).toHaveLength(20);
+    }
+  });
 });
 
 describe("group FK-miss handling", () => {

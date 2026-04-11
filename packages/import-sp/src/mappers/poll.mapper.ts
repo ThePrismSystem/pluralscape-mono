@@ -56,8 +56,12 @@ export interface MappedPollOutput {
 export type MappedPoll = MappedPollOutput;
 
 export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPollOutput> {
-  const options: readonly MappedPollOption[] = sp.options.map((o) => ({
-    id: o.id,
+  // SP poll options have an optional `id` field — freshly-created polls ship
+  // options without ids. Fall back to a stable positional synthetic id so
+  // downstream votes can still reference them by position even without a
+  // server-assigned id.
+  const options: readonly MappedPollOption[] = (sp.options ?? []).map((o, idx) => ({
+    id: o.id ?? `opt_${String(idx)}`,
     label: o.name,
     color: o.color ?? null,
   }));
@@ -90,7 +94,7 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
   if (missingVoterRefs.length > 0) {
     return failed({
       kind: "fk-miss",
-      message: `Poll "${sp.name}" has unresolved voter reference(s): ${missingVoterRefs.join(", ")}`,
+      message: `poll ${sp._id} has ${String(missingVoterRefs.length)} unresolved voter reference(s)`,
       missingRefs: missingVoterRefs,
       targetField: "votes",
     });

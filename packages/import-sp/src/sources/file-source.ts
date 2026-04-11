@@ -10,10 +10,23 @@
  *   multibyte UTF-8 sequences split across chunks.
  * - clarinet internally buffers partial tokens across write() calls.
  *
+ * Memory characteristics: despite the SAX parser, the prescan pass
+ * reconstructs the full SP document tree in memory (`documentsByCollection`
+ * holds every collection element as a plain object) before `iterate()` is
+ * first called. Peak resident memory is therefore O(file_size) — roughly
+ * 2-3x the input file size once JS object overhead is included. This is
+ * acceptable for typical personal exports (tens of MB) but unsuitable for
+ * multi-GB inputs. A future optimization is to switch prescan to a bounded
+ * queue and yield documents as they close, so only one collection is ever
+ * materialized at a time; that refactor is gated on the engine consuming
+ * documents faster than the parser can produce them.
+ *
  * Error policy: no recovery. On any parse error FileSourceParseError is thrown
  * with the byte position from the parser.
  */
 import clarinet from "clarinet";
+
+import { toRecord } from "../shared/to-record.js";
 
 import { isSpCollectionName, type SpCollectionName } from "./sp-collections.js";
 
@@ -242,6 +255,15 @@ export function createFileImportSource(args: FileImportSourceArgs): ImportDataSo
   return {
     mode: "file",
 
+    /**
+     * Returns the raw top-level key list from the parsed document. The
+     * return type is intentionally `string[]` rather than
+     * `SpCollectionName[]` — the whole point of this method is to let the
+     * engine detect collection names the importer does not recognise (so
+     * it can emit `dropped-collection` warnings). Narrowing to
+     * `SpCollectionName[]` would require us to filter unknown names out
+     * here, defeating the purpose.
+     */
     async listCollections() {
       const state = await parseStream();
       return state.topLevelKeys;
@@ -252,7 +274,7 @@ export function createFileImportSource(args: FileImportSourceArgs): ImportDataSo
       const docs = state.documentsByCollection.get(collection) ?? [];
       for (const doc of docs) {
         if (typeof doc !== "object" || doc === null) continue;
-        const rec = doc as Record<string, unknown>;
+        const rec = toRecord(doc);
         const sourceId = typeof rec._id === "string" ? rec._id : null;
         if (sourceId === null) continue;
         yield { collection, sourceId, document: rec };

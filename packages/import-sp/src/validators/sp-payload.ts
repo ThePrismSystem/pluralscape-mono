@@ -29,8 +29,14 @@ const SPDocumentIdSchema = z.string().min(1);
 const NullableString = z.string().nullable().optional();
 const OptionalBool = z.boolean().optional();
 const OptionalNumber = z.number().nonnegative().optional();
-const NonNegInt = z.number().int().nonnegative();
 const Timestamp = z.number().nonnegative();
+
+/**
+ * Highest numeric value accepted by SP's `CustomFieldType` enum — sourced
+ * from `typeConverters.length` in
+ * `src/api/base/user/generateReports.ts` of the upstream SP repo.
+ */
+const SP_CUSTOM_FIELD_TYPE_MAX = 7;
 
 export const SPUserSchema = z.looseObject({
   _id: SPDocumentIdSchema,
@@ -100,11 +106,21 @@ export const SPGroupSchema = z.looseObject({
 
 export const SPGroupKnownKeys: ReadonlySet<string> = knownKeysOf(SPGroupSchema);
 
+/**
+ * `type` is SP's numeric enum 0-7 (see `SPCustomField`). `order` is a
+ * fractional-index string on migrated accounts; we coerce numeric `order`
+ * values from pre-migration exports so both shapes validate.
+ */
+const SPCustomFieldTypeSchema = z.number().int().min(0).max(SP_CUSTOM_FIELD_TYPE_MAX);
+const SPCustomFieldOrderSchema = z
+  .union([z.string().min(1), z.number()])
+  .transform((v) => (typeof v === "number" ? String(v) : v));
+
 export const SPCustomFieldSchema = z.looseObject({
   _id: SPDocumentIdSchema,
   name: z.string().min(1),
-  type: z.string().min(1),
-  order: NonNegInt,
+  type: SPCustomFieldTypeSchema,
+  order: SPCustomFieldOrderSchema,
   preventTrusted: OptionalBool,
   private: OptionalBool,
   supportMarkdown: OptionalBool,
@@ -112,13 +128,17 @@ export const SPCustomFieldSchema = z.looseObject({
 
 export const SPCustomFieldKnownKeys: ReadonlySet<string> = knownKeysOf(SPCustomFieldSchema);
 
+/**
+ * `endTime` is absent (not null) on live fronting sessions per real SP
+ * exports — make it both nullable and optional so both shapes validate.
+ */
 export const SPFrontHistorySchema = z.looseObject({
   _id: SPDocumentIdSchema,
   member: z.string().min(1),
   custom: z.boolean(),
   live: z.boolean(),
   startTime: Timestamp,
-  endTime: z.number().nonnegative().nullable(),
+  endTime: z.number().nonnegative().nullable().optional(),
   customStatus: NullableString,
 }) satisfies z.ZodType<SPFrontHistory>;
 
@@ -145,8 +165,12 @@ export const SPNoteSchema = z.looseObject({
 
 export const SPNoteKnownKeys: ReadonlySet<string> = knownKeysOf(SPNoteSchema);
 
+/**
+ * Real SP poll options omit the `id` field on freshly-created polls — only
+ * `name` and `color` are always present. Treat `id` as optional.
+ */
 const SPPollOptionSchema = z.looseObject({
-  id: z.string().min(1),
+  id: z.string().min(1).optional(),
   name: z.string(),
   color: NullableString,
 }) satisfies z.ZodType<SPPollOption>;
@@ -165,16 +189,21 @@ export const SPPollSchema = z.looseObject({
   custom: OptionalBool,
   allowAbstain: OptionalBool,
   allowVeto: OptionalBool,
-  options: z.array(SPPollOptionSchema).readonly(),
+  options: z.array(SPPollOptionSchema).readonly().optional(),
   votes: z.array(SPPollVoteSchema).readonly().optional(),
 }) satisfies z.ZodType<SPPoll>;
 
 export const SPPollKnownKeys: ReadonlySet<string> = knownKeysOf(SPPollSchema);
 
+/**
+ * Real SP channels use `desc` (not `description`) for the description text
+ * and omit `parentCategory` entirely when the channel is not nested under
+ * a category. Match the real shape so loose-parse succeeds.
+ */
 export const SPChannelCategorySchema = z.looseObject({
   _id: SPDocumentIdSchema,
   name: z.string().min(1),
-  description: NullableString,
+  desc: NullableString,
   order: OptionalNumber,
 }) satisfies z.ZodType<SPChannelCategory>;
 
@@ -183,8 +212,8 @@ export const SPChannelCategoryKnownKeys: ReadonlySet<string> = knownKeysOf(SPCha
 export const SPChannelSchema = z.looseObject({
   _id: SPDocumentIdSchema,
   name: z.string().min(1),
-  description: NullableString,
-  parentCategory: z.string().min(1).nullable(),
+  desc: NullableString,
+  parentCategory: z.string().min(1).nullable().optional(),
   order: OptionalNumber,
 }) satisfies z.ZodType<SPChannel>;
 
@@ -205,9 +234,11 @@ export const SPBoardMessageSchema = z.looseObject({
   _id: SPDocumentIdSchema,
   title: z.string(),
   message: z.string(),
-  writer: z.string().min(1),
+  writtenBy: z.string().min(1),
+  writtenFor: z.string().min(1).optional(),
   writtenAt: Timestamp,
-  readBy: z.array(z.string()).readonly().optional(),
+  read: OptionalBool,
+  supportMarkdown: OptionalBool,
 }) satisfies z.ZodType<SPBoardMessage>;
 
 export const SPBoardMessageKnownKeys: ReadonlySet<string> = knownKeysOf(SPBoardMessageSchema);

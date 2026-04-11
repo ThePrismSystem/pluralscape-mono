@@ -60,14 +60,23 @@ export type MappedMember = MappedMemberOutput;
  * Resolve a member's privacy bucket source IDs.
  *
  * Precedence:
- * 1. Modern SP `buckets` array (non-empty) — use as-is.
- * 2. Legacy `private: true` → `["synthetic:private"]` (the narrowest).
- * 3. Legacy `preventTrusted: true` (while not private) → public-only.
- * 4. Any other explicit legacy flag → public + trusted.
- * 5. No privacy info at all → fail closed to synthetic:private.
+ * 1. Modern SP member with `buckets` field present (any length) — respect
+ *    the explicit assignment. An empty array means "assigned to no
+ *    buckets", which SP semantically treats as "visible to no friends"
+ *    (equivalent to restrictive). We import that as an empty `bucketIds`
+ *    list so downstream privacy stays fail-closed. We do NOT fall through
+ *    to legacy-flag synthesis in this case, even when `private` or
+ *    `preventTrusted` are set — the modern account has already chosen the
+ *    bucket model and mixing the two would double-count privacy.
+ * 2. Legacy SP (no `buckets` field at all) — derive from the
+ *    `private` / `preventTrusted` boolean pair:
+ *    2a. `private: true` → `["synthetic:private"]` (the narrowest).
+ *    2b. `preventTrusted: true` (while not private) → public-only.
+ *    2c. Any other explicit legacy flag → public + trusted.
+ *    2d. No privacy info at all → fail closed to synthetic:private.
  */
 function deriveBucketSourceIds(sp: SPMember): readonly string[] {
-  if (sp.buckets && sp.buckets.length > 0) return sp.buckets;
+  if (sp.buckets !== undefined) return sp.buckets;
   if (sp.private === true) return ["synthetic:private"];
   if (sp.preventTrusted === true) return ["synthetic:public"];
   if (sp.private === false || sp.preventTrusted === false) {
@@ -127,7 +136,7 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
   if (missingRefs.length > 0) {
     return failed({
       kind: "fk-miss",
-      message: `Member "${sp.name}" has ${String(missingRefs.length)} unresolved privacy bucket reference(s)`,
+      message: `member ${sp._id} has ${String(missingRefs.length)} unresolved privacy bucket reference(s)`,
       missingRefs,
       targetField: "buckets",
     });

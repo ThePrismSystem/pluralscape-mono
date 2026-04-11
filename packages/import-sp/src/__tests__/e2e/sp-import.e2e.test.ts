@@ -4,7 +4,6 @@ import path from "node:path";
 import { describe, it, expect, beforeAll } from "vitest";
 
 import { runImport } from "../../engine/import-engine.js";
-import { SP_COLLECTION_NAMES } from "../../sources/sp-collections.js";
 
 import {
   COLLECTION_TO_ENTITY_TYPE,
@@ -51,6 +50,21 @@ function assertEntityCounts(snap: RecordingSnapshot, manifest: Manifest): void {
   const keys = Object.keys(COLLECTION_TO_ENTITY_TYPE) as ManifestCollectionKey[];
   for (const key of keys) {
     const entityType = COLLECTION_TO_ENTITY_TYPE[key];
+    // Privacy buckets are a special case: SP auto-creates default buckets
+    // ("Friends", "Trusted friends") when an account is first provisioned,
+    // and the seeder only tracks the buckets it explicitly POSTs. The
+    // importer correctly imports every bucket in the export, so the snap
+    // count can exceed the manifest count by the number of SP defaults.
+    // We enforce "at least the manifest count" here and rely on
+    // `assertAllEntitiesPresent` to verify every manifest entry was
+    // imported.
+    if (entityType === "privacy-bucket") {
+      expect(
+        snap.count(entityType),
+        `${entityType}: imported count must cover every manifest entry`,
+      ).toBeGreaterThanOrEqual(manifest[key].length);
+      continue;
+    }
     expect(snap.count(entityType), `count mismatch for ${entityType}`).toBe(manifest[key].length);
   }
 }
@@ -72,6 +86,19 @@ function assertAllEntitiesPresent(snap: RecordingSnapshot, manifest: Manifest): 
  * Spot-check a few entity payloads to verify field mapping correctness.
  * Checks that key fields from the manifest survived import into the payload.
  */
+/**
+ * The member mapper wraps the core member fields inside a `member` sub-object
+ * (alongside `fieldValues` and `bucketIds`). This helper navigates that
+ * structure for payload spot-checks.
+ */
+function memberName(payload: unknown): unknown {
+  if (payload === null || typeof payload !== "object") return undefined;
+  const outer = payload as Record<string, unknown>;
+  const inner = outer["member"];
+  if (inner === null || typeof inner !== "object") return undefined;
+  return (inner as Record<string, unknown>)["name"];
+}
+
 function assertPayloadSpotChecks(
   snap: RecordingSnapshot,
   manifest: Manifest,
@@ -85,8 +112,7 @@ function assertPayloadSpotChecks(
       throw new Error(`first member entity should exist (sourceId=${firstMember.sourceId})`);
     }
     expect(entity.payload).toBeDefined();
-    const payload = entity.payload as Record<string, unknown>;
-    expect(payload["name"]).toBe(firstMember.fields["name"]);
+    expect(memberName(entity.payload)).toBe(firstMember.fields["name"]);
   }
 
   // Check first custom front has a payload
@@ -127,8 +153,7 @@ function assertPayloadSpotChecks(
       throw new Error(`member.alice entity should exist (sourceId=${aliceEntry.sourceId})`);
     }
     expect(entity.payload).toBeDefined();
-    const payload = entity.payload as Record<string, unknown>;
-    expect(payload["name"]).toBe(aliceEntry.fields["name"]);
+    expect(memberName(entity.payload)).toBe(aliceEntry.fields["name"]);
   }
 }
 
@@ -146,6 +171,7 @@ function noopProgress(): Promise<void> {
 
 type SourceFactory = (
   mode: "minimal" | "adversarial",
+  manifest: Manifest,
 ) => ImportDataSource | Promise<ImportDataSource>;
 
 function defineImportSuite(
@@ -161,7 +187,7 @@ function defineImportSuite(
 
     beforeAll(async () => {
       manifest = await loadManifest(mode);
-      const source = await sourceFactory(mode);
+      const source = await sourceFactory(mode, manifest);
       const recorder = createRecordingPersister();
       const result = await runImport({
         source,
@@ -203,11 +229,29 @@ function defineImportSuite(
 
 describe.skipIf(!hasApiTokens())("SP Import E2E — API Source", () => {
   describe("ApiSource connectivity", () => {
-    it("lists all known SP collection names", async () => {
-      const source = createApiSource("minimal");
+    it("lists the collections the api source can fetch via bulk GET", async () => {
+      const manifest = await loadManifest("minimal");
+      const source = createApiSource("minimal", manifest);
       try {
         const collections = await source.listCollections();
-        for (const name of SP_COLLECTION_NAMES) {
+        // The api source reports only collections with a usable bulk/single
+        // endpoint — the per-parent-traversal collections (comments, notes,
+        // chatMessages, boardMessages) are intentionally omitted and imported
+        // only via the file source. See api-source.ts for the strategy map.
+        const expected = [
+          "users",
+          "private",
+          "privacyBuckets",
+          "customFields",
+          "frontStatuses",
+          "members",
+          "groups",
+          "frontHistory",
+          "polls",
+          "channelCategories",
+          "channels",
+        ];
+        for (const name of expected) {
           expect(collections, `missing collection ${name}`).toContain(name);
         }
       } finally {
@@ -235,12 +279,13 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — File Source", () => {
 
 describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () => {
   it("resumes from an aborted checkpoint and completes", async () => {
-    const source = await createFileSource("minimal");
+    const manifest = await loadManifest("minimal");
+    const source = await createFileSource("minimal", manifest);
     const recorder = createRecordingPersister();
 
     // First: run a full import to establish baseline.
     const fullResult = await runImport({
-      source: await createFileSource("minimal"),
+      source: await createFileSource("minimal", manifest),
       persister: recorder.persister,
       initialCheckpoint: makeInitialCheckpoint(),
       options: { selectedCategories: {}, avatarMode: "skip" },
@@ -256,7 +301,7 @@ describe.skipIf(!hasExportFixtures())("SP Import E2E — Checkpoint Resume", () 
 
     const abortRecorder = createRecordingPersister();
     const abortResult = await runImport({
-      source: await createFileSource("minimal"),
+      source: await createFileSource("minimal", manifest),
       persister: abortRecorder.persister,
       initialCheckpoint: makeInitialCheckpoint(),
       options: { selectedCategories: {}, avatarMode: "skip" },

@@ -38,7 +38,7 @@ export function mapFrontingSession(
     });
   }
 
-  const endTime = sp.live ? null : sp.endTime;
+  const endTime = sp.live ? null : (sp.endTime ?? null);
 
   const payload: MappedFrontingSession = {
     memberId: sp.custom ? null : resolved,
