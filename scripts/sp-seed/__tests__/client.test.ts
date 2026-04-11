@@ -173,3 +173,92 @@ describe("SpClient.request", () => {
     await expect(client.request("/v1/me", {})).rejects.toBeInstanceOf(NonJsonResponseError);
   });
 });
+
+describe("SpClient.bootstrap", () => {
+  let mockFetch: ReturnType<typeof vi.fn>;
+  let originalFetch: typeof global.fetch;
+  beforeEach(() => {
+    originalFetch = global.fetch;
+    mockFetch = vi.fn();
+    global.fetch = mockFetch as unknown as typeof fetch;
+  });
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  // Helper — makes a JWT whose `sub` claim is `uid`.
+  function makeJwt(uid: string): string {
+    const header = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
+    const body = Buffer.from(JSON.stringify({ sub: uid })).toString("base64url");
+    return `${header}.${body}.sig`;
+  }
+
+  test("reuses stored API key when /v1/me probe returns 200", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ exists: true, id: "stored-uid", content: {} }), {
+        status: 200,
+      }),
+    );
+    const result = await SpClient.bootstrap(
+      "minimal",
+      "e@example.com",
+      "pw",
+      "stored-key",
+      "https://sp.example.com",
+    );
+    expect(result.fresh).toBe(false);
+    expect(result.apiKey).toBe("stored-key");
+    expect(result.systemId).toBe("stored-uid");
+  });
+
+  test("falls through to fresh bootstrap when stored key returns 401", async () => {
+    const jwt = makeJwt("new-uid");
+    mockFetch
+      // 1. probe /v1/me → 401
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }))
+      // 2. POST /v1/auth/register → 200 JWT
+      .mockResolvedValueOnce(new Response(jwt, { status: 200 }))
+      // 3. GET /v1/private/new-uid → 200 (trigger auto-create)
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }))
+      // 4. PATCH /v1/private/new-uid (ToS accept) → 200
+      .mockResolvedValueOnce(new Response("", { status: 200 }))
+      // 5. POST /v1/token/000... → 200 raw API key
+      .mockResolvedValueOnce(new Response("new-api-key-base64", { status: 200 }));
+    const result = await SpClient.bootstrap(
+      "minimal",
+      "e@example.com",
+      "pw",
+      "stale-key",
+      "https://sp.example.com",
+    );
+    expect(result.fresh).toBe(true);
+    expect(result.apiKey).toBe("new-api-key-base64");
+    expect(result.systemId).toBe("new-uid");
+  });
+
+  test("falls through to login when register returns 409", async () => {
+    const jwt = makeJwt("existing-uid");
+    mockFetch
+      // 1. (no stored key, skip probe)
+      // 1. POST /v1/auth/register → 409
+      .mockResolvedValueOnce(new Response("User already exists", { status: 409 }))
+      // 2. POST /v1/auth/login → 200 JWT
+      .mockResolvedValueOnce(new Response(jwt, { status: 200 }))
+      // 3. GET /v1/private/existing-uid → 200
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }))
+      // 4. PATCH /v1/private/existing-uid → 200
+      .mockResolvedValueOnce(new Response("", { status: 200 }))
+      // 5. POST /v1/token/000... → 200
+      .mockResolvedValueOnce(new Response("api-key", { status: 200 }));
+    const result = await SpClient.bootstrap(
+      "minimal",
+      "e@example.com",
+      "pw",
+      undefined,
+      "https://sp.example.com",
+    );
+    expect(result.fresh).toBe(true);
+    expect(result.apiKey).toBe("api-key");
+    expect(result.systemId).toBe("existing-uid");
+  });
+});

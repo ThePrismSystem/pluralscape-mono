@@ -1,5 +1,11 @@
 // scripts/sp-seed/client.ts
-import { FETCH_TIMEOUT_MS, REQUEST_DELAY_MS } from "./constants.js";
+import {
+  DUMMY_OBJECT_ID,
+  FETCH_TIMEOUT_MS,
+  FULL_API_ACCESS_PERMISSION,
+  REQUEST_DELAY_MS,
+} from "./constants.js";
+import type { SpMode } from "./constants.js";
 
 export class SpApiError extends Error {
   constructor(
@@ -94,6 +100,19 @@ export function uidFromJwt(jwt: string): string {
   throw new MalformedJwtError("JWT payload missing sub/uid claim");
 }
 
+interface MeResponseEnvelope {
+  readonly exists?: boolean;
+  readonly id?: string;
+  readonly content?: unknown;
+}
+
+export interface BootstrapResult {
+  readonly client: SpClient;
+  readonly systemId: string;
+  readonly apiKey: string;
+  readonly fresh: boolean;
+}
+
 export interface RequestOptions {
   method?: string;
   body?: unknown;
@@ -140,6 +159,33 @@ export class SpClient {
     }
   }
 
+  static async bootstrap(
+    _mode: SpMode,
+    email: string,
+    password: string,
+    storedApiKey: string | undefined,
+    baseUrl: string,
+  ): Promise<BootstrapResult> {
+    if (storedApiKey !== undefined) {
+      const probeClient = new SpClient(baseUrl, storedApiKey);
+      try {
+        const me = await probeClient.request<MeResponseEnvelope>("/v1/me", {});
+        if (typeof me.id === "string") {
+          return {
+            client: probeClient,
+            systemId: me.id,
+            apiKey: storedApiKey,
+            fresh: false,
+          };
+        }
+      } catch (err) {
+        if (!(err instanceof SpApiError) || err.status !== 401) throw err;
+        // 401 → fall through to fresh bootstrap
+      }
+    }
+    return freshBootstrap(email, password, baseUrl);
+  }
+
   private async executeOnce(
     path: string,
     opts: RequestOptions,
@@ -173,4 +219,51 @@ export class SpClient {
     }
     return text;
   }
+}
+
+async function freshBootstrap(
+  email: string,
+  password: string,
+  baseUrl: string,
+): Promise<BootstrapResult> {
+  const transport = new SpClient(baseUrl, "unused");
+  let jwt: string;
+  try {
+    jwt = await transport.requestRaw("/v1/auth/register", {
+      method: "POST",
+      body: { email, password },
+      authOverride: "",
+    });
+  } catch (err) {
+    if (!(err instanceof SpApiError) || err.status !== 409) throw err;
+    jwt = await transport.requestRaw("/v1/auth/login", {
+      method: "POST",
+      body: { email, password },
+      authOverride: "",
+    });
+  }
+  const uid = uidFromJwt(jwt);
+  // Trigger auto-create of private doc via GET (side effect in SP source).
+  await transport.requestRaw(`/v1/private/${uid}`, {
+    method: "GET",
+    authOverride: jwt,
+  });
+  // Accept ToS.
+  await transport.requestRaw(`/v1/private/${uid}`, {
+    method: "PATCH",
+    body: { termsOfServiceAccepted: true },
+    authOverride: jwt,
+  });
+  // Mint full-permission API key.
+  const apiKey = await transport.requestRaw(`/v1/token/${DUMMY_OBJECT_ID}`, {
+    method: "POST",
+    body: { permission: FULL_API_ACCESS_PERMISSION },
+    authOverride: jwt,
+  });
+  return {
+    client: new SpClient(baseUrl, apiKey),
+    systemId: uid,
+    apiKey,
+    fresh: true,
+  };
 }
