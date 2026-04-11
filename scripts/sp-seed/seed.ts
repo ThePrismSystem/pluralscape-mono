@@ -1,4 +1,11 @@
-import { UnresolvedRefError } from "./client.js";
+import { UnresolvedRefError, SpApiError, extractObjectIdFromText } from "./client.js";
+import type { SpClient } from "./client.js";
+import type { Manifest, ManifestEntry, SeedPlan } from "./manifest.js";
+import { writeManifestAtomic } from "./manifest.js";
+import type { EntityFixtures, EntityTypeKey, FixtureDef } from "./fixtures/types.js";
+import { ENTITY_TYPES_IN_ORDER } from "./fixtures/types.js";
+import { ENTITY_CREATION_DELAY_MS, ENTITY_POST_PATHS } from "./constants.js";
+import type { SpMode } from "./constants.js";
 
 /**
  * Walk a POST body object and replace any `FixtureRef`-shaped string values
@@ -41,4 +48,145 @@ function resolveMaybeRef(s: string, refMap: ReadonlyMap<string, string>): string
   const resolved = refMap.get(s);
   if (resolved === undefined) throw new UnresolvedRefError(s);
   return resolved;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Minimum client interface used by triggerExportWith429Handling — enables stub-friendly tests. */
+interface ExportCapableClient {
+  request(path: string, opts: { method?: string; body?: unknown }): Promise<unknown>;
+}
+
+/**
+ * Triggers the SP server-side export email. Catches 429 (rate-limited by SP's
+ * 5-minute cooldown) and logs a warning without throwing — the export is a
+ * side-effect notification, not a required step.
+ */
+export async function triggerExportWith429Handling(
+  client: ExportCapableClient,
+  systemId: string,
+): Promise<void> {
+  console.log("  Triggering SP data export (check your email for the JSON)...");
+  try {
+    await client.request(`/v1/user/${systemId}/export`, {
+      method: "POST",
+      body: {},
+    });
+    console.log(
+      "  Export triggered — download the JSON from the email and save to " +
+        "scripts/.sp-test-<mode>-export.json",
+    );
+  } catch (err) {
+    if (err instanceof SpApiError && err.status === 429) {
+      console.warn(
+        `  Export skipped — rate-limited by SP (${err.body}). ` +
+          `Re-run after the 5-minute cooldown if you need a fresh export.`,
+      );
+      return;
+    }
+    throw err;
+  }
+}
+
+/** Mutable internal manifest shape used during seed execution. */
+type WritableManifest = {
+  systemId: string;
+  mode: SpMode;
+} & {
+  [K in EntityTypeKey]: ManifestEntry[];
+};
+
+/**
+ * Execute a SeedPlan: hydrate `refMap` from reuses, then POST each `create`
+ * entry in order, persisting the manifest atomically after each success.
+ * Returns the fully-populated manifest.
+ */
+export async function executePlan(
+  client: SpClient,
+  systemId: string,
+  mode: SpMode,
+  fixtures: EntityFixtures,
+  plan: SeedPlan,
+  refMap: Map<string, string>,
+): Promise<Manifest> {
+  const working = buildWorkingManifest(systemId, mode, plan.reuse, fixtures);
+  writeManifestAtomic(mode, working as Manifest);
+
+  for (const entry of plan.create) {
+    const fixtureEntry = findFixtureEntry(fixtures, entry.entityType, entry.ref);
+    const resolvedBody = resolveRefs(fixtureEntry.body, refMap);
+    const postPath = ENTITY_POST_PATHS[entry.entityType];
+    const rawId = await client.requestRaw(postPath, {
+      method: "POST",
+      body: resolvedBody,
+    });
+    const sourceId = extractObjectIdFromText(rawId);
+    refMap.set(entry.ref, sourceId);
+    const manifestEntry: ManifestEntry = {
+      ref: entry.ref,
+      sourceId,
+      fields: resolvedBody as Record<string, unknown>,
+    };
+    working[entry.entityType].push(manifestEntry);
+    writeManifestAtomic(mode, working as Manifest);
+    await sleep(ENTITY_CREATION_DELAY_MS);
+  }
+
+  return working as Manifest;
+}
+
+function buildWorkingManifest(
+  systemId: string,
+  mode: SpMode,
+  reuse: SeedPlan["reuse"],
+  fixtures: EntityFixtures,
+): WritableManifest {
+  const working: WritableManifest = {
+    systemId,
+    mode,
+    privacyBuckets: [],
+    customFields: [],
+    customFronts: [],
+    members: [],
+    groups: [],
+    frontHistory: [],
+    comments: [],
+    notes: [],
+    polls: [],
+    channelCategories: [],
+    channels: [],
+    chatMessages: [],
+    boardMessages: [],
+  };
+  // Preserve reuses in their fixture-order so the manifest stays stable.
+  const reuseIndex = new Map<string, SeedPlan["reuse"][number]>();
+  for (const r of reuse) reuseIndex.set(r.ref, r);
+  for (const entityType of ENTITY_TYPES_IN_ORDER) {
+    for (const fixture of fixtures[entityType]) {
+      const r = reuseIndex.get(fixture.ref);
+      if (r && r.entityType === entityType) {
+        working[entityType].push({
+          ref: r.ref,
+          sourceId: r.sourceId,
+          fields: r.fields,
+        });
+      }
+    }
+  }
+  return working;
+}
+
+function findFixtureEntry(
+  fixtures: EntityFixtures,
+  entityType: EntityTypeKey,
+  ref: string,
+): FixtureDef<unknown> {
+  const arr = fixtures[entityType] as readonly FixtureDef<unknown>[];
+  const found = arr.find((f) => f.ref === ref);
+  if (!found) {
+    throw new Error(`fixture not found: entityType=${entityType} ref=${ref}`);
+  }
+  return found;
 }

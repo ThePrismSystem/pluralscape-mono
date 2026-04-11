@@ -17,7 +17,7 @@ export type Manifest = {
   readonly systemId: string;
   readonly mode: SpMode;
 } & {
-  readonly [K in EntityTypeKey]: readonly ManifestEntry[];
+  readonly [K in EntityTypeKey]: ManifestEntry[];
 };
 
 export function emptyManifest(systemId: string, mode: SpMode): Manifest {

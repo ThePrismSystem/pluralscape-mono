@@ -105,7 +105,7 @@ describe("planSeed", () => {
     chatMessages: [],
     boardMessages: [],
     profilePatch: { desc: "", color: "" },
-  } as const;
+  };
 
   test("with no existing manifest, everything is in `create`", async () => {
     const fixtures = {

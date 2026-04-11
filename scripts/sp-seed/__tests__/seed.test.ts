@@ -1,6 +1,6 @@
-import { describe, expect, test } from "vitest";
-import { resolveRefs } from "../seed.js";
-import { UnresolvedRefError } from "../client.js";
+import { describe, expect, test, vi } from "vitest";
+import { resolveRefs, triggerExportWith429Handling } from "../seed.js";
+import { UnresolvedRefError, SpApiError } from "../client.js";
 
 describe("resolveRefs", () => {
   test("replaces top-level ref strings using the map", () => {
@@ -59,6 +59,39 @@ describe("resolveRefs", () => {
     expect(resolved).toEqual({
       documentId: "507f1f77bcf86cd799439011",
       collection: "frontHistory",
+    });
+  });
+});
+
+describe("triggerExportWith429Handling", () => {
+  test("resolves normally when the call succeeds", async () => {
+    const client = {
+      request: vi.fn(async () => ({})),
+    };
+    await expect(triggerExportWith429Handling(client, "sys1")).resolves.toBeUndefined();
+    expect(client.request).toHaveBeenCalledWith("/v1/user/sys1/export", {
+      method: "POST",
+      body: {},
+    });
+  });
+
+  test("swallows SpApiError with status 429", async () => {
+    const client = {
+      request: vi.fn(async () => {
+        throw new SpApiError(429, "POST", "/v1/user/sys1/export", "wait 3 min");
+      }),
+    };
+    await expect(triggerExportWith429Handling(client, "sys1")).resolves.toBeUndefined();
+  });
+
+  test("rethrows SpApiError with non-429 status", async () => {
+    const client = {
+      request: vi.fn(async () => {
+        throw new SpApiError(500, "POST", "/v1/user/sys1/export", "oops");
+      }),
+    };
+    await expect(triggerExportWith429Handling(client, "sys1")).rejects.toMatchObject({
+      status: 500,
     });
   });
 });
