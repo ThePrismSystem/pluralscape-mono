@@ -580,6 +580,9 @@ importers:
 
   packages/import-sp:
     dependencies:
+      '@pluralscape/import-core':
+        specifier: workspace:*
+        version: link:../import-core
       '@pluralscape/types':
         specifier: workspace:*
         version: link:../types

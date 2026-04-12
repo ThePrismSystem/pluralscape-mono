@@ -15,6 +15,7 @@
     "./file-source": "./src/sources/file-source.ts"
   },
   "dependencies": {
+    "@pluralscape/import-core": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@pluralscape/validation": "workspace:*",
     "clarinet": "^0.12.6",
