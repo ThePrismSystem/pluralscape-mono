@@ -1,0 +1,29 @@
+{
+  "name": "@pluralscape/import-pk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@pluralscape/import-core": "workspace:*",
+    "@pluralscape/types": "workspace:*",
+    "@pluralscape/data": "workspace:*",
+    "@pluralscape/validation": "workspace:*",
+    "pkapi.js": "^7.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "eslint": "^10.2.0",
+    "typescript": "^6.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
+  }
+}
