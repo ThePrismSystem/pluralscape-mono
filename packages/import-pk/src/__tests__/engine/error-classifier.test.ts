@@ -1,4 +1,4 @@
-import { APIError } from "pkapi.js";
+import PKAPI, { APIError } from "pkapi.js";
 import { describe, expect, it } from "vitest";
 
 import { classifyPkError } from "../../engine/error-classifier.js";
@@ -7,8 +7,8 @@ import type { ClassifyContext } from "@pluralscape/import-core";
 
 const CTX: ClassifyContext = { entityType: "member", entityId: "test-1" };
 
-/** Minimal fake API object satisfying the APIError constructor. */
-const FAKE_API = { base_url: "https://test", token: "test", version: 2 };
+/** Minimal fake API instance for APIError constructor. */
+const FAKE_API = new PKAPI({ token: "test-token" });
 
 function makeApiError(status: string): APIError {
   return new APIError(FAKE_API, { status });

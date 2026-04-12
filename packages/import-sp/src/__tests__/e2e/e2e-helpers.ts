@@ -177,7 +177,7 @@ async function handleCreate(
         systemId,
         encryptedData: encryptForApi(spEntity.payload.encrypted, masterKey),
         startTime: spEntity.payload.startTime,
-        endTime: spEntity.payload.endTime,
+        endTime: spEntity.payload.endTime ?? undefined,
         memberId: spEntity.payload.memberId,
         customFrontId: spEntity.payload.customFrontId,
         structureEntityId: spEntity.payload.structureEntityId,
