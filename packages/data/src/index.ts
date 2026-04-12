@@ -143,7 +143,17 @@ export {
 } from "./transforms/note.js";
 export type { NoteDecrypted, NoteEncryptedFields } from "./transforms/note.js";
 
-export type { BucketEncryptedFields } from "./transforms/privacy-bucket.js";
+export {
+  decryptPrivacyBucket,
+  decryptPrivacyBucketPage,
+  encryptBucketInput,
+  encryptBucketUpdate,
+} from "./transforms/privacy-bucket.js";
+export type {
+  BucketEncryptedFields,
+  PrivacyBucketRaw,
+  PrivacyBucketPage,
+} from "./transforms/privacy-bucket.js";
 
 export {
   decryptAcknowledgement,
