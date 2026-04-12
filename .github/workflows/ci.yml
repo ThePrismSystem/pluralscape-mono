@@ -274,6 +274,9 @@ jobs:
           E2E_WORKERS: "1"
         run: pnpm test:e2e:slow | tee e2e-slow-output.txt
 
+      - name: Run SP import E2E tests
+        run: pnpm test:e2e:sp-import
+
       - name: Extract E2E test count
         if: github.ref == 'refs/heads/main'
         id: e2e-data
