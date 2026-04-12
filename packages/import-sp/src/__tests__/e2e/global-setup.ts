@@ -1,0 +1,297 @@
+/**
+ * Vitest global setup for import-sp E2E tests.
+ *
+ * Provisions Docker containers (Postgres, MinIO), applies migrations, and
+ * spawns an API server on port 10099. Mirrors the api-e2e global setup but
+ * runs under vitest instead of Playwright.
+ */
+import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_process";
+import crypto from "node:crypto";
+import path from "node:path";
+
+const E2E_PORT = 10_099;
+const HEALTH_POLL_MS = 100;
+const HEALTH_TIMEOUT_MS = 15_000;
+const PG_READY_POLL_MS = 200;
+const PG_READY_TIMEOUT_MS = 30_000;
+const MS_PER_SECOND = 1000;
+const DOCKER_CONTAINER_NAME = "pluralscape-e2e-pg";
+const DOCKER_PG_PORT = 15_432;
+const MINIO_CONTAINER_NAME = "pluralscape-minio-test";
+/** Default MinIO port matching TEST_MINIO_PORT in .env.example. */
+const DEFAULT_MINIO_PORT = 10_943;
+const envMinioPort = process.env["TEST_MINIO_PORT"];
+const MINIO_PORT =
+  envMinioPort !== undefined && envMinioPort !== "" ? Number(envMinioPort) : DEFAULT_MINIO_PORT;
+const MINIO_READY_POLL_MS = 200;
+const MINIO_READY_TIMEOUT_MS = 30_000;
+const MINIO_BUCKET = "pluralscape-test";
+const MINIO_ROOT_USER = "minioadmin";
+const MINIO_ROOT_PASSWORD = "minioadmin";
+const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../../..");
+const API_DIR = path.join(MONOREPO_ROOT, "apps/api");
+
+/** Stable 64-char hex pepper for local E2E tests (not used in production). */
+const DEFAULT_TEST_PEPPER = crypto.createHash("sha256").update("e2e-test-pepper").digest("hex");
+
+let serverProcess: ChildProcess | null = null;
+
+async function pollHealth(baseUrl: string, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${baseUrl}/health`);
+      if (res.ok) return;
+    } catch {
+      // Server not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
+  }
+  throw new Error(`API server did not become healthy within ${String(timeoutMs)}ms`);
+}
+
+function dockerIsAvailable(): boolean {
+  try {
+    execSync("docker info", { stdio: "pipe" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function startPostgresContainer(): string {
+  // Remove any leftover container from a previous crashed run
+  try {
+    execSync(`docker rm -f ${DOCKER_CONTAINER_NAME}`, { stdio: "pipe" });
+  } catch {
+    // No leftover container
+  }
+
+  execSync(
+    [
+      "docker run -d",
+      `--name ${DOCKER_CONTAINER_NAME}`,
+      `-p ${String(DOCKER_PG_PORT)}:5432`,
+      "-e POSTGRES_DB=pluralscape_e2e",
+      "-e POSTGRES_USER=postgres",
+      "-e POSTGRES_PASSWORD=postgres",
+      "postgres:17-alpine",
+    ].join(" "),
+    { stdio: "pipe" },
+  );
+
+  return `postgres://postgres:postgres@localhost:${String(DOCKER_PG_PORT)}/pluralscape_e2e`;
+}
+
+function waitForPostgres(databaseUrl: string): void {
+  const deadline = Date.now() + PG_READY_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    try {
+      execSync(`docker exec ${DOCKER_CONTAINER_NAME} pg_isready -U postgres`, { stdio: "pipe" });
+      execSync(
+        `docker exec ${DOCKER_CONTAINER_NAME} psql -U postgres -d pluralscape_e2e -c "SELECT 1"`,
+        { stdio: "pipe" },
+      );
+      return;
+    } catch {
+      execSync(`sleep ${String(PG_READY_POLL_MS / MS_PER_SECOND)}`, { stdio: "pipe" });
+    }
+  }
+  throw new Error(
+    `Postgres container did not become ready within ${String(PG_READY_TIMEOUT_MS)}ms (url: ${databaseUrl})`,
+  );
+}
+
+function ensureMinioContainer(): boolean {
+  // Check if the shared MinIO container is already running
+  try {
+    const status = execSync(
+      `docker ps --filter name=${MINIO_CONTAINER_NAME} --format "{{.Status}}"`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+    ).trim();
+    if (status.startsWith("Up")) return false;
+  } catch {
+    // Not running
+  }
+
+  // Check if container exists but is stopped
+  try {
+    const id = execSync(`docker ps -a --filter name=${MINIO_CONTAINER_NAME} --format "{{.ID}}"`, {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+    if (id) {
+      execSync(`docker start ${MINIO_CONTAINER_NAME}`, { stdio: "pipe" });
+      return false;
+    }
+  } catch {
+    // No existing container
+  }
+
+  // Create new container
+  execSync(
+    [
+      "docker run -d",
+      `--name ${MINIO_CONTAINER_NAME}`,
+      `-p ${String(MINIO_PORT)}:9000`,
+      `-e MINIO_ROOT_USER=${MINIO_ROOT_USER}`,
+      `-e MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}`,
+      "minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e server /data",
+    ].join(" "),
+    { stdio: "pipe" },
+  );
+  return true;
+}
+
+async function waitForMinio(): Promise<void> {
+  const deadline = Date.now() + MINIO_READY_TIMEOUT_MS;
+  const url = `http://localhost:${String(MINIO_PORT)}/minio/health/live`;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return;
+    } catch {
+      // MinIO not ready yet
+    }
+    await new Promise((resolve) => setTimeout(resolve, MINIO_READY_POLL_MS));
+  }
+  throw new Error(`MinIO did not become healthy within ${String(MINIO_READY_TIMEOUT_MS)}ms`);
+}
+
+function ensureMinioBucket(): void {
+  execSync(
+    `docker exec ${MINIO_CONTAINER_NAME} mc alias set local http://localhost:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}`,
+    { stdio: "pipe" },
+  );
+  try {
+    execSync(`docker exec ${MINIO_CONTAINER_NAME} mc mb local/${MINIO_BUCKET}`, {
+      stdio: "pipe",
+    });
+  } catch {
+    // Bucket already exists
+  }
+}
+
+async function globalSetup(): Promise<() => void> {
+  let databaseUrl = process.env["E2E_DATABASE_URL"];
+  let startedContainer = false;
+
+  if (!databaseUrl) {
+    if (!dockerIsAvailable()) {
+      throw new Error(
+        "E2E tests require either E2E_DATABASE_URL or Docker.\n" +
+          "  Local: install Docker and it will be started automatically.\n" +
+          "  CI: set E2E_DATABASE_URL to a PostgreSQL connection string.",
+      );
+    }
+
+    console.info("[import-sp-e2e] Starting Postgres container...");
+    databaseUrl = startPostgresContainer();
+    startedContainer = true;
+
+    console.info("[import-sp-e2e] Waiting for Postgres to be ready...");
+    waitForPostgres(databaseUrl);
+    console.info("[import-sp-e2e] Postgres is ready.");
+  }
+
+  let startedMinio = false;
+  if (dockerIsAvailable()) {
+    console.info("[import-sp-e2e] Ensuring MinIO container is available...");
+    startedMinio = ensureMinioContainer();
+
+    console.info("[import-sp-e2e] Waiting for MinIO to be ready...");
+    await waitForMinio();
+
+    console.info("[import-sp-e2e] Ensuring MinIO bucket exists...");
+    ensureMinioBucket();
+    console.info("[import-sp-e2e] MinIO is ready.");
+  } else {
+    console.warn("[import-sp-e2e] Docker not available for MinIO. Blob-related tests may fail.");
+  }
+
+  process.env["E2E_STARTED_CONTAINER"] = startedContainer ? "1" : "";
+  process.env["E2E_STARTED_MINIO"] = startedMinio ? "1" : "";
+
+  const emailPepper = process.env["EMAIL_HASH_PEPPER"] ?? DEFAULT_TEST_PEPPER;
+
+  console.info("[import-sp-e2e] Applying migrations...");
+  const migrateScript = path.join(MONOREPO_ROOT, "apps/api-e2e/src/migrate.ts");
+  try {
+    execFileSync("bun", [migrateScript, databaseUrl], {
+      cwd: MONOREPO_ROOT,
+      env: process.env,
+      stdio: "pipe",
+    });
+  } catch (err) {
+    const execErr = err as { stderr?: Buffer; stdout?: Buffer };
+    const stderr = execErr.stderr?.toString() ?? "";
+    const stdout = execErr.stdout?.toString() ?? "";
+    throw new Error(`Migration failed:\nstdout: ${stdout}\nstderr: ${stderr}`);
+  }
+
+  console.info("[import-sp-e2e] Starting API server on port", E2E_PORT);
+  serverProcess = spawn("bun", ["run", "src/index.ts"], {
+    cwd: API_DIR,
+    env: {
+      ...process.env,
+      API_PORT: String(E2E_PORT),
+      DB_DIALECT: "pg",
+      DATABASE_URL: databaseUrl,
+      EMAIL_HASH_PEPPER: emailPepper,
+      NODE_ENV: "test",
+      DISABLE_RATE_LIMIT: "1",
+      BLOB_STORAGE_S3_BUCKET: MINIO_BUCKET,
+      BLOB_STORAGE_S3_ENDPOINT: `http://localhost:${String(MINIO_PORT)}`,
+      BLOB_STORAGE_S3_FORCE_PATH_STYLE: "1",
+      AWS_ACCESS_KEY_ID: MINIO_ROOT_USER,
+      AWS_SECRET_ACCESS_KEY: MINIO_ROOT_PASSWORD,
+    },
+    stdio: "pipe",
+  });
+
+  serverProcess.stderr?.on("data", (data: Buffer) => {
+    const msg = data.toString();
+    if (msg.includes('"level":50') || msg.includes('"level":60')) {
+      process.stderr.write(`[import-sp-e2e] ${msg}`);
+    }
+  });
+
+  if (!serverProcess.pid) {
+    throw new Error("Failed to spawn API server — pid is undefined");
+  }
+  process.env["E2E_SERVER_PID"] = String(serverProcess.pid);
+
+  await pollHealth(`http://localhost:${String(E2E_PORT)}`, HEALTH_TIMEOUT_MS);
+  console.info("[import-sp-e2e] API server is healthy. Running tests...");
+
+  // Return teardown function — vitest calls it after all tests complete.
+  return () => {
+    if (serverProcess?.pid) {
+      try {
+        process.kill(serverProcess.pid, "SIGTERM");
+      } catch {
+        // Process may have already exited
+      }
+    }
+
+    if (startedContainer) {
+      console.info("[import-sp-e2e] Stopping Postgres container...");
+      try {
+        execSync(`docker rm -f ${DOCKER_CONTAINER_NAME}`, { stdio: "pipe" });
+      } catch {
+        // Container may have already been removed
+      }
+    }
+
+    if (startedMinio) {
+      console.info("[import-sp-e2e] Stopping MinIO container...");
+      try {
+        execSync(`docker rm -f ${MINIO_CONTAINER_NAME}`, { stdio: "pipe" });
+      } catch {
+        // Container may have already been removed
+      }
+    }
+  };
+}
+
+export default globalSetup;
