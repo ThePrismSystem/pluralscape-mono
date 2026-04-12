@@ -1029,12 +1029,11 @@ describe("blob", () => {
       headers: { "Content-Type": "image/png" },
     });
 
-    expect(client.blob.confirmUpload.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        systemId: TEST_SYSTEM_ID,
-        blobId: "blob_1",
-      }),
-    );
+    expect(client.blob.confirmUpload.mutate).toHaveBeenCalledWith({
+      systemId: TEST_SYSTEM_ID,
+      blobId: "blob_1",
+      checksum: "9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a",
+    });
   });
 
   it("uploadAvatar throws when S3 PUT fails", async () => {

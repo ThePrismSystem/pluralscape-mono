@@ -236,7 +236,8 @@ const DEFAULT_GROUP_SORT_ORDER = 0;
 /** Encryption tier for avatar blobs (tier 1 = system-key encrypted). */
 const AVATAR_ENCRYPTION_TIER = 1;
 
-/** Placeholder channel ID for message updates where the channel is not in scope. */
+// Message.update routes through a channel-scoped endpoint but import
+// context has no channel scope — the server resolves by messageId alone.
 const MESSAGE_UPDATE_PLACEHOLDER_CHANNEL = "ch_import_placeholder";
 
 export type FetchFn = (
@@ -406,14 +407,8 @@ export function createTRPCPersisterApi(
     },
 
     friend: {
-      recordExternalReference: (
-        _sysId: SystemId,
-        externalUserId: string,
-        _status: "accepted" | "pending",
-      ) => {
-        void _status;
-        return Promise.resolve({ placeholderId: `import_friend_${externalUserId}` });
-      },
+      recordExternalReference: (_sysId: SystemId, externalUserId: string) =>
+        Promise.resolve({ placeholderId: `import_friend_${externalUserId}` }),
     },
 
     frontingSession: {
