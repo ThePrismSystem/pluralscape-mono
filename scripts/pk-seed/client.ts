@@ -155,11 +155,18 @@ export class PkClient {
       throw new PkApiError(response.status, method, path, text);
     }
     if (!text) {
-      return undefined as T;
+      if (response.status === 204) {
+        return undefined as T;
+      }
+      throw new Error(
+        `Empty response body from ${method} ${path} (status ${String(response.status)})`,
+      );
     }
     try {
       return JSON.parse(text) as T;
-    } catch {
+    } catch (parseError: unknown) {
+      // Non-JSON response body — return raw text.
+      // This is expected for some PK API endpoints that return plain strings.
       return text as T;
     }
   }
