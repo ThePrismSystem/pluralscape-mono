@@ -10,11 +10,20 @@
  * shapes so the same validators and mappers work for both file and API sources.
  */
 import PKAPI from "pkapi.js";
+import { z } from "zod/v4";
 
 import { PK_COLLECTION_NAMES } from "./pk-collections.js";
 
 import type { ImportDataSource, SourceEvent } from "@pluralscape/import-core";
 import type { Member, Switch as PkSwitch } from "pkapi.js";
+
+const PrivacyFieldSchema = z.record(z.string(), z.string());
+
+function safeParsePrivacy(raw: unknown): Record<string, string> | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const result = PrivacyFieldSchema.safeParse(raw);
+  return result.success ? result.data : undefined;
+}
 
 export interface PkApiImportSourceArgs {
   readonly token: string;
@@ -70,7 +79,7 @@ export function createPkApiImportSource(args: PkApiImportSourceArgs): ImportData
           const membersMap = await api.getMembers({ system: "@me" });
           for (const [id, member] of membersMap) {
             // Collect privacy data for the synthetic privacy-scan pass.
-            const privacyObj = member.privacy as Record<string, string> | undefined;
+            const privacyObj = safeParsePrivacy(member.privacy);
             memberPrivacyData.push({ pkMemberId: id, privacy: privacyObj });
 
             yield {
@@ -126,7 +135,7 @@ export function createPkApiImportSource(args: PkApiImportSourceArgs): ImportData
                 banner: group.banner ?? null,
                 color: group.color ?? null,
                 members: memberIds,
-                privacy: group.privacy as Record<string, string> | undefined,
+                privacy: safeParsePrivacy(group.privacy),
               },
             };
           }

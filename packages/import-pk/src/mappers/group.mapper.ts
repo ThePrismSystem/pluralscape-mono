@@ -8,6 +8,8 @@
  */
 import { mapped, parseHexColor, skipped, type MapperResult } from "@pluralscape/import-core";
 
+import { normalisePkColor } from "./pk-mapper-helpers.js";
+
 import type { PKGroup } from "../validators/pk-payload.js";
 import type { GroupEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
@@ -17,13 +19,6 @@ export interface PkMappedGroup {
   readonly parentGroupId: null;
   readonly sortOrder: 0;
   readonly memberIds: readonly string[];
-}
-
-/**
- * Normalise a PK color string by ensuring it starts with `#`.
- */
-function normalisePkColor(raw: string): string {
-  return raw.startsWith("#") ? raw : `#${raw}`;
 }
 
 export function mapPkGroup(pk: PKGroup, ctx: MappingContext): MapperResult<PkMappedGroup> {

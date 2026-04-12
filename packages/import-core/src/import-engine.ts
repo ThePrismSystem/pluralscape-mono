@@ -100,12 +100,7 @@ export function buildPersistableEntity(
       `mapper for ${entityType} returned non-object payload (${typeof payload}); dispatch table may be misrouted`,
     );
   }
-  return {
-    entityType,
-    sourceEntityId,
-    source: sourceFormat,
-    payload,
-  } as PersistableEntity;
+  return { entityType, sourceEntityId, source: sourceFormat, payload };
 }
 
 // ---------------------------------------------------------------------------
@@ -146,12 +141,12 @@ export interface BeforeCollectionResult {
   readonly abort?: boolean;
 }
 
-export interface RunImportEngineArgs {
+export interface RunImportEngineArgs<TCollection extends string = string> {
   readonly source: ImportDataSource;
   readonly persister: Persister;
   readonly sourceFormat: ImportSourceFormat;
-  readonly mapperDispatch: Readonly<Record<string, MapperDispatchEntry>>;
-  readonly dependencyOrder: readonly string[];
+  readonly mapperDispatch: Readonly<Partial<Record<TCollection, MapperDispatchEntry>>>;
+  readonly dependencyOrder: readonly TCollection[];
   readonly collectionToEntityType: (collection: string) => ImportCollectionType;
   readonly classifyError?: ErrorClassifier;
   readonly options: {
@@ -211,7 +206,9 @@ function indexOfResumeCollection(
  * cross-document analysis such as converting PK switches into fronting
  * sessions.
  */
-export async function runImportEngine(args: RunImportEngineArgs): Promise<ImportRunResult> {
+export async function runImportEngine<TCollection extends string>(
+  args: RunImportEngineArgs<TCollection>,
+): Promise<ImportRunResult> {
   const { source, persister, sourceFormat, options, onProgress, dependencyOrder } = args;
   const collectionToEntityType = args.collectionToEntityType;
   const classify = args.classifyError ?? classifyErrorDefault;
@@ -268,7 +265,7 @@ export async function runImportEngine(args: RunImportEngineArgs): Promise<Import
       collectionIndex < dependencyOrder.length;
       collectionIndex += 1
     ) {
-      const collection: string | undefined = dependencyOrder[collectionIndex];
+      const collection: TCollection | undefined = dependencyOrder[collectionIndex];
       if (collection === undefined) continue;
       if (isAborted(args.abortSignal)) {
         return abortedResult(state, ctx, errors);

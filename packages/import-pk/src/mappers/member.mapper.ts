@@ -12,6 +12,8 @@ import {
   type MapperResult,
 } from "@pluralscape/import-core";
 
+import { normalisePkColor } from "./pk-mapper-helpers.js";
+
 import type { PKMember } from "../validators/pk-payload.js";
 import type { MemberEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
@@ -21,14 +23,6 @@ export interface PkMappedMember {
   readonly archived: false;
   readonly fieldValues: readonly [];
   readonly bucketIds: readonly string[];
-}
-
-/**
- * Normalise a PK color string by ensuring it starts with `#`.
- * PK exports colours as bare hex (e.g. `"ff6b6b"`).
- */
-function normalisePkColor(raw: string): string {
-  return raw.startsWith("#") ? raw : `#${raw}`;
 }
 
 export function mapPkMember(pk: PKMember, ctx: MappingContext): MapperResult<PkMappedMember> {
