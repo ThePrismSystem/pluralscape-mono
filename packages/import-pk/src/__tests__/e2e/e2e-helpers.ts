@@ -183,6 +183,7 @@ async function handleCreate(
       const payload = entity.payload as {
         encrypted: unknown;
         startTime: number;
+        endTime: number | null;
         memberId: string | undefined;
         customFrontId: string | undefined;
         structureEntityId: string | undefined;
@@ -191,6 +192,7 @@ async function handleCreate(
         systemId,
         encryptedData: encryptForApi(payload.encrypted, masterKey),
         startTime: payload.startTime,
+        endTime: payload.endTime ?? undefined,
         memberId: payload.memberId,
         customFrontId: payload.customFrontId,
         structureEntityId: payload.structureEntityId,

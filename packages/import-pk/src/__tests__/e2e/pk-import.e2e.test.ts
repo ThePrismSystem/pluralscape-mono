@@ -23,7 +23,12 @@ import {
   runFileImport,
   runServerFileImport,
 } from "./e2e-helpers.js";
-import { assertPkGroups, assertPkMembers, assertPkPrivacyBuckets } from "./entity-assertions.js";
+import {
+  assertPkFrontingSessions,
+  assertPkGroups,
+  assertPkMembers,
+  assertPkPrivacyBuckets,
+} from "./entity-assertions.js";
 
 import type {
   E2EPersisterCtx as E2EPersisterContext,
@@ -353,6 +358,14 @@ describe.skipIf(!hasMinimalFixture || !hasApiServer())(
       ]);
     });
 
+    it("fronting sessions exist on server", async () => {
+      await assertPkFrontingSessions(trpc, ctx.masterKey, ctx.systemId, 3, [
+        "session:aaaaa:1704067200000",
+        "session:bbbbb:1704240000000",
+        "session:ccccc:1704672000000",
+      ]);
+    });
+
     it("total created entity count matches expected", () => {
       // The minimal fixture creates: 3 members + 2 groups + 3 sessions + 1 bucket = 9
       expect(ctx.getCreatedCount()).toBe(9);
@@ -410,6 +423,21 @@ describe.skipIf(!hasAdversarialFixture || !hasApiServer())(
     it("privacy bucket exists on server", async () => {
       await assertPkPrivacyBuckets(trpc, ctx.masterKey, ctx.systemId, [
         { sourceId: "synthetic:pk-private", name: "PK Private" },
+      ]);
+    });
+
+    it("fronting sessions exist on server", async () => {
+      await assertPkFrontingSessions(trpc, ctx.masterKey, ctx.systemId, 10, [
+        "session:unis1:1719792000000",
+        "session:unis2:1719792000100",
+        "session:unis1:1719792000200",
+        "session:unis3:1719792000200",
+        "session:unis1:1719792001000",
+        "session:unis4:1719792001000",
+        "session:unis4:1719792120000",
+        "session:unis1:1719792180000",
+        "session:unis4:1719792240000",
+        "session:unis3:1719795600000",
       ]);
     });
   },
