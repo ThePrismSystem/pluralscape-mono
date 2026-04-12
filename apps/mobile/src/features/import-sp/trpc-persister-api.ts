@@ -263,15 +263,12 @@ function defaultFetch(
   url: string,
   init: { method: string; body: Uint8Array; headers: Record<string, string> },
 ): Promise<{ ok: boolean; status: number }> {
-  // Convert Uint8Array to ArrayBuffer for fetch body compatibility
-  const bodyBuffer = init.body.buffer.slice(
-    init.body.byteOffset,
-    init.body.byteOffset + init.body.byteLength,
-  ) as ArrayBuffer;
+  const copy = new ArrayBuffer(init.body.byteLength);
+  new Uint8Array(copy).set(init.body);
   return globalThis
     .fetch(url, {
       method: init.method,
-      body: bodyBuffer,
+      body: copy,
       headers: init.headers,
     })
     .then((r) => ({ ok: r.ok, status: r.status }));
@@ -281,12 +278,10 @@ function defaultFetch(
  * Create a PersisterApi backed by vanilla tRPC client calls.
  *
  * @param client - Vanilla tRPC client (structural subset)
- * @param _systemId - The system ID (baked in for convenience)
  * @param fetchImpl - Optional fetch override for blob S3 uploads (defaults to globalThis.fetch)
  */
 export function createTRPCPersisterApi(
   client: TRPCClientSubset,
-  _systemId: SystemId,
   fetchImpl?: FetchFn,
 ): PersisterApi {
   const doFetch: FetchFn = fetchImpl ?? defaultFetch;

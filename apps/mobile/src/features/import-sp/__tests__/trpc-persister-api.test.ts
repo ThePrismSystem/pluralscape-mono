@@ -299,7 +299,7 @@ describe("system", () => {
   it("getCurrentVersion queries system.get and extracts version", async () => {
     const client = makeMockClient();
     client.system.get.query.mockResolvedValue({ version: 5 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const version = await api.system.getCurrentVersion(TEST_SYSTEM_ID);
 
@@ -310,7 +310,7 @@ describe("system", () => {
   it("update calls system.update with systemId, encryptedData, and version", async () => {
     const client = makeMockClient();
     client.system.update.mutate.mockResolvedValue({ id: "sys_1", version: 3 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.system.update(TEST_SYSTEM_ID, {
       encryptedData: "enc_data",
@@ -332,7 +332,7 @@ describe("systemSettings", () => {
   it("getCurrentVersion queries systemSettings.settings.get and extracts version", async () => {
     const client = makeMockClient();
     client.systemSettings.settings.get.query.mockResolvedValue({ version: 7 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const version = await api.systemSettings.getCurrentVersion(TEST_SYSTEM_ID);
 
@@ -345,7 +345,7 @@ describe("systemSettings", () => {
   it("update calls systemSettings.settings.update", async () => {
     const client = makeMockClient();
     client.systemSettings.settings.update.mutate.mockResolvedValue({ id: "sset_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.systemSettings.update(TEST_SYSTEM_ID, {
       encryptedData: "enc_settings",
@@ -367,7 +367,7 @@ describe("bucket", () => {
   it("create calls bucket.create with systemId and encryptedData", async () => {
     const client = makeMockClient();
     client.bucket.create.mutate.mockResolvedValue({ id: "bkt_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.bucket.create(TEST_SYSTEM_ID, { encryptedData: "enc_bucket" });
 
@@ -381,7 +381,7 @@ describe("bucket", () => {
   it("update calls bucket.update with bucketId, encryptedData, and version", async () => {
     const client = makeMockClient();
     client.bucket.update.mutate.mockResolvedValue({ id: "bkt_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.bucket.update(TEST_SYSTEM_ID, "bkt_1", {
       encryptedData: "enc_bucket_v2",
@@ -404,7 +404,7 @@ describe("field", () => {
   it("create calls field.definition.create", async () => {
     const client = makeMockClient();
     client.field.definition.create.mutate.mockResolvedValue({ id: "fld_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.field.create(TEST_SYSTEM_ID, { encryptedData: "enc_field" });
 
@@ -418,7 +418,7 @@ describe("field", () => {
   it("update calls field.definition.update with fieldDefinitionId", async () => {
     const client = makeMockClient();
     client.field.definition.update.mutate.mockResolvedValue({ id: "fld_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.field.update(TEST_SYSTEM_ID, "fld_1", {
       encryptedData: "enc_field_v2",
@@ -437,7 +437,7 @@ describe("field", () => {
   it("setValue calls field.value.set with owner as member kind", async () => {
     const client = makeMockClient();
     client.field.value.set.mutate.mockResolvedValue({ id: "fv_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.field.setValue(TEST_SYSTEM_ID, {
       memberId: "mem_1",
@@ -461,7 +461,7 @@ describe("customFront", () => {
   it("create calls customFront.create", async () => {
     const client = makeMockClient();
     client.customFront.create.mutate.mockResolvedValue({ id: "cf_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.customFront.create(TEST_SYSTEM_ID, { encryptedData: "enc_cf" });
 
@@ -475,7 +475,7 @@ describe("customFront", () => {
   it("update calls customFront.update with customFrontId", async () => {
     const client = makeMockClient();
     client.customFront.update.mutate.mockResolvedValue({ id: "cf_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.customFront.update(TEST_SYSTEM_ID, "cf_1", {
       encryptedData: "enc_cf_v2",
@@ -498,7 +498,7 @@ describe("member", () => {
   it("create calls member.create with encryptedData only (no avatarBlobId)", async () => {
     const client = makeMockClient();
     client.member.create.mutate.mockResolvedValue({ id: "mem_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.member.create(TEST_SYSTEM_ID, { encryptedData: "enc_member" });
 
@@ -512,7 +512,7 @@ describe("member", () => {
   it("create passes encryptedData even when avatarBlobId is provided", async () => {
     const client = makeMockClient();
     client.member.create.mutate.mockResolvedValue({ id: "mem_2", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.member.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_member",
@@ -529,7 +529,7 @@ describe("member", () => {
   it("update calls member.update with memberId", async () => {
     const client = makeMockClient();
     client.member.update.mutate.mockResolvedValue({ id: "mem_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.member.update(TEST_SYSTEM_ID, "mem_1", {
       encryptedData: "enc_member_v2",
@@ -548,7 +548,7 @@ describe("member", () => {
   it("update ignores avatarBlobId since tRPC endpoint does not accept it", async () => {
     const client = makeMockClient();
     client.member.update.mutate.mockResolvedValue({ id: "mem_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     await api.member.update(TEST_SYSTEM_ID, "mem_1", {
       encryptedData: "enc_member_v2",
@@ -570,7 +570,7 @@ describe("member", () => {
 describe("friend", () => {
   it("recordExternalReference returns synthetic placeholder", async () => {
     const client = makeMockClient();
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.friend.recordExternalReference(
       TEST_SYSTEM_ID,
@@ -583,7 +583,7 @@ describe("friend", () => {
 
   it("recordExternalReference returns unique placeholders per externalUserId", async () => {
     const client = makeMockClient();
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const a = await api.friend.recordExternalReference(TEST_SYSTEM_ID, "user_a", "pending");
     const b = await api.friend.recordExternalReference(TEST_SYSTEM_ID, "user_b", "accepted");
@@ -599,7 +599,7 @@ describe("frontingSession", () => {
   it("create calls frontingSession.create", async () => {
     const client = makeMockClient();
     client.frontingSession.create.mutate.mockResolvedValue({ id: "fs_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.frontingSession.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_session",
@@ -615,7 +615,7 @@ describe("frontingSession", () => {
   it("update calls frontingSession.update with sessionId", async () => {
     const client = makeMockClient();
     client.frontingSession.update.mutate.mockResolvedValue({ id: "fs_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.frontingSession.update(TEST_SYSTEM_ID, "fs_1", {
       encryptedData: "enc_session_v2",
@@ -638,7 +638,7 @@ describe("frontingComment", () => {
   it("create calls frontingComment.create", async () => {
     const client = makeMockClient();
     client.frontingComment.create.mutate.mockResolvedValue({ id: "fcom_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.frontingComment.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_comment",
@@ -654,7 +654,7 @@ describe("frontingComment", () => {
   it("update calls frontingComment.update with commentId", async () => {
     const client = makeMockClient();
     client.frontingComment.update.mutate.mockResolvedValue({ id: "fcom_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.frontingComment.update(TEST_SYSTEM_ID, "fcom_1", {
       encryptedData: "enc_comment_v2",
@@ -677,7 +677,7 @@ describe("note", () => {
   it("create calls note.create", async () => {
     const client = makeMockClient();
     client.note.create.mutate.mockResolvedValue({ id: "note_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.note.create(TEST_SYSTEM_ID, { encryptedData: "enc_note" });
 
@@ -691,7 +691,7 @@ describe("note", () => {
   it("update calls note.update with noteId", async () => {
     const client = makeMockClient();
     client.note.update.mutate.mockResolvedValue({ id: "note_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.note.update(TEST_SYSTEM_ID, "note_1", {
       encryptedData: "enc_note_v2",
@@ -714,7 +714,7 @@ describe("poll", () => {
   it("create calls poll.create", async () => {
     const client = makeMockClient();
     client.poll.create.mutate.mockResolvedValue({ id: "poll_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.poll.create(TEST_SYSTEM_ID, { encryptedData: "enc_poll" });
 
@@ -728,7 +728,7 @@ describe("poll", () => {
   it("update calls poll.update with pollId", async () => {
     const client = makeMockClient();
     client.poll.update.mutate.mockResolvedValue({ id: "poll_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.poll.update(TEST_SYSTEM_ID, "poll_1", {
       encryptedData: "enc_poll_v2",
@@ -747,7 +747,7 @@ describe("poll", () => {
   it("castVote calls poll.castVote with pollId and voter info", async () => {
     const client = makeMockClient();
     client.poll.castVote.mutate.mockResolvedValue({ id: "pv_1" });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.poll.castVote(TEST_SYSTEM_ID, {
       pollId: "poll_1",
@@ -766,7 +766,7 @@ describe("poll", () => {
   it("castVote handles null memberId", async () => {
     const client = makeMockClient();
     client.poll.castVote.mutate.mockResolvedValue({ id: "pv_2" });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.poll.castVote(TEST_SYSTEM_ID, {
       pollId: "poll_1",
@@ -784,7 +784,7 @@ describe("channel", () => {
   it("create calls channel.create with type, parentId, and sortOrder", async () => {
     const client = makeMockClient();
     client.channel.create.mutate.mockResolvedValue({ id: "ch_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.channel.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_channel",
@@ -806,7 +806,7 @@ describe("channel", () => {
   it("create passes non-null parentId through", async () => {
     const client = makeMockClient();
     client.channel.create.mutate.mockResolvedValue({ id: "ch_2", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     await api.channel.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_channel",
@@ -827,7 +827,7 @@ describe("channel", () => {
   it("update calls channel.update with channelId", async () => {
     const client = makeMockClient();
     client.channel.update.mutate.mockResolvedValue({ id: "ch_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.channel.update(TEST_SYSTEM_ID, "ch_1", {
       encryptedData: "enc_channel_v2",
@@ -850,7 +850,7 @@ describe("message", () => {
   it("create calls message.create with channelId", async () => {
     const client = makeMockClient();
     client.message.create.mutate.mockResolvedValue({ id: "msg_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.message.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_message",
@@ -868,7 +868,7 @@ describe("message", () => {
   it("update calls message.update with messageId and channelId placeholder", async () => {
     const client = makeMockClient();
     client.message.update.mutate.mockResolvedValue({ id: "msg_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.message.update(TEST_SYSTEM_ID, "msg_1", {
       encryptedData: "enc_message_v2",
@@ -893,7 +893,7 @@ describe("boardMessage", () => {
   it("create calls boardMessage.create", async () => {
     const client = makeMockClient();
     client.boardMessage.create.mutate.mockResolvedValue({ id: "bm_1", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.boardMessage.create(TEST_SYSTEM_ID, { encryptedData: "enc_bm" });
 
@@ -907,7 +907,7 @@ describe("boardMessage", () => {
   it("update calls boardMessage.update with boardMessageId", async () => {
     const client = makeMockClient();
     client.boardMessage.update.mutate.mockResolvedValue({ id: "bm_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.boardMessage.update(TEST_SYSTEM_ID, "bm_1", {
       encryptedData: "enc_bm_v2",
@@ -931,7 +931,7 @@ describe("group", () => {
     const client = makeMockClient();
     client.group.create.mutate.mockResolvedValue({ id: "grp_1", version: 1 });
     client.group.addMember.mutate.mockResolvedValue({ success: true });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.group.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_group",
@@ -961,7 +961,7 @@ describe("group", () => {
   it("create with empty memberIds does not call addMember", async () => {
     const client = makeMockClient();
     client.group.create.mutate.mockResolvedValue({ id: "grp_2", version: 1 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     await api.group.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_group",
@@ -974,7 +974,7 @@ describe("group", () => {
   it("update calls group.update with groupId", async () => {
     const client = makeMockClient();
     client.group.update.mutate.mockResolvedValue({ id: "grp_1", version: 2 });
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+    const api = createTRPCPersisterApi(client);
 
     const result = await api.group.update(TEST_SYSTEM_ID, "grp_1", {
       encryptedData: "enc_group_v2",
@@ -1005,7 +1005,7 @@ describe("blob", () => {
 
     const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200 });
 
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID, mockFetch);
+    const api = createTRPCPersisterApi(client, mockFetch);
 
     const bytes = new Uint8Array([1, 2, 3, 4]);
     const result = await api.blob.uploadAvatar(TEST_SYSTEM_ID, {
@@ -1046,7 +1046,7 @@ describe("blob", () => {
 
     const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
 
-    const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID, mockFetch);
+    const api = createTRPCPersisterApi(client, mockFetch);
 
     await expect(
       api.blob.uploadAvatar(TEST_SYSTEM_ID, {
@@ -1067,7 +1067,7 @@ describe("importEntityRef", () => {
         .mockResolvedValueOnce({ src_member_1: "mem_1" })
         .mockResolvedValueOnce({ src_field_1: "fld_1" });
 
-      const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+      const api = createTRPCPersisterApi(client);
 
       const result = await api.importEntityRef.lookupBatch(TEST_SYSTEM_ID, {
         source: "simply-plural",
@@ -1104,7 +1104,7 @@ describe("importEntityRef", () => {
         src_2: "mem_2",
       });
 
-      const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+      const api = createTRPCPersisterApi(client);
 
       const result = await api.importEntityRef.lookupBatch(TEST_SYSTEM_ID, {
         source: "simply-plural",
@@ -1126,7 +1126,7 @@ describe("importEntityRef", () => {
 
     it("returns empty record for empty refs array", async () => {
       const client = makeMockClient();
-      const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+      const api = createTRPCPersisterApi(client);
 
       const result = await api.importEntityRef.lookupBatch(TEST_SYSTEM_ID, {
         source: "simply-plural",
@@ -1142,7 +1142,7 @@ describe("importEntityRef", () => {
     it("reshapes refs to entries for tRPC call", async () => {
       const client = makeMockClient();
       client.importEntityRef.upsertBatch.mutate.mockResolvedValue({ upserted: 2 });
-      const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+      const api = createTRPCPersisterApi(client);
 
       const result = await api.importEntityRef.upsertBatch(TEST_SYSTEM_ID, {
         source: "simply-plural",
@@ -1181,7 +1181,7 @@ describe("importEntityRef", () => {
 
     it("returns upserted: 0 for empty refs array", async () => {
       const client = makeMockClient();
-      const api = createTRPCPersisterApi(client, TEST_SYSTEM_ID);
+      const api = createTRPCPersisterApi(client);
 
       const result = await api.importEntityRef.upsertBatch(TEST_SYSTEM_ID, {
         source: "simply-plural",
