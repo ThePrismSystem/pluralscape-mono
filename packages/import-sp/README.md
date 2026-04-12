@@ -46,8 +46,59 @@ const result = await runImport({
 | `createApiImportSource(args)`  | Live SP REST API (paginated, with retry/backoff)    |
 | `createFakeImportSource(data)` | In-memory data for tests                            |
 
-All factories return an `ImportSource` implementing `iterate(collection)`,
-`listCollections()`, and `close()`.
+All factories return an `ImportDataSource` implementing `iterate(collection)`,
+`listCollections()`, `close()`, and optionally `supplyParentIds()`.
+
+---
+
+## Collection coverage
+
+The SP import processes 15 SP collections. Source availability varies:
+
+| SP Collection       | Pluralscape Entity | API Import | File Import | Notes                                   |
+| ------------------- | ------------------ | ---------- | ----------- | --------------------------------------- |
+| `users`             | system-profile     | Yes        | Yes         | Cherry-picked into system profile       |
+| `private`           | system-settings    | No         | Yes         | SP requires JWT auth; API keys rejected |
+| `privacyBuckets`    | privacy-bucket     | Yes        | Yes         |                                         |
+| `customFields`      | field-definition   | Yes        | Yes         |                                         |
+| `frontStatuses`     | custom-front       | Yes        | Yes         | Called `customFronts` in SP API URL     |
+| `members`           | member             | Yes        | Yes         |                                         |
+| `groups`            | group              | Yes        | Yes         |                                         |
+| `frontHistory`      | fronting-session   | Yes        | Yes         |                                         |
+| `comments`          | fronting-comment   | No         | Yes         | SP only exposes per-document endpoint   |
+| `notes`             | journal-entry      | Yes        | Yes         | Multi-pass: fetched per-member          |
+| `polls`             | poll               | Yes        | Yes         |                                         |
+| `channelCategories` | channel-category   | Yes        | Yes         |                                         |
+| `channels`          | channel            | Yes        | Yes         |                                         |
+| `chatMessages`      | chat-message       | No         | Yes         | SP only exposes per-channel endpoint    |
+| `boardMessages`     | board-message      | No         | Yes         | SP only exposes per-member endpoint     |
+
+### Why some collections are file-only
+
+The SP REST API exposes these collections only through per-parent endpoints:
+
+- **comments** — `GET /v1/comments/:type/:id` requires a document type and ID
+- **chatMessages** — `GET /v1/chat/messages/:channelId` requires a channel ID (paginated)
+- **boardMessages** — `GET /v1/board/member/:memberId` requires a member ID
+
+Without a bulk list endpoint, importing them requires enumerating every possible
+parent — not feasible for comments (which span multiple document types) or practical
+without significant request overhead for chat/board messages.
+
+**notes** (journal entries) are the exception: they follow the same per-parent
+pattern (`GET /v1/notes/:system/:member`) but are essential enough to warrant a
+multi-pass fetch. The engine fetches all members first, then iterates each
+member's notes endpoint.
+
+**private** (system settings) uses JWT-only auth middleware
+(`isUserAppJwtAuthenticated`) in the SP API, so API key authentication is
+rejected with 401.
+
+### User guidance
+
+For a **complete import**, use the JSON file export from Simply Plural. API import
+covers all essential data including member notes (journal entries) but omits fronting
+comments, chat messages, and board messages.
 
 ### Persister contract
 
