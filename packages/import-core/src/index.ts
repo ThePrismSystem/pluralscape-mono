@@ -35,3 +35,13 @@ export type {
   BatchMapperOutput,
 } from "./mapper-dispatch.js";
 export { isBatchMapper } from "./mapper-dispatch.js";
+
+// Engine
+export type {
+  RunImportEngineArgs,
+  ImportRunResult,
+  ImportRunOutcome,
+  BeforeCollectionArgs,
+  BeforeCollectionResult,
+} from "./import-engine.js";
+export { runImportEngine, buildPersistableEntity } from "./import-engine.js";
