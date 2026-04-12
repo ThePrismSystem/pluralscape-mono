@@ -11,13 +11,15 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPGroup } from "../sources/sp-types.js";
+import type { GroupEncryptedFields } from "@pluralscape/data";
+import type { HexColor } from "@pluralscape/types";
+import type { CreateGroupBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedGroup {
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: string | null;
+export type MappedGroup = Omit<z.infer<typeof CreateGroupBodySchema>, "encryptedData"> & {
+  readonly encrypted: GroupEncryptedFields;
   readonly memberIds: readonly string[];
-}
+};
 
 export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedGroup> {
   const nameError = requireName(sp.name, "group", sp._id);
@@ -50,10 +52,18 @@ export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedG
     });
   }
 
-  const payload: MappedGroup = {
+  const encrypted: GroupEncryptedFields = {
     name: sp.name,
     description: sp.desc ?? null,
-    color: sp.color ?? null,
+    imageSource: null,
+    color: (sp.color ?? null) as HexColor | null,
+    emoji: null,
+  };
+
+  const payload: MappedGroup = {
+    encrypted,
+    parentGroupId: null,
+    sortOrder: 0,
     memberIds,
   };
   return mapped(payload);

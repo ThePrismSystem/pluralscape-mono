@@ -28,7 +28,7 @@ import { createFakeImportSource } from "../../sources/fake-source.js";
 import { createFileImportSource } from "../../sources/file-source.js";
 import { createInMemoryPersister } from "../helpers/in-memory-persister.js";
 
-import type { MappedMemberOutput } from "../../mappers/member.mapper.js";
+import type { MappedMember } from "../../mappers/member.mapper.js";
 
 const TEST_FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PATH = join(
@@ -87,10 +87,10 @@ describe("import engine — legacy bucket synthesis", () => {
     // Each member carries the *resolved* Pluralscape bucket IDs derived from
     // its legacy privacy flags. See `deriveBucketSourceIds` in
     // `member.mapper.ts`, then resolved via `ctx.translate(...)`.
-    const memberPrivate = state.find("member", "m_00000001")?.payload as MappedMemberOutput;
-    const memberPrevented = state.find("member", "m_00000002")?.payload as MappedMemberOutput;
-    const memberPublic = state.find("member", "m_00000003")?.payload as MappedMemberOutput;
-    const memberDefault = state.find("member", "m_00000004")?.payload as MappedMemberOutput;
+    const memberPrivate = state.find("member", "m_00000001")?.payload as MappedMember;
+    const memberPrevented = state.find("member", "m_00000002")?.payload as MappedMember;
+    const memberPublic = state.find("member", "m_00000003")?.payload as MappedMember;
+    const memberDefault = state.find("member", "m_00000004")?.payload as MappedMember;
 
     // Look up the resolved Pluralscape IDs for each synthesized bucket so we
     // can compare the member's `bucketIds` against the actual FK values.

@@ -11,14 +11,14 @@ describe("mapCustomFront", () => {
     const result = mapCustomFront(sp, createMappingContext({ sourceMode: "fake" }));
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.name).toBe("Tired");
-      expect(result.payload.description).toBeNull();
-      expect(result.payload.color).toBeNull();
-      expect(result.payload.avatarUrl).toBeNull();
+      expect(result.payload.encrypted.name).toBe("Tired");
+      expect(result.payload.encrypted.description).toBeNull();
+      expect(result.payload.encrypted.color).toBeNull();
+      expect(result.payload.encrypted.emoji).toBeNull();
     }
   });
 
-  it("preserves desc, color, and avatarUrl", () => {
+  it("preserves desc and color", () => {
     const sp: SPFrontStatus = {
       _id: "fs2",
       name: "Dissociated",
@@ -29,9 +29,8 @@ describe("mapCustomFront", () => {
     const result = mapCustomFront(sp, createMappingContext({ sourceMode: "fake" }));
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.description).toBe("blurry");
-      expect(result.payload.color).toBe("#888");
-      expect(result.payload.avatarUrl).toBe("https://example.com/x.png");
+      expect(result.payload.encrypted.description).toBe("blurry");
+      expect(result.payload.encrypted.color).toBe("#888");
     }
   });
 

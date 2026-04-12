@@ -17,7 +17,7 @@ import { createRecordingPersister } from "./recording-persister.js";
 
 import type { Manifest, ManifestCollectionKey } from "./manifest.types.js";
 import type { RecordingSnapshot } from "./recording-persister.js";
-import type { MappedMemberOutput } from "../../mappers/member.mapper.js";
+import type { MappedMember } from "../../mappers/member.mapper.js";
 import type { ImportDataSource } from "../../sources/source.types.js";
 import type { ImportCheckpointState } from "@pluralscape/types";
 
@@ -100,14 +100,13 @@ function assertAllEntitiesPresent(
  */
 
 /**
- * The member mapper wraps the core member fields inside a `member` sub-object
- * (alongside `fieldValues` and `bucketIds`). This helper navigates that
- * structure for payload spot-checks.
+ * The member mapper outputs `{ encrypted, archived, fieldValues, bucketIds }`.
+ * This helper navigates that structure for payload spot-checks.
  */
 function memberName(payload: unknown): string | undefined {
   if (payload === null || typeof payload !== "object") return undefined;
-  const outer = payload as MappedMemberOutput;
-  return outer.member.name;
+  const outer = payload as MappedMember;
+  return outer.encrypted.name;
 }
 
 function assertPayloadSpotChecks(

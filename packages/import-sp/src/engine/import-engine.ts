@@ -178,10 +178,10 @@ async function persistSynthesizedBuckets(
   let lastSourceId: string | null = null;
   for (const bucket of synthesized) {
     const payload: MappedPrivacyBucket = {
-      name: bucket.name,
-      description: bucket.description,
-      color: null,
-      icon: null,
+      encrypted: {
+        name: bucket.name,
+        description: bucket.description,
+      },
     };
     try {
       const result = await persister.upsertEntity({

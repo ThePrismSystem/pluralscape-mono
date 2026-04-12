@@ -19,15 +19,10 @@ describe("mapJournalEntry", () => {
     const result = mapJournalEntry(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.title).toBe("Morning thoughts");
+      expect(result.payload.encrypted.title).toBe("Morning thoughts");
       expect(result.payload.author).toEqual({ entityType: "member", entityId: "ps_m1" });
       expect(result.payload.createdAt).toBe(1_700_000_000_000);
-      expect(result.payload.blocks).toHaveLength(1);
-      expect(result.payload.blocks[0]).toEqual({
-        type: "paragraph",
-        content: "Woke up fronting.",
-        children: [],
-      });
+      expect(result.payload.encrypted.content).toBe("Woke up fronting.");
     }
   });
 
@@ -48,7 +43,7 @@ describe("mapJournalEntry", () => {
     }
   });
 
-  it("allows empty body (single empty paragraph block)", () => {
+  it("allows empty body (empty content string)", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const sp: SPNote = {
@@ -61,12 +56,11 @@ describe("mapJournalEntry", () => {
     const result = mapJournalEntry(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.blocks).toHaveLength(1);
-      expect(result.payload.blocks[0]?.content).toBe("");
+      expect(result.payload.encrypted.content).toBe("");
     }
   });
 
-  it("emits warnings for dropped color and supportMarkdown fields", () => {
+  it("maps color to encrypted.backgroundColor and warns for supportMarkdown", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const sp: SPNote = {
@@ -80,8 +74,10 @@ describe("mapJournalEntry", () => {
     };
     const result = mapJournalEntry(sp, ctx);
     expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.encrypted.backgroundColor).toBe("#abcdef");
+    }
     const messages = ctx.warnings.map((w) => w.message);
-    expect(messages.some((m) => m.includes("color"))).toBe(true);
     expect(messages.some((m) => m.includes("supportMarkdown"))).toBe(true);
     expect(ctx.warnings.every((w) => w.entityType === "journal-entry")).toBe(true);
   });
@@ -99,7 +95,7 @@ describe("mapJournalEntry", () => {
     const result = mapJournalEntry(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.title).toBe("Specific Title");
+      expect(result.payload.encrypted.title).toBe("Specific Title");
       expect(result.payload.createdAt).toBe(42);
     }
   });

@@ -4,7 +4,7 @@
  * Translates an {@link SPMember} into three coupled outputs the engine
  * persists atomically:
  *
- * 1. A {@link MappedMemberCore} (the member row itself).
+ * 1. An `encrypted` blob matching {@link MemberEncryptedFields}.
  * 2. An array of {@link ExtractedFieldValue} rows sourced from SP's `info`
  *    map — SP stores custom-field values inline on the member document, but
  *    Pluralscape persists them separately.
@@ -28,18 +28,12 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPMember } from "../sources/sp-types.js";
+import type { MemberEncryptedFields } from "@pluralscape/data";
+import type { HexColor } from "@pluralscape/types";
 
-export interface MappedMemberCore {
-  readonly name: string;
-  readonly description: string | null;
-  readonly pronouns: string | null;
-  readonly colors: readonly string[];
-  readonly avatarUrl: string | null;
+export interface MappedMember {
+  readonly encrypted: MemberEncryptedFields;
   readonly archived: boolean;
-}
-
-export interface MappedMemberOutput {
-  readonly member: MappedMemberCore;
   readonly fieldValues: readonly ExtractedFieldValue[];
   /**
    * Pluralscape privacy-bucket IDs resolved from the source document's
@@ -48,13 +42,6 @@ export interface MappedMemberOutput {
    */
   readonly bucketIds: readonly string[];
 }
-
-/**
- * Canonical name for the persister payload. The member mapper produces
- * {@link MappedMemberOutput}; this alias aligns the entity-level name with the
- * rest of the `Mapped<Entity>` family consumed by {@link PersistableEntity}.
- */
-export type MappedMember = MappedMemberOutput;
 
 /**
  * Resolve a member's privacy bucket source IDs.
@@ -85,7 +72,7 @@ function deriveBucketSourceIds(sp: SPMember): readonly string[] {
   return ["synthetic:private"];
 }
 
-export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<MappedMemberOutput> {
+export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<MappedMember> {
   const nameError = requireName(sp.name, "member", sp._id);
   if (nameError !== null) {
     ctx.addWarning({
@@ -136,17 +123,25 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
     });
   }
 
-  const member: MappedMemberCore = {
+  const encrypted: MemberEncryptedFields = {
     name: sp.name,
     description: sp.desc ?? null,
-    pronouns: sp.pronouns ?? null,
-    colors: sp.color ? [sp.color] : [],
-    avatarUrl: sp.avatarUrl ?? null,
-    archived: sp.archived ?? false,
+    pronouns: sp.pronouns ? [sp.pronouns] : [],
+    avatarSource: sp.avatarUrl ? { kind: "external" as const, url: sp.avatarUrl } : null,
+    colors: sp.color ? [sp.color as HexColor] : [],
+    saturationLevel: { kind: "known" as const, level: "highly-elaborated" as const },
+    tags: [],
+    suppressFriendFrontNotification: false,
+    boardMessageNotificationOnFront: false,
   };
 
   const fieldValues = extractFieldValues({ memberSourceId: sp._id, info: sp.info }, ctx);
 
-  const payload: MappedMemberOutput = { member, fieldValues, bucketIds };
+  const payload: MappedMember = {
+    encrypted,
+    archived: sp.archived ?? false,
+    fieldValues,
+    bucketIds,
+  };
   return mapped(payload);
 }

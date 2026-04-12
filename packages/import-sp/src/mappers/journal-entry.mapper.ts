@@ -1,13 +1,12 @@
 /**
  * Journal entry mapper.
  *
- * SP `notes` → Pluralscape journal entries. The SP note body is plain text
- * (or optionally markdown — we drop the markdown flag and import as plain
- * text for now), which we wrap in a single `ParagraphBlock` matching the
- * Pluralscape rich-text schema from `@pluralscape/types/journal.ts`.
+ * SP `notes` → Pluralscape journal entries (notes). The SP note body is plain
+ * text which becomes the `encrypted.content` field. SP `color` maps to
+ * `encrypted.backgroundColor`.
  *
- * `sp.color` and `sp.supportMarkdown` have no Pluralscape equivalents and are
- * dropped with warnings so users can audit what was lost during import.
+ * `sp.supportMarkdown` has no Pluralscape equivalent and is dropped with a
+ * warning so users can audit what was lost during import.
  *
  * Fails when the author FK can't be resolved.
  */
@@ -15,29 +14,15 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPNote } from "../sources/sp-types.js";
+import type { NoteEncryptedFields } from "@pluralscape/data";
+import type { HexColor } from "@pluralscape/types";
+import type { CreateNoteBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-/**
- * Minimal paragraph block shape compatible with Pluralscape's
- * {@link import("@pluralscape/types").ParagraphBlock}. The persister
- * upcasts this into a full `JournalBlock[]` when encrypting.
- */
-export interface MappedJournalParagraphBlock {
-  readonly type: "paragraph";
-  readonly content: string;
-  readonly children: readonly never[];
-}
-
-export interface MappedJournalEntry {
-  readonly title: string;
-  /**
-   * Mirrors Pluralscape `JournalEntry.author`'s `EntityReference` shape,
-   * narrowed to the `"member"` variant. SP has no structure-entity
-   * equivalent, so the discriminant is always `"member"`.
-   */
-  readonly author: { readonly entityType: "member"; readonly entityId: string };
-  readonly blocks: readonly MappedJournalParagraphBlock[];
+export type MappedJournalEntry = Omit<z.infer<typeof CreateNoteBodySchema>, "encryptedData"> & {
+  readonly encrypted: NoteEncryptedFields;
   readonly createdAt: number;
-}
+};
 
 export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<MappedJournalEntry> {
   const resolved = ctx.translate("member", sp.member);
@@ -50,13 +35,6 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
     });
   }
 
-  if (sp.color !== undefined && sp.color !== null) {
-    ctx.addWarningOnce("journal-entry.color-dropped", {
-      entityType: "journal-entry",
-      entityId: null,
-      message: "SP `color` field dropped (no Pluralscape equivalent)",
-    });
-  }
   if (sp.supportMarkdown !== undefined) {
     ctx.addWarningOnce("journal-entry.supportMarkdown-dropped", {
       entityType: "journal-entry",
@@ -65,15 +43,15 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
     });
   }
 
-  const block: MappedJournalParagraphBlock = {
-    type: "paragraph",
-    content: sp.note,
-    children: [],
-  };
-  const payload: MappedJournalEntry = {
+  const encrypted: NoteEncryptedFields = {
     title: sp.title,
-    author: { entityType: "member", entityId: resolved },
-    blocks: [block],
+    content: sp.note,
+    backgroundColor: (sp.color ?? null) as HexColor | null,
+  };
+
+  const payload: MappedJournalEntry = {
+    encrypted,
+    author: { entityType: "member" as const, entityId: resolved },
     createdAt: sp.date,
   };
   return mapped(payload);

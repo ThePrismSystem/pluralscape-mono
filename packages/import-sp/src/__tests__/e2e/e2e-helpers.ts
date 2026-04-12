@@ -43,17 +43,11 @@ const MAX_BATCH_ITEMS = 10;
 /** Batch size for ref upserts (matches mobile persister). */
 const REF_BATCH_SIZE = 50;
 
-/** Default sort order for imported entities. */
-const DEFAULT_SORT_ORDER = 0;
-
-/** Default max votes per member for imported polls. */
-const SINGLE_VOTE_MAX = 1;
-
 /** Placeholder for update calls that route through a parent scope. */
 const COMMENT_UPDATE_PLACEHOLDER_SESSION = "fs_import_placeholder";
 const MESSAGE_UPDATE_PLACEHOLDER_CHANNEL = "ch_import_placeholder";
 
-// ── Registration ──────────────────────────────────────────��─────────
+// ── Registration ─────────────────────────────────────────────────────
 
 interface RegisterData {
   sessionToken: string;
@@ -278,21 +272,23 @@ export async function createE2EPersister(
       case "privacy-bucket":
         return trpcClient.bucket.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
         });
       case "field-definition":
         return trpcClient.field.definition.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           fieldType: entity.payload.fieldType,
+          required: entity.payload.required,
+          sortOrder: entity.payload.sortOrder,
         });
       case "custom-front":
         return trpcClient.customFront.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
         });
       case "member": {
-        const encrypted = encryptForApi(entity.payload.member, masterKey);
+        const encrypted = encryptForApi(entity.payload.encrypted, masterKey);
         const result = await trpcClient.member.create.mutate({
           systemId,
           encryptedData: encrypted,
@@ -312,16 +308,11 @@ export async function createE2EPersister(
         return result;
       }
       case "group": {
-        const groupCore = {
-          name: entity.payload.name,
-          description: entity.payload.description,
-          color: entity.payload.color,
-        };
         const result = await trpcClient.group.create.mutate({
           systemId,
-          encryptedData: encryptForApi(groupCore, masterKey),
-          parentGroupId: null,
-          sortOrder: DEFAULT_SORT_ORDER,
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          parentGroupId: entity.payload.parentGroupId,
+          sortOrder: entity.payload.sortOrder,
         });
         for (const memberId of entity.payload.memberIds) {
           await trpcClient.group.addMember.mutate({
@@ -335,36 +326,38 @@ export async function createE2EPersister(
       case "fronting-session":
         return trpcClient.frontingSession.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           startTime: entity.payload.startTime,
-          memberId: entity.payload.memberId ?? undefined,
-          customFrontId: entity.payload.customFrontId ?? undefined,
-          structureEntityId: undefined,
+          memberId: entity.payload.memberId,
+          customFrontId: entity.payload.customFrontId,
+          structureEntityId: entity.payload.structureEntityId,
         });
       case "fronting-comment":
         return trpcClient.frontingComment.create.mutate({
           systemId,
           sessionId: entity.payload.frontingSessionId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          memberId: undefined,
-          customFrontId: undefined,
-          structureEntityId: undefined,
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          memberId: entity.payload.memberId,
+          customFrontId: entity.payload.customFrontId,
+          structureEntityId: entity.payload.structureEntityId,
         });
       case "journal-entry":
         return trpcClient.note.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          author: entity.payload.author,
         });
       case "poll": {
         const result = await trpcClient.poll.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload.poll, masterKey),
-          kind: entity.payload.poll.kind,
-          createdByMemberId: undefined,
-          allowMultipleVotes: false,
-          maxVotesPerMember: SINGLE_VOTE_MAX,
-          allowAbstain: entity.payload.poll.allowAbstain,
-          allowVeto: entity.payload.poll.allowVeto,
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          kind: entity.payload.kind,
+          createdByMemberId: entity.payload.createdByMemberId,
+          allowMultipleVotes: entity.payload.allowMultipleVotes,
+          maxVotesPerMember: entity.payload.maxVotesPerMember,
+          allowAbstain: entity.payload.allowAbstain,
+          allowVeto: entity.payload.allowVeto,
+          endsAt: entity.payload.endsAt,
         });
         // Cast votes
         for (const vote of entity.payload.votes) {
@@ -376,7 +369,7 @@ export async function createE2EPersister(
               entityType: "member" as const,
               entityId: vote.memberId ?? result.id,
             },
-            encryptedData: encryptForApi(vote, masterKey),
+            encryptedData: encryptForApi({ comment: vote.comment }, masterKey),
           });
         }
         return result;
@@ -384,32 +377,33 @@ export async function createE2EPersister(
       case "channel-category":
         return trpcClient.channel.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          type: "category",
-          parentId: null,
-          sortOrder: DEFAULT_SORT_ORDER,
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          type: entity.payload.type,
+          parentId: entity.payload.parentId,
+          sortOrder: entity.payload.sortOrder,
         });
       case "channel":
         return trpcClient.channel.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          type: "channel",
-          parentId: entity.payload.parentChannelId,
-          sortOrder: entity.payload.order ?? DEFAULT_SORT_ORDER,
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          type: entity.payload.type,
+          parentId: entity.payload.parentId,
+          sortOrder: entity.payload.sortOrder,
         });
       case "chat-message":
         return trpcClient.message.create.mutate({
           systemId,
           channelId: entity.payload.channelId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          timestamp: entity.payload.createdAt,
-          replyToId: undefined,
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          timestamp: entity.payload.timestamp,
+          replyToId: entity.payload.replyToId,
         });
       case "board-message":
         return trpcClient.boardMessage.create.mutate({
           systemId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
-          sortOrder: DEFAULT_SORT_ORDER,
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
+          sortOrder: entity.payload.sortOrder,
+          pinned: entity.payload.pinned,
         });
       default: {
         const _exhaustive: never = entity;
@@ -458,7 +452,7 @@ export async function createE2EPersister(
         await trpcClient.bucket.update.mutate({
           systemId,
           bucketId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -466,7 +460,7 @@ export async function createE2EPersister(
         await trpcClient.field.definition.update.mutate({
           systemId,
           fieldDefinitionId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -474,7 +468,7 @@ export async function createE2EPersister(
         await trpcClient.customFront.update.mutate({
           systemId,
           customFrontId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -482,7 +476,7 @@ export async function createE2EPersister(
         await trpcClient.member.update.mutate({
           systemId,
           memberId: existingId,
-          encryptedData: encryptForApi(entity.payload.member, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -490,14 +484,7 @@ export async function createE2EPersister(
         await trpcClient.group.update.mutate({
           systemId,
           groupId: existingId,
-          encryptedData: encryptForApi(
-            {
-              name: entity.payload.name,
-              description: entity.payload.description,
-              color: entity.payload.color,
-            },
-            masterKey,
-          ),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -505,7 +492,7 @@ export async function createE2EPersister(
         await trpcClient.frontingSession.update.mutate({
           systemId,
           sessionId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -514,7 +501,7 @@ export async function createE2EPersister(
           systemId,
           sessionId: COMMENT_UPDATE_PLACEHOLDER_SESSION,
           commentId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -522,7 +509,7 @@ export async function createE2EPersister(
         await trpcClient.note.update.mutate({
           systemId,
           noteId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -530,7 +517,7 @@ export async function createE2EPersister(
         await trpcClient.poll.update.mutate({
           systemId,
           pollId: existingId,
-          encryptedData: encryptForApi(entity.payload.poll, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -538,7 +525,7 @@ export async function createE2EPersister(
         await trpcClient.channel.update.mutate({
           systemId,
           channelId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -546,7 +533,7 @@ export async function createE2EPersister(
         await trpcClient.channel.update.mutate({
           systemId,
           channelId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -555,7 +542,7 @@ export async function createE2EPersister(
           systemId,
           channelId: MESSAGE_UPDATE_PLACEHOLDER_CHANNEL,
           messageId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;
@@ -563,7 +550,7 @@ export async function createE2EPersister(
         await trpcClient.boardMessage.update.mutate({
           systemId,
           boardMessageId: existingId,
-          encryptedData: encryptForApi(entity.payload, masterKey),
+          encryptedData: encryptForApi(entity.payload.encrypted, masterKey),
           version,
         });
         break;

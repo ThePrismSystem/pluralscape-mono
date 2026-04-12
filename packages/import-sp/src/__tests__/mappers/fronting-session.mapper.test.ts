@@ -21,10 +21,14 @@ describe("mapFrontingSession", () => {
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.memberId).toBe("ps_m1");
-      expect(result.payload.customFrontId).toBeNull();
+      expect(result.payload.customFrontId).toBeUndefined();
+      expect(result.payload.structureEntityId).toBeUndefined();
       expect(result.payload.startTime).toBe(1_000);
       expect(result.payload.endTime).toBe(2_000);
-      expect(result.payload.comment).toBeNull();
+      expect(result.payload.encrypted.comment).toBeNull();
+      expect(result.payload.encrypted.positionality).toBeNull();
+      expect(result.payload.encrypted.outtrigger).toBeNull();
+      expect(result.payload.encrypted.outtriggerSentiment).toBeNull();
     }
   });
 
@@ -42,7 +46,7 @@ describe("mapFrontingSession", () => {
     const result = mapFrontingSession(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.memberId).toBeNull();
+      expect(result.payload.memberId).toBeUndefined();
       expect(result.payload.customFrontId).toBe("ps_cf1");
     }
   });
@@ -153,7 +157,7 @@ describe("mapFrontingSession", () => {
     const result = mapFrontingSession(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.comment).toBe("feeling blurry");
+      expect(result.payload.encrypted.comment).toBe("feeling blurry");
     }
   });
 

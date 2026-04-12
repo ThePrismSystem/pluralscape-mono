@@ -26,12 +26,12 @@ describe("mapMember", () => {
     const result = mapMember(sp, createCtxWithSyntheticBuckets());
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.member.name).toBe("Aria");
-      expect(result.payload.member.description).toBeNull();
-      expect(result.payload.member.pronouns).toBeNull();
-      expect(result.payload.member.avatarUrl).toBeNull();
-      expect(result.payload.member.colors).toEqual([]);
-      expect(result.payload.member.archived).toBe(false);
+      expect(result.payload.encrypted.name).toBe("Aria");
+      expect(result.payload.encrypted.description).toBeNull();
+      expect(result.payload.encrypted.pronouns).toEqual([]);
+      expect(result.payload.encrypted.avatarSource).toBeNull();
+      expect(result.payload.encrypted.colors).toEqual([]);
+      expect(result.payload.archived).toBe(false);
       expect(result.payload.fieldValues).toEqual([]);
     }
   });
@@ -41,7 +41,7 @@ describe("mapMember", () => {
     const result = mapMember(sp, createCtxWithSyntheticBuckets());
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.member.colors).toEqual(["#fa0"]);
+      expect(result.payload.encrypted.colors).toEqual(["#fa0"]);
     }
   });
 
@@ -57,10 +57,13 @@ describe("mapMember", () => {
     const result = mapMember(sp, createCtxWithSyntheticBuckets());
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.member.description).toBe("hi");
-      expect(result.payload.member.pronouns).toBe("they/them");
-      expect(result.payload.member.avatarUrl).toBe("https://x/y.png");
-      expect(result.payload.member.archived).toBe(true);
+      expect(result.payload.encrypted.description).toBe("hi");
+      expect(result.payload.encrypted.pronouns).toEqual(["they/them"]);
+      expect(result.payload.encrypted.avatarSource).toEqual({
+        kind: "external",
+        url: "https://x/y.png",
+      });
+      expect(result.payload.archived).toBe(true);
     }
   });
 

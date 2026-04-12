@@ -13,14 +13,15 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPChatMessage } from "../sources/sp-types.js";
+import type { MessageEncryptedFields } from "@pluralscape/data";
+import type { MemberId } from "@pluralscape/types";
+import type { CreateMessageBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedChatMessage {
+export type MappedChatMessage = Omit<z.infer<typeof CreateMessageBodySchema>, "encryptedData"> & {
+  readonly encrypted: MessageEncryptedFields;
   readonly channelId: string;
-  readonly writerMemberId: string;
-  readonly body: string;
-  readonly createdAt: number;
-  readonly replyToChatMessageId: string | null;
-}
+};
 
 export function mapChatMessage(
   sp: SPChatMessage,
@@ -35,8 +36,8 @@ export function mapChatMessage(
       targetField: "channel",
     });
   }
-  const writerMemberId = ctx.translate("member", sp.writer);
-  if (writerMemberId === null) {
+  const senderId = ctx.translate("member", sp.writer);
+  if (senderId === null) {
     return failed({
       kind: "fk-miss",
       message: `FK miss: member ${sp.writer} not in translation table`,
@@ -45,7 +46,7 @@ export function mapChatMessage(
     });
   }
 
-  let replyToChatMessageId: string | null = null;
+  let replyToId: MappedChatMessage["replyToId"] = undefined;
   if (sp.replyTo !== undefined && sp.replyTo !== null) {
     const resolved = ctx.translate("chat-message", sp.replyTo);
     if (resolved === null) {
@@ -56,15 +57,21 @@ export function mapChatMessage(
         targetField: "replyTo",
       });
     }
-    replyToChatMessageId = resolved;
+    replyToId = resolved as MappedChatMessage["replyToId"];
   }
 
+  const encrypted: MessageEncryptedFields = {
+    content: sp.message,
+    senderId: senderId as MemberId,
+    attachments: [],
+    mentions: [],
+  };
+
   const payload: MappedChatMessage = {
+    encrypted,
     channelId,
-    writerMemberId,
-    body: sp.message,
-    createdAt: sp.writtenAt,
-    replyToChatMessageId,
+    timestamp: sp.writtenAt,
+    replyToId,
   };
   return mapped(payload);
 }

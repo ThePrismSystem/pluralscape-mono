@@ -15,14 +15,13 @@ import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPChannel, SPChannelCategory } from "../sources/sp-types.js";
+import type { ChannelEncryptedFields } from "@pluralscape/data";
+import type { CreateChannelBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedChannel {
-  readonly name: string;
-  readonly description: string | null;
-  readonly type: "category" | "channel";
-  readonly parentChannelId: string | null;
-  readonly order: number | null;
-}
+export type MappedChannel = Omit<z.infer<typeof CreateChannelBodySchema>, "encryptedData"> & {
+  readonly encrypted: ChannelEncryptedFields;
+};
 
 /**
  * Channel-category payload. Structurally identical to {@link MappedChannel}
@@ -31,13 +30,7 @@ export interface MappedChannel {
  * {@link PersistableEntity} discriminated union can carry separate
  * `"channel-category"` and `"channel"` variants.
  */
-export interface MappedChannelCategory {
-  readonly name: string;
-  readonly description: string | null;
-  readonly type: "category";
-  readonly parentChannelId: null;
-  readonly order: number | null;
-}
+export type MappedChannelCategory = MappedChannel;
 
 export function mapChannelCategory(
   sp: SPChannelCategory,
@@ -52,12 +45,12 @@ export function mapChannelCategory(
     });
     return skipped({ kind: nameError.kind, reason: nameError.message });
   }
+  const encrypted: ChannelEncryptedFields = { name: sp.name };
   const payload: MappedChannelCategory = {
-    name: sp.name,
-    description: sp.desc ?? null,
+    encrypted,
     type: "category",
-    parentChannelId: null,
-    order: sp.order ?? null,
+    parentId: undefined,
+    sortOrder: sp.order ?? 0,
   };
   return mapped(payload);
 }
@@ -73,7 +66,7 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
     return skipped({ kind: nameError.kind, reason: nameError.message });
   }
 
-  let parentChannelId: string | null = null;
+  let parentId: MappedChannel["parentId"] = undefined;
   // Real SP channels without a parent category omit `parentCategory`
   // entirely (undefined) rather than setting it to null. Treat both as
   // "no parent".
@@ -84,18 +77,18 @@ export function mapChannel(sp: SPChannel, ctx: MappingContext): MapperResult<Map
         kind: "fk-miss",
         message: `channel ${sp._id} has unresolved parentCategory ${sp.parentCategory}`,
         missingRefs: [sp.parentCategory],
-        targetField: "parentChannelId",
+        targetField: "parentId",
       });
     }
-    parentChannelId = resolved;
+    parentId = resolved as MappedChannel["parentId"];
   }
 
+  const encrypted: ChannelEncryptedFields = { name: sp.name };
   const payload: MappedChannel = {
-    name: sp.name,
-    description: sp.desc ?? null,
+    encrypted,
     type: "channel",
-    parentChannelId,
-    order: sp.order ?? null,
+    parentId,
+    sortOrder: sp.order ?? 0,
   };
   return mapped(payload);
 }

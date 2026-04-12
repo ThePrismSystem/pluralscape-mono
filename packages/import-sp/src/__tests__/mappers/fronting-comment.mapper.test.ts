@@ -19,8 +19,11 @@ describe("mapFrontingComment", () => {
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.frontingSessionId).toBe("ps_fh1");
-      expect(result.payload.body).toBe("hello");
+      expect(result.payload.encrypted.content).toBe("hello");
       expect(result.payload.createdAt).toBe(12_345);
+      expect(result.payload.memberId).toBeUndefined();
+      expect(result.payload.customFrontId).toBeUndefined();
+      expect(result.payload.structureEntityId).toBeUndefined();
     }
   });
 
@@ -52,7 +55,7 @@ describe("mapFrontingComment", () => {
     const result = mapFrontingComment(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.body).toBe("");
+      expect(result.payload.encrypted.content).toBe("");
     }
   });
 

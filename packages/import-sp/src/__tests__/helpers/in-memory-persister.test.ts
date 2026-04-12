@@ -23,22 +23,32 @@ import type { MappedMember } from "../../mappers/member.mapper.js";
 import type { PersistableEntity } from "../../persistence/persister.types.js";
 
 const MEMBER_PAYLOAD: MappedMember = {
-  member: {
+  encrypted: {
     name: "Alex",
     description: null,
-    pronouns: null,
+    pronouns: [],
+    avatarSource: null,
     colors: [],
-    avatarUrl: null,
-    archived: false,
+    saturationLevel: { kind: "known", level: "highly-elaborated" },
+    tags: [],
+    suppressFriendFrontNotification: false,
+    boardMessageNotificationOnFront: false,
   },
+  archived: false,
   fieldValues: [],
   bucketIds: [],
 };
 
 const GROUP_PAYLOAD: MappedGroup = {
-  name: "Pod",
-  description: null,
-  color: null,
+  encrypted: {
+    name: "Pod",
+    description: null,
+    imageSource: null,
+    color: null,
+    emoji: null,
+  },
+  parentGroupId: null,
+  sortOrder: 0,
   memberIds: [],
 };
 
@@ -78,7 +88,7 @@ describe("in-memory persister enhancements", () => {
     const first = await persister.upsertEntity(memberEntity("sp_1", MEMBER_PAYLOAD));
     const updatedPayload: MappedMember = {
       ...MEMBER_PAYLOAD,
-      member: { ...MEMBER_PAYLOAD.member, name: "Alex Renamed" },
+      encrypted: { ...MEMBER_PAYLOAD.encrypted, name: "Alex Renamed" },
     };
     const second = await persister.upsertEntity(memberEntity("sp_1", updatedPayload));
 

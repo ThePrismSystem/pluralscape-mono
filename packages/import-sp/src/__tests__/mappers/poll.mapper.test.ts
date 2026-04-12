@@ -16,14 +16,16 @@ describe("mapPoll", () => {
     const result = mapPoll(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.poll.title).toBe("Lunch?");
-      expect(result.payload.poll.description).toBeNull();
-      expect(result.payload.poll.endsAt).toBeNull();
-      expect(result.payload.poll.kind).toBe("standard");
-      expect(result.payload.poll.allowAbstain).toBe(false);
-      expect(result.payload.poll.allowVeto).toBe(false);
-      expect(result.payload.poll.createdByMemberId).toBeNull();
-      expect(result.payload.poll.options).toEqual([]);
+      expect(result.payload.encrypted.title).toBe("Lunch?");
+      expect(result.payload.encrypted.description).toBeNull();
+      expect(result.payload.endsAt).toBeUndefined();
+      expect(result.payload.kind).toBe("standard");
+      expect(result.payload.allowAbstain).toBe(false);
+      expect(result.payload.allowVeto).toBe(false);
+      expect(result.payload.allowMultipleVotes).toBe(false);
+      expect(result.payload.maxVotesPerMember).toBe(1);
+      expect(result.payload.createdByMemberId).toBeUndefined();
+      expect(result.payload.encrypted.options).toEqual([]);
       expect(result.payload.votes).toEqual([]);
     }
   });
@@ -41,9 +43,9 @@ describe("mapPoll", () => {
     const result = mapPoll(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.poll.options).toEqual([
-        { id: "o1", label: "Red", color: "#ff0000" },
-        { id: "o2", label: "Blue", color: null },
+      expect(result.payload.encrypted.options).toEqual([
+        { id: "o1", label: "Red", voteCount: 0, color: "#ff0000", emoji: null },
+        { id: "o2", label: "Blue", voteCount: 0, color: null, emoji: null },
       ]);
     }
   });
@@ -141,11 +143,11 @@ describe("mapPoll", () => {
     const result = mapPoll(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.poll.kind).toBe("custom");
-      expect(result.payload.poll.description).toBe("Plans?");
-      expect(result.payload.poll.endsAt).toBe(9_999);
-      expect(result.payload.poll.allowAbstain).toBe(true);
-      expect(result.payload.poll.allowVeto).toBe(true);
+      expect(result.payload.kind).toBe("custom");
+      expect(result.payload.encrypted.description).toBe("Plans?");
+      expect(result.payload.endsAt).toBe(9_999);
+      expect(result.payload.allowAbstain).toBe(true);
+      expect(result.payload.allowVeto).toBe(true);
     }
   });
 });
@@ -216,7 +218,7 @@ describe("poll option id collision prevention", () => {
     const result = mapPoll(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.poll.options).toEqual([]);
+      expect(result.payload.encrypted.options).toEqual([]);
     }
   });
 
@@ -234,8 +236,8 @@ describe("poll option id collision prevention", () => {
     const result = mapPoll(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.poll.options[0]?.id).toBe("p2_opt_0");
-      expect(result.payload.poll.options[1]?.id).toBe("p2_opt_1");
+      expect(result.payload.encrypted.options[0]?.id).toBe("p2_opt_0");
+      expect(result.payload.encrypted.options[1]?.id).toBe("p2_opt_1");
     }
   });
 
@@ -250,7 +252,7 @@ describe("poll option id collision prevention", () => {
     const result = mapPoll(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.poll.options[0]?.id).toBe("server-id-1");
+      expect(result.payload.encrypted.options[0]?.id).toBe("server-id-1");
     }
   });
 
@@ -274,8 +276,8 @@ describe("poll option id collision prevention", () => {
       } as SPPoll,
       ctx,
     );
-    const idA = a.status === "mapped" ? a.payload.poll.options[0]?.id : null;
-    const idB = b.status === "mapped" ? b.payload.poll.options[0]?.id : null;
+    const idA = a.status === "mapped" ? a.payload.encrypted.options[0]?.id : null;
+    const idB = b.status === "mapped" ? b.payload.encrypted.options[0]?.id : null;
     expect(idA).toBe("pA_opt_0");
     expect(idB).toBe("pB_opt_0");
     expect(idA).not.toBe(idB);

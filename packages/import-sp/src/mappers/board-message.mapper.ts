@@ -17,13 +17,18 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPBoardMessage } from "../sources/sp-types.js";
+import type { BoardMessageEncryptedFields } from "@pluralscape/data";
+import type { MemberId } from "@pluralscape/types";
+import type { CreateBoardMessageBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedBoardMessage {
-  readonly title: string;
-  readonly body: string;
-  readonly authorMemberId: string;
+export type MappedBoardMessage = Omit<
+  z.infer<typeof CreateBoardMessageBodySchema>,
+  "encryptedData"
+> & {
+  readonly encrypted: BoardMessageEncryptedFields;
   readonly createdAt: number;
-}
+};
 
 export function mapBoardMessage(
   sp: SPBoardMessage,
@@ -59,10 +64,17 @@ export function mapBoardMessage(
     );
   }
 
+  const content = sp.title ? `# ${sp.title}\n\n${sp.message}` : sp.message;
+
+  const encrypted: BoardMessageEncryptedFields = {
+    content,
+    senderId: authorMemberId as MemberId,
+  };
+
   const payload: MappedBoardMessage = {
-    title: sp.title,
-    body: sp.message,
-    authorMemberId,
+    encrypted,
+    sortOrder: 0,
+    pinned: false,
     createdAt: sp.writtenAt,
   };
   return mapped(payload);

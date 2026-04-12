@@ -6,7 +6,7 @@
  * fractional-index string on migrated accounts (pre-migration exports may
  * still ship numeric orders, coerced to string form by the Zod validator).
  *
- * Ordering note: Pluralscape's `MappedFieldDefinition.order` is a number,
+ * Ordering note: Pluralscape's `MappedFieldDefinition.sortOrder` is a number,
  * but SP's fractional-index strings cannot be losslessly converted per
  * document. We preserve lexicographic order using a best-effort base-36
  * prefix decode — sufficient for small field sets and lets users fine-tune
@@ -27,14 +27,17 @@ import { mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPCustomField, SPCustomFieldType } from "../sources/sp-types.js";
+import type { FieldDefinitionEncryptedFields } from "@pluralscape/data";
 import type { FieldType } from "@pluralscape/types";
+import type { CreateFieldDefinitionBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedFieldDefinition {
-  readonly name: string;
-  readonly fieldType: FieldType;
-  readonly order: number;
-  readonly supportMarkdown: boolean;
-}
+export type MappedFieldDefinition = Omit<
+  z.infer<typeof CreateFieldDefinitionBodySchema>,
+  "encryptedData"
+> & {
+  readonly encrypted: FieldDefinitionEncryptedFields;
+};
 
 /**
  * Map SP's numeric `CustomFieldType` enum to a Pluralscape {@link FieldType}.
@@ -105,11 +108,16 @@ export function mapFieldDefinition(
       message: `unparseable SP custom-field order "${sp.order}"; defaulting to 0 — reorder manually after import`,
     });
   }
-  const payload: MappedFieldDefinition = {
+  const encrypted: FieldDefinitionEncryptedFields = {
     name: sp.name,
+    description: null,
+    options: null,
+  };
+  const payload: MappedFieldDefinition = {
+    encrypted,
     fieldType,
-    order: orderResult.order,
-    supportMarkdown: sp.supportMarkdown ?? false,
+    required: false,
+    sortOrder: orderResult.order,
   };
   return mapped(payload);
 }
