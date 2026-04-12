@@ -41,6 +41,11 @@ CreateFrontingSessionRequest:
       format: int64
       minimum: 0
       description: "Unix milliseconds. Retroactive values are allowed."
+    endTime:
+      type: integer
+      format: int64
+      minimum: 0
+      description: "Unix milliseconds when the session ended. Optional; omit for active sessions. Must be after startTime."
     memberId:
       type: string
       description: "Member ID (mem_ prefix). At least one subject required."

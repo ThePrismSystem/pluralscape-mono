@@ -128,6 +128,10 @@ export async function createFrontingSession(
     MAX_ENCRYPTED_DATA_BYTES,
   );
 
+  if (parsed.endTime !== undefined && parsed.endTime <= parsed.startTime) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "endTime must be after startTime");
+  }
+
   const fsId = createId(ID_PREFIXES.frontingSession);
   const timestamp = now();
 
@@ -140,6 +144,7 @@ export async function createFrontingSession(
         id: fsId,
         systemId,
         startTime: parsed.startTime,
+        endTime: parsed.endTime ?? null,
         memberId: parsed.memberId ?? null,
         customFrontId: parsed.customFrontId ?? null,
         structureEntityId: parsed.structureEntityId ?? null,
@@ -162,6 +167,11 @@ export async function createFrontingSession(
     await dispatchWebhookEvent(tx, systemId, "fronting.started", {
       sessionId: row.id as FrontingSessionId,
     });
+    if (parsed.endTime !== undefined) {
+      await dispatchWebhookEvent(tx, systemId, "fronting.ended", {
+        sessionId: row.id as FrontingSessionId,
+      });
+    }
 
     return toFrontingSessionResult(row);
   });

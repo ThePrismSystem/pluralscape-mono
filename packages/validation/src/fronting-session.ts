@@ -10,6 +10,7 @@ export const CreateFrontingSessionBodySchema = z
   .object({
     encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
     startTime: z.number().int().min(0),
+    endTime: z.number().int().min(0).optional(),
     memberId: optionalBrandedId("mem_"),
     customFrontId: optionalBrandedId("cf_"),
     structureEntityId: optionalBrandedId("ste_"),
