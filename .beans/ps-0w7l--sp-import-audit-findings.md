@@ -1,10 +1,11 @@
 ---
 # ps-0w7l
 title: SP Import Audit Findings
-status: todo
+status: completed
 type: epic
+priority: normal
 created_at: 2026-04-10T21:05:12Z
-updated_at: 2026-04-10T21:05:12Z
+updated_at: 2026-04-12T10:09:41Z
 parent: ps-h2gl
 ---
 

@@ -1,11 +1,11 @@
 ---
 # ps-nrg4
 title: Simply Plural import
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-31T23:13:07Z
-updated_at: 2026-04-08T22:12:46Z
+updated_at: 2026-04-12T10:09:41Z
 parent: ps-h2gl
 ---
 
