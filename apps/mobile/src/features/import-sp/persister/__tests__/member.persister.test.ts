@@ -19,29 +19,37 @@ beforeAll(async () => {
 const AVATAR_BYTES = new Uint8Array([1, 2, 3, 4]);
 
 const MEMBER_NO_AVATAR = {
-  member: {
+  encrypted: {
     name: "Aurora",
+    pronouns: [],
     description: null,
-    pronouns: "they/them",
+    avatarSource: null,
     colors: ["#aabbcc"],
-    avatarUrl: null,
-    archived: false,
+    saturationLevel: null,
+    tags: [],
+    suppressFriendFrontNotification: null,
+    boardMessageNotificationOnFront: null,
   },
+  archived: false,
   fieldValues: [],
-  bucketSourceIds: [],
+  bucketIds: [],
 };
 
 const MEMBER_WITH_AVATAR = {
-  member: {
+  encrypted: {
     name: "Bellamy",
+    pronouns: [],
     description: "the dreamer",
-    pronouns: null,
+    avatarSource: "https://example.com/avatar.png",
     colors: [],
-    avatarUrl: "https://example.com/avatar.png",
-    archived: false,
+    saturationLevel: null,
+    tags: [],
+    suppressFriendFrontNotification: null,
+    boardMessageNotificationOnFront: null,
   },
+  archived: false,
   fieldValues: [],
-  bucketSourceIds: [],
+  bucketIds: [],
 };
 
 function makeAvatarFetcher(

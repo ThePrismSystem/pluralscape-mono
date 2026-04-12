@@ -2,7 +2,7 @@
  * Chat message persister.
  *
  * SP `chatMessages` → Pluralscape chat messages. The mapper has
- * resolved channel, writer, and replyTo FKs, so the payload is ready
+ * resolved channel, sender, and replyTo FKs, so the payload is ready
  * to encrypt and push through `message.create` / `message.update`.
  */
 
@@ -16,38 +16,33 @@ import type {
 } from "./persister.types.js";
 
 export interface ChatMessagePayload {
+  readonly encrypted: {
+    readonly content: string;
+    readonly senderId: string | null;
+    readonly attachments: readonly unknown[];
+    readonly mentions: readonly string[];
+  };
   readonly channelId: string;
-  readonly writerMemberId: string;
-  readonly body: string;
-  readonly createdAt: number;
-  readonly replyToChatMessageId: string | null;
+  readonly timestamp: number;
+  readonly replyToId?: string | null;
 }
 
 function isChatMessagePayload(value: unknown): value is ChatMessagePayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return (
-    typeof record["channelId"] === "string" &&
-    typeof record["writerMemberId"] === "string" &&
-    typeof record["body"] === "string"
-  );
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  const encrypted = record["encrypted"] as Record<string, unknown>;
+  return typeof encrypted["content"] === "string" && typeof record["channelId"] === "string";
 }
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isChatMessagePayload, "chat-message");
-  const encrypted = encryptForCreate(
-    {
-      body: narrowed.body,
-      writerMemberId: narrowed.writerMemberId,
-      createdAt: narrowed.createdAt,
-      replyToChatMessageId: narrowed.replyToChatMessageId,
-    },
-    ctx.masterKey,
-  );
+  const encrypted = encryptForCreate(narrowed.encrypted, ctx.masterKey);
   const result = await ctx.api.message.create(ctx.systemId, {
     encryptedData: encrypted.encryptedData,
     channelId: narrowed.channelId,
-    timestamp: narrowed.createdAt,
+    timestamp: narrowed.timestamp,
+    replyToId: narrowed.replyToId ?? null,
   });
   return { pluralscapeEntityId: result.id };
 }
@@ -58,18 +53,10 @@ async function update(
   existingId: string,
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isChatMessagePayload, "chat-message");
-  const encrypted = encryptForUpdate(
-    {
-      body: narrowed.body,
-      writerMemberId: narrowed.writerMemberId,
-      createdAt: narrowed.createdAt,
-      replyToChatMessageId: narrowed.replyToChatMessageId,
-    },
-    1,
-    ctx.masterKey,
-  );
+  const encrypted = encryptForUpdate(narrowed.encrypted, 1, ctx.masterKey);
   const result = await ctx.api.message.update(ctx.systemId, existingId, {
-    ...encrypted,
+    encryptedData: encrypted.encryptedData,
+    version: encrypted.version,
     channelId: narrowed.channelId,
   });
   return { pluralscapeEntityId: result.id };

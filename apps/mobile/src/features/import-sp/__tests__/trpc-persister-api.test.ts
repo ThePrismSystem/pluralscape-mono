@@ -409,6 +409,8 @@ describe("field", () => {
     const result = await api.field.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_field",
       fieldType: "text",
+      required: false,
+      sortOrder: 0,
     });
 
     expect(result).toEqual({ id: "fld_1", version: 1 });
@@ -416,6 +418,8 @@ describe("field", () => {
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_field",
       fieldType: "text",
+      required: false,
+      sortOrder: 0,
     });
   });
 
@@ -608,6 +612,9 @@ describe("frontingSession", () => {
     const result = await api.frontingSession.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_session",
       startTime: 1_700_000_000,
+      memberId: null,
+      customFrontId: null,
+      structureEntityId: null,
     });
 
     expect(result).toEqual({ id: "fs_1", version: 1 });
@@ -615,6 +622,9 @@ describe("frontingSession", () => {
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_session",
       startTime: 1_700_000_000,
+      memberId: null,
+      customFrontId: null,
+      structureEntityId: null,
     });
   });
 
@@ -649,6 +659,9 @@ describe("frontingComment", () => {
     const result = await api.frontingComment.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_comment",
       sessionId: "fs_1",
+      memberId: null,
+      customFrontId: null,
+      structureEntityId: null,
     });
 
     expect(result).toEqual({ id: "fcom_1", version: 1 });
@@ -689,12 +702,16 @@ describe("note", () => {
     client.note.create.mutate.mockResolvedValue({ id: "note_1", version: 1 });
     const api = createTRPCPersisterApi(client);
 
-    const result = await api.note.create(TEST_SYSTEM_ID, { encryptedData: "enc_note" });
+    const result = await api.note.create(TEST_SYSTEM_ID, {
+      encryptedData: "enc_note",
+      author: null,
+    });
 
     expect(result).toEqual({ id: "note_1", version: 1 });
     expect(client.note.create.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_note",
+      author: null,
     });
   });
 
@@ -879,6 +896,7 @@ describe("message", () => {
       encryptedData: "enc_message",
       channelId: "ch_1",
       timestamp: 1_700_000_000,
+      replyToId: null,
     });
 
     expect(result).toEqual({ id: "msg_1", version: 1 });
@@ -887,6 +905,7 @@ describe("message", () => {
       channelId: "ch_1",
       encryptedData: "enc_message",
       timestamp: 1_700_000_000,
+      replyToId: null,
     });
   });
 
@@ -923,6 +942,7 @@ describe("boardMessage", () => {
     const result = await api.boardMessage.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_bm",
       sortOrder: 0,
+      pinned: false,
     });
 
     expect(result).toEqual({ id: "bm_1", version: 1 });
@@ -930,6 +950,7 @@ describe("boardMessage", () => {
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_bm",
       sortOrder: 0,
+      pinned: false,
     });
   });
 

@@ -14,9 +14,15 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  name: "Alpha",
-  description: "first group",
-  color: "#ff00ff",
+  encrypted: {
+    name: "Alpha",
+    description: "first group",
+    imageSource: null,
+    color: "#ff00ff",
+    emoji: null,
+  },
+  parentGroupId: null,
+  sortOrder: 0,
   memberIds: ["mem_1", "mem_2", "mem_3"],
 };
 
@@ -48,7 +54,7 @@ describe("groupPersister", () => {
 
   it("rejects payloads without memberIds", async () => {
     const ctx = makeTestPersisterContext();
-    await expect(groupPersister.create(ctx, { name: "no members" })).rejects.toThrow(
+    await expect(groupPersister.create(ctx, { encrypted: { name: "no members" } })).rejects.toThrow(
       /invalid payload for group/,
     );
   });

@@ -16,23 +16,35 @@ import type {
 } from "./persister.types.js";
 
 export interface FrontingCommentPayload {
+  readonly encrypted: {
+    readonly content: string;
+  };
   readonly frontingSessionId: string;
-  readonly body: string;
   readonly createdAt: number;
+  readonly memberId?: string | null;
+  readonly customFrontId?: string | null;
+  readonly structureEntityId?: string | null;
 }
 
 function isFrontingCommentPayload(value: unknown): value is FrontingCommentPayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record["frontingSessionId"] === "string" && typeof record["body"] === "string";
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  const encrypted = record["encrypted"] as Record<string, unknown>;
+  return (
+    typeof encrypted["content"] === "string" && typeof record["frontingSessionId"] === "string"
+  );
 }
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isFrontingCommentPayload, "fronting-comment");
-  const encrypted = encryptForCreate(narrowed, ctx.masterKey);
+  const encrypted = encryptForCreate(narrowed.encrypted, ctx.masterKey);
   const result = await ctx.api.frontingComment.create(ctx.systemId, {
-    ...encrypted,
+    encryptedData: encrypted.encryptedData,
     sessionId: narrowed.frontingSessionId,
+    memberId: narrowed.memberId ?? null,
+    customFrontId: narrowed.customFrontId ?? null,
+    structureEntityId: narrowed.structureEntityId ?? null,
   });
   return { pluralscapeEntityId: result.id };
 }
@@ -43,9 +55,10 @@ async function update(
   existingId: string,
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isFrontingCommentPayload, "fronting-comment");
-  const encrypted = encryptForUpdate(narrowed, 1, ctx.masterKey);
+  const encrypted = encryptForUpdate(narrowed.encrypted, 1, ctx.masterKey);
   const result = await ctx.api.frontingComment.update(ctx.systemId, existingId, {
-    ...encrypted,
+    encryptedData: encrypted.encryptedData,
+    version: encrypted.version,
     sessionId: narrowed.frontingSessionId,
   });
   return { pluralscapeEntityId: result.id };

@@ -14,19 +14,21 @@ beforeAll(async () => {
 });
 
 const CHANNEL_WITH_PARENT = {
-  name: "memes",
-  description: null,
+  encrypted: {
+    name: "memes",
+  },
   type: "channel" as const,
-  parentChannelId: "ch_parent",
-  order: 1,
+  parentId: "ch_parent",
+  sortOrder: 1,
 };
 
 const ORPHAN_CHANNEL = {
-  name: "orphan",
-  description: null,
+  encrypted: {
+    name: "orphan",
+  },
   type: "channel" as const,
-  parentChannelId: null,
-  order: 0,
+  parentId: null,
+  sortOrder: 0,
 };
 
 describe("channelPersister", () => {

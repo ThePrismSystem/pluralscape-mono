@@ -14,11 +14,12 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  name: "General",
-  description: null,
+  encrypted: {
+    name: "General",
+  },
   type: "category" as const,
-  parentChannelId: null,
-  order: 0,
+  parentId: undefined,
+  sortOrder: 0,
 };
 
 describe("channelCategoryPersister", () => {
@@ -34,11 +35,11 @@ describe("channelCategoryPersister", () => {
     );
   });
 
-  it("rejects a payload with a non-null parentChannelId", async () => {
+  it("rejects a payload missing encrypted name", async () => {
     const ctx = makeTestPersisterContext();
     await expect(
-      channelCategoryPersister.create(ctx, { ...VALID_PAYLOAD, parentChannelId: "ch_other" }),
-    ).rejects.toThrow(/non-null parentChannelId/);
+      channelCategoryPersister.create(ctx, { type: "category", sortOrder: 0 }),
+    ).rejects.toThrow(/invalid payload for channel-category/);
   });
 
   it("update calls channel.update with the existing ID", async () => {

@@ -58,7 +58,13 @@ export interface TRPCClientSubset {
   readonly field: {
     readonly definition: {
       readonly create: Mutation<
-        { systemId: SystemId; encryptedData: string; fieldType: FieldType },
+        {
+          systemId: SystemId;
+          encryptedData: string;
+          fieldType: FieldType;
+          required: boolean;
+          sortOrder: number;
+        },
         VersionedEntityRef
       >;
       readonly update: Mutation<
@@ -103,9 +109,9 @@ export interface TRPCClientSubset {
         systemId: SystemId;
         encryptedData: string;
         startTime: number;
-        memberId?: string;
-        customFrontId?: string;
-        structureEntityId?: string;
+        memberId: string | null;
+        customFrontId: string | null;
+        structureEntityId: string | null;
       },
       VersionedEntityRef
     >;
@@ -138,7 +144,14 @@ export interface TRPCClientSubset {
     >;
   };
   readonly note: {
-    readonly create: Mutation<{ systemId: SystemId; encryptedData: string }, VersionedEntityRef>;
+    readonly create: Mutation<
+      {
+        systemId: SystemId;
+        encryptedData: string;
+        author: { readonly entityType: "member"; readonly entityId: string } | null;
+      },
+      VersionedEntityRef
+    >;
     readonly update: Mutation<
       { systemId: SystemId; noteId: string; encryptedData: string; version: number },
       VersionedEntityRef
@@ -191,6 +204,7 @@ export interface TRPCClientSubset {
         channelId: string;
         encryptedData: string;
         timestamp: number;
+        replyToId: string | null;
       },
       VersionedEntityRef
     >;
@@ -207,7 +221,7 @@ export interface TRPCClientSubset {
   };
   readonly boardMessage: {
     readonly create: Mutation<
-      { systemId: SystemId; encryptedData: string; sortOrder: number },
+      { systemId: SystemId; encryptedData: string; sortOrder: number; pinned: boolean },
       VersionedEntityRef
     >;
     readonly update: Mutation<
@@ -383,12 +397,18 @@ export function createTRPCPersisterApi(
     field: {
       create: async (
         sysId: SystemId,
-        payload: EncryptedInput & { readonly fieldType: FieldType },
+        payload: EncryptedInput & {
+          readonly fieldType: FieldType;
+          readonly required: boolean;
+          readonly sortOrder: number;
+        },
       ) => {
         return client.field.definition.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
           fieldType: payload.fieldType,
+          required: payload.required,
+          sortOrder: payload.sortOrder,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -463,11 +483,22 @@ export function createTRPCPersisterApi(
     },
 
     frontingSession: {
-      create: async (sysId: SystemId, payload: EncryptedInput & { readonly startTime: number }) => {
+      create: async (
+        sysId: SystemId,
+        payload: EncryptedInput & {
+          readonly startTime: number;
+          readonly memberId: string | null;
+          readonly customFrontId: string | null;
+          readonly structureEntityId: string | null;
+        },
+      ) => {
         return client.frontingSession.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
           startTime: payload.startTime,
+          memberId: payload.memberId,
+          customFrontId: payload.customFrontId,
+          structureEntityId: payload.structureEntityId,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -485,16 +516,20 @@ export function createTRPCPersisterApi(
         sysId: SystemId,
         payload: EncryptedInput & {
           readonly sessionId: string;
-          readonly memberId?: string;
-          readonly customFrontId?: string;
+          readonly memberId: string | null;
+          readonly customFrontId: string | null;
+          readonly structureEntityId: string | null;
         },
       ) => {
         return client.frontingComment.create.mutate({
           systemId: sysId,
           sessionId: payload.sessionId,
           encryptedData: payload.encryptedData,
-          ...(payload.memberId !== undefined ? { memberId: payload.memberId } : {}),
-          ...(payload.customFrontId !== undefined ? { customFrontId: payload.customFrontId } : {}),
+          ...(payload.memberId !== null ? { memberId: payload.memberId } : {}),
+          ...(payload.customFrontId !== null ? { customFrontId: payload.customFrontId } : {}),
+          ...(payload.structureEntityId !== null
+            ? { structureEntityId: payload.structureEntityId }
+            : {}),
         });
       },
       update: async (
@@ -513,10 +548,16 @@ export function createTRPCPersisterApi(
     },
 
     note: {
-      create: async (sysId: SystemId, payload: EncryptedInput) => {
+      create: async (
+        sysId: SystemId,
+        payload: EncryptedInput & {
+          readonly author: { readonly entityType: "member"; readonly entityId: string } | null;
+        },
+      ) => {
         return client.note.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
+          author: payload.author,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -605,13 +646,18 @@ export function createTRPCPersisterApi(
     message: {
       create: async (
         sysId: SystemId,
-        input: EncryptedInput & { readonly channelId: string; readonly timestamp: number },
+        input: EncryptedInput & {
+          readonly channelId: string;
+          readonly timestamp: number;
+          readonly replyToId: string | null;
+        },
       ) => {
         return client.message.create.mutate({
           systemId: sysId,
           channelId: input.channelId,
           encryptedData: input.encryptedData,
           timestamp: input.timestamp,
+          replyToId: input.replyToId,
         });
       },
       update: async (
@@ -630,11 +676,15 @@ export function createTRPCPersisterApi(
     },
 
     boardMessage: {
-      create: async (sysId: SystemId, payload: EncryptedInput & { readonly sortOrder: number }) => {
+      create: async (
+        sysId: SystemId,
+        payload: EncryptedInput & { readonly sortOrder: number; readonly pinned: boolean },
+      ) => {
         return client.boardMessage.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
           sortOrder: payload.sortOrder,
+          pinned: payload.pinned,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {

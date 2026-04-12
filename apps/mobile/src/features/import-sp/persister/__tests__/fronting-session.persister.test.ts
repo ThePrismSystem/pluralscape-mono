@@ -14,11 +14,17 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  memberId: "mem_1",
-  customFrontId: null,
+  encrypted: {
+    comment: null,
+    positionality: null,
+    outtrigger: null,
+    outtriggerSentiment: null,
+  },
   startTime: 1_700_000_000_000,
   endTime: null,
-  comment: null,
+  memberId: "mem_1",
+  customFrontId: null,
+  structureEntityId: null,
 };
 
 describe("frontingSessionPersister", () => {
@@ -46,8 +52,15 @@ describe("frontingSessionPersister", () => {
 
   it("rejects payloads without a numeric startTime", async () => {
     const ctx = makeTestPersisterContext();
-    await expect(frontingSessionPersister.create(ctx, { memberId: "mem_1" })).rejects.toThrow(
-      /invalid payload for fronting-session/,
-    );
+    await expect(
+      frontingSessionPersister.create(ctx, {
+        encrypted: {
+          comment: null,
+          positionality: null,
+          outtrigger: null,
+          outtriggerSentiment: null,
+        },
+      }),
+    ).rejects.toThrow(/invalid payload for fronting-session/);
   });
 });

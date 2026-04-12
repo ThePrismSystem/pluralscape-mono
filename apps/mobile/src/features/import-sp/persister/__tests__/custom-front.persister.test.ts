@@ -14,10 +14,12 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  name: "Dissociated",
-  description: "blurry",
-  color: "#ff00ff",
-  avatarUrl: null,
+  encrypted: {
+    name: "Dissociated",
+    description: "blurry",
+    color: "#ff00ff",
+    emoji: null,
+  },
 };
 
 describe("customFrontPersister", () => {
@@ -44,8 +46,8 @@ describe("customFrontPersister", () => {
 
   it("rejects payloads without a name", async () => {
     const ctx = makeTestPersisterContext();
-    await expect(customFrontPersister.create(ctx, { color: "#000" })).rejects.toThrow(
-      /invalid payload for custom-front/,
-    );
+    await expect(
+      customFrontPersister.create(ctx, { encrypted: { color: "#000" } }),
+    ).rejects.toThrow(/invalid payload for custom-front/);
   });
 });

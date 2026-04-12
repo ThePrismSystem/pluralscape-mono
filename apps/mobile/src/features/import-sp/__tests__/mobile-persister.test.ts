@@ -23,10 +23,10 @@ beforeAll(async () => {
 const TEST_MASTER_KEY = makeTestMasterKey();
 
 const PRIVACY_BUCKET_PAYLOAD = {
-  name: "Trusted",
-  description: "visible to trusted friends",
-  color: null,
-  icon: null,
+  encrypted: {
+    name: "Trusted",
+    description: "visible to trusted friends",
+  },
 };
 
 // ── Construction + skeleton behaviours ──────────────────────────────

@@ -1,8 +1,8 @@
 /**
  * Member persister (with inline avatar upload and field-value fan-out).
  *
- * Receives the `MappedMemberOutput` the engine hands it — `{ member,
- * fieldValues, bucketSourceIds }`. The helper:
+ * Receives the `MappedMemberOutput` the engine hands it — `{ encrypted,
+ * archived, fieldValues, bucketIds }`. The helper:
  *
  * 1. Resolves the avatar URL if present and the mode is not "skip". The
  *    caller's `AvatarFetcher` returns raw bytes; those are uploaded via
@@ -17,7 +17,7 @@
  *    field source ID before calling the API and records an error (but
  *    does not abort the member) if it cannot be resolved.
  *
- * Bucket assignments (the `bucketSourceIds` array) are deferred to a
+ * Bucket assignments (the `bucketIds` array) are deferred to a
  * future phase: the mobile persister does not yet expose a
  * `member.assignBucket` procedure, and Phase C scope is already dense.
  */
@@ -33,13 +33,16 @@ import type {
 
 // ── Narrowed payload shape ───────────────────────────────────────────
 
-export interface MemberCorePayload {
+export interface MemberEncryptedFields {
   readonly name: string;
+  readonly pronouns: string[];
   readonly description: string | null;
-  readonly pronouns: string | null;
+  readonly avatarSource: string | null;
   readonly colors: readonly string[];
-  readonly avatarUrl: string | null;
-  readonly archived: boolean;
+  readonly saturationLevel: number | null;
+  readonly tags: readonly string[];
+  readonly suppressFriendFrontNotification: boolean | null;
+  readonly boardMessageNotificationOnFront: boolean | null;
 }
 
 export interface ExtractedFieldValuePayload {
@@ -48,26 +51,22 @@ export interface ExtractedFieldValuePayload {
   readonly value: string;
 }
 
-export interface MemberOutputPayload {
-  readonly member: MemberCorePayload;
+export interface MemberPayload {
+  readonly encrypted: MemberEncryptedFields;
+  readonly archived: boolean;
   readonly fieldValues: readonly ExtractedFieldValuePayload[];
-  readonly bucketSourceIds: readonly string[];
+  readonly bucketIds: readonly string[];
 }
 
-function isMemberCorePayload(value: unknown): value is MemberCorePayload {
+function isMemberPayload(value: unknown): value is MemberPayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record["name"] === "string" && Array.isArray(record["colors"]);
-}
-
-function isMemberOutputPayload(value: unknown): value is MemberOutputPayload {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  const encrypted = record["encrypted"] as Record<string, unknown>;
   return (
-    "member" in record &&
-    isMemberCorePayload(record["member"]) &&
+    typeof encrypted["name"] === "string" &&
     Array.isArray(record["fieldValues"]) &&
-    Array.isArray(record["bucketSourceIds"])
+    Array.isArray(record["bucketIds"])
   );
 }
 
@@ -147,20 +146,20 @@ async function fanOutFieldValues(
 // ── Core entity-persister shape ──────────────────────────────────────
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
-  const output = assertPayloadShape(payload, isMemberOutputPayload, "member");
+  const output = assertPayloadShape(payload, isMemberPayload, "member");
 
   // Source-ID plumbed in for error messages even though the engine
   // already passes the same ID through via `sourceEntityId`. The
   // persister interface does not surface that here, so we fall back to
   // the member name.
-  const sourceId = output.member.name;
+  const sourceId = output.encrypted.name;
 
   let avatarBlobId: string | null = null;
-  if (output.member.avatarUrl !== null) {
-    avatarBlobId = await tryUploadAvatar(ctx, sourceId, output.member.avatarUrl);
+  if (output.encrypted.avatarSource !== null) {
+    avatarBlobId = await tryUploadAvatar(ctx, sourceId, output.encrypted.avatarSource);
   }
 
-  const encrypted = encryptForCreate(output.member, ctx.masterKey);
+  const encrypted = encryptForCreate(output.encrypted, ctx.masterKey);
   const createInput =
     avatarBlobId === null
       ? { encryptedData: encrypted.encryptedData }
@@ -177,16 +176,16 @@ async function update(
   payload: unknown,
   existingId: string,
 ): Promise<PersisterUpdateResult> {
-  const output = assertPayloadShape(payload, isMemberOutputPayload, "member");
+  const output = assertPayloadShape(payload, isMemberPayload, "member");
 
-  const sourceId = output.member.name;
+  const sourceId = output.encrypted.name;
 
   let avatarBlobId: string | null = null;
-  if (output.member.avatarUrl !== null) {
-    avatarBlobId = await tryUploadAvatar(ctx, sourceId, output.member.avatarUrl);
+  if (output.encrypted.avatarSource !== null) {
+    avatarBlobId = await tryUploadAvatar(ctx, sourceId, output.encrypted.avatarSource);
   }
 
-  const encrypted = encryptForUpdate(output.member, 1, ctx.masterKey);
+  const encrypted = encryptForUpdate(output.encrypted, 1, ctx.masterKey);
   const updateInput =
     avatarBlobId === null
       ? { encryptedData: encrypted.encryptedData, version: encrypted.version }

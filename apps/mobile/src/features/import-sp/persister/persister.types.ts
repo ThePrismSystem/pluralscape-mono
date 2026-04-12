@@ -111,7 +111,11 @@ export type PersisterProcPollCastVote = (
 ) => Promise<{ readonly id: string }>;
 export type PersisterProcFieldDefinitionCreate = (
   systemId: SystemId,
-  payload: EncryptedInput & { readonly fieldType: FieldType },
+  payload: EncryptedInput & {
+    readonly fieldType: FieldType;
+    readonly required: boolean;
+    readonly sortOrder: number;
+  },
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcPollCreate = (
   systemId: SystemId,
@@ -125,19 +129,34 @@ export type PersisterProcPollCreate = (
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcFrontingSessionCreate = (
   systemId: SystemId,
-  payload: EncryptedInput & { readonly startTime: number },
+  payload: EncryptedInput & {
+    readonly startTime: number;
+    readonly memberId: string | null;
+    readonly customFrontId: string | null;
+    readonly structureEntityId: string | null;
+  },
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcFrontingCommentCreate = (
   systemId: SystemId,
   payload: EncryptedInput & {
     readonly sessionId: string;
-    readonly memberId?: string;
-    readonly customFrontId?: string;
+    readonly memberId: string | null;
+    readonly customFrontId: string | null;
+    readonly structureEntityId: string | null;
+  },
+) => Promise<VersionedEntityRef>;
+export type PersisterProcNoteCreate = (
+  systemId: SystemId,
+  payload: EncryptedInput & {
+    readonly author: { readonly entityType: "member"; readonly entityId: string } | null;
   },
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcBoardMessageCreate = (
   systemId: SystemId,
-  payload: EncryptedInput & { readonly sortOrder: number },
+  payload: EncryptedInput & {
+    readonly sortOrder: number;
+    readonly pinned: boolean;
+  },
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcChannelCreate = (
   systemId: SystemId,
@@ -152,6 +171,7 @@ export type PersisterProcMessageCreate = (
   input: EncryptedInput & {
     readonly channelId: string;
     readonly timestamp: number;
+    readonly replyToId: string | null;
   },
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcGroupCreate = (
@@ -242,7 +262,7 @@ export interface PersisterApi {
     readonly update: PersisterProcFrontingCommentUpdate;
   };
   readonly note: {
-    readonly create: PersisterProcCreate;
+    readonly create: PersisterProcNoteCreate;
     readonly update: PersisterProcUpdateById;
   };
   readonly poll: {

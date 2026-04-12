@@ -14,9 +14,14 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
+  encrypted: {
+    content: "hello",
+  },
   frontingSessionId: "fs_1",
-  body: "hello",
   createdAt: 1_700_000_000_000,
+  memberId: null,
+  customFrontId: null,
+  structureEntityId: null,
 };
 
 describe("frontingCommentPersister", () => {
@@ -42,8 +47,8 @@ describe("frontingCommentPersister", () => {
 
   it("rejects malformed payloads", async () => {
     const ctx = makeTestPersisterContext();
-    await expect(frontingCommentPersister.create(ctx, { body: 42 })).rejects.toThrow(
-      /invalid payload for fronting-comment/,
-    );
+    await expect(
+      frontingCommentPersister.create(ctx, { encrypted: { content: 42 } }),
+    ).rejects.toThrow(/invalid payload for fronting-comment/);
   });
 });

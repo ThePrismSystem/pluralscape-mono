@@ -14,9 +14,12 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  title: "First entry",
+  encrypted: {
+    title: "First entry",
+    content: "hello",
+    backgroundColor: null,
+  },
   author: { entityType: "member" as const, entityId: "mem_1" },
-  blocks: [{ type: "paragraph" as const, content: "hello", children: [] }],
   createdAt: 1_700_000_000_000,
 };
 
@@ -40,10 +43,10 @@ describe("journalEntryPersister", () => {
     expect(call?.[1]).toBe("note_existing");
   });
 
-  it("rejects payloads without blocks", async () => {
+  it("rejects payloads without content", async () => {
     const ctx = makeTestPersisterContext();
-    await expect(journalEntryPersister.create(ctx, { title: "no blocks" })).rejects.toThrow(
-      /invalid payload for journal-entry/,
-    );
+    await expect(
+      journalEntryPersister.create(ctx, { encrypted: { title: "no content" } }),
+    ).rejects.toThrow(/invalid payload for journal-entry/);
   });
 });
