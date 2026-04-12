@@ -10,12 +10,12 @@
  *
  * Fails when the author FK can't be resolved.
  */
+import { parseHexColor } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPNote } from "../sources/sp-types.js";
 import type { NoteEncryptedFields } from "@pluralscape/data";
-import type { HexColor } from "@pluralscape/types";
 import type { CreateNoteBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -43,10 +43,19 @@ export function mapJournalEntry(sp: SPNote, ctx: MappingContext): MapperResult<M
     });
   }
 
+  const backgroundColor = parseHexColor(sp.color);
+  if (sp.color && backgroundColor === null) {
+    ctx.addWarningOnce("invalid-hex-color:journal-entry", {
+      entityType: "journal-entry",
+      entityId: sp._id,
+      message: `Invalid color "${sp.color}" dropped (not valid hex)`,
+    });
+  }
+
   const encrypted: NoteEncryptedFields = {
     title: sp.title,
     content: sp.note,
-    backgroundColor: (sp.color ?? null) as HexColor | null,
+    backgroundColor,
   };
 
   const payload: MappedJournalEntry = {

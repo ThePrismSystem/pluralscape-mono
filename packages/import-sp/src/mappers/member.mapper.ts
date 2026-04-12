@@ -23,13 +23,12 @@
  * warning so users can audit what was lost during import.
  */
 import { extractFieldValues, type ExtractedFieldValue } from "./field-value.mapper.js";
-import { requireName, warnDropped } from "./helpers.js";
+import { parseHexColor, requireName, warnDropped } from "./helpers.js";
 import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPMember } from "../sources/sp-types.js";
 import type { MemberEncryptedFields } from "@pluralscape/data";
-import type { HexColor } from "@pluralscape/types";
 
 export interface MappedMember {
   readonly encrypted: MemberEncryptedFields;
@@ -123,12 +122,21 @@ export function mapMember(sp: SPMember, ctx: MappingContext): MapperResult<Mappe
     });
   }
 
+  const parsedColor = parseHexColor(sp.color);
+  if (sp.color && parsedColor === null) {
+    ctx.addWarningOnce("invalid-hex-color:member", {
+      entityType: "member",
+      entityId: sp._id,
+      message: `Invalid color "${sp.color}" dropped (not valid hex)`,
+    });
+  }
+
   const encrypted: MemberEncryptedFields = {
     name: sp.name,
     description: sp.desc ?? null,
     pronouns: sp.pronouns ? [sp.pronouns] : [],
     avatarSource: sp.avatarUrl ? { kind: "external" as const, url: sp.avatarUrl } : null,
-    colors: sp.color ? [sp.color as HexColor] : [],
+    colors: parsedColor ? [parsedColor] : [],
     saturationLevel: { kind: "known" as const, level: "highly-elaborated" as const },
     tags: [],
     suppressFriendFrontNotification: false,

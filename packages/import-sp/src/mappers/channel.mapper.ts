@@ -24,13 +24,14 @@ export type MappedChannel = Omit<z.infer<typeof CreateChannelBodySchema>, "encry
 };
 
 /**
- * Channel-category payload. Structurally identical to {@link MappedChannel}
- * today (both are persisted into the flattened `channels` collection with a
- * `type` discriminant), but kept as a distinct named type so the
- * {@link PersistableEntity} discriminated union can carry separate
- * `"channel-category"` and `"channel"` variants.
+ * Channel-category payload. Narrows {@link MappedChannel} so the compiler
+ * enforces `type: "category"` and `parentId: undefined` — categories are
+ * always top-level containers that cannot nest under another category.
  */
-export type MappedChannelCategory = MappedChannel;
+export type MappedChannelCategory = Omit<MappedChannel, "type" | "parentId"> & {
+  readonly type: "category";
+  readonly parentId: undefined;
+};
 
 export function mapChannelCategory(
   sp: SPChannelCategory,

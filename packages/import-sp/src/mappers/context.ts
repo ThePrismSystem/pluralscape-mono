@@ -47,6 +47,10 @@ export interface MappingContext {
    * per-occurrence anomalies that should be surfaced individually.
    */
   addWarningOnce(dedupeKey: string, warning: MappingWarning): void;
+  /** Store arbitrary metadata alongside a translation entry. */
+  storeMetadata(entityType: ImportEntityType, sourceId: string, key: string, value: unknown): void;
+  /** Retrieve metadata previously stored via storeMetadata. Returns undefined if not found. */
+  getMetadata(entityType: ImportEntityType, sourceId: string, key: string): unknown;
 }
 
 /**
@@ -76,6 +80,7 @@ const WARNING_BUFFER_RESERVED_SLOT = MAX_WARNING_BUFFER_SIZE - 1;
  */
 export function createMappingContext(opts: { sourceMode: SourceMode }): MappingContext {
   const tables = new Map<ImportEntityType, Map<string, string>>();
+  const metadata = new Map<string, unknown>();
   const warnings: MappingWarning[] = [];
   const seenWarningKinds = new Set<string>();
   let truncatedMarkerEmitted = false;
@@ -133,6 +138,12 @@ export function createMappingContext(opts: { sourceMode: SourceMode }): MappingC
       }
       seenWarningKinds.add(dedupeKey);
       warnings.push(warning);
+    },
+    storeMetadata(entityType, sourceId, key, value) {
+      metadata.set(`${entityType}:${sourceId}:${key}`, value);
+    },
+    getMetadata(entityType, sourceId, key) {
+      return metadata.get(`${entityType}:${sourceId}:${key}`);
     },
   };
 }

@@ -30,6 +30,9 @@ describe("mapFrontingSession", () => {
       expect(result.payload.encrypted.outtrigger).toBeNull();
       expect(result.payload.encrypted.outtriggerSentiment).toBeNull();
     }
+    // Session mapper stores subject metadata for downstream comment mapper
+    expect(ctx.getMetadata("fronting-session", "fh1", "memberId")).toBe("ps_m1");
+    expect(ctx.getMetadata("fronting-session", "fh1", "customFrontId")).toBeUndefined();
   });
 
   it("maps a custom-front fronting session (custom=true)", () => {
@@ -49,6 +52,9 @@ describe("mapFrontingSession", () => {
       expect(result.payload.memberId).toBeUndefined();
       expect(result.payload.customFrontId).toBe("ps_cf1");
     }
+    // Session mapper stores subject metadata for downstream comment mapper
+    expect(ctx.getMetadata("fronting-session", "fh2", "memberId")).toBeUndefined();
+    expect(ctx.getMetadata("fronting-session", "fh2", "customFrontId")).toBe("ps_cf1");
   });
 
   it("sets endTime to null when live is true", () => {

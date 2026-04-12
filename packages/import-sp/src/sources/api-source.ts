@@ -163,17 +163,14 @@ function substituteSystem(path: string, systemId: string): string {
 }
 
 /**
- * List of SP collection names the api source can fetch via a single HTTP
- * request. Collections whose strategy is `unsupported` or `dependent` are
- * omitted so the engine does not count them as source-provided during its
- * dropped-collection check.
+ * SP collection names the api source can fetch (list, single, or dependent).
+ * Only `unsupported` collections are excluded — dependent collections are
+ * reported so the engine does not emit a spurious `source-missing-collection`
+ * warning for collections that ARE fetched via the dependent strategy.
  */
-const LISTABLE_COLLECTIONS: readonly SpCollectionName[] = (
+const FETCHABLE_COLLECTIONS: readonly SpCollectionName[] = (
   Object.keys(ENDPOINT_STRATEGIES) as SpCollectionName[]
-).filter((name) => {
-  const kind = ENDPOINT_STRATEGIES[name].kind;
-  return kind !== "unsupported" && kind !== "dependent";
-});
+).filter((name) => ENDPOINT_STRATEGIES[name].kind !== "unsupported");
 
 /**
  * Create an `ImportDataSource` that streams a Simply Plural account from
@@ -437,8 +434,8 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
       }
     },
     listCollections() {
-      // Only collections with a usable bulk/single endpoint are reported.
-      return Promise.resolve([...LISTABLE_COLLECTIONS]);
+      // Only collections with a usable fetch strategy are reported.
+      return Promise.resolve([...FETCHABLE_COLLECTIONS]);
     },
     async close(): Promise<void> {
       // No held resources — fetch is request-scoped.

@@ -11,7 +11,7 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 import type { MappingContext } from "./context.js";
 import type { SPComment } from "../sources/sp-types.js";
 import type { FrontingCommentEncryptedFields } from "@pluralscape/data";
-import type { CustomFrontId, MemberId, SystemStructureEntityId } from "@pluralscape/types";
+import type { CustomFrontId, MemberId } from "@pluralscape/types";
 import type { CreateFrontingCommentBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -38,6 +38,25 @@ export function mapFrontingComment(
     });
   }
 
+  // SP comments don't carry their own subject — inherit from the parent session.
+  const sessionMemberId = ctx.getMetadata("fronting-session", sp.documentId, "memberId") as
+    | MemberId
+    | undefined;
+  const sessionCustomFrontId = ctx.getMetadata(
+    "fronting-session",
+    sp.documentId,
+    "customFrontId",
+  ) as CustomFrontId | undefined;
+
+  if (sessionMemberId === undefined && sessionCustomFrontId === undefined) {
+    ctx.addWarning({
+      entityType: "fronting-comment",
+      entityId: sp._id,
+      kind: "fk-miss",
+      message: `No subject metadata found for fronting-session ${sp.documentId}; comment will fail validation`,
+    });
+  }
+
   const encrypted: FrontingCommentEncryptedFields = {
     content: sp.text,
   };
@@ -46,9 +65,9 @@ export function mapFrontingComment(
     encrypted,
     frontingSessionId: resolved,
     createdAt: sp.time,
-    memberId: undefined as MemberId | undefined,
-    customFrontId: undefined as CustomFrontId | undefined,
-    structureEntityId: undefined as SystemStructureEntityId | undefined,
+    memberId: sessionMemberId,
+    customFrontId: sessionCustomFrontId,
+    structureEntityId: undefined,
   };
   return mapped(payload);
 }

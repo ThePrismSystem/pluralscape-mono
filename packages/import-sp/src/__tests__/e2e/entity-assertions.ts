@@ -342,6 +342,10 @@ export async function assertBoardMessages(
     const raw = await trpc.boardMessage.get.query({ systemId, boardMessageId });
     const decrypted = decryptBoardMessage(raw, masterKey);
 
-    expect(decrypted.content, `${entry.ref}: content`).toBe(entry.fields["message"]);
+    // The board-message mapper combines title + body into a single content field
+    const title = entry.fields["title"] as string | undefined;
+    const message = entry.fields["message"] as string;
+    const expectedContent = title ? `# ${title}\n\n${message}` : message;
+    expect(decrypted.content, `${entry.ref}: content`).toBe(expectedContent);
   }
 }

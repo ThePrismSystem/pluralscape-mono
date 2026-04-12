@@ -14,12 +14,13 @@
  * can't be resolved become `{memberId: null, isVeto: false}` with a warning —
  * the vote is still preserved, just unattributed.
  */
+import { parseHexColor } from "./helpers.js";
 import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPPoll } from "../sources/sp-types.js";
 import type { PollEncryptedFields } from "@pluralscape/data";
-import type { HexColor, PollOptionId } from "@pluralscape/types";
+import type { PollOptionId } from "@pluralscape/types";
 import type { CreatePollBodySchema } from "@pluralscape/validation";
 import type { z } from "zod/v4";
 
@@ -44,9 +45,24 @@ export function mapPoll(sp: SPPoll, ctx: MappingContext): MapperResult<MappedPol
     id: (o.id ?? `${sp._id}_opt_${String(idx)}`) as PollOptionId,
     label: o.name,
     voteCount: 0,
-    color: (o.color ?? null) as HexColor | null,
+    color: parseHexColor(o.color),
     emoji: null,
   }));
+
+  const hasInvalidOptionColor = (sp.options ?? []).some(
+    (o) =>
+      o.color !== undefined &&
+      o.color !== null &&
+      o.color !== "" &&
+      parseHexColor(o.color) === null,
+  );
+  if (hasInvalidOptionColor) {
+    ctx.addWarningOnce(`invalid-hex-color:poll:${sp._id}`, {
+      entityType: "poll",
+      entityId: sp._id,
+      message: `Poll "${sp._id}" has option(s) with invalid color dropped (not valid hex)`,
+    });
+  }
 
   const votes: MappedPollVote[] = [];
   const missingVoterRefs: string[] = [];
