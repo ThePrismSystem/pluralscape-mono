@@ -6,7 +6,7 @@
  * `MapperResult.failed` with `kind: "fk-miss"` and the full list of missing
  * refs. Empty-named groups are skipped.
  */
-import { requireName } from "./helpers.js";
+import { requireName, summarizeMissingRefs } from "./helpers.js";
 import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
@@ -44,7 +44,7 @@ export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedG
   if (missingMemberRefs.length > 0) {
     return failed({
       kind: "fk-miss",
-      message: `Group "${sp.name}" has unresolved member reference(s): ${missingMemberRefs.join(", ")}`,
+      message: `group ${sp._id} has unresolved member reference(s): ${summarizeMissingRefs(missingMemberRefs)}`,
       missingRefs: missingMemberRefs,
       targetField: "members",
     });

@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { createMappingContext } from "../../mappers/context.js";
 import { mapFieldDefinition } from "../../mappers/field-definition.mapper.js";
 
-import type { SPCustomField } from "../../sources/sp-types.js";
+import type { SPCustomField, SPCustomFieldType } from "../../sources/sp-types.js";
 
 describe("mapFieldDefinition", () => {
-  it("maps a text field with explicit order", () => {
-    const sp: SPCustomField = { _id: "f1", name: "Likes", type: "text", order: 0 };
+  it("maps a text field (SP type=0) with a zero-order index", () => {
+    const sp: SPCustomField = { _id: "f1", name: "Likes", type: 0, order: "0" };
     const result = mapFieldDefinition(sp, createMappingContext({ sourceMode: "fake" }));
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
@@ -22,8 +22,8 @@ describe("mapFieldDefinition", () => {
     const sp: SPCustomField = {
       _id: "f2",
       name: "Bio",
-      type: "text",
-      order: 3,
+      type: 0,
+      order: "a00000",
       supportMarkdown: true,
     };
     const result = mapFieldDefinition(sp, createMappingContext({ sourceMode: "fake" }));
@@ -33,29 +33,86 @@ describe("mapFieldDefinition", () => {
     }
   });
 
-  it("maps number, date, color, and url SP types to their FIELD_TYPES equivalents", () => {
+  it("maps SP numeric type 1 (color) and 2-7 (date variants)", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
-    for (const type of ["number", "date", "color", "url"] as const) {
-      const sp: SPCustomField = { _id: `f_${type}`, name: type, type, order: 0 };
+
+    const cases: readonly { readonly spType: SPCustomFieldType; readonly expected: string }[] = [
+      { spType: 1, expected: "color" },
+      { spType: 2, expected: "date" },
+      { spType: 3, expected: "date" },
+      { spType: 4, expected: "date" },
+      { spType: 5, expected: "date" },
+      { spType: 6, expected: "date" },
+      { spType: 7, expected: "date" },
+    ];
+
+    for (const { spType, expected } of cases) {
+      const sp: SPCustomField = {
+        _id: `f_${String(spType)}`,
+        name: `field-${String(spType)}`,
+        type: spType,
+        order: "0",
+      };
       const result = mapFieldDefinition(sp, ctx);
       expect(result.status).toBe("mapped");
       if (result.status === "mapped") {
-        expect(result.payload.fieldType).toBe(type);
+        expect(result.payload.fieldType).toBe(expected);
       }
     }
     expect(ctx.warnings).toHaveLength(0);
   });
 
-  it("falls back to text for unknown SP types and emits a warning", () => {
-    const sp: SPCustomField = { _id: "f3", name: "X", type: "weirdtype", order: 1 };
+  it("preserves relative ordering of fractional-index strings", () => {
+    // Fractional indices sort lexicographically; the mapper's base-36 prefix
+    // decode must produce integer orders that preserve that relationship
+    // for the common single-character-differs case.
     const ctx = createMappingContext({ sourceMode: "fake" });
+    const low = mapFieldDefinition({ _id: "fa", name: "A", type: 0, order: "a00000" }, ctx);
+    const high = mapFieldDefinition({ _id: "fb", name: "B", type: 0, order: "b00000" }, ctx);
+    if (low.status === "mapped" && high.status === "mapped") {
+      expect(low.payload.order).toBeLessThan(high.payload.order);
+    }
+  });
+
+  it("numeric-string order is decoded base-10, not base-36", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f1", name: "Age", type: 0, order: "42" };
     const result = mapFieldDefinition(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.fieldType).toBe("text");
+      expect(result.payload.order).toBe(42);
     }
-    expect(ctx.warnings).toHaveLength(1);
-    expect(ctx.warnings[0]?.entityType).toBe("field-definition");
-    expect(ctx.warnings[0]?.entityId).toBe("f3");
+  });
+
+  it("fractional-index string is decoded base-36", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f2", name: "Birthday", type: 2, order: "a00000" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.order).toBe(parseInt("a00000", 36));
+    }
+  });
+
+  it("order '0' literal returns 0", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f3", name: "Zero", type: 0, order: "0" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.order).toBe(0);
+    }
+  });
+
+  it("unparseable order emits a warning and returns 0", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const sp: SPCustomField = { _id: "f4", name: "Bad", type: 0, order: "!!!" };
+    const result = mapFieldDefinition(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.order).toBe(0);
+    }
+    const orderWarning = ctx.warnings.find((w) => /order/i.test(w.message) && w.entityId === "f4");
+    expect(orderWarning).toBeDefined();
   });
 });

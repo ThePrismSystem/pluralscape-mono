@@ -34,7 +34,10 @@ function isFrontingSessionPayload(value: unknown): value is FrontingSessionPaylo
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isFrontingSessionPayload, "fronting-session");
   const encrypted = encryptForCreate(narrowed, ctx.masterKey);
-  const result = await ctx.api.frontingSession.create(ctx.systemId, encrypted);
+  const result = await ctx.api.frontingSession.create(ctx.systemId, {
+    encryptedData: encrypted.encryptedData,
+    startTime: narrowed.startTime,
+  });
   return { pluralscapeEntityId: result.id };
 }
 

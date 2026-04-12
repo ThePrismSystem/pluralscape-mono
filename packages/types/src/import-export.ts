@@ -134,7 +134,8 @@ export type ImportFailureKind =
   | "dropped-collection"
   | "warnings-truncated"
   | "schema-mismatch"
-  | "validation-failed";
+  | "validation-failed"
+  | "invalid-source-document";
 
 interface ImportErrorBase {
   readonly entityType: ImportEntityType;

@@ -8,25 +8,23 @@
  *   fire-and-forget promise.
  * - `useImportJob` — reads a single job row by id via
  *   `trpc.importJob.get.useQuery`.
- *
- * Further hooks (`useImportProgress`, `useImportSummary`,
- * `useResumeActiveImport`, `useCancelImport`) are added in subsequent
- * Phase D tasks and live in this file too.
+ * - `useResumeActiveImport` — discovers and resumes an in-flight import
+ *   from the persisted checkpoint.
+ * - `useCancelImport` — aborts a running import and marks the job as
+ *   cancelled.
  *
  * Design notes:
  *
- * - The PersisterApi adapter that bridges the engine's persister boundary
- *   to the real tRPC client is intentionally stubbed with a placeholder
- *   at this stage. Phase D's hook tests mock `runSpImport` so the stubs
- *   are never called, and the real wiring is deferred to a follow-up
- *   that can share code with the Plan 3 E2E tests. The stub still
- *   satisfies `PersisterApi`'s structural shape so the hook typechecks.
+ * - The PersisterApi adapter is backed by `createTRPCPersisterApi`, which
+ *   bridges the engine's persister boundary to the vanilla tRPC client
+ *   obtained from `trpc.useUtils().client`.
  * - `startWithToken` and `startWithFile` return the job id immediately
  *   once `importJob.create` resolves. The runner is kicked off via
  *   `void startImportRun(...)` so the hook does not block the caller.
  */
 
 import { trpc } from "@pluralscape/api-client/trpc";
+import { createTRPCClientProxy } from "@trpc/client";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 
 import { useMasterKey } from "../../providers/crypto-provider.js";
@@ -42,10 +40,11 @@ import {
 import { IMPORT_PROGRESS_POLL_INTERVAL_MS } from "./import-sp-mobile.constants.js";
 import { createMobilePersister } from "./mobile-persister.js";
 import { createSpTokenStorage } from "./sp-token-storage.js";
+import { createTRPCPersisterApi, type TRPCClientSubset } from "./trpc-persister-api.js";
 
 import type { PersisterApi } from "./persister/persister.types.js";
 import type { DataQuery } from "../../hooks/types.js";
-import type { RouterOutput } from "@pluralscape/api-client/trpc";
+import type { AppRouter, RouterOutput } from "@pluralscape/api-client/trpc";
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
 import type { ImportDataSource } from "@pluralscape/import-sp/source-types";
@@ -58,9 +57,38 @@ import type {
   ImportJobStatus,
   SystemId,
 } from "@pluralscape/types";
+import type { TRPCClient, TRPCUntypedClient } from "@trpc/client";
 
 /** Shape returned by `trpc.importJob.get.useQuery` — includes `checkpointState`. */
 type ImportJobRow = RouterOutput["importJob"]["get"];
+
+/**
+ * Runtime assertion that the given object satisfies the `TRPCClientSubset`
+ * structural shape. The React Query `useUtils().client` returns either a
+ * typed proxy (which has all procedure paths as nested objects) or an
+ * untyped client (which does not). This guard validates the proxy form.
+ */
+function assertClientSubset(client: object): asserts client is TRPCClientSubset {
+  if (!("system" in client)) {
+    throw new Error("Expected a tRPC typed proxy client with procedure paths");
+  }
+}
+
+/**
+ * Build a `PersisterApi` from the `useUtils().client` union. The React
+ * Query integration exposes `TRPCClient | TRPCUntypedClient`; we
+ * normalize to a typed proxy so the bridge can call `.system.get.query()`
+ * etc., then feed that proxy through `createTRPCPersisterApi`.
+ */
+function buildPersisterApi(
+  client: TRPCClient<AppRouter> | TRPCUntypedClient<AppRouter>,
+): PersisterApi {
+  // If the client is already a typed proxy, assert and use it directly.
+  // Otherwise wrap the untyped client into a proxy first.
+  const proxy = "system" in client ? client : createTRPCClientProxy<AppRouter>(client);
+  assertClientSubset(proxy);
+  return createTRPCPersisterApi(proxy);
+}
 
 // ── Start-import input shapes ────────────────────────────────────────
 
@@ -92,74 +120,6 @@ export interface UseStartImportReturn {
   readonly isStarting: boolean;
   readonly error: Error | null;
   readonly abortControllerRef: React.RefObject<AbortController | null>;
-}
-
-// ── Placeholder PersisterApi adapter ─────────────────────────────────
-
-/**
- * Produce a `PersisterApi` placeholder that throws on every operation.
- *
- * This exists so `createMobilePersister` can receive a structurally-valid
- * api during hook construction. Production usage will replace this with
- * a real vanilla-tRPC-backed implementation wired to the full Pluralscape
- * schema; until that wiring lands, the hook tests mock `runSpImport`
- * wholesale so the persister's methods are never called. Any code path
- * that reaches these stubs is a bug and deserves to throw loudly.
- */
-function createPlaceholderPersisterApi(): PersisterApi {
-  const notWired = (path: string): (() => never) => {
-    return () => {
-      throw new Error(`PersisterApi.${path} is not wired yet (Phase D placeholder)`);
-    };
-  };
-  return {
-    system: {
-      getCurrentVersion: notWired("system.getCurrentVersion"),
-      update: notWired("system.update"),
-    },
-    systemSettings: {
-      getCurrentVersion: notWired("systemSettings.getCurrentVersion"),
-      update: notWired("systemSettings.update"),
-    },
-    bucket: { create: notWired("bucket.create"), update: notWired("bucket.update") },
-    field: {
-      create: notWired("field.create"),
-      update: notWired("field.update"),
-      setValue: notWired("field.setValue"),
-    },
-    customFront: {
-      create: notWired("customFront.create"),
-      update: notWired("customFront.update"),
-    },
-    member: { create: notWired("member.create"), update: notWired("member.update") },
-    friend: { recordExternalReference: notWired("friend.recordExternalReference") },
-    frontingSession: {
-      create: notWired("frontingSession.create"),
-      update: notWired("frontingSession.update"),
-    },
-    frontingComment: {
-      create: notWired("frontingComment.create"),
-      update: notWired("frontingComment.update"),
-    },
-    note: { create: notWired("note.create"), update: notWired("note.update") },
-    poll: {
-      create: notWired("poll.create"),
-      update: notWired("poll.update"),
-      castVote: notWired("poll.castVote"),
-    },
-    channel: { create: notWired("channel.create"), update: notWired("channel.update") },
-    message: { create: notWired("message.create"), update: notWired("message.update") },
-    boardMessage: {
-      create: notWired("boardMessage.create"),
-      update: notWired("boardMessage.update"),
-    },
-    group: { create: notWired("group.create"), update: notWired("group.update") },
-    blob: { uploadAvatar: notWired("blob.uploadAvatar") },
-    importEntityRef: {
-      lookupBatch: notWired("importEntityRef.lookupBatch"),
-      upsertBatch: notWired("importEntityRef.upsertBatch"),
-    },
-  };
 }
 
 // ── Placeholder source used until Phase E wires real source creation ──
@@ -225,6 +185,7 @@ interface StartOrchestrationArgs {
   readonly importJobId: ImportJobId;
   readonly systemId: SystemId;
   readonly masterKey: KdfMasterKey;
+  readonly api: PersisterApi;
   readonly source: ImportDataSource;
   readonly avatarFetcher: AvatarFetcher;
   readonly options: ImportStartCommonOptions;
@@ -235,12 +196,11 @@ interface StartOrchestrationArgs {
 }
 
 async function startImportRun(args: StartOrchestrationArgs): Promise<void> {
-  const api = createPlaceholderPersisterApi();
   const persister = createMobilePersister({
     systemId: args.systemId,
     source: "simply-plural",
     masterKey: args.masterKey,
-    api,
+    api: args.api,
     avatarFetcher: args.avatarFetcher,
     preloadHints: [],
   });
@@ -271,6 +231,7 @@ async function startImportRun(args: StartOrchestrationArgs): Promise<void> {
 export function useStartImport(): UseStartImportReturn {
   const activeSystemId = useActiveSystemId();
   const masterKey = useMasterKey();
+  const utils = trpc.useUtils();
   const createJobMutation = trpc.importJob.create.useMutation();
   const updateJobMutation = trpc.importJob.update.useMutation();
   const updateJobAsync = updateJobMutation.mutateAsync;
@@ -310,6 +271,7 @@ export function useStartImport(): UseStartImportReturn {
           importJobId: job.id,
           systemId: job.systemId,
           masterKey,
+          api: buildPersisterApi(utils.client),
           source: createPlaceholderSource("api"),
           avatarFetcher: createMobileAvatarFetcher({
             mode: args.options.avatarMode === "api" ? "api" : "skip",
@@ -325,7 +287,7 @@ export function useStartImport(): UseStartImportReturn {
         setIsStarting(false);
       }
     },
-    [activeSystemId, createJobAsync, masterKey, updateJobFn],
+    [activeSystemId, createJobAsync, masterKey, updateJobFn, utils.client],
   );
 
   const startWithFile = useCallback(
@@ -348,6 +310,7 @@ export function useStartImport(): UseStartImportReturn {
           importJobId: job.id,
           systemId: job.systemId,
           masterKey,
+          api: buildPersisterApi(utils.client),
           source: createPlaceholderSource("file"),
           avatarFetcher: createMobileAvatarFetcher({
             mode: args.options.avatarMode === "api" ? "api" : "skip",
@@ -363,7 +326,7 @@ export function useStartImport(): UseStartImportReturn {
         setIsStarting(false);
       }
     },
-    [activeSystemId, createJobAsync, masterKey, updateJobFn],
+    [activeSystemId, createJobAsync, masterKey, updateJobFn, utils.client],
   );
 
   return {
@@ -538,6 +501,7 @@ export interface UseResumeActiveImportReturn {
 export function useResumeActiveImport(): UseResumeActiveImportReturn {
   const activeSystemId = useActiveSystemId();
   const masterKey = useMasterKey();
+  const utils = trpc.useUtils();
   const listQuery = trpc.importJob.list.useQuery({
     systemId: activeSystemId,
     status: "importing",
@@ -569,6 +533,7 @@ export function useResumeActiveImport(): UseResumeActiveImportReturn {
         importJobId: firstJob.id,
         systemId: firstJob.systemId,
         masterKey,
+        api: buildPersisterApi(utils.client),
         source: createPlaceholderSource("api"),
         avatarFetcher: createMobileAvatarFetcher({ mode: "skip" }),
         options: {
@@ -586,7 +551,7 @@ export function useResumeActiveImport(): UseResumeActiveImportReturn {
     } finally {
       setIsResuming(false);
     }
-  }, [firstJob, masterKey, updateJobFn]);
+  }, [firstJob, masterKey, updateJobFn, utils.client]);
 
   return {
     activeJob: firstJob,

@@ -41,11 +41,16 @@ describe("SP source types", () => {
     expectTypeOf<SPFrontHistory["member"]>().toEqualTypeOf<string>();
     expectTypeOf<SPFrontHistory["custom"]>().toEqualTypeOf<boolean>();
     expectTypeOf<SPFrontHistory["customStatus"]>().toEqualTypeOf<string | null | undefined>();
-    expectTypeOf<SPFrontHistory["endTime"]>().toEqualTypeOf<number | null>();
+    // `endTime` is both nullable and optional: live sessions omit the
+    // field entirely, finished sessions carry a number, some exports set
+    // it to null explicitly.
+    expectTypeOf<SPFrontHistory["endTime"]>().toEqualTypeOf<number | null | undefined>();
   });
 
   it("SPPoll has options array and embedded votes", () => {
-    expectTypeOf<SPPoll["options"]>().toEqualTypeOf<readonly SPPollOption[]>();
+    // Real SP yes/no polls omit `options` entirely, so the field is
+    // optional on the type.
+    expectTypeOf<SPPoll["options"]>().toEqualTypeOf<readonly SPPollOption[] | undefined>();
     expectTypeOf<SPPoll["votes"]>().toEqualTypeOf<readonly SPPollVote[] | undefined>();
   });
 
@@ -53,8 +58,10 @@ describe("SP source types", () => {
     expectTypeOf<SPNote["member"]>().toEqualTypeOf<string>();
   });
 
-  it("SPChannel has parentCategory FK", () => {
-    expectTypeOf<SPChannel["parentCategory"]>().toEqualTypeOf<string | null>();
+  it("SPChannel has optional nullable parentCategory FK", () => {
+    // SP channels without a parent category omit the field entirely
+    // rather than setting it to null, so it's both optional and nullable.
+    expectTypeOf<SPChannel["parentCategory"]>().toEqualTypeOf<string | null | undefined>();
   });
 
   it("SPUser has username, color, avatarUrl", () => {

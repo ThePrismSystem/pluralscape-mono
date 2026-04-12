@@ -3,21 +3,34 @@
  *
  * Drives clarinet's SAX-style parser via chunks from a web ReadableStream.
  * The accumulator stack reconstructs nested SP documents and yields each
- * top-level collection element as a SourceDocument once it closes.
+ * top-level collection element as a SourceEvent once it closes.
  *
  * Chunk-boundary safety:
  * - TextDecoder("utf-8", { fatal: true }) with { stream: true } buffers
  *   multibyte UTF-8 sequences split across chunks.
  * - clarinet internally buffers partial tokens across write() calls.
  *
+ * Memory characteristics: despite the SAX parser, the prescan pass
+ * reconstructs the full SP document tree in memory (`documentsByCollection`
+ * holds every collection element as a plain object) before `iterate()` is
+ * first called. Peak resident memory is therefore O(file_size) — roughly
+ * 2-3x the input file size once JS object overhead is included. This is
+ * acceptable for typical personal exports (tens of MB) but unsuitable for
+ * multi-GB inputs. A future optimization is to switch prescan to a bounded
+ * queue and yield documents as they close, so only one collection is ever
+ * materialized at a time; that refactor is gated on the engine consuming
+ * documents faster than the parser can produce them.
+ *
  * Error policy: no recovery. On any parse error FileSourceParseError is thrown
  * with the byte position from the parser.
  */
 import clarinet from "clarinet";
 
+import { toRecord } from "../shared/to-record.js";
+
 import { isSpCollectionName, type SpCollectionName } from "./sp-collections.js";
 
-import type { ImportDataSource, SourceDocument } from "./source.types.js";
+import type { ImportDataSource, SourceEvent } from "./source.types.js";
 
 export class FileSourceParseError extends Error {
   public readonly position: number | null;
@@ -188,8 +201,20 @@ export function createFileImportSource(args: FileImportSourceArgs): ImportDataSo
         );
         return;
       }
-      // Closing a top-level collection array — reset currentTopKey.
+      // Closing a top-level collection array — flush any non-object items
+      // (primitives, nested arrays) that landed in the array frame but were
+      // not stored via oncloseobject, then reset currentTopKey.
       if (stack.length === 1 && currentTopKey !== null) {
+        if (popped.value.length > 0) {
+          let bucket = documentsByCollection.get(currentTopKey);
+          if (bucket === undefined) {
+            bucket = [];
+            documentsByCollection.set(currentTopKey, bucket);
+          }
+          for (const item of popped.value) {
+            bucket.push(item);
+          }
+        }
         currentTopKey = null;
         return;
       }
@@ -242,20 +267,49 @@ export function createFileImportSource(args: FileImportSourceArgs): ImportDataSo
   return {
     mode: "file",
 
+    /**
+     * Returns the raw top-level key list from the parsed document. The
+     * return type is intentionally `string[]` rather than
+     * `SpCollectionName[]` — the whole point of this method is to let the
+     * engine detect collection names the importer does not recognise (so
+     * it can emit `dropped-collection` warnings). Narrowing to
+     * `SpCollectionName[]` would require us to filter unknown names out
+     * here, defeating the purpose.
+     */
     async listCollections() {
       const state = await parseStream();
       return state.topLevelKeys;
     },
 
-    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceDocument> {
+    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceEvent> {
       const state = await parseStream();
       const docs = state.documentsByCollection.get(collection) ?? [];
+      let index = 0;
       for (const doc of docs) {
-        if (typeof doc !== "object" || doc === null) continue;
-        const rec = doc as Record<string, unknown>;
-        const sourceId = typeof rec._id === "string" ? rec._id : null;
-        if (sourceId === null) continue;
-        yield { collection, sourceId, document: rec };
+        if (typeof doc !== "object" || doc === null) {
+          yield {
+            kind: "drop",
+            collection,
+            sourceId: null,
+            reason: `Document at index ${String(index)} in "${collection}" is not an object (received ${typeof doc})`,
+          };
+          index += 1;
+          continue;
+        }
+        const rec = toRecord(doc);
+        const rawId = rec._id;
+        if (typeof rawId !== "string" || rawId.length === 0) {
+          yield {
+            kind: "drop",
+            collection,
+            sourceId: null,
+            reason: `Document at index ${String(index)} in "${collection}" is missing required "_id" field`,
+          };
+          index += 1;
+          continue;
+        }
+        yield { kind: "doc", collection, sourceId: rawId, document: rec };
+        index += 1;
       }
     },
 

@@ -2,9 +2,18 @@ import type { MappingContext } from "./context.js";
 import type { ImportEntityType, ImportFailureKind } from "@pluralscape/types";
 
 /**
+ * Maximum number of unresolved foreign-key source IDs rendered inline in a
+ * mapper error message by {@link summarizeMissingRefs}. Larger lists are
+ * summarized with an "and N more" suffix; the full list still travels with
+ * the error's structured `missingRefs` field.
+ */
+const MISSING_REFS_PREVIEW_LIMIT = 5;
+
+/**
  * Emit one warning per (entityType, unknownKey) pair across the whole import.
- * Used after Zod `.passthrough()` validation to surface unknown SP fields
- * without blocking the import.
+ * The dedup key is scoped by entityType so two collections with the same
+ * unknown field name each emit their own warning — a single global key
+ * would silently merge schema drift from unrelated entity types.
  */
 export function warnUnknownKeys(
   ctx: MappingContext,
@@ -14,7 +23,7 @@ export function warnUnknownKeys(
 ): void {
   for (const key of Object.keys(payload)) {
     if (knownKeys.has(key)) continue;
-    const warningKey = `unknown-field:${key}`;
+    const warningKey = `unknown-field:${entityType}:${key}`;
     ctx.addWarningOnce(warningKey, {
       entityType,
       entityId: null,
@@ -23,6 +32,19 @@ export function warnUnknownKeys(
       message: `Unknown field "${key}" on ${entityType} (SP schema may have drifted)`,
     });
   }
+}
+
+/**
+ * Render a bounded preview of unresolved-reference source IDs for inclusion
+ * in a mapper error message. Keeps server logs short even when an entity has
+ * hundreds of missing refs, while the full list remains on the error's
+ * `missingRefs` structured field for downstream processing.
+ */
+export function summarizeMissingRefs(refs: readonly string[]): string {
+  if (refs.length <= MISSING_REFS_PREVIEW_LIMIT) return refs.join(", ");
+  const shown = refs.slice(0, MISSING_REFS_PREVIEW_LIMIT).join(", ");
+  const remaining = refs.length - MISSING_REFS_PREVIEW_LIMIT;
+  return `${shown}, and ${String(remaining)} more`;
 }
 
 /**

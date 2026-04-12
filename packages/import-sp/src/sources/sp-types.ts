@@ -96,10 +96,33 @@ export interface SPGroup extends SPDocument {
 
 // ── customFields ─────────────────────────────────────────────────────
 
+/**
+ * SP's numeric `CustomFieldType` enum sourced from the upstream
+ * `typeConverters` array in `src/api/base/user/generateReports.ts`.
+ *
+ *  0 = text · 1 = color · 2 = date · 3 = month · 4 = year · 5 = monthYear
+ *  6 = timestamp · 7 = monthDay
+ *
+ * Types 2-7 collapse to `"date"` on the Pluralscape side.
+ */
+export type SPCustomFieldType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/**
+ * SP `customFields` collection.
+ *
+ * - `type` is a numeric enum (0-7) sourced from SP's `typeConverters` table
+ *   in `src/api/base/user/generateReports.ts`:
+ *     0 = string/text, 1 = color, 2 = date, 3 = month, 4 = year,
+ *     5 = monthYear, 6 = timestamp, 7 = monthDay.
+ * - `order` is a fractional-index string after the ONE_ELEVEN migration
+ *   (pattern `^0|[a-z0-9]{6,}(:)?[a-z0-9]{0,}$`). Lexicographic sort order
+ *   is the intended ordering; we accept numeric values for pre-migration
+ *   exports and coerce to string form in the validator.
+ */
 export interface SPCustomField extends SPDocument {
   readonly name: string;
-  readonly type: string;
-  readonly order: number;
+  readonly type: SPCustomFieldType;
+  readonly order: string;
   readonly preventTrusted?: boolean;
   readonly private?: boolean;
   readonly supportMarkdown?: boolean;
@@ -113,7 +136,12 @@ export interface SPFrontHistory extends SPDocument {
   readonly custom: boolean;
   readonly live: boolean;
   readonly startTime: number;
-  readonly endTime: number | null;
+  /**
+   * Live sessions omit `endTime` entirely rather than setting it to null,
+   * so the field is both optional and nullable. Finished sessions carry a
+   * numeric end time.
+   */
+  readonly endTime?: number | null;
   readonly customStatus?: string | null;
 }
 
@@ -140,7 +168,8 @@ export interface SPNote extends SPDocument {
 // ── polls ────────────────────────────────────────────────────────────
 
 export interface SPPollOption {
-  readonly id: string;
+  /** Optional — freshly-created polls in real SP exports omit this field. */
+  readonly id?: string;
   readonly name: string;
   readonly color?: string | null;
 }
@@ -159,22 +188,29 @@ export interface SPPoll extends SPDocument {
   readonly custom?: boolean;
   readonly allowAbstain?: boolean;
   readonly allowVeto?: boolean;
-  readonly options: readonly SPPollOption[];
+  /** Optional — real SP has yes/no polls that omit the options array. */
+  readonly options?: readonly SPPollOption[];
   readonly votes?: readonly SPPollVote[];
 }
 
 // ── channelCategories + channels ─────────────────────────────────────
 
+/**
+ * Real SP exports use `desc` (not `description`) for the description text
+ * on both chat channels and channel categories. Channels without a parent
+ * category omit `parentCategory` entirely rather than setting it to null,
+ * so the field is both optional and nullable.
+ */
 export interface SPChannelCategory extends SPDocument {
   readonly name: string;
-  readonly description?: string | null;
+  readonly desc?: string | null;
   readonly order?: number;
 }
 
 export interface SPChannel extends SPDocument {
   readonly name: string;
-  readonly description?: string | null;
-  readonly parentCategory: string | null;
+  readonly desc?: string | null;
+  readonly parentCategory?: string | null;
   readonly order?: number;
 }
 
@@ -190,12 +226,24 @@ export interface SPChatMessage extends SPDocument {
 
 // ── boardMessages ────────────────────────────────────────────────────
 
+/**
+ * SP `boardMessages` collection.
+ *
+ * Field names match SP's AJV schema in `src/api/v1/board.ts`:
+ * - `writtenBy` — author member `_id` (SP does not have a `writer` field)
+ * - `writtenFor` — recipient member `_id`; board posts are per-member walls
+ * - `read` — single read flag (SP tracks read state on the document, not via
+ *   a `readBy` array). Omitted on legacy exports.
+ * - `supportMarkdown` — message body supports markdown rendering.
+ */
 export interface SPBoardMessage extends SPDocument {
   readonly title: string;
   readonly message: string;
-  readonly writer: string;
+  readonly writtenBy: string;
+  readonly writtenFor?: string;
   readonly writtenAt: number;
-  readonly readBy?: readonly string[];
+  readonly read?: boolean;
+  readonly supportMarkdown?: boolean;
 }
 
 // ── privacyBuckets ───────────────────────────────────────────────────

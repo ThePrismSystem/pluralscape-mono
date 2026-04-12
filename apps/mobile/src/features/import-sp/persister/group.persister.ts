@@ -34,6 +34,9 @@ function isGroupPayload(value: unknown): value is GroupPayload {
   return typeof record["name"] === "string" && Array.isArray(record["memberIds"]);
 }
 
+/** Default sort order for imported groups. */
+const DEFAULT_GROUP_SORT_ORDER = 0;
+
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isGroupPayload, "group");
   const encrypted = encryptForCreate(
@@ -47,6 +50,8 @@ async function create(ctx: PersisterContext, payload: unknown): Promise<Persiste
   const result = await ctx.api.group.create(ctx.systemId, {
     encryptedData: encrypted.encryptedData,
     memberIds: narrowed.memberIds,
+    parentGroupId: null,
+    sortOrder: DEFAULT_GROUP_SORT_ORDER,
   });
   return { pluralscapeEntityId: result.id };
 }

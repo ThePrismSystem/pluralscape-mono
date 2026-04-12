@@ -6,14 +6,14 @@ import { createMappingContext } from "../../mappers/context.js";
 import type { SPBoardMessage } from "../../sources/sp-types.js";
 
 describe("mapBoardMessage", () => {
-  it("maps a minimal board message with resolved writer", () => {
+  it("maps a minimal board message with resolved writtenBy", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const sp: SPBoardMessage = {
       _id: "bm1",
       title: "Announcement",
       message: "hello everyone",
-      writer: "src_m1",
+      writtenBy: "src_m1",
       writtenAt: 1_234,
     };
     const result = mapBoardMessage(sp, ctx);
@@ -26,13 +26,13 @@ describe("mapBoardMessage", () => {
     }
   });
 
-  it("fails when writer FK is missing", () => {
+  it("fails when writtenBy FK is missing", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPBoardMessage = {
       _id: "bm2",
       title: "x",
       message: "y",
-      writer: "src_missing",
+      writtenBy: "src_missing",
       writtenAt: 0,
     };
     const result = mapBoardMessage(sp, ctx);
@@ -50,7 +50,7 @@ describe("mapBoardMessage", () => {
       _id: "bm3",
       title: "Specific Title!",
       message: "multi\nline\nbody",
-      writer: "src_m1",
+      writtenBy: "src_m1",
       writtenAt: 42,
     };
     const result = mapBoardMessage(sp, ctx);
@@ -62,57 +62,74 @@ describe("mapBoardMessage", () => {
     }
   });
 
-  it("emits a warning when readBy is present (dropped field)", () => {
+  it("emits a warning when writtenFor is present (dropped field)", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const sp: SPBoardMessage = {
       _id: "bm4",
       title: "x",
       message: "y",
-      writer: "src_m1",
+      writtenBy: "src_m1",
+      writtenFor: "src_recipient",
       writtenAt: 0,
-      readBy: ["src_a", "src_b"],
     };
     const result = mapBoardMessage(sp, ctx);
     expect(result.status).toBe("mapped");
-    expect(ctx.warnings).toHaveLength(1);
-    expect(ctx.warnings[0]?.entityType).toBe("board-message");
-    expect(ctx.warnings[0]?.message).toContain("readBy");
+    const writtenForWarning = ctx.warnings.find((w) => w.message.includes("writtenFor"));
+    expect(writtenForWarning).toBeDefined();
+    expect(writtenForWarning?.entityType).toBe("board-message");
   });
 
-  it("emits the readBy-dropped warning at most once per import", () => {
+  it("emits a warning when read flag is present (dropped field)", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("member", "src_m1", "ps_m1");
+    const sp: SPBoardMessage = {
+      _id: "bm4b",
+      title: "x",
+      message: "y",
+      writtenBy: "src_m1",
+      writtenAt: 0,
+      read: true,
+    };
+    const result = mapBoardMessage(sp, ctx);
+    expect(result.status).toBe("mapped");
+    const readWarning = ctx.warnings.find((w) => w.message.includes("read"));
+    expect(readWarning).toBeDefined();
+  });
+
+  it("emits the writtenFor-dropped warning at most once per import", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const first: SPBoardMessage = {
       _id: "bm6",
       title: "x",
       message: "y",
-      writer: "src_m1",
+      writtenBy: "src_m1",
+      writtenFor: "src_a",
       writtenAt: 0,
-      readBy: ["src_a"],
     };
     const second: SPBoardMessage = {
       _id: "bm7",
       title: "x2",
       message: "y2",
-      writer: "src_m1",
+      writtenBy: "src_m1",
+      writtenFor: "src_b",
       writtenAt: 1,
-      readBy: ["src_b", "src_c"],
     };
     mapBoardMessage(first, ctx);
     mapBoardMessage(second, ctx);
-    expect(ctx.warnings).toHaveLength(1);
-    expect(ctx.warnings[0]?.message).toContain("readBy");
+    const matches = ctx.warnings.filter((w) => w.message.includes("writtenFor"));
+    expect(matches).toHaveLength(1);
   });
 
-  it("does not warn when readBy is absent", () => {
+  it("does not warn when writtenFor and read are absent", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "src_m1", "ps_m1");
     const sp: SPBoardMessage = {
       _id: "bm5",
       title: "x",
       message: "y",
-      writer: "src_m1",
+      writtenBy: "src_m1",
       writtenAt: 0,
     };
     mapBoardMessage(sp, ctx);

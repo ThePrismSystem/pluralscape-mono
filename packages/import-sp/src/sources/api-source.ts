@@ -2,11 +2,11 @@ import {
   SP_API_BACKOFF_BASE_MS,
   SP_API_BACKOFF_MAX_MS,
   SP_API_MAX_RETRIES,
-  SP_API_PAGE_SIZE,
   SP_API_REQUEST_TIMEOUT_MS,
 } from "../import-sp.constants.js";
+import { toRecord } from "../shared/to-record.js";
 
-import type { ImportDataSource, SourceDocument } from "./source.types.js";
+import type { ImportDataSource, SourceEvent } from "./source.types.js";
 import type { SpCollectionName } from "./sp-collections.js";
 
 /**
@@ -38,30 +38,81 @@ export class ApiSourceTransientError extends Error {
 }
 
 /**
- * Mapping from internal SP collection name to the SP REST endpoint path.
+ * Per-collection fetch strategy for the live SP API.
  *
- * These paths are a best-effort derived from SP naming conventions. They are
- * **not** verified against a running SP server here — Plan 3's mobile E2E
- * tests will validate each path against the real API and any mismatches are
- * corrected there. Do not treat this map as canonical until that validation
- * lands.
+ * Path templates use `:system` as a substitution token replaced with the
+ * caller-supplied `systemId`. Strategies:
+ *
+ *  - `list`   — single GET returning an array of documents; SP streams the
+ *               whole collection in one response, so no pagination loop is
+ *               required.
+ *  - `single` — single GET returning one document; wrapped into a one-item
+ *               array so the iterator interface is uniform.
+ *  - `unsupported` — SP exposes no bulk endpoint for the collection (e.g.
+ *               per-document comments, per-member notes, per-channel chat
+ *               messages). The iterator yields nothing rather than throwing
+ *               so the engine can still import the collections that do
+ *               work; operators importing these collections must use the
+ *               file source.
  */
-const ENDPOINT_PATHS: Record<SpCollectionName, string> = {
-  users: "/v1/user",
-  private: "/v1/user/private",
-  privacyBuckets: "/v1/privacyBuckets",
-  customFields: "/v1/customFields",
-  frontStatuses: "/v1/customFronts",
-  members: "/v1/members",
-  groups: "/v1/groups",
-  frontHistory: "/v1/frontHistory",
-  comments: "/v1/comments",
-  notes: "/v1/notes",
-  polls: "/v1/polls",
-  channelCategories: "/v1/channelCategories",
-  channels: "/v1/channels",
-  chatMessages: "/v1/chatMessages",
-  boardMessages: "/v1/boardMessages",
+type ApiFetchStrategy =
+  | { readonly kind: "list"; readonly path: string }
+  | { readonly kind: "single"; readonly path: string }
+  | { readonly kind: "unsupported"; readonly reason: string };
+
+/**
+ * Mapping from internal SP collection name to its live SP API fetch
+ * strategy. Verified against `src/api/v1/routes.ts` in the upstream SP
+ * repo (`ApparyllisOrg/SimplyPluralApi`). Routing quirks in the upstream
+ * SP API that are easy to get wrong:
+ *
+ *  - `members`, `groups`, `customFields`, `customFronts`, `polls`
+ *    all require `:system` in the path.
+ *  - `frontHistory` is a flat list at `/v1/frontHistory` (no `:system`);
+ *    the API scopes by auth context.
+ *  - `channels` / `channelCategories` / `chatMessages` are mounted under
+ *    `/v1/chat/`, not `/v1/channels`.
+ *  - `frontStatuses` is called `customFronts` in the API URL.
+ *  - `users` / `private` are singleton GETs on `/v1/user/:id` and
+ *    `/v1/user/private/:id`, not bulk lists.
+ *  - `privacyBuckets` does not take `:system` (derived from auth context).
+ *  - `comments`, `notes`, `chatMessages`, `boardMessages` have no bulk
+ *    list endpoints — each requires per-parent traversal (per-document,
+ *    per-member, per-channel, per-member respectively) and are marked
+ *    unsupported pending a multi-pass fetcher.
+ */
+const ENDPOINT_STRATEGIES: Readonly<Record<SpCollectionName, ApiFetchStrategy>> = {
+  users: { kind: "single", path: "/v1/user/:system" },
+  private: {
+    kind: "unsupported",
+    reason:
+      "SP exposes /v1/user/private/:id with JWT-only auth (isUserAppJwtAuthenticated) — API keys are rejected with 401",
+  },
+  privacyBuckets: { kind: "list", path: "/v1/privacyBuckets" },
+  customFields: { kind: "list", path: "/v1/customFields/:system" },
+  frontStatuses: { kind: "list", path: "/v1/customFronts/:system" },
+  members: { kind: "list", path: "/v1/members/:system" },
+  groups: { kind: "list", path: "/v1/groups/:system" },
+  frontHistory: { kind: "list", path: "/v1/frontHistory" },
+  comments: {
+    kind: "unsupported",
+    reason: "SP exposes comments per-document only (/v1/comments/:type/:id)",
+  },
+  notes: {
+    kind: "unsupported",
+    reason: "SP exposes notes per-member only (/v1/notes/:system/:member)",
+  },
+  polls: { kind: "list", path: "/v1/polls/:system" },
+  channelCategories: { kind: "list", path: "/v1/chat/categories" },
+  channels: { kind: "list", path: "/v1/chat/channels" },
+  chatMessages: {
+    kind: "unsupported",
+    reason: "SP exposes chat messages per-channel only (/v1/chat/messages/:id)",
+  },
+  boardMessages: {
+    kind: "unsupported",
+    reason: "SP exposes board messages per-member only (/v1/board/member/:id)",
+  },
 };
 
 /** HTTP 401 Unauthorized — the bearer token is missing or invalid. */
@@ -79,7 +130,12 @@ const BACKOFF_EXPONENT_BASE = 2;
 export interface ApiSourceInput {
   readonly token: string;
   readonly baseUrl: string;
-  readonly pageSize?: number;
+  /**
+   * SP system id (same as the authenticated user's uid) used to substitute
+   * `:system` in path templates. Required — most SP list endpoints are
+   * scoped by system and return 404 without it.
+   */
+  readonly systemId: string;
 }
 
 function delayMs(ms: number): Promise<void> {
@@ -90,8 +146,23 @@ function backoffFor(attempt: number): number {
   return Math.min(SP_API_BACKOFF_BASE_MS * BACKOFF_EXPONENT_BASE ** attempt, SP_API_BACKOFF_MAX_MS);
 }
 
+/** Substitute `:system` in a path template with the caller-supplied system id. */
+function substituteSystem(path: string, systemId: string): string {
+  return path.replaceAll(":system", encodeURIComponent(systemId));
+}
+
 /**
- * Create an `ImportDataSource` that streams a Simply Plural account by paginating
+ * List of SP collection names the api source can fetch via a single HTTP
+ * request. Collections whose strategy is `unsupported` are omitted so the
+ * engine does not count them as source-provided during its
+ * dropped-collection check.
+ */
+const LISTABLE_COLLECTIONS: readonly SpCollectionName[] = (
+  Object.keys(ENDPOINT_STRATEGIES) as SpCollectionName[]
+).filter((name) => ENDPOINT_STRATEGIES[name].kind !== "unsupported");
+
+/**
+ * Create an `ImportDataSource` that streams a Simply Plural account from
  * its REST API. The constructor is synchronous; network I/O happens lazily
  * during `iterate()`.
  *
@@ -104,19 +175,17 @@ function backoffFor(attempt: number): number {
  *   `ApiSourceTransientError`.
  * - Any other non-2xx → `ApiSourceTransientError` without retrying (4xx other
  *   than 401 is unlikely to resolve on a retry).
- * - Shape failures (non-array response body, document missing `_id`,
- *   non-object document) → `ApiSourcePermanentError`. Retrying will not
- *   resolve a schema mismatch; the classifier maps this to fatal +
- *   non-recoverable so the operator must fix the source.
+ * - Shape failures on list responses (non-array body) →
+ *   `ApiSourcePermanentError`. Per-document shape failures (non-object
+ *   element, missing `_id`) are emitted as `drop` events so the engine
+ *   can keep iterating the rest of the collection.
  *
- * Pagination stops when the server returns an empty page. We deliberately do
- * **not** stop on a short page because SP's exact page-size semantics have not
- * been verified end-to-end yet.
+ * SP streams full collections in a single response, so no pagination loop
+ * is required. Collections without a bulk list endpoint yield nothing —
+ * use the file source for a complete import.
  */
 export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
-  const pageSize = input.pageSize ?? SP_API_PAGE_SIZE;
-
-  async function fetchWithRetry(url: string): Promise<unknown[]> {
+  async function fetchJson(url: string): Promise<unknown> {
     let attempt = 0;
     while (attempt <= SP_API_MAX_RETRIES) {
       const controller = new AbortController();
@@ -128,7 +197,7 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
       try {
         response = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${input.token}`,
+            Authorization: input.token,
             Accept: "application/json",
           },
           signal: controller.signal,
@@ -171,58 +240,126 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
         );
       }
 
-      const body: unknown = await response.json();
-      if (!Array.isArray(body)) {
-        throw new ApiSourcePermanentError(
-          `SP API returned non-array body for ${url} (got ${typeof body})`,
-        );
-      }
-      const typedBody: unknown[] = body;
-      return typedBody;
+      return (await response.json()) as unknown;
     }
-    // Unreachable — the loop exits via `return body` or a thrown error — but
+    // Unreachable — the loop exits via `return` or a thrown error — but
     // keep an explicit throw so TypeScript's control-flow analysis is happy.
     throw new ApiSourceTransientError("retry loop exhausted");
   }
 
+  function buildUrl(strategy: Exclude<ApiFetchStrategy, { kind: "unsupported" }>): string {
+    const path = substituteSystem(strategy.path, input.systemId);
+    return `${input.baseUrl}${path}`;
+  }
+
+  type AssertResult =
+    | { readonly kind: "ok"; readonly sourceId: string; readonly record: Record<string, unknown> }
+    | { readonly kind: "drop"; readonly sourceId: string | null; readonly reason: string };
+
+  /**
+   * SP's REST API wraps every document via `transformResultForClientRead`:
+   *   `{ exists: true, id: <_id>, content: { ...fields } }`
+   * Unwrap into a flat `{ _id, ...fields }` record so downstream mappers
+   * see the same shape as the file-source (raw MongoDB export).
+   */
+  function unwrapSpEnvelope(raw: Record<string, unknown>): Record<string, unknown> {
+    if ("content" in raw && "id" in raw && typeof raw.id === "string") {
+      const content = raw.content;
+      const fields = content !== null && typeof content === "object" ? toRecord(content) : {};
+      return { _id: raw.id, ...fields };
+    }
+    return raw;
+  }
+
+  function assertDocument(
+    value: unknown,
+    collection: SpCollectionName,
+    index: number,
+  ): AssertResult {
+    if (value === null || typeof value !== "object") {
+      return {
+        kind: "drop",
+        sourceId: null,
+        reason: `ApiImportSource: ${collection}[${String(index)}] is a non-object document (got ${typeof value})`,
+      };
+    }
+    const record = unwrapSpEnvelope(toRecord(value));
+    const id = record._id;
+    if (typeof id !== "string" || id.length === 0) {
+      return {
+        kind: "drop",
+        sourceId: null,
+        reason: `ApiImportSource: ${collection}[${String(index)}] missing required "_id" field`,
+      };
+    }
+    return { kind: "ok", sourceId: id, record };
+  }
+
   return {
     mode: "api",
-    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceDocument> {
-      const path = ENDPOINT_PATHS[collection];
-      // Pagination loop: request pages until the server returns an empty
-      // array. `for (;;)` avoids the `while (true)` no-unnecessary-condition
-      // lint error.
-      for (let page = 0; ; page++) {
-        const offset = page * pageSize;
-        const url = `${input.baseUrl}${path}?limit=${String(pageSize)}&offset=${String(offset)}`;
-        const docs = await fetchWithRetry(url);
-        if (docs.length === 0) {
+    async *iterate(collection: SpCollectionName): AsyncGenerator<SourceEvent> {
+      const strategy = ENDPOINT_STRATEGIES[collection];
+      switch (strategy.kind) {
+        case "unsupported":
+          // The SP API does not expose a simple bulk endpoint for this
+          // collection. Yield nothing so the engine keeps processing the
+          // rest of DEPENDENCY_ORDER — operators who need these collections
+          // should import from a file export instead.
+          return;
+        case "single": {
+          const url = buildUrl(strategy);
+          const body = await fetchJson(url);
+          if (body === null) return;
+          if (Array.isArray(body)) {
+            yield {
+              kind: "drop",
+              collection,
+              sourceId: null,
+              reason: `SP API ${collection} endpoint returned an array (expected single document)`,
+            };
+            return;
+          }
+          // `{}` means the target document does not exist (e.g. a `private` doc
+          // for an account that never touched notification settings) — legitimate
+          // skip, not a drop.
+          if (typeof body === "object" && Object.keys(body).length === 0) return;
+          const result = assertDocument(body, collection, 0);
+          if (result.kind === "drop") {
+            yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
+            return;
+          }
+          yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
           return;
         }
-        for (const document of docs) {
-          if (document === null || typeof document !== "object") {
+        case "list": {
+          const url = buildUrl(strategy);
+          const body = await fetchJson(url);
+          if (!Array.isArray(body)) {
             throw new ApiSourcePermanentError(
-              `ApiImportSource: ${collection} contained a non-object document (got ${typeof document})`,
+              `SP API returned non-array body for ${url} (got ${typeof body})`,
             );
           }
-          const sourceId = (document as { _id?: unknown })._id;
-          if (typeof sourceId !== "string" || sourceId.length === 0) {
-            throw new ApiSourcePermanentError(
-              `ApiImportSource: ${collection} document missing _id`,
-            );
+          let index = 0;
+          for (const element of body) {
+            const result = assertDocument(element, collection, index);
+            if (result.kind === "drop") {
+              yield { kind: "drop", collection, sourceId: result.sourceId, reason: result.reason };
+            } else {
+              yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
+            }
+            index += 1;
           }
-          yield { collection, sourceId, document };
+          return;
+        }
+        default: {
+          const _exhaustive: never = strategy;
+          throw new Error(`unreachable ApiFetchStrategy kind: ${String(_exhaustive)}`);
         }
       }
     },
     listCollections() {
-      // The SP API exposes one endpoint per `SpCollectionName`; we simply
-      // report the static list we can fetch. Because we cannot cheaply
-      // probe the server for unknown collections, the api source can only
-      // ever report known names — any server-side additions will surface
-      // through `iterate`/mapper drift, not through dropped-collection
-      // warnings.
-      return Promise.resolve(Object.keys(ENDPOINT_PATHS));
+      // Only collections with a usable bulk/single endpoint are reported.
+      return Promise.resolve([...LISTABLE_COLLECTIONS]);
     },
     async close(): Promise<void> {
       // No held resources — fetch is request-scoped.

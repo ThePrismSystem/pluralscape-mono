@@ -47,6 +47,7 @@ async function create(ctx: PersisterContext, payload: unknown): Promise<Persiste
   const result = await ctx.api.message.create(ctx.systemId, {
     encryptedData: encrypted.encryptedData,
     channelId: narrowed.channelId,
+    timestamp: narrowed.createdAt,
   });
   return { pluralscapeEntityId: result.id };
 }
@@ -67,7 +68,10 @@ async function update(
     1,
     ctx.masterKey,
   );
-  const result = await ctx.api.message.update(ctx.systemId, existingId, encrypted);
+  const result = await ctx.api.message.update(ctx.systemId, existingId, {
+    ...encrypted,
+    channelId: narrowed.channelId,
+  });
   return { pluralscapeEntityId: result.id };
 }
 

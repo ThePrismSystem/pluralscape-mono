@@ -22,13 +22,16 @@ const VALID_PAYLOAD = {
 };
 
 describe("frontingSessionPersister", () => {
-  it("create encrypts and calls frontingSession.create", async () => {
+  it("create encrypts and calls frontingSession.create with startTime", async () => {
     const ctx = makeTestPersisterContext();
     const createFn = vi.mocked(ctx.api.frontingSession.create);
     const result = await frontingSessionPersister.create(ctx, VALID_PAYLOAD);
     expect(createFn).toHaveBeenCalledWith(
       TEST_SYSTEM_ID,
-      expect.objectContaining({ encryptedData: expect.any(String) }),
+      expect.objectContaining({
+        encryptedData: expect.any(String),
+        startTime: 1_700_000_000_000,
+      }),
     );
     expect(result.pluralscapeEntityId).toBe("fs_1");
   });

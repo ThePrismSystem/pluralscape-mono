@@ -34,6 +34,7 @@ import {
 
 import {
   advanceWithinCollection,
+  bumpCollectionTotals,
   completeCollection,
   emptyCheckpointState,
   resumeStartCollection,
@@ -80,17 +81,24 @@ function delta(kind: "imported" | "updated" | "skipped" | "failed"): AdvanceDelt
  *
  * Invariant: `MAPPER_DISPATCH` guarantees that for each collection, the
  * mapper returns a payload whose shape matches the `Mapped<Entity>` type
- * bound to the corresponding `entityType` variant of `PersistableEntity`. We
- * therefore construct the variant with a single controlled cast — avoiding
- * widening the persister's input type or threading a generic through the
- * dispatch table — and the TypeScript compiler enforces the shape of every
- * consumer of the narrowed result.
+ * bound to the corresponding `entityType` variant of `PersistableEntity`.
+ * We therefore construct the variant with a single controlled cast —
+ * avoiding widening the persister's input type or threading a generic
+ * through the dispatch table — and the TypeScript compiler enforces the
+ * shape of every consumer of the narrowed result. A runtime guard rejects
+ * primitives and null payloads so misrouted dispatch entries surface as a
+ * visible error rather than a silent cast.
  */
-function buildPersistableEntity(
+export function buildPersistableEntity(
   entityType: ImportCollectionType,
   sourceEntityId: string,
   payload: unknown,
 ): PersistableEntity {
+  if (payload === null || typeof payload !== "object") {
+    throw new Error(
+      `mapper for ${entityType} returned non-object payload (${typeof payload}); dispatch table may be misrouted`,
+    );
+  }
   return {
     entityType,
     sourceEntityId,
@@ -229,6 +237,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
     // We deliberately do this before the main loop — even when resuming from a
     // checkpoint — so the warning is visible on every run.
     const sourceCollections = await source.listCollections();
+    const sourceCollectionSet = new Set(sourceCollections);
     for (const name of sourceCollections) {
       if (!KNOWN_DEPENDENCY_ORDER_SET.has(name)) {
         ctx.addWarningOnce(`dropped-collection:${name}`, {
@@ -237,6 +246,17 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
           kind: "dropped-collection",
           key: `dropped-collection:${name}`,
           message: `Collection "${name}" is not supported by the importer and was dropped`,
+        });
+      }
+    }
+    for (const name of DEPENDENCY_ORDER) {
+      if (!sourceCollectionSet.has(name)) {
+        ctx.addWarningOnce(`source-missing-collection:${name}`, {
+          entityType: "unknown",
+          entityId: null,
+          kind: "dropped-collection",
+          key: `source-missing-collection:${name}`,
+          message: `Collection "${name}" is expected but was not reported by the source`,
         });
       }
     }
@@ -348,14 +368,51 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       let pastResumeCutoff = resumeCutoffSourceId === null;
 
       try {
-        for await (const doc of source.iterate(collection)) {
+        for await (const event of source.iterate(collection)) {
           if (!pastResumeCutoff) {
-            if (doc.sourceId === resumeCutoffSourceId) {
+            if (event.sourceId === resumeCutoffSourceId) {
               pastResumeCutoff = true;
             }
             continue;
           }
 
+          if (event.kind === "drop") {
+            const error: ImportError = {
+              entityType,
+              entityId: event.sourceId,
+              message: event.reason,
+              kind: "invalid-source-document",
+              fatal: false,
+            };
+            errors.push(error);
+            await persister.recordError(error);
+            if (event.sourceId !== null) {
+              state = advanceWithinCollection(state, {
+                entityType,
+                lastSourceId: event.sourceId,
+                delta: delta("failed"),
+              });
+            } else {
+              state = bumpCollectionTotals(state, entityType, delta("failed"));
+            }
+            docsSinceCheckpoint += 1;
+            if (docsSinceCheckpoint >= CHECKPOINT_CHUNK_SIZE) {
+              await persister.flush();
+              await onProgress(state);
+              docsSinceCheckpoint = 0;
+            }
+            if (isAborted(args.abortSignal)) {
+              return {
+                finalState: state,
+                warnings: ctx.warnings,
+                errors,
+                outcome: "aborted" as const,
+              };
+            }
+            continue;
+          }
+
+          const doc = event;
           const entry = MAPPER_DISPATCH[collection];
           const result = entry.map(doc.document, ctx);
 
@@ -497,9 +554,13 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       await source.close();
     } catch (closeError: unknown) {
       // Cannot rethrow — would mask the original error or success result.
-      // source.close() is best-effort cleanup; the engine has no logger so
-      // we consume the variable to satisfy lint and move on.
-      void closeError;
+      // Record as a warning so resource leaks are observable in the report.
+      ctx.addWarningOnce("source-close-error", {
+        entityType: "unknown",
+        entityId: null,
+        key: "source-close-error",
+        message: `source.close() failed: ${closeError instanceof Error ? closeError.message : String(closeError)}`,
+      });
     }
   }
 }

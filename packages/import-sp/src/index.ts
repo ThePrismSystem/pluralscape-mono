@@ -46,7 +46,7 @@ export type {
   FakeSourceData,
   FileImportSourceArgs,
   ImportDataSource,
-  SourceDocument,
+  SourceEvent,
   SourceMode,
   SpCollectionName,
 } from "./sources/index.js";

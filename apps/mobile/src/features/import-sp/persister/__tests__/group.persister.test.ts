@@ -21,7 +21,7 @@ const VALID_PAYLOAD = {
 };
 
 describe("groupPersister", () => {
-  it("create passes the resolved memberIds along with encryptedData", async () => {
+  it("create passes memberIds, parentGroupId, and sortOrder with encryptedData", async () => {
     const ctx = makeTestPersisterContext();
     const createFn = vi.mocked(ctx.api.group.create);
     const result = await groupPersister.create(ctx, VALID_PAYLOAD);
@@ -30,6 +30,8 @@ describe("groupPersister", () => {
       expect.objectContaining({
         encryptedData: expect.any(String),
         memberIds: ["mem_1", "mem_2", "mem_3"],
+        parentGroupId: null,
+        sortOrder: 0,
       }),
     );
     expect(result.pluralscapeEntityId).toBe("grp_1");

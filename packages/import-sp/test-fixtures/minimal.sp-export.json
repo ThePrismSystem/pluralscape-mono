@@ -9,8 +9,8 @@
     {
       "_id": "cf_00000001",
       "name": "Likes",
-      "type": "text",
-      "order": 0
+      "type": 0,
+      "order": "a00000"
     }
   ],
   "members": [

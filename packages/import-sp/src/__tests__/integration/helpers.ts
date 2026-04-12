@@ -88,15 +88,25 @@ export function loadEnvApiKey(mode: "minimal" | "adversarial"): string {
 }
 
 /** Create an API-backed import source for a test account. */
-export function createApiSource(mode: "minimal" | "adversarial"): ImportDataSource {
+export function createApiSource(
+  mode: "minimal" | "adversarial",
+  manifest: Manifest,
+): ImportDataSource {
   return createApiImportSource({
     token: loadEnvApiKey(mode),
     baseUrl: SP_API_BASE_URL,
+    systemId: manifest.systemId,
   });
 }
 
 /** Create a file-backed import source from a seeded export fixture. */
-export async function createFileSource(mode: "minimal" | "adversarial"): Promise<ImportDataSource> {
+export async function createFileSource(
+  mode: "minimal" | "adversarial",
+  manifest: Manifest,
+): Promise<ImportDataSource> {
+  // File source does not need the manifest, but the factory signature is
+  // shared with `createApiSource` which does — accept and ignore it.
+  void manifest;
   const filePath = path.join(MONOREPO_ROOT, `scripts/.sp-test-${mode}-export.json`);
   const contents = await readFile(filePath);
   const stream = new ReadableStream<Uint8Array>({

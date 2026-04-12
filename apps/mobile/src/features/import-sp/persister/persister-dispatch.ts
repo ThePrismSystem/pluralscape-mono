@@ -11,6 +11,12 @@
  * that throws with a clear message. Replacing any of these with a real
  * persister just requires dropping in the helper import and
  * overwriting the entry.
+ *
+ * Granularity: each persister lives in its own file, giving one file per
+ * `PersistableEntity` variant. That 1:1 mapping is deliberate — each
+ * persister owns a distinct SQL upsert / conflict policy and is exercised
+ * independently in tests, so merging them into a single dispatch file
+ * would bundle unrelated responsibilities and make per-entity edits noisy.
  */
 
 import { boardMessagePersister } from "./board-message.persister.js";

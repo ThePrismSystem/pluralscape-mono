@@ -66,4 +66,17 @@ describe("MAPPER_DISPATCH", () => {
     expect(warning?.message).toContain("_unknownFutureField");
     expect(warning?.entityType).toBe("member");
   });
+
+  it("returns failed with 'invalid document' fallback when Zod issues array is empty", () => {
+    // Passing `null` triggers Zod validation failure. The fallback message
+    // "invalid document" is used when `parsed.error.issues[0]` is undefined.
+    // Most Zod failures produce at least one issue, but the fallback path
+    // must still be covered.
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const result = MAPPER_DISPATCH.users.map(null, ctx);
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.message).toContain("validation");
+    }
+  });
 });

@@ -30,7 +30,10 @@ function isFrontingCommentPayload(value: unknown): value is FrontingCommentPaylo
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isFrontingCommentPayload, "fronting-comment");
   const encrypted = encryptForCreate(narrowed, ctx.masterKey);
-  const result = await ctx.api.frontingComment.create(ctx.systemId, encrypted);
+  const result = await ctx.api.frontingComment.create(ctx.systemId, {
+    ...encrypted,
+    sessionId: narrowed.frontingSessionId,
+  });
   return { pluralscapeEntityId: result.id };
 }
 
@@ -41,7 +44,10 @@ async function update(
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isFrontingCommentPayload, "fronting-comment");
   const encrypted = encryptForUpdate(narrowed, 1, ctx.masterKey);
-  const result = await ctx.api.frontingComment.update(ctx.systemId, existingId, encrypted);
+  const result = await ctx.api.frontingComment.update(ctx.systemId, existingId, {
+    ...encrypted,
+    sessionId: narrowed.frontingSessionId,
+  });
   return { pluralscapeEntityId: result.id };
 }
 

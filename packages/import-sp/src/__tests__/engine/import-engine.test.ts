@@ -2,14 +2,140 @@ import { describe, expect, it } from "vitest";
 
 import { emptyCheckpointState } from "../../engine/checkpoint.js";
 import { collectionToEntityType } from "../../engine/entity-type-map.js";
-import { runImport } from "../../engine/import-engine.js";
+import { buildPersistableEntity, runImport } from "../../engine/import-engine.js";
 import { CHECKPOINT_CHUNK_SIZE } from "../../import-sp.constants.js";
 import { ApiSourceTokenRejectedError } from "../../sources/api-source.js";
 import { createFakeImportSource, type FakeSourceData } from "../../sources/fake-source.js";
 
 import type { Persister, PersistableEntity } from "../../persistence/persister.types.js";
-import type { ImportDataSource } from "../../sources/source.types.js";
+import type { ImportDataSource, SourceEvent } from "../../sources/source.types.js";
 import type { ImportCheckpointState, ImportCollectionType, ImportError } from "@pluralscape/types";
+
+function stubSource(
+  events: readonly SourceEvent[],
+  collections: readonly string[] = ["members"],
+): ImportDataSource {
+  return {
+    mode: "fake",
+    async *iterate(collection) {
+      for (const e of events) {
+        if (e.collection !== collection) continue;
+        await Promise.resolve();
+        yield e;
+      }
+    },
+    listCollections() {
+      return Promise.resolve(collections);
+    },
+    close() {
+      return Promise.resolve();
+    },
+  };
+}
+
+describe("runImport — drop events", () => {
+  it("records drop events as non-fatal failures and continues iteration", async () => {
+    const source = stubSource([
+      {
+        kind: "doc",
+        collection: "members",
+        sourceId: "m1",
+        document: { _id: "m1", name: "Aria", buckets: [] },
+      },
+      { kind: "drop", collection: "members", sourceId: "m2", reason: "non-object body" },
+      {
+        kind: "doc",
+        collection: "members",
+        sourceId: "m3",
+        document: { _id: "m3", name: "Cass", buckets: [] },
+      },
+    ]);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+
+    expect(result.outcome).toBe("completed");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.kind).toBe("invalid-source-document");
+    expect(result.errors[0]?.entityId).toBe("m2");
+    expect(result.errors[0]?.fatal).toBe(false);
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m1", "m3"]);
+  });
+
+  it("drop with null sourceId does not advance the checkpoint cursor", async () => {
+    // A drop event with sourceId=null must not call advanceWithinCollection
+    // (which would overwrite the last-known cursor). We verify indirectly:
+    // bumpCollectionTotals is used instead, so m1's cursor position survives
+    // and m1 is still persisted successfully.
+    const source = stubSource([
+      {
+        kind: "doc",
+        collection: "members",
+        sourceId: "m1",
+        document: { _id: "m1", name: "Aria", buckets: [] },
+      },
+      { kind: "drop", collection: "members", sourceId: null, reason: "non-object body" },
+    ]);
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+
+    // The null-sourceId drop must be recorded as a non-fatal failure.
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.entityId).toBeNull();
+    expect(result.errors[0]?.fatal).toBe(false);
+    // The null drop counts toward the failed total.
+    expect(result.finalState.totals.perCollection.member?.failed).toBe(1);
+    // m1 was successfully imported — the null drop did not corrupt iteration.
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m1"]);
+  });
+
+  it("warns on DEPENDENCY_ORDER collections missing from source.listCollections()", async () => {
+    // stubSource lists only ["members"] — all other DEPENDENCY_ORDER collections
+    // are absent and should each produce a source-missing-collection warning.
+    const source = stubSource(
+      [
+        {
+          kind: "doc",
+          collection: "members",
+          sourceId: "m1",
+          document: { _id: "m1", name: "Aria", buckets: [] },
+        },
+      ],
+      ["members"],
+    );
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+
+    expect(result.outcome).toBe("completed");
+    const missingKeys = result.warnings
+      .filter(
+        (w): w is typeof w & { key: string } =>
+          typeof w.key === "string" && w.key.startsWith("source-missing-collection:"),
+      )
+      .map((w) => w.key);
+    expect(missingKeys.length).toBeGreaterThan(0);
+    expect(missingKeys).toContain("source-missing-collection:privacyBuckets");
+    expect(missingKeys).toContain("source-missing-collection:frontHistory");
+  });
+});
 
 interface RecordingPersister extends Persister {
   readonly upserted: readonly PersistableEntity[];
@@ -584,7 +710,12 @@ describe("runImport — dropped collections", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
-    const dropped = result.warnings.filter((w) => w.kind === "dropped-collection");
+    const dropped = result.warnings.filter(
+      (w): w is typeof w & { key: string } =>
+        w.kind === "dropped-collection" &&
+        typeof w.key === "string" &&
+        w.key.startsWith("dropped-collection:"),
+    );
     expect(dropped.map((w) => w.key).sort()).toEqual([
       "dropped-collection:friends",
       "dropped-collection:pendingFriendRequests",
@@ -612,7 +743,17 @@ describe("runImport — dropped collections", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
-    expect(result.warnings.some((w) => w.kind === "dropped-collection")).toBe(false);
+    // Only genuine "unknown" dropped-collection warnings (key prefix
+    // "dropped-collection:") should be absent; source-missing-collection
+    // warnings also use kind "dropped-collection" but have a different key.
+    expect(
+      result.warnings.some(
+        (w) =>
+          w.kind === "dropped-collection" &&
+          typeof w.key === "string" &&
+          w.key.startsWith("dropped-collection:"),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -702,7 +843,12 @@ describe("runImport — surprise policy end-to-end", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
-    const dropped = result.warnings.filter((w) => w.kind === "dropped-collection");
+    const dropped = result.warnings.filter(
+      (w): w is typeof w & { key: string } =>
+        w.kind === "dropped-collection" &&
+        typeof w.key === "string" &&
+        w.key.startsWith("dropped-collection:"),
+    );
     expect(dropped).toHaveLength(1);
     expect(dropped[0]?.message).toContain("friends");
   });
@@ -785,5 +931,222 @@ describe("runImport — source.close() lifecycle", () => {
       onProgress: noopProgress,
     });
     expect(closed).toBe(true);
+  });
+});
+
+describe("runImport — abort signal during iteration", () => {
+  it("aborts mid-iteration after processing a doc event", async () => {
+    const controller = new AbortController();
+    const source: ImportDataSource = {
+      mode: "fake",
+      listCollections() {
+        return Promise.resolve(["members"]);
+      },
+      async *iterate(collection) {
+        if (collection !== "members") return;
+        await Promise.resolve();
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m1",
+          document: { _id: "m1", name: "Aria" },
+        };
+        // Abort BEFORE yielding m2. The engine checked the signal after
+        // processing m1 (still false), then resumes the generator, which
+        // sets aborted=true and yields m2. The engine processes m2, then
+        // checks the signal again (now true) and returns "aborted".
+        controller.abort();
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m2",
+          document: { _id: "m2", name: "Brook" },
+        };
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m3",
+          document: { _id: "m3", name: "Cass" },
+        };
+      },
+      close() {
+        return Promise.resolve();
+      },
+    };
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+      abortSignal: controller.signal,
+    });
+    expect(result.outcome).toBe("aborted");
+    // m1 and m2 were processed (m2 was already yielded before the check);
+    // m3 was not reached.
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m1", "m2"]);
+  });
+
+  it("aborts mid-iteration after processing a drop event", async () => {
+    const controller = new AbortController();
+    const source: ImportDataSource = {
+      mode: "fake",
+      listCollections() {
+        return Promise.resolve(["members"]);
+      },
+      async *iterate(collection) {
+        if (collection !== "members") return;
+        await Promise.resolve();
+        // Abort BEFORE yielding the drop. The engine resumes the generator,
+        // which sets aborted=true and yields the drop. The engine processes
+        // the drop, checks the signal (now true), and returns "aborted".
+        controller.abort();
+        yield {
+          kind: "drop" as const,
+          collection: "members" as const,
+          sourceId: "m1",
+          reason: "non-object body",
+        };
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m2",
+          document: { _id: "m2", name: "Brook" },
+        };
+      },
+      close() {
+        return Promise.resolve();
+      },
+    };
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+      abortSignal: controller.signal,
+    });
+    expect(result.outcome).toBe("aborted");
+    // The drop was processed (abort was set before yield, checked after);
+    // m2 was not reached.
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.kind).toBe("invalid-source-document");
+    expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(0);
+  });
+});
+
+describe("runImport — source.close() error suppression", () => {
+  it("does not mask the result when source.close() throws", async () => {
+    const source: ImportDataSource = {
+      mode: "fake",
+      listCollections() {
+        return Promise.resolve([]);
+      },
+      async *iterate() {
+        // yield nothing
+      },
+      close() {
+        return Promise.reject(new Error("close failed"));
+      },
+    };
+    const persister = createFakePersister();
+    // The engine must swallow the close error and return the import result
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    const closeWarning = result.warnings.find((w) => w.key === "source-close-error");
+    expect(closeWarning).toBeDefined();
+    expect(closeWarning?.message).toContain("close failed");
+  });
+});
+
+describe("runImport — fatal error during legacy bucket synthesis", () => {
+  it("aborts when persister throws a fatal error during synthetic bucket upsert", async () => {
+    // No privacyBuckets data → engine will synthesize legacy buckets before
+    // entering members. We make the persister throw a fatal error on
+    // synthetic:public to trigger the abort path inside persistSynthesizedBuckets.
+    const data: FakeSourceData = {
+      members: [{ _id: "m_a", name: "Aria" }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister({
+      throwOn: { "synthetic:public": new ApiSourceTokenRejectedError() },
+    });
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("aborted");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(true);
+  });
+});
+
+describe("runImport — non-fatal persister error continues iteration", () => {
+  it("records non-fatal persister failure and continues to the next doc", async () => {
+    const data: FakeSourceData = {
+      members: [
+        { _id: "m_ok1", name: "Aria" },
+        { _id: "m_fail", name: "Brook" },
+        { _id: "m_ok2", name: "Cass" },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    // A generic Error is classified as non-fatal by classifyError
+    const persister = createFakePersister({
+      throwOn: { m_fail: new Error("transient DB error") },
+    });
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m_ok1", "m_ok2"]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(false);
+    expect(result.finalState.totals.perCollection.member?.failed).toBe(1);
+  });
+});
+
+describe("buildPersistableEntity runtime guard", () => {
+  it("accepts an object payload", () => {
+    const entity = buildPersistableEntity("member", "src1", { name: "Alice" });
+    expect(entity.entityType).toBe("member");
+    expect(entity.sourceEntityId).toBe("src1");
+    expect(entity.source).toBe("simply-plural");
+  });
+
+  it("throws on null payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", null)).toThrow(/non-object payload/);
+  });
+
+  it("throws on string payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", "alice")).toThrow(/non-object payload/);
+  });
+
+  it("throws on number payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", 42)).toThrow(/non-object payload/);
+  });
+
+  it("throws on undefined payload", () => {
+    expect(() => buildPersistableEntity("member", "src1", undefined)).toThrow(/non-object payload/);
   });
 });

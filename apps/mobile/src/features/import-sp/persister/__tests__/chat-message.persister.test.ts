@@ -22,22 +22,27 @@ const VALID_PAYLOAD = {
 };
 
 describe("chatMessagePersister", () => {
-  it("create encrypts and passes channelId alongside encryptedData", async () => {
+  it("create encrypts and passes channelId and timestamp alongside encryptedData", async () => {
     const ctx = makeTestPersisterContext();
     const createFn = vi.mocked(ctx.api.message.create);
     const result = await chatMessagePersister.create(ctx, VALID_PAYLOAD);
     expect(createFn).toHaveBeenCalledWith(
       TEST_SYSTEM_ID,
-      expect.objectContaining({ channelId: "ch_1", encryptedData: expect.any(String) }),
+      expect.objectContaining({
+        channelId: "ch_1",
+        timestamp: 1_700_000_000_000,
+        encryptedData: expect.any(String),
+      }),
     );
     expect(result.pluralscapeEntityId).toBe("msg_1");
   });
 
-  it("update targets the existing message ID", async () => {
+  it("update targets the existing message ID and passes channelId", async () => {
     const ctx = makeTestPersisterContext();
     const updateFn = vi.mocked(ctx.api.message.update);
     await chatMessagePersister.update(ctx, VALID_PAYLOAD, "msg_existing");
     expect(updateFn.mock.calls[0]?.[1]).toBe("msg_existing");
+    expect(updateFn.mock.calls[0]?.[2]).toMatchObject({ channelId: "ch_1" });
   });
 
   it("rejects payloads without a body", async () => {

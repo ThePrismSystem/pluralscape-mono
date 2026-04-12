@@ -156,6 +156,42 @@ describe("mapFrontingSession", () => {
       expect(result.payload.comment).toBe("feeling blurry");
     }
   });
+
+  it("non-live session with omitted endTime produces endTime: null", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("member", "src_m1", "ps_m1");
+    const sp: SPFrontHistory = {
+      _id: "fh9",
+      member: "src_m1",
+      custom: false,
+      live: false,
+      startTime: 1_000,
+      // endTime intentionally omitted
+    };
+    const result = mapFrontingSession(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.endTime).toBeNull();
+    }
+  });
+
+  it("live session with endTime present still maps endTime to null", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("member", "src_m1", "ps_m1");
+    const sp: SPFrontHistory = {
+      _id: "fh10",
+      member: "src_m1",
+      custom: false,
+      live: true,
+      startTime: 1_000,
+      endTime: 5_000,
+    };
+    const result = mapFrontingSession(sp, ctx);
+    expect(result.status).toBe("mapped");
+    if (result.status === "mapped") {
+      expect(result.payload.endTime).toBeNull();
+    }
+  });
 });
 
 describe("fronting-session FK-miss handling", () => {

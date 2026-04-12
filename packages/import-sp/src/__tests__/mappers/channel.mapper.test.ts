@@ -25,7 +25,7 @@ describe("mapChannelCategory", () => {
     const sp: SPChannelCategory = {
       _id: "cat2",
       name: "Art",
-      description: "creative stuff",
+      desc: "creative stuff",
       order: 3,
     };
     const result = mapChannelCategory(sp, ctx);
@@ -95,7 +95,7 @@ describe("mapChannel", () => {
     const sp: SPChannel = {
       _id: "ch4",
       name: "voice",
-      description: "voice chat",
+      desc: "voice chat",
       parentCategory: null,
       order: 7,
     };

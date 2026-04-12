@@ -25,7 +25,7 @@ function id(prefix: string, n: number): string {
 function buildMinimal(): unknown {
   return {
     privacyBuckets: [{ _id: id("bk", 1), name: "Public" }],
-    customFields: [{ _id: id("cf", 1), name: "Likes", type: "text", order: 0 }],
+    customFields: [{ _id: id("cf", 1), name: "Likes", type: 0, order: "a00000" }],
     members: [
       {
         _id: id("m", 1),
@@ -60,7 +60,7 @@ function buildMinimal(): unknown {
  */
 function buildLegacyNoBuckets(): unknown {
   return {
-    customFields: [{ _id: id("cf", 1), name: "Likes", type: "text", order: 0 }],
+    customFields: [{ _id: id("cf", 1), name: "Likes", type: 0, order: "a00000" }],
     members: [
       { _id: id("m", 1), name: "Private Member", private: true },
       { _id: id("m", 2), name: "Prevented Member", preventTrusted: true },

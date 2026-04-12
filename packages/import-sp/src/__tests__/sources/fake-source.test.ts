@@ -11,8 +11,10 @@ describe("createFakeImportSource", () => {
       ],
     });
     const out: { collection: string; sourceId: string }[] = [];
-    for await (const doc of source.iterate("members")) {
-      out.push({ collection: doc.collection, sourceId: doc.sourceId });
+    for await (const event of source.iterate("members")) {
+      if (event.kind === "doc") {
+        out.push({ collection: event.collection, sourceId: event.sourceId });
+      }
     }
     expect(out).toEqual([
       { collection: "members", sourceId: "m1" },
@@ -32,9 +34,13 @@ describe("createFakeImportSource", () => {
   it("supports multiple iterations of the same collection", async () => {
     const source = createFakeImportSource({ members: [{ _id: "m1", name: "A" }] });
     const first: string[] = [];
-    for await (const d of source.iterate("members")) first.push(d.sourceId);
+    for await (const d of source.iterate("members")) {
+      if (d.kind === "doc") first.push(d.sourceId);
+    }
     const second: string[] = [];
-    for await (const d of source.iterate("members")) second.push(d.sourceId);
+    for await (const d of source.iterate("members")) {
+      if (d.kind === "doc") second.push(d.sourceId);
+    }
     expect(first).toEqual(second);
   });
 

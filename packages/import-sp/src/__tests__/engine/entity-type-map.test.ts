@@ -25,4 +25,9 @@ describe("entity-type-map", () => {
     expect(entityTypeToCollection("member")).toBe("members");
     expect(entityTypeToCollection("custom-front")).toBe("frontStatuses");
   });
+
+  it("entityTypeToCollection throws for an entity type with no SP collection mapping", () => {
+    // "switch" and "timer" exist as ImportCollectionType but have no SP collection
+    expect(() => entityTypeToCollection("switch")).toThrow(/No SP collection mapping/);
+  });
 });

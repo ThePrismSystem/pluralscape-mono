@@ -22,8 +22,11 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@pluralscape/api": "workspace:*",
+    "@pluralscape/crypto": "workspace:*",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
+    "@trpc/client": "11.16.0",
     "@types/node": "^25.6.0",
     "eslint": "^10.2.0",
     "typescript": "^6.0.0"
