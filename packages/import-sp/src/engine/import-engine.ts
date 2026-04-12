@@ -363,6 +363,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
         privacyBucketsMapped = synth.delta.imported + synth.delta.updated + synth.delta.skipped;
       }
 
+      const collectionSourceIds: string[] = [];
       let docsSinceCheckpoint = 0;
       let collectionAborted = false;
       let pastResumeCutoff = resumeCutoffSourceId === null;
@@ -444,6 +445,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
                 buildPersistableEntity(entityType, doc.sourceId, result.payload),
               );
               ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
+              collectionSourceIds.push(doc.sourceId);
               if (collection === "privacyBuckets") privacyBucketsMapped += 1;
               let upsertDelta: AdvanceDelta;
               switch (upsert.action) {
@@ -546,6 +548,10 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       state = completeCollection(state, { nextEntityType });
       await persister.flush();
       await onProgress(state);
+
+      if (source.supplyParentIds && collectionSourceIds.length > 0) {
+        source.supplyParentIds(collection, collectionSourceIds);
+      }
     }
 
     return completed(state, ctx, errors);
