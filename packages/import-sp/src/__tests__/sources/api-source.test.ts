@@ -323,4 +323,68 @@ describe("createApiImportSource", () => {
 
     expect(result).toBeInstanceOf(ApiSourceTransientError);
   });
+
+  it("throws ApiSourceTransientError after exhausting retries on network errors", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const iterPromise = (async (): Promise<unknown> => {
+      try {
+        await drain(source, "members");
+        return null;
+      } catch (err) {
+        return err;
+      }
+    })();
+    await vi.runAllTimersAsync();
+    const result = await iterPromise;
+    await source.close();
+
+    expect(result).toBeInstanceOf(ApiSourceTransientError);
+    if (result instanceof ApiSourceTransientError) {
+      expect(result.message).toMatch(/Network error/);
+    }
+  });
+
+  it("throws ApiSourceTransientError immediately on non-retryable 4xx", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("bad request", { status: 400 }));
+    const source = createApiImportSource(DEFAULT_INPUT);
+
+    let caught: unknown;
+    try {
+      await drain(source, "members");
+    } catch (err) {
+      caught = err;
+    }
+    await source.close();
+
+    expect(caught).toBeInstanceOf(ApiSourceTransientError);
+    // Should NOT have retried — only one fetch call
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns nothing when single-strategy endpoint responds with null body", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(null));
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const events = await drainEvents(source, "users");
+    await source.close();
+
+    expect(events).toHaveLength(0);
+  });
+
+  it("unwraps SP envelope format (exists/id/content)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse([{ exists: true, id: "m1", content: { name: "Aria", color: "#ff0000" } }]),
+    );
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const events = await drainEvents(source, "members");
+    await source.close();
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("doc");
+    if (events[0]?.kind === "doc") {
+      expect(events[0].sourceId).toBe("m1");
+      expect(events[0].document).toMatchObject({ _id: "m1", name: "Aria", color: "#ff0000" });
+    }
+  });
 });

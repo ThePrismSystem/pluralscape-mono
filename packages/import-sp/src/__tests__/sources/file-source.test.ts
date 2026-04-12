@@ -183,4 +183,48 @@ describe("createFileImportSource", () => {
     expect(events[0]?.kind).toBe("doc");
     expect(events[1]?.kind).toBe("drop");
   });
+
+  it("throws FileSourceParseError when root element is an array instead of object", async () => {
+    const source = createFileImportSource({ stream: stringToStream("[1, 2, 3]") });
+    await expect(async () => {
+      for await (const e of source.iterate("members")) {
+        void e;
+      }
+    }).rejects.toThrow(FileSourceParseError);
+    await source.close();
+  });
+
+  it("throws FileSourceParseError when root element is a scalar (number)", async () => {
+    const source = createFileImportSource({ stream: stringToStream("42") });
+    await expect(async () => {
+      for await (const e of source.iterate("members")) {
+        void e;
+      }
+    }).rejects.toThrow(FileSourceParseError);
+    await source.close();
+  });
+
+  it("throws FileSourceParseError when root element is a scalar (string)", async () => {
+    const source = createFileImportSource({ stream: stringToStream('"hello"') });
+    await expect(async () => {
+      for await (const e of source.iterate("members")) {
+        void e;
+      }
+    }).rejects.toThrow(FileSourceParseError);
+    await source.close();
+  });
+
+  it("throws FileSourceParseError when a known SP collection has a non-array value", async () => {
+    // `members` is a known SP collection name — if its value is an object
+    // instead of an array, the parser should reject it.
+    const source = createFileImportSource({
+      stream: stringToStream(JSON.stringify({ members: { _id: "m1", name: "Aria" } })),
+    });
+    await expect(async () => {
+      for await (const e of source.iterate("members")) {
+        void e;
+      }
+    }).rejects.toThrow(FileSourceParseError);
+    await source.close();
+  });
 });

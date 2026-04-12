@@ -6,6 +6,20 @@ import {
   nextCollection,
 } from "../../engine/dependency-order.js";
 
+import type { SpCollectionName } from "../../sources/sp-collections.js";
+
+/**
+ * Construct a value typed as SpCollectionName that is NOT present in
+ * DEPENDENCY_ORDER. Used to exercise the undefined-index fallback branches.
+ * The helper exists so the unsafe widening is confined to one place.
+ */
+function unknownCollectionName(): SpCollectionName {
+  // `ORDER_INDEX` is a Map keyed by the 15 known names; any other string
+  // will make `.get()` return undefined, hitting the fallback branch.
+  const name: string = "notARealCollection";
+  return name as SpCollectionName;
+}
+
 describe("DEPENDENCY_ORDER", () => {
   it("starts with system-level cherry-picks", () => {
     expect(DEPENDENCY_ORDER[0]).toBe("users");
@@ -65,5 +79,15 @@ describe("DEPENDENCY_ORDER", () => {
     const after = collectionsAfter("groups");
     expect(after[0]).toBe("groups");
     expect(after).toContain("frontHistory");
+  });
+
+  it("nextCollection returns null for an unknown collection name", () => {
+    const result = nextCollection(unknownCollectionName());
+    expect(result).toBeNull();
+  });
+
+  it("collectionsAfter returns empty array for an unknown collection name", () => {
+    const result = collectionsAfter(unknownCollectionName());
+    expect(result).toEqual([]);
   });
 });

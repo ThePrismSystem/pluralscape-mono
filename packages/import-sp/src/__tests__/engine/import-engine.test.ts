@@ -934,6 +934,195 @@ describe("runImport — source.close() lifecycle", () => {
   });
 });
 
+describe("runImport — abort signal during iteration", () => {
+  it("aborts mid-iteration after processing a doc event", async () => {
+    const controller = new AbortController();
+    const source: ImportDataSource = {
+      mode: "fake",
+      listCollections() {
+        return Promise.resolve(["members"]);
+      },
+      async *iterate(collection) {
+        if (collection !== "members") return;
+        await Promise.resolve();
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m1",
+          document: { _id: "m1", name: "Aria" },
+        };
+        // Abort BEFORE yielding m2. The engine checked the signal after
+        // processing m1 (still false), then resumes the generator, which
+        // sets aborted=true and yields m2. The engine processes m2, then
+        // checks the signal again (now true) and returns "aborted".
+        controller.abort();
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m2",
+          document: { _id: "m2", name: "Brook" },
+        };
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m3",
+          document: { _id: "m3", name: "Cass" },
+        };
+      },
+      close() {
+        return Promise.resolve();
+      },
+    };
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+      abortSignal: controller.signal,
+    });
+    expect(result.outcome).toBe("aborted");
+    // m1 and m2 were processed (m2 was already yielded before the check);
+    // m3 was not reached.
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m1", "m2"]);
+  });
+
+  it("aborts mid-iteration after processing a drop event", async () => {
+    const controller = new AbortController();
+    const source: ImportDataSource = {
+      mode: "fake",
+      listCollections() {
+        return Promise.resolve(["members"]);
+      },
+      async *iterate(collection) {
+        if (collection !== "members") return;
+        await Promise.resolve();
+        // Abort BEFORE yielding the drop. The engine resumes the generator,
+        // which sets aborted=true and yields the drop. The engine processes
+        // the drop, checks the signal (now true), and returns "aborted".
+        controller.abort();
+        yield {
+          kind: "drop" as const,
+          collection: "members" as const,
+          sourceId: "m1",
+          reason: "non-object body",
+        };
+        yield {
+          kind: "doc" as const,
+          collection: "members" as const,
+          sourceId: "m2",
+          document: { _id: "m2", name: "Brook" },
+        };
+      },
+      close() {
+        return Promise.resolve();
+      },
+    };
+    const persister = createFakePersister();
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: { member: true }, avatarMode: "skip" },
+      onProgress: noopProgress,
+      abortSignal: controller.signal,
+    });
+    expect(result.outcome).toBe("aborted");
+    // The drop was processed (abort was set before yield, checked after);
+    // m2 was not reached.
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.kind).toBe("invalid-source-document");
+    expect(persister.upserted.filter((e) => e.entityType === "member")).toHaveLength(0);
+  });
+});
+
+describe("runImport — source.close() error suppression", () => {
+  it("does not mask the result when source.close() throws", async () => {
+    const source: ImportDataSource = {
+      mode: "fake",
+      listCollections() {
+        return Promise.resolve([]);
+      },
+      async *iterate() {
+        // yield nothing
+      },
+      close() {
+        return Promise.reject(new Error("close failed"));
+      },
+    };
+    const persister = createFakePersister();
+    // The engine must swallow the close error and return the import result
+    const result = await runImport({
+      source,
+      persister,
+      options: { selectedCategories: {}, avatarMode: "skip" },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+  });
+});
+
+describe("runImport — fatal error during legacy bucket synthesis", () => {
+  it("aborts when persister throws a fatal error during synthetic bucket upsert", async () => {
+    // No privacyBuckets data → engine will synthesize legacy buckets before
+    // entering members. We make the persister throw a fatal error on
+    // synthetic:public to trigger the abort path inside persistSynthesizedBuckets.
+    const data: FakeSourceData = {
+      members: [{ _id: "m_a", name: "Aria" }],
+    };
+    const source = createFakeImportSource(data);
+    const persister = createFakePersister({
+      throwOn: { "synthetic:public": new ApiSourceTokenRejectedError() },
+    });
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("aborted");
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(true);
+  });
+});
+
+describe("runImport — non-fatal persister error continues iteration", () => {
+  it("records non-fatal persister failure and continues to the next doc", async () => {
+    const data: FakeSourceData = {
+      members: [
+        { _id: "m_ok1", name: "Aria" },
+        { _id: "m_fail", name: "Brook" },
+        { _id: "m_ok2", name: "Cass" },
+      ],
+    };
+    const source = createFakeImportSource(data);
+    // A generic Error is classified as non-fatal by classifyError
+    const persister = createFakePersister({
+      throwOn: { m_fail: new Error("transient DB error") },
+    });
+    const result = await runImport({
+      source,
+      persister,
+      options: {
+        selectedCategories: ALL_CATEGORIES_ON,
+        avatarMode: "skip",
+      },
+      onProgress: noopProgress,
+    });
+    expect(result.outcome).toBe("completed");
+    expect(
+      persister.upserted.filter((e) => e.entityType === "member").map((e) => e.sourceEntityId),
+    ).toEqual(["m_ok1", "m_ok2"]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.fatal).toBe(false);
+    expect(result.finalState.totals.perCollection.member?.failed).toBe(1);
+  });
+});
+
 describe("buildPersistableEntity runtime guard", () => {
   it("accepts an object payload", () => {
     const entity = buildPersistableEntity("member", "src1", { name: "Alice" });
