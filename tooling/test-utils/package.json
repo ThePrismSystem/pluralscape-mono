@@ -7,10 +7,12 @@
     ".": "./src/index.ts",
     "./db": "./src/db/index.ts",
     "./crypto": "./src/crypto/index.ts",
-    "./factories": "./src/factories/index.ts"
+    "./factories": "./src/factories/index.ts",
+    "./e2e": "./src/e2e/index.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.4.4",
+    "@pluralscape/types": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {

@@ -104,18 +104,6 @@ export default defineConfig({
           hookTimeout: 30000,
         },
       },
-      {
-        test: {
-          name: "import-pk-e2e",
-          root: "packages/import-pk",
-          environment: "node",
-          include: ["src/**/*.e2e.{test,spec}.ts"],
-          globals: false,
-          restoreMocks: true,
-          testTimeout: 30000,
-          hookTimeout: 30000,
-        },
-      },
       projectConfig("api", "apps/api"),
       integrationProjectConfig("api", "apps/api"),
       {

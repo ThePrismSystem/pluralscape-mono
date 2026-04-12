@@ -1,11 +1,11 @@
 /**
- * Vitest global teardown for import-sp E2E tests.
+ * Vitest global teardown for import-pk E2E tests.
  *
  * Kills the API server and removes Docker containers started by global-setup.
  */
 import { killServer } from "@pluralscape/test-utils/e2e";
 
-const PREFIX = "[import-sp-e2e]";
+const PREFIX = "[import-pk-e2e]";
 
 function globalTeardown(): void {
   const pid = process.env["E2E_SERVER_PID"];
