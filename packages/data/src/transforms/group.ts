@@ -37,6 +37,10 @@ export interface GroupDecrypted {
   readonly updatedAt: UnixMillis;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertGroupFieldsSubset =
+  GroupEncryptedFields extends Pick<GroupDecrypted, keyof GroupEncryptedFields> ? true : never;
+
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `group.get` — derived from `GroupDecrypted`. */

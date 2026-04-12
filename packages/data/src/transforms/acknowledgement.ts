@@ -45,6 +45,15 @@ export interface AcknowledgementDecrypted {
   readonly updatedAt: UnixMillis;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertAcknowledgementFieldsSubset =
+  AcknowledgementEncryptedFields extends Pick<
+    AcknowledgementDecrypted,
+    keyof AcknowledgementEncryptedFields
+  >
+    ? true
+    : never;
+
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `acknowledgement.get` — derived from `AcknowledgementDecrypted`. */

@@ -31,6 +31,10 @@ export interface MemberEncryptedFields {
   readonly boardMessageNotificationOnFront: boolean;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertMemberFieldsSubset =
+  MemberEncryptedFields extends Pick<Member, keyof MemberEncryptedFields> ? true : never;
+
 // ── Validator ─────────────────────────────────────────────────────────
 
 function assertMemberEncryptedFields(raw: unknown): asserts raw is MemberEncryptedFields {

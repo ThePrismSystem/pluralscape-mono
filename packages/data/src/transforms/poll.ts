@@ -80,6 +80,16 @@ export interface PollVoteDecrypted {
   readonly archived: false;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertPollFieldsSubset =
+  PollEncryptedFields extends Pick<PollDecrypted, keyof PollEncryptedFields> ? true : never;
+
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertPollVoteFieldsSubset =
+  PollVoteEncryptedFields extends Pick<PollVoteDecrypted, keyof PollVoteEncryptedFields>
+    ? true
+    : never;
+
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `poll.get` — derived from `PollDecrypted`. */

@@ -34,6 +34,10 @@ export interface ChannelEncryptedFields {
   readonly name: string;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertChannelFieldsSubset =
+  ChannelEncryptedFields extends Pick<Channel, keyof ChannelEncryptedFields> ? true : never;
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertChannelEncryptedFields(raw: unknown): asserts raw is ChannelEncryptedFields {

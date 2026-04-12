@@ -44,6 +44,10 @@ export interface MessageEncryptedFields {
   readonly senderId: MemberId;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertMessageFieldsSubset =
+  MessageEncryptedFields extends Pick<ChatMessage, keyof MessageEncryptedFields> ? true : never;
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertMessageEncryptedFields(raw: unknown): asserts raw is MessageEncryptedFields {
