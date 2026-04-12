@@ -546,6 +546,9 @@ importers:
       '@pluralscape/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@pluralscape/data':
+        specifier: workspace:*
+        version: link:../data
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config

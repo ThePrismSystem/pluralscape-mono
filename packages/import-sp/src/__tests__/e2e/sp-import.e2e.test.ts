@@ -28,6 +28,21 @@ import {
   makeTrpcClient,
   registerTestAccount,
 } from "./e2e-helpers.js";
+import {
+  assertMembers,
+  assertGroups,
+  assertCustomFronts,
+  assertFieldDefinitions,
+  assertPrivacyBuckets,
+  assertFrontingSessions,
+  assertFrontingComments,
+  assertNotes,
+  assertPolls,
+  assertChannelCategories,
+  assertChannels,
+  assertChatMessages,
+  assertBoardMessages,
+} from "./entity-assertions.js";
 
 import type { E2EPersisterContext, TRPCClient } from "./e2e-helpers.js";
 import type { ImportRunResult } from "../../engine/import-engine.js";
@@ -59,60 +74,6 @@ function hasExportFixtures(): boolean {
 
 function noopProgress(): Promise<void> {
   return Promise.resolve();
-}
-
-// ── Assertion helpers ───────────────────────────────────────────────
-
-/**
- * Verify that import entity refs were created for every manifest entry.
- * Since data is encrypted, we verify entity COUNTS and ref existence
- * rather than field values.
- */
-async function assertImportRefsExist(
-  trpc: TRPCClient,
-  systemId: string,
-  manifest: Manifest,
-  createdCount: number,
-): Promise<void> {
-  // The import should have created at least as many entities as
-  // the manifest describes (system-profile/system-settings are updates, not creates).
-  // We check that the created count is positive and in a reasonable range.
-  expect(createdCount).toBeGreaterThan(0);
-
-  // Verify import entity refs for a sample of entity types via lookupBatch.
-  // Members are the most important — every import must have at least one.
-  if (manifest.members.length > 0) {
-    const memberSourceIds = manifest.members.map((m) => m.sourceId);
-    const result = await trpc.importEntityRef.lookupBatch.mutate({
-      systemId: systemId as Parameters<
-        typeof trpc.importEntityRef.lookupBatch.mutate
-      >[0]["systemId"],
-      source: "simply-plural",
-      sourceEntityType: "member",
-      sourceEntityIds: memberSourceIds,
-    });
-    expect(
-      Object.keys(result).length,
-      `expected all ${String(manifest.members.length)} member refs to be stored`,
-    ).toBe(manifest.members.length);
-  }
-
-  // Spot-check custom fronts
-  if (manifest.customFronts.length > 0) {
-    const cfSourceIds = manifest.customFronts.map((cf) => cf.sourceId);
-    const result = await trpc.importEntityRef.lookupBatch.mutate({
-      systemId: systemId as Parameters<
-        typeof trpc.importEntityRef.lookupBatch.mutate
-      >[0]["systemId"],
-      source: "simply-plural",
-      sourceEntityType: "custom-front",
-      sourceEntityIds: cfSourceIds,
-    });
-    expect(
-      Object.keys(result).length,
-      `expected all ${String(manifest.customFronts.length)} custom-front refs to be stored`,
-    ).toBe(manifest.customFronts.length);
-  }
 }
 
 // ── Parameterized import suite ──────────────────────────────────────
@@ -181,24 +142,61 @@ function defineImportSuite(
       expect(ctx.getCreatedCount()).toBeGreaterThan(0);
     });
 
-    it("import entity refs are stored for all manifest entries", async () => {
-      await assertImportRefsExist(trpc, ctx.systemId, manifest, ctx.getCreatedCount());
+    // ── Per-entity-type field value assertions ───────────────────────
+
+    it("members have correct field values", async () => {
+      await assertMembers(trpc, ctx.masterKey, ctx.systemId, manifest);
     });
 
-    if (sourceLabel === "file") {
-      it("fronting session refs are stored", async () => {
-        if (manifest.frontHistory.length === 0) return;
+    it("groups have correct field values", async () => {
+      await assertGroups(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
 
-        const sourceIds = manifest.frontHistory.map((fh) => fh.sourceId);
-        const refs = await trpc.importEntityRef.lookupBatch.mutate({
-          systemId: ctx.systemId as Parameters<
-            typeof trpc.importEntityRef.lookupBatch.mutate
-          >[0]["systemId"],
-          source: "simply-plural",
-          sourceEntityType: "fronting-session",
-          sourceEntityIds: sourceIds,
-        });
-        expect(Object.keys(refs).length).toBe(manifest.frontHistory.length);
+    it("custom fronts have correct field values", async () => {
+      await assertCustomFronts(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    it("field definitions have correct field values", async () => {
+      await assertFieldDefinitions(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    it("privacy buckets have correct field values", async () => {
+      await assertPrivacyBuckets(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    it("fronting sessions have correct field values", async () => {
+      await assertFrontingSessions(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    it("notes have correct field values", async () => {
+      await assertNotes(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    it("polls have correct field values", async () => {
+      await assertPolls(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    it("channel categories have correct field values", async () => {
+      await assertChannelCategories(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    it("channels have correct field values", async () => {
+      await assertChannels(trpc, ctx.masterKey, ctx.systemId, manifest);
+    });
+
+    // File-only entity types (comments, chat messages, board messages
+    // are only present in file-source fixtures, not live API exports).
+    if (sourceLabel === "file") {
+      it("fronting comments have correct field values", async () => {
+        await assertFrontingComments(trpc, ctx.masterKey, ctx.systemId, manifest);
+      });
+
+      it("chat messages have correct field values", async () => {
+        await assertChatMessages(trpc, ctx.masterKey, ctx.systemId, manifest);
+      });
+
+      it("board messages have correct field values", async () => {
+        await assertBoardMessages(trpc, ctx.masterKey, ctx.systemId, manifest);
       });
     }
   });
