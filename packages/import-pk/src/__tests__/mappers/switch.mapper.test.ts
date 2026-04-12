@@ -217,9 +217,9 @@ describe("mapSwitchBatch", () => {
     const sessions = results.filter((r) => r.result.status === "mapped");
 
     expect(sessions).toHaveLength(1);
-    const p = payload(
-      sessions[0] ?? { result: { status: "skipped", kind: "empty-name", reason: "" } },
-    );
+    const first = sessions[0];
+    expect(first).toBeDefined();
+    const p = payload(first as BatchMapperOutput);
     expect(p.customFrontId).toBeUndefined();
     expect(p.structureEntityId).toBeUndefined();
   });
