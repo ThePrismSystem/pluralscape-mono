@@ -49,16 +49,24 @@ export class ApiSourceTransientError extends Error {
  *  - `single` — single GET returning one document; wrapped into a one-item
  *               array so the iterator interface is uniform.
  *  - `unsupported` — SP exposes no bulk endpoint for the collection (e.g.
- *               per-document comments, per-member notes, per-channel chat
- *               messages). The iterator yields nothing rather than throwing
- *               so the engine can still import the collections that do
- *               work; operators importing these collections must use the
- *               file source.
+ *               per-document comments, per-channel chat messages). The
+ *               iterator yields nothing rather than throwing so the engine
+ *               can still import the collections that do work; operators
+ *               importing these collections must use the file source.
+ *  - `dependent` — fetches per-parent: after the engine completes a parent
+ *               collection it calls `supplyParentIds` with the collected
+ *               IDs, and the iterator fans out one request per parent.
  */
 type ApiFetchStrategy =
   | { readonly kind: "list"; readonly path: string }
   | { readonly kind: "single"; readonly path: string }
-  | { readonly kind: "unsupported"; readonly reason: string };
+  | { readonly kind: "unsupported"; readonly reason: string }
+  | {
+      readonly kind: "dependent";
+      readonly parentCollection: SpCollectionName;
+      /** Path template with `:system` and `:parent` substitution tokens. */
+      readonly path: string;
+    };
 
 /**
  * Mapping from internal SP collection name to its live SP API fetch
@@ -76,10 +84,12 @@ type ApiFetchStrategy =
  *  - `users` / `private` are singleton GETs on `/v1/user/:id` and
  *    `/v1/user/private/:id`, not bulk lists.
  *  - `privacyBuckets` does not take `:system` (derived from auth context).
- *  - `comments`, `notes`, `chatMessages`, `boardMessages` have no bulk
- *    list endpoints — each requires per-parent traversal (per-document,
- *    per-member, per-channel, per-member respectively) and are marked
- *    unsupported pending a multi-pass fetcher.
+ *  - `comments`, `chatMessages`, `boardMessages` have no bulk list
+ *    endpoints — each requires per-parent traversal (per-document,
+ *    per-channel, per-member respectively) and are marked unsupported
+ *    pending a multi-pass fetcher.
+ *  - `notes` uses a `dependent` strategy that fetches per-member after
+ *    the engine supplies member IDs via `supplyParentIds`.
  */
 const ENDPOINT_STRATEGIES: Readonly<Record<SpCollectionName, ApiFetchStrategy>> = {
   users: { kind: "single", path: "/v1/user/:system" },
@@ -99,8 +109,9 @@ const ENDPOINT_STRATEGIES: Readonly<Record<SpCollectionName, ApiFetchStrategy>> 
     reason: "SP exposes comments per-document only (/v1/comments/:type/:id)",
   },
   notes: {
-    kind: "unsupported",
-    reason: "SP exposes notes per-member only (/v1/notes/:system/:member)",
+    kind: "dependent",
+    parentCollection: "members",
+    path: "/v1/notes/:system/:parent",
   },
   polls: { kind: "list", path: "/v1/polls/:system" },
   channelCategories: { kind: "list", path: "/v1/chat/categories" },
@@ -153,13 +164,16 @@ function substituteSystem(path: string, systemId: string): string {
 
 /**
  * List of SP collection names the api source can fetch via a single HTTP
- * request. Collections whose strategy is `unsupported` are omitted so the
- * engine does not count them as source-provided during its
+ * request. Collections whose strategy is `unsupported` or `dependent` are
+ * omitted so the engine does not count them as source-provided during its
  * dropped-collection check.
  */
 const LISTABLE_COLLECTIONS: readonly SpCollectionName[] = (
   Object.keys(ENDPOINT_STRATEGIES) as SpCollectionName[]
-).filter((name) => ENDPOINT_STRATEGIES[name].kind !== "unsupported");
+).filter((name) => {
+  const kind = ENDPOINT_STRATEGIES[name].kind;
+  return kind !== "unsupported" && kind !== "dependent";
+});
 
 /**
  * Create an `ImportDataSource` that streams a Simply Plural account from
@@ -185,6 +199,8 @@ const LISTABLE_COLLECTIONS: readonly SpCollectionName[] = (
  * use the file source for a complete import.
  */
 export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
+  const parentIdsByCollection = new Map<SpCollectionName, readonly string[]>();
+
   async function fetchJson(url: string): Promise<unknown> {
     let attempt = 0;
     while (attempt <= SP_API_MAX_RETRIES) {
@@ -297,6 +313,9 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
 
   return {
     mode: "api",
+    supplyParentIds(parentCollection: SpCollectionName, sourceIds: readonly string[]): void {
+      parentIdsByCollection.set(parentCollection, sourceIds);
+    },
     async *iterate(collection: SpCollectionName): AsyncGenerator<SourceEvent> {
       const strategy = ENDPOINT_STRATEGIES[collection];
       switch (strategy.kind) {
@@ -306,6 +325,66 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
           // rest of DEPENDENCY_ORDER — operators who need these collections
           // should import from a file export instead.
           return;
+        case "dependent": {
+          const parentIds = parentIdsByCollection.get(strategy.parentCollection);
+          if (!parentIds || parentIds.length === 0) {
+            return;
+          }
+
+          for (const parentId of parentIds) {
+            const path = substituteSystem(strategy.path, input.systemId).replaceAll(
+              ":parent",
+              encodeURIComponent(parentId),
+            );
+            const url = `${input.baseUrl}${path}`;
+
+            let body: unknown;
+            try {
+              body = await fetchJson(url);
+            } catch (err) {
+              if (err instanceof ApiSourceTokenRejectedError) throw err;
+              yield {
+                kind: "drop",
+                collection,
+                sourceId: null,
+                reason: `Failed to fetch ${collection} for parent ${parentId}: ${err instanceof Error ? err.message : String(err)}`,
+              };
+              continue;
+            }
+
+            if (!Array.isArray(body)) {
+              yield {
+                kind: "drop",
+                collection,
+                sourceId: null,
+                reason: `SP API returned non-array for ${url} (got ${typeof body})`,
+              };
+              continue;
+            }
+
+            let index = 0;
+            for (const element of body) {
+              const result = assertDocument(element, collection, index);
+              if (result.kind === "drop") {
+                yield {
+                  kind: "drop",
+                  collection,
+                  sourceId: result.sourceId,
+                  reason: result.reason,
+                };
+              } else {
+                yield {
+                  kind: "doc",
+                  collection,
+                  sourceId: result.sourceId,
+                  document: result.record,
+                };
+              }
+              index += 1;
+            }
+          }
+          return;
+        }
         case "single": {
           const url = buildUrl(strategy);
           const body = await fetchJson(url);
