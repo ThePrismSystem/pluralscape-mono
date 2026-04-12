@@ -2,11 +2,15 @@
  * PK member mapper.
  *
  * Translates a {@link PKMember} into a Pluralscape member payload. PK colors
- * may omit the `#` prefix, so we normalise before parsing. Privacy bucket
- * assignment is deferred to the privacy-bucket synthesis pass — `bucketIds`
- * is always empty here.
+ * may omit the `#` prefix, so we normalise before parsing.
  */
-import { mapped, parseHexColor, skipped, type MapperResult } from "@pluralscape/import-core";
+import {
+  mapped,
+  parseHexColor,
+  skipped,
+  failed,
+  type MapperResult,
+} from "@pluralscape/import-core";
 
 import type { PKMember } from "../validators/pk-payload.js";
 import type { MemberEncryptedFields } from "@pluralscape/data";
@@ -64,10 +68,29 @@ export function mapPkMember(pk: PKMember, ctx: MappingContext): MapperResult<PkM
     boardMessageNotificationOnFront: false,
   };
 
+  // Resolve privacy bucket assignment from synthesis pass metadata
+  const bucketIds: string[] = [];
+  const privateMemberIds = ctx.getMetadata(
+    "privacy-bucket",
+    "synthetic:pk-private",
+    "memberIds",
+  ) as readonly string[] | undefined;
+
+  if (privateMemberIds?.includes(pk.id)) {
+    const bucketId = ctx.translate("privacy-bucket", "synthetic:pk-private");
+    if (bucketId === null) {
+      return failed({
+        kind: "fk-miss",
+        message: `Privacy bucket "synthetic:pk-private" not found — cannot assign bucket to member "${pk.id}"`,
+      });
+    }
+    bucketIds.push(bucketId);
+  }
+
   return mapped({
     encrypted,
     archived: false as const,
     fieldValues: [] as const,
-    bucketIds: [],
+    bucketIds,
   });
 }

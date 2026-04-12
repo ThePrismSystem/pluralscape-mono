@@ -147,14 +147,58 @@ describe("mapPkMember", () => {
     }
   });
 
-  it("leaves bucketIds empty for privacy synthesis to handle later", () => {
-    const pk: PKMember = { id: "m1", name: "A" };
-    const ctx = createMappingContext({ sourceMode: "fake" });
-    const result = mapPkMember(pk, ctx);
+  describe("privacy bucket linking", () => {
+    it("assigns bucket to member in private list", () => {
+      const pk: PKMember = { id: "m1", name: "A" };
+      const ctx = createMappingContext({ sourceMode: "fake" });
+      ctx.register("privacy-bucket", "synthetic:pk-private", "ps-bucket-001");
+      ctx.storeMetadata("privacy-bucket", "synthetic:pk-private", "memberIds", ["m1", "m2"]);
 
-    expect(result.status).toBe("mapped");
-    if (result.status === "mapped") {
-      expect(result.payload.bucketIds).toEqual([]);
-    }
+      const result = mapPkMember(pk, ctx);
+
+      expect(result.status).toBe("mapped");
+      if (result.status === "mapped") {
+        expect(result.payload.bucketIds).toEqual(["ps-bucket-001"]);
+      }
+    });
+
+    it("returns empty bucketIds for member not in private list", () => {
+      const pk: PKMember = { id: "m1", name: "A" };
+      const ctx = createMappingContext({ sourceMode: "fake" });
+      ctx.register("privacy-bucket", "synthetic:pk-private", "ps-bucket-001");
+      ctx.storeMetadata("privacy-bucket", "synthetic:pk-private", "memberIds", ["m99"]);
+
+      const result = mapPkMember(pk, ctx);
+
+      expect(result.status).toBe("mapped");
+      if (result.status === "mapped") {
+        expect(result.payload.bucketIds).toEqual([]);
+      }
+    });
+
+    it("returns fk-miss when privacy bucket is not translated", () => {
+      const pk: PKMember = { id: "m1", name: "A" };
+      const ctx = createMappingContext({ sourceMode: "fake" });
+      ctx.storeMetadata("privacy-bucket", "synthetic:pk-private", "memberIds", ["m1"]);
+
+      const result = mapPkMember(pk, ctx);
+
+      expect(result.status).toBe("failed");
+      if (result.status === "failed") {
+        expect(result.kind).toBe("fk-miss");
+      }
+    });
+
+    it("returns empty bucketIds when no privacy metadata exists", () => {
+      const pk: PKMember = { id: "m1", name: "A" };
+      const ctx = createMappingContext({ sourceMode: "fake" });
+
+      const result = mapPkMember(pk, ctx);
+
+      expect(result.status).toBe("mapped");
+      if (result.status === "mapped") {
+        expect(result.payload.bucketIds).toEqual([]);
+      }
+    });
   });
 });
