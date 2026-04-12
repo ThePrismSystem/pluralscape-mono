@@ -201,7 +201,7 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
       try {
         response = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${input.token}`,
+            Authorization: input.token,
             Accept: "application/json",
           },
           signal: controller.signal,

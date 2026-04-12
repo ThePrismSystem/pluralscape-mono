@@ -27,8 +27,9 @@ const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../../../..");
 // Guard helpers
 // ---------------------------------------------------------------------------
 
-function hasApiTokens(): boolean {
+function hasLiveApiEnabled(): boolean {
   return (
+    process.env["SP_TEST_LIVE_API"] === "true" &&
     typeof process.env["SP_TEST_MINIMAL_API_KEY"] === "string" &&
     process.env["SP_TEST_MINIMAL_API_KEY"].length > 0 &&
     typeof process.env["SP_TEST_ADVERSARIAL_API_KEY"] === "string" &&
@@ -227,7 +228,7 @@ function defineImportSuite(
 // 1. API Source tests
 // ---------------------------------------------------------------------------
 
-describe.skipIf(!hasApiTokens())("SP Import E2E — API Source", () => {
+describe.skipIf(!hasLiveApiEnabled())("SP Import E2E — API Source", () => {
   describe("ApiSource connectivity", () => {
     it("lists the collections the api source can fetch via bulk GET", async () => {
       const manifest = await loadManifest("minimal");

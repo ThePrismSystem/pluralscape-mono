@@ -161,7 +161,7 @@ describe("createApiImportSource", () => {
 
     const [, init] = fetchMock.mock.calls[0] ?? [];
     const headers = (init as RequestInit | undefined)?.headers as Record<string, string>;
-    expect(headers.Authorization).toBe("Bearer tk_secret");
+    expect(headers.Authorization).toBe("tk_secret");
   });
 
   it("throws ApiSourceTokenRejectedError on 401", async () => {

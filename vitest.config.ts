@@ -13,7 +13,6 @@ const PACKAGES = [
   "validation",
   "rotation-worker",
   "email",
-  "import-sp",
 ];
 
 function projectConfig(name: string, root: string) {
@@ -52,6 +51,21 @@ export default defineConfig({
     projects: [
       ...PACKAGES.map((name) => projectConfig(name, `packages/${name}`)),
       ...PACKAGES.map((name) => integrationProjectConfig(name, `packages/${name}`)),
+      {
+        test: {
+          name: "import-sp",
+          root: "packages/import-sp",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.ts"],
+          exclude: ["**/*.integration.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 5000,
+          hookTimeout: 10000,
+          setupFiles: ["src/__tests__/e2e/setup-env.ts"],
+        },
+      },
+      integrationProjectConfig("import-sp", "packages/import-sp"),
       projectConfig("api", "apps/api"),
       integrationProjectConfig("api", "apps/api"),
       {
