@@ -32,6 +32,12 @@ export interface CustomFrontEncryptedFields {
   readonly emoji: string | null;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertCustomFrontFieldsSubset =
+  CustomFrontEncryptedFields extends Pick<CustomFront, keyof CustomFrontEncryptedFields>
+    ? true
+    : never;
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertCustomFrontEncryptedFields(raw: unknown): asserts raw is CustomFrontEncryptedFields {

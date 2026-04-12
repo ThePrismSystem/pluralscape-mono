@@ -15,6 +15,12 @@ export interface FrontingReportEncryptedFields {
   readonly chartData: readonly ChartData[];
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertFrontingReportFieldsSubset =
+  FrontingReportEncryptedFields extends Pick<FrontingReport, keyof FrontingReportEncryptedFields>
+    ? true
+    : never;
+
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape for a fronting report — adds wire-only fields absent from the domain type. */

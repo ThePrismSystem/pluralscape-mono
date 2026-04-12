@@ -41,6 +41,15 @@ export interface InnerWorldRegionDecrypted {
   readonly updatedAt: UnixMillis;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertInnerWorldRegionFieldsSubset =
+  InnerWorldRegionEncryptedFields extends Pick<
+    InnerWorldRegionDecrypted,
+    keyof InnerWorldRegionEncryptedFields
+  >
+    ? true
+    : never;
+
 export type InnerWorldRegionRaw = Omit<
   InnerWorldRegionDecrypted,
   keyof InnerWorldRegionEncryptedFields | "archived"

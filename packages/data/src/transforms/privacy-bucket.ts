@@ -32,11 +32,18 @@ export interface BucketEncryptedFields {
   readonly description: string | null;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertBucketFieldsSubset =
+  BucketEncryptedFields extends Pick<PrivacyBucket, keyof BucketEncryptedFields> ? true : never;
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertBucketEncryptedFields(raw: unknown): asserts raw is BucketEncryptedFields {
   const obj = assertObjectBlob(raw, "privacy bucket");
   assertStringField(obj, "privacy bucket", "name");
+  if (!("description" in obj)) {
+    throw new Error("Decrypted privacy bucket blob: missing required field: description");
+  }
   if (obj["description"] !== null && typeof obj["description"] !== "string") {
     throw new Error("Decrypted privacy bucket blob: description must be string or null");
   }
@@ -68,7 +75,7 @@ export function decryptPrivacyBucket(
   };
 
   if (raw.archived) {
-    if (raw.archivedAt === null) throw new Error("Archived privacyBucket missing archivedAt");
+    if (raw.archivedAt === null) throw new Error("Archived privacy bucket missing archivedAt");
     return { ...base, archived: true as const, archivedAt: raw.archivedAt };
   }
   return { ...base, archived: false as const };

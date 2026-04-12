@@ -18,6 +18,12 @@ export interface FrontingSessionEncryptedFields {
   readonly outtriggerSentiment: OuttriggerSentiment | null;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertFrontingSessionFieldsSubset =
+  FrontingSessionEncryptedFields extends Pick<FrontingSession, keyof FrontingSessionEncryptedFields>
+    ? true
+    : never;
+
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape for a single fronting session — derived from `ActiveFrontingSession`. */

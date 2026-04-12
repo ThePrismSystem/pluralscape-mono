@@ -43,8 +43,8 @@ function makeServerBucket(
     version: 1,
     createdAt: toUnixMillis(1_700_000_000_000),
     updatedAt: toUnixMillis(1_700_001_000_000),
-    archived: false as boolean,
-    archivedAt: null as UnixMillis | null,
+    archived: false,
+    archivedAt: null,
     ...overrides,
   };
 }
@@ -140,6 +140,16 @@ describe("encryptBucketInput", () => {
     expect(bucket.name).toBe(fields.name);
     expect(bucket.description).toBe(fields.description);
   });
+
+  it("round-trips null description", () => {
+    const fields: BucketEncryptedFields = { name: "Secret", description: null };
+    const { encryptedData } = encryptBucketInput(fields, masterKey);
+    const raw = { ...makeServerBucket(), encryptedData };
+    const bucket = decryptPrivacyBucket(raw, masterKey);
+
+    expect(bucket.name).toBe("Secret");
+    expect(bucket.description).toBeNull();
+  });
 });
 
 describe("encryptBucketUpdate", () => {
@@ -160,6 +170,16 @@ describe("encryptBucketUpdate", () => {
     expect(bucket.name).toBe(fields.name);
     expect(bucket.description).toBe(fields.description);
   });
+
+  it("round-trips null description", () => {
+    const fields: BucketEncryptedFields = { name: "Hidden", description: null };
+    const { encryptedData } = encryptBucketUpdate(fields, 3, masterKey);
+    const raw = { ...makeServerBucket(), encryptedData, version: 3 };
+    const bucket = decryptPrivacyBucket(raw, masterKey);
+
+    expect(bucket.name).toBe("Hidden");
+    expect(bucket.description).toBeNull();
+  });
 });
 
 describe("assertBucketEncryptedFields", () => {
@@ -178,6 +198,16 @@ describe("assertBucketEncryptedFields", () => {
     };
     expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(
       "missing required string field: name",
+    );
+  });
+
+  it("throws when description key is missing", () => {
+    const raw = {
+      ...makeServerBucket(),
+      encryptedData: makeBase64Blob({ name: "Test" }, masterKey),
+    };
+    expect(() => decryptPrivacyBucket(raw, masterKey)).toThrow(
+      "missing required field: description",
     );
   });
 

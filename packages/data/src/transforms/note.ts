@@ -45,6 +45,10 @@ export interface NoteDecrypted {
   readonly updatedAt: UnixMillis;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertNoteFieldsSubset =
+  NoteEncryptedFields extends Pick<NoteDecrypted, keyof NoteEncryptedFields> ? true : never;
+
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `note.get` — derived from the `NoteDecrypted` domain type. */

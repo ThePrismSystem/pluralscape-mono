@@ -32,6 +32,12 @@ export interface RelationshipDecrypted {
   readonly archived: false;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertRelationshipFieldsSubset =
+  RelationshipEncryptedFields extends Pick<RelationshipDecrypted, keyof RelationshipEncryptedFields>
+    ? true
+    : never;
+
 export type RelationshipRaw = Omit<
   RelationshipDecrypted,
   keyof RelationshipEncryptedFields | "archived" | "sourceMemberId" | "targetMemberId"

@@ -42,6 +42,15 @@ export interface StructureEntityTypeDecrypted {
   readonly updatedAt: UnixMillis;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertStructureEntityTypeFieldsSubset =
+  StructureEntityTypeEncryptedFields extends Pick<
+    StructureEntityTypeDecrypted,
+    keyof StructureEntityTypeEncryptedFields
+  >
+    ? true
+    : never;
+
 // ── Wire types ────────────────────────────────────────────────────────
 
 export type StructureEntityTypeRaw = Omit<

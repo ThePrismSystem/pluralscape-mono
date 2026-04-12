@@ -27,6 +27,10 @@ export interface CanvasEncryptedFields {
   readonly dimensions: { readonly width: number; readonly height: number };
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertCanvasFieldsSubset =
+  CanvasEncryptedFields extends Pick<InnerWorldCanvas, keyof CanvasEncryptedFields> ? true : never;
+
 // ── Validators ──────────────────────────────────────────────────────
 
 function assertCanvasEncryptedFields(raw: unknown): asserts raw is CanvasEncryptedFields {

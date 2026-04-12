@@ -31,6 +31,12 @@ export interface FrontingCommentEncryptedFields {
   readonly content: string;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertFrontingCommentFieldsSubset =
+  FrontingCommentEncryptedFields extends Pick<FrontingComment, keyof FrontingCommentEncryptedFields>
+    ? true
+    : never;
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertFrontingCommentEncryptedFields(

@@ -35,6 +35,12 @@ export interface BoardMessageEncryptedFields {
   readonly senderId: MemberId;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertBoardMessageFieldsSubset =
+  BoardMessageEncryptedFields extends Pick<BoardMessage, keyof BoardMessageEncryptedFields>
+    ? true
+    : never;
+
 // ── Validators ────────────────────────────────────────────────────────
 
 function assertBoardMessageEncryptedFields(

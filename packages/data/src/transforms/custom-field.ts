@@ -45,6 +45,15 @@ export interface FieldDefinitionDecrypted {
   readonly updatedAt: UnixMillis;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertFieldDefinitionFieldsSubset =
+  FieldDefinitionEncryptedFields extends Pick<
+    FieldDefinitionDecrypted,
+    keyof FieldDefinitionEncryptedFields
+  >
+    ? true
+    : never;
+
 /**
  * A fully decrypted field value, combining wire metadata with the decrypted value union.
  * `fieldType` and `value` are decrypted from the encrypted blob.

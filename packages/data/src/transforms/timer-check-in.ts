@@ -16,6 +16,12 @@ export interface TimerConfigEncryptedFields {
   readonly promptText: string;
 }
 
+/** Compile-time check: encrypted fields must be a subset of the domain type. */
+export type AssertTimerConfigFieldsSubset =
+  TimerConfigEncryptedFields extends Pick<TimerConfig, keyof TimerConfigEncryptedFields>
+    ? true
+    : never;
+
 // ── Wire types (derived from domain types) ──────────────────────────
 
 /** Wire shape returned by `timerConfig.get` — derived from the `TimerConfig` domain type. */
