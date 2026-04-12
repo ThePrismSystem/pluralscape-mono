@@ -122,6 +122,17 @@ describe("synthesizePkPrivacyBuckets", () => {
     expect(ctx.warnings.some((w) => w.message.includes("privacy"))).toBe(true);
   });
 
+  it("produces no bucket and emits a warning when document fails validation", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    const docs: SourceDocument[] = [
+      { sourceId: "bad-scan", document: { type: "wrong-type", members: [] } },
+    ];
+    const results = synthesizePkPrivacyBuckets(docs, ctx);
+
+    expect(results).toHaveLength(0);
+    expect(ctx.warnings.some((w) => w.message.includes("validation failed"))).toBe(true);
+  });
+
   it("checks all privacy fields, not just visibility", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "m1", "ps_m1");

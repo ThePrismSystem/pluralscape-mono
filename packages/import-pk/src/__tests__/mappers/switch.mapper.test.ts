@@ -240,6 +240,28 @@ describe("mapSwitchBatch", () => {
     }
   });
 
+  it("skips switches with invalid documents and emits warning", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.register("member", "A", "ps_A");
+
+    const validTimestamp = "2024-01-01T00:00:00Z";
+    const docs: SourceDocument[] = [
+      { sourceId: "sw-bad", document: { timestamp: "not-a-date", members: ["A"] } },
+      makeSwitch(validTimestamp, ["A"]),
+    ];
+    const results = mapSwitchBatch(docs, ctx);
+    const sessions = results.filter((r) => r.result.status === "mapped");
+
+    // Only the valid switch produces a session
+    expect(sessions).toHaveLength(1);
+    const session = findSession(sessions, "ps_A");
+    expect(session.startTime).toBe(Date.parse(validTimestamp));
+    expect(session.endTime).toBeNull();
+
+    // Warning emitted for the invalid doc
+    expect(ctx.warnings.some((w) => w.entityId === "sw-bad")).toBe(true);
+  });
+
   it("sorts unsorted switches by timestamp before processing", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     ctx.register("member", "A", "ps_A");

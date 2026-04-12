@@ -166,6 +166,19 @@ describe("PKSwitchSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rejects a switch with non-ISO-8601 timestamp", () => {
+    const result = PKSwitchSchema.safeParse({ timestamp: "not-a-date", members: ["abc"] });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a switch with valid ISO-8601 timestamp", () => {
+    const result = PKSwitchSchema.safeParse({
+      timestamp: "2024-01-01T00:00:00.000Z",
+      members: ["abc"],
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("PKPayloadSchema", () => {

@@ -17,6 +17,8 @@
  */
 import { mapped, type BatchMapperOutput, type SourceDocument } from "@pluralscape/import-core";
 
+import { PKSwitchSchema } from "../validators/pk-payload.js";
+
 import type { FrontingSessionEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
 
@@ -62,13 +64,31 @@ export function mapSwitchBatch(
   if (documents.length === 0) return [];
 
   // 1. Parse and sort by timestamp (stable sort)
-  const parsed: ParsedSwitch[] = documents.map((doc) => {
-    const sw = doc.document as { timestamp: string; members: readonly string[] };
-    return {
-      timestampMs: Date.parse(sw.timestamp),
-      members: sw.members,
-    };
-  });
+  const parsed: ParsedSwitch[] = [];
+  for (const doc of documents) {
+    const validation = PKSwitchSchema.safeParse(doc.document);
+    if (!validation.success) {
+      const firstIssue = validation.error.issues[0];
+      ctx.addWarning({
+        entityType: "fronting-session",
+        entityId: doc.sourceId,
+        message: `Switch validation failed: ${firstIssue?.message ?? "invalid document"}`,
+      });
+      continue;
+    }
+    const sw = validation.data;
+    const timestampMs = Date.parse(sw.timestamp);
+    if (Number.isNaN(timestampMs)) {
+      ctx.addWarning({
+        entityType: "fronting-session",
+        entityId: doc.sourceId,
+        message: `Switch has unparseable timestamp "${sw.timestamp}" — skipping`,
+      });
+      continue;
+    }
+    parsed.push({ timestampMs, members: sw.members });
+  }
+  if (parsed.length === 0) return [];
   parsed.sort((a, b) => a.timestampMs - b.timestampMs);
 
   // 2. Track active fronters: pkMemberId -> startTimeMs

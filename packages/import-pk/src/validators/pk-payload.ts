@@ -71,7 +71,7 @@ export const PKGroupSchema = z.looseObject({
 
 export const PKSwitchSchema = z.object({
   id: z.string().optional(),
-  timestamp: z.string().min(1),
+  timestamp: z.iso.datetime(),
   members: z.array(z.string()).readonly(),
 });
 

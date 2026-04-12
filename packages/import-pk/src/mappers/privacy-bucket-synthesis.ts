@@ -11,6 +11,7 @@
  * metadata so downstream passes can assign `bucketIds` on each member.
  */
 import { mapped, type BatchMapperOutput, type SourceDocument } from "@pluralscape/import-core";
+import { z } from "zod/v4";
 
 import type { BucketEncryptedFields } from "@pluralscape/data";
 import type { MappingContext } from "@pluralscape/import-core";
@@ -32,17 +33,19 @@ const PRIVACY_FIELDS = [
   "proxy_privacy",
 ] as const;
 
-interface PrivacyScanMember {
-  readonly pkMemberId: string;
-  readonly privacy?: Record<string, string>;
-}
+const PrivacyRecordSchema = z.record(z.string(), z.string());
+const PrivacyScanMemberSchema = z.object({
+  pkMemberId: z.string().min(1),
+  privacy: PrivacyRecordSchema.optional(),
+});
+const PrivacyScanDocumentSchema = z.object({
+  type: z.literal("privacy-scan"),
+  members: z.array(PrivacyScanMemberSchema).readonly(),
+});
 
-interface PrivacyScanDocument {
-  readonly type: "privacy-scan";
-  readonly members: readonly PrivacyScanMember[];
-}
+type PrivacyScanMember = z.infer<typeof PrivacyScanMemberSchema>;
 
-function hasAnyPrivateField(privacy: Record<string, string> | undefined): boolean {
+function hasAnyPrivateField(privacy: PrivacyScanMember["privacy"]): boolean {
   if (privacy === undefined) return false;
   return PRIVACY_FIELDS.some((field) => privacy[field] === "private");
 }
@@ -60,10 +63,29 @@ export function synthesizePkPrivacyBuckets(
     return [];
   }
 
-  const scanDoc = documents[0]?.document as PrivacyScanDocument | undefined;
-  const members = scanDoc?.members;
+  const firstDoc = documents[0];
+  if (firstDoc === undefined) {
+    ctx.addWarning({
+      entityType: "privacy-bucket",
+      entityId: null,
+      message: "No member privacy data available — cannot synthesize privacy buckets",
+    });
+    return [];
+  }
 
-  if (members === undefined || members.length === 0) {
+  const validation = PrivacyScanDocumentSchema.safeParse(firstDoc.document);
+  if (!validation.success) {
+    const firstIssue = validation.error.issues[0];
+    ctx.addWarning({
+      entityType: "privacy-bucket",
+      entityId: firstDoc.sourceId,
+      message: `Privacy scan validation failed: ${firstIssue?.message ?? "invalid document"}`,
+    });
+    return [];
+  }
+
+  const members = validation.data.members;
+  if (members.length === 0) {
     ctx.addWarning({
       entityType: "privacy-bucket",
       entityId: null,
