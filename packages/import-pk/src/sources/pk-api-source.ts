@@ -136,9 +136,17 @@ export function createPkApiImportSource(args: PkApiImportSourceArgs): ImportData
         case "switch": {
           // Fetch switches with raw member ID arrays.
           const switchesResult: unknown = await api.getSwitches({ system: "@me", raw: true });
-          // getSwitches returns Map<string, Switch> for v2
-          const switches: PkSwitch[] =
-            switchesResult instanceof Map ? ([...switchesResult.values()] as PkSwitch[]) : [];
+          if (!(switchesResult instanceof Map)) {
+            const resultType = switchesResult === null ? "null" : typeof switchesResult;
+            yield {
+              kind: "drop",
+              collection,
+              sourceId: null,
+              reason: `getSwitches returned ${resultType} instead of Map; switches will be empty`,
+            };
+            break;
+          }
+          const switches: PkSwitch[] = [...switchesResult.values()] as PkSwitch[];
 
           for (let i = 0; i < switches.length; i += 1) {
             const sw = switches[i];
