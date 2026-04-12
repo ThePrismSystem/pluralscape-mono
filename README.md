@@ -99,7 +99,7 @@ docs/
 | Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md) |
 | Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)    |
 
-All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [32 ADRs](docs/adr/).
+All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md). Architecture decisions documented in [34 ADRs](docs/adr/).
 
 ## Key Libraries
 
@@ -115,6 +115,7 @@ All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audit
 | [SQLCipher](https://github.com/nicktimko/sqlcipher)        | Encrypted SQLite                                       | BSD 3-Clause |
 | [Valkey](https://github.com/valkey-io/valkey)              | Pub/sub for real-time horizontal scaling               | BSD 3-Clause |
 | [BullMQ](https://github.com/taskforcesh/bullmq)            | Background job queue (Valkey-backed)                   | MIT          |
+| [pkapi.js](https://github.com/greys-tools/pkapi.js)        | PluralKit API v2 client (import + bridge)              | BSD 2-Clause |
 | [Resend](https://github.com/resendlabs/resend-node)        | Transactional email API (hosted deployments)           | MIT          |
 | [Nodemailer](https://github.com/nodemailer/nodemailer)     | SMTP email delivery (self-hosted deployments)          | MIT-0        |
 | [MinIO](https://github.com/minio/minio)                    | S3-compatible object storage (self-hosted media)       | AGPL-3.0     |
