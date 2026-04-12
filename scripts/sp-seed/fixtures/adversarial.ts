@@ -143,7 +143,9 @@ export const ADVERSARIAL_FIXTURES: EntityFixtures = {
       body: {
         custom: false,
         live: false,
-        startTime: now - 5_000_000,
+        // SP enforces startTime < endTime; equal values get startTime = endTime - 1 server-side.
+        // Use endTime - 1 to match what SP will actually store.
+        startTime: now - 5_000_001,
         endTime: now - 5_000_000,
         member: "member.bob",
       },

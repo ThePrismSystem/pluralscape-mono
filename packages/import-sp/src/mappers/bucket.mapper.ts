@@ -19,13 +19,11 @@ import { mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPPrivacyBucket } from "../sources/sp-types.js";
+import type { BucketEncryptedFields } from "@pluralscape/data";
 
 /** The Pluralscape-shaped bucket payload the persister consumes. */
 export interface MappedPrivacyBucket {
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: string | null;
-  readonly icon: string | null;
+  readonly encrypted: BucketEncryptedFields;
 }
 
 export function mapBucket(
@@ -41,12 +39,11 @@ export function mapBucket(
     });
     return skipped({ kind: nameError.kind, reason: nameError.message });
   }
-  const payload: MappedPrivacyBucket = {
+  const encrypted: BucketEncryptedFields = {
     name: sp.name,
     description: sp.desc ?? null,
-    color: sp.color ?? null,
-    icon: sp.icon ?? null,
   };
+  const payload: MappedPrivacyBucket = { encrypted };
   return mapped(payload);
 }
 

@@ -19,10 +19,11 @@ describe("mapBoardMessage", () => {
     const result = mapBoardMessage(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.title).toBe("Announcement");
-      expect(result.payload.body).toBe("hello everyone");
-      expect(result.payload.authorMemberId).toBe("ps_m1");
+      expect(result.payload.encrypted.content).toBe("# Announcement\n\nhello everyone");
+      expect(result.payload.encrypted.senderId).toBe("ps_m1");
       expect(result.payload.createdAt).toBe(1_234);
+      expect(result.payload.sortOrder).toBe(0);
+      expect(result.payload.pinned).toBe(false);
     }
   });
 
@@ -56,8 +57,8 @@ describe("mapBoardMessage", () => {
     const result = mapBoardMessage(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.title).toBe("Specific Title!");
-      expect(result.payload.body).toBe("multi\nline\nbody");
+      expect(result.payload.encrypted.content).toBe("# Specific Title!\n\nmulti\nline\nbody");
+      expect(result.payload.encrypted.senderId).toBe("ps_m1");
       expect(result.payload.createdAt).toBe(42);
     }
   });

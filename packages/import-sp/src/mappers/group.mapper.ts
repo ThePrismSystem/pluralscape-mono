@@ -6,18 +6,19 @@
  * `MapperResult.failed` with `kind: "fk-miss"` and the full list of missing
  * refs. Empty-named groups are skipped.
  */
-import { requireName, summarizeMissingRefs } from "./helpers.js";
+import { parseHexColor, requireName, summarizeMissingRefs } from "./helpers.js";
 import { failed, mapped, skipped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPGroup } from "../sources/sp-types.js";
+import type { GroupEncryptedFields } from "@pluralscape/data";
+import type { CreateGroupBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedGroup {
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: string | null;
+export type MappedGroup = Omit<z.infer<typeof CreateGroupBodySchema>, "encryptedData"> & {
+  readonly encrypted: GroupEncryptedFields;
   readonly memberIds: readonly string[];
-}
+};
 
 export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedGroup> {
   const nameError = requireName(sp.name, "group", sp._id);
@@ -50,10 +51,27 @@ export function mapGroup(sp: SPGroup, ctx: MappingContext): MapperResult<MappedG
     });
   }
 
-  const payload: MappedGroup = {
+  const color = parseHexColor(sp.color);
+  if (sp.color && color === null) {
+    ctx.addWarningOnce("invalid-hex-color:group", {
+      entityType: "group",
+      entityId: sp._id,
+      message: `Invalid color "${sp.color}" dropped (not valid hex)`,
+    });
+  }
+
+  const encrypted: GroupEncryptedFields = {
     name: sp.name,
     description: sp.desc ?? null,
-    color: sp.color ?? null,
+    imageSource: null,
+    color,
+    emoji: null,
+  };
+
+  const payload: MappedGroup = {
+    encrypted,
+    parentGroupId: null,
+    sortOrder: 0,
     memberIds,
   };
   return mapped(payload);

@@ -5,7 +5,7 @@ status: todo
 type: epic
 priority: normal
 created_at: 2026-04-08T11:56:44Z
-updated_at: 2026-04-08T12:15:27Z
+updated_at: 2026-04-12T06:57:34Z
 parent: ps-vq2h
 blocked_by:
   - ps-nrg4
@@ -37,3 +37,19 @@ Builds the screens, state machine, and UX writing for the import flow. The data 
 ## References
 
 The full wizard flow is documented in [docs/planning/2026-04-08-simply-plural-import.md](../docs/planning/2026-04-08-simply-plural-import.md) — Section "Components" and the "Mobile glue" subsection lay out the data hooks this UI consumes. The integration surface (hooks) is the contract between this bean and ps-nrg4.
+
+## Source Limitation Messaging
+
+The wizard Step 1 (source picker) must clearly communicate what each source imports:
+
+**API import** covers: system profile, members, groups, custom fronts, custom fields, privacy buckets, fronting history, notes (journal entries), polls, channels, and channel categories. This is all essential user data.
+
+**File import** additionally covers: system settings, fronting comments, chat messages, and board messages.
+
+The UI should:
+
+- Show a brief note on the source picker explaining the difference
+- NOT block API import — it covers all essential data
+- Frame file import as "complete" and API import as "most data — notes included"
+- If the user picks API import, do not warn about missing comments/chat/board — these are low-priority social features, not therapeutic data
+- If the user needs a complete import, suggest they export from SP settings and use the file picker

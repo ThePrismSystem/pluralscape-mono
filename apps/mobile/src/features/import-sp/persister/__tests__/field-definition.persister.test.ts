@@ -14,10 +14,14 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  name: "Age",
+  encrypted: {
+    name: "Age",
+    description: null,
+    options: null,
+  },
   fieldType: "number",
-  order: 3,
-  supportMarkdown: false,
+  required: false,
+  sortOrder: 3,
 };
 
 describe("fieldDefinitionPersister", () => {
@@ -27,7 +31,12 @@ describe("fieldDefinitionPersister", () => {
     const result = await fieldDefinitionPersister.create(ctx, VALID_PAYLOAD);
     expect(createFn).toHaveBeenCalledWith(
       TEST_SYSTEM_ID,
-      expect.objectContaining({ encryptedData: expect.any(String), fieldType: "number" }),
+      expect.objectContaining({
+        encryptedData: expect.any(String),
+        fieldType: "number",
+        required: false,
+        sortOrder: 3,
+      }),
     );
     expect(result.pluralscapeEntityId).toBe("fld_1");
   });
@@ -50,7 +59,11 @@ describe("fieldDefinitionPersister", () => {
   it("rejects payloads missing the type field", async () => {
     const ctx = makeTestPersisterContext();
     await expect(
-      fieldDefinitionPersister.create(ctx, { name: "X", order: 0, supportMarkdown: false }),
+      fieldDefinitionPersister.create(ctx, {
+        encrypted: { name: "X", description: null, options: null },
+        required: false,
+        sortOrder: 0,
+      }),
     ).rejects.toThrow(/invalid payload for field-definition/);
   });
 });

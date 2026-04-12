@@ -24,6 +24,7 @@
   "devDependencies": {
     "@pluralscape/api": "workspace:*",
     "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/data": "workspace:*",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@trpc/client": "11.16.0",

@@ -30,28 +30,38 @@ describe("PersistableEntity discriminated union", () => {
       sourceEntityId: "sp_1",
       source: "simply-plural",
       payload: {
-        member: {
+        encrypted: {
           name: "Alex",
           description: null,
-          pronouns: null,
+          pronouns: [],
+          avatarSource: null,
           colors: [],
-          avatarUrl: null,
-          archived: false,
+          saturationLevel: { kind: "known", level: "highly-elaborated" },
+          tags: [],
+          suppressFriendFrontNotification: false,
+          boardMessageNotificationOnFront: false,
         },
+        archived: false,
         fieldValues: [],
         bucketIds: [],
       },
     };
     const narrowed = narrowMember(entity);
     expect(narrowed).not.toBeNull();
-    expect(narrowed?.member.name).toBe("Alex");
+    expect(narrowed?.encrypted.name).toBe("Alex");
   });
 
   it("rejects mismatched payload at the type level", () => {
     const groupPayload: MappedGroup = {
-      name: "Pod",
-      description: null,
-      color: null,
+      encrypted: {
+        name: "Pod",
+        description: null,
+        imageSource: null,
+        color: null,
+        emoji: null,
+      },
+      parentGroupId: null,
+      sortOrder: 0,
       memberIds: [],
     };
     // @ts-expect-error - group payload cannot be assigned to a member entity

@@ -6,8 +6,8 @@
  * persister API surface flattens the route to `note.create`/`note.update`.
  *
  * The mapper already resolves the author member FK and wraps the note
- * body in a single paragraph block. The persister simply encrypts and
- * pushes through.
+ * body in the content field. The persister simply encrypts and pushes
+ * through.
  */
 
 import { assertPayloadShape, encryptForCreate, encryptForUpdate } from "./persister-helpers.js";
@@ -20,26 +20,30 @@ import type {
 } from "./persister.types.js";
 
 export interface JournalEntryPayload {
-  readonly title: string;
-  readonly author: { readonly entityType: "member"; readonly entityId: string };
-  readonly blocks: readonly {
-    readonly type: "paragraph";
+  readonly encrypted: {
+    readonly title: string;
     readonly content: string;
-    readonly children: readonly never[];
-  }[];
+    readonly backgroundColor: string | null;
+  };
+  readonly author?: { readonly entityType: "member"; readonly entityId: string } | null;
   readonly createdAt: number;
 }
 
 function isJournalEntryPayload(value: unknown): value is JournalEntryPayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record["title"] === "string" && Array.isArray(record["blocks"]);
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  const encrypted = record["encrypted"] as Record<string, unknown>;
+  return typeof encrypted["title"] === "string" && typeof encrypted["content"] === "string";
 }
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isJournalEntryPayload, "journal-entry");
-  const encrypted = encryptForCreate(narrowed, ctx.masterKey);
-  const result = await ctx.api.note.create(ctx.systemId, encrypted);
+  const encrypted = encryptForCreate(narrowed.encrypted, ctx.masterKey);
+  const result = await ctx.api.note.create(ctx.systemId, {
+    encryptedData: encrypted.encryptedData,
+    author: narrowed.author ?? null,
+  });
   return { pluralscapeEntityId: result.id };
 }
 
@@ -49,7 +53,7 @@ async function update(
   existingId: string,
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isJournalEntryPayload, "journal-entry");
-  const encrypted = encryptForUpdate(narrowed, 1, ctx.masterKey);
+  const encrypted = encryptForUpdate(narrowed.encrypted, 1, ctx.masterKey);
   const result = await ctx.api.note.update(ctx.systemId, existingId, encrypted);
   return { pluralscapeEntityId: result.id };
 }

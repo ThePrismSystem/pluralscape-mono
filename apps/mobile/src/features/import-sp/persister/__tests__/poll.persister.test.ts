@@ -11,19 +11,21 @@ beforeAll(async () => {
 });
 
 const POLL_WITH_THREE_VOTES = {
-  poll: {
+  encrypted: {
     title: "Lunch?",
     description: null,
-    endsAt: null,
-    kind: "standard" as const,
-    allowAbstain: true,
-    allowVeto: true,
-    createdByMemberId: null,
     options: [
       { id: "opt_a", label: "pizza", color: null },
       { id: "opt_b", label: "sushi", color: null },
     ],
   },
+  kind: "standard" as const,
+  createdByMemberId: null,
+  allowMultipleVotes: false,
+  maxVotesPerMember: 1,
+  allowAbstain: true,
+  allowVeto: true,
+  endsAt: null,
   votes: [
     { optionId: "opt_a", memberId: "mem_1", isVeto: false, comment: null },
     { optionId: "opt_b", memberId: "mem_2", isVeto: false, comment: null },
@@ -69,8 +71,8 @@ describe("pollPersister", () => {
 
   it("rejects payloads missing votes", async () => {
     const ctx = makeTestPersisterContext();
-    await expect(pollPersister.create(ctx, { poll: POLL_WITH_THREE_VOTES.poll })).rejects.toThrow(
-      /invalid payload for poll/,
-    );
+    await expect(
+      pollPersister.create(ctx, { encrypted: POLL_WITH_THREE_VOTES.encrypted, kind: "standard" }),
+    ).rejects.toThrow(/invalid payload for poll/);
   });
 });

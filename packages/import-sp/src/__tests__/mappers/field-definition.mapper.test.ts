@@ -11,25 +11,12 @@ describe("mapFieldDefinition", () => {
     const result = mapFieldDefinition(sp, createMappingContext({ sourceMode: "fake" }));
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.name).toBe("Likes");
+      expect(result.payload.encrypted.name).toBe("Likes");
+      expect(result.payload.encrypted.description).toBeNull();
+      expect(result.payload.encrypted.options).toBeNull();
       expect(result.payload.fieldType).toBe("text");
-      expect(result.payload.order).toBe(0);
-      expect(result.payload.supportMarkdown).toBe(false);
-    }
-  });
-
-  it("preserves supportMarkdown when set", () => {
-    const sp: SPCustomField = {
-      _id: "f2",
-      name: "Bio",
-      type: 0,
-      order: "a00000",
-      supportMarkdown: true,
-    };
-    const result = mapFieldDefinition(sp, createMappingContext({ sourceMode: "fake" }));
-    expect(result.status).toBe("mapped");
-    if (result.status === "mapped") {
-      expect(result.payload.supportMarkdown).toBe(true);
+      expect(result.payload.sortOrder).toBe(0);
+      expect(result.payload.required).toBe(false);
     }
   });
 
@@ -70,7 +57,7 @@ describe("mapFieldDefinition", () => {
     const low = mapFieldDefinition({ _id: "fa", name: "A", type: 0, order: "a00000" }, ctx);
     const high = mapFieldDefinition({ _id: "fb", name: "B", type: 0, order: "b00000" }, ctx);
     if (low.status === "mapped" && high.status === "mapped") {
-      expect(low.payload.order).toBeLessThan(high.payload.order);
+      expect(low.payload.sortOrder).toBeLessThan(high.payload.sortOrder);
     }
   });
 
@@ -80,7 +67,7 @@ describe("mapFieldDefinition", () => {
     const result = mapFieldDefinition(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.order).toBe(42);
+      expect(result.payload.sortOrder).toBe(42);
     }
   });
 
@@ -90,7 +77,7 @@ describe("mapFieldDefinition", () => {
     const result = mapFieldDefinition(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.order).toBe(parseInt("a00000", 36));
+      expect(result.payload.sortOrder).toBe(parseInt("a00000", 36));
     }
   });
 
@@ -100,7 +87,7 @@ describe("mapFieldDefinition", () => {
     const result = mapFieldDefinition(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.order).toBe(0);
+      expect(result.payload.sortOrder).toBe(0);
     }
   });
 
@@ -110,7 +97,7 @@ describe("mapFieldDefinition", () => {
     const result = mapFieldDefinition(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.order).toBe(0);
+      expect(result.payload.sortOrder).toBe(0);
     }
     const orderWarning = ctx.warnings.find((w) => /order/i.test(w.message) && w.entityId === "f4");
     expect(orderWarning).toBeDefined();

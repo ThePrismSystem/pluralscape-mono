@@ -178,10 +178,10 @@ async function persistSynthesizedBuckets(
   let lastSourceId: string | null = null;
   for (const bucket of synthesized) {
     const payload: MappedPrivacyBucket = {
-      name: bucket.name,
-      description: bucket.description,
-      color: null,
-      icon: null,
+      encrypted: {
+        name: bucket.name,
+        description: bucket.description,
+      },
     };
     try {
       const result = await persister.upsertEntity({
@@ -363,6 +363,8 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
         privacyBucketsMapped = synth.delta.imported + synth.delta.updated + synth.delta.skipped;
       }
 
+      // Includes created, updated, AND skipped docs — all valid for dependent fetch parent enumeration.
+      const persistedSourceIds: string[] = [];
       let docsSinceCheckpoint = 0;
       let collectionAborted = false;
       let pastResumeCutoff = resumeCutoffSourceId === null;
@@ -444,6 +446,7 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
                 buildPersistableEntity(entityType, doc.sourceId, result.payload),
               );
               ctx.register(entityType, doc.sourceId, upsert.pluralscapeEntityId);
+              persistedSourceIds.push(doc.sourceId);
               if (collection === "privacyBuckets") privacyBucketsMapped += 1;
               let upsertDelta: AdvanceDelta;
               switch (upsert.action) {
@@ -546,6 +549,10 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       state = completeCollection(state, { nextEntityType });
       await persister.flush();
       await onProgress(state);
+
+      if (source.supplyParentIds && persistedSourceIds.length > 0) {
+        source.supplyParentIds(collection, persistedSourceIds);
+      }
     }
 
     return completed(state, ctx, errors);

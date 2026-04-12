@@ -1,5 +1,13 @@
 import type { Archived, PrivacyBucket, UnixMillis } from "@pluralscape/types";
 
+// ── Encrypted payload types ───────────────────────────────────────────
+
+/** The subset of PrivacyBucket fields stored encrypted on the server. */
+export interface BucketEncryptedFields {
+  readonly name: string;
+  readonly description: string | null;
+}
+
 // ── Wire types ────────────────────────────────────────────────────────
 
 /** Wire shape returned by `privacyBucket.get` — derived from the `PrivacyBucket` domain type. */

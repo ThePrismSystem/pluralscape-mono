@@ -58,4 +58,14 @@ export interface ImportDataSource {
   iterate(collection: SpCollectionName): AsyncIterable<SourceEvent>;
   listCollections(): Promise<readonly string[]>;
   close(): Promise<void>;
+
+  /**
+   * Supply source IDs from a parent collection that a dependent collection
+   * needs to enumerate its per-parent endpoints. Called by the engine after
+   * completing a parent collection's iteration.
+   *
+   * Sources that don't use dependent fetching may omit this (the engine
+   * guards the call with an existence check).
+   */
+  supplyParentIds?(parentCollection: SpCollectionName, sourceIds: readonly string[]): void;
 }

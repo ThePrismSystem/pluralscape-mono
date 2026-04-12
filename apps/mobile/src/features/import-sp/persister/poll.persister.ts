@@ -1,11 +1,11 @@
 /**
  * Poll persister (with votes fan-out).
  *
- * The Plan 2 `poll.mapper.ts` emits `{ poll, votes }` — the poll core
- * (title, description, options, etc.) plus an array of vote records
- * inline. This helper encrypts the poll and issues `poll.create` /
- * `poll.update`, then fans out one `poll.castVote` per vote via the
- * shared `castPollVotes` helper.
+ * The mapper emits `{ encrypted, kind, votes, ... }` — the encrypted
+ * poll core (title, description, options) plus structural metadata and
+ * an array of vote records inline. This helper encrypts the poll and
+ * issues `poll.create` / `poll.update`, then fans out one
+ * `poll.castVote` per vote via the shared `castPollVotes` helper.
  */
 
 import {
@@ -23,51 +23,43 @@ import type {
   PersisterUpdateResult,
 } from "./persister.types.js";
 
-export interface PollCorePayload {
-  readonly title: string;
-  readonly description: string | null;
-  readonly endsAt: number | null;
+export interface PollPayload {
+  readonly encrypted: {
+    readonly title: string;
+    readonly description: string | null;
+    readonly options: readonly {
+      readonly id: string;
+      readonly label: string;
+      readonly color: string | null;
+    }[];
+  };
   readonly kind: "standard" | "custom";
+  readonly createdByMemberId: string | null;
+  readonly allowMultipleVotes: boolean;
+  readonly maxVotesPerMember: number;
   readonly allowAbstain: boolean;
   readonly allowVeto: boolean;
-  readonly createdByMemberId: string | null;
-  readonly options: readonly {
-    readonly id: string;
-    readonly label: string;
-    readonly color: string | null;
-  }[];
-}
-
-export interface PollOutputPayload {
-  readonly poll: PollCorePayload;
+  readonly endsAt: number | null;
   readonly votes: readonly PollVoteInput[];
 }
 
-function isPollCore(value: unknown): value is PollCorePayload {
+function isPollPayload(value: unknown): value is PollPayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record["title"] === "string" && Array.isArray(record["options"]);
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  return typeof record["kind"] === "string" && Array.isArray(record["votes"]);
 }
-
-function isPollOutputPayload(value: unknown): value is PollOutputPayload {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
-  return "poll" in record && isPollCore(record["poll"]) && Array.isArray(record["votes"]);
-}
-
-/** Default max votes when multiple votes are not allowed. */
-const SINGLE_VOTE_MAX = 1;
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
-  const narrowed = assertPayloadShape(payload, isPollOutputPayload, "poll");
-  const encrypted = encryptForCreate(narrowed.poll, ctx.masterKey);
+  const narrowed = assertPayloadShape(payload, isPollPayload, "poll");
+  const encrypted = encryptForCreate(narrowed.encrypted, ctx.masterKey);
   const result = await ctx.api.poll.create(ctx.systemId, {
     encryptedData: encrypted.encryptedData,
-    kind: narrowed.poll.kind,
-    allowMultipleVotes: false,
-    maxVotesPerMember: SINGLE_VOTE_MAX,
-    allowAbstain: narrowed.poll.allowAbstain,
-    allowVeto: narrowed.poll.allowVeto,
+    kind: narrowed.kind,
+    allowMultipleVotes: narrowed.allowMultipleVotes,
+    maxVotesPerMember: narrowed.maxVotesPerMember,
+    allowAbstain: narrowed.allowAbstain,
+    allowVeto: narrowed.allowVeto,
   });
   await castPollVotes(ctx, result.id, narrowed.votes);
   return { pluralscapeEntityId: result.id };
@@ -78,8 +70,8 @@ async function update(
   payload: unknown,
   existingId: string,
 ): Promise<PersisterUpdateResult> {
-  const narrowed = assertPayloadShape(payload, isPollOutputPayload, "poll");
-  const encrypted = encryptForUpdate(narrowed.poll, 1, ctx.masterKey);
+  const narrowed = assertPayloadShape(payload, isPollPayload, "poll");
+  const encrypted = encryptForUpdate(narrowed.encrypted, 1, ctx.masterKey);
   const result = await ctx.api.poll.update(ctx.systemId, existingId, encrypted);
   await castPollVotes(ctx, result.id, narrowed.votes);
   return { pluralscapeEntityId: result.id };

@@ -12,15 +12,14 @@ describe("mapChannelCategory", () => {
     const result = mapChannelCategory(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.name).toBe("General");
+      expect(result.payload.encrypted.name).toBe("General");
       expect(result.payload.type).toBe("category");
-      expect(result.payload.parentChannelId).toBeNull();
-      expect(result.payload.description).toBeNull();
-      expect(result.payload.order).toBeNull();
+      expect(result.payload.parentId).toBeUndefined();
+      expect(result.payload.sortOrder).toBe(0);
     }
   });
 
-  it("preserves description and order on categories", () => {
+  it("preserves order on categories", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPChannelCategory = {
       _id: "cat2",
@@ -31,8 +30,7 @@ describe("mapChannelCategory", () => {
     const result = mapChannelCategory(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.description).toBe("creative stuff");
-      expect(result.payload.order).toBe(3);
+      expect(result.payload.sortOrder).toBe(3);
     }
   });
 
@@ -59,7 +57,7 @@ describe("mapChannel", () => {
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.type).toBe("channel");
-      expect(result.payload.parentChannelId).toBe("ps_cat1");
+      expect(result.payload.parentId).toBe("ps_cat1");
     }
   });
 
@@ -69,7 +67,7 @@ describe("mapChannel", () => {
     const result = mapChannel(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.parentChannelId).toBeNull();
+      expect(result.payload.parentId).toBeUndefined();
     }
     expect(ctx.warnings).toHaveLength(0);
   });
@@ -85,12 +83,12 @@ describe("mapChannel", () => {
     expect(result.status).toBe("failed");
     if (result.status === "failed") {
       expect(result.kind).toBe("fk-miss");
-      expect(result.targetField).toBe("parentChannelId");
+      expect(result.targetField).toBe("parentId");
       expect(result.missingRefs).toContain("src_missing");
     }
   });
 
-  it("preserves description and order on channels", () => {
+  it("preserves order on channels", () => {
     const ctx = createMappingContext({ sourceMode: "fake" });
     const sp: SPChannel = {
       _id: "ch4",
@@ -102,8 +100,7 @@ describe("mapChannel", () => {
     const result = mapChannel(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.description).toBe("voice chat");
-      expect(result.payload.order).toBe(7);
+      expect(result.payload.sortOrder).toBe(7);
     }
   });
 });

@@ -1,5 +1,5 @@
 import type { MappingContext } from "./context.js";
-import type { ImportEntityType, ImportFailureKind } from "@pluralscape/types";
+import type { HexColor, ImportEntityType, ImportFailureKind } from "@pluralscape/types";
 
 /**
  * Maximum number of unresolved foreign-key source IDs rendered inline in a
@@ -81,4 +81,17 @@ export function warnDropped(
     key: `dropped-field:${entityType}:${field}`,
     message: `Dropped ${entityType}.${field}: ${reason}`,
   });
+}
+
+/** Hex color regex: #RGB, #RRGGBB, or #RRGGBBAA */
+const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+/**
+ * Parse an SP color string into a validated HexColor, or null if invalid.
+ * SP does not validate color format, so arbitrary strings may appear.
+ */
+export function parseHexColor(value: string | undefined | null): HexColor | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (HEX_COLOR_REGEX.test(value)) return value as HexColor;
+  return null;
 }

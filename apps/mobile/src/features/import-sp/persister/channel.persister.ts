@@ -4,7 +4,7 @@
  * Delegates to the shared `persistViaChannelsTable` writer with
  * `type: "channel"`. The mapper has already resolved the parent
  * category FK against the IdTranslationTable, so the payload's
- * `parentChannelId` is either null (orphan) or a Pluralscape ID.
+ * `parentId` is either null (orphan) or a Pluralscape ID.
  */
 
 import {
@@ -22,33 +22,31 @@ import type {
 } from "./persister.types.js";
 
 export interface ChannelPayload {
-  readonly name: string;
-  readonly description: string | null;
+  readonly encrypted: {
+    readonly name: string;
+  };
   readonly type: "category" | "channel";
-  readonly parentChannelId: string | null;
-  readonly order: number | null;
+  readonly parentId?: string | null;
+  readonly sortOrder: number;
 }
 
 function isChannelPayload(value: unknown): value is ChannelPayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record["name"] === "string";
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  const encrypted = record["encrypted"] as Record<string, unknown>;
+  return typeof encrypted["name"] === "string";
 }
-
-const DEFAULT_SORT_ORDER = 0;
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isChannelPayload, "channel");
-  const encrypted = encryptForCreate(
-    { name: narrowed.name, description: narrowed.description },
-    ctx.masterKey,
-  );
+  const encrypted = encryptForCreate(narrowed.encrypted, ctx.masterKey);
   const result = await persistViaChannelsTable(
     ctx,
     {
       encryptedData: encrypted.encryptedData,
-      parentId: narrowed.parentChannelId,
-      sortOrder: narrowed.order ?? DEFAULT_SORT_ORDER,
+      parentId: narrowed.parentId ?? null,
+      sortOrder: narrowed.sortOrder,
     },
     "channel",
   );
@@ -61,11 +59,7 @@ async function update(
   existingId: string,
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isChannelPayload, "channel");
-  const encrypted = encryptForUpdate(
-    { name: narrowed.name, description: narrowed.description },
-    1,
-    ctx.masterKey,
-  );
+  const encrypted = encryptForUpdate(narrowed.encrypted, 1, ctx.masterKey);
   const result = await ctx.api.channel.update(ctx.systemId, existingId, encrypted);
   return { pluralscapeEntityId: result.id };
 }

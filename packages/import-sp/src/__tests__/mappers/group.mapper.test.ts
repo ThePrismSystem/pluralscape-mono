@@ -18,9 +18,13 @@ describe("mapGroup", () => {
     const result = mapGroup(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.name).toBe("Alpha Group");
-      expect(result.payload.description).toBeNull();
-      expect(result.payload.color).toBeNull();
+      expect(result.payload.parentGroupId).toBeNull();
+      expect(result.payload.sortOrder).toBe(0);
+      expect(result.payload.encrypted.name).toBe("Alpha Group");
+      expect(result.payload.encrypted.description).toBeNull();
+      expect(result.payload.encrypted.imageSource).toBeNull();
+      expect(result.payload.encrypted.color).toBeNull();
+      expect(result.payload.encrypted.emoji).toBeNull();
       expect(result.payload.memberIds).toEqual(["ps_m1", "ps_m2"]);
     }
   });
@@ -37,8 +41,8 @@ describe("mapGroup", () => {
     const result = mapGroup(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.description).toBe("the second group");
-      expect(result.payload.color).toBe("#112233");
+      expect(result.payload.encrypted.description).toBe("the second group");
+      expect(result.payload.encrypted.color).toBe("#112233");
       expect(result.payload.memberIds).toEqual([]);
     }
   });

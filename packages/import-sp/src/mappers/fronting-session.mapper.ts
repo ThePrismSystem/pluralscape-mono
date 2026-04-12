@@ -14,14 +14,18 @@ import { failed, mapped, type MapperResult } from "./mapper-result.js";
 
 import type { MappingContext } from "./context.js";
 import type { SPFrontHistory } from "../sources/sp-types.js";
+import type { FrontingSessionEncryptedFields } from "@pluralscape/data";
+import type { CustomFrontId, MemberId } from "@pluralscape/types";
+import type { CreateFrontingSessionBodySchema } from "@pluralscape/validation";
+import type { z } from "zod/v4";
 
-export interface MappedFrontingSession {
-  readonly memberId: string | null;
-  readonly customFrontId: string | null;
-  readonly startTime: number;
+export type MappedFrontingSession = Omit<
+  z.infer<typeof CreateFrontingSessionBodySchema>,
+  "encryptedData"
+> & {
+  readonly encrypted: FrontingSessionEncryptedFields;
   readonly endTime: number | null;
-  readonly comment: string | null;
-}
+};
 
 export function mapFrontingSession(
   sp: SPFrontHistory,
@@ -40,12 +44,29 @@ export function mapFrontingSession(
 
   const endTime = sp.live ? null : (sp.endTime ?? null);
 
+  const encrypted: FrontingSessionEncryptedFields = {
+    comment: sp.customStatus ?? null,
+    positionality: null,
+    outtrigger: null,
+    outtriggerSentiment: null,
+  };
+
+  const memberId = sp.custom ? undefined : (resolved as MemberId);
+  const customFrontId = sp.custom ? (resolved as CustomFrontId) : undefined;
+
   const payload: MappedFrontingSession = {
-    memberId: sp.custom ? null : resolved,
-    customFrontId: sp.custom ? resolved : null,
+    encrypted,
     startTime: sp.startTime,
     endTime,
-    comment: sp.customStatus ?? null,
+    memberId,
+    customFrontId,
+    structureEntityId: undefined,
   };
+
+  // Persist subject IDs so the fronting-comment mapper can inherit them —
+  // SP comments don't carry their own subject, only a session reference.
+  ctx.storeMetadata("fronting-session", sp._id, "memberId", memberId);
+  ctx.storeMetadata("fronting-session", sp._id, "customFrontId", customFrontId);
+
   return mapped(payload);
 }

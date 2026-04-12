@@ -12,14 +12,12 @@ describe("mapBucket", () => {
     const result = mapBucket(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.name).toBe("Trusted");
-      expect(result.payload.color).toBeNull();
-      expect(result.payload.description).toBeNull();
-      expect(result.payload.icon).toBeNull();
+      expect(result.payload.encrypted.name).toBe("Trusted");
+      expect(result.payload.encrypted.description).toBeNull();
     }
   });
 
-  it("preserves desc and color", () => {
+  it("preserves desc", () => {
     const sp: SPPrivacyBucket = {
       _id: "bk2",
       name: "Inner Circle",
@@ -30,8 +28,7 @@ describe("mapBucket", () => {
     const result = mapBucket(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.description).toBe("for close friends");
-      expect(result.payload.color).toBe("#aabbcc");
+      expect(result.payload.encrypted.description).toBe("for close friends");
     }
   });
 

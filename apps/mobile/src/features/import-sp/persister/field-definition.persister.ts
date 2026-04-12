@@ -19,33 +19,37 @@ import type {
 import type { FieldType } from "@pluralscape/types";
 
 /**
- * Narrowed shape of `MappedFieldDefinition`. Ordering and markdown
- * support are part of the plaintext payload, not wire metadata, so they
- * go through the same encryption as the name.
+ * Narrowed shape of `MappedFieldDefinition`. Encrypted fields (name,
+ * description, options) are nested under `encrypted`; plaintext
+ * structural fields live at the top level.
  */
 export interface FieldDefinitionPayload {
-  readonly name: string;
+  readonly encrypted: {
+    readonly name: string;
+    readonly description: string | null;
+    readonly options: readonly { readonly label: string; readonly color: string | null }[];
+  };
   readonly fieldType: FieldType;
-  readonly order: number;
-  readonly supportMarkdown: boolean;
+  readonly required: boolean;
+  readonly sortOrder: number;
 }
 
 function isFieldDefinitionPayload(value: unknown): value is FieldDefinitionPayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return (
-    typeof record["name"] === "string" &&
-    typeof record["fieldType"] === "string" &&
-    typeof record["order"] === "number"
-  );
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  const encrypted = record["encrypted"] as Record<string, unknown>;
+  return typeof encrypted["name"] === "string" && typeof record["fieldType"] === "string";
 }
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isFieldDefinitionPayload, "field-definition");
-  const encrypted = encryptForCreate(narrowed, ctx.masterKey);
+  const encrypted = encryptForCreate(narrowed.encrypted, ctx.masterKey);
   const result = await ctx.api.field.create(ctx.systemId, {
     encryptedData: encrypted.encryptedData,
     fieldType: narrowed.fieldType,
+    required: narrowed.required,
+    sortOrder: narrowed.sortOrder,
   });
   return { pluralscapeEntityId: result.id };
 }
@@ -56,7 +60,7 @@ async function update(
   existingId: string,
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isFieldDefinitionPayload, "field-definition");
-  const encrypted = encryptForUpdate(narrowed, 1, ctx.masterKey);
+  const encrypted = encryptForUpdate(narrowed.encrypted, 1, ctx.masterKey);
   const result = await ctx.api.field.update(ctx.systemId, existingId, encrypted);
   return { pluralscapeEntityId: result.id };
 }

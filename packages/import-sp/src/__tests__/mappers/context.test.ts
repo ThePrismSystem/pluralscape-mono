@@ -83,6 +83,35 @@ describe("MappingContext", () => {
     ctx.addWarningOnce("kind", { entityType: "member", entityId: "d", message: "once" });
     expect(ctx.warnings).toHaveLength(3);
   });
+
+  it("storeMetadata / getMetadata round-trips a value", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.storeMetadata("fronting-session", "fh1", "memberId", "mem_abc");
+    expect(ctx.getMetadata("fronting-session", "fh1", "memberId")).toBe("mem_abc");
+  });
+
+  it("getMetadata returns undefined for unstored keys", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    expect(ctx.getMetadata("fronting-session", "fh1", "memberId")).toBeUndefined();
+  });
+
+  it("metadata is scoped by entity type, source ID, and key", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.storeMetadata("fronting-session", "fh1", "memberId", "mem_1");
+    ctx.storeMetadata("fronting-session", "fh1", "customFrontId", "cf_1");
+    ctx.storeMetadata("fronting-session", "fh2", "memberId", "mem_2");
+    expect(ctx.getMetadata("fronting-session", "fh1", "memberId")).toBe("mem_1");
+    expect(ctx.getMetadata("fronting-session", "fh1", "customFrontId")).toBe("cf_1");
+    expect(ctx.getMetadata("fronting-session", "fh2", "memberId")).toBe("mem_2");
+    expect(ctx.getMetadata("fronting-session", "fh2", "customFrontId")).toBeUndefined();
+  });
+
+  it("storeMetadata overwrites previous values for the same key", () => {
+    const ctx = createMappingContext({ sourceMode: "fake" });
+    ctx.storeMetadata("member", "m1", "tag", "first");
+    ctx.storeMetadata("member", "m1", "tag", "second");
+    expect(ctx.getMetadata("member", "m1", "tag")).toBe("second");
+  });
 });
 
 describe("warnings buffer truncation", () => {

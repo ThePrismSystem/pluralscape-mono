@@ -21,10 +21,12 @@ describe("mapChatMessage", () => {
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
       expect(result.payload.channelId).toBe("ps_ch1");
-      expect(result.payload.writerMemberId).toBe("ps_m1");
-      expect(result.payload.body).toBe("hi");
-      expect(result.payload.createdAt).toBe(1_000);
-      expect(result.payload.replyToChatMessageId).toBeNull();
+      expect(result.payload.encrypted.senderId).toBe("ps_m1");
+      expect(result.payload.encrypted.content).toBe("hi");
+      expect(result.payload.encrypted.attachments).toEqual([]);
+      expect(result.payload.encrypted.mentions).toEqual([]);
+      expect(result.payload.timestamp).toBe(1_000);
+      expect(result.payload.replyToId).toBeUndefined();
     }
   });
 
@@ -78,7 +80,7 @@ describe("mapChatMessage", () => {
     const result = mapChatMessage(sp, ctx);
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.replyToChatMessageId).toBe("ps_parent");
+      expect(result.payload.replyToId).toBe("ps_parent");
     }
   });
 });
@@ -143,7 +145,7 @@ describe("chat-message FK-miss handling", () => {
 
     expect(result.status).toBe("mapped");
     if (result.status === "mapped") {
-      expect(result.payload.replyToChatMessageId).toBe("ps_parent");
+      expect(result.payload.replyToId).toBe("ps_parent");
     }
   });
 });

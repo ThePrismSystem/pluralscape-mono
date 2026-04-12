@@ -14,10 +14,10 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  name: "Trusted",
-  description: "visible to trusted friends",
-  color: null,
-  icon: null,
+  encrypted: {
+    name: "Trusted",
+    description: "visible to trusted friends",
+  },
 };
 
 describe("privacyBucketPersister", () => {
@@ -49,7 +49,7 @@ describe("privacyBucketPersister", () => {
 
   it("rejects malformed payloads on create", async () => {
     const ctx = makeTestPersisterContext();
-    await expect(privacyBucketPersister.create(ctx, { name: 42 })).rejects.toThrow(
+    await expect(privacyBucketPersister.create(ctx, { encrypted: { name: 42 } })).rejects.toThrow(
       /invalid payload for privacy-bucket/,
     );
   });

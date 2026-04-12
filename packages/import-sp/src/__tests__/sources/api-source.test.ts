@@ -10,6 +10,22 @@ import {
 import type { ImportDataSource, SourceEvent } from "../../sources/source.types.js";
 import type { SpCollectionName } from "../../sources/sp-collections.js";
 
+/**
+ * Call {@link ImportDataSource.supplyParentIds} without triggering
+ * `@typescript-eslint/unbound-method`. Uses `Reflect.get` so ESLint
+ * never sees a direct method-property access.
+ */
+function callSupplyParentIds(
+  source: ImportDataSource,
+  parentCollection: SpCollectionName,
+  sourceIds: readonly string[],
+): void {
+  const fn: unknown = Reflect.get(source, "supplyParentIds");
+  if (typeof fn === "function") {
+    (fn as (p: SpCollectionName, ids: readonly string[]) => void)(parentCollection, sourceIds);
+  }
+}
+
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
     status: 200,
@@ -138,16 +154,60 @@ describe("createApiImportSource", () => {
   it("yields nothing for unsupported collections rather than throwing", async () => {
     const source = createApiImportSource(DEFAULT_INPUT);
     const comments = await drain(source, "comments");
-    const notes = await drain(source, "notes");
     const chatMessages = await drain(source, "chatMessages");
     const boardMessages = await drain(source, "boardMessages");
     await source.close();
 
     expect(comments).toEqual([]);
-    expect(notes).toEqual([]);
     expect(chatMessages).toEqual([]);
     expect(boardMessages).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fetches notes per-member after supplyParentIds is called", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse([
+          { _id: "n1", title: "Note A", member: "m1" },
+          { _id: "n2", title: "Note B", member: "m1" },
+        ]),
+      )
+      .mockResolvedValueOnce(jsonResponse([{ _id: "n3", title: "Note C", member: "m2" }]));
+
+    const source = createApiImportSource(DEFAULT_INPUT);
+    expect(Reflect.get(source, "supplyParentIds")).toBeDefined();
+    callSupplyParentIds(source, "members", ["m1", "m2"]);
+    const ids = await drain(source, "notes");
+    await source.close();
+
+    expect(ids).toEqual(["n1", "n2", "n3"]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const urls = fetchMock.mock.calls.map((args: unknown[]) => args[0]);
+    expect(urls[0]).toBe("https://api.test/v1/notes/sys_abc/m1");
+    expect(urls[1]).toBe("https://api.test/v1/notes/sys_abc/m2");
+  });
+
+  it("yields nothing for notes when supplyParentIds was not called", async () => {
+    const source = createApiImportSource(DEFAULT_INPUT);
+    const ids = await drain(source, "notes");
+    await source.close();
+
+    expect(ids).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("skips a member whose notes endpoint returns empty array", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse([{ _id: "n1", title: "Note" }]));
+
+    const source = createApiImportSource(DEFAULT_INPUT);
+    callSupplyParentIds(source, "members", ["m1", "m2"]);
+    const ids = await drain(source, "notes");
+    await source.close();
+
+    expect(ids).toEqual(["n1"]);
   });
 
   it("sends the bearer token in Authorization", async () => {
@@ -230,11 +290,14 @@ describe("createApiImportSource", () => {
     expect(names).toContain("users");
     expect(names).toContain("privacyBuckets");
 
+    // Dependent collections ARE reported so the engine does not emit
+    // spurious source-missing-collection warnings.
+    expect(names).toContain("notes");
+
     // Unsupported collections must NOT be reported — the engine would
     // otherwise include them in its known-dropped checks.
     expect(names).not.toContain("private");
     expect(names).not.toContain("comments");
-    expect(names).not.toContain("notes");
     expect(names).not.toContain("chatMessages");
     expect(names).not.toContain("boardMessages");
   });
@@ -386,5 +449,96 @@ describe("createApiImportSource", () => {
       expect(events[0].sourceId).toBe("m1");
       expect(events[0].document).toMatchObject({ _id: "m1", name: "Aria", color: "#ff0000" });
     }
+  });
+
+  it("yields drop event when dependent endpoint returns non-array", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: "something" }));
+
+    const source = createApiImportSource(DEFAULT_INPUT);
+    callSupplyParentIds(source, "members", ["m1"]);
+
+    const ids = await drain(source, "notes");
+    expect(ids).toEqual([]);
+
+    // Re-create to get the drop events (drain only collects doc IDs)
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: "something" }));
+    const source2 = createApiImportSource(DEFAULT_INPUT);
+    callSupplyParentIds(source2, "members", ["m1"]);
+    const events = await drainEvents(source2, "notes");
+    await source2.close();
+
+    expect(events).toHaveLength(1);
+    const [e] = events;
+    expect(e?.kind).toBe("drop");
+    if (e?.kind === "drop") {
+      expect(e.reason).toMatch(/non-array/i);
+    }
+  });
+
+  it("re-throws ApiSourceTokenRejectedError during dependent fetch", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([{ _id: "n1", title: "Note A", member: "m1" }]))
+      .mockResolvedValueOnce(new Response("unauthorized", { status: 401 }));
+
+    const source = createApiImportSource(DEFAULT_INPUT);
+    callSupplyParentIds(source, "members", ["m1", "m2"]);
+
+    let caught: unknown;
+    try {
+      await drainEvents(source, "notes");
+    } catch (err) {
+      caught = err;
+    }
+    await source.close();
+
+    expect(caught).toBeInstanceOf(ApiSourceTokenRejectedError);
+  });
+
+  it("yields drop event on transient error during dependent fetch", async () => {
+    vi.useFakeTimers();
+    // First parent: network error exhausting retries (initial + 5 retries = 6 attempts)
+    fetchMock
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      // Second parent: valid notes
+      .mockResolvedValueOnce(jsonResponse([{ _id: "n1", title: "Note from m2", member: "m2" }]));
+
+    const source = createApiImportSource(DEFAULT_INPUT);
+    callSupplyParentIds(source, "members", ["m1", "m2"]);
+
+    const iterPromise = drainEvents(source, "notes");
+    await vi.runAllTimersAsync();
+    const events = await iterPromise;
+    await source.close();
+
+    const drops = events.filter((e) => e.kind === "drop");
+    const docs = events.filter((e) => e.kind === "doc");
+
+    expect(drops).toHaveLength(1);
+    expect(drops[0]?.kind === "drop" && drops[0].reason).toMatch(/parent m1/i);
+    expect(docs).toHaveLength(1);
+    expect(docs[0]?.kind === "doc" && docs[0].sourceId).toBe("n1");
+  });
+
+  it("overwrites parent IDs when supplyParentIds is called twice", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse([{ _id: "n5", title: "Note from m3", member: "m3" }]),
+    );
+
+    const source = createApiImportSource(DEFAULT_INPUT);
+    callSupplyParentIds(source, "members", ["m1", "m2"]);
+    callSupplyParentIds(source, "members", ["m3"]);
+
+    const ids = await drain(source, "notes");
+    await source.close();
+
+    expect(ids).toEqual(["n5"]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0] ?? [];
+    expect(url).toBe("https://api.test/v1/notes/sys_abc/m3");
   });
 });

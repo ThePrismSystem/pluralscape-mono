@@ -14,11 +14,15 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
+  encrypted: {
+    content: "hello world",
+    senderId: "mem_1",
+    attachments: [],
+    mentions: [],
+  },
   channelId: "ch_1",
-  writerMemberId: "mem_1",
-  body: "hello world",
-  createdAt: 1_700_000_000_000,
-  replyToChatMessageId: null,
+  timestamp: 1_700_000_000_000,
+  replyToId: null,
 };
 
 describe("chatMessagePersister", () => {
@@ -45,14 +49,13 @@ describe("chatMessagePersister", () => {
     expect(updateFn.mock.calls[0]?.[2]).toMatchObject({ channelId: "ch_1" });
   });
 
-  it("rejects payloads without a body", async () => {
+  it("rejects payloads without encrypted content", async () => {
     const ctx = makeTestPersisterContext();
     await expect(
       chatMessagePersister.create(ctx, {
         channelId: "ch_1",
-        writerMemberId: "mem_1",
-        createdAt: 0,
-        replyToChatMessageId: null,
+        timestamp: 0,
+        replyToId: null,
       }),
     ).rejects.toThrow(/invalid payload for chat-message/);
   });

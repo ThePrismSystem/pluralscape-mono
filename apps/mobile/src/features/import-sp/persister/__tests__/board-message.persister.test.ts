@@ -14,9 +14,12 @@ beforeAll(async () => {
 });
 
 const VALID_PAYLOAD = {
-  title: "First post",
-  body: "hello everyone",
-  authorMemberId: "mem_1",
+  encrypted: {
+    content: "hello everyone",
+    senderId: "mem_1",
+  },
+  sortOrder: 0,
+  pinned: false,
   createdAt: 1_700_000_000_000,
 };
 
@@ -39,10 +42,10 @@ describe("boardMessagePersister", () => {
     expect(updateFn.mock.calls[0]?.[1]).toBe("bm_existing");
   });
 
-  it("rejects payloads missing a title", async () => {
+  it("rejects payloads missing content", async () => {
     const ctx = makeTestPersisterContext();
     await expect(
-      boardMessagePersister.create(ctx, { body: "x", authorMemberId: "mem_1" }),
+      boardMessagePersister.create(ctx, { encrypted: {}, sortOrder: 0, createdAt: 0 }),
     ).rejects.toThrow(/invalid payload for board-message/);
   });
 });

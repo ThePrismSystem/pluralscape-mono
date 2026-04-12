@@ -22,21 +22,23 @@ import type {
  * the persister does not depend on the mapper module.
  */
 export interface PrivacyBucketPayload {
-  readonly name: string;
-  readonly description: string | null;
-  readonly color: string | null;
-  readonly icon: string | null;
+  readonly encrypted: {
+    readonly name: string;
+    readonly description: string | null;
+  };
 }
 
 function isPrivacyBucketPayload(value: unknown): value is PrivacyBucketPayload {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return typeof record["name"] === "string";
+  if (typeof record["encrypted"] !== "object" || record["encrypted"] === null) return false;
+  const encrypted = record["encrypted"] as Record<string, unknown>;
+  return typeof encrypted["name"] === "string";
 }
 
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isPrivacyBucketPayload, "privacy-bucket");
-  const encrypted = encryptForCreate(narrowed, ctx.masterKey);
+  const encrypted = encryptForCreate(narrowed.encrypted, ctx.masterKey);
   const result = await ctx.api.bucket.create(ctx.systemId, encrypted);
   return { pluralscapeEntityId: result.id };
 }
@@ -47,7 +49,7 @@ async function update(
   existingId: string,
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isPrivacyBucketPayload, "privacy-bucket");
-  const encrypted = encryptForUpdate(narrowed, 1, ctx.masterKey);
+  const encrypted = encryptForUpdate(narrowed.encrypted, 1, ctx.masterKey);
   const result = await ctx.api.bucket.update(ctx.systemId, existingId, encrypted);
   return { pluralscapeEntityId: result.id };
 }
