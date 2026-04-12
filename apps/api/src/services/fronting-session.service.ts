@@ -168,6 +168,12 @@ export async function createFrontingSession(
       sessionId: row.id as FrontingSessionId,
     });
     if (parsed.endTime !== undefined) {
+      await audit(tx, {
+        eventType: "fronting-session.ended",
+        actor: { kind: "account", id: auth.accountId },
+        detail: "Fronting session ended",
+        systemId,
+      });
       await dispatchWebhookEvent(tx, systemId, "fronting.ended", {
         sessionId: row.id as FrontingSessionId,
       });
