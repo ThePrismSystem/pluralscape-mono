@@ -18,7 +18,7 @@ import process from "node:process";
 import { PkClient } from "./client.js";
 import type { Manifest } from "./manifest.js";
 import { loadManifest, emptyManifest, writeManifestAtomic, planSeed } from "./manifest.js";
-import { executePlan, resolveRefs } from "./seed.js";
+import { executePlan } from "./seed.js";
 import { MINIMAL_FIXTURES } from "./fixtures/minimal.js";
 import { ADVERSARIAL_FIXTURES } from "./fixtures/adversarial.js";
 import type { PkMode } from "./constants.js";

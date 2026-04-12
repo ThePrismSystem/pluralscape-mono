@@ -10,12 +10,7 @@ import type { Manifest, ManifestEntry, SeedPlan } from "./manifest.js";
 import { writeManifestAtomic } from "./manifest.js";
 import type { PkMode, EntityTypeKey } from "./constants.js";
 import { ENTITY_TYPES_IN_ORDER, ONE_DAY_MS } from "./constants.js";
-import type {
-  EntityFixtures,
-  MemberFixtureDef,
-  GroupFixtureDef,
-  SwitchFixtureDef,
-} from "./fixtures/types.js";
+import type { EntityFixtures } from "./fixtures/types.js";
 
 /**
  * Walk a value and replace any ref-shaped string with its resolved server-side ID.
