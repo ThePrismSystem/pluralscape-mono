@@ -62,7 +62,7 @@ export default defineConfig({
           restoreMocks: true,
           testTimeout: 5000,
           hookTimeout: 10000,
-          setupFiles: ["src/__tests__/e2e/setup-env.ts"],
+          setupFiles: ["src/__tests__/integration/setup-env.ts"],
         },
       },
       integrationProjectConfig("import-sp", "packages/import-sp"),

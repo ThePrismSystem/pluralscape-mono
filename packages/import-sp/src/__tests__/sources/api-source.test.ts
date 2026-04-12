@@ -119,23 +119,20 @@ describe("createApiImportSource", () => {
   it("treats an empty-object single-doc response as no document", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({}));
     const source = createApiImportSource(DEFAULT_INPUT);
-    const out = await drain(source, "private");
+    const out = await drain(source, "users");
     await source.close();
 
     expect(out).toEqual([]);
   });
 
-  it("appends a wide startTime/endTime query for frontHistory", async () => {
+  it("fetches frontHistory via the bulk list endpoint", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse([]));
     const source = createApiImportSource(DEFAULT_INPUT);
     await drain(source, "frontHistory");
     await source.close();
 
     const [url] = fetchMock.mock.calls[0] ?? [];
-    const urlString = url as string;
-    expect(urlString).toMatch(
-      /^https:\/\/api\.test\/v1\/frontHistory\/sys_abc\?startTime=0&endTime=\d+$/,
-    );
+    expect(url).toBe("https://api.test/v1/frontHistory");
   });
 
   it("yields nothing for unsupported collections rather than throwing", async () => {
@@ -231,11 +228,11 @@ describe("createApiImportSource", () => {
     expect(names).toContain("channels");
     expect(names).toContain("customFields");
     expect(names).toContain("users");
-    expect(names).toContain("private");
     expect(names).toContain("privacyBuckets");
 
     // Unsupported collections must NOT be reported — the engine would
     // otherwise include them in its known-dropped checks.
+    expect(names).not.toContain("private");
     expect(names).not.toContain("comments");
     expect(names).not.toContain("notes");
     expect(names).not.toContain("chatMessages");
@@ -302,7 +299,7 @@ describe("createApiImportSource", () => {
   it("does not drop on legitimate empty-object single response", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({}));
     const source = createApiImportSource(DEFAULT_INPUT);
-    const events = await drainEvents(source, "private");
+    const events = await drainEvents(source, "users");
     await source.close();
 
     expect(events).toHaveLength(0);

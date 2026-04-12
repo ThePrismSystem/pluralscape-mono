@@ -85,13 +85,17 @@ type ApiFetchStrategy =
  */
 const ENDPOINT_STRATEGIES: Readonly<Record<SpCollectionName, ApiFetchStrategy>> = {
   users: { kind: "single", path: "/v1/user/:system" },
-  private: { kind: "single", path: "/v1/user/private/:system" },
+  private: {
+    kind: "unsupported",
+    reason:
+      "SP exposes /v1/user/private/:id with JWT-only auth (isUserAppJwtAuthenticated) — API keys are rejected with 401",
+  },
   privacyBuckets: { kind: "list", path: "/v1/privacyBuckets" },
   customFields: { kind: "list", path: "/v1/customFields/:system" },
   frontStatuses: { kind: "list", path: "/v1/customFronts/:system" },
   members: { kind: "list", path: "/v1/members/:system" },
   groups: { kind: "list", path: "/v1/groups/:system" },
-  frontHistory: { kind: "range", path: "/v1/frontHistory/:system" },
+  frontHistory: { kind: "list", path: "/v1/frontHistory" },
   comments: {
     kind: "unsupported",
     reason: "SP exposes comments per-document only (/v1/comments/:type/:id)",
@@ -273,6 +277,21 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
     | { readonly kind: "ok"; readonly sourceId: string; readonly record: Record<string, unknown> }
     | { readonly kind: "drop"; readonly sourceId: string | null; readonly reason: string };
 
+  /**
+   * SP's REST API wraps every document via `transformResultForClientRead`:
+   *   `{ exists: true, id: <_id>, content: { ...fields } }`
+   * Unwrap into a flat `{ _id, ...fields }` record so downstream mappers
+   * see the same shape as the file-source (raw MongoDB export).
+   */
+  function unwrapSpEnvelope(raw: Record<string, unknown>): Record<string, unknown> {
+    if ("content" in raw && "id" in raw && typeof raw.id === "string") {
+      const content = raw.content;
+      const fields = content !== null && typeof content === "object" ? toRecord(content) : {};
+      return { _id: raw.id, ...fields };
+    }
+    return raw;
+  }
+
   function assertDocument(
     value: unknown,
     collection: SpCollectionName,
@@ -285,7 +304,7 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
         reason: `ApiImportSource: ${collection}[${String(index)}] is a non-object document (got ${typeof value})`,
       };
     }
-    const record = toRecord(value);
+    const record = unwrapSpEnvelope(toRecord(value));
     const id = record._id;
     if (typeof id !== "string" || id.length === 0) {
       return {

@@ -60,7 +60,7 @@ export function createRecordingPersister(): RecordingPersister {
         });
       }
       idCounter += 1;
-      const pluralscapeEntityId = `e2e_${String(idCounter)}`;
+      const pluralscapeEntityId = `integ_${String(idCounter)}`;
       store.set(key, {
         entityType: entity.entityType,
         sourceEntityId: entity.sourceEntityId,

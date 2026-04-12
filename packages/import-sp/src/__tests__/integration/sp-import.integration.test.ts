@@ -48,9 +48,14 @@ function hasExportFixtures(): boolean {
 // Assertion helpers
 // ---------------------------------------------------------------------------
 
-function assertEntityCounts(snap: RecordingSnapshot, manifest: Manifest): void {
+function assertEntityCounts(
+  snap: RecordingSnapshot,
+  manifest: Manifest,
+  skipCollections?: ReadonlySet<ManifestCollectionKey>,
+): void {
   const keys = Object.keys(COLLECTION_TO_ENTITY_TYPE) as ManifestCollectionKey[];
   for (const key of keys) {
+    if (skipCollections?.has(key)) continue;
     const entityType = COLLECTION_TO_ENTITY_TYPE[key];
     // Privacy buckets are a special case: SP auto-creates default buckets
     // ("Friends", "Trusted friends") when an account is first provisioned,
@@ -71,9 +76,14 @@ function assertEntityCounts(snap: RecordingSnapshot, manifest: Manifest): void {
   }
 }
 
-function assertAllEntitiesPresent(snap: RecordingSnapshot, manifest: Manifest): void {
+function assertAllEntitiesPresent(
+  snap: RecordingSnapshot,
+  manifest: Manifest,
+  skipCollections?: ReadonlySet<ManifestCollectionKey>,
+): void {
   const keys = Object.keys(COLLECTION_TO_ENTITY_TYPE) as ManifestCollectionKey[];
   for (const key of keys) {
+    if (skipCollections?.has(key)) continue;
     const entityType = COLLECTION_TO_ENTITY_TYPE[key];
     for (const entry of manifest[key]) {
       expect(
@@ -104,6 +114,7 @@ function assertPayloadSpotChecks(
   snap: RecordingSnapshot,
   manifest: Manifest,
   mode: "minimal" | "adversarial",
+  skipCollections?: ReadonlySet<ManifestCollectionKey>,
 ): void {
   // Check first member has a payload with a name field
   const firstMember = manifest.members[0];
@@ -129,15 +140,17 @@ function assertPayloadSpotChecks(
   }
 
   // Check first note has a payload with a title field
-  const firstNote = manifest.notes[0];
-  if (firstNote) {
-    const entity = snap.find("journal-entry", firstNote.sourceId);
-    if (!entity) {
-      throw new Error(`first note entity should exist (sourceId=${firstNote.sourceId})`);
+  if (!skipCollections?.has("notes")) {
+    const firstNote = manifest.notes[0];
+    if (firstNote) {
+      const entity = snap.find("journal-entry", firstNote.sourceId);
+      if (!entity) {
+        throw new Error(`first note entity should exist (sourceId=${firstNote.sourceId})`);
+      }
+      expect(entity.payload).toBeDefined();
+      const payload = entity.payload as Record<string, unknown>;
+      expect(payload["title"]).toBe(firstNote.fields["title"]);
     }
-    expect(entity.payload).toBeDefined();
-    const payload = entity.payload as Record<string, unknown>;
-    expect(payload["title"]).toBe(firstNote.fields["title"]);
   }
 
   // Ref-based lookup: verify the well-known `member.alice` ref resolves to
@@ -175,10 +188,23 @@ type SourceFactory = (
   manifest: Manifest,
 ) => ImportDataSource | Promise<ImportDataSource>;
 
+/**
+ * Collections the API source cannot fetch (no bulk endpoint or JWT-only auth).
+ * Assertions skip these when running against the API source; the file source
+ * covers them instead.
+ */
+const API_UNSUPPORTED_COLLECTIONS: ReadonlySet<ManifestCollectionKey> = new Set([
+  "comments",
+  "notes",
+  "chatMessages",
+  "boardMessages",
+]);
+
 function defineImportSuite(
   label: string,
   mode: "minimal" | "adversarial",
   sourceFactory: SourceFactory,
+  skipCollections?: ReadonlySet<ManifestCollectionKey>,
 ): void {
   describe(label, () => {
     let manifest: Manifest;
@@ -211,15 +237,15 @@ function defineImportSuite(
     });
 
     it("entity counts match manifest", () => {
-      assertEntityCounts(snap, manifest);
+      assertEntityCounts(snap, manifest, skipCollections);
     });
 
     it("every manifest source ID has a recorded entity", () => {
-      assertAllEntitiesPresent(snap, manifest);
+      assertAllEntitiesPresent(snap, manifest, skipCollections);
     });
 
     it("entity payloads contain expected fields", () => {
-      assertPayloadSpotChecks(snap, manifest, mode);
+      assertPayloadSpotChecks(snap, manifest, mode, skipCollections);
     });
   });
 }
@@ -241,7 +267,6 @@ describe.skipIf(!hasLiveApiEnabled())("SP Import E2E — API Source", () => {
         // only via the file source. See api-source.ts for the strategy map.
         const expected = [
           "users",
-          "private",
           "privacyBuckets",
           "customFields",
           "frontStatuses",
@@ -261,8 +286,18 @@ describe.skipIf(!hasLiveApiEnabled())("SP Import E2E — API Source", () => {
     });
   });
 
-  defineImportSuite("minimal account — full import", "minimal", createApiSource);
-  defineImportSuite("adversarial account — full import", "adversarial", createApiSource);
+  defineImportSuite(
+    "minimal account — full import",
+    "minimal",
+    createApiSource,
+    API_UNSUPPORTED_COLLECTIONS,
+  );
+  defineImportSuite(
+    "adversarial account — full import",
+    "adversarial",
+    createApiSource,
+    API_UNSUPPORTED_COLLECTIONS,
+  );
 });
 
 // ---------------------------------------------------------------------------
