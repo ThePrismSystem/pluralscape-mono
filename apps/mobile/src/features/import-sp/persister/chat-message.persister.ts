@@ -47,6 +47,7 @@ async function create(ctx: PersisterContext, payload: unknown): Promise<Persiste
   const result = await ctx.api.message.create(ctx.systemId, {
     encryptedData: encrypted.encryptedData,
     channelId: narrowed.channelId,
+    timestamp: narrowed.createdAt,
   });
   return { pluralscapeEntityId: result.id };
 }

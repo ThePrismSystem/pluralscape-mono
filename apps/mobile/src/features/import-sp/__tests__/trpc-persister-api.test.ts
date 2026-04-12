@@ -401,17 +401,21 @@ describe("bucket", () => {
 // ── field ────────────────────────────────────────────────────────────
 
 describe("field", () => {
-  it("create calls field.definition.create", async () => {
+  it("create calls field.definition.create with fieldType", async () => {
     const client = makeMockClient();
     client.field.definition.create.mutate.mockResolvedValue({ id: "fld_1", version: 1 });
     const api = createTRPCPersisterApi(client);
 
-    const result = await api.field.create(TEST_SYSTEM_ID, { encryptedData: "enc_field" });
+    const result = await api.field.create(TEST_SYSTEM_ID, {
+      encryptedData: "enc_field",
+      fieldType: "text",
+    });
 
     expect(result).toEqual({ id: "fld_1", version: 1 });
     expect(client.field.definition.create.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_field",
+      fieldType: "text",
     });
   });
 
@@ -596,19 +600,21 @@ describe("friend", () => {
 // ── frontingSession ─────────────────────────────────────────────────
 
 describe("frontingSession", () => {
-  it("create calls frontingSession.create", async () => {
+  it("create calls frontingSession.create with startTime", async () => {
     const client = makeMockClient();
     client.frontingSession.create.mutate.mockResolvedValue({ id: "fs_1", version: 1 });
     const api = createTRPCPersisterApi(client);
 
     const result = await api.frontingSession.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_session",
+      startTime: 1_700_000_000,
     });
 
     expect(result).toEqual({ id: "fs_1", version: 1 });
     expect(client.frontingSession.create.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_session",
+      startTime: 1_700_000_000,
     });
   });
 
@@ -642,11 +648,13 @@ describe("frontingComment", () => {
 
     const result = await api.frontingComment.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_comment",
+      sessionId: "fs_1",
     });
 
     expect(result).toEqual({ id: "fcom_1", version: 1 });
     expect(client.frontingComment.create.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
+      sessionId: "fs_1",
       encryptedData: "enc_comment",
     });
   });
@@ -664,6 +672,7 @@ describe("frontingComment", () => {
     expect(result).toEqual({ id: "fcom_1", version: 2 });
     expect(client.frontingComment.update.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
+      sessionId: "fs_import_placeholder",
       commentId: "fcom_1",
       encryptedData: "enc_comment_v2",
       version: 1,
@@ -711,17 +720,30 @@ describe("note", () => {
 // ── poll ────────────────────────────────────────────────────────────
 
 describe("poll", () => {
-  it("create calls poll.create", async () => {
+  it("create calls poll.create with poll config fields", async () => {
     const client = makeMockClient();
     client.poll.create.mutate.mockResolvedValue({ id: "poll_1", version: 1 });
     const api = createTRPCPersisterApi(client);
 
-    const result = await api.poll.create(TEST_SYSTEM_ID, { encryptedData: "enc_poll" });
+    const result = await api.poll.create(TEST_SYSTEM_ID, {
+      encryptedData: "enc_poll",
+      kind: "standard",
+      allowMultipleVotes: false,
+      maxVotesPerMember: 1,
+      allowAbstain: true,
+      allowVeto: false,
+    });
 
     expect(result).toEqual({ id: "poll_1", version: 1 });
     expect(client.poll.create.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_poll",
+      kind: "standard",
+      createdByMemberId: undefined,
+      allowMultipleVotes: false,
+      maxVotesPerMember: 1,
+      allowAbstain: true,
+      allowVeto: false,
     });
   });
 
@@ -847,7 +869,7 @@ describe("channel", () => {
 // ── message ─────────────────────────────────────────────────────────
 
 describe("message", () => {
-  it("create calls message.create with channelId", async () => {
+  it("create calls message.create with channelId and timestamp", async () => {
     const client = makeMockClient();
     client.message.create.mutate.mockResolvedValue({ id: "msg_1", version: 1 });
     const api = createTRPCPersisterApi(client);
@@ -855,6 +877,7 @@ describe("message", () => {
     const result = await api.message.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_message",
       channelId: "ch_1",
+      timestamp: 1_700_000_000,
     });
 
     expect(result).toEqual({ id: "msg_1", version: 1 });
@@ -862,6 +885,7 @@ describe("message", () => {
       systemId: TEST_SYSTEM_ID,
       channelId: "ch_1",
       encryptedData: "enc_message",
+      timestamp: 1_700_000_000,
     });
   });
 
@@ -890,17 +914,21 @@ describe("message", () => {
 // ── boardMessage ────────────────────────────────────────────────────
 
 describe("boardMessage", () => {
-  it("create calls boardMessage.create", async () => {
+  it("create calls boardMessage.create with sortOrder", async () => {
     const client = makeMockClient();
     client.boardMessage.create.mutate.mockResolvedValue({ id: "bm_1", version: 1 });
     const api = createTRPCPersisterApi(client);
 
-    const result = await api.boardMessage.create(TEST_SYSTEM_ID, { encryptedData: "enc_bm" });
+    const result = await api.boardMessage.create(TEST_SYSTEM_ID, {
+      encryptedData: "enc_bm",
+      sortOrder: 0,
+    });
 
     expect(result).toEqual({ id: "bm_1", version: 1 });
     expect(client.boardMessage.create.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
       encryptedData: "enc_bm",
+      sortOrder: 0,
     });
   });
 
@@ -936,6 +964,8 @@ describe("group", () => {
     const result = await api.group.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_group",
       memberIds: ["mem_1", "mem_2"],
+      parentGroupId: null,
+      sortOrder: 0,
     });
 
     expect(result).toEqual({ id: "grp_1", version: 1 });
@@ -966,6 +996,8 @@ describe("group", () => {
     await api.group.create(TEST_SYSTEM_ID, {
       encryptedData: "enc_group",
       memberIds: [],
+      parentGroupId: null,
+      sortOrder: 0,
     });
 
     expect(client.group.addMember.mutate).not.toHaveBeenCalled();

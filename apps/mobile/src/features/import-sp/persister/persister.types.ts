@@ -20,7 +20,13 @@
 
 import type { KdfMasterKey } from "@pluralscape/crypto";
 import type { AvatarFetcher } from "@pluralscape/import-sp/avatar-fetcher-types";
-import type { ImportError, ImportSourceFormat, SystemId } from "@pluralscape/types";
+import type {
+  FieldType,
+  ImportError,
+  ImportSourceFormat,
+  PollKind,
+  SystemId,
+} from "@pluralscape/types";
 
 // ── Versioned operations ─────────────────────────────────────────────
 
@@ -93,6 +99,36 @@ export type PersisterProcPollCastVote = (
     readonly encryptedData: string;
   },
 ) => Promise<{ readonly id: string }>;
+export type PersisterProcFieldDefinitionCreate = (
+  systemId: SystemId,
+  payload: EncryptedInput & { readonly fieldType: FieldType },
+) => Promise<VersionedEntityRef>;
+export type PersisterProcPollCreate = (
+  systemId: SystemId,
+  payload: EncryptedInput & {
+    readonly kind: PollKind;
+    readonly allowMultipleVotes: boolean;
+    readonly maxVotesPerMember: number;
+    readonly allowAbstain: boolean;
+    readonly allowVeto: boolean;
+  },
+) => Promise<VersionedEntityRef>;
+export type PersisterProcFrontingSessionCreate = (
+  systemId: SystemId,
+  payload: EncryptedInput & { readonly startTime: number },
+) => Promise<VersionedEntityRef>;
+export type PersisterProcFrontingCommentCreate = (
+  systemId: SystemId,
+  payload: EncryptedInput & {
+    readonly sessionId: string;
+    readonly memberId?: string;
+    readonly customFrontId?: string;
+  },
+) => Promise<VersionedEntityRef>;
+export type PersisterProcBoardMessageCreate = (
+  systemId: SystemId,
+  payload: EncryptedInput & { readonly sortOrder: number },
+) => Promise<VersionedEntityRef>;
 export type PersisterProcChannelCreate = (
   systemId: SystemId,
   input: EncryptedInput & {
@@ -103,11 +139,18 @@ export type PersisterProcChannelCreate = (
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcMessageCreate = (
   systemId: SystemId,
-  input: EncryptedInput & { readonly channelId: string },
+  input: EncryptedInput & {
+    readonly channelId: string;
+    readonly timestamp: number;
+  },
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcGroupCreate = (
   systemId: SystemId,
-  input: EncryptedInput & { readonly memberIds: readonly string[] },
+  input: EncryptedInput & {
+    readonly memberIds: readonly string[];
+    readonly parentGroupId: string | null;
+    readonly sortOrder: number;
+  },
 ) => Promise<VersionedEntityRef>;
 export type PersisterProcGroupUpdate = (
   systemId: SystemId,
@@ -160,7 +203,7 @@ export interface PersisterApi {
     readonly update: PersisterProcUpdateById;
   };
   readonly field: {
-    readonly create: PersisterProcCreate;
+    readonly create: PersisterProcFieldDefinitionCreate;
     readonly update: PersisterProcUpdateById;
     readonly setValue: PersisterProcFieldSetValue;
   };
@@ -181,11 +224,11 @@ export interface PersisterApi {
     readonly recordExternalReference: PersisterProcFriendRecord;
   };
   readonly frontingSession: {
-    readonly create: PersisterProcCreate;
+    readonly create: PersisterProcFrontingSessionCreate;
     readonly update: PersisterProcUpdateById;
   };
   readonly frontingComment: {
-    readonly create: PersisterProcCreate;
+    readonly create: PersisterProcFrontingCommentCreate;
     readonly update: PersisterProcUpdateById;
   };
   readonly note: {
@@ -193,7 +236,7 @@ export interface PersisterApi {
     readonly update: PersisterProcUpdateById;
   };
   readonly poll: {
-    readonly create: PersisterProcCreate;
+    readonly create: PersisterProcPollCreate;
     readonly update: PersisterProcUpdateById;
     readonly castVote: PersisterProcPollCastVote;
   };
@@ -206,7 +249,7 @@ export interface PersisterApi {
     readonly update: PersisterProcUpdateById;
   };
   readonly boardMessage: {
-    readonly create: PersisterProcCreate;
+    readonly create: PersisterProcBoardMessageCreate;
     readonly update: PersisterProcUpdateById;
   };
   readonly group: {

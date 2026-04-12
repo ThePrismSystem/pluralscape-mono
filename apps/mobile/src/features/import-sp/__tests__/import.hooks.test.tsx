@@ -88,7 +88,7 @@ vi.mock("@pluralscape/api-client/trpc", async () => {
             }),
         },
       },
-      useUtils: () => ({}),
+      useUtils: () => ({ client: { system: {} } }),
     },
   };
 });

@@ -15,6 +15,9 @@ import type {
   PersisterUpdateResult,
 } from "./persister.types.js";
 
+/** Default sort order for imported board messages. */
+const DEFAULT_BOARD_MESSAGE_SORT_ORDER = 0;
+
 export interface BoardMessagePayload {
   readonly title: string;
   readonly body: string;
@@ -35,7 +38,10 @@ function isBoardMessagePayload(value: unknown): value is BoardMessagePayload {
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isBoardMessagePayload, "board-message");
   const encrypted = encryptForCreate(narrowed, ctx.masterKey);
-  const result = await ctx.api.boardMessage.create(ctx.systemId, encrypted);
+  const result = await ctx.api.boardMessage.create(ctx.systemId, {
+    encryptedData: encrypted.encryptedData,
+    sortOrder: DEFAULT_BOARD_MESSAGE_SORT_ORDER,
+  });
   return { pluralscapeEntityId: result.id };
 }
 

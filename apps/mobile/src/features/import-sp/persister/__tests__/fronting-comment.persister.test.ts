@@ -26,7 +26,7 @@ describe("frontingCommentPersister", () => {
     const result = await frontingCommentPersister.create(ctx, VALID_PAYLOAD);
     expect(createFn).toHaveBeenCalledWith(
       TEST_SYSTEM_ID,
-      expect.objectContaining({ encryptedData: expect.any(String) }),
+      expect.objectContaining({ encryptedData: expect.any(String), sessionId: "fs_1" }),
     );
     expect(result.pluralscapeEntityId).toBe("fcom_1");
   });

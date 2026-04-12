@@ -21,13 +21,13 @@ const VALID_PAYLOAD = {
 };
 
 describe("fieldDefinitionPersister", () => {
-  it("create encrypts and issues field.create", async () => {
+  it("create encrypts and issues field.create with fieldType", async () => {
     const ctx = makeTestPersisterContext();
     const createFn = vi.mocked(ctx.api.field.create);
     const result = await fieldDefinitionPersister.create(ctx, VALID_PAYLOAD);
     expect(createFn).toHaveBeenCalledWith(
       TEST_SYSTEM_ID,
-      expect.objectContaining({ encryptedData: expect.any(String) }),
+      expect.objectContaining({ encryptedData: expect.any(String), fieldType: "number" }),
     );
     expect(result.pluralscapeEntityId).toBe("fld_1");
   });

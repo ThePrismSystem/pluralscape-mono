@@ -32,7 +32,7 @@ const POLL_WITH_THREE_VOTES = {
 };
 
 describe("pollPersister", () => {
-  it("creates the poll, then fans out one castVote per vote", async () => {
+  it("creates the poll with config fields, then fans out one castVote per vote", async () => {
     const ctx = makeTestPersisterContext();
     const createFn = vi.mocked(ctx.api.poll.create);
     const castVote = vi.mocked(ctx.api.poll.castVote);
@@ -40,6 +40,17 @@ describe("pollPersister", () => {
     const result = await pollPersister.create(ctx, POLL_WITH_THREE_VOTES);
 
     expect(createFn).toHaveBeenCalledTimes(1);
+    expect(createFn).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        encryptedData: expect.any(String),
+        kind: "standard",
+        allowMultipleVotes: false,
+        maxVotesPerMember: 1,
+        allowAbstain: true,
+        allowVeto: true,
+      }),
+    );
     expect(castVote).toHaveBeenCalledTimes(3);
     expect(result.pluralscapeEntityId).toBe("poll_1");
   });

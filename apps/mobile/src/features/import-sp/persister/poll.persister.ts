@@ -55,10 +55,20 @@ function isPollOutputPayload(value: unknown): value is PollOutputPayload {
   return "poll" in record && isPollCore(record["poll"]) && Array.isArray(record["votes"]);
 }
 
+/** Default max votes when multiple votes are not allowed. */
+const SINGLE_VOTE_MAX = 1;
+
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isPollOutputPayload, "poll");
   const encrypted = encryptForCreate(narrowed.poll, ctx.masterKey);
-  const result = await ctx.api.poll.create(ctx.systemId, encrypted);
+  const result = await ctx.api.poll.create(ctx.systemId, {
+    encryptedData: encrypted.encryptedData,
+    kind: narrowed.poll.kind,
+    allowMultipleVotes: false,
+    maxVotesPerMember: SINGLE_VOTE_MAX,
+    allowAbstain: narrowed.poll.allowAbstain,
+    allowVeto: narrowed.poll.allowVeto,
+  });
   await castPollVotes(ctx, result.id, narrowed.votes);
   return { pluralscapeEntityId: result.id };
 }

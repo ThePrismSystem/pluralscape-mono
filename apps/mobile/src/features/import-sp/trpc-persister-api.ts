@@ -13,7 +13,7 @@ import type {
   PersisterApi,
   VersionedEntityRef,
 } from "./persister/persister.types.js";
-import type { SystemId } from "@pluralscape/types";
+import type { FieldType, PollKind, SystemId } from "@pluralscape/types";
 
 // ── Minimal tRPC client shape ───────────────────────────────────────
 // Structural typing avoids importing the full AppRouter type tree.
@@ -57,7 +57,10 @@ export interface TRPCClientSubset {
   };
   readonly field: {
     readonly definition: {
-      readonly create: Mutation<{ systemId: SystemId; encryptedData: string }, VersionedEntityRef>;
+      readonly create: Mutation<
+        { systemId: SystemId; encryptedData: string; fieldType: FieldType },
+        VersionedEntityRef
+      >;
       readonly update: Mutation<
         {
           systemId: SystemId;
@@ -95,16 +98,42 @@ export interface TRPCClientSubset {
     >;
   };
   readonly frontingSession: {
-    readonly create: Mutation<{ systemId: SystemId; encryptedData: string }, VersionedEntityRef>;
+    readonly create: Mutation<
+      {
+        systemId: SystemId;
+        encryptedData: string;
+        startTime: number;
+        memberId?: string;
+        customFrontId?: string;
+        structureEntityId?: string;
+      },
+      VersionedEntityRef
+    >;
     readonly update: Mutation<
       { systemId: SystemId; sessionId: string; encryptedData: string; version: number },
       VersionedEntityRef
     >;
   };
   readonly frontingComment: {
-    readonly create: Mutation<{ systemId: SystemId; encryptedData: string }, VersionedEntityRef>;
+    readonly create: Mutation<
+      {
+        systemId: SystemId;
+        sessionId: string;
+        encryptedData: string;
+        memberId?: string;
+        customFrontId?: string;
+        structureEntityId?: string;
+      },
+      VersionedEntityRef
+    >;
     readonly update: Mutation<
-      { systemId: SystemId; commentId: string; encryptedData: string; version: number },
+      {
+        systemId: SystemId;
+        sessionId: string;
+        commentId: string;
+        encryptedData: string;
+        version: number;
+      },
       VersionedEntityRef
     >;
   };
@@ -116,7 +145,20 @@ export interface TRPCClientSubset {
     >;
   };
   readonly poll: {
-    readonly create: Mutation<{ systemId: SystemId; encryptedData: string }, VersionedEntityRef>;
+    readonly create: Mutation<
+      {
+        systemId: SystemId;
+        encryptedData: string;
+        kind: PollKind;
+        createdByMemberId: string | undefined;
+        allowMultipleVotes: boolean;
+        maxVotesPerMember: number;
+        allowAbstain: boolean;
+        allowVeto: boolean;
+        endsAt?: number;
+      },
+      VersionedEntityRef
+    >;
     readonly update: Mutation<
       { systemId: SystemId; pollId: string; encryptedData: string; version: number },
       VersionedEntityRef
@@ -144,7 +186,12 @@ export interface TRPCClientSubset {
   };
   readonly message: {
     readonly create: Mutation<
-      { systemId: SystemId; channelId: string; encryptedData: string },
+      {
+        systemId: SystemId;
+        channelId: string;
+        encryptedData: string;
+        timestamp: number;
+      },
       VersionedEntityRef
     >;
     readonly update: Mutation<
@@ -159,7 +206,10 @@ export interface TRPCClientSubset {
     >;
   };
   readonly boardMessage: {
-    readonly create: Mutation<{ systemId: SystemId; encryptedData: string }, VersionedEntityRef>;
+    readonly create: Mutation<
+      { systemId: SystemId; encryptedData: string; sortOrder: number },
+      VersionedEntityRef
+    >;
     readonly update: Mutation<
       {
         systemId: SystemId;
@@ -230,15 +280,16 @@ export interface TRPCClientSubset {
   };
 }
 
-/** Default sort order for groups created via import. */
-const DEFAULT_GROUP_SORT_ORDER = 0;
-
 /** Encryption tier for avatar blobs (tier 1 = system-key encrypted). */
 const AVATAR_ENCRYPTION_TIER = 1;
 
 // Message.update routes through a channel-scoped endpoint but import
 // context has no channel scope — the server resolves by messageId alone.
 const MESSAGE_UPDATE_PLACEHOLDER_CHANNEL = "ch_import_placeholder";
+
+// FrontingComment.update routes through a session-scoped endpoint but import
+// context has no session scope — the server resolves by commentId alone.
+const FRONTING_COMMENT_UPDATE_PLACEHOLDER_SESSION = "fs_import_placeholder";
 
 export type FetchFn = (
   url: string,
@@ -334,10 +385,14 @@ export function createTRPCPersisterApi(
     },
 
     field: {
-      create: async (sysId: SystemId, payload: EncryptedInput) => {
+      create: async (
+        sysId: SystemId,
+        payload: EncryptedInput & { readonly fieldType: FieldType },
+      ) => {
         return client.field.definition.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
+          fieldType: payload.fieldType,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -412,10 +467,11 @@ export function createTRPCPersisterApi(
     },
 
     frontingSession: {
-      create: async (sysId: SystemId, payload: EncryptedInput) => {
+      create: async (sysId: SystemId, payload: EncryptedInput & { readonly startTime: number }) => {
         return client.frontingSession.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
+          startTime: payload.startTime,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -429,15 +485,26 @@ export function createTRPCPersisterApi(
     },
 
     frontingComment: {
-      create: async (sysId: SystemId, payload: EncryptedInput) => {
+      create: async (
+        sysId: SystemId,
+        payload: EncryptedInput & {
+          readonly sessionId: string;
+          readonly memberId?: string;
+          readonly customFrontId?: string;
+        },
+      ) => {
         return client.frontingComment.create.mutate({
           systemId: sysId,
+          sessionId: payload.sessionId,
           encryptedData: payload.encryptedData,
+          ...(payload.memberId !== undefined ? { memberId: payload.memberId } : {}),
+          ...(payload.customFrontId !== undefined ? { customFrontId: payload.customFrontId } : {}),
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
         return client.frontingComment.update.mutate({
           systemId: sysId,
+          sessionId: FRONTING_COMMENT_UPDATE_PLACEHOLDER_SESSION,
           commentId: entityId,
           encryptedData: payload.encryptedData,
           version: payload.version,
@@ -463,10 +530,25 @@ export function createTRPCPersisterApi(
     },
 
     poll: {
-      create: async (sysId: SystemId, payload: EncryptedInput) => {
+      create: async (
+        sysId: SystemId,
+        payload: EncryptedInput & {
+          readonly kind: PollKind;
+          readonly allowMultipleVotes: boolean;
+          readonly maxVotesPerMember: number;
+          readonly allowAbstain: boolean;
+          readonly allowVeto: boolean;
+        },
+      ) => {
         return client.poll.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
+          kind: payload.kind,
+          createdByMemberId: undefined,
+          allowMultipleVotes: payload.allowMultipleVotes,
+          maxVotesPerMember: payload.maxVotesPerMember,
+          allowAbstain: payload.allowAbstain,
+          allowVeto: payload.allowVeto,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -521,11 +603,15 @@ export function createTRPCPersisterApi(
     },
 
     message: {
-      create: async (sysId: SystemId, input: EncryptedInput & { readonly channelId: string }) => {
+      create: async (
+        sysId: SystemId,
+        input: EncryptedInput & { readonly channelId: string; readonly timestamp: number },
+      ) => {
         return client.message.create.mutate({
           systemId: sysId,
           channelId: input.channelId,
           encryptedData: input.encryptedData,
+          timestamp: input.timestamp,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -540,10 +626,11 @@ export function createTRPCPersisterApi(
     },
 
     boardMessage: {
-      create: async (sysId: SystemId, payload: EncryptedInput) => {
+      create: async (sysId: SystemId, payload: EncryptedInput & { readonly sortOrder: number }) => {
         return client.boardMessage.create.mutate({
           systemId: sysId,
           encryptedData: payload.encryptedData,
+          sortOrder: payload.sortOrder,
         });
       },
       update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
@@ -559,13 +646,17 @@ export function createTRPCPersisterApi(
     group: {
       create: async (
         sysId: SystemId,
-        input: EncryptedInput & { readonly memberIds: readonly string[] },
+        input: EncryptedInput & {
+          readonly memberIds: readonly string[];
+          readonly parentGroupId: string | null;
+          readonly sortOrder: number;
+        },
       ) => {
         const result = await client.group.create.mutate({
           systemId: sysId,
           encryptedData: input.encryptedData,
-          parentGroupId: null,
-          sortOrder: DEFAULT_GROUP_SORT_ORDER,
+          parentGroupId: input.parentGroupId,
+          sortOrder: input.sortOrder,
         });
 
         for (const memberId of input.memberIds) {

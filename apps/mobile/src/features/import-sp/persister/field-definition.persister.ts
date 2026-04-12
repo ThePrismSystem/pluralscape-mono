@@ -16,6 +16,7 @@ import type {
   PersisterCreateResult,
   PersisterUpdateResult,
 } from "./persister.types.js";
+import type { FieldType } from "@pluralscape/types";
 
 /**
  * Narrowed shape of `MappedFieldDefinition`. Ordering and markdown
@@ -24,7 +25,7 @@ import type {
  */
 export interface FieldDefinitionPayload {
   readonly name: string;
-  readonly fieldType: string;
+  readonly fieldType: FieldType;
   readonly order: number;
   readonly supportMarkdown: boolean;
 }
@@ -42,7 +43,10 @@ function isFieldDefinitionPayload(value: unknown): value is FieldDefinitionPaylo
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isFieldDefinitionPayload, "field-definition");
   const encrypted = encryptForCreate(narrowed, ctx.masterKey);
-  const result = await ctx.api.field.create(ctx.systemId, encrypted);
+  const result = await ctx.api.field.create(ctx.systemId, {
+    encryptedData: encrypted.encryptedData,
+    fieldType: narrowed.fieldType,
+  });
   return { pluralscapeEntityId: result.id };
 }
 

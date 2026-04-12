@@ -22,13 +22,17 @@ const VALID_PAYLOAD = {
 };
 
 describe("chatMessagePersister", () => {
-  it("create encrypts and passes channelId alongside encryptedData", async () => {
+  it("create encrypts and passes channelId and timestamp alongside encryptedData", async () => {
     const ctx = makeTestPersisterContext();
     const createFn = vi.mocked(ctx.api.message.create);
     const result = await chatMessagePersister.create(ctx, VALID_PAYLOAD);
     expect(createFn).toHaveBeenCalledWith(
       TEST_SYSTEM_ID,
-      expect.objectContaining({ channelId: "ch_1", encryptedData: expect.any(String) }),
+      expect.objectContaining({
+        channelId: "ch_1",
+        timestamp: 1_700_000_000_000,
+        encryptedData: expect.any(String),
+      }),
     );
     expect(result.pluralscapeEntityId).toBe("msg_1");
   });

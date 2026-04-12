@@ -21,13 +21,13 @@ const VALID_PAYLOAD = {
 };
 
 describe("boardMessagePersister", () => {
-  it("create encrypts and calls boardMessage.create", async () => {
+  it("create encrypts and calls boardMessage.create with sortOrder", async () => {
     const ctx = makeTestPersisterContext();
     const createFn = vi.mocked(ctx.api.boardMessage.create);
     const result = await boardMessagePersister.create(ctx, VALID_PAYLOAD);
     expect(createFn).toHaveBeenCalledWith(
       TEST_SYSTEM_ID,
-      expect.objectContaining({ encryptedData: expect.any(String) }),
+      expect.objectContaining({ encryptedData: expect.any(String), sortOrder: 0 }),
     );
     expect(result.pluralscapeEntityId).toBe("bm_1");
   });

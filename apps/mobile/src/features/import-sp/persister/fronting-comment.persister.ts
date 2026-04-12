@@ -30,7 +30,10 @@ function isFrontingCommentPayload(value: unknown): value is FrontingCommentPaylo
 async function create(ctx: PersisterContext, payload: unknown): Promise<PersisterCreateResult> {
   const narrowed = assertPayloadShape(payload, isFrontingCommentPayload, "fronting-comment");
   const encrypted = encryptForCreate(narrowed, ctx.masterKey);
-  const result = await ctx.api.frontingComment.create(ctx.systemId, encrypted);
+  const result = await ctx.api.frontingComment.create(ctx.systemId, {
+    ...encrypted,
+    sessionId: narrowed.frontingSessionId,
+  });
   return { pluralscapeEntityId: result.id };
 }
 
