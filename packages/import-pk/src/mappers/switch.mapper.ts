@@ -124,7 +124,12 @@ export function mapSwitchBatch(
     // Close sessions for members no longer fronting
     for (const [pkMemberId, startTime] of activeFronters) {
       if (!currentMembers.has(pkMemberId)) {
-        const resolved = resolvedIds.get(pkMemberId) ?? pkMemberId;
+        const resolved = resolvedIds.get(pkMemberId);
+        if (resolved === undefined) {
+          throw new Error(
+            `Invariant violation: unresolved member "${pkMemberId}" in activeFronters`,
+          );
+        }
         outputs.push({
           sourceEntityId: `session:${pkMemberId}:${String(startTime)}`,
           result: mapped(buildSession(resolved, startTime, sw.timestampMs)),

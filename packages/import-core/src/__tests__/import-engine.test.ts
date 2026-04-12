@@ -13,6 +13,7 @@ import type {
   SourceDocument,
   BatchMapperOutput,
 } from "../mapper-dispatch.js";
+import type { SourceEvent, ImportDataSource } from "../source.types.js";
 import type { FakeSourceData } from "../testing/fake-source.js";
 import type { ImportCollectionType } from "@pluralscape/types";
 
@@ -655,6 +656,148 @@ describe("runImportEngine", () => {
 
       const snap = snapshot();
       expect(snap.countByType("group")).toBe(0);
+    });
+  });
+
+  describe("source.close() error path", () => {
+    it("produces a warning when source.close() throws", async () => {
+      const data = makeSimpleData();
+      const source = createFakeImportSource(data);
+      source.close = () => {
+        return Promise.reject(new Error("close failed"));
+      };
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.warnings.some((w) => w.message.includes("source.close() failed"))).toBe(true);
+    });
+  });
+
+  describe("drop events from source", () => {
+    it("records drop events as non-fatal errors and continues", async () => {
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(collection: string): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          if (collection === "members") {
+            yield {
+              kind: "drop",
+              collection,
+              sourceId: "m1",
+              reason: "malformed document",
+            };
+            yield {
+              kind: "doc",
+              collection,
+              sourceId: "m2",
+              document: { _id: "m2", name: "Blake" },
+            };
+          }
+        },
+        listCollections: () => Promise.resolve(["members"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister, snapshot } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("completed");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.message).toBe("malformed document");
+      expect(result.errors[0]?.fatal).toBe(false);
+      expect(snapshot().countByType("member")).toBe(1);
+    });
+  });
+
+  describe("source iteration fatal throw", () => {
+    it("produces a fatal error when iterate() throws mid-iteration", async () => {
+      const source: ImportDataSource = {
+        mode: "fake",
+        async *iterate(collection: string): AsyncGenerator<SourceEvent> {
+          await Promise.resolve();
+          if (collection === "members") {
+            yield {
+              kind: "doc",
+              collection,
+              sourceId: "m1",
+              document: { _id: "m1", name: "Aria" },
+            };
+            throw new Error("network timeout");
+          }
+        },
+        listCollections: () => Promise.resolve(["members"]),
+        close: () => Promise.resolve(),
+      };
+      const { persister } = createInMemoryPersister();
+
+      const result = await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: {
+          members: { entityType: "member", map: (doc: unknown) => mapped(doc) },
+        },
+        dependencyOrder: ["members"],
+        collectionToEntityType: () => "member",
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(result.outcome).toBe("aborted");
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.fatal).toBe(true);
+      expect(result.errors[0]?.message).toBe("network timeout");
+    });
+  });
+
+  describe("supplyParentIds callback", () => {
+    it("calls supplyParentIds with persisted source IDs after collection completes", async () => {
+      const suppliedParentIds: { collection: string; ids: readonly string[] }[] = [];
+      const data = makeSimpleData();
+      const source = createFakeImportSource(data);
+      source.supplyParentIds = (collection: string, ids: readonly string[]) => {
+        suppliedParentIds.push({ collection, ids: [...ids] });
+      };
+      const { persister } = createInMemoryPersister();
+
+      await runImportEngine({
+        source,
+        persister,
+        sourceFormat: "simply-plural",
+        mapperDispatch: simpleMapperDispatch,
+        dependencyOrder: SIMPLE_DEPENDENCY_ORDER,
+        collectionToEntityType: SIMPLE_COLLECTION_TO_ENTITY_TYPE,
+        options: { selectedCategories: {}, avatarMode: "skip" },
+        onProgress: noopProgress,
+      });
+
+      expect(suppliedParentIds).toHaveLength(2);
+      expect(suppliedParentIds[0]?.collection).toBe("members");
+      expect(suppliedParentIds[0]?.ids).toEqual(["m1", "m2"]);
+      expect(suppliedParentIds[1]?.collection).toBe("groups");
+      expect(suppliedParentIds[1]?.ids).toEqual(["g1", "g2"]);
     });
   });
 
