@@ -44,7 +44,10 @@ async function update(
 ): Promise<PersisterUpdateResult> {
   const narrowed = assertPayloadShape(payload, isFrontingCommentPayload, "fronting-comment");
   const encrypted = encryptForUpdate(narrowed, 1, ctx.masterKey);
-  const result = await ctx.api.frontingComment.update(ctx.systemId, existingId, encrypted);
+  const result = await ctx.api.frontingComment.update(ctx.systemId, existingId, {
+    ...encrypted,
+    sessionId: narrowed.frontingSessionId,
+  });
   return { pluralscapeEntityId: result.id };
 }
 

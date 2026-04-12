@@ -554,9 +554,13 @@ export async function runImport(args: RunImportArgs): Promise<ImportRunResult> {
       await source.close();
     } catch (closeError: unknown) {
       // Cannot rethrow — would mask the original error or success result.
-      // source.close() is best-effort cleanup; the engine has no logger so
-      // we consume the variable to satisfy lint and move on.
-      void closeError;
+      // Record as a warning so resource leaks are observable in the report.
+      ctx.addWarningOnce("source-close-error", {
+        entityType: "unknown",
+        entityId: null,
+        key: "source-close-error",
+        message: `source.close() failed: ${closeError instanceof Error ? closeError.message : String(closeError)}`,
+      });
     }
   }
 }

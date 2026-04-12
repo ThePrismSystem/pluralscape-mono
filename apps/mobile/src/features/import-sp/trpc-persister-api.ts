@@ -283,14 +283,6 @@ export interface TRPCClientSubset {
 /** Encryption tier for avatar blobs (tier 1 = system-key encrypted). */
 const AVATAR_ENCRYPTION_TIER = 1;
 
-// Message.update routes through a channel-scoped endpoint but import
-// context has no channel scope — the server resolves by messageId alone.
-const MESSAGE_UPDATE_PLACEHOLDER_CHANNEL = "ch_import_placeholder";
-
-// FrontingComment.update routes through a session-scoped endpoint but import
-// context has no session scope — the server resolves by commentId alone.
-const FRONTING_COMMENT_UPDATE_PLACEHOLDER_SESSION = "fs_import_placeholder";
-
 export type FetchFn = (
   url: string,
   init: { method: string; body: Uint8Array; headers: Record<string, string> },
@@ -300,7 +292,9 @@ export type FetchFn = (
  * Compute a SHA-256 hex digest of the given bytes.
  */
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  // Slice into a fresh ArrayBuffer to satisfy SubtleCrypto's type requirement
+  // Copy into a fresh ArrayBuffer — TS lib types Uint8Array.buffer as
+  // ArrayBufferLike (includes SharedArrayBuffer) which is incompatible
+  // with SubtleCrypto's BufferSource parameter.
   const copy = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(copy).set(bytes);
   const digest = await crypto.subtle.digest("SHA-256", copy);
@@ -315,6 +309,8 @@ function defaultFetch(
   url: string,
   init: { method: string; body: Uint8Array; headers: Record<string, string> },
 ): Promise<{ ok: boolean; status: number }> {
+  // Copy into a fresh ArrayBuffer — TS lib types Uint8Array.buffer as
+  // ArrayBufferLike which is incompatible with fetch's BodyInit parameter.
   const copy = new ArrayBuffer(init.body.byteLength);
   new Uint8Array(copy).set(init.body);
   return globalThis
@@ -501,10 +497,14 @@ export function createTRPCPersisterApi(
           ...(payload.customFrontId !== undefined ? { customFrontId: payload.customFrontId } : {}),
         });
       },
-      update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
+      update: async (
+        sysId: SystemId,
+        entityId: string,
+        payload: EncryptedUpdate & { readonly sessionId: string },
+      ) => {
         return client.frontingComment.update.mutate({
           systemId: sysId,
-          sessionId: FRONTING_COMMENT_UPDATE_PLACEHOLDER_SESSION,
+          sessionId: payload.sessionId,
           commentId: entityId,
           encryptedData: payload.encryptedData,
           version: payload.version,
@@ -614,10 +614,14 @@ export function createTRPCPersisterApi(
           timestamp: input.timestamp,
         });
       },
-      update: async (sysId: SystemId, entityId: string, payload: EncryptedUpdate) => {
+      update: async (
+        sysId: SystemId,
+        entityId: string,
+        payload: EncryptedUpdate & { readonly channelId: string },
+      ) => {
         return client.message.update.mutate({
           systemId: sysId,
-          channelId: MESSAGE_UPDATE_PLACEHOLDER_CHANNEL,
+          channelId: payload.channelId,
           messageId: entityId,
           encryptedData: payload.encryptedData,
           version: payload.version,
@@ -659,12 +663,22 @@ export function createTRPCPersisterApi(
           sortOrder: input.sortOrder,
         });
 
+        const failedMembers: string[] = [];
         for (const memberId of input.memberIds) {
-          await client.group.addMember.mutate({
-            systemId: sysId,
-            groupId: result.id,
-            memberId,
-          });
+          try {
+            await client.group.addMember.mutate({
+              systemId: sysId,
+              groupId: result.id,
+              memberId,
+            });
+          } catch {
+            failedMembers.push(memberId);
+          }
+        }
+        if (failedMembers.length > 0) {
+          throw new Error(
+            `group ${result.id} created but ${String(failedMembers.length)}/${String(input.memberIds.length)} addMember calls failed`,
+          );
         }
 
         return result;

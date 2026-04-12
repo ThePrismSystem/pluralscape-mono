@@ -65,6 +65,16 @@ export type PersisterProcUpdateById = (
   entityId: string,
   payload: EncryptedUpdate,
 ) => Promise<VersionedEntityRef>;
+export type PersisterProcFrontingCommentUpdate = (
+  systemId: SystemId,
+  entityId: string,
+  payload: EncryptedUpdate & { readonly sessionId: string },
+) => Promise<VersionedEntityRef>;
+export type PersisterProcMessageUpdate = (
+  systemId: SystemId,
+  entityId: string,
+  payload: EncryptedUpdate & { readonly channelId: string },
+) => Promise<VersionedEntityRef>;
 export type PersisterProcCreate = (
   systemId: SystemId,
   payload: EncryptedInput,
@@ -229,7 +239,7 @@ export interface PersisterApi {
   };
   readonly frontingComment: {
     readonly create: PersisterProcFrontingCommentCreate;
-    readonly update: PersisterProcUpdateById;
+    readonly update: PersisterProcFrontingCommentUpdate;
   };
   readonly note: {
     readonly create: PersisterProcCreate;
@@ -246,7 +256,7 @@ export interface PersisterApi {
   };
   readonly message: {
     readonly create: PersisterProcMessageCreate;
-    readonly update: PersisterProcUpdateById;
+    readonly update: PersisterProcMessageUpdate;
   };
   readonly boardMessage: {
     readonly create: PersisterProcBoardMessageCreate;

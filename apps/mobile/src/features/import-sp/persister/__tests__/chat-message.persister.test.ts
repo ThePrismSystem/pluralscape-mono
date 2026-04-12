@@ -37,11 +37,12 @@ describe("chatMessagePersister", () => {
     expect(result.pluralscapeEntityId).toBe("msg_1");
   });
 
-  it("update targets the existing message ID", async () => {
+  it("update targets the existing message ID and passes channelId", async () => {
     const ctx = makeTestPersisterContext();
     const updateFn = vi.mocked(ctx.api.message.update);
     await chatMessagePersister.update(ctx, VALID_PAYLOAD, "msg_existing");
     expect(updateFn.mock.calls[0]?.[1]).toBe("msg_existing");
+    expect(updateFn.mock.calls[0]?.[2]).toMatchObject({ channelId: "ch_1" });
   });
 
   it("rejects payloads without a body", async () => {

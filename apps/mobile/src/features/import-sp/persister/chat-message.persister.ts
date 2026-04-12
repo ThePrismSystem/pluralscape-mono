@@ -68,7 +68,10 @@ async function update(
     1,
     ctx.masterKey,
   );
-  const result = await ctx.api.message.update(ctx.systemId, existingId, encrypted);
+  const result = await ctx.api.message.update(ctx.systemId, existingId, {
+    ...encrypted,
+    channelId: narrowed.channelId,
+  });
   return { pluralscapeEntityId: result.id };
 }
 

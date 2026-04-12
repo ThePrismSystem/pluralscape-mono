@@ -48,9 +48,6 @@ export class ApiSourceTransientError extends Error {
  *               required.
  *  - `single` — single GET returning one document; wrapped into a one-item
  *               array so the iterator interface is uniform.
- *  - `range`  — single GET with `?startTime=&endTime=` query over a fixed
- *               wide window. Used for `frontHistory`, which SP exposes only
- *               as a time-bounded query.
  *  - `unsupported` — SP exposes no bulk endpoint for the collection (e.g.
  *               per-document comments, per-member notes, per-channel chat
  *               messages). The iterator yields nothing rather than throwing
@@ -61,7 +58,6 @@ export class ApiSourceTransientError extends Error {
 type ApiFetchStrategy =
   | { readonly kind: "list"; readonly path: string }
   | { readonly kind: "single"; readonly path: string }
-  | { readonly kind: "range"; readonly path: string }
   | { readonly kind: "unsupported"; readonly reason: string };
 
 /**
@@ -70,8 +66,10 @@ type ApiFetchStrategy =
  * repo (`ApparyllisOrg/SimplyPluralApi`). Routing quirks in the upstream
  * SP API that are easy to get wrong:
  *
- *  - `members`, `groups`, `customFields`, `customFronts`, `polls`,
- *    `frontHistory` all require `:system` in the path.
+ *  - `members`, `groups`, `customFields`, `customFronts`, `polls`
+ *    all require `:system` in the path.
+ *  - `frontHistory` is a flat list at `/v1/frontHistory` (no `:system`);
+ *    the API scopes by auth context.
  *  - `channels` / `channelCategories` / `chatMessages` are mounted under
  *    `/v1/chat/`, not `/v1/channels`.
  *  - `frontStatuses` is called `customFronts` in the API URL.
@@ -129,12 +127,6 @@ const HTTP_SERVER_ERROR_MAX = 599;
 /** Backoff grows as `BASE * 2^attempt` capped at `MAX`. */
 const BACKOFF_EXPONENT_BASE = 2;
 
-/**
- * Wide-open lower bound for the `frontHistory` range fetch. Unix epoch zero
- * predates any real SP account, so `startTime=0` pulls the full history.
- */
-const FRONT_HISTORY_RANGE_START_MS = 0;
-
 export interface ApiSourceInput {
   readonly token: string;
   readonly baseUrl: string;
@@ -183,7 +175,7 @@ const LISTABLE_COLLECTIONS: readonly SpCollectionName[] = (
  *   `ApiSourceTransientError`.
  * - Any other non-2xx → `ApiSourceTransientError` without retrying (4xx other
  *   than 401 is unlikely to resolve on a retry).
- * - Shape failures on list/range responses (non-array body) →
+ * - Shape failures on list responses (non-array body) →
  *   `ApiSourcePermanentError`. Per-document shape failures (non-object
  *   element, missing `_id`) are emitted as `drop` events so the engine
  *   can keep iterating the rest of the collection.
@@ -257,20 +249,7 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
 
   function buildUrl(strategy: Exclude<ApiFetchStrategy, { kind: "unsupported" }>): string {
     const path = substituteSystem(strategy.path, input.systemId);
-    const base = `${input.baseUrl}${path}`;
-    switch (strategy.kind) {
-      case "list":
-      case "single":
-        return base;
-      case "range": {
-        const now = Date.now();
-        return `${base}?startTime=${String(FRONT_HISTORY_RANGE_START_MS)}&endTime=${String(now)}`;
-      }
-      default: {
-        const _exhaustive: never = strategy;
-        throw new Error(`unreachable ApiFetchStrategy kind: ${String(_exhaustive)}`);
-      }
-    }
+    return `${input.baseUrl}${path}`;
   }
 
   type AssertResult =
@@ -352,9 +331,7 @@ export function createApiImportSource(input: ApiSourceInput): ImportDataSource {
           yield { kind: "doc", collection, sourceId: result.sourceId, document: result.record };
           return;
         }
-        case "list":
-        case "range": {
-          // list or range strategies — both return an array.
+        case "list": {
           const url = buildUrl(strategy);
           const body = await fetchJson(url);
           if (!Array.isArray(body)) {

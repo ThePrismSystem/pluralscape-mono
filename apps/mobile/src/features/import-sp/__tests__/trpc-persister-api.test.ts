@@ -659,7 +659,7 @@ describe("frontingComment", () => {
     });
   });
 
-  it("update calls frontingComment.update with commentId", async () => {
+  it("update calls frontingComment.update with commentId and sessionId", async () => {
     const client = makeMockClient();
     client.frontingComment.update.mutate.mockResolvedValue({ id: "fcom_1", version: 2 });
     const api = createTRPCPersisterApi(client);
@@ -667,12 +667,13 @@ describe("frontingComment", () => {
     const result = await api.frontingComment.update(TEST_SYSTEM_ID, "fcom_1", {
       encryptedData: "enc_comment_v2",
       version: 1,
+      sessionId: "fs_real_session",
     });
 
     expect(result).toEqual({ id: "fcom_1", version: 2 });
     expect(client.frontingComment.update.mutate).toHaveBeenCalledWith({
       systemId: TEST_SYSTEM_ID,
-      sessionId: "fs_import_placeholder",
+      sessionId: "fs_real_session",
       commentId: "fcom_1",
       encryptedData: "enc_comment_v2",
       version: 1,
@@ -889,7 +890,7 @@ describe("message", () => {
     });
   });
 
-  it("update calls message.update with messageId and channelId placeholder", async () => {
+  it("update calls message.update with messageId and channelId", async () => {
     const client = makeMockClient();
     client.message.update.mutate.mockResolvedValue({ id: "msg_1", version: 2 });
     const api = createTRPCPersisterApi(client);
@@ -897,17 +898,17 @@ describe("message", () => {
     const result = await api.message.update(TEST_SYSTEM_ID, "msg_1", {
       encryptedData: "enc_message_v2",
       version: 1,
+      channelId: "ch_real_channel",
     });
 
     expect(result).toEqual({ id: "msg_1", version: 2 });
-    expect(client.message.update.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        systemId: TEST_SYSTEM_ID,
-        messageId: "msg_1",
-        encryptedData: "enc_message_v2",
-        version: 1,
-      }),
-    );
+    expect(client.message.update.mutate).toHaveBeenCalledWith({
+      systemId: TEST_SYSTEM_ID,
+      channelId: "ch_real_channel",
+      messageId: "msg_1",
+      encryptedData: "enc_message_v2",
+      version: 1,
+    });
   });
 });
 

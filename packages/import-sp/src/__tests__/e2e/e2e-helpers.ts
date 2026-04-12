@@ -35,7 +35,7 @@ const API_BASE_URL = `http://localhost:${String(E2E_PORT)}`;
 const TRPC_URL = `${API_BASE_URL}/v1/trpc`;
 
 /** Maximum URL length before httpBatchLink splits into multiple requests. */
-const MAX_URL_LENGTH = 2083;
+const MAX_URL_LENGTH = 2_083;
 
 /** Maximum operations per batch request. */
 const MAX_BATCH_ITEMS = 10;

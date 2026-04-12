@@ -1060,6 +1060,9 @@ describe("runImport — source.close() error suppression", () => {
       onProgress: noopProgress,
     });
     expect(result.outcome).toBe("completed");
+    const closeWarning = result.warnings.find((w) => w.key === "source-close-error");
+    expect(closeWarning).toBeDefined();
+    expect(closeWarning?.message).toContain("close failed");
   });
 });
 

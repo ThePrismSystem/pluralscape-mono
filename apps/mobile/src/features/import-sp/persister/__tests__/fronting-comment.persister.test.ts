@@ -31,12 +31,13 @@ describe("frontingCommentPersister", () => {
     expect(result.pluralscapeEntityId).toBe("fcom_1");
   });
 
-  it("update targets the existing comment ID", async () => {
+  it("update targets the existing comment ID and passes sessionId", async () => {
     const ctx = makeTestPersisterContext();
     const updateFn = vi.mocked(ctx.api.frontingComment.update);
     await frontingCommentPersister.update(ctx, VALID_PAYLOAD, "fcom_existing");
     const call = updateFn.mock.calls[0];
     expect(call?.[1]).toBe("fcom_existing");
+    expect(call?.[2]).toMatchObject({ sessionId: "fs_1" });
   });
 
   it("rejects malformed payloads", async () => {
